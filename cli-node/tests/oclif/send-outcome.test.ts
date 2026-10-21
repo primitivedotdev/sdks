@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildFollowUpCommand,
+  classifySendError,
   DEFINITIVE_SEND_REJECTION_STATUSES,
   followUpCommandPrefix,
   followUpInvocation,
@@ -259,5 +260,26 @@ describe("follow-up commands", () => {
         followUpInvocation(GLOBAL_ENTRY, { PRIMITIVE_AGENT_PROFILE: "work" }),
       ),
     ).toBe("PRIMITIVE_AGENT_PROFILE=work primcli");
+  });
+});
+
+describe("conditional send refusal", () => {
+  it("treats 409 latest_message_mismatch as not sent, and other conflicts as uncertain", () => {
+    expect(classifySendError(409, { code: "latest_message_mismatch" })).toBe(
+      "not_sent",
+    );
+    expect(classifySendError(409, { code: "something_else" })).toBe(
+      "uncertain",
+    );
+  });
+
+  it("treats 422 latest_message_thread_unresolved and 503 thread_busy as not sent, and other 503s as uncertain", () => {
+    expect(
+      classifySendError(422, { code: "latest_message_thread_unresolved" }),
+    ).toBe("not_sent");
+    expect(classifySendError(503, { code: "thread_busy" })).toBe("not_sent");
+    expect(
+      classifySendError(503, { code: "outbound_capacity_exhausted" }),
+    ).toBe("uncertain");
   });
 });

@@ -547,6 +547,30 @@ type Invoker interface {
 	//
 	// GET /domains/{id}/zone-file
 	DownloadDomainZoneFile(ctx context.Context, params DownloadDomainZoneFileParams) (DownloadDomainZoneFileRes, error)
+	// DownloadEmailAttachmentArchiveMember invokes downloadEmailAttachmentArchiveMember operation.
+	//
+	// Returns the decoded bytes of one regular file inside a zip, tar or tar.gz attachment, by its
+	// listed path. The archive's structure, every member path and every limit are checked as for the
+	// listing, but only the requested file is decoded and verified (its zip CRC-32, and X-Content-SHA256
+	// of the bytes returned); list the archive to have every file decoded. Authenticate with an
+	// organization API key, an authorized organization OAuth token, or an address-bound agent connection
+	// key. A connected agent reads only mail received at its own address. Function credentials are not
+	// supported. Discarded content is unavailable.
+	//
+	// GET /emails/{id}/attachments/{attachment}/members/{path}
+	DownloadEmailAttachmentArchiveMember(ctx context.Context, params DownloadEmailAttachmentArchiveMemberParams) (DownloadEmailAttachmentArchiveMemberRes, error)
+	// DownloadEmailAttachmentByFilename invokes downloadEmailAttachmentByFilename operation.
+	//
+	// Returns the same bytes as downloadEmailAttachmentPart, selecting the attachment by its exact
+	// filename. The path form `/emails/{id}/attachments/{filename}` also works for any name that is not
+	// digits only, which that form reads as a part_index. When several attachments share the filename
+	// the response is 409 attachment_name_ambiguous with every matching part_index, and nothing is
+	// returned. Authenticate with an organization API key, an authorized organization OAuth token, or an
+	// address-bound agent connection key. A connected agent reads only mail received at its own address.
+	// Function credentials are not supported. Discarded content is unavailable.
+	//
+	// GET /emails/{id}/attachments
+	DownloadEmailAttachmentByFilename(ctx context.Context, params DownloadEmailAttachmentByFilenameParams) (DownloadEmailAttachmentByFilenameRes, error)
 	// DownloadEmailAttachmentPart invokes downloadEmailAttachmentPart operation.
 	//
 	// Pending service release. This contract does not establish live availability.
@@ -568,6 +592,30 @@ type Invoker interface {
 	//
 	// GET /emails/{id}/raw
 	DownloadRawEmail(ctx context.Context, params DownloadRawEmailParams) (DownloadRawEmailRes, error)
+	// DownloadSentAttachmentArchiveMember invokes downloadSentAttachmentArchiveMember operation.
+	//
+	// Returns the decoded bytes of one regular file inside a zip, tar or tar.gz attachment, by its
+	// listed path. The archive's structure, every member path and every limit are checked as for the
+	// listing, but only the requested file is decoded and verified (its zip CRC-32, and X-Content-SHA256
+	// of the bytes returned); list the archive to have every file decoded. Authenticate with an
+	// organization API key, an authorized organization OAuth token, or an address-bound agent connection
+	// key. A connected agent reads only mail sent from its own address. Function credentials are not
+	// supported. Discarded content is unavailable.
+	//
+	// GET /sent-emails/{id}/attachments/{attachment}/members/{path}
+	DownloadSentAttachmentArchiveMember(ctx context.Context, params DownloadSentAttachmentArchiveMemberParams) (DownloadSentAttachmentArchiveMemberRes, error)
+	// DownloadSentAttachmentByFilename invokes downloadSentAttachmentByFilename operation.
+	//
+	// Returns the same bytes as downloadSentAttachmentPart, selecting the attachment by its exact
+	// filename. The path form `/sent-emails/{id}/attachments/{filename}` also works for any name that is
+	// not digits only, which that form reads as a part_index. When several attachments share the
+	// filename the response is 409 attachment_name_ambiguous with every matching part_index, and nothing
+	// is returned. Authenticate with an organization API key, an authorized organization OAuth token, or
+	// an address-bound agent connection key. A connected agent reads only mail sent from its own address.
+	//  Function credentials are not supported. Discarded content is unavailable.
+	//
+	// GET /sent-emails/{id}/attachments
+	DownloadSentAttachmentByFilename(ctx context.Context, params DownloadSentAttachmentByFilenameParams) (DownloadSentAttachmentByFilenameRes, error)
 	// DownloadSentAttachmentPart invokes downloadSentAttachmentPart operation.
 	//
 	// Pending service release. This contract does not establish live availability.
@@ -1105,6 +1153,17 @@ type Invoker interface {
 	//
 	// GET /domains
 	ListDomains(ctx context.Context) (ListDomainsRes, error)
+	// ListEmailAttachmentArchiveMembers invokes listEmailAttachmentArchiveMembers operation.
+	//
+	// Lists the regular files inside a zip, tar or tar.gz attachment with each one's path, decoded size
+	// and SHA-256. The format is detected from the content. Unsafe paths refuse the whole archive, and
+	// resource limits bound the work (see the 413 and 422 responses). Authenticate with an organization
+	// API key, an authorized organization OAuth token, or an address-bound agent connection key. A
+	// connected agent reads only mail received at its own address. Function credentials are not
+	// supported. Discarded content is unavailable.
+	//
+	// GET /emails/{id}/attachments/{attachment}/members
+	ListEmailAttachmentArchiveMembers(ctx context.Context, params ListEmailAttachmentArchiveMembersParams) (ListEmailAttachmentArchiveMembersRes, error)
 	// ListEmails invokes listEmails operation.
 	//
 	// Returns a paginated list of INBOUND emails received at your
@@ -1220,6 +1279,17 @@ type Invoker interface {
 	//
 	// GET /routes
 	ListRoutes(ctx context.Context) (ListRoutesRes, error)
+	// ListSentAttachmentArchiveMembers invokes listSentAttachmentArchiveMembers operation.
+	//
+	// Lists the regular files inside a zip, tar or tar.gz attachment with each one's path, decoded size
+	// and SHA-256. The format is detected from the content. Unsafe paths refuse the whole archive, and
+	// resource limits bound the work (see the 413 and 422 responses). Authenticate with an organization
+	// API key, an authorized organization OAuth token, or an address-bound agent connection key. A
+	// connected agent reads only mail sent from its own address. Function credentials are not supported.
+	// Discarded content is unavailable.
+	//
+	// GET /sent-emails/{id}/attachments/{attachment}/members
+	ListSentAttachmentArchiveMembers(ctx context.Context, params ListSentAttachmentArchiveMembersParams) (ListSentAttachmentArchiveMembersRes, error)
 	// ListSentEmails invokes listSentEmails operation.
 	//
 	// Returns a paginated list of OUTBOUND emails the caller's
@@ -7848,6 +7918,325 @@ func (c *Client) sendDownloadDomainZoneFile(ctx context.Context, params Download
 	return result, nil
 }
 
+// DownloadEmailAttachmentArchiveMember invokes downloadEmailAttachmentArchiveMember operation.
+//
+// Returns the decoded bytes of one regular file inside a zip, tar or tar.gz attachment, by its
+// listed path. The archive's structure, every member path and every limit are checked as for the
+// listing, but only the requested file is decoded and verified (its zip CRC-32, and X-Content-SHA256
+// of the bytes returned); list the archive to have every file decoded. Authenticate with an
+// organization API key, an authorized organization OAuth token, or an address-bound agent connection
+// key. A connected agent reads only mail received at its own address. Function credentials are not
+// supported. Discarded content is unavailable.
+//
+// GET /emails/{id}/attachments/{attachment}/members/{path}
+func (c *Client) DownloadEmailAttachmentArchiveMember(ctx context.Context, params DownloadEmailAttachmentArchiveMemberParams) (DownloadEmailAttachmentArchiveMemberRes, error) {
+	res, err := c.sendDownloadEmailAttachmentArchiveMember(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDownloadEmailAttachmentArchiveMember(ctx context.Context, params DownloadEmailAttachmentArchiveMemberParams) (res DownloadEmailAttachmentArchiveMemberRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("downloadEmailAttachmentArchiveMember"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/emails/{id}/attachments/{attachment}/members/{path}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DownloadEmailAttachmentArchiveMemberOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [6]string
+	pathParts[0] = "/emails/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/attachments/"
+	{
+		// Encode "attachment" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "attachment",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Attachment))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	pathParts[4] = "/members/"
+	{
+		// Encode "path" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "path",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Path))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[5] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, DownloadEmailAttachmentArchiveMemberOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDownloadEmailAttachmentArchiveMemberResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// DownloadEmailAttachmentByFilename invokes downloadEmailAttachmentByFilename operation.
+//
+// Returns the same bytes as downloadEmailAttachmentPart, selecting the attachment by its exact
+// filename. The path form `/emails/{id}/attachments/{filename}` also works for any name that is not
+// digits only, which that form reads as a part_index. When several attachments share the filename
+// the response is 409 attachment_name_ambiguous with every matching part_index, and nothing is
+// returned. Authenticate with an organization API key, an authorized organization OAuth token, or an
+// address-bound agent connection key. A connected agent reads only mail received at its own address.
+// Function credentials are not supported. Discarded content is unavailable.
+//
+// GET /emails/{id}/attachments
+func (c *Client) DownloadEmailAttachmentByFilename(ctx context.Context, params DownloadEmailAttachmentByFilenameParams) (DownloadEmailAttachmentByFilenameRes, error) {
+	res, err := c.sendDownloadEmailAttachmentByFilename(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDownloadEmailAttachmentByFilename(ctx context.Context, params DownloadEmailAttachmentByFilenameParams) (res DownloadEmailAttachmentByFilenameRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("downloadEmailAttachmentByFilename"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/emails/{id}/attachments"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DownloadEmailAttachmentByFilenameOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/emails/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/attachments"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "filename" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "filename",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(params.Filename))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, DownloadEmailAttachmentByFilenameOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDownloadEmailAttachmentByFilenameResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // DownloadEmailAttachmentPart invokes downloadEmailAttachmentPart operation.
 //
 // Pending service release. This contract does not establish live availability.
@@ -8153,6 +8542,326 @@ func (c *Client) sendDownloadRawEmail(ctx context.Context, params DownloadRawEma
 
 	stage = "DecodeResponse"
 	result, err := decodeDownloadRawEmailResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// DownloadSentAttachmentArchiveMember invokes downloadSentAttachmentArchiveMember operation.
+//
+// Returns the decoded bytes of one regular file inside a zip, tar or tar.gz attachment, by its
+// listed path. The archive's structure, every member path and every limit are checked as for the
+// listing, but only the requested file is decoded and verified (its zip CRC-32, and X-Content-SHA256
+// of the bytes returned); list the archive to have every file decoded. Authenticate with an
+// organization API key, an authorized organization OAuth token, or an address-bound agent connection
+// key. A connected agent reads only mail sent from its own address. Function credentials are not
+// supported. Discarded content is unavailable.
+//
+// GET /sent-emails/{id}/attachments/{attachment}/members/{path}
+func (c *Client) DownloadSentAttachmentArchiveMember(ctx context.Context, params DownloadSentAttachmentArchiveMemberParams) (DownloadSentAttachmentArchiveMemberRes, error) {
+	res, err := c.sendDownloadSentAttachmentArchiveMember(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDownloadSentAttachmentArchiveMember(ctx context.Context, params DownloadSentAttachmentArchiveMemberParams) (res DownloadSentAttachmentArchiveMemberRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("downloadSentAttachmentArchiveMember"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/sent-emails/{id}/attachments/{attachment}/members/{path}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DownloadSentAttachmentArchiveMemberOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [6]string
+	pathParts[0] = "/sent-emails/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/attachments/"
+	{
+		// Encode "attachment" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "attachment",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Attachment))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	pathParts[4] = "/members/"
+	{
+		// Encode "path" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "path",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Path))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[5] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, DownloadSentAttachmentArchiveMemberOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDownloadSentAttachmentArchiveMemberResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// DownloadSentAttachmentByFilename invokes downloadSentAttachmentByFilename operation.
+//
+// Returns the same bytes as downloadSentAttachmentPart, selecting the attachment by its exact
+// filename. The path form `/sent-emails/{id}/attachments/{filename}` also works for any name that is
+// not digits only, which that form reads as a part_index. When several attachments share the
+// filename the response is 409 attachment_name_ambiguous with every matching part_index, and nothing
+// is returned. Authenticate with an organization API key, an authorized organization OAuth token, or
+// an address-bound agent connection key. A connected agent reads only mail sent from its own address.
+//
+//	Function credentials are not supported. Discarded content is unavailable.
+//
+// GET /sent-emails/{id}/attachments
+func (c *Client) DownloadSentAttachmentByFilename(ctx context.Context, params DownloadSentAttachmentByFilenameParams) (DownloadSentAttachmentByFilenameRes, error) {
+	res, err := c.sendDownloadSentAttachmentByFilename(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDownloadSentAttachmentByFilename(ctx context.Context, params DownloadSentAttachmentByFilenameParams) (res DownloadSentAttachmentByFilenameRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("downloadSentAttachmentByFilename"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/sent-emails/{id}/attachments"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DownloadSentAttachmentByFilenameOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/sent-emails/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/attachments"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "filename" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "filename",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(params.Filename))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, DownloadSentAttachmentByFilenameOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDownloadSentAttachmentByFilenameResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -13568,6 +14277,156 @@ func (c *Client) sendListDomains(ctx context.Context) (res ListDomainsRes, err e
 	return result, nil
 }
 
+// ListEmailAttachmentArchiveMembers invokes listEmailAttachmentArchiveMembers operation.
+//
+// Lists the regular files inside a zip, tar or tar.gz attachment with each one's path, decoded size
+// and SHA-256. The format is detected from the content. Unsafe paths refuse the whole archive, and
+// resource limits bound the work (see the 413 and 422 responses). Authenticate with an organization
+// API key, an authorized organization OAuth token, or an address-bound agent connection key. A
+// connected agent reads only mail received at its own address. Function credentials are not
+// supported. Discarded content is unavailable.
+//
+// GET /emails/{id}/attachments/{attachment}/members
+func (c *Client) ListEmailAttachmentArchiveMembers(ctx context.Context, params ListEmailAttachmentArchiveMembersParams) (ListEmailAttachmentArchiveMembersRes, error) {
+	res, err := c.sendListEmailAttachmentArchiveMembers(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListEmailAttachmentArchiveMembers(ctx context.Context, params ListEmailAttachmentArchiveMembersParams) (res ListEmailAttachmentArchiveMembersRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listEmailAttachmentArchiveMembers"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/emails/{id}/attachments/{attachment}/members"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListEmailAttachmentArchiveMembersOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [5]string
+	pathParts[0] = "/emails/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/attachments/"
+	{
+		// Encode "attachment" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "attachment",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Attachment))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	pathParts[4] = "/members"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListEmailAttachmentArchiveMembersOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListEmailAttachmentArchiveMembersResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ListEmails invokes listEmails operation.
 //
 // Returns a paginated list of INBOUND emails received at your
@@ -15392,6 +16251,156 @@ func (c *Client) sendListRoutes(ctx context.Context) (res ListRoutesRes, err err
 
 	stage = "DecodeResponse"
 	result, err := decodeListRoutesResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListSentAttachmentArchiveMembers invokes listSentAttachmentArchiveMembers operation.
+//
+// Lists the regular files inside a zip, tar or tar.gz attachment with each one's path, decoded size
+// and SHA-256. The format is detected from the content. Unsafe paths refuse the whole archive, and
+// resource limits bound the work (see the 413 and 422 responses). Authenticate with an organization
+// API key, an authorized organization OAuth token, or an address-bound agent connection key. A
+// connected agent reads only mail sent from its own address. Function credentials are not supported.
+// Discarded content is unavailable.
+//
+// GET /sent-emails/{id}/attachments/{attachment}/members
+func (c *Client) ListSentAttachmentArchiveMembers(ctx context.Context, params ListSentAttachmentArchiveMembersParams) (ListSentAttachmentArchiveMembersRes, error) {
+	res, err := c.sendListSentAttachmentArchiveMembers(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListSentAttachmentArchiveMembers(ctx context.Context, params ListSentAttachmentArchiveMembersParams) (res ListSentAttachmentArchiveMembersRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listSentAttachmentArchiveMembers"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/sent-emails/{id}/attachments/{attachment}/members"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListSentAttachmentArchiveMembersOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [5]string
+	pathParts[0] = "/sent-emails/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/attachments/"
+	{
+		// Encode "attachment" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "attachment",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Attachment))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	pathParts[4] = "/members"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListSentAttachmentArchiveMembersOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListSentAttachmentArchiveMembersResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

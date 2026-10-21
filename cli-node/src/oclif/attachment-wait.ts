@@ -7,6 +7,12 @@ export const ATTACHMENT_WAIT_OPERATIONS: ReadonlySet<string> = new Set([
   "downloadAttachments",
   "downloadEmailAttachmentPart",
   "downloadSentAttachmentPart",
+  "downloadEmailAttachmentByFilename",
+  "downloadSentAttachmentByFilename",
+  "downloadEmailAttachmentArchiveMember",
+  "downloadSentAttachmentArchiveMember",
+  "listEmailAttachmentArchiveMembers",
+  "listSentAttachmentArchiveMembers",
 ]);
 
 export const ATTACHMENT_NOT_READY = "attachment_not_ready";

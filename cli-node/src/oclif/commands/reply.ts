@@ -183,6 +183,10 @@ class ReplyCommand extends Command {
         "Attach a file to the reply. Repeat --attachment to attach multiple files.",
       multiple: true,
     }),
+    "if-latest-message-id": Flags.string({
+      description:
+        "Send only if this message id is still the newest message in the thread, as your credential sees it (received or sent, in the order messages joined the thread). Otherwise nothing is sent and the command exits 1 with error code latest_message_mismatch and the current newest id in error.details.latest_message_id. Pass latest_message_id from `primitive emails conversation`. Cannot be combined with a repeat.",
+    }),
     wait: Flags.boolean({
       description:
         "Block until the receiving MTA returns an outcome. Without --wait, the call returns once Primitive has accepted the reply for delivery.",
@@ -391,12 +395,18 @@ class ReplyCommand extends Command {
                   : {}),
                 ...(flags.from !== undefined ? { from: flags.from } : {}),
                 in_reply_to_email_id: emailId,
+                ...(flags["if-latest-message-id"] !== undefined
+                  ? { if_latest_message_id: flags["if-latest-message-id"] }
+                  : {}),
               }
             : {
                 ...plainContent,
                 ...(flags.from !== undefined ? { from: flags.from } : {}),
                 ...(flags.all ? { reply_all: true } : {}),
                 ...(repeat !== undefined ? { repeat } : {}),
+                ...(flags["if-latest-message-id"] !== undefined
+                  ? { if_latest_message_id: flags["if-latest-message-id"] }
+                  : {}),
                 in_reply_to_email_id: emailId,
               },
         );
@@ -438,6 +448,9 @@ class ReplyCommand extends Command {
         ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
         ...(flags.all ? { reply_all: true } : {}),
         ...(repeat !== undefined ? { repeat } : {}),
+        ...(flags["if-latest-message-id"] !== undefined
+          ? { if_latest_message_id: flags["if-latest-message-id"] }
+          : {}),
       };
       // An answer ends automatic working for the email it answers.
       const halted = await haltAutoWorking(

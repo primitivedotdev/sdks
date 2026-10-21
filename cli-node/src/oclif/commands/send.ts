@@ -177,6 +177,11 @@ class SendCommand extends Command {
       description:
         "Message-Id of the parent email when threading a reply on the wire. For replying to an inbound message you received, prefer `primitive reply --id <inbound-id>`.",
     }),
+    "if-latest-message-id": Flags.string({
+      description:
+        "Send only if this message id is still the newest message in the thread, as your credential sees it (received or sent, in the order messages joined the thread). Otherwise nothing is sent and the command exits 1 with error code latest_message_mismatch and the current newest id in error.details.latest_message_id. Pass latest_message_id from `primitive emails conversation`. Cannot be combined with a repeat. Requires --in-reply-to, which names the thread.",
+      dependsOn: ["in-reply-to"],
+    }),
     fyi: Flags.boolean({
       description: `${FYI_FLAG_DESCRIPTION} Requires --in-reply-to, the Message-Id being acknowledged.`,
       dependsOn: ["in-reply-to"],
@@ -337,6 +342,9 @@ class SendCommand extends Command {
       const threading = {
         ...(flags["in-reply-to"] !== undefined
           ? { in_reply_to: flags["in-reply-to"] }
+          : {}),
+        ...(flags["if-latest-message-id"] !== undefined
+          ? { if_latest_message_id: flags["if-latest-message-id"] }
           : {}),
         ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
         ...(waitTimeoutMs !== undefined

@@ -54,6 +54,10 @@ import {
 } from "./commands/credits.js";
 import DoctorCommand from "./commands/doctor.js";
 import DomainsZoneFileCommand from "./commands/domains-zone-file.js";
+import {
+  EmailsAttachmentCommand,
+  EmailsAttachmentMembersCommand,
+} from "./commands/emails-attachment.js";
 import { createEmailsGetCommand } from "./commands/emails-get.js";
 import EmailsLatestCommand from "./commands/emails-latest.js";
 import EmailsWaitCommand from "./commands/emails-wait.js";
@@ -689,6 +693,11 @@ export const COMMANDS: Record<string, typeof Command> = {
   // inbound emails as a compact text table. emails:list-emails stays
   // available for the full JSON envelope + cursor pagination.
   "emails:latest": EmailsLatestCommand,
+  // `emails:attachment` downloads one attachment by its exact filename, and
+  // `emails:attachment-members` lists (or, with --member, fetches) the files
+  // inside a zip or tar attachment. The generated operations stay available.
+  "emails:attachment": EmailsAttachmentCommand,
+  "emails:attachment-members": EmailsAttachmentMembersCommand,
   // `emails:watch` and unscoped `emails:wait` poll the search API for matching
   // inbound mail. `watch` defaults to a human table; `wait` defaults to JSONL.
   "emails:watch": EmailsWatchCommand,

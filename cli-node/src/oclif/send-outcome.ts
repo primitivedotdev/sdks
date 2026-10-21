@@ -57,7 +57,7 @@ export const SEND_OUTCOME_HELP = `Outcomes and exit codes, shared by chat, chat 
   - exit 0 replied: chat only. The message was sent and a reply arrived.
   - exit 0 sent: accepted for delivery. A queued status counts as sent.
   - exit 0 already_sent: an identical earlier send exists (or was deleted: HTTP 410 sent_email_deleted). Nothing new went out. Do not resend.
-  - exit 1 not_sent: the API rejected the request (HTTP 400, 401, 402, 403, 404, 413, 422 or 429), the command failed before sending, or the send record has status agent_failed, gate_denied or canceled. Nothing went out.
+  - exit 1 not_sent: the API rejected the request (HTTP 400, 401, 402, 403, 404, 413, 422 or 429, or, from --if-latest-message-id, 409 latest_message_mismatch, 422 latest_message_thread_unresolved or 503 thread_busy), the command failed before sending, or the send record has status agent_failed, gate_denied or canceled. Nothing went out.
   - exit 2: invalid flags or arguments. Nothing went out.
   - exit 3 sent_awaiting_reply: chat only. Sent, but no reply before the timeout. Wait; do not resend.
   - exit 4 uncertain: transport error, conflict, server error, or a send record with status unknown. It may or may not have gone out. Reconcile with primitive sent get --idempotency-key <key> (the key is in the --json envelope) before retrying.`;
@@ -82,6 +82,16 @@ export function sendFailureOutcome(
 // and the earlier send no longer shows in sent history.
 const SENT_EMAIL_DELETED_CODE = "sent_email_deleted";
 
+// HTTP 409 `latest_message_mismatch`: --if-latest-message-id no longer names
+// the newest message in the thread. Nothing was sent.
+const LATEST_MESSAGE_MISMATCH_CODE = "latest_message_mismatch";
+
+// HTTP 503 `thread_busy`: another writer held the thread longer than a
+// conditional send waits for its lock. The API refused it before anything
+// was written, so unlike other 503s it is a definite refusal and the same
+// request can be retried.
+const THREAD_BUSY_CODE = "thread_busy";
+
 function errorPayloadCode(payload: unknown): string | undefined {
   if (payload === null || typeof payload !== "object") return undefined;
   const code = (payload as { code?: unknown }).code;
@@ -103,9 +113,18 @@ export function classifySendError(
   httpStatus: number | undefined,
   errorPayload: unknown,
 ): FailedSendOutcome | "already_sent" {
-  return isDeletedEarlierSend(httpStatus, errorPayload)
-    ? "already_sent"
-    : sendFailureOutcome(httpStatus);
+  if (isDeletedEarlierSend(httpStatus, errorPayload)) return "already_sent";
+  // A conditional send whose condition no longer holds: the API refused it
+  // before anything was written, so it is a definite refusal, not a conflict
+  // of unknown outcome.
+  if (
+    httpStatus === 409 &&
+    errorPayloadCode(errorPayload) === LATEST_MESSAGE_MISMATCH_CODE
+  )
+    return "not_sent";
+  if (httpStatus === 503 && errorPayloadCode(errorPayload) === THREAD_BUSY_CODE)
+    return "not_sent";
+  return sendFailureOutcome(httpStatus);
 }
 
 export function formatDeletedEarlierSendNotice(): string {

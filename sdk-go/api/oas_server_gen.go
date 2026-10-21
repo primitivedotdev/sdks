@@ -527,6 +527,30 @@ type Handler interface {
 	//
 	// GET /domains/{id}/zone-file
 	DownloadDomainZoneFile(ctx context.Context, params DownloadDomainZoneFileParams) (DownloadDomainZoneFileRes, error)
+	// DownloadEmailAttachmentArchiveMember implements downloadEmailAttachmentArchiveMember operation.
+	//
+	// Returns the decoded bytes of one regular file inside a zip, tar or tar.gz attachment, by its
+	// listed path. The archive's structure, every member path and every limit are checked as for the
+	// listing, but only the requested file is decoded and verified (its zip CRC-32, and X-Content-SHA256
+	// of the bytes returned); list the archive to have every file decoded. Authenticate with an
+	// organization API key, an authorized organization OAuth token, or an address-bound agent connection
+	// key. A connected agent reads only mail received at its own address. Function credentials are not
+	// supported. Discarded content is unavailable.
+	//
+	// GET /emails/{id}/attachments/{attachment}/members/{path}
+	DownloadEmailAttachmentArchiveMember(ctx context.Context, params DownloadEmailAttachmentArchiveMemberParams) (DownloadEmailAttachmentArchiveMemberRes, error)
+	// DownloadEmailAttachmentByFilename implements downloadEmailAttachmentByFilename operation.
+	//
+	// Returns the same bytes as downloadEmailAttachmentPart, selecting the attachment by its exact
+	// filename. The path form `/emails/{id}/attachments/{filename}` also works for any name that is not
+	// digits only, which that form reads as a part_index. When several attachments share the filename
+	// the response is 409 attachment_name_ambiguous with every matching part_index, and nothing is
+	// returned. Authenticate with an organization API key, an authorized organization OAuth token, or an
+	// address-bound agent connection key. A connected agent reads only mail received at its own address.
+	// Function credentials are not supported. Discarded content is unavailable.
+	//
+	// GET /emails/{id}/attachments
+	DownloadEmailAttachmentByFilename(ctx context.Context, params DownloadEmailAttachmentByFilenameParams) (DownloadEmailAttachmentByFilenameRes, error)
 	// DownloadEmailAttachmentPart implements downloadEmailAttachmentPart operation.
 	//
 	// Pending service release. This contract does not establish live availability.
@@ -548,6 +572,30 @@ type Handler interface {
 	//
 	// GET /emails/{id}/raw
 	DownloadRawEmail(ctx context.Context, params DownloadRawEmailParams) (DownloadRawEmailRes, error)
+	// DownloadSentAttachmentArchiveMember implements downloadSentAttachmentArchiveMember operation.
+	//
+	// Returns the decoded bytes of one regular file inside a zip, tar or tar.gz attachment, by its
+	// listed path. The archive's structure, every member path and every limit are checked as for the
+	// listing, but only the requested file is decoded and verified (its zip CRC-32, and X-Content-SHA256
+	// of the bytes returned); list the archive to have every file decoded. Authenticate with an
+	// organization API key, an authorized organization OAuth token, or an address-bound agent connection
+	// key. A connected agent reads only mail sent from its own address. Function credentials are not
+	// supported. Discarded content is unavailable.
+	//
+	// GET /sent-emails/{id}/attachments/{attachment}/members/{path}
+	DownloadSentAttachmentArchiveMember(ctx context.Context, params DownloadSentAttachmentArchiveMemberParams) (DownloadSentAttachmentArchiveMemberRes, error)
+	// DownloadSentAttachmentByFilename implements downloadSentAttachmentByFilename operation.
+	//
+	// Returns the same bytes as downloadSentAttachmentPart, selecting the attachment by its exact
+	// filename. The path form `/sent-emails/{id}/attachments/{filename}` also works for any name that is
+	// not digits only, which that form reads as a part_index. When several attachments share the
+	// filename the response is 409 attachment_name_ambiguous with every matching part_index, and nothing
+	// is returned. Authenticate with an organization API key, an authorized organization OAuth token, or
+	// an address-bound agent connection key. A connected agent reads only mail sent from its own address.
+	//  Function credentials are not supported. Discarded content is unavailable.
+	//
+	// GET /sent-emails/{id}/attachments
+	DownloadSentAttachmentByFilename(ctx context.Context, params DownloadSentAttachmentByFilenameParams) (DownloadSentAttachmentByFilenameRes, error)
 	// DownloadSentAttachmentPart implements downloadSentAttachmentPart operation.
 	//
 	// Pending service release. This contract does not establish live availability.
@@ -1085,6 +1133,17 @@ type Handler interface {
 	//
 	// GET /domains
 	ListDomains(ctx context.Context) (ListDomainsRes, error)
+	// ListEmailAttachmentArchiveMembers implements listEmailAttachmentArchiveMembers operation.
+	//
+	// Lists the regular files inside a zip, tar or tar.gz attachment with each one's path, decoded size
+	// and SHA-256. The format is detected from the content. Unsafe paths refuse the whole archive, and
+	// resource limits bound the work (see the 413 and 422 responses). Authenticate with an organization
+	// API key, an authorized organization OAuth token, or an address-bound agent connection key. A
+	// connected agent reads only mail received at its own address. Function credentials are not
+	// supported. Discarded content is unavailable.
+	//
+	// GET /emails/{id}/attachments/{attachment}/members
+	ListEmailAttachmentArchiveMembers(ctx context.Context, params ListEmailAttachmentArchiveMembersParams) (ListEmailAttachmentArchiveMembersRes, error)
 	// ListEmails implements listEmails operation.
 	//
 	// Returns a paginated list of INBOUND emails received at your
@@ -1200,6 +1259,17 @@ type Handler interface {
 	//
 	// GET /routes
 	ListRoutes(ctx context.Context) (ListRoutesRes, error)
+	// ListSentAttachmentArchiveMembers implements listSentAttachmentArchiveMembers operation.
+	//
+	// Lists the regular files inside a zip, tar or tar.gz attachment with each one's path, decoded size
+	// and SHA-256. The format is detected from the content. Unsafe paths refuse the whole archive, and
+	// resource limits bound the work (see the 413 and 422 responses). Authenticate with an organization
+	// API key, an authorized organization OAuth token, or an address-bound agent connection key. A
+	// connected agent reads only mail sent from its own address. Function credentials are not supported.
+	// Discarded content is unavailable.
+	//
+	// GET /sent-emails/{id}/attachments/{attachment}/members
+	ListSentAttachmentArchiveMembers(ctx context.Context, params ListSentAttachmentArchiveMembersParams) (ListSentAttachmentArchiveMembersRes, error)
 	// ListSentEmails implements listSentEmails operation.
 	//
 	// Returns a paginated list of OUTBOUND emails the caller's

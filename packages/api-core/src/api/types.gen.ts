@@ -4,6 +4,37 @@ export type ClientOptions = {
     baseUrl: 'https://api.primitive.dev/v1' | 'https://www.primitive.dev/api/v1' | 'https://api.primitive.dev/v1' | 'https://www.primitive.dev/api/v1' | 'https://api.primitive.dev/v1' | 'https://www.primitive.dev/api/v1' | (string & {});
 };
 
+export type ArchiveMember = {
+    /**
+     * Member path inside the archive, relative, with "/" separators and no leading "./".
+     */
+    path: string;
+    /**
+     * Decoded size in bytes.
+     */
+    size_bytes: number;
+    /**
+     * SHA-256 of the decoded bytes.
+     */
+    sha256: string;
+};
+
+export type ArchiveMembers = {
+    /**
+     * The attachment the listing is of.
+     */
+    part_index: number;
+    /**
+     * That attachment's filename.
+     */
+    filename: string | null;
+    format: 'zip' | 'tar' | 'tar.gz';
+    /**
+     * Regular files in archive order.
+     */
+    members: Array<ArchiveMember>;
+};
+
 export type ContactPolicyRuleInput = {
     /**
      * Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description.
@@ -684,7 +715,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'sent_mail_search_unavailable';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'sent_mail_search_unavailable' | 'latest_message_mismatch' | 'latest_message_thread_unresolved' | 'thread_busy' | 'attachment_name_ambiguous' | 'archive_limit_exceeded' | 'archive_unsafe_path' | 'archive_invalid' | 'archive_unsupported' | 'attachment_not_archive' | 'archive_busy';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -2596,6 +2627,18 @@ export type Conversation = {
      *
      */
     cursor?: string;
+    /**
+     * The id to pass as `if_latest_message_id` when replying in this
+     * conversation: the message that joined the thread last among
+     * those this credential can read, by the rule a conditional send
+     * checks. It can differ from the last message in `messages`, which
+     * is ordered by timestamp, when mail joined the thread after a
+     * newer-timestamped message. Present on a full read and a window
+     * read of a threaded conversation; null when no message in the
+     * thread is visible; absent on a `since` delta.
+     *
+     */
+    latest_message_id?: string | null;
 };
 
 /**
@@ -2776,6 +2819,10 @@ export type SendMailInput = {
     headers?: {
         [key: string]: string;
     };
+    /**
+     * Send only if this message id is still the newest message in the thread this send joins, as this credential can see it. Newest means the message that joined the thread last, in the order messages were attached to it, not by timestamp: a message accepted earlier but attached later is newer. Messages stored before join order was recorded count as older than every message that has one, and among themselves sort by timestamp (received_at for mail received, created_at for mail sent), ties going to the larger id. Pass latest_message_id from GET /emails/{id}/conversation: it is read by the same rule, whereas the last message listed there is ordered by timestamp and can differ when mail joined the thread late. An organization credential sees every message in the thread; a mailbox-scoped agent connection key sees only mail received at its address and mail sent from it. Mail awaiting sender authentication never counts. Otherwise nothing is sent and the response is 409 latest_message_mismatch with error.details.latest_message_id, latest_message_at and thread_id. If in_reply_to resolves to no single thread this credential can check, the response is 422 latest_message_thread_unresolved; that does not change on retry. If the thread stays locked by another writer for longer than the send waits, the response is 503 thread_busy with Retry-After; nothing was sent and the same request can be retried. Checked inside the send transaction under a lock on the thread, so two sends conditioned on the same id cannot both go out. The value is part of the request a replay is matched on: a replay of an already accepted request with the same idempotency key, or the identical request within the automatic deduplication window, returns the original result without checking again, and a request that differs only in if_latest_message_id is not a replay. On /send-mail it requires in_reply_to; it cannot be combined with scheduled_at or repeat, because it is checked when the request is accepted.
+     */
+    if_latest_message_id?: string;
 };
 
 /**
@@ -3570,6 +3617,10 @@ export type ReplyInput = {
     headers?: {
         [key: string]: string;
     };
+    /**
+     * Send only if this message id is still the newest message in the thread this send joins, as this credential can see it. Newest means the message that joined the thread last, in the order messages were attached to it, not by timestamp: a message accepted earlier but attached later is newer. Messages stored before join order was recorded count as older than every message that has one, and among themselves sort by timestamp (received_at for mail received, created_at for mail sent), ties going to the larger id. Pass latest_message_id from GET /emails/{id}/conversation: it is read by the same rule, whereas the last message listed there is ordered by timestamp and can differ when mail joined the thread late. An organization credential sees every message in the thread; a mailbox-scoped agent connection key sees only mail received at its address and mail sent from it. Mail awaiting sender authentication never counts. Otherwise nothing is sent and the response is 409 latest_message_mismatch with error.details.latest_message_id, latest_message_at and thread_id. If in_reply_to resolves to no single thread this credential can check, the response is 422 latest_message_thread_unresolved; that does not change on retry. If the thread stays locked by another writer for longer than the send waits, the response is 503 thread_busy with Retry-After; nothing was sent and the same request can be retried. Checked inside the send transaction under a lock on the thread, so two sends conditioned on the same id cannot both go out. The value is part of the request a replay is matched on: a replay of an already accepted request with the same idempotency key, or the identical request within the automatic deduplication window, returns the original result without checking again, and a request that differs only in if_latest_message_id is not a replay. On /send-mail it requires in_reply_to; it cannot be combined with scheduled_at or repeat, because it is checked when the request is accepted.
+     */
+    if_latest_message_id?: string;
 };
 
 /**
@@ -5526,6 +5577,21 @@ export type CallerIdentity = {
 };
 
 /**
+ * The attachment's exact filename from its metadata. Any name, digits only included. No other query parameter is accepted.
+ */
+export type AttachmentFilename = string;
+
+/**
+ * The attachment, by its exact part_index when the value is digits only, otherwise by its exact filename (case-sensitive, compared after Unicode NFC normalization). A digits-only value always selects that part_index, even when another attachment has that name; read such a name with ?filename=.
+ */
+export type AttachmentSelector = string;
+
+/**
+ * The member path exactly as listed, percent-encoded as one path segment (slashes as %2F).
+ */
+export type ArchiveMemberPath = string;
+
+/**
  * The agent's email address, URL-encoded in the path.
  */
 export type AgentNetworkAddress = string;
@@ -7261,6 +7327,219 @@ export type DownloadEmailAttachmentPartResponses = {
 
 export type DownloadEmailAttachmentPartResponse = DownloadEmailAttachmentPartResponses[keyof DownloadEmailAttachmentPartResponses];
 
+export type DownloadEmailAttachmentByFilenameData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query: {
+        /**
+         * The attachment's exact filename from its metadata. Any name, digits only included. No other query parameter is accepted.
+         */
+        filename: string;
+    };
+    url: '/emails/{id}/attachments';
+};
+
+export type DownloadEmailAttachmentByFilenameErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Missing or inaccessible message, or no attachment with this filename
+     */
+    404: ErrorResponse;
+    /**
+     * attachment_name_ambiguous; more than one attachment has this filename, or a digits-only path value matches no part_index but is the name of an attachment. error.details.part_indexes lists every match, so fetch by part_index or by ?filename=. Or attachment_changed; attachment metadata changed during the read.
+     */
+    409: ErrorResponse;
+    /**
+     * content_discarded; the original content is no longer available
+     */
+    410: ErrorResponse;
+    /**
+     * attachment_limit_exceeded; the attachment exceeds download limits
+     */
+    413: ErrorResponse;
+    /**
+     * attachment_integrity_failed; stored content failed integrity validation
+     */
+    502: ErrorResponse;
+    /**
+     * attachment_not_ready or attachment_storage_unavailable; retry after the indicated delay
+     */
+    503: ErrorResponse;
+};
+
+export type DownloadEmailAttachmentByFilenameError = DownloadEmailAttachmentByFilenameErrors[keyof DownloadEmailAttachmentByFilenameErrors];
+
+export type DownloadEmailAttachmentByFilenameResponses = {
+    /**
+     * Original attachment bytes; never a JSON envelope or a base64 string
+     */
+    200: Blob | File;
+};
+
+export type DownloadEmailAttachmentByFilenameResponse = DownloadEmailAttachmentByFilenameResponses[keyof DownloadEmailAttachmentByFilenameResponses];
+
+export type ListEmailAttachmentArchiveMembersData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+        /**
+         * The attachment, by its exact part_index when the value is digits only, otherwise by its exact filename (case-sensitive, compared after Unicode NFC normalization). A digits-only value always selects that part_index, even when another attachment has that name; read such a name with ?filename=.
+         */
+        attachment: string;
+    };
+    query?: never;
+    url: '/emails/{id}/attachments/{attachment}/members';
+};
+
+export type ListEmailAttachmentArchiveMembersErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Missing or inaccessible message, or no such attachment
+     */
+    404: ErrorResponse;
+    /**
+     * attachment_name_ambiguous; more than one attachment has this filename, or a digits-only path value matches no part_index but is the name of an attachment. error.details.part_indexes lists every match, so fetch by part_index or by ?filename=. Or attachment_changed; attachment metadata changed during the read.
+     */
+    409: ErrorResponse;
+    /**
+     * content_discarded; the original content is no longer available
+     */
+    410: ErrorResponse;
+    /**
+     * archive_limit_exceeded, or attachment_limit_exceeded for the attachment itself. Limits: at most 1000 entries of any kind (files, directories and links all count); each file at most 31457280 bytes decoded; all files together (for tar.gz, the whole decoded tar stream) at most 33554432 bytes; a compression ratio above 100:1 is refused once decoded output passes 1048576 bytes; member paths at most 1024 UTF-8 bytes.
+     */
+    413: ErrorResponse;
+    /**
+     * attachment_not_archive, archive_unsafe_path, archive_invalid or archive_unsupported. An archive with an absolute, drive-letter, backslash, control-character, Unicode format or separator character (bidirectional controls included), empty, "." or ".." path segment is refused whole (archive_unsafe_path) rather than listed without the entry. Any symbolic or hard link is refused the same way, wherever it points. Paths that differ only by letter case or Unicode normalization count as duplicates. Duplicate paths, overlapping zip data, a zip local header whose name or method disagrees with the central directory, and truncated or corrupt structures are archive_invalid; encryption, zip64, multi-volume archives, compression other than stored or deflate, sparse tar files, and device or other special files are archive_unsupported.
+     */
+    422: ErrorResponse;
+    /**
+     * attachment_integrity_failed; stored content failed integrity validation
+     */
+    502: ErrorResponse;
+    /**
+     * attachment_not_ready, attachment_storage_unavailable or archive_busy; retry after the indicated delay. archive_busy means this server is already reading as many archives as it allows at once; nothing is wrong with the archive.
+     */
+    503: ErrorResponse;
+};
+
+export type ListEmailAttachmentArchiveMembersError = ListEmailAttachmentArchiveMembersErrors[keyof ListEmailAttachmentArchiveMembersErrors];
+
+export type ListEmailAttachmentArchiveMembersResponses = {
+    /**
+     * Files inside the archive
+     */
+    200: SuccessEnvelope & {
+        data?: ArchiveMembers;
+    };
+};
+
+export type ListEmailAttachmentArchiveMembersResponse = ListEmailAttachmentArchiveMembersResponses[keyof ListEmailAttachmentArchiveMembersResponses];
+
+export type DownloadEmailAttachmentArchiveMemberData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+        /**
+         * The attachment, by its exact part_index when the value is digits only, otherwise by its exact filename (case-sensitive, compared after Unicode NFC normalization). A digits-only value always selects that part_index, even when another attachment has that name; read such a name with ?filename=.
+         */
+        attachment: string;
+        /**
+         * The member path exactly as listed, percent-encoded as one path segment (slashes as %2F).
+         */
+        path: string;
+    };
+    query?: never;
+    url: '/emails/{id}/attachments/{attachment}/members/{path}';
+};
+
+export type DownloadEmailAttachmentArchiveMemberErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Missing or inaccessible message, no such attachment, or no regular file at this path
+     */
+    404: ErrorResponse;
+    /**
+     * attachment_name_ambiguous; more than one attachment has this filename, or a digits-only path value matches no part_index but is the name of an attachment. error.details.part_indexes lists every match, so fetch by part_index or by ?filename=. Or attachment_changed; attachment metadata changed during the read.
+     */
+    409: ErrorResponse;
+    /**
+     * content_discarded; the original content is no longer available
+     */
+    410: ErrorResponse;
+    /**
+     * archive_limit_exceeded, or attachment_limit_exceeded for the attachment itself. Limits: at most 1000 entries of any kind (files, directories and links all count); each file at most 31457280 bytes decoded; all files together (for tar.gz, the whole decoded tar stream) at most 33554432 bytes; a compression ratio above 100:1 is refused once decoded output passes 1048576 bytes; member paths at most 1024 UTF-8 bytes.
+     */
+    413: ErrorResponse;
+    /**
+     * attachment_not_archive, archive_unsafe_path, archive_invalid or archive_unsupported. An archive with an absolute, drive-letter, backslash, control-character, Unicode format or separator character (bidirectional controls included), empty, "." or ".." path segment is refused whole (archive_unsafe_path) rather than listed without the entry. Any symbolic or hard link is refused the same way, wherever it points. Paths that differ only by letter case or Unicode normalization count as duplicates. Duplicate paths, overlapping zip data, a zip local header whose name or method disagrees with the central directory, and truncated or corrupt structures are archive_invalid; encryption, zip64, multi-volume archives, compression other than stored or deflate, sparse tar files, and device or other special files are archive_unsupported.
+     */
+    422: ErrorResponse;
+    /**
+     * attachment_integrity_failed; stored content failed integrity validation
+     */
+    502: ErrorResponse;
+    /**
+     * attachment_not_ready, attachment_storage_unavailable or archive_busy; retry after the indicated delay. archive_busy means this server is already reading as many archives as it allows at once; nothing is wrong with the archive.
+     */
+    503: ErrorResponse;
+};
+
+export type DownloadEmailAttachmentArchiveMemberError = DownloadEmailAttachmentArchiveMemberErrors[keyof DownloadEmailAttachmentArchiveMemberErrors];
+
+export type DownloadEmailAttachmentArchiveMemberResponses = {
+    /**
+     * Original attachment bytes; never a JSON envelope or a base64 string
+     */
+    200: Blob | File;
+};
+
+export type DownloadEmailAttachmentArchiveMemberResponse = DownloadEmailAttachmentArchiveMemberResponses[keyof DownloadEmailAttachmentArchiveMemberResponses];
+
 export type DownloadSentAttachmentPartData = {
     body?: never;
     path: {
@@ -7326,6 +7605,219 @@ export type DownloadSentAttachmentPartResponses = {
 };
 
 export type DownloadSentAttachmentPartResponse = DownloadSentAttachmentPartResponses[keyof DownloadSentAttachmentPartResponses];
+
+export type DownloadSentAttachmentByFilenameData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query: {
+        /**
+         * The attachment's exact filename from its metadata. Any name, digits only included. No other query parameter is accepted.
+         */
+        filename: string;
+    };
+    url: '/sent-emails/{id}/attachments';
+};
+
+export type DownloadSentAttachmentByFilenameErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Missing or inaccessible message, or no attachment with this filename
+     */
+    404: ErrorResponse;
+    /**
+     * attachment_name_ambiguous; more than one attachment has this filename, or a digits-only path value matches no part_index but is the name of an attachment. error.details.part_indexes lists every match, so fetch by part_index or by ?filename=. Or attachment_changed; attachment metadata changed during the read.
+     */
+    409: ErrorResponse;
+    /**
+     * content_discarded; the original content is no longer available
+     */
+    410: ErrorResponse;
+    /**
+     * attachment_limit_exceeded; the attachment exceeds download limits
+     */
+    413: ErrorResponse;
+    /**
+     * attachment_integrity_failed; stored content failed integrity validation
+     */
+    502: ErrorResponse;
+    /**
+     * attachment_not_ready or attachment_storage_unavailable; retry after the indicated delay
+     */
+    503: ErrorResponse;
+};
+
+export type DownloadSentAttachmentByFilenameError = DownloadSentAttachmentByFilenameErrors[keyof DownloadSentAttachmentByFilenameErrors];
+
+export type DownloadSentAttachmentByFilenameResponses = {
+    /**
+     * Original attachment bytes; never a JSON envelope or a base64 string
+     */
+    200: Blob | File;
+};
+
+export type DownloadSentAttachmentByFilenameResponse = DownloadSentAttachmentByFilenameResponses[keyof DownloadSentAttachmentByFilenameResponses];
+
+export type ListSentAttachmentArchiveMembersData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+        /**
+         * The attachment, by its exact part_index when the value is digits only, otherwise by its exact filename (case-sensitive, compared after Unicode NFC normalization). A digits-only value always selects that part_index, even when another attachment has that name; read such a name with ?filename=.
+         */
+        attachment: string;
+    };
+    query?: never;
+    url: '/sent-emails/{id}/attachments/{attachment}/members';
+};
+
+export type ListSentAttachmentArchiveMembersErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Missing or inaccessible message, or no such attachment
+     */
+    404: ErrorResponse;
+    /**
+     * attachment_name_ambiguous; more than one attachment has this filename, or a digits-only path value matches no part_index but is the name of an attachment. error.details.part_indexes lists every match, so fetch by part_index or by ?filename=. Or attachment_changed; attachment metadata changed during the read.
+     */
+    409: ErrorResponse;
+    /**
+     * content_discarded; the original content is no longer available
+     */
+    410: ErrorResponse;
+    /**
+     * archive_limit_exceeded, or attachment_limit_exceeded for the attachment itself. Limits: at most 1000 entries of any kind (files, directories and links all count); each file at most 31457280 bytes decoded; all files together (for tar.gz, the whole decoded tar stream) at most 33554432 bytes; a compression ratio above 100:1 is refused once decoded output passes 1048576 bytes; member paths at most 1024 UTF-8 bytes.
+     */
+    413: ErrorResponse;
+    /**
+     * attachment_not_archive, archive_unsafe_path, archive_invalid or archive_unsupported. An archive with an absolute, drive-letter, backslash, control-character, Unicode format or separator character (bidirectional controls included), empty, "." or ".." path segment is refused whole (archive_unsafe_path) rather than listed without the entry. Any symbolic or hard link is refused the same way, wherever it points. Paths that differ only by letter case or Unicode normalization count as duplicates. Duplicate paths, overlapping zip data, a zip local header whose name or method disagrees with the central directory, and truncated or corrupt structures are archive_invalid; encryption, zip64, multi-volume archives, compression other than stored or deflate, sparse tar files, and device or other special files are archive_unsupported.
+     */
+    422: ErrorResponse;
+    /**
+     * attachment_integrity_failed; stored content failed integrity validation
+     */
+    502: ErrorResponse;
+    /**
+     * attachment_not_ready, attachment_storage_unavailable or archive_busy; retry after the indicated delay. archive_busy means this server is already reading as many archives as it allows at once; nothing is wrong with the archive.
+     */
+    503: ErrorResponse;
+};
+
+export type ListSentAttachmentArchiveMembersError = ListSentAttachmentArchiveMembersErrors[keyof ListSentAttachmentArchiveMembersErrors];
+
+export type ListSentAttachmentArchiveMembersResponses = {
+    /**
+     * Files inside the archive
+     */
+    200: SuccessEnvelope & {
+        data?: ArchiveMembers;
+    };
+};
+
+export type ListSentAttachmentArchiveMembersResponse = ListSentAttachmentArchiveMembersResponses[keyof ListSentAttachmentArchiveMembersResponses];
+
+export type DownloadSentAttachmentArchiveMemberData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+        /**
+         * The attachment, by its exact part_index when the value is digits only, otherwise by its exact filename (case-sensitive, compared after Unicode NFC normalization). A digits-only value always selects that part_index, even when another attachment has that name; read such a name with ?filename=.
+         */
+        attachment: string;
+        /**
+         * The member path exactly as listed, percent-encoded as one path segment (slashes as %2F).
+         */
+        path: string;
+    };
+    query?: never;
+    url: '/sent-emails/{id}/attachments/{attachment}/members/{path}';
+};
+
+export type DownloadSentAttachmentArchiveMemberErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Missing or inaccessible message, no such attachment, or no regular file at this path
+     */
+    404: ErrorResponse;
+    /**
+     * attachment_name_ambiguous; more than one attachment has this filename, or a digits-only path value matches no part_index but is the name of an attachment. error.details.part_indexes lists every match, so fetch by part_index or by ?filename=. Or attachment_changed; attachment metadata changed during the read.
+     */
+    409: ErrorResponse;
+    /**
+     * content_discarded; the original content is no longer available
+     */
+    410: ErrorResponse;
+    /**
+     * archive_limit_exceeded, or attachment_limit_exceeded for the attachment itself. Limits: at most 1000 entries of any kind (files, directories and links all count); each file at most 31457280 bytes decoded; all files together (for tar.gz, the whole decoded tar stream) at most 33554432 bytes; a compression ratio above 100:1 is refused once decoded output passes 1048576 bytes; member paths at most 1024 UTF-8 bytes.
+     */
+    413: ErrorResponse;
+    /**
+     * attachment_not_archive, archive_unsafe_path, archive_invalid or archive_unsupported. An archive with an absolute, drive-letter, backslash, control-character, Unicode format or separator character (bidirectional controls included), empty, "." or ".." path segment is refused whole (archive_unsafe_path) rather than listed without the entry. Any symbolic or hard link is refused the same way, wherever it points. Paths that differ only by letter case or Unicode normalization count as duplicates. Duplicate paths, overlapping zip data, a zip local header whose name or method disagrees with the central directory, and truncated or corrupt structures are archive_invalid; encryption, zip64, multi-volume archives, compression other than stored or deflate, sparse tar files, and device or other special files are archive_unsupported.
+     */
+    422: ErrorResponse;
+    /**
+     * attachment_integrity_failed; stored content failed integrity validation
+     */
+    502: ErrorResponse;
+    /**
+     * attachment_not_ready, attachment_storage_unavailable or archive_busy; retry after the indicated delay. archive_busy means this server is already reading as many archives as it allows at once; nothing is wrong with the archive.
+     */
+    503: ErrorResponse;
+};
+
+export type DownloadSentAttachmentArchiveMemberError = DownloadSentAttachmentArchiveMemberErrors[keyof DownloadSentAttachmentArchiveMemberErrors];
+
+export type DownloadSentAttachmentArchiveMemberResponses = {
+    /**
+     * Original attachment bytes; never a JSON envelope or a base64 string
+     */
+    200: Blob | File;
+};
+
+export type DownloadSentAttachmentArchiveMemberResponse = DownloadSentAttachmentArchiveMemberResponses[keyof DownloadSentAttachmentArchiveMemberResponses];
 
 export type StopRepeatFromEmailData = {
     body?: RepeatStopRequest;
@@ -7408,13 +7900,20 @@ export type ReplyToEmailErrors = {
      */
     404: ErrorResponse;
     /**
+     * latest_message_mismatch; if_latest_message_id is no longer the newest message in the thread. Nothing was sent. error.details carries latest_message_id (null when the thread has no message visible to this credential), latest_message_at and thread_id.
+     */
+    409: ErrorResponse;
+    /**
      * The prior send was deleted. Its idempotency key or automatic reply suppression remains reserved, so this request will not send another message. Do not retry with a new key to bypass this refusal.
      */
     410: ErrorResponse;
     /**
      * Inbound is not repliable: the row exists but lacks a
      * `message_id` (no thread anchor) or a `recipient` (cannot
-     * derive the From address).
+     * derive the From address). Or latest_message_thread_unresolved:
+     * if_latest_message_id was given but in_reply_to resolves to no single
+     * thread this credential can check; nothing was sent, and the same
+     * request will not succeed on retry.
      *
      */
     422: ErrorResponse;
@@ -8908,9 +9407,17 @@ export type SendEmailErrors = {
      */
     403: ErrorResponse;
     /**
+     * latest_message_mismatch; if_latest_message_id is no longer the newest message in the thread. Nothing was sent. error.details carries latest_message_id (null when the thread has no message visible to this credential), latest_message_at and thread_id.
+     */
+    409: ErrorResponse;
+    /**
      * The prior send was deleted. Its idempotency key or automatic reply suppression remains reserved, so this request will not send another message. Do not retry with a new key to bypass this refusal.
      */
     410: ErrorResponse;
+    /**
+     * latest_message_thread_unresolved; if_latest_message_id was given but in_reply_to resolves to no single thread this credential can check. Nothing was sent, and the same request will not succeed on retry. error.details.thread_id is null.
+     */
+    422: ErrorResponse;
     /**
      * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */

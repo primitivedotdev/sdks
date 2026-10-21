@@ -1927,6 +1927,145 @@ func (s *AgentSignupVerifyResultTokenType) UnmarshalText(data []byte) error {
 	}
 }
 
+// Ref: #/components/schemas/ArchiveMember
+type ArchiveMember struct {
+	// Member path inside the archive, relative, with "/" separators and no leading "./".
+	Path string `json:"path"`
+	// Decoded size in bytes.
+	SizeBytes int `json:"size_bytes"`
+	// SHA-256 of the decoded bytes.
+	SHA256 string `json:"sha256"`
+}
+
+// GetPath returns the value of Path.
+func (s *ArchiveMember) GetPath() string {
+	return s.Path
+}
+
+// GetSizeBytes returns the value of SizeBytes.
+func (s *ArchiveMember) GetSizeBytes() int {
+	return s.SizeBytes
+}
+
+// GetSHA256 returns the value of SHA256.
+func (s *ArchiveMember) GetSHA256() string {
+	return s.SHA256
+}
+
+// SetPath sets the value of Path.
+func (s *ArchiveMember) SetPath(val string) {
+	s.Path = val
+}
+
+// SetSizeBytes sets the value of SizeBytes.
+func (s *ArchiveMember) SetSizeBytes(val int) {
+	s.SizeBytes = val
+}
+
+// SetSHA256 sets the value of SHA256.
+func (s *ArchiveMember) SetSHA256(val string) {
+	s.SHA256 = val
+}
+
+// Ref: #/components/schemas/ArchiveMembers
+type ArchiveMembers struct {
+	// The attachment the listing is of.
+	PartIndex int `json:"part_index"`
+	// That attachment's filename.
+	Filename NilString            `json:"filename"`
+	Format   ArchiveMembersFormat `json:"format"`
+	// Regular files in archive order.
+	Members []ArchiveMember `json:"members"`
+}
+
+// GetPartIndex returns the value of PartIndex.
+func (s *ArchiveMembers) GetPartIndex() int {
+	return s.PartIndex
+}
+
+// GetFilename returns the value of Filename.
+func (s *ArchiveMembers) GetFilename() NilString {
+	return s.Filename
+}
+
+// GetFormat returns the value of Format.
+func (s *ArchiveMembers) GetFormat() ArchiveMembersFormat {
+	return s.Format
+}
+
+// GetMembers returns the value of Members.
+func (s *ArchiveMembers) GetMembers() []ArchiveMember {
+	return s.Members
+}
+
+// SetPartIndex sets the value of PartIndex.
+func (s *ArchiveMembers) SetPartIndex(val int) {
+	s.PartIndex = val
+}
+
+// SetFilename sets the value of Filename.
+func (s *ArchiveMembers) SetFilename(val NilString) {
+	s.Filename = val
+}
+
+// SetFormat sets the value of Format.
+func (s *ArchiveMembers) SetFormat(val ArchiveMembersFormat) {
+	s.Format = val
+}
+
+// SetMembers sets the value of Members.
+func (s *ArchiveMembers) SetMembers(val []ArchiveMember) {
+	s.Members = val
+}
+
+type ArchiveMembersFormat string
+
+const (
+	ArchiveMembersFormatZip   ArchiveMembersFormat = "zip"
+	ArchiveMembersFormatTar   ArchiveMembersFormat = "tar"
+	ArchiveMembersFormatTarGz ArchiveMembersFormat = "tar.gz"
+)
+
+// AllValues returns all ArchiveMembersFormat values.
+func (ArchiveMembersFormat) AllValues() []ArchiveMembersFormat {
+	return []ArchiveMembersFormat{
+		ArchiveMembersFormatZip,
+		ArchiveMembersFormatTar,
+		ArchiveMembersFormatTarGz,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ArchiveMembersFormat) MarshalText() ([]byte, error) {
+	switch s {
+	case ArchiveMembersFormatZip:
+		return []byte(s), nil
+	case ArchiveMembersFormatTar:
+		return []byte(s), nil
+	case ArchiveMembersFormatTarGz:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ArchiveMembersFormat) UnmarshalText(data []byte) error {
+	switch ArchiveMembersFormat(data) {
+	case ArchiveMembersFormatZip:
+		*s = ArchiveMembersFormatZip
+		return nil
+	case ArchiveMembersFormatTar:
+		*s = ArchiveMembersFormatTar
+		return nil
+	case ArchiveMembersFormatTarGz:
+		*s = ArchiveMembersFormatTarGz
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 type AttachmentPart struct {
 	Data io.Reader
 }
@@ -1989,8 +2128,12 @@ func (s *AttachmentPartHeaders) SetResponse(val AttachmentPart) {
 	s.Response = val
 }
 
-func (*AttachmentPartHeaders) downloadEmailAttachmentPartRes() {}
-func (*AttachmentPartHeaders) downloadSentAttachmentPartRes()  {}
+func (*AttachmentPartHeaders) downloadEmailAttachmentArchiveMemberRes() {}
+func (*AttachmentPartHeaders) downloadEmailAttachmentByFilenameRes()    {}
+func (*AttachmentPartHeaders) downloadEmailAttachmentPartRes()          {}
+func (*AttachmentPartHeaders) downloadSentAttachmentArchiveMemberRes()  {}
+func (*AttachmentPartHeaders) downloadSentAttachmentByFilenameRes()     {}
+func (*AttachmentPartHeaders) downloadSentAttachmentPartRes()           {}
 
 type AwaitReplyBadRequest ErrorResponse
 
@@ -4788,6 +4931,15 @@ type Conversation struct {
 	// `since` on the next read. An opaque string: send it back
 	// verbatim and do not parse it or build one.
 	Cursor OptString `json:"cursor"`
+	// The id to pass as `if_latest_message_id` when replying in this
+	// conversation: the message that joined the thread last among
+	// those this credential can read, by the rule a conditional send
+	// checks. It can differ from the last message in `messages`, which
+	// is ordered by timestamp, when mail joined the thread after a
+	// newer-timestamped message. Present on a full read and a window
+	// read of a threaded conversation; null when no message in the
+	// thread is visible; absent on a `since` delta.
+	LatestMessageID OptNilUUID `json:"latest_message_id"`
 }
 
 // GetThreadID returns the value of ThreadID.
@@ -4820,6 +4972,11 @@ func (s *Conversation) GetCursor() OptString {
 	return s.Cursor
 }
 
+// GetLatestMessageID returns the value of LatestMessageID.
+func (s *Conversation) GetLatestMessageID() OptNilUUID {
+	return s.LatestMessageID
+}
+
 // SetThreadID sets the value of ThreadID.
 func (s *Conversation) SetThreadID(val NilUUID) {
 	s.ThreadID = val
@@ -4848,6 +5005,11 @@ func (s *Conversation) SetMessages(val []ConversationMessage) {
 // SetCursor sets the value of Cursor.
 func (s *Conversation) SetCursor(val OptString) {
 	s.Cursor = val
+}
+
+// SetLatestMessageID sets the value of LatestMessageID.
+func (s *Conversation) SetLatestMessageID(val OptNilUUID) {
+	s.LatestMessageID = val
 }
 
 // One message in the conversation, with its body and a chat role.
@@ -10806,6 +10968,77 @@ type DownloadDomainZoneFileUnauthorized ErrorResponse
 
 func (*DownloadDomainZoneFileUnauthorized) downloadDomainZoneFileRes() {}
 
+type DownloadEmailAttachmentArchiveMemberBadGateway ErrorResponse
+
+func (*DownloadEmailAttachmentArchiveMemberBadGateway) downloadEmailAttachmentArchiveMemberRes() {}
+
+type DownloadEmailAttachmentArchiveMemberBadRequest ErrorResponse
+
+func (*DownloadEmailAttachmentArchiveMemberBadRequest) downloadEmailAttachmentArchiveMemberRes() {}
+
+type DownloadEmailAttachmentArchiveMemberConflict ErrorResponse
+
+func (*DownloadEmailAttachmentArchiveMemberConflict) downloadEmailAttachmentArchiveMemberRes() {}
+
+type DownloadEmailAttachmentArchiveMemberForbidden ErrorResponse
+
+func (*DownloadEmailAttachmentArchiveMemberForbidden) downloadEmailAttachmentArchiveMemberRes() {}
+
+type DownloadEmailAttachmentArchiveMemberGone ErrorResponse
+
+func (*DownloadEmailAttachmentArchiveMemberGone) downloadEmailAttachmentArchiveMemberRes() {}
+
+type DownloadEmailAttachmentArchiveMemberNotFound ErrorResponse
+
+func (*DownloadEmailAttachmentArchiveMemberNotFound) downloadEmailAttachmentArchiveMemberRes() {}
+
+type DownloadEmailAttachmentArchiveMemberRequestEntityTooLarge ErrorResponse
+
+func (*DownloadEmailAttachmentArchiveMemberRequestEntityTooLarge) downloadEmailAttachmentArchiveMemberRes() {
+}
+
+type DownloadEmailAttachmentArchiveMemberUnauthorized ErrorResponse
+
+func (*DownloadEmailAttachmentArchiveMemberUnauthorized) downloadEmailAttachmentArchiveMemberRes() {}
+
+type DownloadEmailAttachmentArchiveMemberUnprocessableEntity ErrorResponse
+
+func (*DownloadEmailAttachmentArchiveMemberUnprocessableEntity) downloadEmailAttachmentArchiveMemberRes() {
+}
+
+type DownloadEmailAttachmentByFilenameBadGateway ErrorResponse
+
+func (*DownloadEmailAttachmentByFilenameBadGateway) downloadEmailAttachmentByFilenameRes() {}
+
+type DownloadEmailAttachmentByFilenameBadRequest ErrorResponse
+
+func (*DownloadEmailAttachmentByFilenameBadRequest) downloadEmailAttachmentByFilenameRes() {}
+
+type DownloadEmailAttachmentByFilenameConflict ErrorResponse
+
+func (*DownloadEmailAttachmentByFilenameConflict) downloadEmailAttachmentByFilenameRes() {}
+
+type DownloadEmailAttachmentByFilenameForbidden ErrorResponse
+
+func (*DownloadEmailAttachmentByFilenameForbidden) downloadEmailAttachmentByFilenameRes() {}
+
+type DownloadEmailAttachmentByFilenameGone ErrorResponse
+
+func (*DownloadEmailAttachmentByFilenameGone) downloadEmailAttachmentByFilenameRes() {}
+
+type DownloadEmailAttachmentByFilenameNotFound ErrorResponse
+
+func (*DownloadEmailAttachmentByFilenameNotFound) downloadEmailAttachmentByFilenameRes() {}
+
+type DownloadEmailAttachmentByFilenameRequestEntityTooLarge ErrorResponse
+
+func (*DownloadEmailAttachmentByFilenameRequestEntityTooLarge) downloadEmailAttachmentByFilenameRes() {
+}
+
+type DownloadEmailAttachmentByFilenameUnauthorized ErrorResponse
+
+func (*DownloadEmailAttachmentByFilenameUnauthorized) downloadEmailAttachmentByFilenameRes() {}
+
 type DownloadEmailAttachmentPartBadGateway ErrorResponse
 
 func (*DownloadEmailAttachmentPartBadGateway) downloadEmailAttachmentPartRes() {}
@@ -10902,6 +11135,76 @@ func (*DownloadRawEmailOKHeaders) downloadRawEmailRes() {}
 type DownloadRawEmailUnauthorized ErrorResponse
 
 func (*DownloadRawEmailUnauthorized) downloadRawEmailRes() {}
+
+type DownloadSentAttachmentArchiveMemberBadGateway ErrorResponse
+
+func (*DownloadSentAttachmentArchiveMemberBadGateway) downloadSentAttachmentArchiveMemberRes() {}
+
+type DownloadSentAttachmentArchiveMemberBadRequest ErrorResponse
+
+func (*DownloadSentAttachmentArchiveMemberBadRequest) downloadSentAttachmentArchiveMemberRes() {}
+
+type DownloadSentAttachmentArchiveMemberConflict ErrorResponse
+
+func (*DownloadSentAttachmentArchiveMemberConflict) downloadSentAttachmentArchiveMemberRes() {}
+
+type DownloadSentAttachmentArchiveMemberForbidden ErrorResponse
+
+func (*DownloadSentAttachmentArchiveMemberForbidden) downloadSentAttachmentArchiveMemberRes() {}
+
+type DownloadSentAttachmentArchiveMemberGone ErrorResponse
+
+func (*DownloadSentAttachmentArchiveMemberGone) downloadSentAttachmentArchiveMemberRes() {}
+
+type DownloadSentAttachmentArchiveMemberNotFound ErrorResponse
+
+func (*DownloadSentAttachmentArchiveMemberNotFound) downloadSentAttachmentArchiveMemberRes() {}
+
+type DownloadSentAttachmentArchiveMemberRequestEntityTooLarge ErrorResponse
+
+func (*DownloadSentAttachmentArchiveMemberRequestEntityTooLarge) downloadSentAttachmentArchiveMemberRes() {
+}
+
+type DownloadSentAttachmentArchiveMemberUnauthorized ErrorResponse
+
+func (*DownloadSentAttachmentArchiveMemberUnauthorized) downloadSentAttachmentArchiveMemberRes() {}
+
+type DownloadSentAttachmentArchiveMemberUnprocessableEntity ErrorResponse
+
+func (*DownloadSentAttachmentArchiveMemberUnprocessableEntity) downloadSentAttachmentArchiveMemberRes() {
+}
+
+type DownloadSentAttachmentByFilenameBadGateway ErrorResponse
+
+func (*DownloadSentAttachmentByFilenameBadGateway) downloadSentAttachmentByFilenameRes() {}
+
+type DownloadSentAttachmentByFilenameBadRequest ErrorResponse
+
+func (*DownloadSentAttachmentByFilenameBadRequest) downloadSentAttachmentByFilenameRes() {}
+
+type DownloadSentAttachmentByFilenameConflict ErrorResponse
+
+func (*DownloadSentAttachmentByFilenameConflict) downloadSentAttachmentByFilenameRes() {}
+
+type DownloadSentAttachmentByFilenameForbidden ErrorResponse
+
+func (*DownloadSentAttachmentByFilenameForbidden) downloadSentAttachmentByFilenameRes() {}
+
+type DownloadSentAttachmentByFilenameGone ErrorResponse
+
+func (*DownloadSentAttachmentByFilenameGone) downloadSentAttachmentByFilenameRes() {}
+
+type DownloadSentAttachmentByFilenameNotFound ErrorResponse
+
+func (*DownloadSentAttachmentByFilenameNotFound) downloadSentAttachmentByFilenameRes() {}
+
+type DownloadSentAttachmentByFilenameRequestEntityTooLarge ErrorResponse
+
+func (*DownloadSentAttachmentByFilenameRequestEntityTooLarge) downloadSentAttachmentByFilenameRes() {}
+
+type DownloadSentAttachmentByFilenameUnauthorized ErrorResponse
+
+func (*DownloadSentAttachmentByFilenameUnauthorized) downloadSentAttachmentByFilenameRes() {}
 
 type DownloadSentAttachmentPartBadGateway ErrorResponse
 
@@ -15125,6 +15428,16 @@ const (
 	ErrorResponseErrorCodeAddressNotControlled                ErrorResponseErrorCode = "address_not_controlled"
 	ErrorResponseErrorCodeContactConflict                     ErrorResponseErrorCode = "contact_conflict"
 	ErrorResponseErrorCodeSentMailSearchUnavailable           ErrorResponseErrorCode = "sent_mail_search_unavailable"
+	ErrorResponseErrorCodeLatestMessageMismatch               ErrorResponseErrorCode = "latest_message_mismatch"
+	ErrorResponseErrorCodeLatestMessageThreadUnresolved       ErrorResponseErrorCode = "latest_message_thread_unresolved"
+	ErrorResponseErrorCodeThreadBusy                          ErrorResponseErrorCode = "thread_busy"
+	ErrorResponseErrorCodeAttachmentNameAmbiguous             ErrorResponseErrorCode = "attachment_name_ambiguous"
+	ErrorResponseErrorCodeArchiveLimitExceeded                ErrorResponseErrorCode = "archive_limit_exceeded"
+	ErrorResponseErrorCodeArchiveUnsafePath                   ErrorResponseErrorCode = "archive_unsafe_path"
+	ErrorResponseErrorCodeArchiveInvalid                      ErrorResponseErrorCode = "archive_invalid"
+	ErrorResponseErrorCodeArchiveUnsupported                  ErrorResponseErrorCode = "archive_unsupported"
+	ErrorResponseErrorCodeAttachmentNotArchive                ErrorResponseErrorCode = "attachment_not_archive"
+	ErrorResponseErrorCodeArchiveBusy                         ErrorResponseErrorCode = "archive_busy"
 )
 
 // AllValues returns all ErrorResponseErrorCode values.
@@ -15223,6 +15536,16 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeAddressNotControlled,
 		ErrorResponseErrorCodeContactConflict,
 		ErrorResponseErrorCodeSentMailSearchUnavailable,
+		ErrorResponseErrorCodeLatestMessageMismatch,
+		ErrorResponseErrorCodeLatestMessageThreadUnresolved,
+		ErrorResponseErrorCodeThreadBusy,
+		ErrorResponseErrorCodeAttachmentNameAmbiguous,
+		ErrorResponseErrorCodeArchiveLimitExceeded,
+		ErrorResponseErrorCodeArchiveUnsafePath,
+		ErrorResponseErrorCodeArchiveInvalid,
+		ErrorResponseErrorCodeArchiveUnsupported,
+		ErrorResponseErrorCodeAttachmentNotArchive,
+		ErrorResponseErrorCodeArchiveBusy,
 	}
 }
 
@@ -15414,6 +15737,26 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeContactConflict:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeSentMailSearchUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeLatestMessageMismatch:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeLatestMessageThreadUnresolved:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeThreadBusy:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAttachmentNameAmbiguous:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeArchiveLimitExceeded:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeArchiveUnsafePath:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeArchiveInvalid:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeArchiveUnsupported:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAttachmentNotArchive:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeArchiveBusy:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -15702,6 +16045,36 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 	case ErrorResponseErrorCodeSentMailSearchUnavailable:
 		*s = ErrorResponseErrorCodeSentMailSearchUnavailable
 		return nil
+	case ErrorResponseErrorCodeLatestMessageMismatch:
+		*s = ErrorResponseErrorCodeLatestMessageMismatch
+		return nil
+	case ErrorResponseErrorCodeLatestMessageThreadUnresolved:
+		*s = ErrorResponseErrorCodeLatestMessageThreadUnresolved
+		return nil
+	case ErrorResponseErrorCodeThreadBusy:
+		*s = ErrorResponseErrorCodeThreadBusy
+		return nil
+	case ErrorResponseErrorCodeAttachmentNameAmbiguous:
+		*s = ErrorResponseErrorCodeAttachmentNameAmbiguous
+		return nil
+	case ErrorResponseErrorCodeArchiveLimitExceeded:
+		*s = ErrorResponseErrorCodeArchiveLimitExceeded
+		return nil
+	case ErrorResponseErrorCodeArchiveUnsafePath:
+		*s = ErrorResponseErrorCodeArchiveUnsafePath
+		return nil
+	case ErrorResponseErrorCodeArchiveInvalid:
+		*s = ErrorResponseErrorCodeArchiveInvalid
+		return nil
+	case ErrorResponseErrorCodeArchiveUnsupported:
+		*s = ErrorResponseErrorCodeArchiveUnsupported
+		return nil
+	case ErrorResponseErrorCodeAttachmentNotArchive:
+		*s = ErrorResponseErrorCodeAttachmentNotArchive
+		return nil
+	case ErrorResponseErrorCodeArchiveBusy:
+		*s = ErrorResponseErrorCodeArchiveBusy
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
@@ -15871,19 +16244,25 @@ func (s *ErrorResponseHeaders) SetResponse(val ErrorResponse) {
 	s.Response = val
 }
 
-func (*ErrorResponseHeaders) deleteAgentContactRes()            {}
-func (*ErrorResponseHeaders) deleteContactRes()                 {}
-func (*ErrorResponseHeaders) downloadEmailAttachmentPartRes()   {}
-func (*ErrorResponseHeaders) downloadSentAttachmentPartRes()    {}
-func (*ErrorResponseHeaders) getContactRes()                    {}
-func (*ErrorResponseHeaders) listAgentContactsRes()             {}
-func (*ErrorResponseHeaders) listContactsRes()                  {}
-func (*ErrorResponseHeaders) pollCliLoginRes()                  {}
-func (*ErrorResponseHeaders) putAgentContactRes()               {}
-func (*ErrorResponseHeaders) putContactRes()                    {}
-func (*ErrorResponseHeaders) redeemCreditCodeRes()              {}
-func (*ErrorResponseHeaders) resendAgentSignupVerificationRes() {}
-func (*ErrorResponseHeaders) resendCliSignupVerificationRes()   {}
+func (*ErrorResponseHeaders) deleteAgentContactRes()                   {}
+func (*ErrorResponseHeaders) deleteContactRes()                        {}
+func (*ErrorResponseHeaders) downloadEmailAttachmentArchiveMemberRes() {}
+func (*ErrorResponseHeaders) downloadEmailAttachmentByFilenameRes()    {}
+func (*ErrorResponseHeaders) downloadEmailAttachmentPartRes()          {}
+func (*ErrorResponseHeaders) downloadSentAttachmentArchiveMemberRes()  {}
+func (*ErrorResponseHeaders) downloadSentAttachmentByFilenameRes()     {}
+func (*ErrorResponseHeaders) downloadSentAttachmentPartRes()           {}
+func (*ErrorResponseHeaders) getContactRes()                           {}
+func (*ErrorResponseHeaders) listAgentContactsRes()                    {}
+func (*ErrorResponseHeaders) listContactsRes()                         {}
+func (*ErrorResponseHeaders) listEmailAttachmentArchiveMembersRes()    {}
+func (*ErrorResponseHeaders) listSentAttachmentArchiveMembersRes()     {}
+func (*ErrorResponseHeaders) pollCliLoginRes()                         {}
+func (*ErrorResponseHeaders) putAgentContactRes()                      {}
+func (*ErrorResponseHeaders) putContactRes()                           {}
+func (*ErrorResponseHeaders) redeemCreditCodeRes()                     {}
+func (*ErrorResponseHeaders) resendAgentSignupVerificationRes()        {}
+func (*ErrorResponseHeaders) resendCliSignupVerificationRes()          {}
 
 // Ref: #/components/schemas/Filter
 type Filter struct {
@@ -21894,6 +22273,71 @@ func (s *ListDomainsOK) SetData(val []Domain) {
 
 func (*ListDomainsOK) listDomainsRes() {}
 
+type ListEmailAttachmentArchiveMembersBadGateway ErrorResponse
+
+func (*ListEmailAttachmentArchiveMembersBadGateway) listEmailAttachmentArchiveMembersRes() {}
+
+type ListEmailAttachmentArchiveMembersBadRequest ErrorResponse
+
+func (*ListEmailAttachmentArchiveMembersBadRequest) listEmailAttachmentArchiveMembersRes() {}
+
+type ListEmailAttachmentArchiveMembersConflict ErrorResponse
+
+func (*ListEmailAttachmentArchiveMembersConflict) listEmailAttachmentArchiveMembersRes() {}
+
+type ListEmailAttachmentArchiveMembersForbidden ErrorResponse
+
+func (*ListEmailAttachmentArchiveMembersForbidden) listEmailAttachmentArchiveMembersRes() {}
+
+type ListEmailAttachmentArchiveMembersGone ErrorResponse
+
+func (*ListEmailAttachmentArchiveMembersGone) listEmailAttachmentArchiveMembersRes() {}
+
+type ListEmailAttachmentArchiveMembersNotFound ErrorResponse
+
+func (*ListEmailAttachmentArchiveMembersNotFound) listEmailAttachmentArchiveMembersRes() {}
+
+// Merged schema.
+type ListEmailAttachmentArchiveMembersOK struct {
+	Success bool           `json:"success"`
+	Data    ArchiveMembers `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListEmailAttachmentArchiveMembersOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListEmailAttachmentArchiveMembersOK) GetData() ArchiveMembers {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListEmailAttachmentArchiveMembersOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListEmailAttachmentArchiveMembersOK) SetData(val ArchiveMembers) {
+	s.Data = val
+}
+
+func (*ListEmailAttachmentArchiveMembersOK) listEmailAttachmentArchiveMembersRes() {}
+
+type ListEmailAttachmentArchiveMembersRequestEntityTooLarge ErrorResponse
+
+func (*ListEmailAttachmentArchiveMembersRequestEntityTooLarge) listEmailAttachmentArchiveMembersRes() {
+}
+
+type ListEmailAttachmentArchiveMembersUnauthorized ErrorResponse
+
+func (*ListEmailAttachmentArchiveMembersUnauthorized) listEmailAttachmentArchiveMembersRes() {}
+
+type ListEmailAttachmentArchiveMembersUnprocessableEntity ErrorResponse
+
+func (*ListEmailAttachmentArchiveMembersUnprocessableEntity) listEmailAttachmentArchiveMembersRes() {}
+
 type ListEmailsAutomated string
 
 const (
@@ -22511,6 +22955,70 @@ func (s *ListRoutesOK) SetData(val []RecipientRoute) {
 }
 
 func (*ListRoutesOK) listRoutesRes() {}
+
+type ListSentAttachmentArchiveMembersBadGateway ErrorResponse
+
+func (*ListSentAttachmentArchiveMembersBadGateway) listSentAttachmentArchiveMembersRes() {}
+
+type ListSentAttachmentArchiveMembersBadRequest ErrorResponse
+
+func (*ListSentAttachmentArchiveMembersBadRequest) listSentAttachmentArchiveMembersRes() {}
+
+type ListSentAttachmentArchiveMembersConflict ErrorResponse
+
+func (*ListSentAttachmentArchiveMembersConflict) listSentAttachmentArchiveMembersRes() {}
+
+type ListSentAttachmentArchiveMembersForbidden ErrorResponse
+
+func (*ListSentAttachmentArchiveMembersForbidden) listSentAttachmentArchiveMembersRes() {}
+
+type ListSentAttachmentArchiveMembersGone ErrorResponse
+
+func (*ListSentAttachmentArchiveMembersGone) listSentAttachmentArchiveMembersRes() {}
+
+type ListSentAttachmentArchiveMembersNotFound ErrorResponse
+
+func (*ListSentAttachmentArchiveMembersNotFound) listSentAttachmentArchiveMembersRes() {}
+
+// Merged schema.
+type ListSentAttachmentArchiveMembersOK struct {
+	Success bool           `json:"success"`
+	Data    ArchiveMembers `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListSentAttachmentArchiveMembersOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListSentAttachmentArchiveMembersOK) GetData() ArchiveMembers {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListSentAttachmentArchiveMembersOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListSentAttachmentArchiveMembersOK) SetData(val ArchiveMembers) {
+	s.Data = val
+}
+
+func (*ListSentAttachmentArchiveMembersOK) listSentAttachmentArchiveMembersRes() {}
+
+type ListSentAttachmentArchiveMembersRequestEntityTooLarge ErrorResponse
+
+func (*ListSentAttachmentArchiveMembersRequestEntityTooLarge) listSentAttachmentArchiveMembersRes() {}
+
+type ListSentAttachmentArchiveMembersUnauthorized ErrorResponse
+
+func (*ListSentAttachmentArchiveMembersUnauthorized) listSentAttachmentArchiveMembersRes() {}
+
+type ListSentAttachmentArchiveMembersUnprocessableEntity ErrorResponse
+
+func (*ListSentAttachmentArchiveMembersUnprocessableEntity) listSentAttachmentArchiveMembersRes() {}
 
 type ListSentEmailsBadRequest ErrorResponse
 
@@ -35936,6 +36444,28 @@ type ReplyInput struct {
 	// `validation_error`. Values: 1 to 200 printable ASCII characters. Custom headers are sent as
 	// spelled, are not DKIM-signed, and can be searched with `header` on `GET /sent-emails`.
 	Headers OptReplyInputHeaders `json:"headers"`
+	// Send only if this message id is still the newest message in the thread this send joins, as this
+	// credential can see it. Newest means the message that joined the thread last, in the order messages
+	// were attached to it, not by timestamp: a message accepted earlier but attached later is newer.
+	// Messages stored before join order was recorded count as older than every message that has one, and
+	// among themselves sort by timestamp (received_at for mail received, created_at for mail sent), ties
+	// going to the larger id. Pass latest_message_id from GET /emails/{id}/conversation: it is read by
+	// the same rule, whereas the last message listed there is ordered by timestamp and can differ when
+	// mail joined the thread late. An organization credential sees every message in the thread; a
+	// mailbox-scoped agent connection key sees only mail received at its address and mail sent from it.
+	// Mail awaiting sender authentication never counts. Otherwise nothing is sent and the response is
+	// 409 latest_message_mismatch with error.details.latest_message_id, latest_message_at and thread_id.
+	// If in_reply_to resolves to no single thread this credential can check, the response is 422
+	// latest_message_thread_unresolved; that does not change on retry. If the thread stays locked by
+	// another writer for longer than the send waits, the response is 503 thread_busy with Retry-After;
+	// nothing was sent and the same request can be retried. Checked inside the send transaction under a
+	// lock on the thread, so two sends conditioned on the same id cannot both go out. The value is part
+	// of the request a replay is matched on: a replay of an already accepted request with the same
+	// idempotency key, or the identical request within the automatic deduplication window, returns the
+	// original result without checking again, and a request that differs only in if_latest_message_id is
+	// not a replay. On /send-mail it requires in_reply_to; it cannot be combined with scheduled_at or
+	// repeat, because it is checked when the request is accepted.
+	IfLatestMessageID OptUUID `json:"if_latest_message_id"`
 }
 
 // GetBodyText returns the value of BodyText.
@@ -35978,6 +36508,11 @@ func (s *ReplyInput) GetHeaders() OptReplyInputHeaders {
 	return s.Headers
 }
 
+// GetIfLatestMessageID returns the value of IfLatestMessageID.
+func (s *ReplyInput) GetIfLatestMessageID() OptUUID {
+	return s.IfLatestMessageID
+}
+
 // SetBodyText sets the value of BodyText.
 func (s *ReplyInput) SetBodyText(val OptString) {
 	s.BodyText = val
@@ -36018,6 +36553,11 @@ func (s *ReplyInput) SetHeaders(val OptReplyInputHeaders) {
 	s.Headers = val
 }
 
+// SetIfLatestMessageID sets the value of IfLatestMessageID.
+func (s *ReplyInput) SetIfLatestMessageID(val OptUUID) {
+	s.IfLatestMessageID = val
+}
+
 // Extra headers, as `{ "Name": "value" }`, at most 25. A name is one of `Auto-Submitted`,
 // `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-Ref`,
 //
@@ -36050,6 +36590,10 @@ func (*ReplyToEmailBadGateway) replyToEmailRes() {}
 type ReplyToEmailBadRequest ErrorResponse
 
 func (*ReplyToEmailBadRequest) replyToEmailRes() {}
+
+type ReplyToEmailConflict ErrorResponse
+
+func (*ReplyToEmailConflict) replyToEmailRes() {}
 
 type ReplyToEmailForbidden ErrorResponse
 
@@ -38583,6 +39127,10 @@ type SendEmailBadRequest ErrorResponse
 
 func (*SendEmailBadRequest) sendEmailRes() {}
 
+type SendEmailConflict ErrorResponse
+
+func (*SendEmailConflict) sendEmailRes() {}
+
 type SendEmailForbidden ErrorResponse
 
 func (*SendEmailForbidden) sendEmailRes() {}
@@ -38656,6 +39204,10 @@ func (*SendEmailServiceUnavailable) sendEmailRes() {}
 type SendEmailUnauthorized ErrorResponse
 
 func (*SendEmailUnauthorized) sendEmailRes() {}
+
+type SendEmailUnprocessableEntity ErrorResponse
+
+func (*SendEmailUnprocessableEntity) sendEmailRes() {}
 
 // Ref: #/components/schemas/SendMailAttachment
 type SendMailAttachment struct {
@@ -38898,6 +39450,28 @@ type SendMailInput struct {
 	// `validation_error`. Values: 1 to 200 printable ASCII characters. Custom headers are sent as
 	// spelled, are not DKIM-signed, and can be searched with `header` on `GET /sent-emails`.
 	Headers OptSendMailInputHeaders `json:"headers"`
+	// Send only if this message id is still the newest message in the thread this send joins, as this
+	// credential can see it. Newest means the message that joined the thread last, in the order messages
+	// were attached to it, not by timestamp: a message accepted earlier but attached later is newer.
+	// Messages stored before join order was recorded count as older than every message that has one, and
+	// among themselves sort by timestamp (received_at for mail received, created_at for mail sent), ties
+	// going to the larger id. Pass latest_message_id from GET /emails/{id}/conversation: it is read by
+	// the same rule, whereas the last message listed there is ordered by timestamp and can differ when
+	// mail joined the thread late. An organization credential sees every message in the thread; a
+	// mailbox-scoped agent connection key sees only mail received at its address and mail sent from it.
+	// Mail awaiting sender authentication never counts. Otherwise nothing is sent and the response is
+	// 409 latest_message_mismatch with error.details.latest_message_id, latest_message_at and thread_id.
+	// If in_reply_to resolves to no single thread this credential can check, the response is 422
+	// latest_message_thread_unresolved; that does not change on retry. If the thread stays locked by
+	// another writer for longer than the send waits, the response is 503 thread_busy with Retry-After;
+	// nothing was sent and the same request can be retried. Checked inside the send transaction under a
+	// lock on the thread, so two sends conditioned on the same id cannot both go out. The value is part
+	// of the request a replay is matched on: a replay of an already accepted request with the same
+	// idempotency key, or the identical request within the automatic deduplication window, returns the
+	// original result without checking again, and a request that differs only in if_latest_message_id is
+	// not a replay. On /send-mail it requires in_reply_to; it cannot be combined with scheduled_at or
+	// repeat, because it is checked when the request is accepted.
+	IfLatestMessageID OptUUID `json:"if_latest_message_id"`
 }
 
 // GetRepeat returns the value of Repeat.
@@ -38980,6 +39554,11 @@ func (s *SendMailInput) GetHeaders() OptSendMailInputHeaders {
 	return s.Headers
 }
 
+// GetIfLatestMessageID returns the value of IfLatestMessageID.
+func (s *SendMailInput) GetIfLatestMessageID() OptUUID {
+	return s.IfLatestMessageID
+}
+
 // SetRepeat sets the value of Repeat.
 func (s *SendMailInput) SetRepeat(val OptRepeatInput) {
 	s.Repeat = val
@@ -39058,6 +39637,11 @@ func (s *SendMailInput) SetScheduledAt(val OptDateTime) {
 // SetHeaders sets the value of Headers.
 func (s *SendMailInput) SetHeaders(val OptSendMailInputHeaders) {
 	s.Headers = val
+}
+
+// SetIfLatestMessageID sets the value of IfLatestMessageID.
+func (s *SendMailInput) SetIfLatestMessageID(val OptUUID) {
+	s.IfLatestMessageID = val
 }
 
 // Blind-carbon-copy recipients. Either a single address or an array of addresses. Each entry must be

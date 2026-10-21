@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from typing import cast
+from uuid import UUID
 
 if TYPE_CHECKING:
   from ..models.repeat_input import RepeatInput
@@ -80,6 +81,25 @@ class ReplyInput:
                 `validation_error`. Values: 1 to 200 printable ASCII characters. Custom headers are sent as spelled, are not
                 DKIM-signed, and can be searched with `header` on `GET /sent-emails`. Example: {'X-Campaign-Id': 'spring-sale',
                 'Auto-Submitted': 'auto-generated'}.
+            if_latest_message_id (UUID | Unset): Send only if this message id is still the newest message in the thread this
+                send joins, as this credential can see it. Newest means the message that joined the thread last, in the order
+                messages were attached to it, not by timestamp: a message accepted earlier but attached later is newer. Messages
+                stored before join order was recorded count as older than every message that has one, and among themselves sort
+                by timestamp (received_at for mail received, created_at for mail sent), ties going to the larger id. Pass
+                latest_message_id from GET /emails/{id}/conversation: it is read by the same rule, whereas the last message
+                listed there is ordered by timestamp and can differ when mail joined the thread late. An organization credential
+                sees every message in the thread; a mailbox-scoped agent connection key sees only mail received at its address
+                and mail sent from it. Mail awaiting sender authentication never counts. Otherwise nothing is sent and the
+                response is 409 latest_message_mismatch with error.details.latest_message_id, latest_message_at and thread_id.
+                If in_reply_to resolves to no single thread this credential can check, the response is 422
+                latest_message_thread_unresolved; that does not change on retry. If the thread stays locked by another writer
+                for longer than the send waits, the response is 503 thread_busy with Retry-After; nothing was sent and the same
+                request can be retried. Checked inside the send transaction under a lock on the thread, so two sends conditioned
+                on the same id cannot both go out. The value is part of the request a replay is matched on: a replay of an
+                already accepted request with the same idempotency key, or the identical request within the automatic
+                deduplication window, returns the original result without checking again, and a request that differs only in
+                if_latest_message_id is not a replay. On /send-mail it requires in_reply_to; it cannot be combined with
+                scheduled_at or repeat, because it is checked when the request is accepted.
      """
 
     body_text: str | Unset = UNSET
@@ -90,6 +110,7 @@ class ReplyInput:
     attachments: list[SendMailAttachment] | Unset = UNSET
     repeat: RepeatInput | Unset = UNSET
     headers: ReplyInputHeaders | Unset = UNSET
+    if_latest_message_id: UUID | Unset = UNSET
 
 
 
@@ -126,6 +147,10 @@ class ReplyInput:
         if not isinstance(self.headers, Unset):
             headers = self.headers.to_dict()
 
+        if_latest_message_id: str | Unset = UNSET
+        if not isinstance(self.if_latest_message_id, Unset):
+            if_latest_message_id = str(self.if_latest_message_id)
+
 
         field_dict: dict[str, Any] = {}
 
@@ -147,6 +172,8 @@ class ReplyInput:
             field_dict["repeat"] = repeat
         if headers is not UNSET:
             field_dict["headers"] = headers
+        if if_latest_message_id is not UNSET:
+            field_dict["if_latest_message_id"] = if_latest_message_id
 
         return field_dict
 
@@ -200,6 +227,16 @@ class ReplyInput:
 
 
 
+        _if_latest_message_id = d.pop("if_latest_message_id", UNSET)
+        if_latest_message_id: UUID | Unset
+        if isinstance(_if_latest_message_id,  Unset):
+            if_latest_message_id = UNSET
+        else:
+            if_latest_message_id = UUID(_if_latest_message_id)
+
+
+
+
         reply_input = cls(
             body_text=body_text,
             body_html=body_html,
@@ -209,6 +246,7 @@ class ReplyInput:
             attachments=attachments,
             repeat=repeat,
             headers=headers,
+            if_latest_message_id=if_latest_message_id,
         )
 
         return reply_input

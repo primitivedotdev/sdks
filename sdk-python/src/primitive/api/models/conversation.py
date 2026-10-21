@@ -45,6 +45,14 @@ class Conversation:
             cursor (str | Unset): Present only on a `since` read: the position to send as
                 `since` on the next read. An opaque string: send it back
                 verbatim and do not parse it or build one.
+            latest_message_id (None | Unset | UUID): The id to pass as `if_latest_message_id` when replying in this
+                conversation: the message that joined the thread last among
+                those this credential can read, by the rule a conditional send
+                checks. It can differ from the last message in `messages`, which
+                is ordered by timestamp, when mail joined the thread after a
+                newer-timestamped message. Present on a full read and a window
+                read of a threaded conversation; null when no message in the
+                thread is visible; absent on a `since` delta.
      """
 
     thread_id: None | UUID
@@ -53,6 +61,7 @@ class Conversation:
     messages: list[ConversationMessage]
     subject: None | str | Unset = UNSET
     cursor: str | Unset = UNSET
+    latest_message_id: None | Unset | UUID = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -86,6 +95,14 @@ class Conversation:
 
         cursor = self.cursor
 
+        latest_message_id: None | str | Unset
+        if isinstance(self.latest_message_id, Unset):
+            latest_message_id = UNSET
+        elif isinstance(self.latest_message_id, UUID):
+            latest_message_id = str(self.latest_message_id)
+        else:
+            latest_message_id = self.latest_message_id
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -99,6 +116,8 @@ class Conversation:
             field_dict["subject"] = subject
         if cursor is not UNSET:
             field_dict["cursor"] = cursor
+        if latest_message_id is not UNSET:
+            field_dict["latest_message_id"] = latest_message_id
 
         return field_dict
 
@@ -152,6 +171,26 @@ class Conversation:
 
         cursor = d.pop("cursor", UNSET)
 
+        def _parse_latest_message_id(data: object) -> None | Unset | UUID:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                latest_message_id_type_0 = UUID(data)
+
+
+
+                return latest_message_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | Unset | UUID, data)
+
+        latest_message_id = _parse_latest_message_id(d.pop("latest_message_id", UNSET))
+
+
         conversation = cls(
             thread_id=thread_id,
             message_count=message_count,
@@ -159,6 +198,7 @@ class Conversation:
             messages=messages,
             subject=subject,
             cursor=cursor,
+            latest_message_id=latest_message_id,
         )
 
 

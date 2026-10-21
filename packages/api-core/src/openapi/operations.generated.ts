@@ -6919,6 +6919,80 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": true,
     "bodyRequired": false,
+    "command": "download-email-attachment-archive-member",
+    "description": "Returns the decoded bytes of one regular file inside a zip, tar or tar.gz attachment, by its listed path. The archive's structure, every member path and every limit are checked as for the listing, but only the requested file is decoded and verified (its zip CRC-32, and X-Content-SHA256 of the bytes returned); list the archive to have every file decoded. Authenticate with an organization API key, an authorized organization OAuth token, or an address-bound agent connection key. A connected agent reads only mail received at its own address. Function credentials are not supported. Discarded content is unavailable.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "downloadEmailAttachmentArchiveMember",
+    "path": "/emails/{id}/attachments/{attachment}/members/{path}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "description": "The attachment, by its exact part_index when the value is digits only, otherwise by its exact filename (case-sensitive, compared after Unicode NFC normalization). A digits-only value always selects that part_index, even when another attachment has that name; read such a name with ?filename=.",
+        "enum": null,
+        "name": "attachment",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "description": "The member path exactly as listed, percent-encoded as one path segment (slashes as %2F).",
+        "enum": null,
+        "name": "path",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": null,
+    "sdkName": "downloadEmailAttachmentArchiveMember",
+    "summary": "Download one file from inside a received zip or tar attachment",
+    "tag": "Emails",
+    "tagCommand": "emails"
+  },
+  {
+    "binaryResponse": true,
+    "bodyRequired": false,
+    "command": "download-email-attachment-by-filename",
+    "description": "Returns the same bytes as downloadEmailAttachmentPart, selecting the attachment by its exact filename. The path form `/emails/{id}/attachments/{filename}` also works for any name that is not digits only, which that form reads as a part_index. When several attachments share the filename the response is 409 attachment_name_ambiguous with every matching part_index, and nothing is returned. Authenticate with an organization API key, an authorized organization OAuth token, or an address-bound agent connection key. A connected agent reads only mail received at its own address. Function credentials are not supported. Discarded content is unavailable.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "downloadEmailAttachmentByFilename",
+    "path": "/emails/{id}/attachments",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [
+      {
+        "description": "The attachment's exact filename from its metadata. Any name, digits only included. No other query parameter is accepted.",
+        "enum": null,
+        "name": "filename",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": null,
+    "sdkName": "downloadEmailAttachmentByFilename",
+    "summary": "Download one received email attachment by filename",
+    "tag": "Emails",
+    "tagCommand": "emails"
+  },
+  {
+    "binaryResponse": true,
+    "bodyRequired": false,
     "command": "download-email-attachment-part",
     "description": "Pending service release. This contract does not establish live availability.\nDownloads the original bytes of one ordinary email attachment, selected by\nits metadata `part_index`, not its position in an attachments array. Refresh\nthe email detail after `attachment_changed` before choosing an index again.\nUses bearer authentication only; signed raw-email download tokens are not accepted.\nA paired-agent credential may read only a message addressed to its claimed address.\nFunction credentials are denied. Other bearer credentials retain their\nexisting email access boundaries. This endpoint serves email bytes only.\n",
     "hasJsonBody": false,
@@ -7217,6 +7291,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "cursor": {
           "type": "string",
           "description": "Present only on a `since` read: the position to send as\n`since` on the next read. An opaque string: send it back\nverbatim and do not parse it or build one.\n"
+        },
+        "latest_message_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "The id to pass as `if_latest_message_id` when replying in this\nconversation: the message that joined the thread last among\nthose this credential can read, by the rule a conditional send\nchecks. It can differ from the last message in `messages`, which\nis ordered by timestamp, when mail joined the thread after a\nnewer-timestamped message. Present on a full read and a window\nread of a threaded conversation; null when no message in the\nthread is visible; absent on a `since` delta.\n"
         }
       },
       "required": [
@@ -8102,6 +8184,97 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "getEmail",
     "summary": "Get inbound email by id",
+    "tag": "Emails",
+    "tagCommand": "emails"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-email-attachment-archive-members",
+    "description": "Lists the regular files inside a zip, tar or tar.gz attachment with each one's path, decoded size and SHA-256. The format is detected from the content. Unsafe paths refuse the whole archive, and resource limits bound the work (see the 413 and 422 responses). Authenticate with an organization API key, an authorized organization OAuth token, or an address-bound agent connection key. A connected agent reads only mail received at its own address. Function credentials are not supported. Discarded content is unavailable.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listEmailAttachmentArchiveMembers",
+    "path": "/emails/{id}/attachments/{attachment}/members",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "description": "The attachment, by its exact part_index when the value is digits only, otherwise by its exact filename (case-sensitive, compared after Unicode NFC normalization). A digits-only value always selects that part_index, even when another attachment has that name; read such a name with ?filename=.",
+        "enum": null,
+        "name": "attachment",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "required": [
+        "part_index",
+        "filename",
+        "format",
+        "members"
+      ],
+      "properties": {
+        "part_index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The attachment the listing is of."
+        },
+        "filename": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "That attachment's filename."
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "zip",
+            "tar",
+            "tar.gz"
+          ]
+        },
+        "members": {
+          "type": "array",
+          "description": "Regular files in archive order.",
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "size_bytes",
+              "sha256"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "description": "Member path inside the archive, relative, with \"/\" separators and no leading \"./\"."
+              },
+              "size_bytes": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Decoded size in bytes."
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "description": "SHA-256 of the decoded bytes."
+              }
+            }
+          }
+        }
+      }
+    },
+    "sdkName": "listEmailAttachmentArchiveMembers",
+    "summary": "List the files inside a received zip or tar attachment",
     "tag": "Emails",
     "tagCommand": "emails"
   },
@@ -18378,6 +18551,80 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": true,
     "bodyRequired": false,
+    "command": "download-sent-attachment-archive-member",
+    "description": "Returns the decoded bytes of one regular file inside a zip, tar or tar.gz attachment, by its listed path. The archive's structure, every member path and every limit are checked as for the listing, but only the requested file is decoded and verified (its zip CRC-32, and X-Content-SHA256 of the bytes returned); list the archive to have every file decoded. Authenticate with an organization API key, an authorized organization OAuth token, or an address-bound agent connection key. A connected agent reads only mail sent from its own address. Function credentials are not supported. Discarded content is unavailable.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "downloadSentAttachmentArchiveMember",
+    "path": "/sent-emails/{id}/attachments/{attachment}/members/{path}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "description": "The attachment, by its exact part_index when the value is digits only, otherwise by its exact filename (case-sensitive, compared after Unicode NFC normalization). A digits-only value always selects that part_index, even when another attachment has that name; read such a name with ?filename=.",
+        "enum": null,
+        "name": "attachment",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "description": "The member path exactly as listed, percent-encoded as one path segment (slashes as %2F).",
+        "enum": null,
+        "name": "path",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": null,
+    "sdkName": "downloadSentAttachmentArchiveMember",
+    "summary": "Download one file from inside a sent zip or tar attachment",
+    "tag": "Sending",
+    "tagCommand": "sending"
+  },
+  {
+    "binaryResponse": true,
+    "bodyRequired": false,
+    "command": "download-sent-attachment-by-filename",
+    "description": "Returns the same bytes as downloadSentAttachmentPart, selecting the attachment by its exact filename. The path form `/sent-emails/{id}/attachments/{filename}` also works for any name that is not digits only, which that form reads as a part_index. When several attachments share the filename the response is 409 attachment_name_ambiguous with every matching part_index, and nothing is returned. Authenticate with an organization API key, an authorized organization OAuth token, or an address-bound agent connection key. A connected agent reads only mail sent from its own address. Function credentials are not supported. Discarded content is unavailable.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "downloadSentAttachmentByFilename",
+    "path": "/sent-emails/{id}/attachments",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [
+      {
+        "description": "The attachment's exact filename from its metadata. Any name, digits only included. No other query parameter is accepted.",
+        "enum": null,
+        "name": "filename",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": null,
+    "sdkName": "downloadSentAttachmentByFilename",
+    "summary": "Download one sent email attachment by filename",
+    "tag": "Sending",
+    "tagCommand": "sending"
+  },
+  {
+    "binaryResponse": true,
+    "bodyRequired": false,
     "command": "download-sent-attachment-part",
     "description": "Pending service release. This contract does not establish live availability.\nDownloads the original bytes of one ordinary email attachment, selected by\nits metadata `part_index`, not its position in an attachments array. Refresh\nthe email detail after `attachment_changed` before choosing an index again.\nUses bearer authentication only; signed raw-email download tokens are not accepted.\nA paired-agent credential may read only mail sent from its claimed address.\nReceiving a copy does not authorize downloading another sender's sent content.\nFunction credentials are denied. Other bearer credentials retain their\nexisting email access boundaries. This endpoint serves email bytes only.\n",
     "hasJsonBody": false,
@@ -19275,6 +19522,97 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "list-sent-attachment-archive-members",
+    "description": "Lists the regular files inside a zip, tar or tar.gz attachment with each one's path, decoded size and SHA-256. The format is detected from the content. Unsafe paths refuse the whole archive, and resource limits bound the work (see the 413 and 422 responses). Authenticate with an organization API key, an authorized organization OAuth token, or an address-bound agent connection key. A connected agent reads only mail sent from its own address. Function credentials are not supported. Discarded content is unavailable.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listSentAttachmentArchiveMembers",
+    "path": "/sent-emails/{id}/attachments/{attachment}/members",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "description": "The attachment, by its exact part_index when the value is digits only, otherwise by its exact filename (case-sensitive, compared after Unicode NFC normalization). A digits-only value always selects that part_index, even when another attachment has that name; read such a name with ?filename=.",
+        "enum": null,
+        "name": "attachment",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "required": [
+        "part_index",
+        "filename",
+        "format",
+        "members"
+      ],
+      "properties": {
+        "part_index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The attachment the listing is of."
+        },
+        "filename": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "That attachment's filename."
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "zip",
+            "tar",
+            "tar.gz"
+          ]
+        },
+        "members": {
+          "type": "array",
+          "description": "Regular files in archive order.",
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "size_bytes",
+              "sha256"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "description": "Member path inside the archive, relative, with \"/\" separators and no leading \"./\"."
+              },
+              "size_bytes": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Decoded size in bytes."
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "description": "SHA-256 of the decoded bytes."
+              }
+            }
+          }
+        }
+      }
+    },
+    "sdkName": "listSentAttachmentArchiveMembers",
+    "summary": "List the files inside a sent zip or tar attachment",
+    "tag": "Sending",
+    "tagCommand": "sending"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "list-sent-emails",
     "description": "Returns a paginated list of OUTBOUND emails the caller's\norg has sent via /send-mail (and /emails/{id}/reply, which\nforwards through /send-mail). Includes every recorded\nattempt, including gate-denied attempts that the agent\nnever called and rows still in `queued` state.\n\nUnder an address-bound agent connection credential, the\nlist holds this agent's own sends plus delivered sends from\nother addresses in the org that name this agent in to, cc\nor bcc and have matching inbound delivery evidence at this\nagent. Pass `from` with the agent's own address to list\nonly its own sends.\n\nFor inbound mail received at your verified domains, see\n/emails. There is no unified send/receive history endpoint;\nthe two surfaces are intentionally separate because the\nunderlying tables, statuses, and lifecycle differ.\n\nEmail bodies (`body_text`, `body_html`) are NOT included on\nlist rows so a 50-row page can't balloon into a multi-MB\nresponse when sends are near the 5MB body cap. Use\n/sent-emails/{id} to fetch a single row with bodies, or\ncross-reference by `client_idempotency_key` if the caller\nalready has the body locally.\n",
     "hasJsonBody": false,
@@ -19869,6 +20207,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "X-Campaign-Id": "spring-sale",
             "Auto-Submitted": "auto-generated"
           }
+        },
+        "if_latest_message_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Send only if this message id is still the newest message in the thread this send joins, as this credential can see it. Newest means the message that joined the thread last, in the order messages were attached to it, not by timestamp: a message accepted earlier but attached later is newer. Messages stored before join order was recorded count as older than every message that has one, and among themselves sort by timestamp (received_at for mail received, created_at for mail sent), ties going to the larger id. Pass latest_message_id from GET /emails/{id}/conversation: it is read by the same rule, whereas the last message listed there is ordered by timestamp and can differ when mail joined the thread late. An organization credential sees every message in the thread; a mailbox-scoped agent connection key sees only mail received at its address and mail sent from it. Mail awaiting sender authentication never counts. Otherwise nothing is sent and the response is 409 latest_message_mismatch with error.details.latest_message_id, latest_message_at and thread_id. If in_reply_to resolves to no single thread this credential can check, the response is 422 latest_message_thread_unresolved; that does not change on retry. If the thread stays locked by another writer for longer than the send waits, the response is 503 thread_busy with Retry-After; nothing was sent and the same request can be retried. Checked inside the send transaction under a lock on the thread, so two sends conditioned on the same id cannot both go out. The value is part of the request a replay is matched on: a replay of an already accepted request with the same idempotency key, or the identical request within the automatic deduplication window, returns the original result without checking again, and a request that differs only in if_latest_message_id is not a replay. On /send-mail it requires in_reply_to; it cannot be combined with scheduled_at or repeat, because it is checked when the request is accepted."
         }
       }
     },
@@ -20908,6 +21251,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "X-Campaign-Id": "spring-sale",
             "Auto-Submitted": "auto-generated"
           }
+        },
+        "if_latest_message_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Send only if this message id is still the newest message in the thread this send joins, as this credential can see it. Newest means the message that joined the thread last, in the order messages were attached to it, not by timestamp: a message accepted earlier but attached later is newer. Messages stored before join order was recorded count as older than every message that has one, and among themselves sort by timestamp (received_at for mail received, created_at for mail sent), ties going to the larger id. Pass latest_message_id from GET /emails/{id}/conversation: it is read by the same rule, whereas the last message listed there is ordered by timestamp and can differ when mail joined the thread late. An organization credential sees every message in the thread; a mailbox-scoped agent connection key sees only mail received at its address and mail sent from it. Mail awaiting sender authentication never counts. Otherwise nothing is sent and the response is 409 latest_message_mismatch with error.details.latest_message_id, latest_message_at and thread_id. If in_reply_to resolves to no single thread this credential can check, the response is 422 latest_message_thread_unresolved; that does not change on retry. If the thread stays locked by another writer for longer than the send waits, the response is 503 thread_busy with Retry-After; nothing was sent and the same request can be retried. Checked inside the send transaction under a lock on the thread, so two sends conditioned on the same id cannot both go out. The value is part of the request a replay is matched on: a replay of an already accepted request with the same idempotency key, or the identical request within the automatic deduplication window, returns the original result without checking again, and a request that differs only in if_latest_message_id is not a replay. On /send-mail it requires in_reply_to; it cannot be combined with scheduled_at or repeat, because it is checked when the request is accepted."
         }
       },
       "required": [

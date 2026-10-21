@@ -32,6 +32,9 @@ from .agent_signup_start_result import AgentSignupStartResult
 from .agent_signup_verify_result import AgentSignupVerifyResult
 from .agent_signup_verify_result_auth_method import AgentSignupVerifyResultAuthMethod
 from .agent_signup_verify_result_token_type import AgentSignupVerifyResultTokenType
+from .archive_member import ArchiveMember
+from .archive_members import ArchiveMembers
+from .archive_members_format import ArchiveMembersFormat
 from .await_reply_response_200 import AwaitReplyResponse200
 from .await_reply_result import AwaitReplyResult
 from .caller_identity import CallerIdentity
@@ -339,6 +342,7 @@ from .list_default_network_members_response_200 import ListDefaultNetworkMembers
 from .list_deliveries_response_200 import ListDeliveriesResponse200
 from .list_deliveries_status import ListDeliveriesStatus
 from .list_domains_response_200 import ListDomainsResponse200
+from .list_email_attachment_archive_members_response_200 import ListEmailAttachmentArchiveMembersResponse200
 from .list_emails_automated import ListEmailsAutomated
 from .list_emails_awaiting import ListEmailsAwaiting
 from .list_emails_exclude_fyi import ListEmailsExcludeFyi
@@ -359,6 +363,7 @@ from .list_registry_agents_response_200 import ListRegistryAgentsResponse200
 from .list_registry_requests_response_200 import ListRegistryRequestsResponse200
 from .list_repeating_sends_response_200 import ListRepeatingSendsResponse200
 from .list_routes_response_200 import ListRoutesResponse200
+from .list_sent_attachment_archive_members_response_200 import ListSentAttachmentArchiveMembersResponse200
 from .list_sent_emails_response_200 import ListSentEmailsResponse200
 from .list_templates_response_200 import ListTemplatesResponse200
 from .list_wake_authorizations_response_200 import ListWakeAuthorizationsResponse200
@@ -697,6 +702,9 @@ __all__ = (
     "AgentSignupVerifyResult",
     "AgentSignupVerifyResultAuthMethod",
     "AgentSignupVerifyResultTokenType",
+    "ArchiveMember",
+    "ArchiveMembers",
+    "ArchiveMembersFormat",
     "AwaitReplyResponse200",
     "AwaitReplyResult",
     "CallerIdentity",
@@ -1004,6 +1012,7 @@ __all__ = (
     "ListDeliveriesResponse200",
     "ListDeliveriesStatus",
     "ListDomainsResponse200",
+    "ListEmailAttachmentArchiveMembersResponse200",
     "ListEmailsAutomated",
     "ListEmailsAwaiting",
     "ListEmailsExcludeFyi",
@@ -1024,6 +1033,7 @@ __all__ = (
     "ListRegistryRequestsResponse200",
     "ListRepeatingSendsResponse200",
     "ListRoutesResponse200",
+    "ListSentAttachmentArchiveMembersResponse200",
     "ListSentEmailsResponse200",
     "ListTemplatesResponse200",
     "ListWakeAuthorizationsResponse200",

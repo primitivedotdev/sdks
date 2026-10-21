@@ -2488,6 +2488,228 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /emails/{id}/attachments:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    get:
+      parameters:
+        - $ref: "#/components/parameters/AttachmentFilename"
+      operationId: downloadEmailAttachmentByFilename
+      summary: "Download one received email attachment by filename"
+      description: >-
+        Returns the same bytes as downloadEmailAttachmentPart, selecting the
+        attachment by its exact filename. The path form
+        `/emails/{id}/attachments/{filename}` also works for any name that is not
+        digits only, which that form reads as a part_index. When several attachments
+        share the filename the response is 409 attachment_name_ambiguous with every
+        matching part_index, and nothing is returned. Authenticate with an
+        organization API key, an authorized organization OAuth token, or an
+        address-bound agent connection key. A connected agent reads only mail
+        received at its own address. Function credentials are not supported.
+        Discarded content is unavailable.
+      tags:
+        - Emails
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/AttachmentPart"
+        "404":
+          description: Missing or inaccessible message, or no attachment with this filename
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/AttachmentNameAmbiguous"
+        "413":
+          description: attachment_limit_exceeded; the attachment exceeds download limits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "410":
+          description: content_discarded; the original content is no longer available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: attachment_integrity_failed; stored content failed integrity
+            validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: attachment_not_ready or attachment_storage_unavailable; retry after
+            the indicated delay
+          headers:
+            Retry-After:
+              description: Delay in seconds before retrying this read
+              schema:
+                type: integer
+                minimum: 0
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /emails/{id}/attachments/{attachment}/members:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+      - $ref: "#/components/parameters/AttachmentSelector"
+    get:
+      operationId: listEmailAttachmentArchiveMembers
+      summary: "List the files inside a received zip or tar attachment"
+      description: >-
+        Lists the regular files inside a zip, tar or tar.gz attachment with each
+        one's path, decoded size and SHA-256. The format is detected from the
+        content. Unsafe paths refuse the whole archive, and resource limits bound
+        the work (see the 413 and 422 responses). Authenticate with an organization
+        API key, an authorized organization OAuth token, or an address-bound agent
+        connection key. A connected agent reads only mail received at its own
+        address. Function credentials are not supported. Discarded content is
+        unavailable.
+      tags:
+        - Emails
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Files inside the archive
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ArchiveMembers"
+        "404":
+          description: Missing or inaccessible message, or no such attachment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/AttachmentNameAmbiguous"
+        "413":
+          $ref: "#/components/responses/ArchiveLimitExceeded"
+        "422":
+          $ref: "#/components/responses/ArchiveUnprocessable"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "410":
+          description: content_discarded; the original content is no longer available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: attachment_integrity_failed; stored content failed integrity
+            validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: attachment_not_ready, attachment_storage_unavailable or archive_busy;
+            retry after the indicated delay. archive_busy means this server is
+            already reading as many archives as it allows at once; nothing is
+            wrong with the archive.
+          headers:
+            Retry-After:
+              description: Delay in seconds before retrying this read
+              schema:
+                type: integer
+                minimum: 0
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /emails/{id}/attachments/{attachment}/members/{path}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+      - $ref: "#/components/parameters/AttachmentSelector"
+      - $ref: "#/components/parameters/ArchiveMemberPath"
+    get:
+      operationId: downloadEmailAttachmentArchiveMember
+      summary: "Download one file from inside a received zip or tar attachment"
+      description: >-
+        Returns the decoded bytes of one regular file inside a zip, tar or tar.gz
+        attachment, by its listed path. The archive's structure, every member path
+        and every limit are checked as for the listing, but only the requested file
+        is decoded and verified (its zip CRC-32, and X-Content-SHA256 of the bytes
+        returned); list the archive to have every file decoded. Authenticate with an
+        organization API key, an authorized organization OAuth token, or an
+        address-bound agent connection key. A connected agent reads only mail
+        received at its own address. Function credentials are not supported.
+        Discarded content is unavailable.
+      tags:
+        - Emails
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/AttachmentPart"
+        "404":
+          description: Missing or inaccessible message, no such attachment, or no regular
+            file at this path
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/AttachmentNameAmbiguous"
+        "413":
+          $ref: "#/components/responses/ArchiveLimitExceeded"
+        "422":
+          $ref: "#/components/responses/ArchiveUnprocessable"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "410":
+          description: content_discarded; the original content is no longer available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: attachment_integrity_failed; stored content failed integrity
+            validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: attachment_not_ready, attachment_storage_unavailable or archive_busy;
+            retry after the indicated delay. archive_busy means this server is
+            already reading as many archives as it allows at once; nothing is
+            wrong with the archive.
+          headers:
+            Retry-After:
+              description: Delay in seconds before retrying this read
+              schema:
+                type: integer
+                minimum: 0
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /sent-emails/{id}/attachments/{part_index}:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
@@ -2568,6 +2790,227 @@ paths:
         "503":
           description: attachment_not_ready or attachment_storage_unavailable; retry after
             the indicated delay
+          headers:
+            Retry-After:
+              description: Delay in seconds before retrying this read
+              schema:
+                type: integer
+                minimum: 0
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /sent-emails/{id}/attachments:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    get:
+      parameters:
+        - $ref: "#/components/parameters/AttachmentFilename"
+      operationId: downloadSentAttachmentByFilename
+      summary: "Download one sent email attachment by filename"
+      description: >-
+        Returns the same bytes as downloadSentAttachmentPart, selecting the
+        attachment by its exact filename. The path form
+        `/sent-emails/{id}/attachments/{filename}` also works for any name that is
+        not digits only, which that form reads as a part_index. When several
+        attachments share the filename the response is 409 attachment_name_ambiguous
+        with every matching part_index, and nothing is returned. Authenticate with
+        an organization API key, an authorized organization OAuth token, or an
+        address-bound agent connection key. A connected agent reads only mail sent
+        from its own address. Function credentials are not supported. Discarded
+        content is unavailable.
+      tags:
+        - Sending
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/AttachmentPart"
+        "404":
+          description: Missing or inaccessible message, or no attachment with this filename
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/AttachmentNameAmbiguous"
+        "413":
+          description: attachment_limit_exceeded; the attachment exceeds download limits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "410":
+          description: content_discarded; the original content is no longer available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: attachment_integrity_failed; stored content failed integrity
+            validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: attachment_not_ready or attachment_storage_unavailable; retry after
+            the indicated delay
+          headers:
+            Retry-After:
+              description: Delay in seconds before retrying this read
+              schema:
+                type: integer
+                minimum: 0
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /sent-emails/{id}/attachments/{attachment}/members:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+      - $ref: "#/components/parameters/AttachmentSelector"
+    get:
+      operationId: listSentAttachmentArchiveMembers
+      summary: "List the files inside a sent zip or tar attachment"
+      description: >-
+        Lists the regular files inside a zip, tar or tar.gz attachment with each
+        one's path, decoded size and SHA-256. The format is detected from the
+        content. Unsafe paths refuse the whole archive, and resource limits bound
+        the work (see the 413 and 422 responses). Authenticate with an organization
+        API key, an authorized organization OAuth token, or an address-bound agent
+        connection key. A connected agent reads only mail sent from its own address.
+        Function credentials are not supported. Discarded content is unavailable.
+      tags:
+        - Sending
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Files inside the archive
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ArchiveMembers"
+        "404":
+          description: Missing or inaccessible message, or no such attachment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/AttachmentNameAmbiguous"
+        "413":
+          $ref: "#/components/responses/ArchiveLimitExceeded"
+        "422":
+          $ref: "#/components/responses/ArchiveUnprocessable"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "410":
+          description: content_discarded; the original content is no longer available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: attachment_integrity_failed; stored content failed integrity
+            validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: attachment_not_ready, attachment_storage_unavailable or archive_busy;
+            retry after the indicated delay. archive_busy means this server is
+            already reading as many archives as it allows at once; nothing is
+            wrong with the archive.
+          headers:
+            Retry-After:
+              description: Delay in seconds before retrying this read
+              schema:
+                type: integer
+                minimum: 0
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /sent-emails/{id}/attachments/{attachment}/members/{path}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+      - $ref: "#/components/parameters/AttachmentSelector"
+      - $ref: "#/components/parameters/ArchiveMemberPath"
+    get:
+      operationId: downloadSentAttachmentArchiveMember
+      summary: "Download one file from inside a sent zip or tar attachment"
+      description: >-
+        Returns the decoded bytes of one regular file inside a zip, tar or tar.gz
+        attachment, by its listed path. The archive's structure, every member path
+        and every limit are checked as for the listing, but only the requested file
+        is decoded and verified (its zip CRC-32, and X-Content-SHA256 of the bytes
+        returned); list the archive to have every file decoded. Authenticate with an
+        organization API key, an authorized organization OAuth token, or an
+        address-bound agent connection key. A connected agent reads only mail sent
+        from its own address. Function credentials are not supported. Discarded
+        content is unavailable.
+      tags:
+        - Sending
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/AttachmentPart"
+        "404":
+          description: Missing or inaccessible message, no such attachment, or no regular
+            file at this path
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/AttachmentNameAmbiguous"
+        "413":
+          $ref: "#/components/responses/ArchiveLimitExceeded"
+        "422":
+          $ref: "#/components/responses/ArchiveUnprocessable"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "410":
+          description: content_discarded; the original content is no longer available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: attachment_integrity_failed; stored content failed integrity
+            validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: attachment_not_ready, attachment_storage_unavailable or archive_busy;
+            retry after the indicated delay. archive_busy means this server is
+            already reading as many archives as it allows at once; nothing is
+            wrong with the archive.
           headers:
             Retry-After:
               description: Delay in seconds before retrying this read
@@ -2669,6 +3112,15 @@ paths:
             schema:
               $ref: "#/components/schemas/ReplyInput"
       responses:
+        "409":
+          description: latest_message_mismatch; if_latest_message_id is no longer the newest
+            message in the thread. Nothing was sent. error.details carries
+            latest_message_id (null when the thread has no message visible to this
+            credential), latest_message_at and thread_id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "200":
           description: |
             Outbound relay result. When the request was answered with an
@@ -2707,7 +3159,10 @@ paths:
           description: |
             Inbound is not repliable: the row exists but lacks a
             `message_id` (no thread anchor) or a `recipient` (cannot
-            derive the From address).
+            derive the From address). Or latest_message_thread_unresolved:
+            if_latest_message_id was given but in_reply_to resolves to no single
+            thread this credential can check; nothing was sent, and the same
+            request will not succeed on retry.
           content:
             application/json:
               schema:
@@ -4085,6 +4540,24 @@ paths:
             schema:
               $ref: "#/components/schemas/SendMailInput"
       responses:
+        "409":
+          description: latest_message_mismatch; if_latest_message_id is no longer the newest
+            message in the thread. Nothing was sent. error.details carries
+            latest_message_id (null when the thread has no message visible to this
+            credential), latest_message_at and thread_id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: latest_message_thread_unresolved; if_latest_message_id was given but
+            in_reply_to resolves to no single thread this credential can check.
+            Nothing was sent, and the same request will not succeed on retry.
+            error.details.thread_id is null.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "200":
           description: |
             Outbound relay result. When the request was answered with an
@@ -10907,6 +11380,39 @@ components:
       name: token
       description: Signed download token provided in webhook payloads
   parameters:
+    AttachmentFilename:
+      name: filename
+      in: query
+      required: true
+      description: The attachment's exact filename from its metadata. Any name, digits
+        only included. No other query parameter is accepted.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 1024
+    AttachmentSelector:
+      name: attachment
+      in: path
+      required: true
+      description: The attachment, by its exact part_index when the value is digits
+        only, otherwise by its exact filename (case-sensitive, compared after
+        Unicode NFC normalization). A digits-only value always selects that
+        part_index, even when another attachment has that name; read such a
+        name with ?filename=.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 1024
+    ArchiveMemberPath:
+      name: path
+      in: path
+      required: true
+      description: The member path exactly as listed, percent-encoded as one path
+        segment (slashes as %2F).
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 1024
     AgentNetworkAddress:
       name: address
       in: path
@@ -11042,6 +11548,48 @@ components:
         type: integer
         minimum: 1
   responses:
+    AttachmentNameAmbiguous:
+      description: attachment_name_ambiguous; more than one attachment has this filename,
+        or a digits-only path value matches no part_index but is the name of an
+        attachment. error.details.part_indexes lists every match, so fetch by
+        part_index or by ?filename=. Or attachment_changed; attachment metadata
+        changed during the read.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ArchiveLimitExceeded:
+      description: >-
+        archive_limit_exceeded, or attachment_limit_exceeded for the attachment
+        itself. Limits: at most 1000 entries of any kind (files, directories
+        and links all count); each file at most 31457280 bytes decoded; all
+        files together (for tar.gz, the whole decoded tar stream) at most
+        33554432 bytes; a compression ratio above 100:1 is refused once
+        decoded output passes 1048576 bytes; member paths at most 1024 UTF-8
+        bytes.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ArchiveUnprocessable:
+      description: >-
+        attachment_not_archive, archive_unsafe_path, archive_invalid or
+        archive_unsupported. An archive with an absolute, drive-letter,
+        backslash, control-character, Unicode format or separator character
+        (bidirectional controls included), empty, "." or ".." path segment is
+        refused whole (archive_unsafe_path) rather than listed without the
+        entry. Any symbolic or hard link is refused the same way, wherever it
+        points. Paths that differ only by letter case or Unicode
+        normalization count as duplicates. Duplicate paths, overlapping zip
+        data, a zip local header whose name or method disagrees with the
+        central directory, and truncated or corrupt structures are
+        archive_invalid; encryption, zip64, multi-volume archives, compression
+        other than stored or deflate, sparse tar files, and device or other
+        special files are archive_unsupported.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
     AttachmentPart:
       description: Original attachment bytes; never a JSON envelope or a base64 string
       content:
@@ -11278,6 +11826,56 @@ components:
                     required:
                       - deleted
   schemas:
+    ArchiveMember:
+      type: object
+      required:
+        - path
+        - size_bytes
+        - sha256
+      properties:
+        path:
+          type: string
+          description: Member path inside the archive, relative, with "/" separators and no
+            leading "./".
+        size_bytes:
+          type: integer
+          minimum: 0
+          description: Decoded size in bytes.
+        sha256:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+          description: SHA-256 of the decoded bytes.
+    ArchiveMembers:
+      type: object
+      required:
+        - part_index
+        - filename
+        - format
+        - members
+      properties:
+        part_index:
+          type: integer
+          minimum: 0
+          description: >-
+            The attachment the listing is of.
+        filename:
+          type:
+            - string
+            - "null"
+          description: >-
+            That attachment's filename.
+        format:
+          type: string
+          enum:
+            - zip
+            - tar
+            - tar.gz
+        members:
+          type: array
+          description: >-
+            Regular files in archive order.
+          items:
+            $ref: "#/components/schemas/ArchiveMember"
     ContactPolicyRuleInput:
       type: object
       additionalProperties: false
@@ -12684,6 +13282,16 @@ components:
                 - address_not_controlled
                 - contact_conflict
                 - sent_mail_search_unavailable
+                - latest_message_mismatch
+                - latest_message_thread_unresolved
+                - thread_busy
+                - attachment_name_ambiguous
+                - archive_limit_exceeded
+                - archive_unsafe_path
+                - archive_invalid
+                - archive_unsupported
+                - attachment_not_archive
+                - archive_busy
             message:
               type: string
             details:
@@ -15774,6 +16382,20 @@ components:
             Present only on a `since` read: the position to send as
             `since` on the next read. An opaque string: send it back
             verbatim and do not parse it or build one.
+        latest_message_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: |
+            The id to pass as `if_latest_message_id` when replying in this
+            conversation: the message that joined the thread last among
+            those this credential can read, by the rule a conditional send
+            checks. It can differ from the last message in `messages`, which
+            is ordered by timestamp, when mail joined the thread after a
+            newer-timestamped message. Present on a full read and a window
+            read of a threaded conversation; null when no message in the
+            thread is visible; absent on a `since` delta.
       required:
         - thread_id
         - message_count
@@ -16108,6 +16730,38 @@ components:
           example:
             X-Campaign-Id: spring-sale
             Auto-Submitted: auto-generated
+        if_latest_message_id:
+          type: string
+          format: uuid
+          description: >-
+            Send only if this message id is still the newest message in the thread this
+            send joins, as this credential can see it. Newest means the message that
+            joined the thread last, in the order messages were attached to it, not by
+            timestamp: a message accepted earlier but attached later is newer. Messages
+            stored before join order was recorded count as older than every message that
+            has one, and among themselves sort by timestamp (received_at for mail
+            received, created_at for mail sent), ties going to the larger id. Pass
+            latest_message_id from GET /emails/{id}/conversation: it is read by the same
+            rule, whereas the last message listed there is ordered by timestamp and can
+            differ when mail joined the thread late. An organization credential sees
+            every message in the thread; a mailbox-scoped agent connection key sees only
+            mail received at its address and mail sent from it. Mail awaiting sender
+            authentication never counts. Otherwise nothing is sent and the response is
+            409 latest_message_mismatch with error.details.latest_message_id,
+            latest_message_at and thread_id. If in_reply_to resolves to no single thread
+            this credential can check, the response is 422
+            latest_message_thread_unresolved; that does not change on retry. If the
+            thread stays locked by another writer for longer than the send waits, the
+            response is 503 thread_busy with Retry-After; nothing was sent and the same
+            request can be retried. Checked inside the send transaction under a lock on
+            the thread, so two sends conditioned on the same id cannot both go out. The
+            value is part of the request a replay is matched on: a replay of an already
+            accepted request with the same idempotency key, or the identical request
+            within the automatic deduplication window, returns the original result
+            without checking again, and a request that differs only in
+            if_latest_message_id is not a replay. On /send-mail it requires in_reply_to;
+            it cannot be combined with scheduled_at or repeat, because it is checked
+            when the request is accepted.
       required:
         - from
         - to
@@ -17255,6 +17909,38 @@ components:
           example:
             X-Campaign-Id: spring-sale
             Auto-Submitted: auto-generated
+        if_latest_message_id:
+          type: string
+          format: uuid
+          description: >-
+            Send only if this message id is still the newest message in the thread this
+            send joins, as this credential can see it. Newest means the message that
+            joined the thread last, in the order messages were attached to it, not by
+            timestamp: a message accepted earlier but attached later is newer. Messages
+            stored before join order was recorded count as older than every message that
+            has one, and among themselves sort by timestamp (received_at for mail
+            received, created_at for mail sent), ties going to the larger id. Pass
+            latest_message_id from GET /emails/{id}/conversation: it is read by the same
+            rule, whereas the last message listed there is ordered by timestamp and can
+            differ when mail joined the thread late. An organization credential sees
+            every message in the thread; a mailbox-scoped agent connection key sees only
+            mail received at its address and mail sent from it. Mail awaiting sender
+            authentication never counts. Otherwise nothing is sent and the response is
+            409 latest_message_mismatch with error.details.latest_message_id,
+            latest_message_at and thread_id. If in_reply_to resolves to no single thread
+            this credential can check, the response is 422
+            latest_message_thread_unresolved; that does not change on retry. If the
+            thread stays locked by another writer for longer than the send waits, the
+            response is 503 thread_busy with Retry-After; nothing was sent and the same
+            request can be retried. Checked inside the send transaction under a lock on
+            the thread, so two sends conditioned on the same id cannot both go out. The
+            value is part of the request a replay is matched on: a replay of an already
+            accepted request with the same idempotency key, or the identical request
+            within the automatic deduplication window, returns the original result
+            without checking again, and a request that differs only in
+            if_latest_message_id is not a replay. On /send-mail it requires in_reply_to;
+            it cannot be combined with scheduled_at or repeat, because it is checked
+            when the request is accepted.
     RepeatInput:
       type: object
       additionalProperties: false
