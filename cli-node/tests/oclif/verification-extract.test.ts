@@ -192,6 +192,14 @@ describe("extractVerificationCode", () => {
     ).toBe("482913");
   });
 
+  it("does not treat a line that supplies its own code as a label for the number above", () => {
+    expect(
+      extractVerificationCode({
+        text: "Request reference:\n738296\nYour new reset code is 4455",
+      }),
+    ).toBe("4455");
+  });
+
   it("reads the HTML part when the text part has no code", () => {
     expect(
       extractVerificationCode({

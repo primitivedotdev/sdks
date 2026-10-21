@@ -125,6 +125,15 @@ function previousContent(lines: string[], index: number, count: number) {
 const NEXT_LINE_LABEL =
   /^\s*(?:is|was|[-:=(])?\s*(?:your|the|this)?\b.{0,30}?\b(?:code|passcode|otp|pin)\b/i;
 
+/** The next line labels the code above it and supplies no code of its own. */
+function isLabelBelow(line: string | null): boolean {
+  return (
+    line !== null &&
+    NEXT_LINE_LABEL.test(line) &&
+    !/\d{4,}|\b(?=[A-Z0-9-]*\d)[A-Z0-9][A-Z0-9-]{3,}\b/.test(line)
+  );
+}
+
 function nextContent(lines: string[], index: number): string | null {
   for (let i = index + 1; i < lines.length; i++)
     if (lines[i].trim() !== "") return lines[i];
@@ -154,7 +163,7 @@ function scoreCode(
     score += 7;
   else if (
     after.trim() === "" &&
-    NEXT_LINE_LABEL.test(nextContent(lines, candidate.line) ?? "")
+    isLabelBelow(nextContent(lines, candidate.line))
   )
     score += 7;
   else return null;
