@@ -227,6 +227,11 @@ Show only inbound emails waiting on your reply.
 Show the oldest email awaiting your reply, its conversation, and the reply command. See
 .BR "AGENT LOOP" .
 .TP
+.B primitive wait --from DOMAIN --code
+Wait for the next email from DOMAIN (or an address) and print only its
+verification code. --link prints the sign-in link instead; without either the
+email is printed with its ID. Exit 5 on --timeout (default 5m).
+.TP
 .B primitive functions init NAME
 Scaffold a Primitive Function.
 .TP

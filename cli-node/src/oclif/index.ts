@@ -161,6 +161,7 @@ import {
   ThreadsMutedCommand,
   ThreadsUnmuteCommand,
 } from "./commands/threads-mute.js";
+import WaitCommand from "./commands/wait.js";
 import WakeAuthorizationsCreateCommand from "./commands/wake-authorizations-create.js";
 import WakeAuthorizationsDeleteCommand from "./commands/wake-authorizations-delete.js";
 import WakeAuthorizationsListCommand from "./commands/wake-authorizations-list.js";
@@ -732,6 +733,9 @@ export const COMMANDS: Record<string, typeof Command> = {
   // reply, with its conversation and the reply command. Pairs with
   // `reply --id <id>`; reads server reply state, not a local cursor.
   "inbox:next": InboxNextCommand,
+  // `wait` blocks for the next email to this identity and prints it, or only
+  // its verification code (--code) or sign-in link (--link).
+  wait: WaitCommand,
   // WebSocket receiving, with explicit poll transport and bounded one-shot waits.
   // One listener route owns events, receiver status and exact-email routing diagnostics.
   listen: ListenCommand,

@@ -142,6 +142,49 @@ primitive inbox next
 
 Run `primitive --help` for the full command list. Per-command help (`primitive functions deploy --help`) carries enough detail that an agent can compose any operation without leaving the terminal.
 
+## Verification codes and sign-in links
+
+Your address works for signing up and logging in to other services. After you
+enter it, wait for the email and take what you need from it:
+
+```bash
+# Sign up with your address, then:
+primitive wait --from github.com --code      # prints 482913
+primitive wait --from vercel.com --link      # prints the sign-in link
+primitive wait --subject "verify" --timeout 90s
+primitive wait --from stripe.com --code --json
+```
+
+`primitive wait` waits for the next email to the identity the CLI resolves (a
+connected agent profile's own address, or any inbound mail for a member login)
+and prints it: sender, subject, time, the start of its text and its ID, ready
+for `primitive reply --id <id>`. Only mail that arrives after the command starts
+matches; `--include-existing` also lets one of the newest 50 emails match, for
+a code that arrived before you started waiting.
+
+- `--from` takes an address or a bare domain; `github.com` matches any sender at
+  it or its subdomains. It narrows the wait; it does not authenticate the sender.
+- `--subject` matches text in the subject; `--thread <id>` and
+  `--reply-to <sent-email-id>` narrow to a conversation.
+- `--timeout` takes `90s`, `5m`, `1h` or plain seconds (default `5m`, `0` waits
+  forever).
+- `--code` prints only the one-time code, preferring numbers next to words like
+  code, verification or passcode and ignoring years, phone numbers, prices and
+  order numbers. A code split as `123 456` prints as `123456`.
+- `--link` prints only the most likely verify, confirm, sign-in, magic or reset
+  link, skipping unsubscribe, privacy, help and social links and removing an
+  obvious click-tracking wrapper.
+- `--json` prints one object: `id`, `thread_id`, `from`, `to`, `subject`,
+  `received_at`, `text` and, when asked, `code` and `link`.
+
+| Exit | Meaning |
+|---|---|
+| 0 | A matching email arrived and was printed. |
+| 1 | Error (API failure or authentication). |
+| 2 | Invalid flags or arguments. |
+| 5 | No matching email before `--timeout`. |
+| 6 | The email arrived without a code (`--code`) or link (`--link`); its ID is on stderr. |
+
 ## Waiting with connected credentials
 
 After sending, wait for the existing send's reply without sending again:
