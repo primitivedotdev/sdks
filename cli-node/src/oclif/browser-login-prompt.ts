@@ -86,17 +86,37 @@ function nativeClipboardCommand(): [string, string[]] | null {
   return null;
 }
 
+/**
+ * Resolves false on any failure, including a tool that exits before
+ * reading its input (EPIPE on stdin), so the caller falls back to OSC 52
+ * instead of the error taking down login.
+ */
+export function runClipboardCommand(
+  command: string,
+  args: string[],
+  text: string,
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const settle = (ok: boolean) => {
+      if (settled) return;
+      settled = true;
+      resolve(ok);
+    };
+    const child = spawn(command, args, {
+      stdio: ["pipe", "ignore", "ignore"],
+    });
+    child.on("error", () => settle(false));
+    child.stdin.on("error", () => settle(false));
+    child.on("close", (code) => settle(code === 0));
+    child.stdin.end(text);
+  });
+}
+
 function copyWithNativeClipboard(text: string): Promise<boolean> {
   const command = nativeClipboardCommand();
   if (!command) return Promise.resolve(false);
-  return new Promise((resolve) => {
-    const child = spawn(command[0], command[1], {
-      stdio: ["pipe", "ignore", "ignore"],
-    });
-    child.on("error", () => resolve(false));
-    child.on("close", (code) => resolve(code === 0));
-    child.stdin.end(text);
-  });
+  return runClipboardCommand(command[0], command[1], text);
 }
 
 /**
@@ -114,11 +134,15 @@ export async function copyToClipboard(
 }
 
 const CTRL_C = "\u0003";
+const CTRL_Z = "\u001a";
 
 /**
- * Listens for `c` while the CLI polls for browser approval. Raw mode
- * swallows Ctrl+C, so it is re-raised as SIGINT to keep the usual exit
- * behaviour. Returns a disposer that restores the terminal.
+ * Listens for `c` while the CLI polls for browser approval. Raw mode turns
+ * Ctrl+C and Ctrl+Z into plain input, so they are handled here: Ctrl+C is
+ * re-raised as SIGINT, and Ctrl+Z restores the terminal, suspends with
+ * SIGTSTP, and re-enters raw mode on SIGCONT. Several keys can arrive in
+ * one chunk (pastes, SSH), so every character is checked. Returns a
+ * disposer that restores the terminal.
  */
 export function listenForCopyHotkey(params: {
   input: Input;
@@ -130,14 +154,7 @@ export function listenForCopyHotkey(params: {
   const copy = params.copy ?? copyToClipboard;
   let disposed = false;
 
-  const onData = (chunk: Buffer | string) => {
-    const key = chunk.toString();
-    if (key === CTRL_C) {
-      dispose();
-      process.kill(process.pid, "SIGINT");
-      return;
-    }
-    if (key.toLowerCase() !== "c") return;
+  const copyUrl = () => {
     void copy(url, output).then((how) => {
       if (disposed) return;
       output.write(
@@ -148,10 +165,39 @@ export function listenForCopyHotkey(params: {
     });
   };
 
+  const onContinue = () => {
+    if (!disposed) input.setRawMode?.(true);
+  };
+
+  const suspend = () => {
+    input.setRawMode?.(false);
+    process.once("SIGCONT", onContinue);
+    process.kill(process.pid, "SIGTSTP");
+  };
+
+  const onData = (chunk: Buffer | string) => {
+    let wantsCopy = false;
+    for (const key of chunk.toString()) {
+      if (key === CTRL_C) {
+        dispose();
+        process.kill(process.pid, "SIGINT");
+        return;
+      }
+      if (key === CTRL_Z && process.platform !== "win32") {
+        if (wantsCopy) copyUrl();
+        suspend();
+        return;
+      }
+      if (key === "c" || key === "C") wantsCopy = true;
+    }
+    if (wantsCopy) copyUrl();
+  };
+
   const dispose = () => {
     if (disposed) return;
     disposed = true;
     input.off("data", onData);
+    process.off("SIGCONT", onContinue);
     input.setRawMode?.(false);
     input.pause();
   };

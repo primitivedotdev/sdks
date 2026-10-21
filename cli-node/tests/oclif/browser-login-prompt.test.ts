@@ -6,6 +6,7 @@ import {
   formatBrowserLoginInstructions,
   listenForCopyHotkey,
   osc52Sequence,
+  runClipboardCommand,
 } from "../../src/oclif/browser-login-prompt.js";
 
 const START = {
@@ -178,5 +179,87 @@ describe("listenForCopyHotkey", () => {
     } finally {
       kill.mockRestore();
     }
+  });
+
+  it("handles Ctrl+C that arrives in the same chunk as other keys", () => {
+    const input = new FakeInput();
+    const copy = vi.fn(async () => "native" as const);
+    const kill = vi.spyOn(process, "kill").mockImplementation(() => true);
+    try {
+      listenForCopyHotkey({ copy, input, output: fakeOutput(), url: "u" });
+      input.emit("data", Buffer.from("c\u0003"));
+
+      expect(kill).toHaveBeenCalledWith(process.pid, "SIGINT");
+      expect(copy).not.toHaveBeenCalled();
+      expect(input.rawMode).toBe(false);
+    } finally {
+      kill.mockRestore();
+    }
+  });
+
+  it("copies once for a chunk with several keys", async () => {
+    const input = new FakeInput();
+    const copy = vi.fn(async () => "native" as const);
+    const dispose = listenForCopyHotkey({
+      copy,
+      input,
+      output: fakeOutput(),
+      url: "u",
+    });
+    input.emit("data", Buffer.from("xcC"));
+    await vi.waitFor(() => expect(copy).toHaveBeenCalledTimes(1));
+    dispose();
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "suspends on Ctrl+Z and re-enters raw mode on SIGCONT",
+    () => {
+      const input = new FakeInput();
+      const kill = vi.spyOn(process, "kill").mockImplementation(() => true);
+      try {
+        const dispose = listenForCopyHotkey({
+          input,
+          output: fakeOutput(),
+          url: "u",
+        });
+        input.emit("data", Buffer.from("\u001a"));
+
+        expect(input.rawMode).toBe(false);
+        expect(kill).toHaveBeenCalledWith(process.pid, "SIGTSTP");
+
+        process.emit("SIGCONT", "SIGCONT");
+        expect(input.rawMode).toBe(true);
+        expect(input.listenerCount("data")).toBe(1);
+
+        dispose();
+        expect(process.listenerCount("SIGCONT")).toBe(0);
+      } finally {
+        kill.mockRestore();
+      }
+    },
+  );
+});
+
+describe("runClipboardCommand", () => {
+  it("returns false instead of throwing when the tool exits before reading", async () => {
+    await expect(
+      runClipboardCommand(
+        "sh",
+        ["-c", "exec 0<&-; exit 1"],
+        "x".repeat(1 << 20),
+      ),
+    ).resolves.toBe(false);
+  });
+
+  it("returns false when the tool is missing", async () => {
+    await expect(
+      runClipboardCommand("primitive-no-such-clipboard-tool", [], "x"),
+    ).resolves.toBe(false);
+  });
+
+  it("returns true when the tool reads the text and succeeds", async () => {
+    await expect(
+      runClipboardCommand("sh", ["-c", "cat >/dev/null"], "x"),
+    ).resolves.toBe(true);
   });
 });
