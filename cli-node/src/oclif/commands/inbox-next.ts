@@ -371,7 +371,21 @@ export function waitingInboxApi(
     ...api,
     getConversation: retryingOperation(api.getConversation, options),
     getEmail: retryingOperation(api.getEmail, options),
-    listEmails: retryingOperation(api.listEmails, options),
+    // A long-poll retried after a backoff holds only for the time left, so
+    // the wait never outlasts its deadline.
+    listEmails: retryingOperation(api.listEmails, options, (input) => {
+      const query = (input as { query?: { wait?: number } }).query;
+      if (deadline === null || query?.wait === undefined) return input;
+      const remainingMs = deadline - Date.now();
+      if (remainingMs <= 0) return null;
+      return {
+        ...input,
+        query: {
+          ...query,
+          wait: Math.min(query.wait, Math.floor(remainingMs / 1000)),
+        },
+      } as typeof input;
+    }),
   };
 }
 

@@ -175,15 +175,25 @@ export class WaitDeadlineReached extends Error {
   }
 }
 
-/** Wrap a generated operation so that it retries transient failures. */
+/**
+ * Wrap a generated operation so that it retries transient failures.
+ * `prepare` runs before every attempt, so an attempt can be fitted to the
+ * time left (a long-poll's hold, say); returning null ends the wait.
+ */
 export function retryingOperation<
   F extends (options: never) => Promise<unknown>,
->(operation: F, options: TransientRetryOptions): F {
+>(
+  operation: F,
+  options: TransientRetryOptions,
+  prepare?: (input: Parameters<F>[0]) => Parameters<F>[0] | null,
+): F {
   return (async (input: Parameters<F>[0]) => {
-    const result = await retryTransient(
-      () => operation(input) as Promise<unknown>,
-      options,
-    );
+    const result = await retryTransient(() => {
+      const attempt = prepare ? prepare(input) : input;
+      return attempt === null
+        ? Promise.resolve(null)
+        : (operation(attempt) as Promise<unknown>);
+    }, options);
     if (result === null) throw new WaitDeadlineReached();
     return result;
   }) as unknown as F;

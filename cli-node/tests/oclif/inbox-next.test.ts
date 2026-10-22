@@ -40,6 +40,7 @@ import InboxNextCommand, {
   sanitizeForTerminal,
   toJson,
   waitForActivity,
+  waitingInboxApi,
 } from "../../src/oclif/commands/inbox-next.js";
 import { COMMANDS } from "../../src/oclif/index.js";
 import { readEmailInteraction } from "../../src/oclif/interaction-actions.js";
@@ -47,6 +48,7 @@ import {
   AwaitingIncludesRejectedError,
   ReplyStateUnsupportedError,
 } from "../../src/oclif/reply-state.js";
+import { WaitDeadlineReached } from "../../src/oclif/transient-retry.js";
 
 const CLI_ROOT = resolve(import.meta.dirname, "../..");
 const AGENT = "agent@acme.primitive.email";
@@ -1528,6 +1530,32 @@ describe("inbox next with transient API failures", () => {
     expect(JSON.parse(result.stdout).warnings).toEqual([
       "primitive: rate limited; retrying in 0 s.",
     ]);
+  });
+
+  it("a retried long-poll holds only for the time the wait has left", async () => {
+    const queries: Array<Record<string, unknown>> = [];
+    let calls = 0;
+    const listEmails = (async (options: { query: Record<string, unknown> }) => {
+      queries.push(options.query);
+      calls += 1;
+      return calls === 1
+        ? failure(429, "rate_limit_exceeded", { "Retry-After": "0" })
+        : { data: { data: [], meta: { cursor: null } } };
+    }) as unknown as InboxNextApi["listEmails"];
+    const api = waitingInboxApi(Date.now() + 5_500, {
+      ...inbox.api(),
+      listEmails,
+    });
+    await api.listEmails({
+      query: { limit: 1, since: "x", wait: 30 },
+    } as never);
+    expect(queries.map((query) => query.wait)).toEqual([5, 5]);
+    await expect(
+      waitingInboxApi(Date.now() - 1, {
+        ...inbox.api(),
+        listEmails,
+      }).listEmails({ query: { limit: 1, since: "x", wait: 30 } } as never),
+    ).rejects.toBeInstanceOf(WaitDeadlineReached);
   });
 
   it("--wait exits 5 when the API stays unavailable until the timeout", async () => {
