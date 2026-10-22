@@ -91,6 +91,7 @@ import {
 import {
   pauseForTransientFailure,
   retryTransient,
+  type TransientFailure,
   transientFailure,
 } from "../transient-retry.js";
 import {
@@ -2824,6 +2825,10 @@ export async function waitForReply(
   // When a rate limit's Retry-After outlasted the strict phase, the fallback
   // search must not start before the server allows it.
   let notBefore = 0;
+  const holdRetryAfter = (failure: TransientFailure) => {
+    if (failure.retryAfterMs !== undefined)
+      notBefore = Math.max(notBefore, Date.now() + failure.retryAfterMs);
+  };
   for (const phase of phases) {
     if (phase.label === "strict" && strictFilterUnsupported) continue;
     if (notBefore > Date.now()) {
@@ -2858,13 +2863,12 @@ export async function waitForReply(
       if (!page.ok) {
         const failure = transientFailure(page);
         if (failure) {
-          if (failure.retryAfterMs !== undefined)
-            notBefore = Date.now() + failure.retryAfterMs;
           // Rate limited or briefly unavailable: back off within this phase.
           if (
             !(await pauseForTransientFailure(failure, failures, {
               deadline: phase.deadline,
               notice,
+              onTransientFailure: holdRetryAfter,
             }))
           )
             break;
@@ -2907,7 +2911,11 @@ export async function waitForReply(
               path: { id: match.id },
               responseStyle: "fields",
             }),
-          { deadline: phase.deadline, notice },
+          {
+            deadline: phase.deadline,
+            notice,
+            onTransientFailure: holdRetryAfter,
+          },
         );
         // This phase ran out while the API was rate limited or unavailable;
         // the loop moves on to the next phase, or ends the wait.

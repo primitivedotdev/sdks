@@ -29,6 +29,8 @@ export type TransientRetryOptions = {
   deadline: number | null | undefined;
   /** Where the one-line backoff notice goes; stderr by default. */
   notice?: (message: string) => void;
+  /** Told of each transient failure before its backoff. */
+  onTransientFailure?: (failure: TransientFailure) => void;
 };
 
 type ResponseLike = {
@@ -129,6 +131,7 @@ export async function pauseForTransientFailure(
   attempt: number,
   options: TransientRetryOptions,
 ): Promise<boolean> {
+  options.onTransientFailure?.(failure);
   const deadline = options.deadline ?? null;
   const remaining =
     deadline === null ? Number.POSITIVE_INFINITY : deadline - Date.now();

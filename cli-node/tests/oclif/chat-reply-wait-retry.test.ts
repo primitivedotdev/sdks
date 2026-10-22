@@ -133,4 +133,22 @@ describe("chat reply wait with transient API failures", () => {
       true,
     );
   });
+
+  it("does not reread a candidate in fallback before its Retry-After allows it", async () => {
+    const reads: number[] = [];
+    const { apiClient } = setup((url) => {
+      if (url.pathname !== `/v1/emails/${replyId}`) return undefined;
+      reads.push(Date.now());
+      return Date.now() < start + 10_000
+        ? Response.json(
+            { error: { code: "rate_limit_exceeded", message: "slow" } },
+            { status: 429, headers: { "Retry-After": "60" } },
+          )
+        : undefined;
+    });
+    const result = await waitForReply(params(apiClient, []));
+    expect(result?.matchStrategy).toBe("fallback");
+    expect(reads).toHaveLength(2);
+    expect(reads[1]).toBeGreaterThanOrEqual(start + 60_000);
+  });
 });
