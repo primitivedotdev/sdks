@@ -1161,3 +1161,43 @@ describe("AGENT_RESUME on agent connect", () => {
     expect(output.resumeNote).toBe("failed");
   });
 });
+
+describe("a pasted invitation that finished an unfinished agent", () => {
+  it("says it finished the same address", async () => {
+    const f = fixture(
+      {},
+      {
+        ...setupResult(),
+        replacedUnfinished: {
+          address: identity.agentAddress,
+          sameAddress: true,
+        },
+      },
+    );
+    const output = await runAgentConnect(f.options);
+    expect(output.replacedUnfinished).toEqual({
+      address: identity.agentAddress,
+      sameAddress: true,
+    });
+    expect(output.guidance).toMatch(
+      /^This finished the session's unfinished agent agent@example\.test\. /,
+    );
+  });
+
+  it("names the earlier pending agent when the invitation was for another address", async () => {
+    const f = fixture(
+      {},
+      {
+        ...setupResult(),
+        replacedUnfinished: {
+          address: "pending@example.test",
+          sameAddress: false,
+        },
+      },
+    );
+    const output = await runAgentConnect(f.options);
+    expect(output.guidance).toContain(
+      "the session's earlier unfinished agent pending@example.test stays unconnected in the Primitive app",
+    );
+  });
+});

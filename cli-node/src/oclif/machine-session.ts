@@ -16,7 +16,11 @@ import {
   AgentDisconnectError,
   disconnectAgent,
 } from "./agent-disconnect.js";
-import { enrollAgent } from "./agent-enroll.js";
+import {
+  enrollAgent,
+  stuckEnrollmentStep,
+  unfinishedEnrollmentAddress,
+} from "./agent-enroll.js";
 import {
   publishResumeNote,
   type ResumeNoteClear,
@@ -1195,13 +1199,19 @@ export async function registerSession(
     } catch {
       credentials = null;
     }
-    if (!credentials)
+    if (!credentials) {
+      // An address this session already reserved is finished from the app,
+      // not by signing in and creating another one.
+      const pending = unfinishedEnrollmentAddress(options.configDir, sessionId);
       return {
         ...known,
+        ...(pending ? { address: pending } : {}),
         status: "not_logged_in",
-        detail:
-          "No saved member login on this machine. Run `primitive signin`, then start the session again.",
+        detail: pending
+          ? stuckEnrollmentStep(pending)
+          : "No saved member login on this machine. Run `primitive signin`, then start the session again.",
       };
+    }
     // Recorded before enrollment so an interrupted run resumes with the same
     // name, and so a SessionEnd that arrives meanwhile can mark it ended.
     record = await updateSessionRecord(

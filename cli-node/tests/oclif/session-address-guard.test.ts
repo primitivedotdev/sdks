@@ -56,6 +56,7 @@ import {
   saveConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
 import { connectedProfilesForSession } from "../../src/oclif/machine-session.js";
+import { appendRegistrationLog } from "../../src/oclif/registration-log.js";
 import { ALREADY_CONNECTED_EXIT_CODE } from "../../src/oclif/session-address-guard.js";
 import {
   removeMailFile,
@@ -873,5 +874,102 @@ describe("connectedProfilesForSession", () => {
       { profile: `session-${session}`, address: "auto@example.test" },
     ]);
     expect(connectedProfilesForSession(configDir, "not-a-uuid")).toEqual([]);
+  });
+});
+
+describe("a session whose registration never finished", () => {
+  function stuckSession() {
+    const directory = agentProfileDirectory(configDir, `session-${session}`);
+    writeMailJson(join(directory, "enrollment", "state.json"), {
+      version: 2,
+      address: "pending@example.test",
+      phase: "setup_attempted",
+    });
+    writeMailJson(join(directory, "setup.json"), {
+      version: 1,
+      session,
+      receiverMode: "native",
+      invitationHash: "d".repeat(64),
+      since: "2026-01-01T00:00:00.000Z",
+      contactRequests: false,
+      challenge: null,
+      phase: "waiting",
+      receipt: null,
+    });
+    appendRegistrationLog(configDir, `session-${session}`, {
+      event: "failed",
+      phase: "setup_attempted",
+      code: "setup_unfinished",
+      orgId: "22222222-2222-4222-8222-222222222222",
+      address: "pending@example.test",
+      detail:
+        "This session's agent pending@example.test is created but not connected: in the Primitive app open it and choose Copy again, then paste that setup instruction here; `agent connect` finishes the same address.",
+    });
+  }
+
+  it("claims a pasted invitation instead of asking keep or replace", async () => {
+    process.env.CODEX_THREAD_ID = session;
+    stuckSession();
+    mocks.setupAgent.mockResolvedValue(setupResult(`session-${session}`));
+    await AgentConnectCommand.run(
+      ["--session", session, "--no-skill", "--json"],
+      {
+        root,
+      },
+    );
+    expect(process.exitCode).not.toBe(ALREADY_CONNECTED_EXIT_CODE);
+    expect(outputs.join("\n")).not.toContain("already_connected");
+    expect(mocks.setupAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        profileName: `session-${session}`,
+        session,
+        invitation,
+      }),
+    );
+    expect(mocks.disconnectAgent).not.toHaveBeenCalled();
+  });
+
+  it("still asks when another profile of the session holds a credential", async () => {
+    process.env.CODEX_THREAD_ID = session;
+    stuckSession();
+    savedProfile("work", "work@example.test", session);
+    await AgentConnectCommand.run(
+      ["--session", session, "--no-skill", "--json"],
+      {
+        root,
+      },
+    );
+    expect(process.exitCode).toBe(ALREADY_CONNECTED_EXIT_CODE);
+    expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
+      status: "already_connected",
+      bound: [{ profile: "work", address: "work@example.test" }],
+    });
+    expect(mocks.setupAgent).not.toHaveBeenCalled();
+  });
+
+  it("status explains the last failed registration without opening profile files", async () => {
+    stuckSession();
+    await AgentConnectCommand.run(
+      ["--status", "--session", session, "--json"],
+      {
+        root,
+      },
+    );
+    expect(process.exitCode).toBe(1);
+    const output = JSON.parse(outputs[0] ?? "");
+    expect(output).toMatchObject({
+      status: "not_configured",
+      registration: {
+        address: "pending@example.test",
+        lastFailure: { code: "setup_unfinished" },
+      },
+    });
+    expect(output.detail).toContain("choose Copy again");
+    process.exitCode = undefined;
+    outputs.length = 0;
+    await AgentConnectCommand.run(["--status", "--session", session], { root });
+    expect(outputs.join("\n")).toContain(
+      "The last registration attempt for this session (pending@example.test) failed at",
+    );
   });
 });
