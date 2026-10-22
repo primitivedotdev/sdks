@@ -60,7 +60,7 @@ try {
   const bundled = tree(join(installedRoot, "dist", "skills", "primitive-connect"));
   assert.equal(manifest.name, "primitive-connect");
   assert.deepEqual(bundled, manifest.files);
-  assert.match(readFileSync(join(installedRoot, "dist", "skills", "primitive-connect", "SKILL.md"), "utf8"), /## Connect in one command/);
+  assert.match(readFileSync(join(installedRoot, "dist", "skills", "primitive-connect", "SKILL.md"), "utf8"), /## Connect this session/);
 
   const help = await invoke(["agent", "connect", "--help"]);
   assert.equal(help.exit, 0);
