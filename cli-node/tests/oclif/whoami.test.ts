@@ -58,13 +58,67 @@ describe("whoami command", () => {
     const output = formatWhoamiSummary(makeAccount(), null);
 
     expect(output).toContain("Authenticated as cli@example.com");
-    expect(output).toContain("Account id: acct-1");
+    expect(output).toContain("Organization id: acct-1");
     expect(output).toContain("Plan: pro");
     expect(output).not.toContain("onboarding");
     expect(output).not.toContain("stripe");
     expect(output).not.toContain("webhook");
     expect(output).not.toContain("Managed inbox");
   });
+
+  it("names the organization when the saved login recorded its name", () => {
+    const output = formatWhoamiSummary(makeAccount(), null, "Acme Agents");
+
+    expect(output).toContain("Organization: Acme Agents (acct-1)");
+    expect(output).not.toContain("Organization id:");
+  });
+
+  it.each([
+    [
+      "the saved login's organization",
+      "acct-1",
+      "Organization: Acme Agents (acct-1)",
+      "Acme Agents",
+    ],
+    [
+      "another organization's saved login",
+      "org-other",
+      "Organization id: acct-1",
+      null,
+    ],
+    ["no saved login (an API key)", null, "Organization id: acct-1", null],
+  ])(
+    "names the organization from %s in text and JSON",
+    async (_case, savedOrgId, line, jsonName) => {
+      mocks.auth.mockResolvedValue({
+        apiClient: { client: {} },
+        auth: {
+          credentials: savedOrgId
+            ? { org_id: savedOrgId, org_name: "Acme Agents" }
+            : null,
+        },
+        baseUrlOverridden: false,
+      });
+      mocks.account.mockResolvedValue({ data: { data: makeAccount() } });
+      const output: string[] = [];
+      vi.spyOn(console, "log").mockImplementation((value: unknown) => {
+        output.push(String(value));
+      });
+      const root = resolve(import.meta.dirname, "../..");
+      await WhoamiCommand.run([], { root });
+      expect(output.join("\n")).toContain(line);
+      output.length = 0;
+      await WhoamiCommand.run(["--json"], { root });
+      const json = JSON.parse(output.join("\n"));
+      expect(json.org_name).toBe(jsonName);
+      // The account payload passes through unchanged beside the new field.
+      expect(json).toMatchObject({
+        id: "acct-1",
+        email: "cli@example.com",
+        plan: "pro",
+      });
+    },
+  );
 
   it("includes the managed inbox line when a managed domain is present", () => {
     const output = formatWhoamiSummary(
