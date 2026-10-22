@@ -37,8 +37,11 @@ import {
   openBrowser,
 } from "../browser-login-prompt.js";
 import { deleteChatState } from "../chat-state.js";
+import { waitForRegistrations } from "../registration-log.js";
 
 const MAX_CLI_LOGIN_POLL_INTERVAL_SECONDS = 60;
+/** How long a login waits for an in-flight agent registration on this machine. */
+const REGISTRATION_WAIT_MS = 15_000;
 
 function cliError(message: string): Errors.CLIError {
   return new Errors.CLIError(message, { exit: 1 });
@@ -301,6 +304,14 @@ class LoginCommand extends Command {
     flags: LoginFlags,
     retryCommand = this.retryCommand(),
   ): Promise<void> {
+    // A session registering in the background reads this login while it
+    // runs. Let it finish first, so a switch never lands mid-registration.
+    await waitForRegistrations(this.config.configDir, REGISTRATION_WAIT_MS, {
+      onWait: () =>
+        process.stderr.write(
+          "Waiting a few seconds for this machine's agent registration to finish before changing the login.\n",
+        ),
+    });
     let releaseCredentialsLock: () => void;
     try {
       releaseCredentialsLock = acquireCliCredentialsLock(this.config.configDir);

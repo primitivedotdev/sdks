@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { agentProfileDirectory } from "../../src/oclif/connected-agent-profile.js";
+import { appendRegistrationLog } from "../../src/oclif/registration-log.js";
 import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 const session = "11111111-1111-4111-8111-111111111111";
@@ -275,6 +276,56 @@ describe("whoami command", () => {
         expect(mocks.account).not.toHaveBeenCalled();
       } finally {
         vi.unstubAllEnvs();
+      }
+    },
+  );
+
+  it.each([true, false])(
+    "names this session's failed registration under the member login (json %s)",
+    async (json) => {
+      const directory = mkdtempSync(join(tmpdir(), "primitive-whoami-"));
+      try {
+        vi.stubEnv("PRIMITIVE_CONFIG_DIR", directory);
+        vi.stubEnv("CLAUDE_CODE_SESSION_ID", session);
+        appendRegistrationLog(directory, `session-${session}`, {
+          event: "failed",
+          phase: "setup_attempted",
+          code: "setup_unfinished",
+          orgId: "org-1",
+          address: "pending@example.test",
+          detail:
+            "This session's agent pending@example.test is created but not connected: in the Primitive app open it and choose Copy again, then paste that setup instruction here; `agent connect` finishes the same address.",
+        });
+        mocks.auth.mockResolvedValue({
+          apiClient: { client: {} },
+          auth: { apiKey: undefined },
+          baseUrlOverridden: false,
+        });
+        mocks.account.mockResolvedValue({ data: { data: makeAccount() } });
+        const output: string[] = [];
+        vi.spyOn(console, "log").mockImplementation((value: unknown) => {
+          output.push(String(value));
+        });
+        await WhoamiCommand.run(json ? ["--json"] : [], {
+          root: resolve(import.meta.dirname, "../.."),
+        });
+        const text = output.join("\n");
+        if (json)
+          expect(JSON.parse(text)).toMatchObject({
+            id: "acct-1",
+            session_registration: {
+              address: "pending@example.test",
+              lastFailure: { code: "setup_unfinished" },
+            },
+          });
+        else
+          expect(text).toContain(
+            "The last registration attempt for this session (pending@example.test) failed at",
+          );
+        expect(text).toContain("choose Copy again");
+      } finally {
+        vi.unstubAllEnvs();
+        rmSync(directory, { recursive: true, force: true });
       }
     },
   );

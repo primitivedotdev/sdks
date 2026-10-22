@@ -473,6 +473,50 @@ describe("agent session-register", () => {
     expect(calls.enroll).toHaveLength(1);
   });
 
+  it("signed out, a session with a reserved address is told how to finish it", async () => {
+    const stuck = setup({ loggedIn: false });
+    writeMailJson(
+      join(
+        agentProfileDirectory(stuck.configDir, `session-${session}`),
+        "enrollment",
+        "state.json",
+      ),
+      {
+        version: 2,
+        session,
+        profile: `session-${session}`,
+        name: "claude-repo",
+        address: "claude-repo@example.test",
+        createRequestId: "44444444-4444-4444-8444-444444444444",
+        continueAttempted: false,
+        orgId: "org-1",
+        grantId: "grant-1",
+        apiBaseUrl: "https://api.primitive-staging-1.com/v1",
+        receiverMode: "external",
+        contactRequests: false,
+        startedAt: "2026-01-01T00:00:00.000Z",
+        phase: "setup_attempted",
+        invitationHash: "d".repeat(64),
+        ownerAddress: "owner@example.test",
+      },
+    );
+    const deps = fakeDependencies(stuck.configDir);
+    const result = await registerSession({
+      configDir: stuck.configDir,
+      runtime: "claude",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies: deps.dependencies,
+    });
+    expect(result).toMatchObject({
+      status: "not_logged_in",
+      address: "claude-repo@example.test",
+      detail:
+        "This session's agent claude-repo@example.test is created but not connected: in the Primitive app open it and choose Copy again, then paste that setup instruction here; `agent connect` finishes the same address.",
+    });
+    expect(deps.calls.enroll).toHaveLength(0);
+  });
+
   it("fails open: no login, no network, enrollment errors", async () => {
     const notLoggedIn = setup({ loggedIn: false });
     const a = fakeDependencies(notLoggedIn.configDir);

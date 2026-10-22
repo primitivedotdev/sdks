@@ -208,6 +208,31 @@ function removeOwner(path: string, owner: string): void {
   }
 }
 
+/**
+ * True while a live process holds the lock {@link acquireListenLock} takes
+ * for this directory and scope. Read-only; a lock whose owner exited, or
+ * whose owner record cannot be read, counts as free.
+ */
+export function listenLockHeld(directory: string, scope: string): boolean {
+  const key = createHash("sha256").update(scope).digest("hex");
+  const path = join(directory, `${key}.lock`);
+  try {
+    const entries = readdirSync(path);
+    const match =
+      entries.length === 1
+        ? /^(\d+)-[a-f0-9-]{36}$/.exec(entries[0] ?? "")
+        : null;
+    if (!match) return false;
+    const pid = Number(match[1]);
+    if (!processAlive(pid)) return false;
+    const saved = ownerIdentity(join(path, entries[0] ?? ""));
+    const current = saved === null ? null : listenProcessIdentity(pid);
+    return compareListenProcessIdentity(saved, current) !== false;
+  } catch {
+    return false;
+  }
+}
+
 export function acquireListenLock(
   directory: string,
   scope: string,
