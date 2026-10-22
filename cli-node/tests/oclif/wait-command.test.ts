@@ -371,3 +371,88 @@ describe("primitive wait command", () => {
     });
   });
 });
+
+describe("primitive wait with transient API failures", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.createAuthenticatedCliApiClient.mockResolvedValue({
+      apiClient: { client: {} },
+      auth: { kind: "api-key", source: "flag" },
+      baseUrlOverridden: false,
+    });
+  });
+
+  function failure(status: number, code: string, headers = {}) {
+    return {
+      error: { success: false, error: { code, message: `HTTP ${status}` } },
+      response: new Response(null, { status, headers }),
+    };
+  }
+
+  /** Answer the first tail long-polls with `responses`, then as the inbox. */
+  function failTail(responses: Array<() => unknown>) {
+    const inbox = mocks.listEmails.getMockImplementation();
+    let served = 0;
+    mocks.listEmails.mockImplementation(
+      async (arg: { query: Record<string, unknown> }) =>
+        arg.query.since !== undefined && served < responses.length
+          ? responses[served++]()
+          : inbox?.(arg),
+    );
+  }
+
+  it("waits out a 429 with Retry-After and returns the code", async () => {
+    fakeInbox([oldCode], [githubCode]);
+    failTail([
+      () => failure(429, "rate_limit_exceeded", { "Retry-After": "0" }),
+    ]);
+    const result = await runWait(["--from", "github.com", "--code"]);
+    expect(result.exitCode ?? 0).toBe(WAIT_EXIT_CODES.found);
+    expect(result.stdout).toBe("482913\n");
+    expect(result.stderr).toContain(
+      "primitive: rate limited; retrying in 0 s.",
+    );
+  });
+
+  it("retries a network error on a detail read", async () => {
+    fakeInbox([oldCode], [githubCode]);
+    const inbox = mocks.getEmail.getMockImplementation();
+    let failed = false;
+    mocks.getEmail.mockImplementation(async (arg: { path: { id: string } }) => {
+      if (failed) return inbox?.(arg);
+      failed = true;
+      return { error: new TypeError("fetch failed") };
+    });
+    const result = await runWait(["--from", "github.com", "--code"]);
+    expect(result.stdout).toBe("482913\n");
+    expect(result.stderr).toContain("primitive: network error; retrying in");
+  });
+
+  it("exits with the timeout code when the API stays unavailable", async () => {
+    fakeInbox([oldCode], [githubCode]);
+    failTail(
+      Array.from(
+        { length: 50 },
+        () => () => failure(503, "service_unavailable"),
+      ),
+    );
+    const result = await runWait(["--from", "github.com", "--timeout", "1"]);
+    expect(result.exitCode).toBe(WAIT_EXIT_CODES.timeout);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain(
+      "primitive: API unavailable (HTTP 503); retrying in",
+    );
+    expect(result.stderr).toContain(
+      "Timed out after 1 with no matching email from github.com.",
+    );
+  });
+
+  it("still fails a 403 at once, with the API's error", async () => {
+    fakeInbox([oldCode], [githubCode]);
+    failTail([() => failure(403, "forbidden")]);
+    const result = await runWait(["--from", "github.com"]);
+    expect(result.exitCode).toBe(WAIT_EXIT_CODES.error);
+    expect(result.stderr).toContain('"code": "forbidden"');
+    expect(result.stderr).not.toContain("retrying");
+  });
+});

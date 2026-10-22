@@ -3,7 +3,8 @@ import type { PrimitiveApiClient } from "@primitivedotdev/api-core";
 import { getSentEmail } from "@primitivedotdev/api-core";
 import { parseFromHeader } from "@primitivedotdev/sdk/parser/address";
 import type { EmailPollFilters } from "./commands/emails-poll.js";
-import { readBeforeDeadline } from "./scoped-chat.js";
+import { readApiBeforeDeadline } from "./scoped-chat.js";
+import { describeApiFailure } from "./transient-retry.js";
 
 function invalid(message: string): Errors.CLIError {
   return new Errors.CLIError(message, { exit: 1 });
@@ -47,7 +48,7 @@ export async function resolveScopedEmailWait(params: {
       "Connected email waits support exact --from, --to, and --reply-to-sent-email-id matching only; search, body, subject, domain, attachment, and spam filters are unavailable.",
     );
   const sentId = replyToSentEmailId.toLowerCase();
-  const result = await readBeforeDeadline(params.deadline, (signal) =>
+  const result = await readApiBeforeDeadline(params.deadline, (signal) =>
     getSentEmail({
       signal,
       client: params.apiClient.client,
@@ -57,7 +58,11 @@ export async function resolveScopedEmailWait(params: {
   );
   if (result === null) return null;
   const sent = result.data?.data;
-  if (result.error || !sent || sent.id !== sentId)
+  if (result.error)
+    throw invalid(
+      `Could not read that sent email with the connected credential: ${describeApiFailure(result)}. Inspect the existing send before retrying; do not send it again.`,
+    );
+  if (!sent || sent.id !== sentId)
     throw invalid(
       "Could not read that sent email with the connected credential. Inspect the existing send before retrying; do not send it again.",
     );

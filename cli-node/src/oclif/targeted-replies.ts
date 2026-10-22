@@ -17,9 +17,11 @@ import { presenceDisposition } from "./presence-provenance.js";
 import {
   isPlainChatReply,
   isScopedChatReply,
+  readApiBeforeDeadline,
   readBeforeDeadline,
   scopedChatSenderTrust,
 } from "./scoped-chat.js";
+import { describeApiFailure } from "./transient-retry.js";
 
 export interface ReplyTarget {
   from: string;
@@ -85,7 +87,7 @@ export async function inspectTargetedReply(
     contactRequest?: ContactRequestReference;
   },
 ): Promise<TargetedReplyInspection | null> {
-  const result = await readBeforeDeadline(params.deadline, (signal) =>
+  const result = await readApiBeforeDeadline(params.deadline, (signal) =>
     getEmail({
       client: params.apiClient.client,
       path: { id: params.id },
@@ -95,7 +97,11 @@ export async function inspectTargetedReply(
   );
   if (result === null) return null;
   const email = result.data?.data;
-  if (result.error || !email || email.id !== params.id)
+  if (result.error)
+    throw invalid(
+      `Could not inspect reply candidate ${params.id}: ${describeApiFailure(result)}.`,
+    );
+  if (!email || email.id !== params.id)
     throw invalid(`Could not inspect reply candidate ${params.id}.`);
   const presence = presenceDisposition(email);
   if (presence !== "ordinary")
@@ -187,7 +193,7 @@ export async function readTargetedReplyPage(
     throw invalid(
       "Targeted reply recovery requires the exact sent email, receiving address, and peer.",
     );
-  const result = await readBeforeDeadline(params.deadline, (signal) =>
+  const result = await readApiBeforeDeadline(params.deadline, (signal) =>
     searchEmails({
       client: params.apiClient.client,
       signal,

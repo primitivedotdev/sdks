@@ -2,6 +2,7 @@ import type { EmailDetail } from "@primitivedotdev/api-core";
 import { classifySignalContent } from "@primitivedotdev/sdk/interactions";
 import { isTrustedSender } from "@primitivedotdev/sdk/webhook";
 import { presenceDisposition } from "./presence-provenance.js";
+import { retryTransient } from "./transient-retry.js";
 
 export function isConnectedChatCredential(apiKey: string | undefined): boolean {
   return apiKey?.startsWith("pconn_") ?? false;
@@ -36,6 +37,20 @@ export async function readBeforeDeadline<T>(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * readBeforeDeadline for a generated-client read inside a wait: a rate
+ * limit, gateway failure or network error is retried with backoff until the
+ * deadline instead of being returned. Null when the deadline passes.
+ */
+export function readApiBeforeDeadline<T>(
+  deadline: number | null | undefined,
+  read: (signal: AbortSignal | undefined) => Promise<T>,
+): Promise<T | null> {
+  return retryTransient(() => readBeforeDeadline(deadline, read), {
+    deadline,
+  });
 }
 
 function address(value: string): string {
