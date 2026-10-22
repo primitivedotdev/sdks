@@ -86,13 +86,16 @@ describe("whoami command", () => {
       "Organization id: acct-1",
       null,
     ],
+    ["no saved login (an API key)", null, "Organization id: acct-1", null],
   ])(
     "names the organization from %s in text and JSON",
     async (_case, savedOrgId, line, jsonName) => {
       mocks.auth.mockResolvedValue({
         apiClient: { client: {} },
         auth: {
-          credentials: { org_id: savedOrgId, org_name: "Acme Agents" },
+          credentials: savedOrgId
+            ? { org_id: savedOrgId, org_name: "Acme Agents" }
+            : null,
         },
         baseUrlOverridden: false,
       });
@@ -106,7 +109,14 @@ describe("whoami command", () => {
       expect(output.join("\n")).toContain(line);
       output.length = 0;
       await WhoamiCommand.run(["--json"], { root });
-      expect(JSON.parse(output.join("\n")).org_name).toBe(jsonName);
+      const json = JSON.parse(output.join("\n"));
+      expect(json.org_name).toBe(jsonName);
+      // The account payload passes through unchanged beside the new field.
+      expect(json).toMatchObject({
+        id: "acct-1",
+        email: "cli@example.com",
+        plan: "pro",
+      });
     },
   );
 
