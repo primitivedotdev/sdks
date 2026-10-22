@@ -115,6 +115,8 @@ function server(
     recordInvitationBodies?: boolean;
     /** Answers the OAuth refresh with the same access token. */
     oauthRefresh?: boolean;
+    /** The invitation answer succeeds but lacks its invitation. */
+    incompleteInvitation?: boolean;
   } = {},
 ) {
   const creates: Array<{
@@ -254,6 +256,8 @@ function server(
       continuations.push(url);
       if (options.continuationFailure)
         throw new Error("Uncertain continuation");
+      if (options.incompleteInvitation)
+        return Response.json({ success: true, data: { connection: {} } });
       return Response.json({
         success: true,
         data: {
@@ -1418,15 +1422,15 @@ test("a stuck enrollment heals with the owner's login: one fresh invitation for 
   );
 });
 
-test("a claim this machine sent and lost is reconnected, never left stuck", async () => {
+test("a claimed agent is never reconnected automatically, even after a lost claim from here", async () => {
   const configDir = owner();
-  const { fetcher, creates, invitationBodies, freshInvitation } = server({
-    freshInvitation: true,
+  const { fetcher, invitationBodies } = server({
     recordInvitationBodies: true,
-    connectionStatuses: ["claimed", "connected"],
+    connectionStatuses: ["claimed"],
   });
-  const { options, claims } = stuckOptions(configDir, fetcher, () => {
-    // The claim journal is written right before the claim is sent.
+  const { options } = stuckOptions(configDir, fetcher, () => {
+    // The claim journal is written before the claim is sent, so it cannot
+    // prove the server kept this machine's claim rather than another one.
     writeMailJson(
       join(
         agentProfilesDirectory(configDir),
@@ -1437,13 +1441,25 @@ test("a claim this machine sent and lost is reconnected, never left stuck", asyn
     );
   });
   await assert.rejects(enrollAgent(options));
-  const value = await enrollAgent(options);
-  assert.equal(value.connection.status, "connected");
-  assert.equal(creates.length, 1);
-  // A reconnect (no pending_only) revokes the credential the lost response
-  // carried, which this machine never saved.
-  assert.deepEqual(invitationBodies, [{}]);
-  assert.equal(claims[1], freshInvitation);
+  await assert.rejects(
+    enrollAgent(options),
+    /was claimed by another setup, so this machine did not change it: in the Primitive app open it and choose Reconnect/,
+  );
+  assert.equal(invitationBodies.length, 0);
+});
+
+test("an unusable invitation answer is never followed by another automatic invitation", async () => {
+  const configDir = owner();
+  const { fetcher, continuations } = server({
+    recordInvitationBodies: true,
+    incompleteInvitation: true,
+    connectionStatuses: ["pending"],
+  });
+  const { options } = stuckOptions(configDir, fetcher);
+  await assert.rejects(enrollAgent(options));
+  await assert.rejects(enrollAgent(options), /choose Copy again/);
+  await assert.rejects(enrollAgent(options), /choose Copy again/);
+  assert.equal(continuations.length, 1);
 });
 
 test("a stuck agent claimed elsewhere is never reconnected automatically", async () => {

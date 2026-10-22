@@ -25,7 +25,6 @@ import {
   AGENT_PROFILE_ENV,
   AgentConnectionSetupError,
   agentProfileDirectory,
-  agentProfilesDirectory,
   connectedApiBaseUrl,
   loadConnectedAgentProfile,
 } from "./connected-agent-profile.js";
@@ -713,26 +712,6 @@ async function refreshMemberLogin(
   }
 }
 
-/** This machine submitted the claim for this invitation into this profile. */
-function claimSentHere(
-  configDir: string,
-  invitationHash: string,
-  profile: string,
-): boolean {
-  try {
-    const journal = readMailJson(
-      join(
-        agentProfilesDirectory(configDir),
-        "claims",
-        `${invitationHash}.json`,
-      ),
-    ) as { profile_name?: unknown } | null;
-    return journal?.profile_name === profile;
-  } catch {
-    return false;
-  }
-}
-
 type OwnedConnection = { status: string; ownerAddress: unknown };
 
 /**
@@ -795,10 +774,9 @@ function healAttempts(path: string): number {
  * saved credential (the claim was never sent, was refused, or its response
  * was lost). With the owner's member login for the same organization, it
  * asks Primitive for a fresh invitation for the same address and returns it
- * for this session to claim. It never creates another address. A pending
- * connection gets a pending-only invitation; a connection claimed by this
- * machine's own lost response is reconnected, which revokes that lost
- * credential. Every refusal names the one next step.
+ * for this session to claim. It never creates another address and only
+ * heals a pending connection, with a pending-only invitation. Every refusal
+ * names the one next step.
  */
 async function healStuckEnrollment(
   state: ResolvedEnrollment,
@@ -810,7 +788,6 @@ async function healStuckEnrollment(
   hash: string;
   ownerAddress: string;
   grantId: string;
-  reconnected: boolean;
 }> {
   const stuck = stuckEnrollmentStep(state.address);
   if (
@@ -854,10 +831,10 @@ async function healStuckEnrollment(
     throw refuse(
       reconnectStep(state.address, "was disconnected in the Primitive app"),
     );
-  const reconnect =
-    row.status === "claimed" &&
-    claimSentHere(params.configDir, state.invitationHash ?? "", state.profile);
-  if (row.status !== "pending" && !reconnect)
+  // Only a pending agent is healed. A claimed one may hold a credential on
+  // another machine (a local claim record cannot prove which claim the
+  // server kept), so reconnecting it is left to the owner.
+  if (row.status !== "pending")
     throw refuse(
       reconnectStep(
         state.address,
@@ -874,28 +851,36 @@ async function healStuckEnrollment(
       lastAttemptAt: new Date((params.now ?? Date.now)()).toISOString(),
     });
   record(attempts + 1);
-  let payload: unknown;
+  let claimedElsewhere = false;
   try {
     const response = await inviteAgentConnection({
       client: client.client,
       path: { address: state.address },
-      body: reconnect ? {} : { pending_only: true },
+      body: { pending_only: true },
       signal: AbortSignal.timeout(25_000),
       responseStyle: "fields",
     });
     if (response.error) {
       const code = plainRecord(plainRecord(response.error)?.error)?.code;
-      if (code === "connection_already_claimed")
-        throw refuse(
-          reconnectStep(state.address, "was claimed by another setup"),
-        );
+      // A definite refusal: nothing was issued.
+      claimedElsewhere = code === "connection_already_claimed";
       throw new Error();
     }
-    payload = response.data;
-  } catch (error) {
-    if (error instanceof AgentConnectionSetupError) throw error;
-    // An uncertain invitation is never retried automatically: another one
-    // would invalidate whatever this request may have issued.
+    const invitation = invitationFrom(
+      response.data,
+      state,
+      (params.now ?? Date.now)(),
+    );
+    if (invitation.ownerAddress !== state.ownerAddress) throw new Error();
+    return { ...invitation, grantId: credentials.oauth_grant_id };
+  } catch {
+    if (claimedElsewhere)
+      throw refuse(
+        reconnectStep(state.address, "was claimed by another setup"),
+      );
+    // A lost, failed or unusable answer may still have issued an invitation,
+    // so none is requested again automatically: another one would
+    // invalidate it.
     try {
       record(HEAL_MAX_ATTEMPTS);
     } catch {
@@ -903,13 +888,6 @@ async function healStuckEnrollment(
     }
     throw refuse(stuck);
   }
-  const invitation = invitationFrom(payload, state, (params.now ?? Date.now)());
-  if (invitation.ownerAddress !== state.ownerAddress) throw refuse(stuck);
-  return {
-    ...invitation,
-    grantId: credentials.oauth_grant_id,
-    reconnected: reconnect,
-  };
 }
 
 /** A short code for the registration log, from the refusal it explains. */
@@ -1193,9 +1171,7 @@ export async function enrollAgent(params: AgentEnrollOptions) {
       };
       writeMailJson(path, state);
       track(state);
-      log("heal_invited", {
-        code: healed.reconnected ? "reconnected" : "pending_only",
-      });
+      log("heal_invited", { code: "pending_only" });
       return await finish(resolvedEnrollment(state), false, healed.url);
     }
     if (existing)

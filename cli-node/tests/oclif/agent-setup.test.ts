@@ -1638,6 +1638,27 @@ describe("finishing a session whose setup never got a credential", () => {
     );
   });
 
+  it("keeps the enrollment record when the claim outcome is uncertain or the paste is malformed", async () => {
+    const enrollment = (f: ReturnType<typeof fixture>) =>
+      join(
+        agentProfileDirectory(f.configDir, f.params.profileName),
+        "enrollment",
+        "state.json",
+      );
+    const malformed = stuck("agent@example.com", false);
+    await expect(
+      setupAgent({ ...malformed.params, invitation: "not an invitation" }),
+    ).rejects.toThrow();
+    expect(existsSync(enrollment(malformed))).toBe(true);
+    const lost = stuck("agent@example.com");
+    lost.fetch.mockRejectedValueOnce(new Error("socket closed"));
+    await expect(
+      setupAgent({ ...lost.params, invitation: fresh(lost) }),
+    ).rejects.toThrow(/may have been consumed/);
+    // Still blocks a new address: the next registration heals the same one.
+    expect(existsSync(enrollment(lost))).toBe(true);
+  });
+
   it("resuming without a credential names the step that finishes the agent", async () => {
     const f = stuck("agent@example.com");
     await expect(f.resume()).rejects.toThrow(

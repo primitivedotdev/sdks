@@ -861,6 +861,9 @@ export async function setupAgent(params: {
   let replacedUnfinished: { address: string | null } | undefined;
   // Files this run moved aside, put back if the claim is definitely refused.
   const moved: Array<{ from: string; to: string }> = [];
+  // Set when this run's successful claim replaces the profile's unfinished
+  // enrollment record, which stays in place until then.
+  let retireEnrollment = false;
   const setAside = (from: string, at: Date) => {
     const to = moveAside(from, at);
     if (to) moved.push({ from, to });
@@ -919,10 +922,10 @@ export async function setupAgent(params: {
         replacedUnfinished = {
           address: pendingEnrollmentAddress(directory),
         };
-        const at = new Date(dependencies.now());
-        setAside(path, at);
-        if (!params.enrollmentOwned)
-          setAside(join(directory, "enrollment", "state.json"), at);
+        setAside(path, new Date(dependencies.now()));
+        // The enrollment record keeps blocking a new address until this
+        // run's claim succeeds; only then is it moved aside.
+        retireEnrollment = !params.enrollmentOwned;
         state = null;
       }
     }
@@ -938,10 +941,7 @@ export async function setupAgent(params: {
     ) {
       takeEnrollment();
       replacedUnfinished = { address: pendingEnrollmentAddress(directory) };
-      setAside(
-        join(directory, "enrollment", "state.json"),
-        new Date(dependencies.now()),
-      );
+      retireEnrollment = true;
     }
     if (state) refuseSetupConflicts(state, params);
     if (!state && loadConnectedAgentProfile(params.configDir, profileName))
@@ -996,6 +996,11 @@ export async function setupAgent(params: {
             claimLockWaitMs: params.claimLockWaitMs ?? CLAIM_LOCK_WAIT_MS,
           })
         ).name;
+        if (retireEnrollment)
+          moveAside(
+            join(directory, "enrollment", "state.json"),
+            new Date(dependencies.now()),
+          );
         if (replacedUnfinished?.address)
           appendRegistrationLog(params.configDir, profileName, {
             event: "replaced_unfinished",
