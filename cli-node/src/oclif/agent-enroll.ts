@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import {
   getAgentContactPolicy,
+  inviteAgentConnection,
+  listAgentConnections,
   listDomains,
   PrimitiveApiClient,
   putAgentContactPolicy,
@@ -14,10 +16,11 @@ import {
   RECEIVER_MODES,
   type ReceiverMode,
   setupAgent,
+  unfinishedSetupStep,
   verificationReplySubmitted,
 } from "./agent-setup.js";
 import { refreshStoredCliCredentials } from "./api-client.js";
-import { loadCliCredentials } from "./auth.js";
+import { loadCliCredentials, type StoredCliCredentials } from "./auth.js";
 import {
   AGENT_PROFILE_ENV,
   AgentConnectionSetupError,
@@ -33,6 +36,11 @@ import {
   refreshOwnerMemberAddress,
 } from "./owner-member-address.js";
 import {
+  appendRegistrationLog,
+  ENROLLMENT_LOCK_SCOPE,
+  type RegistrationEvent,
+} from "./registration-log.js";
+import {
   mailAddress,
   privateMailDirectory,
   readMailJson,
@@ -46,7 +54,25 @@ const CONNECTION_LIST_LIMIT = 131_072;
 const CONFIRMATION_BUDGET_MS = 120_000;
 const CONFIRMATION_MAX_ATTEMPTS = 40;
 const CONFIRMATION_PAGE_LIMIT = 20;
+/** How long a member-login refresh waits out another credential operation. */
+const CREDENTIAL_LOCK_WAIT_MS = 15_000;
+/** Fresh invitations a stuck enrollment may issue for itself, in total. */
+const HEAL_MAX_ATTEMPTS = 3;
 const refuse = (message: string) => new AgentConnectionSetupError(message);
+
+/**
+ * The one next step for a session whose agent exists but never connected.
+ * Copying the setup instruction again in the app issues a fresh invitation
+ * for the same address, and `agent connect` claims it into this session.
+ */
+export function stuckEnrollmentStep(address: string): string {
+  return unfinishedSetupStep(address);
+}
+
+/** The one next step for a session whose agent was disconnected or taken over. */
+function reconnectStep(address: string, why: string): string {
+  return `This session's agent ${address} ${why}, so this machine did not change it: in the Primitive app open it and choose Reconnect, then paste that setup instruction here; \`agent connect\` finishes the same address.`;
+}
 
 type Enrollment = {
   version: 1 | 2;
@@ -85,6 +111,8 @@ export type AgentEnrollOptions = {
   /** Runs once the saved login and session preflight pass, before any request. */
   beforeCreate?: () => Promise<void>;
   confirmationSleep?: (milliseconds: number) => Promise<void>;
+  /** How long a member-login refresh waits for another credential operation. */
+  credentialLockWaitMs?: number;
 } & EnrollDependencies;
 
 function plainRecord(value: unknown): Record<string, unknown> | null {
@@ -506,24 +534,26 @@ async function readOwnerConnection(
     saved.oauth_grant_id !== enrollment.grantId ||
     saved.api_base_url !== enrollment.apiBaseUrl
   )
-    throw refuse(
-      "The saved member login changed before connection confirmation. Preserve this session's profile and resume with the original member login.",
+    // The member login changed (another organization, or a re-login) while
+    // this enrollment ran. Confirmation through the owner list is optional:
+    // the connection's own status already answers, so it is skipped.
+    return "unavailable";
+  let credentials: StoredCliCredentials;
+  try {
+    credentials = await refreshMemberLogin(
+      enrollment.apiBaseUrl,
+      saved,
+      params,
     );
-  const credentials = await refreshStoredCliCredentials({
-    apiBaseUrl: enrollment.apiBaseUrl,
-    configDir: params.configDir,
-    credentials: saved,
-    fetch: params.fetch,
-    now: params.now,
-  });
+  } catch {
+    return "unavailable";
+  }
   if (
     credentials.org_id !== enrollment.orgId ||
     credentials.oauth_grant_id !== enrollment.grantId ||
     credentials.api_base_url !== enrollment.apiBaseUrl
   )
-    throw refuse(
-      "The saved member login changed before connection confirmation. Preserve this session's profile and resume with the original member login.",
-    );
+    return "unavailable";
   let cursor: string | undefined;
   // This bounded scan confirms small rosters quickly. Missing the row is not
   // proof that server-side challenge verification failed.
@@ -566,7 +596,7 @@ async function readOwnerConnection(
       // it, and the address alone identifies the connection.
       if (connection.owner_address !== enrollment.ownerAddress)
         throw refuse(
-          "The owner connection list did not match this session's saved identity. Preserve the profile and inspect the connection in the app.",
+          `The owner connection list names a different control address for ${enrollment.address}, so this machine changed nothing: in the Primitive app open it and choose Reconnect, then paste that setup instruction here.`,
         );
       if (typeof connection.name === "string") listed.name = connection.name;
       if (connection.owner_active === false) return "owner_inactive";
@@ -644,6 +674,260 @@ export function enrollmentResumes(configDir: string, session: string): boolean {
   }
 }
 
+function credentialLockBusy(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    error.message.includes("credential operation is already in progress")
+  );
+}
+
+/**
+ * Refreshes the saved member login, waiting out another credential
+ * operation (a login or logout in another terminal) instead of failing on
+ * its lock. The caller compares the returned login with the one it expects.
+ */
+async function refreshMemberLogin(
+  apiBaseUrl: string,
+  saved: StoredCliCredentials,
+  params: Pick<
+    AgentEnrollOptions,
+    "configDir" | "fetch" | "now" | "credentialLockWaitMs"
+  >,
+): Promise<StoredCliCredentials> {
+  const deadline =
+    Date.now() + (params.credentialLockWaitMs ?? CREDENTIAL_LOCK_WAIT_MS);
+  for (;;) {
+    try {
+      return await refreshStoredCliCredentials({
+        apiBaseUrl,
+        configDir: params.configDir,
+        credentials: saved,
+        fetch: params.fetch,
+        now: params.now,
+      });
+    } catch (error) {
+      if (!credentialLockBusy(error) || Date.now() >= deadline) throw error;
+      await sleep(Math.min(500, Math.max(1, deadline - Date.now())));
+    }
+  }
+}
+
+type OwnedConnection = { status: string; ownerAddress: unknown };
+
+/**
+ * One connection the signed-in member personally owns, read page by page
+ * from their own list (`owner=self`), so a login that does not own the
+ * agent never finds it.
+ */
+async function findOwnedConnection(
+  client: PrimitiveApiClient,
+  address: string,
+): Promise<OwnedConnection | "absent" | "unavailable"> {
+  let cursor: string | undefined;
+  for (let page = 0; page < CONFIRMATION_PAGE_LIMIT; page++) {
+    let value: unknown;
+    try {
+      const response = await listAgentConnections({
+        client: client.client,
+        query: { limit: 50, owner: "self", ...(cursor ? { cursor } : {}) },
+        signal: AbortSignal.timeout(10_000),
+        responseStyle: "fields",
+      });
+      if (response.error) return "unavailable";
+      value = response.data;
+    } catch {
+      return "unavailable";
+    }
+    const envelope = plainRecord(value);
+    if (envelope?.success !== true || !Array.isArray(envelope.data))
+      return "unavailable";
+    for (const candidate of envelope.data) {
+      const row = plainRecord(candidate);
+      if (row?.address !== address) continue;
+      return { status: String(row.status), ownerAddress: row.owner_address };
+    }
+    const next = plainRecord(envelope.meta)?.cursor;
+    if (next === null) return "absent";
+    if (typeof next !== "string" || !SESSION_UUID.test(next) || next === cursor)
+      return "unavailable";
+    cursor = next;
+  }
+  return "unavailable";
+}
+
+function healAttempts(path: string): number {
+  try {
+    const saved = readMailJson(path) as {
+      version?: unknown;
+      attempts?: unknown;
+    } | null;
+    return saved?.version === 1 && Number.isSafeInteger(saved.attempts)
+      ? Number(saved.attempts)
+      : 0;
+  } catch {
+    return HEAL_MAX_ATTEMPTS;
+  }
+}
+
+/**
+ * A stuck enrollment: its address exists and its claim never produced a
+ * saved credential (the claim was never sent, was refused, or its response
+ * was lost). With the owner's member login for the same organization, it
+ * asks Primitive for a fresh invitation for the same address and returns it
+ * for this session to claim. It never creates another address and only
+ * heals a pending connection, with a pending-only invitation. Every refusal
+ * names the one next step.
+ */
+async function healStuckEnrollment(
+  state: ResolvedEnrollment,
+  params: AgentEnrollOptions,
+  saved: StoredCliCredentials,
+  directory: string,
+): Promise<{
+  url: string;
+  hash: string;
+  ownerAddress: string;
+  grantId: string;
+}> {
+  const stuck = stuckEnrollmentStep(state.address);
+  if (
+    saved.org_id !== state.orgId ||
+    connectedApiBaseUrl(saved.api_base_url) !== state.apiBaseUrl
+  )
+    throw refuse(stuck);
+  const healPath = join(directory, "heal.json");
+  const attempts = healAttempts(healPath);
+  if (attempts >= HEAL_MAX_ATTEMPTS) throw refuse(stuck);
+  let credentials: StoredCliCredentials;
+  try {
+    credentials = await refreshMemberLogin(state.apiBaseUrl, saved, params);
+  } catch (error) {
+    if (credentialLockBusy(error))
+      throw refuse(
+        `Another Primitive login is still in progress, so this session's agent ${state.address} was not finished yet; rerun this command once that login completes.`,
+      );
+    throw refuse(stuck);
+  }
+  if (
+    credentials.org_id !== state.orgId ||
+    credentials.api_base_url !== state.apiBaseUrl
+  )
+    throw refuse(stuck);
+  const client = new PrimitiveApiClient({
+    apiKey: credentials.access_token,
+    apiBaseUrl: state.apiBaseUrl,
+    fetch: params.fetch,
+  });
+  const row = await findOwnedConnection(client, state.address);
+  if (row === "unavailable")
+    throw refuse(
+      `Primitive could not be reached to finish this session's agent ${state.address}; rerun this command (or start the session again) to retry.`,
+    );
+  // Absent from the member's own list: removed, shared, or owned by
+  // someone else. Only the owner's app can issue its invitation then.
+  if (row === "absent" || row.ownerAddress !== state.ownerAddress)
+    throw refuse(stuck);
+  if (row.status === "revoked")
+    throw refuse(
+      reconnectStep(state.address, "was disconnected in the Primitive app"),
+    );
+  // Only a pending agent is healed. A claimed one may hold a credential on
+  // another machine (a local claim record cannot prove which claim the
+  // server kept), so reconnecting it is left to the owner.
+  if (row.status !== "pending")
+    throw refuse(
+      reconnectStep(
+        state.address,
+        row.status === "connected"
+          ? "is connected from somewhere else"
+          : "was claimed by another setup",
+      ),
+    );
+  // Counted before the request, so automatic invitations stay bounded.
+  const record = (count: number) =>
+    writeMailJson(healPath, {
+      version: 1,
+      attempts: count,
+      lastAttemptAt: new Date((params.now ?? Date.now)()).toISOString(),
+    });
+  record(attempts + 1);
+  let claimedElsewhere = false;
+  try {
+    const response = await inviteAgentConnection({
+      client: client.client,
+      path: { address: state.address },
+      body: { pending_only: true },
+      signal: AbortSignal.timeout(25_000),
+      responseStyle: "fields",
+    });
+    if (response.error) {
+      const code = plainRecord(plainRecord(response.error)?.error)?.code;
+      // A definite refusal: nothing was issued.
+      claimedElsewhere = code === "connection_already_claimed";
+      throw new Error();
+    }
+    const invitation = invitationFrom(
+      response.data,
+      state,
+      (params.now ?? Date.now)(),
+    );
+    if (invitation.ownerAddress !== state.ownerAddress) throw new Error();
+    return { ...invitation, grantId: credentials.oauth_grant_id };
+  } catch {
+    if (claimedElsewhere)
+      throw refuse(
+        reconnectStep(state.address, "was claimed by another setup"),
+      );
+    // A lost, failed or unusable answer may still have issued an invitation,
+    // so none is requested again automatically: another one would
+    // invalidate it.
+    try {
+      record(HEAL_MAX_ATTEMPTS);
+    } catch {
+      /* The attempt count above already bounds retries. */
+    }
+    throw refuse(stuck);
+  }
+}
+
+/** A short code for the registration log, from the refusal it explains. */
+function failureCode(error: unknown): string {
+  if (!(error instanceof AgentConnectionSetupError)) return "unexpected_error";
+  const text = error.message;
+  if (text.includes("is created but not connected")) return "setup_unfinished";
+  if (text.includes("choose Reconnect")) return "reconnect_needed";
+  if (text.includes("could not be reached")) return "api_unavailable";
+  if (text.includes("login is still in progress")) return "login_in_progress";
+  if (text.includes("Sign in") || text.includes("sign in"))
+    return "login_required";
+  return "refused";
+}
+
+/**
+ * The address this session's enrollment reserved when it has no saved
+ * credential yet, so a refusal can name the step that finishes it. Null when
+ * there is no such enrollment. Offline and read-only.
+ */
+export function unfinishedEnrollmentAddress(
+  configDir: string,
+  session: string,
+): string | null {
+  const profile = `session-${session}`;
+  try {
+    if (loadConnectedAgentProfile(configDir, profile)) return null;
+    const raw = readMailJson(
+      join(
+        agentProfileDirectory(configDir, profile),
+        "enrollment",
+        "state.json",
+      ),
+    );
+    return raw === null ? null : savedEnrollment(raw).address;
+  } catch {
+    return null;
+  }
+}
+
 /** Trusted-machine enrollment using only saved member OAuth and the public API. */
 export async function enrollAgent(params: AgentEnrollOptions) {
   if (!SESSION_UUID.test(params.session))
@@ -665,10 +949,17 @@ export async function enrollAgent(params: AgentEnrollOptions) {
       "Enrollment uses only the saved member login; rerun it under `env -u PRIMITIVE_AGENT_PROFILE -u PRIMITIVE_API_KEY -u PRIMITIVE_KEY` so no agent profile or API key override applies.",
     );
   const saved = loadCliCredentials(params.configDir);
-  if (!saved)
-    throw refuse(
-      "Sign in with `primitive signin` as a member of this organization first.",
+  if (!saved) {
+    const pending = unfinishedEnrollmentAddress(
+      params.configDir,
+      params.session,
     );
+    throw refuse(
+      pending
+        ? stuckEnrollmentStep(pending)
+        : "Sign in with `primitive signin` as a member of this organization first.",
+    );
+  }
   const apiBaseUrl = connectedApiBaseUrl(saved.api_base_url);
   const profile = `session-${params.session}`;
   const directory = join(
@@ -676,7 +967,31 @@ export async function enrollAgent(params: AgentEnrollOptions) {
     "enrollment",
   );
   privateMailDirectory(directory, true);
-  const release = acquireListenLock(directory, "agent-enrollment");
+  const release = acquireListenLock(directory, ENROLLMENT_LOCK_SCOPE);
+  // What the registration log records about this attempt so far.
+  const progress: {
+    phase: string | null;
+    orgId: string | null;
+    address: string | null;
+  } = { phase: null, orgId: saved.org_id, address: null };
+  const log = (
+    event: RegistrationEvent,
+    extra: { code?: string | null; detail?: string | null } = {},
+  ) =>
+    appendRegistrationLog(params.configDir, profile, {
+      event,
+      phase: progress.phase,
+      code: extra.code ?? null,
+      orgId: progress.orgId,
+      address: progress.address,
+      detail: extra.detail ?? null,
+    });
+  const track = (current: Enrollment | null) => {
+    if (!current) return;
+    progress.phase = current.phase;
+    progress.orgId = current.orgId;
+    progress.address = current.address;
+  };
   try {
     await (
       params.preflight ??
@@ -688,21 +1003,42 @@ export async function enrollAgent(params: AgentEnrollOptions) {
     const path = join(directory, "state.json");
     const old = readMailJson(path);
     let state = old === null ? null : savedEnrollment(old);
+    track(state);
+    log("started");
     if (state && params.name === undefined) name = state.name;
     if (
       state &&
       (state.session !== params.session ||
         state.profile !== profile ||
         state.name !== name ||
-        state.orgId !== saved.org_id ||
-        state.grantId !== saved.oauth_grant_id ||
-        state.apiBaseUrl !== apiBaseUrl ||
         state.receiverMode !== receiverMode ||
         state.contactRequests !== contactRequests)
     )
       throw refuse(
-        "This session's enrollment belongs to another owner, address, or setup choice. Nothing was changed.",
+        "This session's enrollment was started with different setup choices (name, receiver or contact requests); rerun it with the original options. Nothing was changed.",
       );
+    const existing = loadConnectedAgentProfile(params.configDir, profile);
+    // A claimed profile resumes with its own credential; the member login
+    // only adds optional owner-side checks, so another login does not block it.
+    const resumesClaim = Boolean(
+      existing && state?.phase === "setup_attempted",
+    );
+    const sameOrganization =
+      state?.orgId === saved.org_id && state.apiBaseUrl === apiBaseUrl;
+    if (state && !sameOrganization && !resumesClaim)
+      throw refuse(
+        state.address && !existing
+          ? stuckEnrollmentStep(state.address)
+          : `This session's enrollment belongs to organization ${state.orgId}, and the saved member login is now for another organization: sign in to ${state.orgId} with \`primitive login\` and rerun this command. Nothing was changed.`,
+      );
+    // A re-login to the same organization (a new grant, for example after
+    // switching organizations and back) continues this enrollment. Later
+    // member-login steps compare against the login adopted here, so a change
+    // during this run is still detected.
+    if (state && sameOrganization && state.grantId !== saved.oauth_grant_id) {
+      state = { ...state, grantId: saved.oauth_grant_id };
+      writeMailJson(path, state);
+    }
     if (
       state &&
       Date.parse(state.startedAt) > (params.now ?? Date.now)() + 60_000
@@ -710,7 +1046,6 @@ export async function enrollAgent(params: AgentEnrollOptions) {
       throw refuse(
         "Saved enrollment time is inconsistent. Preserve its private files.",
       );
-    const existing = loadConnectedAgentProfile(params.configDir, profile);
     if (
       existing &&
       (!state ||
@@ -724,7 +1059,7 @@ export async function enrollAgent(params: AgentEnrollOptions) {
       throw refuse(
         "This session profile already belongs to another connection. Nothing was changed.",
       );
-    const finish = async (
+    const finishSetup = async (
       enrollment: ResolvedEnrollment,
       resume: boolean,
       invitation?: string,
@@ -736,6 +1071,7 @@ export async function enrollAgent(params: AgentEnrollOptions) {
         receiverMode,
         ...(resume ? { resume: true } : { invitation }),
         contactRequests,
+        enrollmentOwned: true,
         fetch: params.fetch,
       });
       const ownerMemberAddress = await refreshOwnerMemberAddress({
@@ -806,29 +1142,46 @@ export async function enrollAgent(params: AgentEnrollOptions) {
         name: current.name ?? name,
       };
     };
+    const finish = async (
+      enrollment: ResolvedEnrollment,
+      resume: boolean,
+      invitation?: string,
+    ) => {
+      const value = await finishSetup(enrollment, resume, invitation);
+      log("finished", { code: value.connection.status });
+      return value;
+    };
     if (state?.phase === "setup_attempted") {
-      if (!existing)
-        throw refuse(
-          "The invitation claim may have been consumed. Keep this pending agent and inspect it in the app; do not create or claim another address.",
-        );
-      return finish(resolvedEnrollment(state), true);
+      if (existing) return await finish(resolvedEnrollment(state), true);
+      // The address exists and no credential was saved. With the owner's
+      // login, finish the same address with a fresh invitation; otherwise
+      // the refusal names the one step that finishes it.
+      const resolved = resolvedEnrollment(state);
+      const healed = await healStuckEnrollment(
+        resolved,
+        params,
+        saved,
+        directory,
+      );
+      state = {
+        ...resolved,
+        grantId: healed.grantId,
+        invitationHash: healed.hash,
+        ownerAddress: healed.ownerAddress,
+      };
+      writeMailJson(path, state);
+      track(state);
+      log("heal_invited", { code: "pending_only" });
+      return await finish(resolvedEnrollment(state), false, healed.url);
     }
     if (existing)
       throw refuse(
         "This profile is already connected without a matching enrollment. Nothing was changed.",
       );
     if (state?.version === 1)
-      throw refuse(
-        "Connection creation may already have happened. Inspect this session's pending address in the app and issue a fresh invitation there if needed. Use `primitive agent connect` with that invitation and this session's profile; do not rerun enrollment or create another address.",
-      );
+      throw refuse(stuckEnrollmentStep(resolvedEnrollment(state).address));
 
-    const credentials = await refreshStoredCliCredentials({
-      apiBaseUrl,
-      configDir: params.configDir,
-      credentials: saved,
-      fetch: params.fetch,
-      now: params.now,
-    });
+    const credentials = await refreshMemberLogin(apiBaseUrl, saved, params);
     if (
       credentials.org_id !== saved.org_id ||
       credentials.oauth_grant_id !== saved.oauth_grant_id ||
@@ -840,9 +1193,7 @@ export async function enrollAgent(params: AgentEnrollOptions) {
     const fetchImpl = params.fetch ?? fetch;
     const firstAttempt = state === null;
     if (state?.continueAttempted)
-      throw refuse(
-        "Continue setup already ran and its result may be uncertain. Inspect the saved agent in the app; do not issue another invitation automatically.",
-      );
+      throw refuse(stuckEnrollmentStep(resolvedEnrollment(state).address));
     if (!state) {
       if (params.continueSetup)
         throw refuse(
@@ -950,6 +1301,8 @@ export async function enrollAgent(params: AgentEnrollOptions) {
       );
     state = { ...state, address: connection.address };
     writeMailJson(path, state);
+    track(state);
+    log("created");
     if (data?.recovered === true) {
       if (data.invitation !== null)
         throw refuse(
@@ -957,7 +1310,12 @@ export async function enrollAgent(params: AgentEnrollOptions) {
         );
       if (connection.status !== "pending")
         throw refuse(
-          "The saved agent is already claimed, connected or disconnected. Its credential was not changed. Inspect it in the app; do not automatically reconnect it.",
+          reconnectStep(
+            connection.address,
+            connection.status === "revoked"
+              ? "was disconnected in the Primitive app and its credential was not changed"
+              : "was already claimed and its credential was not changed",
+          ),
         );
       if (!params.continueSetup)
         throw refuse(
@@ -988,7 +1346,10 @@ export async function enrollAgent(params: AgentEnrollOptions) {
             plainRecord(rejected?.error)?.code === "connection_already_claimed"
           )
             throw refuse(
-              "This agent was claimed before Continue setup. Its credential was not changed. Inspect it in the app.",
+              reconnectStep(
+                connection.address,
+                "was claimed before Continue setup and its credential was not changed",
+              ),
             );
           throw new Error();
         }
@@ -996,7 +1357,7 @@ export async function enrollAgent(params: AgentEnrollOptions) {
       } catch (error) {
         if (error instanceof AgentConnectionSetupError) throw error;
         throw refuse(
-          "Continue setup has an uncertain outcome. Inspect the saved agent in the app; do not repeat it and invalidate another invitation.",
+          `Continue setup has an uncertain outcome, so it is not repeated automatically. ${stuckEnrollmentStep(connection.address)}`,
         );
       }
     }
@@ -1012,7 +1373,34 @@ export async function enrollAgent(params: AgentEnrollOptions) {
       ownerAddress: invitation.ownerAddress,
     };
     writeMailJson(path, state);
-    return finish(resolvedEnrollment(state), false, invitation.url);
+    track(state);
+    // The claim needs no member login, so a login switched meanwhile does
+    // not stop it; it is recorded so a later failure is explained.
+    let current: StoredCliCredentials | null = null;
+    try {
+      current = loadCliCredentials(params.configDir);
+    } catch {
+      current = null;
+    }
+    log("setup_attempted", {
+      code:
+        current?.org_id === state.orgId &&
+        current.oauth_grant_id === state.grantId
+          ? null
+          : "login_changed",
+    });
+    return await finish(resolvedEnrollment(state), false, invitation.url);
+  } catch (error) {
+    log("failed", {
+      code: failureCode(error),
+      // Only the CLI's own refusals are recorded; any other error may
+      // carry a response body or transport detail.
+      detail:
+        error instanceof AgentConnectionSetupError
+          ? error.message
+          : "Registration stopped on an unexpected error.",
+    });
+    throw error;
   } finally {
     release();
   }

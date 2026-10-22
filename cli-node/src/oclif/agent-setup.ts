@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { join } from "node:path";
+import { existsSync, renameSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 import {
@@ -17,6 +18,7 @@ import {
 import {
   AgentInvitationRejectedError,
   agentInvitationHash,
+  ClaimNotSubmittedError,
   connectAgent,
   parseAgentInvitation,
   removeEmptyDirectory,
@@ -42,6 +44,10 @@ import { runContactRequest } from "./contacts.js";
 import { acquireListenLock } from "./listen-state.js";
 import { createNotificationContactPolicy } from "./notification-contact-policy.js";
 import { connectNativeSession, SESSION_UUID } from "./notify-session-native.js";
+import {
+  appendRegistrationLog,
+  ENROLLMENT_LOCK_SCOPE,
+} from "./registration-log.js";
 import { scopedChatSenderTrust } from "./scoped-chat.js";
 import {
   mailId,
@@ -696,6 +702,53 @@ function refuseSetupConflicts(
     );
 }
 
+/** How long a claim waits for another claim on this machine to finish. */
+const CLAIM_LOCK_WAIT_MS = 30_000;
+
+/**
+ * Moves a file aside as `replaced-<stamp>-<name>`, keeping it for recovery.
+ * Returns where it went, or null when there was no file.
+ */
+export function moveAside(path: string, now: Date): string | null {
+  const stamp = now.toISOString().replace(/[^0-9]/g, "");
+  const target = join(dirname(path), `replaced-${stamp}-${basename(path)}`);
+  try {
+    renameSync(path, target);
+    return target;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    return null;
+  }
+}
+
+/** The address an unfinished enrollment in this profile reserved, if any. */
+function pendingEnrollmentAddress(directory: string): string | null {
+  try {
+    const saved = readMailJson(join(directory, "enrollment", "state.json")) as {
+      address?: unknown;
+    } | null;
+    return typeof saved?.address === "string" ? saved.address : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A connected credential is saved in this profile. Unreadable counts as one. */
+function holdsCredential(configDir: string, profileName: string): boolean {
+  try {
+    return loadConnectedAgentProfile(configDir, profileName) !== null;
+  } catch {
+    return true;
+  }
+}
+
+/** The one next step when a profile has setup progress but no credential. */
+export function unfinishedSetupStep(address: string | null): string {
+  return address
+    ? `This session's agent ${address} is created but not connected: in the Primitive app open it and choose Copy again, then paste that setup instruction here; \`agent connect\` finishes the same address.`
+    : "This profile's earlier setup never finished and holds no credential: ask the owner to copy a fresh setup instruction from the Primitive app and paste it here; `agent connect` claims it into this same profile.";
+}
+
 function invitationHashOrNull(invitation: string | undefined): string | null {
   if (invitation === undefined) return null;
   try {
@@ -718,6 +771,13 @@ export async function setupAgent(params: {
   timeoutMs?: number;
   /** How long to wait for the server to confirm the reply. Zero skips the wait. */
   verificationTimeoutMs?: number;
+  /** How long the claim waits for another claim on this machine to finish. */
+  claimLockWaitMs?: number;
+  /**
+   * The caller is this profile's enrollment and holds its lock, so its saved
+   * enrollment state is left for the caller to manage.
+   */
+  enrollmentOwned?: boolean;
   fetch?: typeof fetch;
   dependencies?: Partial<AgentSetupDependencies>;
 }) {
@@ -763,7 +823,17 @@ export async function setupAgent(params: {
     newHash !== null &&
     state.invitationHash !== newHash &&
     savedSetupRevoked(params.configDir, profileName, state.invitationHash);
-  if (saved && !replacesRevoked(saved)) refuseSetupConflicts(saved, params);
+  // A setup that never got a credential (its claim was refused, lost, or
+  // never sent) is not a connection. A new invitation finishes this profile
+  // instead of being refused as a second address: the stale setup, and the
+  // enrollment that started it, are moved aside before the claim.
+  const replacesUnfinished = (state: SetupState) =>
+    newHash !== null &&
+    state.invitationHash !== newHash &&
+    state.phase === "waiting" &&
+    !holdsCredential(params.configDir, profileName);
+  if (saved && !replacesRevoked(saved) && !replacesUnfinished(saved))
+    refuseSetupConflicts(saved, params);
   const receiverMode =
     params.receiverMode ?? (params.resume ? saved?.receiverMode : undefined);
   if (params.session === undefined && (receiverMode ?? "native") !== "poll")
@@ -781,13 +851,40 @@ export async function setupAgent(params: {
   }
   privateMailDirectory(directory, true);
   const release = acquireListenLock(directory, "setup");
-  // Held only while replacing a revoked setup, until its claim settles.
+  // Held only while replacing a revoked or unfinished setup, until its
+  // claim settles.
   let releaseClaim: (() => void) | undefined;
+  // Held while an unfinished enrollment in this profile is replaced, so a
+  // background registration cannot resume it underneath this claim.
+  let releaseEnrollment: (() => void) | undefined;
+  // The unfinished agent this run's claim replaced, reported with the result.
+  let replacedUnfinished: { address: string | null } | undefined;
+  // Files this run moved aside, put back if the claim is definitely refused.
+  const moved: Array<{ from: string; to: string }> = [];
+  // Set when this run's successful claim replaces the profile's unfinished
+  // enrollment record, which stays in place until then.
+  let retireEnrollment = false;
+  const setAside = (from: string, at: Date) => {
+    const to = moveAside(from, at);
+    if (to) moved.push({ from, to });
+  };
   // Set when the server definitely refused the claim: this run's setup
   // record is removed and, once the lock is released, an empty directory.
   let discardStub = false;
   // The connection's display name, known only when this run claimed it.
   let claimedName: string | undefined;
+  const takeEnrollment = () => {
+    try {
+      releaseEnrollment = acquireListenLock(
+        join(directory, "enrollment"),
+        ENROLLMENT_LOCK_SCOPE,
+      );
+    } catch {
+      throw fail(
+        "This session's background registration is still running, so this invitation was not claimed; wait a few seconds and rerun the same command.",
+      );
+    }
+  };
   try {
     const path = join(directory, "setup.json");
     const value = readMailJson(path);
@@ -800,7 +897,7 @@ export async function setupAgent(params: {
     // profile state is moved or written and held through this run's claim.
     // An in-flight claim into this profile then refuses this run instead of
     // finishing against a setup this run replaced.
-    if (state && replacesRevoked(state)) {
+    if (state && (replacesRevoked(state) || replacesUnfinished(state))) {
       try {
         releaseClaim = acquireListenLock(
           agentProfilesDirectory(params.configDir),
@@ -820,7 +917,31 @@ export async function setupAgent(params: {
           new Date(dependencies.now()),
         );
         state = null;
+      } else if (state && replacesUnfinished(state)) {
+        if (!params.enrollmentOwned) takeEnrollment();
+        replacedUnfinished = {
+          address: pendingEnrollmentAddress(directory),
+        };
+        setAside(path, new Date(dependencies.now()));
+        // The enrollment record keeps blocking a new address until this
+        // run's claim succeeds; only then is it moved aside.
+        retireEnrollment = !params.enrollmentOwned;
+        state = null;
       }
+    }
+    // A pasted invitation into a profile whose enrollment never produced a
+    // credential (and never saved a setup) finishes that profile too.
+    if (
+      !params.resume &&
+      !state &&
+      !params.enrollmentOwned &&
+      !releaseEnrollment &&
+      !holdsCredential(params.configDir, profileName) &&
+      existsSync(join(directory, "enrollment", "state.json"))
+    ) {
+      takeEnrollment();
+      replacedUnfinished = { address: pendingEnrollmentAddress(directory) };
+      retireEnrollment = true;
     }
     if (state) refuseSetupConflicts(state, params);
     if (!state && loadConnectedAgentProfile(params.configDir, profileName))
@@ -872,16 +993,45 @@ export async function setupAgent(params: {
             fetch: params.fetch,
             presence: true,
             claimLockHeld: releaseClaim !== undefined,
+            claimLockWaitMs: params.claimLockWaitMs ?? CLAIM_LOCK_WAIT_MS,
           })
         ).name;
+        if (retireEnrollment)
+          moveAside(
+            join(directory, "enrollment", "state.json"),
+            new Date(dependencies.now()),
+          );
+        if (replacedUnfinished?.address)
+          appendRegistrationLog(params.configDir, profileName, {
+            event: "replaced_unfinished",
+            phase: null,
+            code: null,
+            orgId: null,
+            address: replacedUnfinished.address,
+            detail:
+              "A pasted setup instruction finished this session's unfinished registration.",
+          });
       } catch (error) {
-        if (error instanceof AgentInvitationRejectedError && created) {
+        if (
+          (error instanceof AgentInvitationRejectedError ||
+            error instanceof ClaimNotSubmittedError) &&
+          created
+        ) {
           discardStub = true;
           try {
             removeMailFile(path);
           } catch {
             discardStub = false;
           }
+          // Nothing was claimed, so the unfinished setup this run moved
+          // aside is still this profile's state.
+          if (discardStub)
+            for (const { from, to } of moved.splice(0).reverse())
+              try {
+                renameSync(to, from);
+              } catch {
+                /* The moved copy stays beside it for recovery. */
+              }
         }
         throw error;
       } finally {
@@ -891,7 +1041,9 @@ export async function setupAgent(params: {
       }
     }
     const profile = loadConnectedAgentProfile(params.configDir, profileName);
-    if (!profile || !state || profile.invitation_hash !== state.invitationHash)
+    if (!profile)
+      throw fail(unfinishedSetupStep(pendingEnrollmentAddress(directory)));
+    if (!state || profile.invitation_hash !== state.invitationHash)
       throw fail(
         "The claim has no matching saved credential. Preserve private state and request a fresh invitation; do not replay this one.",
       );
@@ -933,6 +1085,18 @@ export async function setupAgent(params: {
     claimedName ??= savedConnectionName(params.configDir, profileName);
     const result = (receiving: string, ownerNotifications?: string) => ({
       identity: context.identity,
+      ...(replacedUnfinished
+        ? {
+            replacedUnfinished: {
+              address: replacedUnfinished.address,
+              sameAddress:
+                replacedUnfinished.address === null
+                  ? null
+                  : replacedUnfinished.address.toLowerCase() ===
+                    context.identity.agentAddress.toLowerCase(),
+            },
+          }
+        : {}),
       ...(claimedName === undefined ? {} : { connectionName: claimedName }),
       sessionId: params.session ?? state?.session ?? null,
       verification: {
@@ -1030,6 +1194,7 @@ export async function setupAgent(params: {
     );
   } finally {
     releaseClaim?.();
+    releaseEnrollment?.();
     release();
     if (discardStub) removeEmptyDirectory(directory);
   }

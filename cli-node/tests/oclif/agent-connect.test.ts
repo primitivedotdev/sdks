@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AgentInvitationRejectedError,
   agentConnectionStatus,
+  ClaimNotSubmittedError,
   connectAgent,
   parseAgentInvitation,
   readAgentInvitation,
@@ -459,6 +460,60 @@ describe("connected-agent setup", () => {
     );
     expect(request).toHaveBeenCalledTimes(1);
     expect(loadConnectedAgentProfile(configDir, "other")).toBeNull();
+  });
+
+  it("waits for another claim on this machine instead of refusing at once", async () => {
+    let resume: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    const request = vi.fn<typeof fetch>(async () => {
+      await gate;
+      return response();
+    });
+    const first = connectAgent(params(request));
+    const second = connectAgent({
+      ...params(async () =>
+        response({
+          ...claim(),
+          data: {
+            ...claim().data,
+            connection: {
+              ...claim().data.connection,
+              address: "b@example.test",
+            },
+          },
+        }),
+      ),
+      profileName: "other",
+      invitation: setupUrl.replace("#token=", "#token=second_"),
+      claimLockWaitMs: 5_000,
+    });
+    setTimeout(() => resume?.(), 100);
+    await first;
+    await expect(second).resolves.toMatchObject({ status: "claimed" });
+  });
+
+  it("reports a claim that never got the lock as not submitted", async () => {
+    let resume: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    const first = connectAgent(
+      params(async () => {
+        await gate;
+        return response();
+      }),
+    );
+    await expect(
+      connectAgent({
+        ...params(vi.fn<typeof fetch>()),
+        profileName: "other",
+        claimLockWaitMs: 50,
+      }),
+    ).rejects.toBeInstanceOf(ClaimNotSubmittedError);
+    resume?.();
+    await first;
   });
 
   it("serializes concurrent claims before either can submit another request", async () => {

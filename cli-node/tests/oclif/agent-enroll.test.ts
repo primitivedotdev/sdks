@@ -10,13 +10,21 @@ import {
 } from "../../src/oclif/agent-enroll.js";
 import type { setupAgent } from "../../src/oclif/agent-setup.js";
 import {
+  acquireCliCredentialsLock,
+  deleteCliCredentials,
   loadCliCredentials,
   saveCliCredentials,
 } from "../../src/oclif/auth.js";
 import {
+  AgentConnectionSetupError,
   agentProfileDirectory,
+  agentProfilesDirectory,
   saveConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
+import {
+  readRegistrationLog,
+  registrationSummary,
+} from "../../src/oclif/registration-log.js";
 import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 const session = "11111111-1111-4111-8111-111111111111";
@@ -101,6 +109,14 @@ function server(
     connectionListUnavailable?: boolean;
     connectionPagesBeforeTarget?: number;
     ownerActive?: boolean;
+    /** A fresh invitation for the same address returns a new token. */
+    freshInvitation?: boolean;
+    /** Invitation bodies are recorded instead of required to be pending-only. */
+    recordInvitationBodies?: boolean;
+    /** Answers the OAuth refresh with the same access token. */
+    oauthRefresh?: boolean;
+    /** The invitation answer succeeds but lacks its invitation. */
+    incompleteInvitation?: boolean;
   } = {},
 ) {
   const creates: Array<{
@@ -118,6 +134,11 @@ function server(
     rules: [],
   };
   const continuations: string[] = [];
+  const invitationBodies: Array<Record<string, unknown>> = [];
+  const listQueries: string[] = [];
+  let refreshes = 0;
+  const freshToken = ["fresh", "c".repeat(48)].join("_");
+  const freshInvitation = `${stage}/agent-connections/setup#token=${freshToken}`;
   const policyWrites: Array<Record<string, unknown>> = [];
   const invitation = `${options.wrongOrigin ? "https://api.primitive.dev/v1" : stage}/agent-connections/setup#token=${["invite", "a".repeat(48)].join("_")}`;
   function policyResponse(address: string) {
@@ -214,23 +235,44 @@ function server(
         ).map((domain) => ({ domain, verified: true, is_active: true })),
       });
     }
+    if (url === "https://api.primitive-staging-1.com/oauth/token") {
+      assert.ok(options.oauthRefresh, "No OAuth refresh expected");
+      refreshes++;
+      return Response.json({
+        access_token: ["prim", "oat", "test"].join("_"),
+        refresh_token: ["prim", "ort", "next"].join("_"),
+        token_type: "Bearer",
+        expires_in: 3600,
+      });
+    }
     if (url.endsWith("/invitation") && method === "POST") {
-      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
-      assert.deepEqual(body, { pending_only: true });
+      const body = JSON.parse(
+        String(
+          init?.body ?? (input instanceof Request ? await input.text() : ""),
+        ),
+      ) as Record<string, unknown>;
+      if (options.recordInvitationBodies) invitationBodies.push(body);
+      else assert.deepEqual(body, { pending_only: true });
       continuations.push(url);
       if (options.continuationFailure)
         throw new Error("Uncertain continuation");
+      if (options.incompleteInvitation)
+        return Response.json({ success: true, data: { connection: {} } });
       return Response.json({
         success: true,
         data: {
           connection: {
-            address: creates.at(-1)?.address,
+            address:
+              creates.at(-1)?.address ??
+              decodeURIComponent(
+                url.split("/agent-connections/")[1]?.split("/")[0] ?? "",
+              ),
             name: options.expectedName ?? "Research",
             status: "pending",
             owner_address: "owner@example.test",
           },
           invitation: {
-            claim_url: invitation,
+            claim_url: options.freshInvitation ? freshInvitation : invitation,
             expires_at: new Date(clock + 10 * 60_000).toISOString(),
           },
         },
@@ -297,6 +339,7 @@ function server(
     }
     if (url.startsWith(`${stage}/agent-connections?`) && method === "GET") {
       connectionListReads++;
+      listQueries.push(new URL(url).search);
       const headers = new Headers(
         init?.headers ?? (input instanceof Request ? input.headers : undefined),
       );
@@ -342,6 +385,10 @@ function server(
     fetcher,
     creates,
     continuations,
+    invitationBodies,
+    listQueries,
+    refreshes: () => refreshes,
+    freshInvitation,
     invitation,
     policyWrites,
     policyReads: () => policyReads,
@@ -978,7 +1025,10 @@ test("a saved uncertain create remains held after time passes", async () => {
     address: result.identity.agentAddress,
     startedAt: new Date(clock - 11 * 60_000).toISOString(),
   });
-  await assert.rejects(enrollAgent(options), /may already have happened/);
+  await assert.rejects(
+    enrollAgent(options),
+    /is created but not connected: in the Primitive app open it and choose Copy again/,
+  );
   assert.equal(creates.length, 1);
 });
 
@@ -1015,7 +1065,9 @@ test("a concurrent owner login change cannot create an agent in another organiza
 
 test("an uncertain claim cannot be replayed without a saved connected profile", async () => {
   const configDir = owner();
-  const { fetcher, creates } = server();
+  // The owner list reports the agent connected, and this machine never
+  // submitted its claim, so the credential is someone else's.
+  const { fetcher, creates, continuations } = server();
   const options = {
     configDir,
     session,
@@ -1029,8 +1081,12 @@ test("an uncertain claim cannot be replayed without a saved connected profile", 
     }) as typeof setupAgent,
   };
   await assert.rejects(enrollAgent(options), /lost claim response/);
-  await assert.rejects(enrollAgent(options), /claim may have been consumed/);
+  await assert.rejects(
+    enrollAgent(options),
+    /is connected from somewhere else, so this machine did not change it: in the Primitive app open it and choose Reconnect/,
+  );
   assert.equal(creates.length, 1);
+  assert.equal(continuations.length, 0);
 });
 
 test("a saved claim resumes setup without creating another connection", async () => {
@@ -1217,7 +1273,7 @@ test("an uncertain Continue setup is durably held and cannot invalidate another 
   const count = creates.length;
   await assert.rejects(
     enrollAgent({ ...options, continueSetup: true }),
-    /Continue setup already ran/,
+    /is created but not connected: in the Primitive app open it and choose Copy again/,
   );
   assert.equal(creates.length, count);
   assert.equal(continuations.length, 1);
@@ -1286,4 +1342,273 @@ test("poll enrollment probes no session socket and saves the poll receiver", asy
     ),
   );
   assert.equal(journal.receiverMode, "poll");
+});
+
+// A session whose enrollment created its address but never saved a
+// credential: the claim was never sent, was lost, or the login changed.
+const enrollmentPath = (configDir: string) =>
+  join(
+    agentProfileDirectory(configDir, `session-${session}`),
+    "enrollment",
+    "state.json",
+  );
+const savedState = (configDir: string) =>
+  JSON.parse(readFileSync(enrollmentPath(configDir), "utf8")) as Record<
+    string,
+    unknown
+  >;
+const hashOf = (url: string) =>
+  createHash("sha256")
+    .update(stage)
+    .update("\0")
+    .update(new URLSearchParams(new URL(url).hash.slice(1)).get("token") ?? "")
+    .digest("hex");
+const notSubmitted = () =>
+  new AgentConnectionSetupError(
+    "Agent setup is already running on this machine, so this invitation was not submitted; rerun the same command when it finishes.",
+  );
+
+function stuckOptions(
+  configDir: string,
+  fetcher: typeof fetch,
+  firstRun: () => void = () => undefined,
+) {
+  const claims: Array<string | undefined> = [];
+  const options = {
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external" as const,
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    confirmationSleep: async () => undefined,
+    setup: (async (params) => {
+      claims.push(params.invitation);
+      if (claims.length === 1) {
+        firstRun();
+        throw notSubmitted();
+      }
+      assert.equal(params.enrollmentOwned, true);
+      return result;
+    }) as typeof setupAgent,
+  };
+  return { options, claims };
+}
+
+test("a stuck enrollment heals with the owner's login: one fresh invitation for the same address", async () => {
+  const configDir = owner();
+  const { fetcher, creates, invitationBodies, listQueries, freshInvitation } =
+    server({
+      freshInvitation: true,
+      recordInvitationBodies: true,
+      connectionStatuses: ["pending", "connected"],
+    });
+  const { options, claims } = stuckOptions(configDir, fetcher);
+  await assert.rejects(enrollAgent(options), /was not submitted/);
+  assert.equal(savedState(configDir).phase, "setup_attempted");
+  const value = await enrollAgent(options);
+  assert.equal(value.connection.status, "connected");
+  assert.equal(value.identity.agentAddress, creates[0]?.address);
+  // Never a second address, and exactly one pending-only invitation.
+  assert.equal(creates.length, 1);
+  assert.deepEqual(invitationBodies, [{ pending_only: true }]);
+  assert.match(listQueries[0] ?? "", /owner=self/);
+  assert.equal(claims[1], freshInvitation);
+  assert.equal(savedState(configDir).invitationHash, hashOf(freshInvitation));
+  assert.equal(
+    registrationSummary(configDir, `session-${session}`)?.lastFailure,
+    null,
+  );
+});
+
+test("a claimed agent is never reconnected automatically, even after a lost claim from here", async () => {
+  const configDir = owner();
+  const { fetcher, invitationBodies } = server({
+    recordInvitationBodies: true,
+    connectionStatuses: ["claimed"],
+  });
+  const { options } = stuckOptions(configDir, fetcher, () => {
+    // The claim journal is written before the claim is sent, so it cannot
+    // prove the server kept this machine's claim rather than another one.
+    writeMailJson(
+      join(
+        agentProfilesDirectory(configDir),
+        "claims",
+        `${String(savedState(configDir).invitationHash)}.json`,
+      ),
+      { version: 1, profile_name: `session-${session}`, status: "attempted" },
+    );
+  });
+  await assert.rejects(enrollAgent(options));
+  await assert.rejects(
+    enrollAgent(options),
+    /was claimed by another setup, so this machine did not change it: in the Primitive app open it and choose Reconnect/,
+  );
+  assert.equal(invitationBodies.length, 0);
+});
+
+test("an unusable invitation answer is never followed by another automatic invitation", async () => {
+  const configDir = owner();
+  const { fetcher, continuations } = server({
+    recordInvitationBodies: true,
+    incompleteInvitation: true,
+    connectionStatuses: ["pending"],
+  });
+  const { options } = stuckOptions(configDir, fetcher);
+  await assert.rejects(enrollAgent(options));
+  await assert.rejects(enrollAgent(options), /choose Copy again/);
+  await assert.rejects(enrollAgent(options), /choose Copy again/);
+  assert.equal(continuations.length, 1);
+});
+
+test("a stuck agent claimed elsewhere is never reconnected automatically", async () => {
+  const configDir = owner();
+  const { fetcher, invitationBodies } = server({
+    recordInvitationBodies: true,
+    connectionStatuses: ["claimed"],
+  });
+  const { options } = stuckOptions(configDir, fetcher);
+  await assert.rejects(enrollAgent(options));
+  await assert.rejects(
+    enrollAgent(options),
+    /was claimed by another setup, so this machine did not change it: in the Primitive app open it and choose Reconnect/,
+  );
+  assert.equal(invitationBodies.length, 0);
+});
+
+test("without the owner's login a stuck enrollment names the one step that finishes it", async () => {
+  const configDir = owner();
+  const { fetcher, creates } = server({ connectionStatuses: ["pending"] });
+  const { options } = stuckOptions(configDir, fetcher);
+  await assert.rejects(enrollAgent(options));
+  const address = creates[0]?.address ?? "";
+  const step = `This session's agent ${address} is created but not connected: in the Primitive app open it and choose Copy again, then paste that setup instruction here; \`agent connect\` finishes the same address.`;
+  const original = loadCliCredentials(configDir);
+  assert.ok(original);
+  const noRequests = (async () =>
+    assert.fail("No request without the owner's login")) as typeof fetch;
+  // Signed in to another organization.
+  saveCliCredentials(configDir, {
+    ...original,
+    org_id: "33333333-3333-4333-8333-333333333333",
+    oauth_grant_id: "another-grant",
+  });
+  await assert.rejects(
+    enrollAgent({ ...options, fetch: noRequests }),
+    (error: Error) => error.message === step,
+  );
+  // Signed out.
+  deleteCliCredentials(configDir);
+  await assert.rejects(
+    enrollAgent({ ...options, fetch: noRequests }),
+    (error: Error) => error.message === step,
+  );
+});
+
+test("a login switch mid-registration does not strand the session", async () => {
+  const configDir = owner();
+  const { fetcher, creates, invitationBodies } = server({
+    freshInvitation: true,
+    recordInvitationBodies: true,
+    connectionStatuses: ["pending", "connected"],
+  });
+  const original = loadCliCredentials(configDir);
+  assert.ok(original);
+  // The owner switched organizations and back while the claim waited, so
+  // the saved login is the same organization under a new grant.
+  const { options } = stuckOptions(configDir, fetcher, () =>
+    saveCliCredentials(configDir, {
+      ...original,
+      oauth_grant_id: "grant-after-relogin",
+    }),
+  );
+  await assert.rejects(enrollAgent(options));
+  const value = await enrollAgent(options);
+  assert.equal(value.connection.status, "connected");
+  assert.equal(creates.length, 1);
+  assert.equal(invitationBodies.length, 1);
+  assert.equal(savedState(configDir).grantId, "grant-after-relogin");
+});
+
+test("enrollment waits out another credential operation instead of failing", async () => {
+  const configDir = owner();
+  const original = loadCliCredentials(configDir);
+  assert.ok(original);
+  // Near expiry, so enrollment must refresh under the credential lock.
+  saveCliCredentials(configDir, {
+    ...original,
+    expires_at: new Date(clock + 1_000).toISOString(),
+  });
+  const { fetcher, creates, refreshes } = server({ oauthRefresh: true });
+  const release = acquireCliCredentialsLock(configDir, {
+    installSignalHandlers: false,
+  });
+  const timer = setTimeout(release, 300);
+  try {
+    const value = await enrollAgent({
+      configDir,
+      session,
+      name: "Research",
+      receiverMode: "external",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      fetch: fetcher,
+      now: () => clock,
+      credentialLockWaitMs: 5_000,
+      setup: (async () => result) as typeof setupAgent,
+    });
+    assert.equal(value.connection.status, "connected");
+  } finally {
+    clearTimeout(timer);
+    release();
+  }
+  assert.equal(creates.length, 1);
+  assert.ok(refreshes() >= 1);
+});
+
+test("the registration log explains a stuck session and holds no secrets", async () => {
+  const configDir = owner();
+  const { fetcher, invitation, freshInvitation } = server({
+    freshInvitation: true,
+    recordInvitationBodies: true,
+    connectionStatuses: ["pending", "connected"],
+  });
+  const { options } = stuckOptions(configDir, fetcher);
+  await assert.rejects(enrollAgent(options));
+  const summary = registrationSummary(configDir, `session-${session}`);
+  assert.equal(summary?.lastFailure?.code, "refused");
+  assert.match(summary?.lastFailure?.detail ?? "", /was not submitted/);
+  assert.equal(summary?.orgId, orgId);
+  assert.equal(summary?.address, result.identity.agentAddress);
+  await enrollAgent(options);
+  const events = readRegistrationLog(configDir, `session-${session}`).map(
+    (row) => row.event,
+  );
+  assert.deepEqual(events, [
+    "started",
+    "created",
+    "setup_attempted",
+    "failed",
+    "started",
+    "heal_invited",
+    "finished",
+  ]);
+  const text = readFileSync(
+    join(
+      agentProfileDirectory(configDir, `session-${session}`),
+      "registration-log.json",
+    ),
+    "utf8",
+  );
+  for (const secret of [
+    invitation,
+    freshInvitation,
+    new URLSearchParams(new URL(invitation).hash.slice(1)).get("token") ?? "",
+    new URLSearchParams(new URL(freshInvitation).hash.slice(1)).get("token") ??
+      "",
+    "prim_",
+    "pconn_",
+    "token=",
+  ])
+    assert.equal(text.includes(secret), false, secret);
 });

@@ -31,6 +31,8 @@ import {
 } from "../../src/oclif/connected-agent-profile.js";
 
 import { acquireListenLock } from "../../src/oclif/listen-state.js";
+import { readRegistrationLog } from "../../src/oclif/registration-log.js";
+import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
 const directories: string[] = [];
@@ -345,7 +347,7 @@ describe("one-command connected agent setup", () => {
     const f = fixture();
     f.fetch.mockRejectedValue(new Error(f.credential));
     await expect(setupAgent(f.params)).rejects.toThrow("fresh invitation");
-    await expect(f.resume()).rejects.toThrow("fresh invitation");
+    await expect(f.resume()).rejects.toThrow("fresh setup instruction");
     await expect(setupAgent(f.params)).rejects.toThrow(
       "fresh setup instruction",
     );
@@ -1483,5 +1485,184 @@ describe("reconnecting a profile whose agent was revoked elsewhere", () => {
     // Once it is free, the same reconnect goes through.
     await setupAgent({ ...f.params, invitation: reconnectInvitation(f) });
     expect(f.fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("finishing a session whose setup never got a credential", () => {
+  // The owner copied a fresh setup instruction for the session's pending
+  // agent and pasted it. The earlier claim never produced a credential.
+  const fresh = (f: ReturnType<typeof fixture>) =>
+    f.params.invitation.replace("#token=", "#token=fresh_");
+  const profileFiles = (f: ReturnType<typeof fixture>, sub = "") =>
+    readdirSync(
+      join(agentProfileDirectory(f.configDir, f.params.profileName), sub),
+    );
+  function stuck(address: string, withSetup = true) {
+    const f = fixture();
+    writeMailJson(
+      join(
+        agentProfileDirectory(f.configDir, f.params.profileName),
+        "enrollment",
+        "state.json",
+      ),
+      { version: 2, address, phase: "setup_attempted" },
+    );
+    if (withSetup)
+      writeMailJson(
+        join(
+          agentProfileDirectory(f.configDir, f.params.profileName),
+          "setup.json",
+        ),
+        {
+          version: 1,
+          session: f.params.session,
+          receiverMode: "native",
+          invitationHash: "d".repeat(64),
+          since: new Date(f.now - 60_000).toISOString(),
+          contactRequests: true,
+          challenge: null,
+          phase: "waiting",
+          receipt: null,
+        },
+      );
+    return f;
+  }
+
+  it("claims an invitation for the same address without asking, replacing the stale state", async () => {
+    const f = stuck("agent@example.com");
+    const result = await setupAgent({ ...f.params, invitation: fresh(f) });
+    expect(result).toMatchObject({
+      identity: f.identity,
+      verification: { state: "reply_submitted" },
+      replacedUnfinished: { address: "agent@example.com", sameAddress: true },
+    });
+    expect(f.fetch).toHaveBeenCalledOnce();
+    expect(f.state().invitationHash).not.toBe("d".repeat(64));
+    expect(
+      profileFiles(f).filter((name) => /^replaced-\d+-setup\.json$/.test(name)),
+    ).toHaveLength(1);
+    expect(profileFiles(f, "enrollment")).toEqual([
+      expect.stringMatching(/^replaced-\d+-state\.json$/),
+    ]);
+    expect(
+      readRegistrationLog(f.configDir, f.params.profileName).map(
+        (row) => row.event,
+      ),
+    ).toEqual(["replaced_unfinished"]);
+  });
+
+  it("reports when the invitation connected a different address than the pending one", async () => {
+    const f = stuck("other@example.com");
+    const result = await setupAgent({ ...f.params, invitation: fresh(f) });
+    expect(result).toMatchObject({
+      identity: { agentAddress: "agent@example.com" },
+      replacedUnfinished: { address: "other@example.com", sameAddress: false },
+    });
+  });
+
+  it("finishes an enrollment that stopped before it saved any setup", async () => {
+    const f = stuck("agent@example.com", false);
+    const result = await setupAgent({ ...f.params, invitation: fresh(f) });
+    expect(result).toMatchObject({
+      replacedUnfinished: { address: "agent@example.com", sameAddress: true },
+    });
+    expect(profileFiles(f, "enrollment")).toEqual([
+      expect.stringMatching(/^replaced-\d+-state\.json$/),
+    ]);
+  });
+
+  it("still asks before replacing a profile that holds a credential", async () => {
+    const f = fixture();
+    await setupAgent(f.params);
+    await expect(
+      setupAgent({ ...f.params, invitation: fresh(f) }),
+    ).rejects.toThrow(
+      "Agent profile private-session is already connected as agent@example.com with a different invitation.",
+    );
+    expect(f.fetch).toHaveBeenCalledOnce();
+  });
+
+  it("waits for a background registration instead of claiming underneath it", async () => {
+    const f = stuck("agent@example.com");
+    const before = f.state();
+    const release = acquireListenLock(
+      join(
+        agentProfileDirectory(f.configDir, f.params.profileName),
+        "enrollment",
+      ),
+      "agent-enrollment",
+    );
+    try {
+      await expect(
+        setupAgent({ ...f.params, invitation: fresh(f) }),
+      ).rejects.toThrow(
+        "This session's background registration is still running, so this invitation was not claimed; wait a few seconds and rerun the same command.",
+      );
+    } finally {
+      release();
+    }
+    expect(f.fetch).not.toHaveBeenCalled();
+    expect(f.state()).toEqual(before);
+    expect(profileFiles(f).some((name) => name.startsWith("replaced-"))).toBe(
+      false,
+    );
+  });
+
+  it("puts the stale state back when the invitation is refused", async () => {
+    const f = stuck("agent@example.com");
+    const before = f.state();
+    f.fetch.mockResolvedValueOnce(
+      Response.json(
+        {
+          success: false,
+          error: { code: "connection_invitation_unavailable" },
+        },
+        { status: 409 },
+      ),
+    );
+    await expect(
+      setupAgent({ ...f.params, invitation: fresh(f) }),
+    ).rejects.toBeInstanceOf(AgentInvitationRejectedError);
+    expect(f.state()).toEqual(before);
+    expect(
+      existsSync(
+        join(
+          agentProfileDirectory(f.configDir, f.params.profileName),
+          "enrollment",
+          "state.json",
+        ),
+      ),
+    ).toBe(true);
+    expect(profileFiles(f).some((name) => name.startsWith("replaced-"))).toBe(
+      false,
+    );
+  });
+
+  it("keeps the enrollment record when the claim outcome is uncertain or the paste is malformed", async () => {
+    const enrollment = (f: ReturnType<typeof fixture>) =>
+      join(
+        agentProfileDirectory(f.configDir, f.params.profileName),
+        "enrollment",
+        "state.json",
+      );
+    const malformed = stuck("agent@example.com", false);
+    await expect(
+      setupAgent({ ...malformed.params, invitation: "not an invitation" }),
+    ).rejects.toThrow();
+    expect(existsSync(enrollment(malformed))).toBe(true);
+    const lost = stuck("agent@example.com");
+    lost.fetch.mockRejectedValueOnce(new Error("socket closed"));
+    await expect(
+      setupAgent({ ...lost.params, invitation: fresh(lost) }),
+    ).rejects.toThrow(/may have been consumed/);
+    // Still blocks a new address: the next registration heals the same one.
+    expect(existsSync(enrollment(lost))).toBe(true);
+  });
+
+  it("resuming without a credential names the step that finishes the agent", async () => {
+    const f = stuck("agent@example.com");
+    await expect(f.resume()).rejects.toThrow(
+      "This session's agent agent@example.com is created but not connected: in the Primitive app open it and choose Copy again, then paste that setup instruction here; `agent connect` finishes the same address.",
+    );
   });
 });
