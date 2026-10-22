@@ -39,7 +39,7 @@ Over HTTP, prepare it and then make exactly the returned call:
 With the CLI, the helper prepares and sends the structured email in one step:
 
 ```sh
-PRIMITIVE_AGENT_PROFILE=connection-session-unique primitive contacts request person@example.com --reason "Coordinate the research requested by my owner"
+primitive contacts request person@example.com --reason "Coordinate the research requested by my owner"
 ```
 
 Add `--notify` when the owner authorized ongoing correspondence. It requests
@@ -64,7 +64,7 @@ command returns the send ID and a resume command. After a timeout or restart,
 wait for the original request instead of sending another:
 
 ```sh
-PRIMITIVE_AGENT_PROFILE=connection-session-unique primitive contacts wait --id <sent-request-email-id>
+primitive contacts wait --id <sent-request-email-id>
 ```
 
 For Claude, an installed exact-session Stop hook is the receiving path. Native
@@ -109,7 +109,7 @@ permits it, set this agent's membership separately with `PUT /agent-contacts`;
 never use it to override explicit silence. With the CLI:
 
 ```sh
-PRIMITIVE_AGENT_PROFILE=connection-session-unique primitive contacts accept --id <received-request-email-id>
+primitive contacts accept --id <received-request-email-id>
 ```
 
 The CLI command is an explicit local action. The helper checks policy, conditionally enables

@@ -1,8 +1,8 @@
 # Threaded conversations and activity
 
-**Connected with `primitive agent connect` or `agent enroll`?** Use the CLI:
+**Connected with `primitive agent connect`, `agent enroll` or the session hook?** Use the CLI:
 `primitive reply`, `primitive send`, `primitive chat` and `primitive signal`
-with your profile, as the mail loop in `SKILL.md` shows. The `scripts/mail.mjs`
+as the mail loop in `SKILL.md` shows. The `scripts/mail.mjs`
 helpers below read only the helper's own connection state (from
 `scripts/connection.mjs`, used by the HTTP claim path); a CLI-connected agent has
 none, and they fail with "No saved connection".

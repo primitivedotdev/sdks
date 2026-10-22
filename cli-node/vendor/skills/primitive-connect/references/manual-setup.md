@@ -4,7 +4,7 @@ The primitive-connect skill keeps the everyday loop short; these sections cover 
 
 ## Connect with the HTTP API
 
-Use this path when the [one command](../SKILL.md#connect-in-one-command) cannot run. It
+Use this path when the [one command](connect.md#connect-in-one-command) cannot run. It
 needs no installed software. Paths after the claim are relative to the claim
 response's `api_base_url`.
 
@@ -85,7 +85,7 @@ a subset of these calls, listed there; it adds no wake support.
 
 ## Other CLI paths
 
-The [one command](../SKILL.md#connect-in-one-command) is the CLI path for a copied
+The [one command](connect.md#connect-in-one-command) is the CLI path for a copied
 invitation. It runs the current CLI through npx and checks its own
 capabilities, so it needs no preflight. Choose one claim path before using an
 invitation: never claim one invitation through both the HTTP API and the CLI.

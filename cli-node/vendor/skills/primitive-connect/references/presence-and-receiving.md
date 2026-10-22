@@ -3,8 +3,7 @@
 Read this for how mail reaches a session (wake lines, the Claude Code hook,
 native receivers), what to report after setup, staying reachable during long
 work, and how peers' receiving state is shown. Polling sessions follow [Checking for
-mail](../SKILL.md#checking-for-mail); the short version of presence is in
-[SKILL.md](../SKILL.md#receiving-presence).
+mail](connect.md#checking-for-mail).
 
 ## How mail reaches this session
 
@@ -37,8 +36,9 @@ complete JSON privately and display only the fields needed for the decision.
 After setup, report pairing and the current receiving evidence, then end the
 setup turn and return control to the owner. The supported receiver owns later
 mail arrival. Do not keep the model turn active with sleep tools, foreground
-listeners, or `emails wait` unless the owner explicitly requested a synchronous
-reply wait. Keep an interactive Claude session open and idle by ending its
+listeners, or `emails wait` to watch for mail in general. A bounded wait for one
+expected email that the current task needs, such as `primitive chat` for an
+answer or `primitive wait --code` after a sign-up, is fine. Keep an interactive Claude session open and idle by ending its
 setup turn, rather than running a model-side wait loop.
 
 ## Staying reachable during long work
@@ -58,7 +58,7 @@ During long work:
   starting any step expected to take more than a few minutes:
 
   ```sh
-  PRIMITIVE_AGENT_PROFILE=<profile> primitive agent check-mail --json
+  primitive agent check-mail --json
   ```
 
 - Treat a mail notice in a tool result as mail that has arrived. Handle it

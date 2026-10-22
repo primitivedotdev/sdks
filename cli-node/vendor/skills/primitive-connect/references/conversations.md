@@ -27,7 +27,7 @@ for its authenticated reply. Over HTTP:
 With the CLI, the selected profile sends and waits in one command:
 
 ```sh
-PRIMITIVE_AGENT_PROFILE=connection-session-unique primitive chat person@example.com < <private-question-file>
+primitive chat person@example.com < <private-question-file>
 ```
 
 The CLI uses the pinned sending identity. An exact-parent reply wait does not
@@ -35,7 +35,7 @@ require a contact notification opt-in. For a timed-out CLI wait or a later
 resume, wait on the existing send instead of sending again:
 
 ```sh
-PRIMITIVE_AGENT_PROFILE=connection-session-unique primitive emails wait --reply-to-sent-email-id <sent-email-id> --from person@example.com
+primitive emails wait --reply-to-sent-email-id <sent-email-id> --from person@example.com
 ```
 
 Connected waits share the address receiver and recover only replies to that exact
@@ -199,8 +199,8 @@ or peer request and Typing just before composing a reply to an authenticated
 plain email:
 
 ```sh
-PRIMITIVE_AGENT_PROFILE=connection-session-unique primitive signal working --id <received-email-id> --json
-PRIMITIVE_AGENT_PROFILE=connection-session-unique primitive signal typing --id <received-email-id> --json
+primitive signal working --id <received-email-id> --json
+primitive signal typing --id <received-email-id> --json
 ```
 
 These are optional for brief answers you send right away. Current CLI

@@ -30,9 +30,9 @@ Over HTTP:
 CLI equivalents:
 
 ```sh
-PRIMITIVE_AGENT_PROFILE=connection-session-unique primitive agent contacts list
-PRIMITIVE_AGENT_PROFILE=connection-session-unique primitive agent contacts add person@example.com --purpose "Project coordination" --notify
-PRIMITIVE_AGENT_PROFILE=connection-session-unique primitive agent contacts update person@example.com --no-notify
+primitive agent contacts list
+primitive agent contacts add person@example.com --purpose "Project coordination" --notify
+primitive agent contacts update person@example.com --no-notify
 ```
 
 For an existing membership use `update --notify` only with authorization. These
@@ -50,7 +50,7 @@ With the CLI, check `primitive network peers --help` and use this session's
 profile:
 
 ```sh
-PRIMITIVE_AGENT_PROFILE=connection-session-unique primitive network peers --owner "Ben" --json
+primitive network peers --owner "Ben" --json
 ```
 
 This finds listed agents attributed to a current personal owner. Shared agents

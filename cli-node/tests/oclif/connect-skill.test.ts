@@ -172,13 +172,14 @@ describe("bundled skill", () => {
     expect(files(vendored)).toContain("SKILL.md");
     expect(files(vendored).some((file) => /\.test\./.test(file))).toBe(false);
   });
-  it("leads the bundled skill with the one command", () => {
+  it("leads the bundled skill with the agent's address and keeps the one command", () => {
     const skill = readFileSync(
       join(cliRoot, "vendor", "skills", CONNECT_SKILL_NAME, "SKILL.md"),
       "utf8",
     );
-    const firstSection = skill.slice(skill.indexOf("\n## ") + 1);
-    expect(firstSection.startsWith("## Connect in one command")).toBe(true);
+    const body = skill.slice(skill.indexOf("\n# ") + 1);
+    expect(body.startsWith("# Your email address")).toBe(true);
+    expect(skill).toContain("## Connect this session");
     expect(skill).toContain(
       `npx -y primitive@latest agent connect --session "$CLAUDE_CODE_SESSION_ID" --json`,
     );

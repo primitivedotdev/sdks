@@ -270,7 +270,7 @@ it("agent connect --session runs the whole flow with a default profile and one J
       join(home, "codex", "skills", "primitive-connect", "SKILL.md"),
       "utf8",
     ),
-  ).toContain("## Connect in one command");
+  ).toContain("## Connect this session");
   expect(process.exitCode).toBe(2);
   process.exitCode = undefined;
 

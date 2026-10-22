@@ -27,18 +27,22 @@ if (receiver !== 'native' && receiver !== 'external' && receiver !== 'poll') {
     checks[2].patterns.push(/--notify-session\b/, /--background\b/);
   }
 
-  const missing = [];
-  for (const { args, label, patterns } of checks) {
+  const helpText = (args) => {
     const result = spawnSync('primitive', args, {
       encoding: 'utf8',
       timeout: 10_000,
       maxBuffer: 128 * 1024,
     });
-    if (result.error || result.status !== 0) {
+    return result.error || result.status !== 0 ? null : result.stdout.replace(/\s+/g, ' ');
+  };
+
+  const missing = [];
+  for (const { args, label, patterns } of checks) {
+    const help = helpText(args);
+    if (help === null) {
       missing.push(`${label} --help is unavailable`);
       continue;
     }
-    const help = result.stdout.replace(/\s+/g, ' ');
     if (patterns.some((pattern) => !pattern.test(help))) {
       missing.push(`${label} --help lacks required setup, ${receiver} receiving, or peer-discovery support`);
     }
@@ -49,5 +53,10 @@ if (receiver !== 'native' && receiver !== 'external' && receiver !== 'poll') {
     process.exitCode = 1;
   } else {
     process.stdout.write(`Primitive CLI preflight passed for ${receiver} receiving and peer discovery.\n`);
+    // Advisory only: older CLIs without `primitive wait` still connect and work.
+    const wait = helpText(['wait', '--help']);
+    process.stdout.write(wait !== null && /--code\b/.test(wait) && /--link\b/.test(wait)
+      ? 'primitive wait: available (--code, --link).\n'
+      : 'primitive wait: not in this CLI; run `primitive agent check-mail` every few seconds until the email is listed, then read it with `primitive emails get --id <id> --context`.\n');
   }
 }
