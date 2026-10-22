@@ -16,20 +16,30 @@ owner in your home thread.
 
 ## Verification codes and links
 
-Submit the form first, then wait for the email:
+Start waiting before you submit the form: `primitive wait` only matches mail
+that arrives after it starts, and a fast service can send the email before a
+wait started afterwards is listening.
 
 ```sh
-code=$(primitive wait --from example.com --code --timeout 5m)
-link=$(primitive wait --from example.com --link --timeout 5m)
+d=$(mktemp -d); echo "$d"   # keep this path; codes are credentials, so not in the project folder
+( primitive wait --from example.com --code --timeout 5m > "$d/code"; echo $? > "$d/status" ) &
+# submit the form, then:
+while [ ! -f "$d/status" ]; do sleep 2; done; cat "$d/status" "$d/code"
 ```
+
+Use `--link` instead of `--code` for a confirmation or sign-in link. The loop
+ends when the wait does (found, timed out or failed), so it never runs past
+`--timeout`. When the submit is a command in the same shell, start the wait in
+the background, submit, then `wait` for it.
 
 - `--from` takes an address or a domain. Use the service's sending domain; if
   you do not know it, leave `--from` off and check the sender yourself with
   `--json`.
 - `--subject <text>` narrows the match when a service sends several emails.
-- Only mail that arrives after the wait starts matches. Add
-  `--include-existing` to also match the newest 50 emails already received,
-  for example when the form was slow or you are retrying.
+- Only mail that arrives after the wait starts matches. If you already
+  submitted, add `--include-existing` to also match the newest 50 emails
+  already received, and check with `--json` that the match arrived after you
+  submitted, not from an earlier attempt.
 - `--timeout` takes `90s`, `5m`, `1h` or plain seconds (default `5m`, `0`
   waits forever). A timeout exits with status 5. Status 6 means an email
   arrived but no code or link was found in it; its ID is on stderr, so read it

@@ -14,8 +14,11 @@ already set up. Every `primitive` command, and every tool or script that runs
 one, acts as you; you never pass a profile or `--from`. Your address is in
 `$PRIMITIVE_AGENT_ADDRESS`, and `primitive whoami` prints it on its first line.
 
-If `$PRIMITIVE_AGENT_ADDRESS` is empty, or `primitive whoami` does not print an
-agent address, this session has no agent identity yet: see [Connect this
+`primitive whoami` is the check: its first line is your address whenever this
+session acts as an agent, whether the hook set it up or a profile was selected
+by hand (Codex, manual setups; those may have no `$PRIMITIVE_AGENT_ADDRESS`, so
+use the address `whoami` prints). Only when `whoami` prints no agent address
+does this session lack an identity: see [Connect this
 session](#connect-this-session). Never send as your owner's own login instead.
 
 ## Everyday commands
@@ -54,12 +57,20 @@ EOF
 
 On a timeout, wait again on the same send as the output says; never ask twice.
 
-**Sign up for a service and verify.** Only when the owner's task calls for it,
-give `$PRIMITIVE_AGENT_ADDRESS` as the email on the form, submit, then:
+**Sign up for a service and verify.** Only when the owner's task calls for it.
+`primitive wait` only matches mail that arrives after it starts, so start it
+before you submit the form, give your address as the email, submit, then read
+the result:
 
 ```sh
-code=$(primitive wait --from example.com --code --timeout 5m)
+d=$(mktemp -d); echo "$d"   # keep this path for the read below
+( primitive wait --from example.com --code --timeout 5m > "$d/code"; echo $? > "$d/status" ) &
+# submit the form now, then:
+while [ ! -f "$d/status" ]; do sleep 2; done; cat "$d/code"
 ```
+
+Status 0 means the code is in the file; other statuses and the
+already-submitted case are in [External services](references/external-services.md#verification-codes-and-links).
 
 Enter the code; never echo it into a report or forward it. Use `--link` for a
 confirmation or sign-in link, and open it only if it points at that service.
