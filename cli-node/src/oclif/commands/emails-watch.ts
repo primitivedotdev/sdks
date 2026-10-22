@@ -15,6 +15,10 @@ import {
   AWAITING_VALUES,
   ReplyStateUnsupportedError,
 } from "../reply-state.js";
+import {
+  pauseForTransientFailure,
+  transientFailure,
+} from "../transient-retry.js";
 import { formatHeader, formatRow, pickIdWidth } from "./emails-latest.js";
 import {
   collectNewAcceptedEmails,
@@ -148,6 +152,8 @@ class EmailsWatchCommand extends Command {
     const idWidth = pickIdWidth(Boolean(process.stdout.isTTY));
     const seenIds = new Set<string>();
     let cursor: string | null = null;
+    // Consecutive transient failures, for backoff.
+    let failures = 0;
     let printed = 0;
     let headerPrinted = false;
 
@@ -172,8 +178,18 @@ class EmailsWatchCommand extends Command {
       }
 
       if (!page.ok) {
+        const failure = transientFailure(page);
+        if (failure) {
+          // Rate limited or briefly unavailable: back off until the deadline.
+          if (
+            !(await pauseForTransientFailure(failure, failures, { deadline }))
+          )
+            break;
+          failures += 1;
+          continue;
+        }
         const payload = extractErrorPayload(page.error);
-        writeErrorWithHints(payload);
+        writeErrorWithHints(payload, page.response);
         surfaceUnauthorizedHint({
           auth,
           baseUrlOverridden,
@@ -184,6 +200,7 @@ class EmailsWatchCommand extends Command {
         return;
       }
 
+      failures = 0;
       const nextCursor = cursorFromAcceptedRows(page.rows);
       const cursorAdvanced = Boolean(nextCursor && nextCursor !== cursor);
       if (nextCursor) cursor = nextCursor;

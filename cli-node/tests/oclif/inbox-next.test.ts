@@ -1470,3 +1470,84 @@ describe("inbox next command", () => {
     }
   });
 });
+
+describe("inbox next with transient API failures", () => {
+  let inbox: FakeInbox;
+  beforeEach(() => {
+    vi.clearAllMocks();
+    inbox = new FakeInbox();
+    const api = inbox.api();
+    mocks.listEmails.mockImplementation(api.listEmails);
+    mocks.getEmail.mockImplementation(api.getEmail);
+    mocks.getConversation.mockImplementation(api.getConversation);
+    mocks.createAuthenticatedCliApiClient.mockResolvedValue({
+      apiClient: { client: {} },
+      auth: { kind: "api-key", source: "flag" },
+      baseUrlOverridden: false,
+    });
+  });
+
+  function failure(status: number, code: string, headers = {}) {
+    return {
+      error: { success: false, error: { code, message: "Too many requests" } },
+      response: new Response(null, { status, headers }),
+    };
+  }
+
+  /** Fail the first `count` long-polls, then answer as the fake inbox. */
+  function failLongPolls(count: number, make: () => unknown) {
+    const real = inbox.api().listEmails;
+    let failed = 0;
+    mocks.listEmails.mockImplementation(
+      async (arg: { query: Record<string, unknown> }) => {
+        if (arg.query.wait !== undefined && failed < count) {
+          failed += 1;
+          return make();
+        }
+        return real(arg as never);
+      },
+    );
+  }
+
+  it("--wait waits out a rate-limited long-poll and returns the mail", async () => {
+    inbox.add({
+      id: "old",
+      created_at: "2026-09-18T00:00:00.000Z",
+      awaiting: "them",
+      reply_count: 1,
+    });
+    inbox.onWait = () =>
+      inbox.add({ id: "new", created_at: "2026-09-19T00:00:00.000Z" });
+    failLongPolls(1, () =>
+      failure(429, "rate_limit_exceeded", { "Retry-After": "0" }),
+    );
+    const result = await runCommand(["--wait", "--timeout", "60", "--json"]);
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout).email.id).toBe("new");
+    // Under --json the notice lands in the document's warnings.
+    expect(JSON.parse(result.stdout).warnings).toEqual([
+      "primitive: rate limited; retrying in 0 s.",
+    ]);
+  });
+
+  it("--wait exits 5 when the API stays unavailable until the timeout", async () => {
+    failLongPolls(1000, () => failure(503, "service_unavailable"));
+    const result = await runCommand(["--wait", "--timeout", "1"]);
+    expect(result.exitCode).toBe(INBOX_NEXT_EXIT_CODES.empty);
+    expect(result.stderr).toContain(
+      "primitive: API unavailable (HTTP 503); retrying in",
+    );
+    expect(result.stderr).toContain("Nothing awaits your reply.");
+  });
+
+  it("without --wait, a 429 fails at once and says it was rate limited", async () => {
+    mocks.listEmails.mockImplementation(async () =>
+      failure(429, "rate_limit_exceeded", { "Retry-After": "60" }),
+    );
+    const result = await runCommand([]);
+    expect(result.exitCode).toBe(INBOX_NEXT_EXIT_CODES.error);
+    expect(result.stderr).toContain("rate_limit_exceeded");
+    expect(result.stderr).toContain("Hint: this request was rate limited.");
+    expect(mocks.listEmails).toHaveBeenCalledTimes(1);
+  });
+});

@@ -174,11 +174,13 @@ try{
   const chat=await run(['chat',peer,'hello','--json','--timeout','5']);
   assert.equal(chat.outcome,'replied');assert.equal(chat.reply.body_text,'Ordinary reply');assert.equal(posts,beforeChat+1);
   automaticAcceptance=false;
-  for (const [status, errorPattern] of [
-    [429, /rate limited.*Retry after 32 seconds/],
-    [403, /access was denied.*HTTP 403/],
-    [404, /unavailable on this API endpoint.*HTTP 404/],
-    [503, /temporarily unavailable.*HTTP 503/],
+  // A rate limit or 503 is retried with backoff until the wait's timeout,
+  // which then ends the wait as a timeout; other failures end it at once.
+  for (const [status, errorPattern, transient] of [
+    [429, /rate limited \(retry after 32 s\); this wait times out in \d+ s/, true],
+    [403, /access was denied.*HTTP 403/, false],
+    [404, /unavailable on this API endpoint.*HTTP 404/, false],
+    [503, /API unavailable \(HTTP 503\); retrying in \d+ s/, true],
   ]) {
     searchFailureStatus=status;
     const sendsBefore=posts, searchesBefore=searchAttempts;
@@ -186,11 +188,15 @@ try{
     assert.equal(failedWait.outcome,'sent_awaiting_reply');
     assert.equal(failedWait.contact_accepted,false);
     assert.equal(posts,sendsBefore+1,'request wait must send only once');
-    assert.equal(searchAttempts,searchesBefore+1,'failed search must not retry');
-    await run(['contacts','wait','--id',failedWait.sent_id,'--timeout','5','--json'],{code:1,errorPattern});
-    await run(['contacts','wait','--request-id',failedWait.request_id,'--timeout','5','--json'],{code:1,errorPattern});
+    if (transient) assert.ok(searchAttempts>searchesBefore,'the wait searched');
+    else assert.equal(searchAttempts,searchesBefore+1,'a failed search is not retried');
+    const searchesBeforeResume=searchAttempts;
+    const resume=transient?{code:3,errorPattern,timeout:'2'}:{code:1,errorPattern,timeout:'5'};
+    await run(['contacts','wait','--id',failedWait.sent_id,'--timeout',resume.timeout,'--json'],resume);
+    await run(['contacts','wait','--request-id',failedWait.request_id,'--timeout',resume.timeout,'--json'],resume);
     assert.equal(posts,sendsBefore+1,'both resume command forms must never resend');
-    assert.equal(searchAttempts,searchesBefore+3,'each resume performs one targeted search');
+    if (transient) assert.ok(searchAttempts>=searchesBeforeResume+2,'each resume searches again');
+    else assert.equal(searchAttempts,searchesBeforeResume+2,'each resume performs one targeted search');
   }
   searchFailureStatus=0;
   const session=randomUUID(), sessionProfile=`session-${session}`;

@@ -61,6 +61,7 @@ import {
   replyStateSurfaceForOperation,
 } from "./reply-state.js";
 import { sentListOtherSendersNote } from "./sent-list-labels.js";
+import { parseRetryAfter } from "./transient-retry.js";
 
 type OperationName = keyof typeof operations;
 export type ApiErrorCode = ErrorResponse["error"]["code"];
@@ -585,14 +586,37 @@ const NETWORK_ERROR_HINTS: Record<string, string> = {
     "Hint: DNS lookup failed. Check /etc/resolv.conf inside containers, and try `curl -v https://api.primitive.dev/v1/account` to confirm the host resolves. `primitive doctor` reports the local environment in one shot.",
 };
 
+// The API's rate-limit codes: `rate_limited` (organization-wide limiter,
+// /send-mail) and `rate_limit_exceeded` (per-resource limiters and the
+// abuse backstop in front of the API).
+const RATE_LIMIT_CODES = new Set(["rate_limited", "rate_limit_exceeded"]);
+
+/** When to retry a rate-limited request, from Retry-After when it was sent. */
+export function rateLimitHint(response?: Response): string {
+  const delay = parseRetryAfter(response?.headers.get("retry-after"));
+  return delay === undefined
+    ? "Hint: this request was rate limited. Wait before retrying: the API request limits use a 60 second window, and send limits can take longer to reset."
+    : `Hint: this request was rate limited. Retry in ${Math.max(1, Math.ceil(delay / 1000))} s.`;
+}
+
 // Write a server / SDK error to stderr in the canonical envelope
 // shape, plus an actionable hint when the code is one we know how
 // to advise on. Replaces the bare
 // `process.stderr.write(${formatErrorPayload(p)}\n)` dance every
 // command was doing.
-export function writeErrorWithHints(payload: unknown): void {
+export function writeErrorWithHints(
+  payload: unknown,
+  response?: Response,
+): void {
   process.stderr.write(`${formatErrorPayload(payload)}\n`);
   const code = extractErrorCode(payload);
+  if (
+    response?.status === 429 ||
+    (code !== undefined && RATE_LIMIT_CODES.has(code))
+  ) {
+    process.stderr.write(`${rateLimitHint(response)}\n`);
+    return;
+  }
   if (!code) return;
   if (code in ERROR_CODE_HINTS) {
     const hint = ERROR_CODE_HINTS[code as keyof typeof ERROR_CODE_HINTS];
@@ -1378,7 +1402,7 @@ export function createOperationCommand(
 
         if (result.error) {
           const errorPayload = extractErrorPayload(result.error);
-          writeErrorWithHints(errorPayload);
+          writeErrorWithHints(errorPayload, result.response);
           const operationErrorHint = OPERATION_ERROR_HINTS[operation.sdkName]?.(
             extractErrorCode(errorPayload),
             body,

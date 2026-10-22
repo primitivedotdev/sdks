@@ -4,7 +4,8 @@ import type {
   SentEmailSummary,
 } from "@primitivedotdev/api-core";
 import { listSentEmails } from "@primitivedotdev/api-core";
-import { readBeforeDeadline } from "./scoped-chat.js";
+import { readApiBeforeDeadline } from "./scoped-chat.js";
+import { describeApiFailure } from "./transient-retry.js";
 
 /** Lookup only. An empty result never authorizes another send. */
 export async function reconcileChatSend(params: {
@@ -14,7 +15,7 @@ export async function reconcileChatSend(params: {
   recipient: string;
   deadline?: number | null;
 }): Promise<SentEmailSummary | null> {
-  const result = await readBeforeDeadline(params.deadline, (signal) =>
+  const result = await readApiBeforeDeadline(params.deadline, (signal) =>
     listSentEmails({
       client: params.apiClient.client,
       query: { idempotency_key: params.idempotencyKey, limit: 2 },
@@ -23,9 +24,13 @@ export async function reconcileChatSend(params: {
     }),
   );
   if (result === null) return null;
+  if (result.error)
+    throw new Errors.CLIError(
+      `Could not reconcile the saved send intent: ${describeApiFailure(result)}. Its outcome remains unknown; do not send again.`,
+      { exit: 1 },
+    );
   const page = result.data;
   if (
-    result.error ||
     !page ||
     !Array.isArray(page.data) ||
     !page.meta ||

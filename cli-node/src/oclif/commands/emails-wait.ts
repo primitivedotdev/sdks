@@ -21,6 +21,10 @@ import {
 } from "../reply-state.js";
 import { isConnectedChatCredential } from "../scoped-chat.js";
 import { resolveScopedEmailWait } from "../scoped-email-wait.js";
+import {
+  pauseForTransientFailure,
+  transientFailure,
+} from "../transient-retry.js";
 import { formatHeader, formatRow, pickIdWidth } from "./emails-latest.js";
 import {
   collectNewAcceptedEmails,
@@ -57,7 +61,10 @@ class EmailsWaitCommand extends Command {
   Connected waits share an address event subscription and recover replies with
   exact-parent search. They never scan inbox history. Additional content
   filters. The command never sends mail. On timeout it exits 1; run the same
-  wait again to recover a reply to the existing send without resending it.`;
+  wait again to recover a reply to the existing send without resending it.
+  A rate limit (HTTP 429, honouring Retry-After), a 502, 503 or 504, or a
+  network error during the wait is retried with backoff until --timeout,
+  with one note on stderr per retry.`;
 
   static summary = "Wait for matching inbound emails";
 
@@ -210,6 +217,8 @@ class EmailsWaitCommand extends Command {
     const idWidth = pickIdWidth(Boolean(process.stdout.isTTY));
     const seenIds = new Set<string>();
     let cursor: string | null = null;
+    // Consecutive transient failures, for backoff.
+    let failures = 0;
     let matched = 0;
     let headerPrinted = false;
 
@@ -279,8 +288,18 @@ class EmailsWaitCommand extends Command {
       }
 
       if (!page.ok) {
+        const failure = transientFailure(page);
+        if (failure) {
+          // Rate limited or briefly unavailable: back off until the deadline.
+          if (
+            !(await pauseForTransientFailure(failure, failures, { deadline }))
+          )
+            break;
+          failures += 1;
+          continue;
+        }
         const payload = extractErrorPayload(page.error);
-        writeErrorWithHints(payload);
+        writeErrorWithHints(payload, page.response);
         surfaceUnauthorizedHint({
           auth,
           baseUrlOverridden,
@@ -291,6 +310,7 @@ class EmailsWaitCommand extends Command {
         return;
       }
 
+      failures = 0;
       const nextCursor = cursorFromAcceptedRows(page.rows);
       const cursorAdvanced = Boolean(nextCursor && nextCursor !== cursor);
       if (nextCursor) cursor = nextCursor;

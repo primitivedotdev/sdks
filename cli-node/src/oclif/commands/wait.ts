@@ -3,7 +3,11 @@ import type {
   EmailDetail,
   PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
-import { getEmail, listEmails } from "@primitivedotdev/api-core";
+import {
+  getConversation,
+  getEmail,
+  listEmails,
+} from "@primitivedotdev/api-core";
 import { savedSetupChallengeId } from "../agent-mail-check.js";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
@@ -15,6 +19,7 @@ import {
 import { agentProfileDirectory } from "../connected-agent-profile.js";
 import { buildEmailCompact } from "../email-compact.js";
 import { presenceDisposition } from "../presence-provenance.js";
+import { WaitDeadlineReached } from "../transient-retry.js";
 import {
   extractVerificationCode,
   extractVerificationLink,
@@ -22,8 +27,10 @@ import {
 import { sleep } from "./emails-poll.js";
 import {
   baselineCursor,
+  type InboxNextApi,
   InboxNextApiError,
   sanitizeForTerminal,
+  waitingInboxApi,
 } from "./inbox-next.js";
 
 // `primitive wait` is the "sign up with your address, then read the code"
@@ -221,10 +228,11 @@ function setupChallengeIds(
 type ListResult = { rows: Row[]; cursor: string | null };
 
 async function listRows(
+  api: InboxNextApi,
   apiClient: PrimitiveApiClient,
   query: { limit: number; since?: string; wait?: number },
 ): Promise<ListResult> {
-  const result = await listEmails({
+  const result = await api.listEmails({
     client: apiClient.client,
     query,
     responseStyle: "fields",
@@ -246,10 +254,11 @@ async function listRows(
 }
 
 async function readDetail(
+  api: InboxNextApi,
   apiClient: PrimitiveApiClient,
   id: string,
 ): Promise<EmailDetail | null> {
-  const result = await getEmail({
+  const result = await api.getEmail({
     client: apiClient.client,
     path: { id },
     responseStyle: "fields",
@@ -267,6 +276,7 @@ async function readDetail(
 }
 
 async function firstMatch(
+  api: InboxNextApi,
   apiClient: PrimitiveApiClient,
   rows: Row[],
   filters: WaitFilters,
@@ -277,7 +287,7 @@ async function firstMatch(
     if (!id || seen.has(id)) continue;
     seen.add(id);
     if (!rowMayMatch(row, filters)) continue;
-    const detail = await readDetail(apiClient, id);
+    const detail = await readDetail(api, apiClient, id);
     if (detail && detailMatches(detail, filters)) return detail;
   }
   return null;
@@ -303,24 +313,44 @@ export async function waitForEmail(params: {
   /** Emails never to return, such as this profile's own setup challenge. */
   skipIds?: readonly string[];
 }): Promise<EmailDetail | null> {
+  const { deadline } = params;
+  // Every read backs off on a rate limit, gateway failure or network error
+  // and reads again until the deadline, which then ends the wait as a timeout.
+  const api = waitingInboxApi(deadline, {
+    getConversation,
+    getEmail,
+    listEmails,
+  });
+  try {
+    return await tailForEmail(api, params);
+  } catch (error) {
+    if (error instanceof WaitDeadlineReached) return null;
+    throw error;
+  }
+}
+
+async function tailForEmail(
+  api: InboxNextApi,
+  params: Parameters<typeof waitForEmail>[0],
+): Promise<EmailDetail | null> {
   const { apiClient, filters, deadline } = params;
   const seen = new Set<string>(params.skipIds ?? []);
   // Taken before the recent page is read, so mail that lands during that
   // read is returned by the tail.
-  let since = await baselineCursor({ apiClient });
+  let since = await baselineCursor({ apiClient, api });
   // Mail that arrived between the command starting and the baseline (during
   // authentication, say) sits at or before the baseline. Check it from the
   // newest page, oldest first, before tailing past it. The boundary is the
   // start time itself, with no allowance before it, so a retried login does
   // not pick up the previous attempt's email.
-  const recent = await listRows(apiClient, { limit: EXISTING_PAGE_SIZE });
+  const recent = await listRows(api, apiClient, { limit: EXISTING_PAGE_SIZE });
   const sinceStart = recent.rows
     .filter((row) => arrivedSince(row, params.startedAt))
     .reverse();
-  const early = await firstMatch(apiClient, sinceStart, filters, seen);
+  const early = await firstMatch(api, apiClient, sinceStart, filters, seen);
   if (early) return early;
   if (params.includeExisting) {
-    const found = await firstMatch(apiClient, recent.rows, filters, seen);
+    const found = await firstMatch(api, apiClient, recent.rows, filters, seen);
     if (found) return found;
   }
   for (;;) {
@@ -328,7 +358,7 @@ export async function waitForEmail(params: {
       deadline === null ? MAX_LONG_POLL_SECONDS * 1000 : deadline - Date.now();
     if (remainingMs <= 0) return null;
     const startedAt = Date.now();
-    const page = await listRows(apiClient, {
+    const page = await listRows(api, apiClient, {
       limit: TAIL_PAGE_SIZE,
       since,
       wait: Math.max(
@@ -336,7 +366,7 @@ export async function waitForEmail(params: {
         Math.min(MAX_LONG_POLL_SECONDS, Math.floor(remainingMs / 1000)),
       ),
     });
-    const found = await firstMatch(apiClient, page.rows, filters, seen);
+    const found = await firstMatch(api, apiClient, page.rows, filters, seen);
     if (found) return found;
     if (page.rows.length > 0 && page.cursor) {
       since = page.cursor;
@@ -371,6 +401,8 @@ Only mail that arrives after the command starts matches, unless --include-existi
 --from takes an address (exact match) or a bare domain: github.com matches any sender at github.com or its subdomains. It is checked against the From address and the envelope sender, which the sender controls; it narrows the wait, it does not prove who sent the mail.
 
 --code prints only the verification or one-time code, with spaces or dashes between its groups removed. --link prints only the most likely verification, sign-in, confirm, magic or reset link, with an obvious click-tracking wrapper removed. Without either, the email is printed: sender, subject, time, its ID and the start of its text, ready for \`primitive reply --id <id>\`. --json prints one object with id, thread_id, from, to, subject, received_at, text and, when asked, code and link (null when none was found).
+
+A rate limit (HTTP 429, honouring Retry-After), a 502, 503 or 504, or a network error during the wait is retried with backoff until --timeout, with one note on stderr per retry; if it lasts until then, the wait times out (exit 5).
 
 Exit codes:
   - 0: a matching email arrived and was printed.

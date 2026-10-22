@@ -89,6 +89,11 @@ import {
   thrownErrorExitCode,
 } from "../send-outcome.js";
 import {
+  pauseForTransientFailure,
+  retryTransient,
+  transientFailure,
+} from "../transient-retry.js";
+import {
   collectNewAcceptedEmails,
   DEFAULT_EMAIL_POLL_INTERVAL_SECONDS,
   DEFAULT_EMAIL_POLL_PAGE_SIZE,
@@ -2824,6 +2829,8 @@ async function waitForReply(
     // poison fallback's view of the same row.
     const seenIds = new Set<string>();
     let cursor: string | null = null;
+    // Consecutive transient failures, for backoff.
+    let failures = 0;
     while (true) {
       if (phase.deadline !== null && Date.now() >= phase.deadline) break;
       const page = await fetchEmailSearchPage({
@@ -2835,14 +2842,28 @@ async function waitForReply(
       });
 
       if (!page.ok) {
+        const failure = transientFailure(page);
+        if (failure) {
+          // Rate limited or briefly unavailable: back off within this phase.
+          if (
+            !(await pauseForTransientFailure(failure, failures, {
+              deadline: phase.deadline,
+              notice,
+            }))
+          )
+            break;
+          failures += 1;
+          continue;
+        }
         const payload = extractErrorPayload(page.error);
-        writeErrorWithHints(payload);
+        writeErrorWithHints(payload, page.response);
         surfaceUnauthorizedHint({
           ...params.authFailureContext,
           payload,
         });
         throw new Errors.CLIError("Failed to poll for reply.", { exit: 1 });
       }
+      failures = 0;
 
       // Advance cursor only to the last accepted/completed row in the
       // page. If we instead used page.cursor we would skip past
@@ -2863,14 +2884,20 @@ async function waitForReply(
 
       const matches = collectNewAcceptedEmails(page.rows, seenIds);
       for (const match of matches) {
-        const full = await getEmail({
-          client: params.apiClient.client,
-          path: { id: match.id },
-          responseStyle: "fields",
-        });
+        const full = await retryTransient(
+          () =>
+            getEmail({
+              client: params.apiClient.client,
+              path: { id: match.id },
+              responseStyle: "fields",
+            }),
+          { deadline: totalDeadline, notice },
+        );
+        // The wait timed out while the API was rate limited or unavailable.
+        if (full === null) return null;
         if (full.error) {
           const payload = extractErrorPayload(full.error);
-          writeErrorWithHints(payload);
+          writeErrorWithHints(payload, full.response);
           surfaceUnauthorizedHint({
             ...params.authFailureContext,
             payload,
