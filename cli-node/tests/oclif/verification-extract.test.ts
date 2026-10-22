@@ -149,15 +149,29 @@ const zipCodeOnly: VerificationEmail = {
   text: "Please confirm the shipping address on file.\nZip code 94107\nAccount 55120934",
 };
 
+const dashedWithNoise: VerificationEmail = {
+  subject: "Your Widgetly sign-in code",
+  text: `Welcome back to Widgetly! Order #5521 shipped on 22 Oct 2026. Support: +1 (628) 555-0142.
+
+Use this one-time passcode to finish signing in: 4K7-P2Q
+
+It expires in 15 minutes.`,
+};
+
 describe("extractVerificationCode", () => {
   it.each([
     ["GitHub device verification", github, "482913"],
     ["Google, HTML only, code also in subject", google, "731406"],
-    ["Slack dashed alphanumeric code", slack, "XKP4QZ"],
+    ["Slack dashed alphanumeric code", slack, "XKP-4QZ"],
     ["Stripe code split as two groups with a phone number", stripe, "598274"],
     ["order total, year, phone numbers and order number", orderNoise, "660215"],
     ["HTML with one digit per cell", htmlOnlyDigitsPerCell, "905317"],
     ['code split as "123 456"', splitCode, "123456"],
+    [
+      "a dashed passcode kept as written among an order, date and phone",
+      dashedWithNoise,
+      "4K7-P2Q",
+    ],
     ["code leading the subject", subjectFirst, "804119"],
   ])("%s", (_name, email, expected) => {
     expect(extractVerificationCode(email)).toBe(expected);

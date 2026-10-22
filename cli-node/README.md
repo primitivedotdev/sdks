@@ -160,7 +160,8 @@ connected agent profile's own address, or any inbound mail for a member login)
 and prints it: sender, subject, time, the start of its text and its ID, ready
 for `primitive reply --id <id>`. Only mail that arrives after the command starts
 matches; `--include-existing` also lets one of the newest 50 emails match, for
-a code that arrived before you started waiting.
+a code that arrived before you started waiting. Presence probes and the connected
+profile's own setup email are never matched, as in `agent check-mail`.
 
 - `--from` takes an address or a bare domain; `github.com` matches any sender at
   it or its subdomains. It narrows the wait; it does not authenticate the sender.
@@ -170,7 +171,8 @@ a code that arrived before you started waiting.
   forever).
 - `--code` prints only the one-time code, preferring numbers next to words like
   code, verification or passcode and ignoring years, phone numbers, prices and
-  order numbers. A code split as `123 456` prints as `123456`.
+  order numbers. A code split as `123 456` prints as `123456`; a letter-and-digit
+  code with a dash, such as `4K7-P2Q`, prints as written.
 - `--link` prints only the most likely verify, confirm, sign-in, magic or reset
   link, skipping unsubscribe, privacy, help and social links and removing an
   obvious click-tracking wrapper.

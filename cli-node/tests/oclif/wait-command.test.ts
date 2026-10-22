@@ -208,6 +208,27 @@ describe("primitive wait helpers", () => {
     expect(detailMatches(email, { thread: "t-2" })).toBe(false);
   });
 
+  it("never returns an email it was told to skip, such as the profile's setup challenge", async () => {
+    const setupChallenge = {
+      ...githubCode,
+      id: "setup-1",
+      sender: "owner@github.com",
+      from_email: "owner@github.com",
+      subject: "Connect your agent to Primitive",
+      body_text: "Reply to finish connecting this agent.",
+    };
+    fakeInbox([], [setupChallenge, githubCode]);
+    const found = await waitForEmail({
+      apiClient: { client: {} } as never,
+      filters: { from: "github.com" },
+      includeExisting: false,
+      deadline: Date.now() + 5_000,
+      startedAt: Date.now(),
+      skipIds: ["setup-1"],
+    });
+    expect(found?.id).toBe("gh-2");
+  });
+
   it("returns null at the deadline without matching existing mail", async () => {
     fakeInbox([oldCode], []);
     const found = await waitForEmail({

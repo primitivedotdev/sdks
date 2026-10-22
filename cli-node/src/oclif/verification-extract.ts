@@ -220,7 +220,9 @@ const MIN_CODE_SCORE = 8;
 
 /**
  * The verification or one-time code in an email, with spaces and dashes
- * between groups removed ("123 456" -> "123456"), or null when none is found.
+ * between digit groups removed ("123 456" -> "123456") and a dashed
+ * letter-and-digit code kept as written ("4K7-P2Q"), or null when none is
+ * found.
  */
 export function extractVerificationCode(
   email: VerificationEmail,
@@ -249,8 +251,11 @@ function codeInBody(
       for (const match of line.matchAll(regex)) {
         const start = match.index ?? 0;
         const raw = match[0];
-        const value = raw.replace(/[ -]/g, "");
-        if (value.length < 4 || value.length > 10) continue;
+        // A dashed letter-and-digit code ("4K7-P2Q") is printed as written,
+        // since the dash can be part of it; digit groups are joined.
+        const joined = raw.replace(/[ -]/g, "");
+        const value = form === "dashed" ? raw : joined;
+        if (joined.length < 4 || joined.length > 10) continue;
         found.push({
           value,
           raw,

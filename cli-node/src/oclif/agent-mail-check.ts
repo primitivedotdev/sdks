@@ -129,7 +129,7 @@ export function isControlMail(
 }
 
 /** The setup challenge's email ID saved by this profile's setup, if any. */
-function savedSetupChallengeId(directory: string): string | null {
+export function savedSetupChallengeId(directory: string): string | null {
   try {
     const saved = readMailJson(join(directory, "setup.json")) as {
       challenge?: { id?: unknown } | null;

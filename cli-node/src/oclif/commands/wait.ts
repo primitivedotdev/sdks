@@ -4,6 +4,7 @@ import type {
   PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
 import { getEmail, listEmails } from "@primitivedotdev/api-core";
+import { savedSetupChallengeId } from "../agent-mail-check.js";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorCode,
@@ -11,6 +12,7 @@ import {
   surfaceUnauthorizedHint,
   writeErrorWithHints,
 } from "../api-command.js";
+import { agentProfileDirectory } from "../connected-agent-profile.js";
 import { buildEmailCompact } from "../email-compact.js";
 import { presenceDisposition } from "../presence-provenance.js";
 import {
@@ -201,6 +203,21 @@ export function formatWaitEmail(email: WaitJson, bin: string): string {
   return sanitizeForTerminal(lines.join("\n"));
 }
 
+// The connected profile's setup challenge is control mail the CLI answers
+// itself, as `agent check-mail` treats it. It arrives right after the session
+// connects, often from the same domain a sign-up waits on, so never hand it
+// back as the service's email.
+function setupChallengeIds(
+  configDir: string,
+  agent: { profileName: string } | undefined,
+): string[] {
+  if (!agent) return [];
+  const id = savedSetupChallengeId(
+    agentProfileDirectory(configDir, agent.profileName),
+  );
+  return id ? [id] : [];
+}
+
 type ListResult = { rows: Row[]; cursor: string | null };
 
 async function listRows(
@@ -283,9 +300,11 @@ export async function waitForEmail(params: {
   deadline: number | null;
   /** When the command started (client clock), before authentication. */
   startedAt: number;
+  /** Emails never to return, such as this profile's own setup challenge. */
+  skipIds?: readonly string[];
 }): Promise<EmailDetail | null> {
   const { apiClient, filters, deadline } = params;
-  const seen = new Set<string>();
+  const seen = new Set<string>(params.skipIds ?? []);
   // Taken before the recent page is read, so mail that lands during that
   // read is returned by the tail.
   let since = await baselineCursor({ apiClient });
@@ -472,6 +491,7 @@ Exit codes:
         includeExisting: flags["include-existing"],
         deadline,
         startedAt,
+        skipIds: setupChallengeIds(this.config.configDir, auth.connectedAgent),
       });
     } catch (error) {
       if (!(error instanceof InboxNextApiError)) throw error;
