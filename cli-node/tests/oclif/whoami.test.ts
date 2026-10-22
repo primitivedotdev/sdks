@@ -58,12 +58,19 @@ describe("whoami command", () => {
     const output = formatWhoamiSummary(makeAccount(), null);
 
     expect(output).toContain("Authenticated as cli@example.com");
-    expect(output).toContain("Account id: acct-1");
+    expect(output).toContain("Organization id: acct-1");
     expect(output).toContain("Plan: pro");
     expect(output).not.toContain("onboarding");
     expect(output).not.toContain("stripe");
     expect(output).not.toContain("webhook");
     expect(output).not.toContain("Managed inbox");
+  });
+
+  it("names the organization when the saved login recorded its name", () => {
+    const output = formatWhoamiSummary(makeAccount(), null, "Acme Agents");
+
+    expect(output).toContain("Organization: Acme Agents (acct-1)");
+    expect(output).not.toContain("Organization id:");
   });
 
   it("includes the managed inbox line when a managed domain is present", () => {
