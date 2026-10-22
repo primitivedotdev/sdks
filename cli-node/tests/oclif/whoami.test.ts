@@ -73,6 +73,43 @@ describe("whoami command", () => {
     expect(output).not.toContain("Organization id:");
   });
 
+  it.each([
+    [
+      "the saved login's organization",
+      "acct-1",
+      "Organization: Acme Agents (acct-1)",
+      "Acme Agents",
+    ],
+    [
+      "another organization's saved login",
+      "org-other",
+      "Organization id: acct-1",
+      null,
+    ],
+  ])(
+    "names the organization from %s in text and JSON",
+    async (_case, savedOrgId, line, jsonName) => {
+      mocks.auth.mockResolvedValue({
+        apiClient: { client: {} },
+        auth: {
+          credentials: { org_id: savedOrgId, org_name: "Acme Agents" },
+        },
+        baseUrlOverridden: false,
+      });
+      mocks.account.mockResolvedValue({ data: { data: makeAccount() } });
+      const output: string[] = [];
+      vi.spyOn(console, "log").mockImplementation((value: unknown) => {
+        output.push(String(value));
+      });
+      const root = resolve(import.meta.dirname, "../..");
+      await WhoamiCommand.run([], { root });
+      expect(output.join("\n")).toContain(line);
+      output.length = 0;
+      await WhoamiCommand.run(["--json"], { root });
+      expect(JSON.parse(output.join("\n")).org_name).toBe(jsonName);
+    },
+  );
+
   it("includes the managed inbox line when a managed domain is present", () => {
     const output = formatWhoamiSummary(
       makeAccount(),
