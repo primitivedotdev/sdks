@@ -75,7 +75,7 @@ export async function clearPendingAfterRead(
 }
 
 const NO_SIGNAL_DESCRIPTION =
-  "With --context, do not report working to the sender, and stop a working report an earlier read of this email started; nothing is sent. By default, reading mail from the verified owner or a same-organization member (not another agent) that a receiver surfaced to this session reports working in the background until you answer (also disabled by PRIMITIVE_NO_AUTO_SIGNALS=1).";
+  "Do not report working to the sender, and stop a working report an earlier read of this email started; nothing is sent. Only a --context read reports working; on any other read this flag just stops the earlier report. By default, reading mail from the verified owner or a same-organization member (not another agent) that a receiver surfaced to this session reports working in the background until you answer (also disabled by PRIMITIVE_NO_AUTO_SIGNALS=1).";
 
 /**
  * The line a brief ends with once it has started reporting working: the
@@ -307,7 +307,6 @@ export function createEmailsGetCommand(base: typeof Command): typeof Command {
       }),
       "no-signal": Flags.boolean({
         description: NO_SIGNAL_DESCRIPTION,
-        dependsOn: ["context"],
       }),
     } as never;
 
@@ -344,6 +343,7 @@ export function createEmailsGetCommand(base: typeof Command): typeof Command {
       const parsed = flags as CompactFlags & {
         context?: boolean;
         compact?: boolean;
+        "no-signal"?: boolean;
       };
       if (typeof parsed.id !== "string")
         throw new Errors.CLIError("Missing required flag --id.");
@@ -358,6 +358,14 @@ export function createEmailsGetCommand(base: typeof Command): typeof Command {
         await runBrief(this, parsed);
         return;
       }
+      // Only a --context read starts working, so on the other reads
+      // --no-signal just ends a report an earlier read started.
+      if (parsed["no-signal"])
+        await haltAutoWorking(
+          this.config.configDir,
+          { emailIds: [parsed.id] },
+          "not_acting",
+        );
       if (parsed.links !== undefined && !validLinksValue(parsed.links))
         throw new Errors.CLIError(
           "--links must be `all` or a comma list of link numbers, for example 1,2,3.",
@@ -367,6 +375,8 @@ export function createEmailsGetCommand(base: typeof Command): typeof Command {
         await runCompact(this, parsed);
         return;
       }
+      // The generated read parses its own flags, which do not include this one.
+      this.argv = this.argv.filter((arg) => arg !== "--no-signal");
       const before = process.exitCode;
       await (base.prototype as Command).run.call(this);
       if (process.exitCode === before || process.exitCode === 0)

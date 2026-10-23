@@ -969,6 +969,21 @@ describe("emails get", () => {
     expect(result.stdout).not.toContain("The sender now sees you working");
   });
 
+  it("stops a working report with --no-signal on a read without --context", async () => {
+    claimAutoRead(configDir, {
+      emailId,
+      profileName: "work",
+      sender,
+      threadId: thread,
+    });
+    startWorkingLease(configDir, emailId);
+    const result = await run(["--id", emailId, "--no-signal"], baseRoutes());
+    expect(result.code).toBeUndefined();
+    expect(readWorkingLease(configDir, emailId)?.stop_reason).toBe(
+      "not_acting",
+    );
+  });
+
   it("prints the stop line when a working report from an earlier read is still running", async () => {
     claimAutoRead(configDir, {
       emailId,
