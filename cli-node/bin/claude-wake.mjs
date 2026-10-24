@@ -186,6 +186,18 @@ function sessionReceivers(session) {
 }
 
 /**
+ * The profiles to listen as. An older hook that names a profile but no
+ * session still listens as that profile; it has no pending notices, and its
+ * wake is forwarded as before.
+ */
+function listenReceivers(receivers) {
+  if (receivers) return receivers;
+  if (legacyProfile && profileName && agentAddress)
+    return [{ profile: profileName, address: agentAddress }];
+  return null;
+}
+
+/**
  * Wait for the first wake among this session's profiles, then stop the other
  * listeners. Each runs as its own profile, as separate per-profile hooks did.
  */
@@ -233,10 +245,10 @@ async function receive(input) {
   // A listener blocks until mail arrives, so this repeats only while other
   // hooks keep announcing first; the bound keeps a failing claim from spinning.
   for (let attempt = 0; attempt < 20; attempt++) {
-    const result = await firstWake(input, receivers);
+    const result = await firstWake(input, listenReceivers(receivers));
     if (!result) return;
     const { wake, receiver } = result;
-    if (!receiver) {
+    if (!receiver || !receivers) {
       process.stderr.write(wake.output);
       process.exitCode = 2;
       return;

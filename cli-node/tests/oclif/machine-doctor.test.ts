@@ -1113,6 +1113,58 @@ describe("primitive machine doctor", () => {
     expect(readFileSync(settingsPath, "utf8")).toBe("{}\n");
   }, 20_000);
 
+  it("with profiles set, still repairs the shared hooks those profiles receive through", async () => {
+    const { home, bin, configDir, options } = machine({ runtimes: ["claude"] });
+    const settingsPath = join(home, ".claude", "settings.json");
+    saveConnectedAgentProfile(
+      configDir,
+      "my-agent",
+      profile("my-agent@example.test"),
+    );
+    writeMailJson(
+      join(agentProfileDirectory(configDir, "my-agent"), "setup.json"),
+      { session: sessionA, receiverMode: "external" },
+    );
+    addSessionReceiver(configDir, sessionA, {
+      profile: "my-agent",
+      address: "my-agent@example.test",
+    });
+    // Shared hooks written by an install that has since moved.
+    const old = (pending: boolean) => ({
+      type: "command",
+      command: launcherPath(configDir),
+      args: sharedWakeArgs("/old/primitive/bin", configDir, pending),
+      ...(pending ? { timeout: 10 } : { asyncRewake: true, timeout: 604800 }),
+    });
+    writeFileSync(
+      settingsPath,
+      JSON.stringify({
+        hooks: {
+          Stop: [{ hooks: [old(false)] }],
+          SessionStart: [{ matcher: "resume", hooks: [old(false)] }],
+          PostToolUse: [{ hooks: [old(true)] }],
+        },
+      }),
+    );
+    const fixed = byId(
+      await runMachineDoctor({
+        ...options,
+        fix: true,
+        only: new Set(["claude.hook.stop"]),
+        profiles: new Set(["my-agent"]),
+      }),
+    );
+    expect(fixed["claude.hook.stop"]).toMatchObject({
+      status: "ok",
+      fixed: true,
+    });
+    const hooks = JSON.parse(readFileSync(settingsPath, "utf8")).hooks;
+    expect(hooks.Stop[0].hooks[0].args).toEqual(sharedWakeArgs(bin, configDir));
+    expect(hooks.PostToolUse[0].hooks[0].args).toEqual(
+      sharedWakeArgs(bin, configDir, true),
+    );
+  });
+
   it("with profiles set, repairs only those profiles' receive hooks", async () => {
     const { home, bin, configDir, options } = machine({ runtimes: ["claude"] });
     const settingsPath = join(home, ".claude", "settings.json");

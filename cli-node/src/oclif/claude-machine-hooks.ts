@@ -1286,7 +1286,9 @@ export function repairClaudeHooks(
           const verdict = verdicts.get(hook);
           const parsed = parseSessionHook(hook);
           if (!verdict || verdict === "keep" || !parsed) return hook;
-          if (!selected(parsed.profile)) return hook;
+          // The shared hooks serve every profile, so a repair limited to
+          // some profiles still fixes them.
+          if (!parsed.shared && !selected(parsed.profile)) return hook;
           const item = {
             profile: parsed.profile,
             session: parsed.session?.toLowerCase() ?? null,

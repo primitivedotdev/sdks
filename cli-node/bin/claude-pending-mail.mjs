@@ -587,7 +587,7 @@ function runListener(cli, configDir, profile, address, sessionId) {
       ],
       { env, stdio: ["pipe", "ignore", "ignore"] },
     );
-    const timer = setTimeout(() => child.kill("SIGTERM"), 5_500);
+    const timer = setTimeout(() => child.kill("SIGTERM"), 5_000);
     child.once("error", () => {
       clearTimeout(timer);
       done();
@@ -603,37 +603,44 @@ function runListener(cli, configDir, profile, address, sessionId) {
   });
 }
 
-/** One profile's mail check after a tool call, and the lines it announces. */
+/**
+ * Claude Code stops a PostToolUse hook after 10 seconds. Mail checks run in
+ * parallel within 5 seconds; claims then run one profile at a time and none
+ * starts after this point, so a hook is never stopped between claiming
+ * notices and printing them. Notices left unclaimed go to the next hook.
+ */
+const CLAIM_CUTOFF_MS = 6_000;
+
+/**
+ * Start one profile's mail check after a tool call. Resolves with a release
+ * function once the check is done, or null when another hook holds it.
+ */
 async function checkProfile({ cli, configDir, profile, address, sessionId }) {
   const directory = profileDirectory(configDir, profile);
-  if (!directory) return [];
+  if (!directory) return null;
   mkdirSync(directory, { recursive: true, mode: 0o700 });
   writeJson(join(directory, `pending-mail-${sessionId}.fired.json`), {
     version: 1,
     at: new Date().toISOString(),
   });
   const lock = join(directory, `pending-mail-${sessionId}.lock`);
-  if (!tryLock(lock)) return [];
-  try {
-    // A pending notice never stops the mail check: new mail keeps being
-    // fetched while an earlier notice waits to be read.
-    if (pollDue(configDir, profile, sessionId))
-      await runListener(cli, configDir, profile, address, sessionId);
-    return announcePendingMail({
-      cli,
-      configDir,
-      profile,
-      address,
-      sessionId,
-      skillFile: claudeSkillFile(),
-    }).lines;
-  } finally {
+  if (!tryLock(lock)) return null;
+  const release = () => {
     try {
       rmdirSync(lock);
     } catch {
       /* Fail open. */
     }
+  };
+  try {
+    // A pending notice never stops the mail check: new mail keeps being
+    // fetched while an earlier notice waits to be read.
+    if (pollDue(configDir, profile, sessionId))
+      await runListener(cli, configDir, profile, address, sessionId);
+  } catch {
+    /* The claim below still runs. */
   }
+  return release;
 }
 
 async function main() {
@@ -674,15 +681,31 @@ async function main() {
     ? readSessionReceivers(configDir, sessionId)
     : [{ profile, address }];
   if (receivers.length === 0) return;
-  const lines = (
-    await Promise.all(
-      receivers.map((receiver) =>
-        checkProfile({ cli, configDir, ...receiver, sessionId }).catch(
-          () => [],
-        ),
+  const started = Date.now();
+  const checks = await Promise.all(
+    receivers.map((receiver) =>
+      checkProfile({ cli, configDir, ...receiver, sessionId }).catch(
+        () => null,
       ),
-    )
-  ).flat();
+    ),
+  );
+  const lines = [];
+  try {
+    receivers.forEach((receiver, index) => {
+      if (!checks[index] || Date.now() - started > CLAIM_CUTOFF_MS) return;
+      lines.push(
+        ...announcePendingMail({
+          cli,
+          configDir,
+          ...receiver,
+          sessionId,
+          skillFile: claudeSkillFile(),
+        }).lines,
+      );
+    });
+  } finally {
+    for (const release of checks) release?.();
+  }
   context(lines);
 }
 

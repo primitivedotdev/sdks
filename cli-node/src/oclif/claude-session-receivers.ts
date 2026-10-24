@@ -193,29 +193,26 @@ export function removeSessionReceiver(
  * saved address changed to another. Returns how many were dropped.
  */
 export function pruneSessionReceivers(configDir: string): number {
+  const live = (row: SessionReceiver) => {
+    try {
+      const profile = loadConnectedAgentProfile(
+        resolve(configDir),
+        row.profile,
+      );
+      return profile !== null && profile.agent_address === row.address;
+    } catch {
+      // An unreadable profile is kept; the profile checks report it.
+      return true;
+    }
+  };
   let dropped = 0;
   for (const [session, receivers] of listSessionReceivers(configDir)) {
-    const live = receivers.filter((row) => {
-      try {
-        const profile = loadConnectedAgentProfile(
-          resolve(configDir),
-          row.profile,
-        );
-        return profile !== null && profile.agent_address === row.address;
-      } catch {
-        // An unreadable profile is kept; the profile checks report it.
-        return true;
-      }
-    });
-    if (live.length === receivers.length) continue;
+    // A cheap unlocked look first; the rows are judged again under the
+    // lock, so a receiver added or updated meanwhile is never dropped.
+    if (receivers.every(live)) continue;
     withLock(configDir, () => {
       const current = readSessionReceivers(configDir, session);
-      const next = current.filter((row) =>
-        live.some(
-          (kept) =>
-            kept.profile === row.profile && kept.address === row.address,
-        ),
-      );
+      const next = current.filter(live);
       dropped += current.length - next.length;
       if (next.length !== current.length) write(configDir, session, next);
     });

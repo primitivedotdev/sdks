@@ -17,7 +17,10 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { test } from "vitest";
-import { readSessionReceivers } from "../../src/oclif/claude-session-receivers.js";
+import {
+  addSessionReceiver,
+  readSessionReceivers,
+} from "../../src/oclif/claude-session-receivers.js";
 import {
   claudeWakeHookStatus,
   editClaudeSettings,
@@ -1058,3 +1061,44 @@ function sharedHookEntryFor(
   assert.ok(entry, `no shared ${event} hook`);
   return entry;
 }
+
+test("a held install keeps the profile's hooks for its other sessions", () => {
+  const { claudeDir, configDir, cliPath } = fixture();
+  const settingsPath = join(claudeDir, "settings.json");
+  connect(configDir, "profile-a", "a@example.com");
+  connect(configDir, "profile-b", "b@example.com");
+  const elsewhere = perSessionHook(
+    cliPath,
+    configDir,
+    "profile-b",
+    "b@example.com",
+    sessionB,
+  );
+  writeFileSync(
+    settingsPath,
+    JSON.stringify({ hooks: { Stop: [{ hooks: [elsewhere] }] } }),
+  );
+  const common = {
+    cliPath,
+    configDir,
+    sessionId: sessionA,
+    env: { CLAUDE_CONFIG_DIR: claudeDir },
+  };
+  addSessionReceiver(configDir, sessionA, {
+    profile: "profile-a",
+    address: "a@example.com",
+  });
+  assert.equal(
+    installClaudeWakeHook({
+      ...common,
+      profileName: "profile-b",
+      agentAddress: "b@example.com",
+      yieldToOtherProfiles: true,
+    }),
+    "held_for_other_profile",
+  );
+  // Session B still receives as profile-b through its own hook.
+  const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+  assert.deepEqual(settings.hooks.Stop, [{ hooks: [elsewhere] }]);
+  assert.deepEqual(receivers(configDir, sessionA), ["profile-a"]);
+});

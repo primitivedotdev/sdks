@@ -814,3 +814,44 @@ it("the shared hook ignores a payload without an exact session", () => {
   expect(result.status).toBe(0);
   expect(calls).toEqual([]);
 });
+
+it("an older hook naming a profile but no session still listens as that profile", () => {
+  const root = mkdtempSync(join(tmpdir(), "primitive-wake-legacy-profile-"));
+  roots.push(root);
+  const cli = join(root, "cli.mjs");
+  const seen = join(root, "profile.txt");
+  writeFileSync(
+    cli,
+    [
+      'import { writeFileSync } from "node:fs";',
+      'if (process.argv.includes("--help")) {',
+      '  process.stdout.write("--once --wake --hook-session --events primitive-hook-profile-bound-v2");',
+      "} else {",
+      "  for await (const _chunk of process.stdin) {}",
+      '  writeFileSync(process.env.SEEN, process.env.PRIMITIVE_AGENT_PROFILE + " " + process.env.PRIMITIVE_HOOK_AGENT_ADDRESS);',
+      `  process.stderr.write(${JSON.stringify(line(received))});`,
+      "  process.exitCode = 2;",
+      "}",
+    ].join("\n"),
+  );
+  const result = spawnSync(
+    process.execPath,
+    [
+      resolve(import.meta.dirname, "../../bin/claude-wake.mjs"),
+      cli,
+      root,
+      "named-profile",
+      "named@example.com",
+      "primitive-agent-wake-v1",
+    ],
+    {
+      input: JSON.stringify({ hook_event_name: "Stop", session_id: session }),
+      encoding: "utf8",
+      timeout: 10_000,
+      env: { ...process.env, SEEN: seen },
+    },
+  );
+  expect(result.status).toBe(2);
+  expect(result.stderr).toBe(line(received));
+  expect(readFileSync(seen, "utf8")).toBe("named-profile named@example.com");
+});

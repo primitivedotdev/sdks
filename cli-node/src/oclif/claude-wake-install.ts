@@ -405,7 +405,17 @@ export function installClaudeWakeHook(options: {
           if (parsed.shared)
             return resolve(parsed.configDir) !== configDir || reuse;
           if (!perSession(parsed)) return true;
-          if (held && parsed.profile !== profileName) return true;
+          // A held install removes only this profile's own hook for this
+          // session; every other receiving hook stays as it is.
+          if (
+            held &&
+            !(
+              parsed.profile === profileName &&
+              parsed.session?.toLowerCase() === sessionId &&
+              resolve(parsed.configDir) === configDir
+            )
+          )
+            return true;
           // Hooks of another config directory are folded in by that
           // directory's own CLI; only dead ones are pruned here.
           if (resolve(parsed.configDir) !== configDir)
