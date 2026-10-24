@@ -45,6 +45,8 @@ export async function openConnectedReplyWait(options: {
   resumeReply?: { emailId: string; requestId: string };
   idempotencyKey?: string;
   createdAt?: string;
+  /** When the send being waited on was created, for a wait on an existing send. */
+  sentAt?: string;
   since?: string;
   pageSize: number;
   deadline?: number | null;
@@ -188,11 +190,14 @@ export async function openConnectedReplyWait(options: {
     if (earliestReply !== undefined) return earliestReply;
     const intent = await store.readWait(requestId);
     // A caller's explicit --since may reach further back than the wait.
+    // A wait on an existing send may start long after it, so the send's own
+    // time and an explicit --since both reach further back than the wait.
     const created = Date.parse(intent?.createdAt ?? "");
-    const since = Date.parse(options.since ?? "");
+    const earlier = [options.sentAt, options.since]
+      .map((value) => Date.parse(value ?? ""))
+      .filter(Number.isFinite);
     earliestReply = Number.isFinite(created)
-      ? Math.min(created, Number.isFinite(since) ? since : created) -
-        REPLY_CLOCK_SKEW_MS
+      ? Math.min(created, ...earlier) - REPLY_CLOCK_SKEW_MS
       : Number.NEGATIVE_INFINITY;
     return earliestReply;
   }
@@ -429,11 +434,9 @@ export async function openConnectedReplyWait(options: {
             // Unclassified retained history is skipped without a read:
             // inspecting every older email first made a new reply wait
             // behind a scan of the whole local store, often past the wait's
-            // deadline. Exact-parent search still covers older replies.
-            if (!row.details && Date.parse(row.receivedAt) < floor) {
-              settled.add(row.emailId);
-              continue;
-            }
+            // deadline. Only the local scan skips it: exact-parent search
+            // still returns an older reply and has it inspected.
+            if (!row.details && Date.parse(row.receivedAt) < floor) continue;
             if (
               row.details &&
               row.details.authorization !== "pending" &&

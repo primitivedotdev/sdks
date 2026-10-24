@@ -748,3 +748,42 @@ it("finds a new reply without first reading every retained older email", async (
   ).toEqual([`/v1/emails/${reply.id}`]);
   await waiter.close();
 });
+
+it("still matches an older reply exact-parent search returns after the local scan skipped it", async () => {
+  const f = fixture();
+  // A wait started long after the send: the reply is older than the wait.
+  f.state.detail.received_at = new Date(Date.now() - 3600_000).toISOString();
+  // The first search page is empty, so one local page is scanned first.
+  f.state.pages.push({ data: [], meta: { cursor: "second-page" } });
+  const waiter = await openConnectedReplyWait({
+    ...f.options,
+    pageSize: 1,
+    deadline: Date.now() + 5000,
+  });
+  await waiter.receiver.store.ingest({
+    emailId: f.state.detail.id,
+    eventId: randomUUID(),
+    receivedAt: f.state.detail.received_at,
+  });
+  expect((await waiter.next())?.id).toBe(f.state.detail.id);
+  await waiter.close();
+});
+
+it("reaches back to the send's own time for a wait on an existing send", async () => {
+  const f = fixture();
+  f.state.page = { data: [], meta: { cursor: null } };
+  f.state.detail.received_at = new Date(Date.now() - 3600_000).toISOString();
+  const waiter = await openConnectedReplyWait({
+    ...f.options,
+    sentAt: new Date(Date.now() - 2 * 3600_000).toISOString(),
+    deadline: Date.now() + 5000,
+  });
+  // Exact-parent search has not indexed it; the local store has it.
+  await waiter.receiver.store.ingest({
+    emailId: f.state.detail.id,
+    eventId: randomUUID(),
+    receivedAt: f.state.detail.received_at,
+  });
+  expect((await waiter.next())?.id).toBe(f.state.detail.id);
+  await waiter.close();
+});

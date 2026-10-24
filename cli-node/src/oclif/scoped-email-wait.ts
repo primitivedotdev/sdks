@@ -25,7 +25,12 @@ export async function resolveScopedEmailWait(params: {
   apiClient: PrimitiveApiClient;
   filters: EmailPollFilters;
   deadline?: number | null;
-}): Promise<{ from: string; recipient: string; sentId: string } | null> {
+}): Promise<{
+  from: string;
+  recipient: string;
+  sentId: string;
+  sentAt?: string;
+} | null> {
   const { from, to, replyToSentEmailId, ...unsupported } = params.filters;
   if (
     !replyToSentEmailId ||
@@ -81,5 +86,10 @@ export async function resolveScopedEmailWait(params: {
     );
   // The public sent record has no complete CC/BCC inventory. The peer stays
   // explicit rather than being inferred from a potentially partial To header.
-  return { from: ownAddress, recipient, sentId };
+  return {
+    from: ownAddress,
+    recipient,
+    sentId,
+    ...(typeof sent.created_at === "string" ? { sentAt: sent.created_at } : {}),
+  };
 }
