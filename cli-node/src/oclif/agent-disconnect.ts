@@ -3,6 +3,7 @@ import { existsSync, renameSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
 import { clearResumeNote, type ResumeNoteClear } from "./agent-resume-note.js";
+import { refuseOrgSelectionForProfile } from "./api-client.js";
 import { uninstallClaudeWakeHook } from "./claude-wake-install.js";
 import {
   AgentConnectionSetupError,
@@ -299,6 +300,9 @@ export async function disconnectAgent(
   params: { configDir: string; profileName: string } & DisconnectDependencies,
 ): Promise<DisconnectResult> {
   const profileName = agentProfileName(params.profileName);
+  // A profile acts only in its own organization: refuse --org before
+  // anything changes.
+  refuseOrgSelectionForProfile(profileName);
   if (!loadConnectedAgentProfile(params.configDir, profileName))
     throw new AgentDisconnectError(
       "This agent profile is not configured. Nothing was changed.",

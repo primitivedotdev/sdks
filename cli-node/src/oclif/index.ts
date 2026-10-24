@@ -76,6 +76,12 @@ import FunctionsTestFunctionCommand from "./commands/functions-test-function.js"
 import InboxNextCommand from "./commands/inbox-next.js";
 import InboxSetupCommand from "./commands/inbox-setup.js";
 import InboxStatusCommand from "./commands/inbox-status.js";
+import {
+  KeysCreateCommand,
+  KeysListCommand,
+  KeysRevokeCommand,
+  KeysRotateCommand,
+} from "./commands/keys.js";
 import ListenCommand from "./commands/listen.js";
 import ListenInitCommand from "./commands/listen-init.js";
 import ListenPendingCommand from "./commands/listen-pending.js";
@@ -100,6 +106,7 @@ import {
 import OrgSecretsListCommand from "./commands/org-secrets-list.js";
 import OrgSecretsRemoveCommand from "./commands/org-secrets-remove.js";
 import OrgSecretsSetCommand from "./commands/org-secrets-set.js";
+import { OrgsCommand, OrgUseCommand } from "./commands/orgs.js";
 import {
   PayloadsPullCommand,
   PayloadsPushCommand,
@@ -119,6 +126,12 @@ import {
   RepeatsResumeCommand,
 } from "./commands/repeats.js";
 import ReplyCommand from "./commands/reply.js";
+import {
+  RolesAccessModeCommand,
+  RolesGroupsCommand,
+  RolesListCommand,
+  RolesMailboxAccessCommand,
+} from "./commands/roles.js";
 import RoutesAddCommand from "./commands/routes-add.js";
 import RoutesListCommand from "./commands/routes-list.js";
 import RoutesRemoveCommand from "./commands/routes-remove.js";
@@ -538,6 +551,9 @@ const OVERRIDDEN_OPERATION_IDS = new Set<string>([
   // requires an Idempotency-Key header, which generated wrappers do not send.
   // The friendly `credits:redeem` shares the same command.
   "credits:redeem-credit-code",
+  // `cli:list-cli-orgs` needs the login's identity token, not the per-org
+  // token every generated command sends; `primitive orgs` serves the id.
+  "cli:list-cli-orgs",
 ]);
 
 const generatedCommands = Object.fromEntries(
@@ -777,6 +793,23 @@ export const COMMANDS: Record<string, typeof Command> = {
   "functions:set-secret": FunctionsSetSecretCommand,
   // Org-level ("global") secrets, shared across every function. Hand-rolled
   // with raw fetch because /v1/org/secrets is not on the generated client yet.
+  // Organization switching for a login made as yourself.
+  orgs: OrgsCommand,
+  "org:use": OrgUseCommand,
+  // `cli list-cli-orgs` authenticates with the login's identity token, which
+  // only the hand-rolled `orgs` holds, so the id is served by it.
+  "cli:list-cli-orgs": OrgsCommand,
+  // API keys: create and rotate with a step-up, list and revoke through the
+  // credential inventory.
+  "keys:create": KeysCreateCommand,
+  "keys:list": KeysListCommand,
+  "keys:rotate": KeysRotateCommand,
+  "keys:revoke": KeysRevokeCommand,
+  // Read-only role views.
+  "roles:list": RolesListCommand,
+  "roles:groups": RolesGroupsCommand,
+  "roles:mailbox-access": RolesMailboxAccessCommand,
+  "roles:access-mode": RolesAccessModeCommand,
   "org:secrets:list": OrgSecretsListCommand,
   "org:secrets:set": OrgSecretsSetCommand,
   "org:secrets:remove": OrgSecretsRemoveCommand,

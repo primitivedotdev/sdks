@@ -1,5 +1,10 @@
 """ Contains all the data models used in inputs/outputs """
 
+from .access_mode import AccessMode
+from .access_mode_decisions import AccessModeDecisions
+from .access_mode_gate import AccessModeGate
+from .access_mode_mode import AccessModeMode
+from .access_mode_preview_item import AccessModePreviewItem
 from .account import Account
 from .account_updated import AccountUpdated
 from .add_default_network_member_response_200 import AddDefaultNetworkMemberResponse200
@@ -67,11 +72,21 @@ from .cli_login_start_result import CliLoginStartResult
 from .cli_logout_input import CliLogoutInput
 from .cli_logout_response_200 import CliLogoutResponse200
 from .cli_logout_result import CliLogoutResult
+from .cli_org import CliOrg
+from .cli_org_access_token import CliOrgAccessToken
+from .cli_org_access_token_token_type import CliOrgAccessTokenTokenType
+from .cli_org_list import CliOrgList
+from .cli_org_list_user import CliOrgListUser
+from .cli_org_refusal import CliOrgRefusal
+from .cli_org_refusal_reason import CliOrgRefusalReason
 from .cli_signup_resend_result import CliSignupResendResult
 from .cli_signup_start_result import CliSignupStartResult
 from .cli_signup_verify_result import CliSignupVerifyResult
 from .cli_signup_verify_result_auth_method import CliSignupVerifyResultAuthMethod
 from .cli_signup_verify_result_token_type import CliSignupVerifyResultTokenType
+from .cli_user_login_poll_result import CliUserLoginPollResult
+from .cli_user_login_poll_result_auth_method import CliUserLoginPollResultAuthMethod
+from .cli_user_login_poll_result_token_type import CliUserLoginPollResultTokenType
 from .complete_webhook_exec_input import CompleteWebhookExecInput
 from .complete_webhook_exec_input_mode import CompleteWebhookExecInputMode
 from .complete_webhook_exec_input_transport_error import CompleteWebhookExecInputTransportError
@@ -137,6 +152,8 @@ from .create_function_result import CreateFunctionResult
 from .create_function_secret_input import CreateFunctionSecretInput
 from .create_function_secret_response_200 import CreateFunctionSecretResponse200
 from .create_function_secret_response_201 import CreateFunctionSecretResponse201
+from .create_key_input import CreateKeyInput
+from .create_key_response_201 import CreateKeyResponse201
 from .create_org_secret_input import CreateOrgSecretInput
 from .create_org_secret_response_200 import CreateOrgSecretResponse200
 from .create_org_secret_response_201 import CreateOrgSecretResponse201
@@ -151,6 +168,24 @@ from .create_wake_authorization_response_201 import CreateWakeAuthorizationRespo
 from .create_wake_schedule_input import CreateWakeScheduleInput
 from .create_wake_schedule_input_args import CreateWakeScheduleInputArgs
 from .create_wake_schedule_response_201 import CreateWakeScheduleResponse201
+from .created_key import CreatedKey
+from .created_key_grant import CreatedKeyGrant
+from .credential_event import CredentialEvent
+from .credential_event_details import CredentialEventDetails
+from .credential_event_list import CredentialEventList
+from .credential_kind import CredentialKind
+from .credential_list import CredentialList
+from .credential_list_counts import CredentialListCounts
+from .credential_policy import CredentialPolicy
+from .credential_policy_cli_access import CredentialPolicyCliAccess
+from .credential_policy_super_admin_key_creators import CredentialPolicySuperAdminKeyCreators
+from .credential_row import CredentialRow
+from .credential_row_actions_item import CredentialRowActionsItem
+from .credential_row_client_type_0 import CredentialRowClientType0
+from .credential_row_creator import CredentialRowCreator
+from .credential_row_creator_status import CredentialRowCreatorStatus
+from .credential_row_grant import CredentialRowGrant
+from .credential_row_grant_type import CredentialRowGrantType
 from .credit_balance import CreditBalance
 from .credit_balance_budget_type_0 import CreditBalanceBudgetType0
 from .credit_balance_prepaid_credit_type_0 import CreditBalancePrepaidCreditType0
@@ -288,6 +323,7 @@ from .gate_denial_name import GateDenialName
 from .gate_denial_reason import GateDenialReason
 from .gate_fix import GateFix
 from .gate_fix_action import GateFixAction
+from .get_access_mode_response_200 import GetAccessModeResponse200
 from .get_account_response_200 import GetAccountResponse200
 from .get_agent_contact_policy_response_200 import GetAgentContactPolicyResponse200
 from .get_agent_response_200 import GetAgentResponse200
@@ -296,6 +332,7 @@ from .get_contact_policy_response_200 import GetContactPolicyResponse200
 from .get_contact_response_200 import GetContactResponse200
 from .get_contact_response_200_data import GetContactResponse200Data
 from .get_conversation_response_200 import GetConversationResponse200
+from .get_credential_policy_response_200 import GetCredentialPolicyResponse200
 from .get_credit_balance_response_200 import GetCreditBalanceResponse200
 from .get_default_network_agent_response_200 import GetDefaultNetworkAgentResponse200
 from .get_email_response_200 import GetEmailResponse200
@@ -303,6 +340,7 @@ from .get_function_response_200 import GetFunctionResponse200
 from .get_function_routing_response_200 import GetFunctionRoutingResponse200
 from .get_function_test_run_trace_response_200 import GetFunctionTestRunTraceResponse200
 from .get_inbox_status_response_200 import GetInboxStatusResponse200
+from .get_key_builder_response_200 import GetKeyBuilderResponse200
 from .get_memory_response_200 import GetMemoryResponse200
 from .get_memory_scope_type import GetMemoryScopeType
 from .get_org_routing_topology_response_200 import GetOrgRoutingTopologyResponse200
@@ -318,6 +356,11 @@ from .get_template_response_200 import GetTemplateResponse200
 from .get_thread_response_200 import GetThreadResponse200
 from .get_wake_schedule_response_200 import GetWakeScheduleResponse200
 from .get_webhook_secret_response_200 import GetWebhookSecretResponse200
+from .grant_description import GrantDescription
+from .grant_forbidden_details import GrantForbiddenDetails
+from .grant_forbidden_details_resource import GrantForbiddenDetailsResource
+from .group import Group
+from .group_list import GroupList
 from .inbox_status import InboxStatus
 from .inbox_status_domain import InboxStatusDomain
 from .inbox_status_domain_status import InboxStatusDomainStatus
@@ -339,6 +382,17 @@ from .invite_agent_connection_response_200_data_connection import InviteAgentCon
 from .invite_agent_connection_response_200_data_connection_ownership_kind import InviteAgentConnectionResponse200DataConnectionOwnershipKind
 from .invite_agent_connection_response_200_data_connection_status import InviteAgentConnectionResponse200DataConnectionStatus
 from .invite_agent_connection_response_200_data_invitation import InviteAgentConnectionResponse200DataInvitation
+from .key_builder import KeyBuilder
+from .key_builder_matrix_item import KeyBuilderMatrixItem
+from .key_builder_presets_item import KeyBuilderPresetsItem
+from .key_conditions import KeyConditions
+from .key_conditions_input import KeyConditionsInput
+from .key_grant_spec import KeyGrantSpec
+from .key_grant_spec_matrix import KeyGrantSpecMatrix
+from .key_grant_spec_matrix_additional_property import KeyGrantSpecMatrixAdditionalProperty
+from .key_grant_spec_resources import KeyGrantSpecResources
+from .key_grant_warning import KeyGrantWarning
+from .key_preset import KeyPreset
 from .list_agent_connections_owner import ListAgentConnectionsOwner
 from .list_agent_connections_response_200 import ListAgentConnectionsResponse200
 from .list_agent_connections_response_200_data_item import ListAgentConnectionsResponse200DataItem
@@ -351,9 +405,12 @@ from .list_agent_contacts_response_200_meta import ListAgentContactsResponse200M
 from .list_agent_networks_response_200 import ListAgentNetworksResponse200
 from .list_changes_expand import ListChangesExpand
 from .list_changes_response_200 import ListChangesResponse200
+from .list_cli_orgs_response_200 import ListCliOrgsResponse200
 from .list_contacts_response_200 import ListContactsResponse200
 from .list_contacts_response_200_data_item import ListContactsResponse200DataItem
 from .list_contacts_response_200_meta import ListContactsResponse200Meta
+from .list_credential_events_response_200 import ListCredentialEventsResponse200
+from .list_credentials_response_200 import ListCredentialsResponse200
 from .list_declined_payments_response_200 import ListDeclinedPaymentsResponse200
 from .list_default_network_agents_response_200 import ListDefaultNetworkAgentsResponse200
 from .list_default_network_members_response_200 import ListDefaultNetworkMembersResponse200
@@ -374,6 +431,8 @@ from .list_function_logs_response_200_data import ListFunctionLogsResponse200Dat
 from .list_function_secrets_response_200 import ListFunctionSecretsResponse200
 from .list_function_secrets_response_200_data import ListFunctionSecretsResponse200Data
 from .list_functions_response_200 import ListFunctionsResponse200
+from .list_groups_response_200 import ListGroupsResponse200
+from .list_mailbox_access_response_200 import ListMailboxAccessResponse200
 from .list_org_secrets_response_200 import ListOrgSecretsResponse200
 from .list_org_secrets_response_200_data import ListOrgSecretsResponse200Data
 from .list_payout_addresses_response_200 import ListPayoutAddressesResponse200
@@ -381,6 +440,7 @@ from .list_registries_response_200 import ListRegistriesResponse200
 from .list_registry_agents_response_200 import ListRegistryAgentsResponse200
 from .list_registry_requests_response_200 import ListRegistryRequestsResponse200
 from .list_repeating_sends_response_200 import ListRepeatingSendsResponse200
+from .list_roles_response_200 import ListRolesResponse200
 from .list_routes_response_200 import ListRoutesResponse200
 from .list_sent_attachment_archive_members_response_200 import ListSentAttachmentArchiveMembersResponse200
 from .list_sent_emails_response_200 import ListSentEmailsResponse200
@@ -388,6 +448,8 @@ from .list_templates_response_200 import ListTemplatesResponse200
 from .list_wake_authorizations_response_200 import ListWakeAuthorizationsResponse200
 from .list_wake_dispatches_response_200 import ListWakeDispatchesResponse200
 from .list_wake_schedules_response_200 import ListWakeSchedulesResponse200
+from .mailbox_access_list import MailboxAccessList
+from .mailbox_access_list_entries_item import MailboxAccessListEntriesItem
 from .member_address import MemberAddress
 from .member_sender import MemberSender
 from .memory_json_value_type_5 import MemoryJsonValueType5
@@ -411,6 +473,8 @@ from .parsed_email_data_error_type_0 import ParsedEmailDataErrorType0
 from .parsed_email_data_status import ParsedEmailDataStatus
 from .pay_challenge_input import PayChallengeInput
 from .pay_challenge_response_200 import PayChallengeResponse200
+from .permission_check import PermissionCheck
+from .permission_check_resource import PermissionCheckResource
 from .plan_limits import PlanLimits
 from .poll_cli_login_input import PollCliLoginInput
 from .poll_cli_login_response_200 import PollCliLoginResponse200
@@ -488,7 +552,18 @@ from .revoke_agent_connection_response_200_data import RevokeAgentConnectionResp
 from .revoke_agent_connection_response_200_data_connection import RevokeAgentConnectionResponse200DataConnection
 from .revoke_agent_connection_response_200_data_connection_ownership_kind import RevokeAgentConnectionResponse200DataConnectionOwnershipKind
 from .revoke_agent_connection_response_200_data_connection_status import RevokeAgentConnectionResponse200DataConnectionStatus
+from .revoke_credential_input import RevokeCredentialInput
+from .revoke_credential_response_200 import RevokeCredentialResponse200
+from .revoke_credential_result import RevokeCredentialResult
+from .role import Role
+from .role_kind import RoleKind
+from .role_list import RoleList
+from .role_list_assignment import RoleListAssignment
+from .role_template import RoleTemplate
+from .rotate_key_input import RotateKeyInput
+from .rotate_key_response_200 import RotateKeyResponse200
 from .rotate_webhook_secret_response_200 import RotateWebhookSecretResponse200
+from .rotated_key import RotatedKey
 from .route_evaluated_entry import RouteEvaluatedEntry
 from .route_evaluated_entry_result import RouteEvaluatedEntryResult
 from .route_evaluated_entry_tier import RouteEvaluatedEntryTier
@@ -581,6 +656,7 @@ from .start_agent_signup_input import StartAgentSignupInput
 from .start_agent_signup_input_metadata import StartAgentSignupInputMetadata
 from .start_agent_signup_response_201 import StartAgentSignupResponse201
 from .start_cli_login_input import StartCliLoginInput
+from .start_cli_login_input_login_kind import StartCliLoginInputLoginKind
 from .start_cli_login_input_metadata import StartCliLoginInputMetadata
 from .start_cli_login_response_201 import StartCliLoginResponse201
 from .start_cli_signup_input import StartCliSignupInput
@@ -640,6 +716,8 @@ from .update_filter_response_200 import UpdateFilterResponse200
 from .update_function_input import UpdateFunctionInput
 from .update_function_input_files import UpdateFunctionInputFiles
 from .update_function_response_200 import UpdateFunctionResponse200
+from .update_key_input import UpdateKeyInput
+from .update_key_response_200 import UpdateKeyResponse200
 from .update_registry_input import UpdateRegistryInput
 from .update_registry_response_200 import UpdateRegistryResponse200
 from .update_registry_response_200_data import UpdateRegistryResponse200Data
@@ -656,6 +734,7 @@ from .update_wake_authorization_response_200 import UpdateWakeAuthorizationRespo
 from .update_wake_schedule_input import UpdateWakeScheduleInput
 from .update_wake_schedule_input_args import UpdateWakeScheduleInputArgs
 from .update_wake_schedule_response_200 import UpdateWakeScheduleResponse200
+from .updated_key import UpdatedKey
 from .verified_domain import VerifiedDomain
 from .verify_agent_claim_input import VerifyAgentClaimInput
 from .verify_agent_claim_response_200 import VerifyAgentClaimResponse200
@@ -692,6 +771,11 @@ from .x402_receipt_status import X402ReceiptStatus
 from .x402_spend_policy import X402SpendPolicy
 
 __all__ = (
+    "AccessMode",
+    "AccessModeDecisions",
+    "AccessModeGate",
+    "AccessModeMode",
+    "AccessModePreviewItem",
     "Account",
     "AccountUpdated",
     "AddDefaultNetworkMemberResponse200",
@@ -759,11 +843,21 @@ __all__ = (
     "CliLogoutInput",
     "CliLogoutResponse200",
     "CliLogoutResult",
+    "CliOrg",
+    "CliOrgAccessToken",
+    "CliOrgAccessTokenTokenType",
+    "CliOrgList",
+    "CliOrgListUser",
+    "CliOrgRefusal",
+    "CliOrgRefusalReason",
     "CliSignupResendResult",
     "CliSignupStartResult",
     "CliSignupVerifyResult",
     "CliSignupVerifyResultAuthMethod",
     "CliSignupVerifyResultTokenType",
+    "CliUserLoginPollResult",
+    "CliUserLoginPollResultAuthMethod",
+    "CliUserLoginPollResultTokenType",
     "CompleteWebhookExecInput",
     "CompleteWebhookExecInputMode",
     "CompleteWebhookExecInputTransportError",
@@ -810,6 +904,8 @@ __all__ = (
     "CreateChallengeInput",
     "CreateChallengeInputNetwork",
     "CreateChallengeResponse201",
+    "CreatedKey",
+    "CreatedKeyGrant",
     "CreateEmailChallengeInput",
     "CreateEmailChallengeInputNetwork",
     "CreateEmailChallengeResponse200",
@@ -829,6 +925,8 @@ __all__ = (
     "CreateFunctionSecretInput",
     "CreateFunctionSecretResponse200",
     "CreateFunctionSecretResponse201",
+    "CreateKeyInput",
+    "CreateKeyResponse201",
     "CreateOrgSecretInput",
     "CreateOrgSecretResponse200",
     "CreateOrgSecretResponse201",
@@ -843,6 +941,22 @@ __all__ = (
     "CreateWakeScheduleInput",
     "CreateWakeScheduleInputArgs",
     "CreateWakeScheduleResponse201",
+    "CredentialEvent",
+    "CredentialEventDetails",
+    "CredentialEventList",
+    "CredentialKind",
+    "CredentialList",
+    "CredentialListCounts",
+    "CredentialPolicy",
+    "CredentialPolicyCliAccess",
+    "CredentialPolicySuperAdminKeyCreators",
+    "CredentialRow",
+    "CredentialRowActionsItem",
+    "CredentialRowClientType0",
+    "CredentialRowCreator",
+    "CredentialRowCreatorStatus",
+    "CredentialRowGrant",
+    "CredentialRowGrantType",
     "CreditBalance",
     "CreditBalanceBudgetType0",
     "CreditBalancePrepaidCreditType0",
@@ -980,6 +1094,7 @@ __all__ = (
     "GateDenialReason",
     "GateFix",
     "GateFixAction",
+    "GetAccessModeResponse200",
     "GetAccountResponse200",
     "GetAgentContactPolicyResponse200",
     "GetAgentResponse200",
@@ -988,6 +1103,7 @@ __all__ = (
     "GetContactResponse200",
     "GetContactResponse200Data",
     "GetConversationResponse200",
+    "GetCredentialPolicyResponse200",
     "GetCreditBalanceResponse200",
     "GetDefaultNetworkAgentResponse200",
     "GetEmailResponse200",
@@ -995,6 +1111,7 @@ __all__ = (
     "GetFunctionRoutingResponse200",
     "GetFunctionTestRunTraceResponse200",
     "GetInboxStatusResponse200",
+    "GetKeyBuilderResponse200",
     "GetMemoryResponse200",
     "GetMemoryScopeType",
     "GetOrgRoutingTopologyResponse200",
@@ -1010,6 +1127,11 @@ __all__ = (
     "GetThreadResponse200",
     "GetWakeScheduleResponse200",
     "GetWebhookSecretResponse200",
+    "GrantDescription",
+    "GrantForbiddenDetails",
+    "GrantForbiddenDetailsResource",
+    "Group",
+    "GroupList",
     "InboxStatus",
     "InboxStatusDomain",
     "InboxStatusDomainStatus",
@@ -1031,6 +1153,17 @@ __all__ = (
     "InviteAgentConnectionResponse200DataConnectionOwnershipKind",
     "InviteAgentConnectionResponse200DataConnectionStatus",
     "InviteAgentConnectionResponse200DataInvitation",
+    "KeyBuilder",
+    "KeyBuilderMatrixItem",
+    "KeyBuilderPresetsItem",
+    "KeyConditions",
+    "KeyConditionsInput",
+    "KeyGrantSpec",
+    "KeyGrantSpecMatrix",
+    "KeyGrantSpecMatrixAdditionalProperty",
+    "KeyGrantSpecResources",
+    "KeyGrantWarning",
+    "KeyPreset",
     "ListAgentConnectionsOwner",
     "ListAgentConnectionsResponse200",
     "ListAgentConnectionsResponse200DataItem",
@@ -1043,9 +1176,12 @@ __all__ = (
     "ListAgentNetworksResponse200",
     "ListChangesExpand",
     "ListChangesResponse200",
+    "ListCliOrgsResponse200",
     "ListContactsResponse200",
     "ListContactsResponse200DataItem",
     "ListContactsResponse200Meta",
+    "ListCredentialEventsResponse200",
+    "ListCredentialsResponse200",
     "ListDeclinedPaymentsResponse200",
     "ListDefaultNetworkAgentsResponse200",
     "ListDefaultNetworkMembersResponse200",
@@ -1066,6 +1202,8 @@ __all__ = (
     "ListFunctionSecretsResponse200",
     "ListFunctionSecretsResponse200Data",
     "ListFunctionsResponse200",
+    "ListGroupsResponse200",
+    "ListMailboxAccessResponse200",
     "ListOrgSecretsResponse200",
     "ListOrgSecretsResponse200Data",
     "ListPayoutAddressesResponse200",
@@ -1073,6 +1211,7 @@ __all__ = (
     "ListRegistryAgentsResponse200",
     "ListRegistryRequestsResponse200",
     "ListRepeatingSendsResponse200",
+    "ListRolesResponse200",
     "ListRoutesResponse200",
     "ListSentAttachmentArchiveMembersResponse200",
     "ListSentEmailsResponse200",
@@ -1080,6 +1219,8 @@ __all__ = (
     "ListWakeAuthorizationsResponse200",
     "ListWakeDispatchesResponse200",
     "ListWakeSchedulesResponse200",
+    "MailboxAccessList",
+    "MailboxAccessListEntriesItem",
     "MemberAddress",
     "MemberSender",
     "MemoryJsonValueType5",
@@ -1103,6 +1244,8 @@ __all__ = (
     "ParsedEmailDataStatus",
     "PayChallengeInput",
     "PayChallengeResponse200",
+    "PermissionCheck",
+    "PermissionCheckResource",
     "PlanLimits",
     "PollCliLoginInput",
     "PollCliLoginResponse200",
@@ -1180,6 +1323,17 @@ __all__ = (
     "RevokeAgentConnectionResponse200DataConnection",
     "RevokeAgentConnectionResponse200DataConnectionOwnershipKind",
     "RevokeAgentConnectionResponse200DataConnectionStatus",
+    "RevokeCredentialInput",
+    "RevokeCredentialResponse200",
+    "RevokeCredentialResult",
+    "Role",
+    "RoleKind",
+    "RoleList",
+    "RoleListAssignment",
+    "RoleTemplate",
+    "RotatedKey",
+    "RotateKeyInput",
+    "RotateKeyResponse200",
     "RotateWebhookSecretResponse200",
     "RouteEvaluatedEntry",
     "RouteEvaluatedEntryResult",
@@ -1273,6 +1427,7 @@ __all__ = (
     "StartAgentSignupInputMetadata",
     "StartAgentSignupResponse201",
     "StartCliLoginInput",
+    "StartCliLoginInputLoginKind",
     "StartCliLoginInputMetadata",
     "StartCliLoginResponse201",
     "StartCliSignupInput",
@@ -1322,6 +1477,7 @@ __all__ = (
     "UpdateAccountResponse200",
     "UpdateAgentNetworkMemberInput",
     "UpdateDefaultNetworkMemberResponse200",
+    "UpdatedKey",
     "UpdateDomainInput",
     "UpdateDomainResponse200",
     "UpdateEndpointInput",
@@ -1332,6 +1488,8 @@ __all__ = (
     "UpdateFunctionInput",
     "UpdateFunctionInputFiles",
     "UpdateFunctionResponse200",
+    "UpdateKeyInput",
+    "UpdateKeyResponse200",
     "UpdateRegistryInput",
     "UpdateRegistryResponse200",
     "UpdateRegistryResponse200Data",

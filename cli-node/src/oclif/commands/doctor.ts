@@ -162,6 +162,16 @@ function checkApiKey(opts: {
     }
 
     if (
+      parsed?.auth_method === "user_grant" &&
+      typeof parsed.refresh_token === "string" &&
+      parsed.refresh_token.length > 0
+    ) {
+      return {
+        status: "ok",
+        message: `loaded login as yourself from ${credsPath}`,
+      };
+    }
+    if (
       parsed?.auth_method === "oauth" &&
       typeof parsed.access_token === "string" &&
       parsed.access_token.length > 0

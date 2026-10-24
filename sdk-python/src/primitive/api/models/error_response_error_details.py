@@ -34,6 +34,22 @@ class ErrorResponseErrorDetails:
             sent_email_id (str | Unset): ID of the persisted sent-email attempt associated with the error.
             content_hash (str | Unset): Content hash of the original request on idempotency cache-hit errors.
             client_idempotency_key (str | Unset): Effective idempotency key associated with the original request.
+            permission (None | str | Unset): Present when `code == grant_forbidden`. The permission the operation requires.
+                See `GrantForbiddenDetails` for the full shape.
+            credential_kind (None | str | Unset): Present when `code == grant_forbidden`. The kind of credential that was
+                refused.
+            grant_template_key (None | str | Unset): Present when `code == grant_forbidden` and the credential holds a
+                template grant.
+            credential_grant_id (None | str | Unset): Present when `code == grant_forbidden` and the credential holds a
+                concrete grant.
+            catalog_version (None | str | Unset): Present when `code == grant_forbidden`. Version of the permission catalog
+                the decision used.
+            reason (None | str | Unset): Present when `code == grant_forbidden` (why the grant refused) or
+                `grant_not_available` (why the grant cannot be given).
+            purpose (None | str | Unset): Present when `code == step_up_required`. What the step-up token must be issued
+                for.
+            step_up_url (None | str | Unset): Present when `code == step_up_required`. Dashboard page that issues a step-up
+                token.
      """
 
     mx_conflict: ErrorResponseErrorDetailsMxConflict | Unset = UNSET
@@ -41,6 +57,14 @@ class ErrorResponseErrorDetails:
     sent_email_id: str | Unset = UNSET
     content_hash: str | Unset = UNSET
     client_idempotency_key: str | Unset = UNSET
+    permission: None | str | Unset = UNSET
+    credential_kind: None | str | Unset = UNSET
+    grant_template_key: None | str | Unset = UNSET
+    credential_grant_id: None | str | Unset = UNSET
+    catalog_version: None | str | Unset = UNSET
+    reason: None | str | Unset = UNSET
+    purpose: None | str | Unset = UNSET
+    step_up_url: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -65,6 +89,54 @@ class ErrorResponseErrorDetails:
 
         client_idempotency_key = self.client_idempotency_key
 
+        permission: None | str | Unset
+        if isinstance(self.permission, Unset):
+            permission = UNSET
+        else:
+            permission = self.permission
+
+        credential_kind: None | str | Unset
+        if isinstance(self.credential_kind, Unset):
+            credential_kind = UNSET
+        else:
+            credential_kind = self.credential_kind
+
+        grant_template_key: None | str | Unset
+        if isinstance(self.grant_template_key, Unset):
+            grant_template_key = UNSET
+        else:
+            grant_template_key = self.grant_template_key
+
+        credential_grant_id: None | str | Unset
+        if isinstance(self.credential_grant_id, Unset):
+            credential_grant_id = UNSET
+        else:
+            credential_grant_id = self.credential_grant_id
+
+        catalog_version: None | str | Unset
+        if isinstance(self.catalog_version, Unset):
+            catalog_version = UNSET
+        else:
+            catalog_version = self.catalog_version
+
+        reason: None | str | Unset
+        if isinstance(self.reason, Unset):
+            reason = UNSET
+        else:
+            reason = self.reason
+
+        purpose: None | str | Unset
+        if isinstance(self.purpose, Unset):
+            purpose = UNSET
+        else:
+            purpose = self.purpose
+
+        step_up_url: None | str | Unset
+        if isinstance(self.step_up_url, Unset):
+            step_up_url = UNSET
+        else:
+            step_up_url = self.step_up_url
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -80,6 +152,22 @@ class ErrorResponseErrorDetails:
             field_dict["content_hash"] = content_hash
         if client_idempotency_key is not UNSET:
             field_dict["client_idempotency_key"] = client_idempotency_key
+        if permission is not UNSET:
+            field_dict["permission"] = permission
+        if credential_kind is not UNSET:
+            field_dict["credential_kind"] = credential_kind
+        if grant_template_key is not UNSET:
+            field_dict["grant_template_key"] = grant_template_key
+        if credential_grant_id is not UNSET:
+            field_dict["credential_grant_id"] = credential_grant_id
+        if catalog_version is not UNSET:
+            field_dict["catalog_version"] = catalog_version
+        if reason is not UNSET:
+            field_dict["reason"] = reason
+        if purpose is not UNSET:
+            field_dict["purpose"] = purpose
+        if step_up_url is not UNSET:
+            field_dict["step_up_url"] = step_up_url
 
         return field_dict
 
@@ -108,12 +196,100 @@ class ErrorResponseErrorDetails:
 
         client_idempotency_key = d.pop("client_idempotency_key", UNSET)
 
+        def _parse_permission(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        permission = _parse_permission(d.pop("permission", UNSET))
+
+
+        def _parse_credential_kind(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        credential_kind = _parse_credential_kind(d.pop("credential_kind", UNSET))
+
+
+        def _parse_grant_template_key(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        grant_template_key = _parse_grant_template_key(d.pop("grant_template_key", UNSET))
+
+
+        def _parse_credential_grant_id(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        credential_grant_id = _parse_credential_grant_id(d.pop("credential_grant_id", UNSET))
+
+
+        def _parse_catalog_version(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        catalog_version = _parse_catalog_version(d.pop("catalog_version", UNSET))
+
+
+        def _parse_reason(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        reason = _parse_reason(d.pop("reason", UNSET))
+
+
+        def _parse_purpose(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        purpose = _parse_purpose(d.pop("purpose", UNSET))
+
+
+        def _parse_step_up_url(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        step_up_url = _parse_step_up_url(d.pop("step_up_url", UNSET))
+
+
         error_response_error_details = cls(
             mx_conflict=mx_conflict,
             required_entitlements=required_entitlements,
             sent_email_id=sent_email_id,
             content_hash=content_hash,
             client_idempotency_key=client_idempotency_key,
+            permission=permission,
+            credential_kind=credential_kind,
+            grant_template_key=grant_template_key,
+            credential_grant_id=credential_grant_id,
+            catalog_version=catalog_version,
+            reason=reason,
+            purpose=purpose,
+            step_up_url=step_up_url,
         )
 
 

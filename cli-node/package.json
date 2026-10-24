@@ -123,10 +123,19 @@
         "description": "Browse and install Function templates. Use `primitive templates list-templates`, `primitive templates get-template`, `primitive templates install-template`, and `primitive templates get-template-install`."
       },
       "org": {
-        "description": "Manage org-level (global) resources shared across functions"
+        "description": "Switch the CLI between your organizations (`primitive org use <org>`, list them with `primitive orgs`) and manage org-level (global) resources shared across functions"
       },
       "org:secrets": {
         "description": "Global secrets shared across every function. Use `primitive org secrets list|set|remove`. Changes land in a function on its next redeploy; a function secret of the same name overrides the global."
+      },
+      "keys": {
+        "description": "Create, list, rotate and revoke organization API keys, with a preset or narrowed grant, an expiry and conditions. Use `primitive keys create|list|rotate|revoke`; generated API names remain available."
+      },
+      "credentials": {
+        "description": "The credential inventory, the credential audit trail and the credential policy (generated API operations)."
+      },
+      "roles": {
+        "description": "Read roles, groups, mailbox access and the access mode. Use `primitive roles list|groups|mailbox-access|access-mode`; generated API names remain available."
       },
       "payments": {
         "description": "Collect and pay x402 stablecoin (USDC) payments. Start with `primitive payments register-payout-address`, then `primitive payments create-challenge` to request a payment and `primitive payments pay` to settle one. Settlement is non-custodial; signing happens locally with your wallet key. Manage caps with `primitive payments get-policy|update-spend-policy`."

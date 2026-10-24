@@ -373,6 +373,22 @@ func (UnimplementedHandler) CreateFunctionSecret(ctx context.Context, req *Creat
 	return r, ht.ErrNotImplemented
 }
 
+// CreateKey implements createKey operation.
+//
+// Creates an organization API key with a preset or a custom grant, an
+// optional expiry and optional conditions. The secret is returned once,
+// in `key`. A person's session may call this directly. An OAuth token
+// (such as a CLI login) needs a single-use step-up token from the
+// dashboard in the `Primitive-Step-Up` header; without one the answer
+// is `403 step_up_required` with `details.step_up_url`. A grant the
+// caller may not give, or one the server does not offer, answers
+// `409 grant_not_available` with a `reason`.
+//
+// POST /keys
+func (UnimplementedHandler) CreateKey(ctx context.Context, req *CreateKeyInput, params CreateKeyParams) (r CreateKeyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // CreateOrgSecret implements createOrgSecret operation.
 //
 // Idempotent insert-or-update keyed on `(org_id, key)`. Returns
@@ -792,6 +808,17 @@ func (UnimplementedHandler) DownloadSentAttachmentPart(ctx context.Context, para
 	return r, ht.ErrNotImplemented
 }
 
+// GetAccessMode implements getAccessMode operation.
+//
+// Whether mailbox access follows the whole organization or explicit
+// delegations. Owners and admins also see the preview of a switch and
+// the decisions recorded for it.
+//
+// GET /access-mode
+func (UnimplementedHandler) GetAccessMode(ctx context.Context) (r GetAccessModeRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetAccount implements getAccount operation.
 //
 // Get account info.
@@ -967,6 +994,17 @@ func (UnimplementedHandler) GetConversation(ctx context.Context, params GetConve
 	return r, ht.ErrNotImplemented
 }
 
+// GetCredentialPolicy implements getCredentialPolicy operation.
+//
+// The rules new keys and CLI access are held to: maximum lifetime,
+// required expiry, who may create super admin keys and more. Available
+// to an owner or admin in a person's session.
+//
+// GET /credential-policy
+func (UnimplementedHandler) GetCredentialPolicy(ctx context.Context) (r GetCredentialPolicyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetCreditBalance implements getCreditBalance operation.
 //
 // Read the organization credit position. `prepaid_credit` is the prepaid
@@ -1066,6 +1104,17 @@ func (UnimplementedHandler) GetFunctionTestRunTrace(ctx context.Context, params 
 //
 // GET /inbox/status
 func (UnimplementedHandler) GetInboxStatus(ctx context.Context) (r GetInboxStatusRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetKeyBuilder implements getKeyBuilder operation.
+//
+// The presets a key can be created from, with whether each is available
+// and why not, the per-area permission matrix and the credential
+// policy.
+//
+// GET /keys/builder
+func (UnimplementedHandler) GetKeyBuilder(ctx context.Context) (r GetKeyBuilderRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1393,6 +1442,19 @@ func (UnimplementedHandler) ListChanges(ctx context.Context, params ListChangesP
 	return r, ht.ErrNotImplemented
 }
 
+// ListCliOrgs implements listCliOrgs operation.
+//
+// Lists every organization the person behind a CLI user login belongs
+// to, with whether the CLI may be used there and, when it may not, the
+// reason. Authenticate with the identity access token (`prim_uat_`) from
+// a CLI user login; no other credential is accepted. A server without
+// CLI user logins answers `404 feature_disabled`.
+//
+// GET /cli/orgs
+func (UnimplementedHandler) ListCliOrgs(ctx context.Context) (r ListCliOrgsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListContacts implements listContacts operation.
 //
 // Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -1411,6 +1473,30 @@ func (UnimplementedHandler) ListChanges(ctx context.Context, params ListChangesP
 //
 // GET /contacts
 func (UnimplementedHandler) ListContacts(ctx context.Context, params ListContactsParams) (r ListContactsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListCredentialEvents implements listCredentialEvents operation.
+//
+// The credential audit trail, newest first, paged with `cursor`.
+// Filter by actor, credential, event type and time. Available to an
+// owner or admin in a person's session.
+//
+// GET /credential-events
+func (UnimplementedHandler) ListCredentialEvents(ctx context.Context, params ListCredentialEventsParams) (r ListCredentialEventsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListCredentials implements listCredentials operation.
+//
+// The credential inventory: organization API keys, Function keys,
+// connected agent keys, OAuth grants and agent delegates, each with its
+// grant, creator, last use, expiry, conditions and the actions it
+// offers. Available to an owner or admin in a person's session. Answers
+// `404 feature_disabled` where the inventory is not enabled.
+//
+// GET /credentials
+func (UnimplementedHandler) ListCredentials(ctx context.Context, params ListCredentialsParams) (r ListCredentialsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1569,6 +1655,24 @@ func (UnimplementedHandler) ListFunctions(ctx context.Context) (r ListFunctionsR
 	return r, ht.ErrNotImplemented
 }
 
+// ListGroups implements listGroups operation.
+//
+// Groups of members, each with its members and an optional role.
+//
+// GET /groups
+func (UnimplementedHandler) ListGroups(ctx context.Context) (r ListGroupsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListMailboxAccess implements listMailboxAccess operation.
+//
+// Every mailbox and domain access entry (delegation) in the organization.
+//
+// GET /mailbox-access
+func (UnimplementedHandler) ListMailboxAccess(ctx context.Context) (r ListMailboxAccessRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListOrgSecrets implements listOrgSecrets operation.
 //
 // Returns metadata for every org-level secret. Org secrets apply
@@ -1627,6 +1731,17 @@ func (UnimplementedHandler) ListRegistryRequests(ctx context.Context, params Lis
 //
 // GET /repeating-sends
 func (UnimplementedHandler) ListRepeatingSends(ctx context.Context, params ListRepeatingSendsParams) (r ListRepeatingSendsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListRoles implements listRoles operation.
+//
+// The organization's roles (built-in, template and custom), the role
+// templates that can be assigned, and whether role assignment is
+// available. Readable by any person in the organization.
+//
+// GET /roles
+func (UnimplementedHandler) ListRoles(ctx context.Context) (r ListRolesRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1746,6 +1861,8 @@ func (UnimplementedHandler) PayChallenge(ctx context.Context, req *PayChallengeI
 // Polls a CLI login session until the browser approval either succeeds,
 // is denied, expires, or is polled too quickly. The OAuth token set is
 // created only after approval and is returned exactly once.
+// A login started with `login_kind: "user"` succeeds with a
+// `CliUserLoginPollResult` instead (`auth_method: "user_grant"`).
 //
 // POST /cli/login/poll
 func (UnimplementedHandler) PollCliLogin(ctx context.Context, req *PollCliLoginInput) (r PollCliLoginRes, _ error) {
@@ -2105,6 +2222,30 @@ func (UnimplementedHandler) ResolveRegistryHandle(ctx context.Context, params Re
 //
 // DELETE /agent-connections/{address}
 func (UnimplementedHandler) RevokeAgentConnection(ctx context.Context, params RevokeAgentConnectionParams) (r RevokeAgentConnectionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RevokeCredential implements revokeCredential operation.
+//
+// Revokes one credential from the inventory. Function keys are rotated,
+// never revoked, and answer `409 rotate_instead`. Available to an owner
+// or admin in a person's session.
+//
+// POST /credentials/revoke
+func (UnimplementedHandler) RevokeCredential(ctx context.Context, req *RevokeCredentialInput) (r RevokeCredentialRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RotateKey implements rotateKey operation.
+//
+// Mints a successor with the same grant, name, expiry and conditions,
+// and brings the old key's expiry forward to the end of the overlap
+// (default 24 hours; `0` revokes it at once). The new secret is
+// returned once. An OAuth token needs a step-up token, as for
+// `createKey`.
+//
+// POST /keys/{id}/rotate
+func (UnimplementedHandler) RotateKey(ctx context.Context, req OptRotateKeyInput, params RotateKeyParams) (r RotateKeyRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2502,6 +2643,17 @@ func (UnimplementedHandler) UpdateFunction(ctx context.Context, req *UpdateFunct
 	return r, ht.ErrNotImplemented
 }
 
+// UpdateKey implements updateKey operation.
+//
+// Renames a key or changes its expiry, grant, conditions or suspension.
+// A grant change is recorded as a new grant version. Available in a
+// person's session.
+//
+// PATCH /keys/{id}
+func (UnimplementedHandler) UpdateKey(ctx context.Context, req *UpdateKeyInput, params UpdateKeyParams) (r UpdateKeyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // UpdateRegistry implements updateRegistry operation.
 //
 // Update a registry you own.
@@ -2625,8 +2777,20 @@ func (UnimplementedHandler) VerifyDomain(ctx context.Context, params VerifyDomai
 
 // Whoami implements whoami operation.
 //
-// Current authenticated identity. member_address is null for machine credentials or an unavailable
-// member address.
+// Current authenticated identity. member_address is null for machine
+// credentials or an unavailable member address.
+// Two optional query parameters ask for the caller's grant. They are
+// described here rather than declared, so generated clients keep the
+// signature they had; pass them as raw query parameters.
+// - `include=grant` adds `grant` (`GrantDescription`): the grant this
+// credential holds.
+// - `check=<permission>`, optionally with
+// `resource=<function|domain|endpoint|route>:<id>`, adds `check`
+// (`PermissionCheck`): whether the grant allows that permission, with
+// the same `reason` and `details` a `403 grant_forbidden` would carry.
+// Nothing is enforced by asking; an unknown permission answers
+// `400 validation_error`.
+// A server without grants ignores both and omits the fields.
 //
 // GET /whoami
 func (UnimplementedHandler) Whoami(ctx context.Context) (r WhoamiRes, _ error) {

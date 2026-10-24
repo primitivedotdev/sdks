@@ -18,7 +18,7 @@ node-generate:
 	pnpm --filter @primitivedotdev/sdk generate
 
 node-check-generated:
-	pnpm --filter @primitivedotdev/sdk generate && git diff --exit-code -- openapi/primitive-api.codegen.json sdk-node/src/schema.generated.ts sdk-node/src/types.generated.ts sdk-node/src/generated packages/api-core/src/api packages/api-core/src/openapi/openapi.generated.ts packages/api-core/src/openapi/operations.generated.ts
+	pnpm --filter @primitivedotdev/sdk generate && git diff --exit-code -- openapi/primitive-api.codegen.json sdk-node/src/schema.generated.ts sdk-node/src/types.generated.ts sdk-node/src/generated packages/api-core/src/api packages/api-core/src/openapi/openapi.generated.ts packages/api-core/src/openapi/operations.generated.ts packages/api-core/src/openapi/permissions.generated.ts
 
 node-test:
 	pnpm --dir sdk-node test

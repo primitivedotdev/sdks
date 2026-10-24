@@ -845,6 +845,98 @@ func decodeCreateFunctionSecretParams(args [1]string, argsEscaped bool, r *http.
 	return params, nil
 }
 
+// CreateKeyParams is parameters of createKey operation.
+type CreateKeyParams struct {
+	// A single-use step-up token (`pstep_...`) from the dashboard's
+	// step-up page. Needed when an OAuth token, such as a CLI login,
+	// creates or rotates a key.
+	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
+}
+
+func unpackCreateKeyParams(packed middleware.Parameters) (params CreateKeyParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "Primitive-Step-Up",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.PrimitiveStepUp = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeCreateKeyParams(args [0]string, argsEscaped bool, r *http.Request) (params CreateKeyParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: Primitive-Step-Up.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Primitive-Step-Up",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotPrimitiveStepUpVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPrimitiveStepUpVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.PrimitiveStepUp.SetTo(paramsDotPrimitiveStepUpVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.PrimitiveStepUp.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     200,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Primitive-Step-Up",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // DecideRegistryRequestParams is parameters of decideRegistryRequest operation.
 type DecideRegistryRequestParams struct {
 	// The registry slug.
@@ -6883,6 +6975,542 @@ func decodeListContactsParams(args [0]string, argsEscaped bool, r *http.Request)
 	return params, nil
 }
 
+// ListCredentialEventsParams is parameters of listCredentialEvents operation.
+type ListCredentialEventsParams struct {
+	// The `next_cursor` from the previous page.
+	Cursor OptString `json:",omitempty,omitzero"`
+	// Page size.
+	Limit OptInt `json:",omitempty,omitzero"`
+	// Only events by this actor.
+	ActorID OptUUID `json:",omitempty,omitzero"`
+	// Only events about this credential.
+	CredentialID OptUUID `json:",omitempty,omitzero"`
+	// Only events of this type, for example `key.created`.
+	EventType OptString `json:",omitempty,omitzero"`
+	// Only events at or after this time (ISO 8601).
+	Since OptDateTime `json:",omitempty,omitzero"`
+	// Only events before this time (ISO 8601).
+	Until OptDateTime `json:",omitempty,omitzero"`
+}
+
+func unpackListCredentialEventsParams(packed middleware.Parameters) (params ListCredentialEventsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "cursor",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Cursor = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "limit",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Limit = v.(OptInt)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "actor_id",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.ActorID = v.(OptUUID)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "credential_id",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.CredentialID = v.(OptUUID)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "event_type",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.EventType = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "since",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Since = v.(OptDateTime)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "until",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Until = v.(OptDateTime)
+		}
+	}
+	return params
+}
+
+func decodeListCredentialEventsParams(args [0]string, argsEscaped bool, r *http.Request) (params ListCredentialEventsParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode query: cursor.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotCursorVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotCursorVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Cursor.SetTo(paramsDotCursorVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Cursor.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     256,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "cursor",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: limit.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotLimitVal int
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotLimitVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Limit.SetTo(paramsDotLimitVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Limit.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           500,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "limit",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: actor_id.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "actor_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotActorIDVal uuid.UUID
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToUUID(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotActorIDVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.ActorID.SetTo(paramsDotActorIDVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "actor_id",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: credential_id.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "credential_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotCredentialIDVal uuid.UUID
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToUUID(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotCredentialIDVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.CredentialID.SetTo(paramsDotCredentialIDVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "credential_id",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: event_type.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "event_type",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotEventTypeVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotEventTypeVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.EventType.SetTo(paramsDotEventTypeVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.EventType.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     100,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "event_type",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: since.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "since",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotSinceVal time.Time
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToDateTime(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotSinceVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Since.SetTo(paramsDotSinceVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "since",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: until.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "until",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotUntilVal time.Time
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToDateTime(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotUntilVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Until.SetTo(paramsDotUntilVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "until",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// ListCredentialsParams is parameters of listCredentials operation.
+type ListCredentialsParams struct {
+	// Only list credentials of this kind.
+	Kind OptCredentialKind `json:",omitempty,omitzero"`
+}
+
+func unpackListCredentialsParams(packed middleware.Parameters) (params ListCredentialsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "kind",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Kind = v.(OptCredentialKind)
+		}
+	}
+	return params
+}
+
+func decodeListCredentialsParams(args [0]string, argsEscaped bool, r *http.Request) (params ListCredentialsParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode query: kind.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "kind",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotKindVal CredentialKind
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotKindVal = CredentialKind(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Kind.SetTo(paramsDotKindVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Kind.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "kind",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // ListDefaultNetworkAgentsParams is parameters of listDefaultNetworkAgents operation.
 type ListDefaultNetworkAgentsParams struct {
 	// Maximum number of addresses to return.
@@ -12648,6 +13276,152 @@ func decodeRevokeAgentConnectionParams(args [1]string, argsEscaped bool, r *http
 	return params, nil
 }
 
+// RotateKeyParams is parameters of rotateKey operation.
+type RotateKeyParams struct {
+	// API key id.
+	ID uuid.UUID
+	// A single-use step-up token (`pstep_...`) from the dashboard's
+	// step-up page. Needed when an OAuth token, such as a CLI login,
+	// creates or rotates a key.
+	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
+}
+
+func unpackRotateKeyParams(packed middleware.Parameters) (params RotateKeyParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "Primitive-Step-Up",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.PrimitiveStepUp = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeRotateKeyParams(args [1]string, argsEscaped bool, r *http.Request) (params RotateKeyParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode header: Primitive-Step-Up.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Primitive-Step-Up",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotPrimitiveStepUpVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPrimitiveStepUpVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.PrimitiveStepUp.SetTo(paramsDotPrimitiveStepUpVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.PrimitiveStepUp.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     200,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Primitive-Step-Up",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // RunWakeScheduleParams is parameters of runWakeSchedule operation.
 type RunWakeScheduleParams struct {
 	// Resource UUID.
@@ -16463,6 +17237,72 @@ func unpackUpdateFunctionParams(packed middleware.Parameters) (params UpdateFunc
 }
 
 func decodeUpdateFunctionParams(args [1]string, argsEscaped bool, r *http.Request) (params UpdateFunctionParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// UpdateKeyParams is parameters of updateKey operation.
+type UpdateKeyParams struct {
+	// API key id.
+	ID uuid.UUID
+}
+
+func unpackUpdateKeyParams(packed middleware.Parameters) (params UpdateKeyParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeUpdateKeyParams(args [1]string, argsEscaped bool, r *http.Request) (params UpdateKeyParams, _ error) {
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]

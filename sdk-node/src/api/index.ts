@@ -20,12 +20,21 @@ export * from "./events.js";
  */
 
 import {
+  type AccessMode,
   type AgentAccountResult,
   type AgentClaimLinkResult,
   type AgentClaimResult,
   type AgentClaimStartResult,
+  type CallerIdentity,
   type CreateAgentAccountInput,
   type CreateAgentClaimLinkInput,
+  type CreatedKey,
+  type CreateKeyInput,
+  type CredentialEventList,
+  type CredentialKind,
+  type CredentialList,
+  type CredentialPolicy,
+  createPrimitiveApiError,
   type GateDenial,
   type Account as GeneratedAccount,
   type DeleteMemoryData as GeneratedDeleteMemoryData,
@@ -51,14 +60,24 @@ import {
   type SendMailResult as GeneratedSendMailResult,
   type SetMemoryInput as GeneratedSetMemoryInput,
   type UpdateRepeatingSendRequest as GeneratedUpdateRepeatingSendRequest,
+  type GroupList,
   operations as generatedOperations,
   isMemoryJsonValue,
+  type KeyBuilder,
+  type ListCredentialEventsData,
+  type MailboxAccessList,
+  type Permission,
   PrimitiveApiClient,
   type PrimitiveApiClientOptions,
   PrimitiveApiError,
   type PrimitiveApiErrorDetails,
   type PrimitiveRateLimit,
+  type RevokeCredentialResult,
+  type RoleList,
+  type RotatedKey,
   type StartAgentClaimInput,
+  type UpdatedKey,
+  type UpdateKeyInput,
   type VerifyAgentClaimInput,
 } from "@primitivedotdev/api-core";
 import { buildRepeatStopBody } from "../interactions/repeats.js";
@@ -816,7 +835,7 @@ function unwrapData<T>(
       throw result.error;
     }
     const parsed = parseApiErrorPayload(result.error);
-    throw new PrimitiveApiError(parsed.message, {
+    throw createPrimitiveApiError(parsed.message, {
       payload: result.error,
       status: response?.status,
       code: parsed.code,
@@ -1074,7 +1093,7 @@ function unwrapInboxPage(result: {
   if (result.error) {
     if (isAbortLikeError(result.error)) throw result.error;
     const parsed = parseApiErrorPayload(result.error);
-    throw new PrimitiveApiError(parsed.message, {
+    throw createPrimitiveApiError(parsed.message, {
       payload: result.error,
       status: response?.status,
       code: parsed.code,
@@ -1173,6 +1192,29 @@ export class InboxResource {
   }
 }
 
+/**
+ * `GET /whoami` with its grant query parameters (`include`, `check`,
+ * `resource`). The spec describes them without declaring them, so the
+ * generated `whoami` keeps its signature; this sends them directly.
+ */
+function whoamiWithQuery(
+  client: PrimitiveApiClient["client"],
+  query: Record<string, string>,
+  options: RequestOptions | undefined,
+) {
+  return client.get<
+    { 200: { success: true; data: CallerIdentity } },
+    GeneratedErrorResponse,
+    false
+  >({
+    ...resolveRequestOptions(options),
+    query,
+    responseStyle: "fields",
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/whoami",
+  });
+}
+
 /** Account introspection, grouped under `client.account`. */
 export class AccountResource {
   constructor(private readonly client: PrimitiveApiClient["client"]) {}
@@ -1189,6 +1231,44 @@ export class AccountResource {
       responseStyle: "fields",
     });
     return unwrapData<GeneratedAccount>(result, "account");
+  }
+
+  /**
+   * The caller's identity. With `{ grant: true }` it includes `grant`: the
+   * grant this credential holds. A server without grants omits `grant`.
+   */
+  async whoami(
+    input: { grant?: boolean } = {},
+    options?: RequestOptions,
+  ): Promise<CallerIdentity> {
+    const result = await whoamiWithQuery(
+      this.client,
+      input.grant ? { include: "grant" } : {},
+      options,
+    );
+    return unwrapData<CallerIdentity>(result, "identity");
+  }
+
+  /**
+   * Whether this credential's grant allows `permission` (optionally on one
+   * resource, as `function:<id>`, `domain:<id>`, `endpoint:<id>` or
+   * `route:<id>`). Nothing is enforced by asking. Returns null from a server
+   * that does not answer permission checks.
+   */
+  async checkPermission(
+    permission: Permission,
+    input: { resource?: string } = {},
+    options?: RequestOptions,
+  ): Promise<NonNullable<CallerIdentity["check"]> | null> {
+    const result = await whoamiWithQuery(
+      this.client,
+      {
+        check: permission,
+        ...(input.resource === undefined ? {} : { resource: input.resource }),
+      },
+      options,
+    );
+    return unwrapData<CallerIdentity>(result, "identity").check ?? null;
   }
 }
 
@@ -1402,6 +1482,203 @@ export class RepeatsResource {
   }
 }
 
+/** Options for `client.keys.create` and `client.keys.rotate`. */
+export interface KeyStepUpOptions extends RequestOptions {
+  /**
+   * A single-use step-up token (`pstep_...`) from the dashboard. Needed when
+   * the client authenticates with an OAuth token rather than a session.
+   */
+  stepUp?: string;
+}
+
+function stepUpHeaders(
+  options: KeyStepUpOptions | undefined,
+): RequestOptions | undefined {
+  if (!options?.stepUp) return options;
+  const { stepUp, ...rest } = options;
+  return {
+    ...rest,
+    headers: { ...(rest.headers ?? {}), "Primitive-Step-Up": stepUp },
+  };
+}
+
+/**
+ * Organization API keys, grouped under `client.keys`.
+ *
+ * Creating and rotating keys is for people: a dashboard session, or an OAuth
+ * token with a step-up token (`stepUp`). The server does not let API keys
+ * create or rotate keys. List
+ * and revoke keys through `client.credentials`.
+ */
+export class KeysResource {
+  constructor(private readonly client: PrimitiveApiClient["client"]) {}
+
+  /** Create a key. The secret is returned once, in `key`. */
+  async create(
+    input: CreateKeyInput,
+    options?: KeyStepUpOptions,
+  ): Promise<CreatedKey> {
+    const result = await generatedOperations.createKey({
+      ...resolveRequestOptions(stepUpHeaders(options)),
+      body: input,
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<CreatedKey>(result, "key");
+  }
+
+  /** Rotate a key. The old key keeps working for `overlapSeconds` (default one day). */
+  async rotate(
+    id: string,
+    input: { overlapSeconds?: number } = {},
+    options?: KeyStepUpOptions,
+  ): Promise<RotatedKey> {
+    const result = await generatedOperations.rotateKey({
+      ...resolveRequestOptions(stepUpHeaders(options)),
+      body:
+        input.overlapSeconds === undefined
+          ? {}
+          : { overlap_seconds: input.overlapSeconds },
+      client: this.client,
+      path: { id },
+      responseStyle: "fields",
+    });
+    return unwrapData<RotatedKey>(result, "rotated key");
+  }
+
+  /** Rename a key or change its expiry, grant, conditions or suspension. */
+  async update(
+    id: string,
+    input: UpdateKeyInput,
+    options?: RequestOptions,
+  ): Promise<UpdatedKey> {
+    const result = await generatedOperations.updateKey({
+      ...resolveRequestOptions(options),
+      body: input,
+      client: this.client,
+      path: { id },
+      responseStyle: "fields",
+    });
+    return unwrapData<UpdatedKey>(result, "updated key");
+  }
+
+  /** The presets, the permission matrix and the credential policy. */
+  async builder(options?: RequestOptions): Promise<KeyBuilder> {
+    const result = await generatedOperations.getKeyBuilder({
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<KeyBuilder>(result, "key builder");
+  }
+}
+
+/**
+ * The credential inventory, audit trail and policy, grouped under
+ * `client.credentials`. Available to an owner or admin in a person's
+ * session.
+ */
+export class CredentialsResource {
+  constructor(private readonly client: PrimitiveApiClient["client"]) {}
+
+  /** Every credential in the organization, optionally of one kind. */
+  async list(
+    input: { kind?: CredentialKind } = {},
+    options?: RequestOptions,
+  ): Promise<CredentialList> {
+    const result = await generatedOperations.listCredentials({
+      ...resolveRequestOptions(options),
+      client: this.client,
+      query: input.kind === undefined ? undefined : { kind: input.kind },
+      responseStyle: "fields",
+    });
+    return unwrapData<CredentialList>(result, "credentials");
+  }
+
+  /** Revoke one credential. Function keys answer `rotate_instead`. */
+  async revoke(
+    input: { kind: CredentialKind; id: string; reason?: string },
+    options?: RequestOptions,
+  ): Promise<RevokeCredentialResult> {
+    const result = await generatedOperations.revokeCredential({
+      ...resolveRequestOptions(options),
+      body: input,
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<RevokeCredentialResult>(result, "revoke result");
+  }
+
+  /** One page of credential audit events; pass `next_cursor` as `cursor`. */
+  async events(
+    input: NonNullable<ListCredentialEventsData["query"]> = {},
+    options?: RequestOptions,
+  ): Promise<CredentialEventList> {
+    const result = await generatedOperations.listCredentialEvents({
+      ...resolveRequestOptions(options),
+      client: this.client,
+      query: input,
+      responseStyle: "fields",
+    });
+    return unwrapData<CredentialEventList>(result, "credential events");
+  }
+
+  /** The organization credential policy. */
+  async policy(options?: RequestOptions): Promise<CredentialPolicy> {
+    const result = await generatedOperations.getCredentialPolicy({
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<CredentialPolicy>(result, "credential policy");
+  }
+}
+
+/** Roles, groups, mailbox access and the access mode, grouped under `client.roles`. */
+export class RolesResource {
+  constructor(private readonly client: PrimitiveApiClient["client"]) {}
+
+  /** Roles, assignable templates and whether assignment is available. */
+  async list(options?: RequestOptions): Promise<RoleList> {
+    const result = await generatedOperations.listRoles({
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<RoleList>(result, "roles");
+  }
+
+  /** Groups of members and their roles. */
+  async groups(options?: RequestOptions): Promise<GroupList> {
+    const result = await generatedOperations.listGroups({
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<GroupList>(result, "groups");
+  }
+
+  /** Every mailbox and domain access entry. */
+  async mailboxAccess(options?: RequestOptions): Promise<MailboxAccessList> {
+    const result = await generatedOperations.listMailboxAccess({
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<MailboxAccessList>(result, "mailbox access");
+  }
+
+  /** The organization access mode. */
+  async accessMode(options?: RequestOptions): Promise<AccessMode> {
+    const result = await generatedOperations.getAccessMode({
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<AccessMode>(result, "access mode");
+  }
+}
+
 export class PrimitiveClient extends PrimitiveApiClient {
   /** Receive durable events in this process, without a public URL. */
   readonly events = new EventsResource(this.client);
@@ -1415,6 +1692,14 @@ export class PrimitiveClient extends PrimitiveApiClient {
   readonly memories: MemoriesResource = new MemoriesResource(this.client);
   /** Repeating sends you created, and stopping one you received. */
   readonly repeats: RepeatsResource = new RepeatsResource(this.client);
+  /** Create, rotate and edit organization API keys. */
+  readonly keys: KeysResource = new KeysResource(this.client);
+  /** The credential inventory, audit trail and policy. */
+  readonly credentials: CredentialsResource = new CredentialsResource(
+    this.client,
+  );
+  /** Roles, groups, mailbox access and the access mode (reads). */
+  readonly roles: RolesResource = new RolesResource(this.client);
 
   // Captured for sendAttachment's upload path, which talks to /v1/payloads
   // directly (streaming, content-addressed) rather than through the generated
@@ -1782,7 +2067,7 @@ function unwrapSendResult(result: {
       throw result.error;
     }
     const parsed = parseApiErrorPayload(result.error);
-    throw new PrimitiveApiError(parsed.message, {
+    throw createPrimitiveApiError(parsed.message, {
       payload: result.error,
       status: response?.status,
       code: parsed.code,
@@ -1875,7 +2160,7 @@ function unwrapSemanticSearchResult(result: {
       throw result.error;
     }
     const parsed = parseApiErrorPayload(result.error);
-    throw new PrimitiveApiError(parsed.message, {
+    throw createPrimitiveApiError(parsed.message, {
       payload: result.error,
       status: response?.status,
       code: parsed.code,
@@ -1924,7 +2209,7 @@ function unwrapMemorySearchResult(result: {
       throw result.error;
     }
     const parsed = parseApiErrorPayload(result.error);
-    throw new PrimitiveApiError(parsed.message, {
+    throw createPrimitiveApiError(parsed.message, {
       payload: result.error,
       status: response?.status,
       code: parsed.code,

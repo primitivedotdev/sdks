@@ -135,6 +135,18 @@ export const openapiDocument: Record<string, unknown> = {
     {
       "name": "Contacts",
       "description": "Organization contacts and per-address agent preferences."
+    },
+    {
+      "name": "Keys",
+      "description": "Create and rotate organization API keys with a preset or narrowed\ngrant, an expiry and conditions.\n"
+    },
+    {
+      "name": "Credentials",
+      "description": "The credential inventory, the credential audit trail and the\norganization credential policy.\n"
+    },
+    {
+      "name": "Roles",
+      "description": "Roles, groups, mailbox access and the organization access mode."
     }
   ],
   "paths": {
@@ -201,7 +213,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "pollCliLogin",
         "summary": "Poll CLI browser login",
-        "description": "Polls a CLI login session until the browser approval either succeeds,\nis denied, expires, or is polled too quickly. The OAuth token set is\ncreated only after approval and is returned exactly once.\n",
+        "description": "Polls a CLI login session until the browser approval either succeeds,\nis denied, expires, or is polled too quickly. The OAuth token set is\ncreated only after approval and is returned exactly once.\nA login started with `login_kind: \"user\"` succeeds with a\n`CliUserLoginPollResult` instead (`auth_method: \"user_grant\"`).\n",
         "tags": [
           "CLI"
         ],
@@ -813,6 +825,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/agent/claim/start": {
       "post": {
+        "x-primitive-permission": [
+          "account:claim"
+        ],
         "operationId": "startAgentClaim",
         "summary": "Start an agent account email claim",
         "description": "Begins upgrading an emailless `agent` account into a full `developer`\naccount by confirming an email address. Authenticated by the agent's own\nAPI key (the org is taken from the credential). Sends a verification\ncode to the supplied email and returns the claim session id plus resend\ntiming. Submit the code to `/agent/claim/verify` to complete the\nupgrade. Confirming an email that already belongs to a Primitive account\nis rejected.\n",
@@ -887,6 +902,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/agent/claim/verify": {
       "post": {
+        "x-primitive-permission": [
+          "account:claim"
+        ],
         "operationId": "verifyAgentClaim",
         "summary": "Verify an agent account email claim",
         "description": "Confirms the verification code emailed by `/agent/claim/start` and\nupgrades the account to the `developer` plan. The org id, API key, and\nmanaged inbox all carry over; the send cap lifts and the developer\nplan's default features (such as Functions) unlock. Upgrading does not\nunlock sending to arbitrary recipients: the recipient rules on the\naccount still apply. `GET /send-permissions` reports those rules (its\nlist of individual addresses can be partial), and `POST /sendability`\nanswers for one specific recipient. Authenticated by the agent's own\nAPI key.\n",
@@ -971,6 +989,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/agent/claim/link": {
       "post": {
+        "x-primitive-permission": [
+          "account:claim"
+        ],
         "operationId": "createAgentClaimLink",
         "summary": "Create a browser claim link",
         "description": "Mints an opaque, single-use link an agent can hand to a human to\ncomplete the email-confirmation upgrade in a browser. Authenticated by\nthe agent's own API key. `claim_url` is null when the API host cannot\nresolve a web origin to build the link.\n",
@@ -1042,6 +1063,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/cli/logout": {
       "post": {
+        "x-primitive-permission": [
+          "credentials:revoke_self"
+        ],
         "operationId": "cliLogout",
         "summary": "Revoke the current CLI OAuth session",
         "description": "Revokes the OAuth grant used to authenticate the request. API-key\nauthenticated legacy logout requests succeed without deleting server API\nkeys so old local CLI state can be cleared safely.\n",
@@ -1098,6 +1122,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/account": {
       "get": {
+        "x-primitive-permission": [
+          "account:read"
+        ],
         "operationId": "getAccount",
         "summary": "Get account info",
         "tags": [
@@ -1135,6 +1162,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "patch": {
+        "x-primitive-permission": [
+          "account:manage"
+        ],
         "operationId": "updateAccount",
         "summary": "Update account settings",
         "tags": [
@@ -1187,6 +1217,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/account/storage": {
       "get": {
+        "x-primitive-permission": [
+          "account:read"
+        ],
         "operationId": "getStorageStats",
         "summary": "Get storage usage",
         "tags": [
@@ -1226,6 +1259,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/account/webhook-secret": {
       "get": {
+        "x-primitive-permission": [
+          "webhook_secret:read"
+        ],
         "operationId": "getWebhookSecret",
         "summary": "Get webhook signing secret",
         "description": "Returns the webhook signing secret for your account. If no\nsecret exists yet, one is generated automatically on first\naccess.\n\nSigning is account-scoped, not per-endpoint. Every webhook\ndelivery from any of your registered endpoints is signed\nwith this single secret. Rotate via\n`POST /account/webhook-secret/rotate`.\n\n**Secret format**: the returned string looks base64-shaped\n(e.g. `XNHBBW8VqoBjRfNs1tkZj11jTk...`) but is NOT base64.\nUse it AS-IS as a UTF-8 string when computing HMAC over a\ndelivery body. Base64-decoding before HMAC will silently\nproduce mismatched signatures.\n\nSee the API-level \"Webhook signing\" section for the full\nwire format (header name, signed string shape, hash algo,\ntolerance) including a language-agnostic verification\nrecipe.\n",
@@ -1266,6 +1302,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/account/webhook-secret/rotate": {
       "post": {
+        "x-primitive-permission": [
+          "webhook_secret:manage"
+        ],
         "operationId": "rotateWebhookSecret",
         "summary": "Rotate webhook signing secret",
         "description": "Generates a new webhook signing secret, replacing the current one.\nRate limited to once per 60 minutes.\n",
@@ -1312,6 +1351,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/credits/redeem": {
       "post": {
+        "x-primitive-permission": [
+          "credits:redeem"
+        ],
         "operationId": "redeemCreditCode",
         "summary": "Redeem a credit code",
         "description": "Redeem a credit code for the authenticated organization. The credit is\nadded to the organization prepaid credit and shows in\n`GET /credits/balance` under `prepaid_credit`.\n\nRedeeming requires an organization owner or admin. An API key redeems\nwith the authority of the user who created it, based on that user's\ncurrent role; a key without that authority gets the same\n`credit_code_invalid` refusal as an unknown code.\n\nThe `Idempotency-Key` header is required. Retrying with the same key\nand code returns the original grant with `replayed: true` and grants\nnothing new; the same key with a different code is refused with\n`idempotency_key_reused`. Every refusal carries a human-readable\n`error.message` that can be shown to the user as is.\n",
@@ -1472,6 +1514,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/credits/balance": {
       "get": {
+        "x-primitive-permission": [
+          "credits:read"
+        ],
         "operationId": "getCreditBalance",
         "summary": "Get credit balance",
         "description": "Read the organization credit position. `prepaid_credit` is the prepaid\nusage credit (paid top-ups, redeemed credit codes and granted credit)\nthat can still pay for usage. `budget` is the active agent spending\nbudget an operator funded for top-ups, or null when there is none.\nAmounts are strings of integer micros (1 USD = 1000000 micros).\n",
@@ -1515,6 +1560,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/domains": {
       "get": {
+        "x-primitive-permission": [
+          "domains:read"
+        ],
         "operationId": "listDomains",
         "summary": "List all domains",
         "description": "Returns all verified and unverified domains for your organization,\nsorted by creation date (newest first). Each domain includes a\n`verified` boolean to distinguish between the two states.\n",
@@ -1553,6 +1601,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "post": {
+        "x-primitive-permission": [
+          "domains:manage"
+        ],
         "operationId": "addDomain",
         "summary": "Claim a new domain",
         "description": "Creates an unverified domain claim and returns the exact\nDNS records to publish in `dns_records`. Publish those\nrecords before calling the verify endpoint. To give users\nan importable DNS file, call `downloadDomainZoneFile` or run\n`primitive domains zone-file --id <domain-id>`.\n",
@@ -1646,6 +1697,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "patch": {
+        "x-primitive-permission": [
+          "domains:manage"
+        ],
         "operationId": "updateDomain",
         "summary": "Update domain settings",
         "description": "Update a verified domain's settings. Only verified domains can be\nupdated. Per-domain spam thresholds require a Pro plan.\n",
@@ -1697,6 +1751,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "delete": {
+        "x-primitive-permission": [
+          "domains:manage"
+        ],
         "operationId": "deleteDomain",
         "summary": "Delete a domain",
         "description": "Deletes a verified or unverified domain claim.",
@@ -1726,6 +1783,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "post": {
+        "x-primitive-permission": [
+          "domains:manage"
+        ],
         "operationId": "verifyDomain",
         "summary": "Verify domain ownership",
         "description": "Checks DNS records required for inbound routing, ownership,\nand outbound authentication: MX, ownership TXT, SPF, DKIM,\nDMARC, and TLS-RPT.\nOn success, the domain is promoted from unverified to verified.\nOn failure, returns which checks passed and which failed,\nplus the exact DNS records still expected. To give users\nan importable DNS file for missing records, call\n`downloadDomainZoneFile` or run\n`primitive domains zone-file --id <domain-id>`.\n",
@@ -1774,6 +1834,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "post": {
+        "x-primitive-permission": [
+          "domains:read"
+        ],
         "operationId": "checkDomainDns",
         "summary": "Run an on-demand DNS health check",
         "description": "Re-checks the domain's DNS records and persists the result as\nthe domain's current DNS health state. This is the on-demand\ncounterpart of the scheduled background checker: the response\nmirrors what the checker records, broken down per scope\n(`ownership`, `inbound`, `outbound`) with the exact records\ninspected and each record's individual status.\n\nUnlike /domains/{id}/verify, this call never promotes an\nunverified domain; it only re-evaluates and records health for\nan existing claim. Managed (Primitive-operated) domains are\nrejected with a validation error because their DNS is not\ncustomer-published.\n\nRate limited per organization; a `Retry-After` header\naccompanies 429 responses.\n",
@@ -1842,6 +1905,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "domains:read"
+        ],
         "operationId": "downloadDomainZoneFile",
         "summary": "Download domain DNS zone file",
         "description": "Downloads a BIND-format DNS zone file containing the DNS records\nrequired for a domain claim. Agents should offer this after\n`addDomain` when users want to import DNS records instead of\ncopying each record manually.\n",
@@ -1895,6 +1961,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/inbox/status": {
       "get": {
+        "x-primitive-permission": [
+          "account:read"
+        ],
         "operationId": "getInboxStatus",
         "summary": "Get inbound inbox readiness",
         "description": "Returns one consolidated view of inbound domain readiness,\nwebhook/function processing routes, deployed Functions, and\nrecent inbound email activity.\n\nAgents should call this before guiding a user through inbound\nsetup. It answers the practical questions \"can I receive mail\",\n\"will anything process that mail\", and \"what should I do next\"\nwithout forcing clients to stitch together domains, endpoints,\nfunctions, and emails manually.\n",
@@ -1935,6 +2004,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/emails": {
       "get": {
+        "x-primitive-permission": [
+          "mail:read"
+        ],
         "operationId": "listEmails",
         "summary": "List inbound emails",
         "description": "Returns a paginated list of INBOUND emails received at your\nverified domains. Outbound messages sent via /send-mail are\nnot included; this endpoint is the inbox view, not a\nunified send/receive history.\n\nSupports filtering by domain, status, date range, and\nfree-text search across subject, sender, and recipient\nfields.\n\nFor a compact text-table summary of the most recent N\ninbounds (no filters, no cursor pagination), the CLI ships\n`primitive emails:latest` as a one-line-per-email shortcut.\nIt's TTY-aware so id columns are full UUIDs when piped, and\na `--json` flag returns the same envelope this endpoint\ndoes. Use whichever fits the call site.\n",
@@ -2123,6 +2195,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/emails/search": {
       "get": {
+        "x-primitive-permission": [
+          "mail:read"
+        ],
         "operationId": "searchEmails",
         "summary": "Search inbound emails",
         "description": "Searches inbound emails with structured filters and optional\nfull-text matching across parsed email fields. This endpoint is\noptimized for filtered inbox views and CLI polling workflows:\ncallers that only need new accepted mail can pass\n`sort=received_at_asc`, `snippet=false`, `include_facets=false`,\nand a `date_from` timestamp.\n\n`q`, `subject`, and `body` use the same English full-text index\nas the web inbox search. Structured filters such as `from`, `to`,\n`domain_id`, status, attachment presence, and spam score bounds\nare combined with the text query.\n\nThe text parameters (`q`, `from`, `to`, `subject` and `body`) must not\ncontain a NUL character; a value that does is rejected with a 400\nvalidation error.\n\nConnected-agent credentials search only mail received by their own\naddress. This applies to results, totals, facets, and every page;\nsearch filters cannot widen the credential's scope. When\n`reply_to_sent_email_id` is supplied, its parent send must belong\nto the connected address in the same organization. An unavailable\nparent returns 404. Sender filters are not authentication proof;\ninspect the email detail's authentication evidence before trusting it.\n",
@@ -2477,6 +2552,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "mail:read"
+        ],
         "operationId": "getEmail",
         "summary": "Get inbound email by id",
         "description": "Returns the full record for an inbound email received at one\nof your verified domains, including the parsed text and HTML\nbodies, threading metadata, SMTP envelope detail, webhook\ndelivery state, and a `replies` array for any outbound sends\nrecorded as replies to this inbound.\n\nFor listing inbound emails (with cursor pagination, status\nand date filters, and free-text search), use\n`/emails`. Outbound (sent) email records are NOT returned\nhere; use `/sent-emails/{id}` for those.\n\nThe response carries four sender-shaped fields whose\nmeanings overlap. `from_email` is the canonical \"who sent\nthis\" field for most use cases (parsed bare address from\nthe `From:` header, with a `sender` fallback). `from_header`\nis the raw header including any display name. `sender` and\n`smtp_mail_from` both carry the SMTP envelope MAIL FROM\n(return-path) and are equal by construction; `sender` is\nthe older field name retained for compatibility. See\n`primitive describe emails:get-email | jq '.responseSchema.properties'`\nfor per-field detail.\n",
@@ -2518,6 +2596,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "delete": {
+        "x-primitive-permission": [
+          "mail:delete"
+        ],
         "operationId": "deleteEmail",
         "summary": "Delete an email",
         "tags": [
@@ -2546,6 +2627,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "mail.raw:read"
+        ],
         "operationId": "downloadRawEmail",
         "summary": "Download raw email",
         "description": "Downloads the raw RFC 822 email file (.eml). Authenticates via\na signed download token (provided in webhook payloads) or a\nvalid session.\n",
@@ -2615,6 +2699,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "mail:read"
+        ],
         "operationId": "downloadAttachments",
         "summary": "Download email attachments",
         "description": "Downloads all attachments as a gzip-compressed tar archive.\nAuthenticates via a signed download token (provided in webhook\npayloads) or a valid session.\n",
@@ -2693,6 +2780,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "mail:read"
+        ],
         "operationId": "downloadEmailAttachmentPart",
         "summary": "Download one inbound email attachment",
         "description": "Pending service release. This contract does not establish live availability.\nDownloads the original bytes of one ordinary email attachment, selected by\nits metadata `part_index`, not its position in an attachments array. Refresh\nthe email detail after `attachment_changed` before choosing an index again.\nUses bearer authentication only; signed raw-email download tokens are not accepted.\nA paired-agent credential may read only a message addressed to its claimed address.\nFunction credentials are denied. Other bearer credentials retain their\nexisting email access boundaries. This endpoint serves email bytes only.\n",
@@ -2796,6 +2886,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "mail:read"
+        ],
         "parameters": [
           {
             "$ref": "#/components/parameters/AttachmentFilename"
@@ -2900,6 +2993,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "mail:read"
+        ],
         "operationId": "listEmailAttachmentArchiveMembers",
         "summary": "List the files inside a received zip or tar attachment",
         "description": "Lists the regular files inside a zip, tar or tar.gz attachment with each one's path, decoded size and SHA-256. The format is detected from the content. Unsafe paths refuse the whole archive, and resource limits bound the work (see the 413 and 422 responses). Authenticate with an organization API key, an authorized organization OAuth token, or an address-bound agent connection key. A connected agent reads only mail received at its own address. Function credentials are not supported. Discarded content is unavailable.",
@@ -3017,6 +3113,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "mail:read"
+        ],
         "operationId": "downloadEmailAttachmentArchiveMember",
         "summary": "Download one file from inside a received zip or tar attachment",
         "description": "Returns the decoded bytes of one regular file inside a zip, tar or tar.gz attachment, by its listed path. The archive's structure, every member path and every limit are checked as for the listing, but only the requested file is decoded and verified (its zip CRC-32, and X-Content-SHA256 of the bytes returned); list the archive to have every file decoded. Authenticate with an organization API key, an authorized organization OAuth token, or an address-bound agent connection key. A connected agent reads only mail received at its own address. Function credentials are not supported. Discarded content is unavailable.",
@@ -3112,6 +3211,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "mail:read"
+        ],
         "operationId": "downloadSentAttachmentPart",
         "summary": "Download one sent email attachment",
         "description": "Pending service release. This contract does not establish live availability.\nDownloads the original bytes of one ordinary email attachment, selected by\nits metadata `part_index`, not its position in an attachments array. Refresh\nthe email detail after `attachment_changed` before choosing an index again.\nUses bearer authentication only; signed raw-email download tokens are not accepted.\nA paired-agent credential may read only mail sent from its claimed address.\nReceiving a copy does not authorize downloading another sender's sent content.\nFunction credentials are denied. Other bearer credentials retain their\nexisting email access boundaries. This endpoint serves email bytes only.\n",
@@ -3215,6 +3317,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "mail:read"
+        ],
         "parameters": [
           {
             "$ref": "#/components/parameters/AttachmentFilename"
@@ -3319,6 +3424,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "mail:read"
+        ],
         "operationId": "listSentAttachmentArchiveMembers",
         "summary": "List the files inside a sent zip or tar attachment",
         "description": "Lists the regular files inside a zip, tar or tar.gz attachment with each one's path, decoded size and SHA-256. The format is detected from the content. Unsafe paths refuse the whole archive, and resource limits bound the work (see the 413 and 422 responses). Authenticate with an organization API key, an authorized organization OAuth token, or an address-bound agent connection key. A connected agent reads only mail sent from its own address. Function credentials are not supported. Discarded content is unavailable.",
@@ -3436,6 +3544,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "mail:read"
+        ],
         "operationId": "downloadSentAttachmentArchiveMember",
         "summary": "Download one file from inside a sent zip or tar attachment",
         "description": "Returns the decoded bytes of one regular file inside a zip, tar or tar.gz attachment, by its listed path. The archive's structure, every member path and every limit are checked as for the listing, but only the requested file is decoded and verified (its zip CRC-32, and X-Content-SHA256 of the bytes returned); list the archive to have every file decoded. Authenticate with an organization API key, an authorized organization OAuth token, or an address-bound agent connection key. A connected agent reads only mail sent from its own address. Function credentials are not supported. Discarded content is unavailable.",
@@ -3528,6 +3639,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "post": {
+        "x-primitive-permission": [
+          "mail:signal"
+        ],
         "operationId": "stopRepeatFromEmail",
         "summary": "Stop the repeat behind a received message",
         "description": "Called by the recipient of a repeating send: the connected agent's own\ncredential for an agent address, or the signed-in member whose personal\naddress it is. `id` is the caller's received copy of any message of the\nrepeat, or the repeat id printed in the message footer, which resolves\nto the caller's newest received copy. Stops the repeat when it lets the recipient stop it, cancels the\npending message, and replies once in the thread with a\n`repeat.stop/1` interaction so the sender sees it. A repeat call returns\nthe same result without a second reply.\n",
@@ -3606,6 +3720,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "post": {
+        "x-primitive-permission": [
+          "mail:reply"
+        ],
         "operationId": "replyToEmail",
         "summary": "Reply to an inbound email",
         "description": "Sends an outbound reply to the inbound email identified by `id`.\nThreading headers (`In-Reply-To`, `References`), recipient\nderivation (Reply-To, then From, then bare sender), and the\n`Re:` subject prefix are all derived server-side from the\nstored inbound row. The request body carries only the message\nbody, optional From override, optional attachments, optional\n`wait` flag, and optional `reply_all` flag, which also copies\nevery other To and Cc address of the inbound (never Bcc).\nPassing any header or explicit recipient override is rejected\nby the schema (`additionalProperties: false`).\n\nForwards through the same gates as `/send-mail`: the response\nstatus, error envelope, and `idempotent_replay` flag mirror\nthe send-mail contract verbatim.\n",
@@ -3731,6 +3848,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "post": {
+        "x-primitive-permission": [
+          "mail.state:write"
+        ],
         "operationId": "replayEmailWebhooks",
         "summary": "Replay email webhooks",
         "description": "Re-delivers the webhook payload for this email to all active\nendpoints matching the email's domain. Rate limited per-email\n(short cooldown between successive replays of the same email)\nand per-org (burst + sustained windows), sharing an org-wide\nbudget with delivery replays.\n",
@@ -3782,6 +3902,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "post": {
+        "x-primitive-permission": [
+          "mail.state:write"
+        ],
         "operationId": "discardEmailContent",
         "summary": "Discard email content",
         "description": "Permanently deletes the email's raw bytes, parsed body (text + HTML),\nand attachments while preserving metadata (sender, recipient,\nsubject, timestamps, hashes, attachment manifest) for audit logs.\nIdempotent: a second call returns success with\n`already_discarded: true` and does no work.\n\n**Gated** on the customer's discard-content opt-in (managed in the\ndashboard at Settings > Webhooks). When the toggle is off, this\nendpoint returns `403` with code `discard_not_enabled` and a\nmessage pointing the human at the dashboard. There is intentionally\nno API to flip this toggle. Opting in to a destructive,\nnon-reversible operation must be a deliberate human click in the\nUI.\n",
@@ -3842,6 +3965,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "mail:read"
+        ],
         "operationId": "getConversation",
         "summary": "Get the conversation an email belongs to",
         "description": "Returns the full conversation the given inbound email belongs\nto, as ordered, ready-to-prompt turns WITH bodies. It resolves\nthe thread from the email and returns every message oldest-first,\nso an agent that received an email can pass `messages` straight\nto a chat model in one call instead of walking `/threads/{id}`\nplus `/emails/{id}` and `/sent-emails/{id}` per message.\n\nEach message carries a `direction` (`inbound` | `outbound`) and a\nderived `role`: `inbound` -> `user`, `outbound` -> `assistant`\n(your own prior replies). The role mapping assumes the caller\nowns the outbound side, which is the agent-reply case this exists\nfor. If the email has no thread yet (a brand-new message), the\nconversation is just that one message as a single user turn.\n\nThe message list is capped; check `truncated` to detect when\nolder messages were omitted. Consecutive same-role turns are not\nmerged here; that normalization is model-specific and left to the\ncaller.\n\nPass `since` for an incremental read. `since=start` returns the\nfull conversation plus a `cursor`. Sending that `cursor` back as\n`since` returns only the messages created or changed after it,\noldest first, with the same per-message shape, and a new\n`cursor`. Without `since` the response carries no `cursor` and\nno per-message `status`.\n",
@@ -3896,6 +4022,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/endpoints": {
       "get": {
+        "x-primitive-permission": [
+          "endpoints.pull:manage"
+        ],
         "operationId": "listEndpoints",
         "summary": "List webhook endpoints",
         "description": "Returns all active (non-deleted) webhook endpoints.",
@@ -3934,6 +4063,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "post": {
+        "x-primitive-permission": [
+          "endpoints.pull:manage"
+        ],
         "operationId": "createEndpoint",
         "summary": "Create a webhook endpoint",
         "description": "Creates a new webhook endpoint. If a deactivated endpoint\nwith the same URL and domain exists, it is reactivated\ninstead. Subject to plan limits on the number of active\nendpoints.\n\n**Signing is account-scoped, not per-endpoint.** This call\ndoes not return any signing material; every endpoint on the\naccount uses the same webhook secret, fetched via\n`GET /account/webhook-secret`. See the API-level \"Webhook\nsigning\" section for the full wire format (header name,\nsigned string, hash algo, secret format, tolerance) and a\nlanguage-agnostic verification recipe.\n\nAfter creating the endpoint, fire a test delivery against\nit via `POST /endpoints/{id}/test` to confirm your verifier\naccepts the signature.\n\n\nFor local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named creation resumes the same active destination; omitted filters preserve its selection, while conflicting supplied configuration returns 409. New unfiltered destinations receive all subsequently ready eligible event types within their credential scope. Connected-agent credentials automatically create private subscriptions restricted to inbound email for their assigned address. Names are isolated per credential; revocation or replacement deletes its subscriptions. Address-scoped events contain parsed mail without raw MIME, signed download links, routing metadata, or sibling envelope recipients. Pull destinations do not occupy HTTP routing slots. Signing-secret setup and a test HTTP delivery are not required for pull receiving.",
@@ -4017,6 +4149,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "patch": {
+        "x-primitive-permission": [
+          "endpoints:manage"
+        ],
         "operationId": "updateEndpoint",
         "summary": "Update a webhook endpoint",
         "description": "Updates an active webhook endpoint. If the URL is changed, the old\nendpoint is deactivated and a new one is created (or an existing\ndeactivated endpoint with the new URL is reactivated).\n\n\nPull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint deletion disconnects the destination; creating a new destination does not backfill historical events.",
@@ -4071,6 +4206,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "delete": {
+        "x-primitive-permission": [
+          "endpoints.pull:manage"
+        ],
         "operationId": "deleteEndpoint",
         "summary": "Delete a webhook endpoint",
         "description": "Soft-deletes a webhook endpoint. The endpoint will no longer\nreceive webhook deliveries.\n",
@@ -4100,6 +4238,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "post": {
+        "x-primitive-permission": [
+          "endpoints:pull"
+        ],
         "operationId": "pullWebhookEvent",
         "summary": "Receive a pending webhook event without a public endpoint",
         "description": "Wait up to 30 seconds for one existing event. The body string preserves the exact webhook serialization; headers and canonical occurrence/type metadata travel alongside it. A fixed lease protects the attempt while a short handler accepts input. Retry may redeliver an occurrence: deduplicate event_id. Empty delivery means no offer now, not proof all input was delivered; inspect backlog and persistent gap_count/last_gap_reason. Queue retention is 24 hours and does not extend source-content retention. Disconnecting preserves pending work. Same named destination shares consumption; different destinations get independent copies.",
@@ -4164,6 +4305,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "post": {
+        "x-primitive-permission": [
+          "endpoints:pull"
+        ],
         "operationId": "completeWebhookEvent",
         "summary": "Report the outcome of a local webhook delivery attempt",
         "description": "Report normalized handling evidence for the queue, attempt and lease. Required JSON fields: queue_id, delivery_id, lease_token, mode, duration_ms. For mode=exec include exit_code; stdout includes write_succeeded; http includes status_code and optional transport_error, error_code, confirmed. Supply this discriminated request with --raw-body in the generated CLI. The server classifies success and retry. Duplicate identical completion is idempotent; a stale lease cannot finish a newer attempt. Exec success means durable input acceptance, not completion of agent reasoning. Only successful HTTP handling with recognized confirmation evidence can confirm content discard. Never send arbitrary handler output or HTTP response bodies.",
@@ -4228,6 +4372,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "post": {
+        "x-primitive-permission": [
+          "endpoints:manage"
+        ],
         "operationId": "testEndpoint",
         "summary": "Send a test webhook",
         "description": "Sends a sample `email.received` event to the endpoint. The request\nincludes SSRF protection (private IP rejection and DNS pinning).\nRate limited to 4 per minute and 30 per hour (non-exempt).\nSuccessful deliveries and verified-domain endpoints are exempt\nfrom the rate limit.\n",
@@ -4279,6 +4426,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "post": {
+        "x-primitive-permission": [
+          "endpoints:manage"
+        ],
         "operationId": "testEndpointRules",
         "summary": "Dry-run endpoint rules against a received email",
         "description": "Evaluates the endpoint's filtering rules against an\nalready-received email WITHOUT delivering anything. The same\nshared matcher the live delivery paths use produces the\nverdict, so the response explains exactly why a webhook fired\nor was suppressed for that message.\n\nWhen delivery would be suppressed, `rule` names the failing\nrule and `reason` carries a human-readable explanation; both\nare null when the message matches. `evaluated` echoes the\nmessage metadata the matcher compared (size, attachments, and\nthe authenticated From identity versus the raw envelope\nsender), so a surprising verdict can be traced to its inputs.\n\nTwo independent gates are surfaced separately:\n`subscribed_to_event` reports the endpoint's event-type\nsubscription (checked before message matching), and\n`rules_valid` reports whether the stored rules blob parsed at\nall. Delivery fails OPEN on an invalid blob (the message is\ndelivered as if unfiltered), so `rules_valid: false` exposes a\nmisconfiguration that is otherwise silent.\n",
@@ -4346,6 +4496,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/filters": {
       "get": {
+        "x-primitive-permission": [
+          "filters:manage"
+        ],
         "operationId": "listFilters",
         "summary": "List filter rules",
         "description": "Returns all whitelist and blocklist filter rules.",
@@ -4384,6 +4537,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "post": {
+        "x-primitive-permission": [
+          "filters:manage"
+        ],
         "operationId": "createFilter",
         "summary": "Create a filter rule",
         "description": "Creates a new whitelist or blocklist filter. Per-domain filters\nrequire a Pro plan. Patterns are stored as lowercase.\n",
@@ -4442,6 +4598,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "patch": {
+        "x-primitive-permission": [
+          "filters:manage"
+        ],
         "operationId": "updateFilter",
         "summary": "Update a filter rule",
         "description": "Toggle a filter's enabled state.",
@@ -4493,6 +4652,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "delete": {
+        "x-primitive-permission": [
+          "filters:manage"
+        ],
         "operationId": "deleteFilter",
         "summary": "Delete a filter rule",
         "tags": [
@@ -4516,6 +4678,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/wake/schedules": {
       "get": {
+        "x-primitive-permission": [
+          "wake:manage"
+        ],
         "operationId": "listWakeSchedules",
         "summary": "List wake schedules",
         "description": "Returns the org's wake.dispatch schedules.",
@@ -4554,6 +4719,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "post": {
+        "x-primitive-permission": [
+          "wake:manage"
+        ],
         "operationId": "createWakeSchedule",
         "summary": "Create a wake schedule",
         "description": "Create a cron schedule that sends a wake.dispatch command to one of your\nown function addresses. `from` and `to` must differ (no self-dispatch);\nthe cron expression and IANA timezone are validated and the first fire\ntime is computed without firing immediately.\n",
@@ -4609,6 +4777,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "wake:manage"
+        ],
         "operationId": "getWakeSchedule",
         "summary": "Get a wake schedule",
         "tags": [
@@ -4646,6 +4817,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "patch": {
+        "x-primitive-permission": [
+          "wake:manage"
+        ],
         "operationId": "updateWakeSchedule",
         "summary": "Update a wake schedule",
         "description": "Update a schedule's command, args, cadence, addresses, note, or enabled\nstate. Changing the cadence (or re-enabling) recomputes the next fire time.\n",
@@ -4697,6 +4871,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "delete": {
+        "x-primitive-permission": [
+          "wake:manage"
+        ],
         "operationId": "deleteWakeSchedule",
         "summary": "Delete a wake schedule",
         "tags": [
@@ -4722,6 +4899,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "post": {
+        "x-primitive-permission": [
+          "wake:manage"
+        ],
         "operationId": "runWakeSchedule",
         "summary": "Run a wake schedule now",
         "description": "Fire the schedule immediately, sending one wake.dispatch via the same\nsigned-send path as a scheduled fire. Does not change the schedule's next\nfire time.\n",
@@ -4766,6 +4946,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/wake/authorizations": {
       "get": {
+        "x-primitive-permission": [
+          "wake:manage"
+        ],
         "operationId": "listWakeAuthorizations",
         "summary": "List wake authorizations",
         "description": "Returns the per-target allowlist grants that authorize which senders may\nwake a function. Optionally filter by the target endpoint.\n",
@@ -4819,6 +5002,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "post": {
+        "x-primitive-permission": [
+          "wake:manage"
+        ],
         "operationId": "createWakeAuthorization",
         "summary": "Create a wake authorization",
         "description": "Grant a sender domain (and optionally a specific address and command set)\npermission to wake a target function. The domain must be fully-qualified.\n",
@@ -4880,6 +5066,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "patch": {
+        "x-primitive-permission": [
+          "wake:manage"
+        ],
         "operationId": "updateWakeAuthorization",
         "summary": "Update a wake authorization",
         "description": "Toggle a wake authorization's enabled state.",
@@ -4931,6 +5120,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "delete": {
+        "x-primitive-permission": [
+          "wake:manage"
+        ],
         "operationId": "deleteWakeAuthorization",
         "summary": "Delete a wake authorization",
         "tags": [
@@ -4951,6 +5143,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/wake/dispatches": {
       "get": {
+        "x-primitive-permission": [
+          "wake:manage"
+        ],
         "operationId": "listWakeDispatches",
         "summary": "List recent wake dispatches",
         "description": "Read-only audit of recent wake.dispatch interactions for the org.",
@@ -5005,6 +5200,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/routes": {
       "get": {
+        "x-primitive-permission": [
+          "routes:manage"
+        ],
         "operationId": "listRoutes",
         "summary": "List recipient routes",
         "description": "Returns the org's recipient routing rules in evaluation order. Each rule\nbinds a recipient address pattern to one endpoint; inbound mail resolves\nto a single destination at delivery time.\n",
@@ -5043,6 +5241,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "post": {
+        "x-primitive-permission": [
+          "routes:manage"
+        ],
         "operationId": "createRoute",
         "summary": "Create a recipient route",
         "description": "Binds a recipient pattern to a destination. Provide exactly one of\n`endpoint_id` (an existing endpoint) or `function_id`. With `function_id`,\na dedicated route-target endpoint is minted for that function in the same\ntransaction, enabling per-address function routing (e.g.\n`alice@acme.com -> functionA`).\n",
@@ -5099,6 +5300,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/routes/reorder": {
       "post": {
+        "x-primitive-permission": [
+          "routes:manage"
+        ],
         "operationId": "reorderRoutes",
         "summary": "Reorder recipient routes",
         "description": "Update the priority of one or more routes in a single call.",
@@ -5152,6 +5356,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/routes/simulate": {
       "post": {
+        "x-primitive-permission": [
+          "routes:manage"
+        ],
         "operationId": "simulateRoute",
         "summary": "Simulate routing for a recipient",
         "description": "Resolves where an inbound email to `recipient` would be delivered, with a\ntrace of every rule evaluated and why. Read-only; creates nothing.\n",
@@ -5207,6 +5414,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "patch": {
+        "x-primitive-permission": [
+          "routes:manage"
+        ],
         "operationId": "updateRoute",
         "summary": "Update a recipient route",
         "tags": [
@@ -5263,6 +5473,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "delete": {
+        "x-primitive-permission": [
+          "routes:manage"
+        ],
         "operationId": "deleteRoute",
         "summary": "Delete a recipient route",
         "tags": [
@@ -5283,6 +5496,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/webhooks/deliveries": {
       "get": {
+        "x-primitive-permission": [
+          "webhooks:read"
+        ],
         "operationId": "listDeliveries",
         "summary": "List webhook deliveries",
         "description": "Returns a paginated list of webhook delivery attempts, newest first.\nA delivery of an inbound email includes a nested `email` object with\nsender, recipient, and subject. A delivery of an opt-in\n`sent_email.*` event has `email_id` and `email` set to null and\n`sent_email_id` set to the send it is about. Filter by `event_type`\nand `sent_email_id` to find the deliveries of one send.\n",
@@ -5407,6 +5623,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "post": {
+        "x-primitive-permission": [
+          "webhooks:replay"
+        ],
         "operationId": "replayDelivery",
         "summary": "Replay a webhook delivery",
         "description": "Re-sends a previous delivery to its original endpoint. If that\nendpoint was deleted or deactivated, the replay is rejected.\nSupports inbound email deliveries and `sent_email.*` deliveries.\nAn inbound email delivery is replayed with its original stored\npayload and event id. A `sent_email.*` delivery is replayed with the\nsame event id but a payload rebuilt from the send as it is now; it\nis rejected if the send was deleted or the endpoint is no longer an\nactive http endpoint. Rate limited per-org, sharing an org-wide\nbudget with email replays.\n",
@@ -5453,6 +5672,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/send-permissions": {
       "get": {
+        "x-primitive-permission": [
+          "account:read"
+        ],
         "operationId": "getSendPermissions",
         "summary": "List send-permission rules",
         "description": "Returns a flat list of rules describing every recipient the\ncaller may send to. Each rule has a `type`, a kind-specific\npayload, and a human-readable `description`. If any rule\nmatches the recipient, /send-mail will accept the send under\nthe recipient-scope check.\n\nThe endpoint is the answer to \"where can I send\" without\nexposing internal entitlement names. Agents that don't\nrecognize a `type` can still read the `description` prose\nand act on it.\n\nRule kinds, ordered broadest-first so an agent can stop\nscanning at the first match:\n\n  1. `any_recipient` (one entry, only when the org can send\n     anywhere): every other rule below it is redundant.\n  2. `managed_zone` (always emitted, one per Primitive-managed\n     zone): sends to any address at *.primitive.email or\n     *.email.works always succeed; no entitlement required.\n  3. `your_domain` (one per active verified outbound domain\n     owned by the org): sends to that domain are approved.\n  4. `address` (one per address that has authenticated\n     inbound mail to the org, capped at `meta.address_cap`):\n     sends to that exact address are approved.\n\nThe list is informational, not an authorization check.\n/send-mail remains the source of truth on whether an\nindividual send will succeed (it also enforces the\nfrom-address and the `send_mail` entitlement, which are\nnot recipient-scope concerns and are not represented here).\n",
@@ -5500,6 +5722,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/send-mail": {
       "post": {
+        "x-primitive-permission": [
+          "mail:send"
+        ],
         "operationId": "sendEmail",
         "summary": "Send outbound email",
         "description": "Sends an outbound email through Primitive's outbound relay. By default\nthe request returns once the relay accepts the message for delivery.\nSet `wait: true` to wait for the first downstream SMTP delivery outcome.\n\n**Host routing.** /send-mail is served by the canonical API host\n(`https://api.primitive.dev/v1`) so the request body can carry\ninline attachments up to ~30 MiB raw. The legacy dashboard\ncompatibility host (`https://www.primitive.dev/api/v1`) also accepts\n/send-mail, but Vercel request body limits apply before proxying.\nThe typed SDKs route /send-mail to the canonical API host\nautomatically.\n",
@@ -5624,6 +5849,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/semantic-search": {
       "post": {
+        "x-primitive-permission": [
+          "mail.search:semantic"
+        ],
         "operationId": "semanticSearch",
         "summary": "Semantic search across received and sent mail",
         "description": "Ranked search across both received and sent mail. The `mode`\nfield selects the ranking strategy:\n\n- `keyword`: lexical full-text matching only (no embeddings).\n- `semantic`: meaning-based matching using vector embeddings.\n- `hybrid` (default): blends the semantic and keyword signals.\n\nResults are ordered by a relevance `score`. Every row reports the\nfields it matched (`matched_fields`), a match-centered excerpt per\nfield (`snippets`), and a `score_breakdown` whose components account\nfor the `score`. Page through results by passing the prior\nresponse's `meta.cursor` back as `cursor`.\n\nRequires the Pro plan and the `semantic_search_enabled`\nentitlement; callers without them receive `403`.\n",
@@ -5696,6 +5924,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/outbound/status": {
       "get": {
+        "x-primitive-permission": [
+          "account:read"
+        ],
         "operationId": "getOutboundStatus",
         "summary": "Get outbound sending readiness",
         "description": "The \"what can I send From?\" bootstrap, the outbound mirror of\n/inbox/status. Returns per-domain sending readiness for every\ndomain in the caller's org, plus the flat `sendable_domains`\nlist of From-domains the org may send from right now. That\nlist is the same set echoed in a `cannot_send_from_domain`\nerror's details, so orienting here before a send and\nrecovering from that error use identical data.\n\nEach domain's `status` collapses the sending prerequisites\ninto one actionable state: `sendable`, `pending_ownership`\n(ownership TXT not verified), `pending_outbound_dns`\n(SPF/DKIM/DMARC not verified), or `inactive` (domain\ndeactivated). `next_actions` lists concrete remediation steps,\neach with a suggested CLI command where one exists.\n",
@@ -5733,6 +5964,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/repeating-sends": {
       "get": {
+        "x-primitive-permission": [
+          "sent:manage"
+        ],
         "operationId": "listRepeatingSends",
         "summary": "List repeating sends",
         "description": "Repeating sends you created, newest first. A repeat is visible to the\nmember who created it, or to any organization API key or member for\nrepeats created with an organization API key. Agent credentials get\n403.\n",
@@ -5801,6 +6035,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "sent:manage"
+        ],
         "operationId": "getRepeatingSend",
         "summary": "Get a repeating send",
         "tags": [
@@ -5838,6 +6075,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "patch": {
+        "x-primitive-permission": [
+          "sent:manage"
+        ],
         "operationId": "updateRepeatingSend",
         "summary": "Update a repeating send",
         "description": "Pause, resume or cancel a repeat, or change its cadence, limits,\nmessage or whether the recipient may stop it. `active` resumes a paused\nrepeat or one the recipient stopped; the next message goes out within\nabout a minute. A null `only_if_recipient_idle_minutes`, `max_sends`\nor `until` clears that limit.\n",
@@ -5889,6 +6129,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "delete": {
+        "x-primitive-permission": [
+          "sent:manage"
+        ],
         "operationId": "deleteRepeatingSend",
         "summary": "Delete a repeating send",
         "description": "Deletes the repeat and cancels its pending message. Messages already sent are not affected.",
@@ -5910,6 +6153,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/sent-emails": {
       "get": {
+        "x-primitive-permission": [
+          "mail:read"
+        ],
         "operationId": "listSentEmails",
         "summary": "List outbound sent emails",
         "description": "Returns a paginated list of OUTBOUND emails the caller's\norg has sent via /send-mail (and /emails/{id}/reply, which\nforwards through /send-mail). Includes every recorded\nattempt, including gate-denied attempts that the agent\nnever called and rows still in `queued` state.\n\nUnder an address-bound agent connection credential, the\nlist holds this agent's own sends plus delivered sends from\nother addresses in the org that name this agent in to, cc\nor bcc and have matching inbound delivery evidence at this\nagent. Pass `from` with the agent's own address to list\nonly its own sends.\n\nFor inbound mail received at your verified domains, see\n/emails. There is no unified send/receive history endpoint;\nthe two surfaces are intentionally separate because the\nunderlying tables, statuses, and lifecycle differ.\n\nEmail bodies (`body_text`, `body_html`) are NOT included on\nlist rows so a 50-row page can't balloon into a multi-MB\nresponse when sends are near the 5MB body cap. Use\n/sent-emails/{id} to fetch a single row with bodies, or\ncross-reference by `client_idempotency_key` if the caller\nalready has the body locally.\n",
@@ -6063,6 +6309,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/sent-emails/{id}": {
       "delete": {
+        "x-primitive-permission": [
+          "sent:manage"
+        ],
         "operationId": "deleteSentEmail",
         "summary": "Delete a sent email",
         "description": "Permanently deletes sender mailbox history and its owned attachment archive\nand transient payload. Allows delivered, bounced, agent_failed, gate_denied,\ncanceled, deferred and wait_timeout; other states return 409. Cancel scheduled\nsends first. This does not recall or cancel delivery already admitted.\nRecipient copies, received replies and independent audit records are preserved.\nOccupied idempotency keys and delivered-reply deduplication remain reserved.\nKeys already released by cancellation, gate denial or a never-attempted failure\nremain reusable. Repeating a completed deletion succeeds; unknown or foreign\nIDs return 404. Organization API keys, sessions and OAuth are supported;\nFunction and connected-agent credentials are denied.\n",
@@ -6148,6 +6397,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "get": {
+        "x-primitive-permission": [
+          "mail:read"
+        ],
         "operationId": "getSentEmail",
         "summary": "Get a sent email by id",
         "description": "Returns the full sent-email record by id, including\n`body_text` and `body_html` (omitted from the listing\nendpoint to keep paginated responses small). Use this when\ndiagnosing a specific send, e.g. inspecting the receiver's\nSMTP response on a `bounced` row or pulling the gate\ndenial detail on a `gate_denied` row.\n\nUnder an address-bound agent connection credential, only\nids in the same scope as /sent-emails resolve: this agent's\nown sends, and delivered sends addressed to it with\nmatching inbound delivery evidence. Other ids return 404.\n",
@@ -6194,6 +6446,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "patch": {
+        "x-primitive-permission": [
+          "sent:manage"
+        ],
         "operationId": "rescheduleSentEmail",
         "summary": "Reschedule a scheduled send",
         "description": "Moves a STILL-SCHEDULED send (status `scheduled`) to a new\nexecution time. The new `scheduled_at` must be in the future\nand at most 30 days out, the same bounds as the create-time\nfield on /send-mail.\n\nThe update is a compare-and-swap on `status = 'scheduled'`:\nonce the scheduler has claimed the row for execution, or it\nwas already canceled or executed, the update loses and the\ncall returns a 409 `not_scheduled` conflict naming the row's\ncurrent status. A due send can therefore never be moved out\nfrom under an in-progress execution.\n\nReturns the full updated sent-email record on success.\n",
@@ -6273,6 +6528,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/agent-connections": {
       "post": {
+        "x-primitive-permission": [
+          "agent_connections:manage"
+        ],
         "operationId": "createAgentConnection",
         "tags": [
           "Agent Connections"
@@ -6789,6 +7047,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "get": {
+        "x-primitive-permission": [
+          "agent_connections:manage"
+        ],
         "operationId": "listAgentConnections",
         "tags": [
           "Agent Connections"
@@ -7148,6 +7409,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/agent-connections/{address}/invitation": {
       "post": {
+        "x-primitive-permission": [
+          "agent_connections:manage"
+        ],
         "operationId": "inviteAgentConnection",
         "tags": [
           "Agent Connections"
@@ -7526,6 +7790,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/agent-connections/{address}": {
       "delete": {
+        "x-primitive-permission": [
+          "agent_connections:update"
+        ],
         "operationId": "revokeAgentConnection",
         "tags": [
           "Agent Connections"
@@ -7855,6 +8122,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/agent-connections/{address}/remove": {
       "post": {
+        "x-primitive-permission": [
+          "agent_connections:manage"
+        ],
         "operationId": "removeAgentConnection",
         "tags": [
           "Agent Connections"
@@ -8097,6 +8367,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/agent-connections/claim": {
       "post": {
+        "x-primitive-permission": [
+          "agent_connections:update"
+        ],
         "operationId": "claimAgentConnection",
         "tags": [
           "Agent Connections"
@@ -8604,6 +8877,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/changes": {
       "get": {
+        "x-primitive-permission": [
+          "changes:read"
+        ],
         "operationId": "listChanges",
         "summary": "Long-poll what changed",
         "description": "One feed of small invalidations (ids and kinds) for everything an app keeps a snapshot of: inbound mail, sent mail, the member's conversation read state, the agent directory and presence, and the credential's own access. Non-consumptive and replayable: any number of devices can read the same cursor independently.\n\nStart with `since=start` (or no `since`): it returns an empty page whose `next_cursor` is a baseline. Take it BEFORE the initial list reads; every change that commits after it is delivered, including ones those reads already reflect. Then call with `since=<next_cursor>&wait=20` in a loop. Changes come oldest first in commit order, at least once: a write that commits late is never skipped, because positions are assigned at commit.\n\nEvery change is scoped to what this credential's full reads would show: a connected agent sees only its own mail, its own sends and sends it provably received; mail held for sender authentication is announced only when released; read state reaches only the member it belongs to; agent changes reach members and agents allowed to view the network; organization API keys receive no agent changes. Function credentials cannot call this.\n\nChanges are kept 7 days. A cursor answers 410 `cursor_expired` only when changes after it were pruned (an idle cursor stays valid); rebuild the snapshots from `since=start`.",
@@ -8773,6 +9049,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/sent-emails/cancel": {
       "post": {
+        "x-primitive-permission": [
+          "sent:cancel"
+        ],
         "operationId": "cancelSentEmailByIdempotencyKey",
         "summary": "Cancel a scheduled send by idempotency key",
         "description": "Cancels the still-scheduled send created with this `Idempotency-Key` (matched exactly), as `POST /sent-emails/{id}/cancel` does, and releases the key. 404 `not_found`: no send this credential can act on was created with the key. 409 `not_scheduled`: the send holding the key is no longer scheduled; `error.details` names its `sent_email_id` and `status` (`canceled` if already canceled). Pass `created_before` on a retry so it cannot reach a newer send that reused the released key. A connected agent can cancel any scheduled send from its own address, whoever created it, and no other.",
@@ -8933,6 +9212,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "post": {
+        "x-primitive-permission": [
+          "sent:manage"
+        ],
         "operationId": "cancelSentEmail",
         "summary": "Cancel a scheduled send",
         "description": "Cancels a STILL-SCHEDULED send (status `scheduled`), moving it\nto the terminal `canceled` status. Nothing is dispatched and\nthe row is kept for historical lookup with `canceled_at` set.\n\nUses the same compare-and-swap guard as reschedule: once the\nscheduler has claimed the row for execution, or it was already\ncanceled or executed, the call returns a 409 `not_scheduled`\nconflict naming the row's current status. Canceling can\ntherefore never race an in-progress execution; a send that\nreports `canceled` was never handed to the delivery path.\n\nReturns the full updated sent-email record on success.\n",
@@ -8997,6 +9279,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/sent-emails/{id}/reply": {
       "get": {
+        "x-primitive-permission": [
+          "mail:read"
+        ],
         "operationId": "awaitReply",
         "summary": "Get (or wait for) the reply to a sent email",
         "description": "Returns the first threaded inbound reply to a send, keyed by\nthe inbound email's `reply_to_sent_email_id`. This is the\ncanonical \"did a reply arrive for this send?\" call: after\n/send-mail, poll (or long-poll) here instead of hand-rolling\nan /emails/search loop.\n\nBy default the call returns immediately with `reply: null`\nwhen nothing has arrived yet. Set `wait=true` to long-poll:\nthe server holds the request up to `wait_timeout_ms`\n(default 10000, max 30000), returning as soon as the first\nreply lands. On a wait that elapses with no reply, the\nresponse has `reply: null` and `timed_out: true`.\n\nThe reply object is compact (headers plus bodies); fetch\n`/emails/{id}` with `reply.id` for the fully parsed record,\nor `/threads/{thread_id}` for the whole back-and-forth.\n",
@@ -9068,6 +9353,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "mail:read"
+        ],
         "operationId": "getThread",
         "summary": "Get a conversation thread by id",
         "description": "Returns a conversation thread: its metadata plus the inbound\nand outbound messages that belong to it, interleaved in time\norder (oldest first). A thread spans both received emails and\nyour sends, so an agent can reconstruct an entire back-and-forth\nfrom one call instead of walking reply headers.\n\nEach message carries a `direction` (`inbound` | `outbound`) and\nan `id`; fetch the full message via `/emails/{id}` or\n`/sent-emails/{id}` accordingly. Bodies are omitted here to keep\nthe thread view lightweight.\n\nDiscover a thread id from the `thread_id` field on any email or\nsent-email (list or detail). The message list is capped; compare\n`message_count` against `messages.length` to detect truncation.\n",
@@ -9111,6 +9399,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/functions": {
       "get": {
+        "x-primitive-permission": [
+          "functions:read"
+        ],
         "operationId": "listFunctions",
         "summary": "List functions",
         "description": "Returns every active (non-deleted) function in the org, newest\nfirst. Each entry carries deploy status and timestamps. To\ninspect the source code or deploy errors, use `GET /functions/{id}`.\n",
@@ -9149,6 +9440,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "post": {
+        "x-primitive-permission": [
+          "functions:deploy"
+        ],
         "operationId": "createFunction",
         "summary": "Deploy a function",
         "description": "Creates and deploys a new function. The handler must be a single\nESM module whose default export is an object with an async\n`fetch(request, env)` method (Workers-style). Primitive signs\neach delivery and forwards the `Primitive-Signature` header to\nthe handler. Verify the raw request body with\n`PRIMITIVE_WEBHOOK_SECRET` before parsing JSON; after verification\nthe request body parses to a webhook event whose `event` field is\n`email.received` for normal inbound mail, or a machine-mail type\n(`email.bounced`, `email.tls_report`, `email.dmarc_report`,\n`email.dmarc_failure`) for bounces and reports. Code is bundled\nbefore being uploaded; ship a single self-contained file rather\nthan relying on external imports.\n\n**Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`\n(optional) is capped at 5 MiB UTF-8, stored with each deployment\nattempt, and sent to the runtime so stack traces can resolve to\noriginal source files.\n\n**Routing.** On successful deploy, the function code is live\nin the runtime, but inbound mail will not reach it until at\nleast one route is bound. Routes are managed from the Primitive\ndashboard. A `deploy_status` of `deployed` means the script is\ninstalled, not that the function is receiving mail. The\ninternal runtime URL is not returned by the API and is not a\ncustomer-facing integration surface.\n\n**Secrets.** New functions ship with the managed secrets\n(`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`,\n`PRIMITIVE_API_BASE_URL`) already bound. Add user-set secrets via\n`POST /functions/{id}/secrets`; secret writes only land in the\nrunning handler on the next redeploy.\n",
@@ -9230,6 +9524,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "functions:read"
+        ],
         "operationId": "getFunction",
         "summary": "Get a function",
         "description": "Returns the full record for a function, including its current\nsource code and the deploy status / error from the most recent\ndeploy attempt.\n",
@@ -9268,6 +9565,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "put": {
+        "x-primitive-permission": [
+          "functions:deploy"
+        ],
         "operationId": "updateFunction",
         "summary": "Update and redeploy a function",
         "description": "Replaces the function's source code with the body's `code` and\ntriggers a redeploy. Same size limits as `POST /functions`.\nUse this verb to push secret writes into the running handler:\npassing the same `code` re-runs the deploy and refreshes the\nbinding set with the latest values from the secrets table.\n\nOn deploy failure, the previously-deployed code stays live; the\nruntime never serves a half-built bundle. The response uses\n`error.code` `deploy_failed`, and the function's `deploy_error`\nfield carries the latest deploy error for dashboard/API reads.\n",
@@ -9335,6 +9635,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "delete": {
+        "x-primitive-permission": [
+          "functions:manage"
+        ],
         "operationId": "deleteFunction",
         "summary": "Delete a function",
         "description": "Soft-deletes the function row, removes the script from the edge\nruntime, and deactivates any route bound to this function so no\nfurther inbound mail is delivered. Past deploy history,\ninvocations, and logs are retained.\n\nReturns 502 if the runtime delete fails partway; the function\nrow stays in place and the call is safe to retry until it\nsucceeds.\n",
@@ -9364,6 +9667,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "post": {
+        "x-primitive-permission": [
+          "functions:deploy"
+        ],
         "operationId": "testFunction",
         "summary": "Send a test invocation",
         "description": "Sends a real test email from a Primitive-controlled sender to a\nlocal-part on one of the org's verified inbound domains. By\ndefault the recipient is a synthetic\n`__primitive_function_test+<random>@<domain>` address on a\ndomain selected to route to the function. Scoped functions use\ntheir scoped domain; fallback functions use a domain that has\nno enabled domain-scoped endpoint. Pass `local_part` to\noverride and exercise routing logic that branches on a specific\nrecipient (the common pattern when one function handles multiple\ninboxes like `summarize@` and `action@`). The function fires\nthrough the normal MX delivery path, so reply / send-mail calls\nfrom inside the handler against the inbound's `email.id` work\nthe same as in production. Returns immediately after the send is\nqueued; the invocation appears on the function's invocations\nlist within a few seconds.\n\nRequires that the function is currently `deployed`. Returns 422\nif the function is in `pending` or `failed` state, or if the\norg has no verified inbound domain to receive the test mail.\nReturns 400 if `local_part` is set to a value that does not\nmatch the local-part character set.\n",
@@ -9465,6 +9771,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "functions:manage"
+        ],
         "operationId": "getFunctionTestRunTrace",
         "summary": "Get a function test run trace",
         "description": "Returns the current end-to-end trace for a function test run.\nThe trace is intentionally partial while the test is still in\nflight: callers can poll this endpoint and watch it fill in\nfrom send -> inbound -> webhook deliveries -> outbound\nrequests, logs, and replies.\n",
@@ -9511,6 +9820,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/functions/routing-topology": {
       "get": {
+        "x-primitive-permission": [
+          "functions:read"
+        ],
         "operationId": "getOrgRoutingTopology",
         "summary": "Get the org's function routing topology",
         "description": "Returns a single snapshot of how inbound mail is routed across\nthis org's active domains and functions: which active domain has\nwhich function bound, the org's fallback function (if any), and\nevery deployed function with no route bound. Use this to answer\n\"which of my functions actually receive mail?\" diagnostically.\n",
@@ -9556,6 +9868,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "functions:read"
+        ],
         "operationId": "getFunctionRouting",
         "summary": "Get a function's current route binding",
         "description": "Returns the endpoint binding for the function, or null when no\nroute is currently bound. The binding identifies whether the\nfunction receives mail for a specific domain (scoped) or for any\nactive domain that has no scoped binding (fallback).\n",
@@ -9608,6 +9923,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "put": {
+        "x-primitive-permission": [
+          "functions:manage"
+        ],
         "operationId": "setFunctionRoute",
         "summary": "Bind a route to a function",
         "description": "Binds inbound mail to this function. The route target is either\na specific verified domain (scoped) or the org's fallback (any\nactive domain with no scoped binding). If another function is\nalready bound at the target, returns a `conflict` envelope\ndescribing the holder; re-issue with `takeover: true` to\ndeactivate that prior binding and install this one.\n",
@@ -9659,6 +9977,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "delete": {
+        "x-primitive-permission": [
+          "functions:manage"
+        ],
         "operationId": "unsetFunctionRoute",
         "summary": "Unbind any route from a function",
         "description": "Deactivates every active endpoint bound to this function. The\nfunction stays deployed but stops receiving inbound mail. Safe\nto call when no route is currently bound (no-op).\n",
@@ -9715,6 +10036,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "secrets:manage"
+        ],
         "operationId": "listFunctionSecrets",
         "summary": "List a function's secrets",
         "description": "Returns metadata for every secret bound to the function, with\nmanaged entries (provisioned by Primitive) listed first and\nuser-set entries listed alphabetically after. **Values are\nnever returned.** Secret writes are write-only.\n\nManaged entries (e.g. `PRIMITIVE_WEBHOOK_SECRET`,\n`PRIMITIVE_API_KEY`, `PRIMITIVE_API_BASE_URL`) carry a\n`description` instead of `created_at` / `updated_at`. They\ncannot be created, updated, or deleted via this API.\n",
@@ -9764,6 +10088,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "post": {
+        "x-primitive-permission": [
+          "secrets:manage"
+        ],
         "operationId": "createFunctionSecret",
         "summary": "Create or update a secret",
         "description": "Idempotent insert-or-update keyed on `(function_id, key)`.\nReturns 201 the first time the key is set, 200 on subsequent\nupdates. Values are encrypted at rest and only become visible\nto the running handler on the next deploy (`PUT /functions/{id}`\nwith the existing code is sufficient to refresh bindings).\n\nKeys must match `^[A-Z_][A-Z0-9_]*$` (uppercase letters,\ndigits, underscores; first character is a letter or\nunderscore). Values are at most 4096 UTF-8 bytes. System-\nmanaged keys are reserved and rejected.\n",
@@ -9854,6 +10181,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "put": {
+        "x-primitive-permission": [
+          "secrets:manage"
+        ],
         "operationId": "setFunctionSecret",
         "summary": "Set a secret by key",
         "description": "Path-keyed companion to `POST /functions/{id}/secrets`.\nIdempotent: returns 201 the first time the key is set, 200 on\nsubsequent updates. Same validation rules and same write-only\nguarantees as the POST verb; the new value lands in the running\nhandler on the next deploy.\n",
@@ -9927,6 +10257,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "delete": {
+        "x-primitive-permission": [
+          "secrets:manage"
+        ],
         "operationId": "deleteFunctionSecret",
         "summary": "Delete a secret",
         "description": "Removes the secret. The binding stays live in the running\nhandler until the next deploy refreshes the binding set\n(`PUT /functions/{id}` with the existing code is sufficient).\nReturns 404 if the key did not exist. Managed system keys\ncannot be deleted.\n",
@@ -9951,6 +10284,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/org/secrets": {
       "get": {
+        "x-primitive-permission": [
+          "secrets:manage"
+        ],
         "operationId": "listOrgSecrets",
         "summary": "List org-level (global) secrets",
         "description": "Returns metadata for every org-level secret. Org secrets apply\nto every function in the org and are read as `env.<KEY>` in\nhandlers. **Values are never returned.** Secret writes are\nwrite-only. A function-level secret of the same name overrides\nthe org-level value for that function.\n",
@@ -9997,6 +10333,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "post": {
+        "x-primitive-permission": [
+          "secrets:manage"
+        ],
         "operationId": "createOrgSecret",
         "summary": "Create or update an org secret",
         "description": "Idempotent insert-or-update keyed on `(org_id, key)`. Returns\n201 the first time the key is set, 200 on subsequent updates.\nValues are encrypted at rest. A changed value lands in a\nfunction only on that function's next deploy.\n\nKeys must match `^[A-Z_][A-Z0-9_]*$` (uppercase letters,\ndigits, underscores; first character is a letter or\nunderscore). Values are at most 4096 UTF-8 bytes. System-\nmanaged keys are reserved and rejected.\n",
@@ -10081,6 +10420,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "put": {
+        "x-primitive-permission": [
+          "secrets:manage"
+        ],
         "operationId": "setOrgSecret",
         "summary": "Set an org secret by key",
         "description": "Path-keyed companion to `POST /org/secrets`. Idempotent:\nreturns 201 the first time the key is set, 200 on subsequent\nupdates. Same validation and write-only guarantees as POST.\n",
@@ -10151,6 +10493,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "delete": {
+        "x-primitive-permission": [
+          "secrets:manage"
+        ],
         "operationId": "deleteOrgSecret",
         "summary": "Delete an org secret",
         "description": "Removes the org secret. Functions keep the previous value until\neach is redeployed. Returns 404 if the key did not exist.\n",
@@ -10180,6 +10525,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "functions:manage"
+        ],
         "operationId": "listFunctionLogs",
         "summary": "List a function's execution logs",
         "description": "Returns the most recent `function_logs` rows for the function,\nnewest first. Each row is a single `console.log` / `console.error`\ninvocation captured from the running handler.\n\nPage through history with the opaque `cursor` returned as\n`next_cursor`; pass it back as the `cursor` query param on the\nnext call. `next_cursor` is `null` when there are no further\nrows. The cursor format is an implementation detail and should\nnot be parsed by callers.\n",
@@ -10268,6 +10616,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/memories": {
       "put": {
+        "x-primitive-permission": [
+          "memories:write"
+        ],
         "operationId": "setMemory",
         "summary": "Set a memory",
         "description": "Create or update a durable JSON memory under an org or function scope.\nWhen no explicit scope is provided, function-authenticated requests\nuse that function's id automatically; requests with\n`x-primitive-function-id` use that function id; all other requests\ndefault to org scope.\n\n`scope.type = function` requires the function id UUID in `scope.id`.\nFunction names are not accepted as scope identifiers. Values must be\nvalid JSON and serialize to at most 65536 UTF-8 bytes. Keys must be at\nmost 512 UTF-8 bytes. `version`, `read_count`, and `write_count` are\nbigint counters serialized as strings.\n\nPassing `if_absent` turns the write into create-only. Passing\n`if_version` turns the write into compare-and-set. These options are\nmutually exclusive and return `memory_conflict` on a stale version or\nexisting key.\n",
@@ -10362,6 +10713,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "get": {
+        "x-primitive-permission": [
+          "memories:read"
+        ],
         "operationId": "getMemory",
         "summary": "Get a memory",
         "description": "Fetch one active memory by key and scope. Omit scope parameters to use\nthe automatic default: function-authenticated context, then the\n`x-primitive-function-id` header, then org scope. Function scope uses a\nfunction id UUID in `scope_id`.\n\nA successful read records memory read usage and updates the memory's\nread stats asynchronously.\n",
@@ -10430,6 +10784,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "delete": {
+        "x-primitive-permission": [
+          "memories:write"
+        ],
         "operationId": "deleteMemory",
         "summary": "Delete a memory",
         "description": "Delete one active memory by key and scope. Deletes are idempotent when\n`if_version` is omitted: deleting a missing key returns `deleted:\nfalse`. With `if_version`, a missing key still returns `deleted: false`,\nbut a stale version returns `memory_conflict`.\n\nA successful delete records memory write usage.\n",
@@ -10512,6 +10869,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/memories/search": {
       "get": {
+        "x-primitive-permission": [
+          "memories:read"
+        ],
         "operationId": "searchMemories",
         "summary": "Search memories",
         "description": "List active memories in a scope by lexicographic key prefix. Results\nare ordered by key ascending. The `meta.cursor` value is the next key\ncursor; pass it back as `cursor` to continue after that key.\n\nSearch records one memory read usage event for the operation. Pass\n`include_value=false` to return metadata only.\n",
@@ -10787,6 +11147,10 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/templates/{id}/install": {
       "post": {
+        "x-primitive-permission": [
+          "templates:install",
+          "functions:deploy"
+        ],
         "operationId": "installTemplate",
         "summary": "Install a function template",
         "description": "Start a one-shot deploy of an approved deploy-mode Function template.\nThe response returns an install record immediately; poll\n`GET /templates/installs/{id}` for progress.\n",
@@ -10872,6 +11236,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/templates/installs/{id}": {
       "get": {
+        "x-primitive-permission": [
+          "functions:read"
+        ],
         "operationId": "getTemplateInstall",
         "summary": "Get template install status",
         "description": "Fetch the current state of a template install. Reads may advance the\nself-test phase when a reply effect has been observed.\n",
@@ -11508,6 +11875,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/agent-networks": {
       "get": {
+        "x-primitive-permission": [
+          "agent_networks:read"
+        ],
         "operationId": "listAgentNetworks",
         "summary": "List your organization's agent networks",
         "description": "An organization member login or an active connected agent allowed to see the network can read networks. The default organization network is always present. can_manage_all is true only for a current owner or admin; a connected credential receives false.",
@@ -11550,6 +11920,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/agent-networks/default/members": {
       "get": {
+        "x-primitive-permission": [
+          "agent_networks:manage"
+        ],
         "operationId": "listDefaultNetworkMembers",
         "summary": "List default network memberships available to your login",
         "description": "An owner or admin sees all connected addresses, including hidden and excluded members. Other human members see only personal addresses owned by their current membership. Filtering happens before pagination. Connected-agent credentials cannot read this roster. Each row includes whether the requester can manage it.",
@@ -11608,6 +11981,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "patch": {
+        "x-primitive-permission": [
+          "agent_networks:manage"
+        ],
         "operationId": "updateDefaultNetworkMember",
         "summary": "Change whether an agent can see or be seen in the network",
         "description": "An owner or admin may update any active address. Other human members may update only their own current, non-excluded personal address. Connected-agent credentials cannot update visibility. Omitted settings keep their current value.",
@@ -11661,6 +12037,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "post": {
+        "x-primitive-permission": [
+          "agent_networks:manage"
+        ],
         "operationId": "addDefaultNetworkMember",
         "summary": "Add an agent to the default network",
         "description": "Owner or admin login required. Restores an explicitly excluded member.",
@@ -11701,6 +12080,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "delete": {
+        "x-primitive-permission": [
+          "agent_networks:manage"
+        ],
         "operationId": "removeDefaultNetworkMember",
         "summary": "Remove an agent from the default network",
         "description": "Owner or admin login required. The explicit exclusion persists across synchronization.",
@@ -11752,6 +12134,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/agent-networks/default/agents": {
       "get": {
+        "x-primitive-permission": [
+          "agent_networks:read"
+        ],
         "operationId": "listDefaultNetworkAgents",
         "summary": "Discover listed agents in your organization network",
         "description": "Requires a connected-agent credential for an active member allowed to see the network, or an organization member login.",
@@ -11810,6 +12195,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "get": {
+        "x-primitive-permission": [
+          "agent_networks:read"
+        ],
         "operationId": "getDefaultNetworkAgent",
         "summary": "Get a listed agent by email address",
         "description": "Requires a connected-agent credential allowed to see the network, or an organization member login. Unlisted agents look absent.",
@@ -11852,6 +12240,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/agent-networks/default/contact-admission": {
       "post": {
+        "x-primitive-permission": [
+          "agent_networks:admit"
+        ],
         "operationId": "checkDefaultNetworkContactAdmission",
         "summary": "Check whether network mail may wake this connected agent",
         "description": "Requires the recipient's connected-agent credential. The recipient\naddress is derived from that credential. The email ID must identify\naccepted or completed inbound mail for that exact recipient, with\nmatching stored sender and delivery evidence. Returns no sender profile\nor existence detail. Clients must also verify the email detail's sender\nprovenance and respect explicit contact silence before using the result.\nNetwork wake requires the sender to be connected and able to view the\nnetwork, and the recipient to be connected and listed. The sender need\nnot be listed and the recipient need not view the network. Ordinary\nknown-address email remains independent. Mail received before\nallowed_since cannot be newly admitted.\n",
@@ -12609,6 +13000,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/contacts": {
       "get": {
+        "x-primitive-permission": [
+          "contacts:read"
+        ],
         "operationId": "listContacts",
         "summary": "list Contacts",
         "tags": [
@@ -12883,6 +13277,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/contacts/{address}": {
       "get": {
+        "x-primitive-permission": [
+          "contacts:read"
+        ],
         "operationId": "getContact",
         "summary": "get Contact",
         "tags": [
@@ -13122,6 +13519,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "put": {
+        "x-primitive-permission": [
+          "contacts:write"
+        ],
         "operationId": "putContact",
         "summary": "put Contact",
         "tags": [
@@ -13413,6 +13813,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "delete": {
+        "x-primitive-permission": [
+          "contacts:delete"
+        ],
         "operationId": "deleteContact",
         "summary": "delete Contact",
         "tags": [
@@ -13638,6 +14041,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/agent-contacts/{agent_address}": {
       "get": {
+        "x-primitive-permission": [
+          "agent_contacts:manage"
+        ],
         "operationId": "listAgentContacts",
         "summary": "list Agent Contacts",
         "tags": [
@@ -13951,6 +14357,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/agent-contacts/{agent_address}/{contact_address}": {
       "put": {
+        "x-primitive-permission": [
+          "agent_contacts:manage"
+        ],
         "operationId": "putAgentContact",
         "summary": "put Agent Contact",
         "tags": [
@@ -14287,6 +14696,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "delete": {
+        "x-primitive-permission": [
+          "agent_contacts:manage"
+        ],
         "operationId": "deleteAgentContact",
         "summary": "delete Agent Contact",
         "tags": [
@@ -14524,6 +14936,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/contact-policy": {
       "get": {
+        "x-primitive-permission": [
+          "contacts:policy"
+        ],
         "operationId": "getContactPolicy",
         "summary": "Read organization contact policy",
         "tags": [
@@ -14598,6 +15013,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "put": {
+        "x-primitive-permission": [
+          "contacts:policy"
+        ],
         "operationId": "putContactPolicy",
         "summary": "Replace organization contact policy",
         "tags": [
@@ -14684,6 +15102,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/agent-contact-policy/{agent_address}": {
       "get": {
+        "x-primitive-permission": [
+          "agent_contact_policy:read"
+        ],
         "operationId": "getAgentContactPolicy",
         "summary": "Read agent contact policy",
         "tags": [
@@ -14770,6 +15191,9 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "put": {
+        "x-primitive-permission": [
+          "contacts:policy"
+        ],
         "operationId": "putAgentContactPolicy",
         "summary": "Replace agent contact policy",
         "tags": [
@@ -14868,6 +15292,9 @@ export const openapiDocument: Record<string, unknown> = {
     },
     "/whoami": {
       "get": {
+        "x-primitive-permission": [
+          "account:read"
+        ],
         "operationId": "whoami",
         "summary": "Get current caller identity",
         "tags": [
@@ -14906,11 +15333,14 @@ export const openapiDocument: Record<string, unknown> = {
             "$ref": "#/components/responses/Forbidden"
           }
         },
-        "description": "Current authenticated identity. member_address is null for machine credentials or an unavailable member address."
+        "description": "Current authenticated identity. member_address is null for machine\ncredentials or an unavailable member address.\n\nTwo optional query parameters ask for the caller's grant. They are\ndescribed here rather than declared, so generated clients keep the\nsignature they had; pass them as raw query parameters.\n\n- `include=grant` adds `grant` (`GrantDescription`): the grant this\n  credential holds.\n- `check=<permission>`, optionally with\n  `resource=<function|domain|endpoint|route>:<id>`, adds `check`\n  (`PermissionCheck`): whether the grant allows that permission, with\n  the same `reason` and `details` a `403 grant_forbidden` would carry.\n  Nothing is enforced by asking; an unknown permission answers\n  `400 validation_error`.\n\nA server without grants ignores both and omits the fields.\n"
       }
     },
     "/account/member-address": {
       "put": {
+        "x-primitive-permission": [
+          "member_address:manage"
+        ],
         "operationId": "provisionMemberAddress",
         "summary": "Provision your member email address",
         "description": "Provision or return this authenticated human member's stable managed address in this organization. API keys, connected agents and Functions cannot provision or impersonate humans. The owner explicitly chooses the address. Existing retained mail requires confirmation; reserved identities cannot be overridden. There is no target user input. An unavailable domain never silently changes the address.",
@@ -14980,6 +15410,831 @@ export const openapiDocument: Record<string, unknown> = {
           }
         }
       }
+    },
+    "/cli/orgs": {
+      "get": {
+        "operationId": "listCliOrgs",
+        "summary": "List the organizations a CLI login can switch to",
+        "description": "Lists every organization the person behind a CLI user login belongs\nto, with whether the CLI may be used there and, when it may not, the\nreason. Authenticate with the identity access token (`prim_uat_`) from\na CLI user login; no other credential is accepted. A server without\nCLI user logins answers `404 feature_disabled`.\n",
+        "tags": [
+          "CLI"
+        ],
+        "responses": {
+          "200": {
+            "description": "Organizations for the signed-in person",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Always `no-store`"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/CliOrgList"
+                        }
+                      },
+                      "required": [
+                        "data"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/credentials": {
+      "get": {
+        "x-primitive-permission": [
+          "credentials:read"
+        ],
+        "operationId": "listCredentials",
+        "summary": "List every credential in the organization",
+        "description": "The credential inventory: organization API keys, Function keys,\nconnected agent keys, OAuth grants and agent delegates, each with its\ngrant, creator, last use, expiry, conditions and the actions it\noffers. Available to an owner or admin in a person's session. Answers\n`404 feature_disabled` where the inventory is not enabled.\n",
+        "tags": [
+          "Credentials"
+        ],
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "description": "Only list credentials of this kind.",
+            "schema": {
+              "$ref": "#/components/schemas/CredentialKind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The credential inventory",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/CredentialList"
+                        }
+                      },
+                      "required": [
+                        "data"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/credentials/revoke": {
+      "post": {
+        "x-primitive-permission": [
+          "keys:manage"
+        ],
+        "operationId": "revokeCredential",
+        "summary": "Revoke one credential",
+        "description": "Revokes one credential from the inventory. Function keys are rotated,\nnever revoked, and answer `409 rotate_instead`. Available to an owner\nor admin in a person's session.\n",
+        "tags": [
+          "Credentials"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeCredentialInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Credential revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/RevokeCredentialResult"
+                        }
+                      },
+                      "required": [
+                        "data"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/credential-events": {
+      "get": {
+        "x-primitive-permission": [
+          "credential_events:read"
+        ],
+        "operationId": "listCredentialEvents",
+        "summary": "List credential audit events",
+        "description": "The credential audit trail, newest first, paged with `cursor`.\nFilter by actor, credential, event type and time. Available to an\nowner or admin in a person's session.\n",
+        "tags": [
+          "Credentials"
+        ],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "The `next_cursor` from the previous page.",
+            "schema": {
+              "type": "string",
+              "maxLength": 256
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Page size.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            }
+          },
+          {
+            "name": "actor_id",
+            "in": "query",
+            "required": false,
+            "description": "Only events by this actor.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "credential_id",
+            "in": "query",
+            "required": false,
+            "description": "Only events about this credential.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "description": "Only events of this type, for example `key.created`.",
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "description": "Only events at or after this time (ISO 8601).",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "description": "Only events before this time (ISO 8601).",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of credential events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/CredentialEventList"
+                        }
+                      },
+                      "required": [
+                        "data"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/credential-policy": {
+      "get": {
+        "x-primitive-permission": [
+          "credentials:read"
+        ],
+        "operationId": "getCredentialPolicy",
+        "summary": "Get the organization credential policy",
+        "description": "The rules new keys and CLI access are held to: maximum lifetime,\nrequired expiry, who may create super admin keys and more. Available\nto an owner or admin in a person's session.\n",
+        "tags": [
+          "Credentials"
+        ],
+        "responses": {
+          "200": {
+            "description": "The credential policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/CredentialPolicy"
+                        }
+                      },
+                      "required": [
+                        "data"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/keys": {
+      "post": {
+        "x-primitive-permission": [
+          "keys:manage"
+        ],
+        "operationId": "createKey",
+        "summary": "Create an API key",
+        "description": "Creates an organization API key with a preset or a custom grant, an\noptional expiry and optional conditions. The secret is returned once,\nin `key`. A person's session may call this directly. An OAuth token\n(such as a CLI login) needs a single-use step-up token from the\ndashboard in the `Primitive-Step-Up` header; without one the answer\nis `403 step_up_required` with `details.step_up_url`. A grant the\ncaller may not give, or one the server does not offer, answers\n`409 grant_not_available` with a `reason`.\n",
+        "tags": [
+          "Keys"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PrimitiveStepUp"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateKeyInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Key created; the secret is shown once",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/CreatedKey"
+                        }
+                      },
+                      "required": [
+                        "data"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/keys/builder": {
+      "get": {
+        "x-primitive-permission": [
+          "keys:read"
+        ],
+        "operationId": "getKeyBuilder",
+        "summary": "Get the key presets and permission matrix",
+        "description": "The presets a key can be created from, with whether each is available\nand why not, the per-area permission matrix and the credential\npolicy.\n",
+        "tags": [
+          "Keys"
+        ],
+        "responses": {
+          "200": {
+            "description": "Presets, matrix and policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/KeyBuilder"
+                        }
+                      },
+                      "required": [
+                        "data"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/keys/{id}/rotate": {
+      "post": {
+        "x-primitive-permission": [
+          "keys:manage"
+        ],
+        "operationId": "rotateKey",
+        "summary": "Rotate an API key",
+        "description": "Mints a successor with the same grant, name, expiry and conditions,\nand brings the old key's expiry forward to the end of the overlap\n(default 24 hours; `0` revokes it at once). The new secret is\nreturned once. An OAuth token needs a step-up token, as for\n`createKey`.\n",
+        "tags": [
+          "Keys"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "API key id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/PrimitiveStepUp"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RotateKeyInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Key rotated; the new secret is shown once",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/RotatedKey"
+                        }
+                      },
+                      "required": [
+                        "data"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/keys/{id}": {
+      "patch": {
+        "x-primitive-permission": [
+          "keys:manage"
+        ],
+        "operationId": "updateKey",
+        "summary": "Update an API key",
+        "description": "Renames a key or changes its expiry, grant, conditions or suspension.\nA grant change is recorded as a new grant version. Available in a\nperson's session.\n",
+        "tags": [
+          "Keys"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "API key id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateKeyInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Key updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/UpdatedKey"
+                        }
+                      },
+                      "required": [
+                        "data"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/roles": {
+      "get": {
+        "x-primitive-permission": [
+          "members:read"
+        ],
+        "operationId": "listRoles",
+        "summary": "List roles",
+        "description": "The organization's roles (built-in, template and custom), the role\ntemplates that can be assigned, and whether role assignment is\navailable. Readable by any person in the organization.\n",
+        "tags": [
+          "Roles"
+        ],
+        "responses": {
+          "200": {
+            "description": "Roles, templates and assignability",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/RoleList"
+                        }
+                      },
+                      "required": [
+                        "data"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/groups": {
+      "get": {
+        "x-primitive-permission": [
+          "members:read"
+        ],
+        "operationId": "listGroups",
+        "summary": "List groups",
+        "description": "Groups of members, each with its members and an optional role.",
+        "tags": [
+          "Roles"
+        ],
+        "responses": {
+          "200": {
+            "description": "Groups",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/GroupList"
+                        }
+                      },
+                      "required": [
+                        "data"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/mailbox-access": {
+      "get": {
+        "x-primitive-permission": [
+          "members:read"
+        ],
+        "operationId": "listMailboxAccess",
+        "summary": "List mailbox access entries",
+        "description": "Every mailbox and domain access entry (delegation) in the organization.",
+        "tags": [
+          "Roles"
+        ],
+        "responses": {
+          "200": {
+            "description": "Mailbox access entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/MailboxAccessList"
+                        }
+                      },
+                      "required": [
+                        "data"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/access-mode": {
+      "get": {
+        "x-primitive-permission": [
+          "members:read"
+        ],
+        "operationId": "getAccessMode",
+        "summary": "Get the organization access mode",
+        "description": "Whether mailbox access follows the whole organization or explicit\ndelegations. Owners and admins also see the preview of a switch and\nthe decisions recorded for it.\n",
+        "tags": [
+          "Roles"
+        ],
+        "responses": {
+          "200": {
+            "description": "The access mode",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AccessMode"
+                        }
+                      },
+                      "required": [
+                        "data"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -14997,6 +16252,17 @@ export const openapiDocument: Record<string, unknown> = {
       }
     },
     "parameters": {
+      "PrimitiveStepUp": {
+        "name": "Primitive-Step-Up",
+        "in": "header",
+        "required": false,
+        "description": "A single-use step-up token (`pstep_...`) from the dashboard's\nstep-up page. Needed when an OAuth token, such as a CLI login,\ncreates or rotates a key.\n",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      },
       "AttachmentFilename": {
         "name": "filename",
         "in": "query",
@@ -15546,6 +16812,1544 @@ export const openapiDocument: Record<string, unknown> = {
       }
     },
     "schemas": {
+      "GrantForbiddenDetails": {
+        "type": "object",
+        "description": "The `details` of a `403 grant_forbidden`: the permission the\noperation needed and the grant that did not hold it.\n",
+        "additionalProperties": true,
+        "properties": {
+          "permission": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The permission the operation requires, for example `mail:send`."
+          },
+          "credential_kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The kind of credential that made the request, for example `org_key`."
+          },
+          "grant_template_key": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The grant template, when the credential holds one."
+          },
+          "credential_grant_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The concrete grant id, when the credential holds one."
+          },
+          "catalog_version": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Version of the permission catalog the decision used."
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why the grant did not allow the operation: `permission_missing`,\n`required_permission_missing`, `mail_scope_requires_org`,\n`resource_outside_grant`, `credential_expired` or\n`unknown_permission`. New reasons may be added.\n"
+          },
+          "missing": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A further permission the operation also requires, when that is the one missing."
+          },
+          "resource": {
+            "type": "object",
+            "description": "The resource the decision was about, when it named one.",
+            "additionalProperties": true,
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": [
+          "permission",
+          "credential_kind",
+          "catalog_version",
+          "reason"
+        ]
+      },
+      "GrantDescription": {
+        "type": "object",
+        "description": "The grant a credential holds, as `GET /whoami?include=grant` reports it.",
+        "additionalProperties": true,
+        "properties": {
+          "credential_kind": {
+            "type": "string"
+          },
+          "actor": {
+            "description": "Who the credential acts as."
+          },
+          "grant_ref": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "grant_type": {
+            "type": "string",
+            "description": "`template`, `concrete` or `computed`."
+          },
+          "template": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "credential_grant_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "computed_from": {
+            "description": "For a computed grant, the role and delegations it was computed from."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "mail_scope": {
+            "description": "`org`, or the addresses, domains and depth the grant reaches."
+          },
+          "resources": {
+            "description": "Resource ids the grant is narrowed to, or null."
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "catalog_version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "credential_kind",
+          "permissions",
+          "catalog_version"
+        ]
+      },
+      "PermissionCheck": {
+        "type": "object",
+        "description": "The decision `GET /whoami?check=<permission>` reports. Nothing is enforced by asking.",
+        "additionalProperties": true,
+        "properties": {
+          "permission": {
+            "type": "string"
+          },
+          "allow": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why the permission is not allowed; same values as `grant_forbidden`."
+          },
+          "details": {
+            "$ref": "#/components/schemas/GrantForbiddenDetails"
+          },
+          "resource": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": [
+          "permission",
+          "allow"
+        ]
+      },
+      "CliUserLoginPollResult": {
+        "type": "object",
+        "description": "A successful poll of a CLI login started with `login_kind: \"user\"`.\nThe identity token (`prim_uat_`) and refresh token (`prim_urt_`)\nbelong to the person, not to an organization: they authenticate\nonly `GET /cli/orgs` and the token exchange. `org` is a ready access\ntoken for the organization chosen in the browser, or null with\n`org_refusal` saying why the CLI cannot be used there.\n",
+        "properties": {
+          "auth_method": {
+            "type": "string",
+            "enum": [
+              "user_grant"
+            ]
+          },
+          "user_grant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "access_token": {
+            "type": "string",
+            "description": "Identity access token for the org list and the token exchange"
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "Refresh token for the identity access token"
+          },
+          "token_type": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
+          },
+          "expires_in": {
+            "type": "integer",
+            "description": "Seconds until access_token expires"
+          },
+          "oauth_client_id": {
+            "type": "string"
+          },
+          "org": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CliOrgAccessToken"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "org_refusal": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CliOrgRefusal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "auth_method",
+          "user_grant_id",
+          "user_id",
+          "access_token",
+          "refresh_token",
+          "token_type",
+          "expires_in",
+          "oauth_client_id",
+          "org",
+          "org_refusal"
+        ]
+      },
+      "CliOrgAccessToken": {
+        "type": "object",
+        "description": "A short-lived access token in one organization, from a CLI user login.",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "token_type": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
+          },
+          "expires_in": {
+            "type": "integer"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "org_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "type": "string"
+          },
+          "oauth_grant_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "access_token",
+          "token_type",
+          "expires_in",
+          "org_id",
+          "org_name",
+          "role",
+          "oauth_grant_id"
+        ]
+      },
+      "CliOrgRefusalReason": {
+        "type": "string",
+        "description": "Why the CLI cannot be used in an organization:\n`not_a_member`, `cli_access_disabled_by_org`, `role_insufficient`\n(the organization's policy does not allow the person's role), or\n`cli_access_revoked` (log in again).\n",
+        "enum": [
+          "not_a_member",
+          "cli_access_disabled_by_org",
+          "role_insufficient",
+          "cli_access_revoked"
+        ]
+      },
+      "CliOrgRefusal": {
+        "type": "object",
+        "properties": {
+          "org_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/CliOrgRefusalReason"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "org_id",
+          "reason",
+          "message"
+        ]
+      },
+      "CliOrg": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "available": {
+            "type": "boolean",
+            "description": "Whether the CLI can switch to this organization."
+          },
+          "reason": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CliOrgRefusalReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "available",
+          "reason"
+        ]
+      },
+      "CliOrgList": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "email": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "email"
+            ]
+          },
+          "user_grant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orgs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CliOrg"
+            }
+          }
+        },
+        "required": [
+          "user",
+          "user_grant_id",
+          "orgs"
+        ]
+      },
+      "CredentialKind": {
+        "type": "string",
+        "description": "`org_key`, `function_key`, `connected_key`, `oauth`,\n`agent_delegate`, or `cli_user_access` (a person's CLI access in the\norganization through a CLI user login, listed only where those\nlogins exist).\n",
+        "enum": [
+          "org_key",
+          "function_key",
+          "connected_key",
+          "oauth",
+          "agent_delegate",
+          "cli_user_access"
+        ]
+      },
+      "CredentialRow": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/CredentialKind"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "prefix": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "client": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "client_id": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "grant": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "ref": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "template",
+                  "concrete",
+                  "computed"
+                ]
+              },
+              "template": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "permissions": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string"
+                }
+              },
+              "mail_scope": {
+                "description": "`org`, or the addresses, domains and depth the grant reaches."
+              },
+              "resources": {
+                "description": "Resource ids the grant is narrowed to, or null."
+              }
+            }
+          },
+          "creator": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "kind": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "email": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "member",
+                  "departed",
+                  "unknown",
+                  "agent_before_claim",
+                  "system"
+                ]
+              }
+            }
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "last_used_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "last_used_ip": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "conditions": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/KeyConditions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "flags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "revoke",
+                "rotate",
+                "edit",
+                "transfer",
+                "suggest"
+              ]
+            }
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "name",
+          "grant",
+          "creator",
+          "expires_at",
+          "flags",
+          "actions"
+        ]
+      },
+      "CredentialList": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CredentialRow"
+            }
+          },
+          "counts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          }
+        },
+        "required": [
+          "items",
+          "counts"
+        ]
+      },
+      "RevokeCredentialInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/CredentialKind"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ]
+      },
+      "RevokeCredentialResult": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "revoked": {
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CredentialKind"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "revoked",
+          "kind",
+          "id"
+        ]
+      },
+      "CredentialEvent": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "event_type": {
+            "type": "string",
+            "description": "For example `key.created`, `key.revoked` or `cli_access.granted`."
+          },
+          "credential_kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "credential_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "credential_prefix": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "actor_kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "actor_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "grant_ref": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "catalog_version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "request_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "occurred_at",
+          "event_type",
+          "details"
+        ]
+      },
+      "CredentialEventList": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CredentialEvent"
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ]
+      },
+      "CredentialPolicy": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "max_key_lifetime_days": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "require_key_expiry": {
+            "type": "boolean"
+          },
+          "super_admin_key_creators": {
+            "type": "string",
+            "enum": [
+              "owners_and_admins",
+              "owners"
+            ]
+          },
+          "members_may_mint_keys": {
+            "type": "boolean"
+          },
+          "allow_org_mail_scope_keys": {
+            "type": "boolean"
+          },
+          "cap_agents_below_person": {
+            "type": "boolean"
+          },
+          "removal_suspends_created": {
+            "type": "boolean"
+          },
+          "oauth_consent_admin_only": {
+            "type": "boolean"
+          },
+          "cli_access": {
+            "type": "string",
+            "description": "Who may use the CLI in the organization. Present only where CLI user logins exist.",
+            "enum": [
+              "owners_and_admins",
+              "all_members",
+              "off"
+            ]
+          }
+        },
+        "required": [
+          "max_key_lifetime_days",
+          "require_key_expiry",
+          "super_admin_key_creators",
+          "members_may_mint_keys",
+          "allow_org_mail_scope_keys",
+          "cap_agents_below_person",
+          "removal_suspends_created",
+          "oauth_consent_admin_only"
+        ]
+      },
+      "KeyPreset": {
+        "type": "string",
+        "description": "`super_admin` (every ordinary permission, as keys have today),\n`send_only`, `read_only`, `own_addresses` and\n`own_addresses_read_only` (both need `addresses`), or `custom`.\n",
+        "enum": [
+          "super_admin",
+          "send_only",
+          "read_only",
+          "own_addresses",
+          "own_addresses_read_only",
+          "custom"
+        ]
+      },
+      "KeyGrantSpec": {
+        "type": "object",
+        "description": "A key's grant: a preset, optionally narrowed. Use `matrix` (area to\n`none`, `read` or `write`, areas from `GET /keys/builder`) or\n`permissions` for a custom grant, `addresses` and `domains` to limit\nmail, and `resources` to limit Functions, domains, endpoints or\nroutes to selected ids. The server adds the permissions a choice\nimplies and reports them in `warnings`.\n",
+        "additionalProperties": false,
+        "properties": {
+          "preset": {
+            "$ref": "#/components/schemas/KeyPreset"
+          },
+          "matrix": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "none",
+                "read",
+                "write"
+              ]
+            }
+          },
+          "permissions": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "string"
+            }
+          },
+          "addresses": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string"
+            }
+          },
+          "domains": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "string"
+            }
+          },
+          "resources": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "maxItems": 100,
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": [
+          "preset"
+        ]
+      },
+      "KeyGrant": {
+        "description": "A preset name, or a grant spec.",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/KeyPreset"
+          },
+          {
+            "$ref": "#/components/schemas/KeyGrantSpec"
+          }
+        ]
+      },
+      "KeyConditions": {
+        "type": "object",
+        "description": "Conditions every use of the key is checked against.",
+        "additionalProperties": true,
+        "properties": {
+          "ip_allowlist": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "string"
+            },
+            "description": "CIDR ranges (IPv4 or IPv6) the key may be used from."
+          },
+          "rate_limit_per_minute": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "suspended_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Set when the key is suspended (read only)."
+          }
+        }
+      },
+      "CreateKeyInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "grant": {
+            "$ref": "#/components/schemas/KeyGrant"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the key stops working. Use this or `expires_in_days`."
+          },
+          "expires_in_days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3650,
+            "description": "Days until the key stops working. Use this or `expires_at`."
+          },
+          "conditions": {
+            "$ref": "#/components/schemas/KeyConditionsInput"
+          }
+        }
+      },
+      "KeyConditionsInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ip_allowlist": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "string"
+            },
+            "description": "CIDR ranges (IPv4 or IPv6) the key may be used from."
+          },
+          "rate_limit_per_minute": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 100000
+          }
+        }
+      },
+      "KeyGrantWarning": {
+        "type": "object",
+        "description": "A permission the server added because a chosen one implies it.",
+        "additionalProperties": true,
+        "properties": {
+          "permission": {
+            "type": "string"
+          },
+          "adds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "why": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "permission",
+          "adds",
+          "why",
+          "description"
+        ]
+      },
+      "CreatedKey": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "key": {
+            "type": "string",
+            "description": "The secret. Shown once; store it now."
+          },
+          "key_prefix": {
+            "type": "string"
+          },
+          "grant": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "template": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "credential_grant_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "permissions": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string"
+                }
+              },
+              "mail_scope": {
+                "description": "`org`, or the addresses, domains and depth the grant reaches."
+              },
+              "resources": {
+                "description": "Resource ids the grant is narrowed to, or null."
+              }
+            }
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "conditions": {
+            "description": "The key's conditions, or null."
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KeyGrantWarning"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "key",
+          "key_prefix",
+          "grant",
+          "expires_at",
+          "warnings"
+        ]
+      },
+      "RotateKeyInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "overlap_seconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 604800,
+            "description": "Seconds the old key keeps working. Default 86400; 0 revokes it at once."
+          }
+        }
+      },
+      "RotatedKey": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string",
+            "description": "The new secret. Shown once; store it now."
+          },
+          "key_prefix": {
+            "type": "string"
+          },
+          "previous_key_id": {
+            "type": "string"
+          },
+          "previous_key_expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "key_prefix",
+          "previous_key_id",
+          "previous_key_expires_at"
+        ]
+      },
+      "UpdateKeyInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "grant": {
+            "$ref": "#/components/schemas/KeyGrant"
+          },
+          "conditions": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/KeyConditionsInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "suspended": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UpdatedKey": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "changed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KeyGrantWarning"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "changed",
+          "warnings"
+        ]
+      },
+      "KeyBuilder": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "presets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "available": {
+                  "type": "boolean"
+                },
+                "reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "message": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "label",
+                "description",
+                "available",
+                "reason",
+                "message"
+              ]
+            }
+          },
+          "matrix": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "read": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "write": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "resource": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "label",
+                "description",
+                "read",
+                "write",
+                "resource"
+              ]
+            }
+          },
+          "policy": {
+            "$ref": "#/components/schemas/CredentialPolicy"
+          }
+        },
+        "required": [
+          "enabled",
+          "presets",
+          "matrix",
+          "policy"
+        ]
+      },
+      "Role": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "builtin",
+              "template",
+              "custom"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "mail_scope": {
+            "description": "`org`, or the addresses, domains and depth the role reaches."
+          },
+          "version": {
+            "type": "integer"
+          },
+          "catalog_version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "predates_catalog": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "kind",
+          "name",
+          "permissions",
+          "version"
+        ]
+      },
+      "RoleTemplate": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "description",
+          "permissions"
+        ]
+      },
+      "RoleList": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Role"
+            }
+          },
+          "templates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoleTemplate"
+            }
+          },
+          "assignment": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "available": {
+                "type": "boolean"
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "available",
+              "reason"
+            ]
+          }
+        },
+        "required": [
+          "roles",
+          "templates",
+          "assignment"
+        ]
+      },
+      "Group": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "members"
+        ]
+      },
+      "GroupList": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Group"
+            }
+          }
+        },
+        "required": [
+          "groups"
+        ]
+      },
+      "MailboxAccessList": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "required": [
+          "entries"
+        ]
+      },
+      "AccessMode": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "whole_org",
+              "delegated"
+            ]
+          },
+          "version": {
+            "type": "integer"
+          },
+          "changed_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "preview": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "decisions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "gate": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "mode",
+          "version",
+          "changed_at"
+        ]
+      },
       "IncludedMessageHeaders": {
         "type": "object",
         "description": "Stored addressing and threading headers. A member is null when absent or withheld.",
@@ -17631,7 +20435,17 @@ export const openapiDocument: Record<string, unknown> = {
                   "update_needs_input",
                   "upstream_error",
                   "usage_limit_exceeded",
-                  "vendor_unavailable"
+                  "vendor_unavailable",
+                  "grant_forbidden",
+                  "grant_not_available",
+                  "step_up_required",
+                  "step_up_invalid",
+                  "step_up_refused",
+                  "step_up_not_accepted",
+                  "pending_owner_confirmation",
+                  "ip_not_allowed",
+                  "rotate_instead",
+                  "role_assignment_unavailable"
                 ]
               },
               "message": {
@@ -17678,6 +20492,62 @@ export const openapiDocument: Record<string, unknown> = {
                   "client_idempotency_key": {
                     "type": "string",
                     "description": "Effective idempotency key associated with the original request."
+                  },
+                  "permission": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Present when `code == grant_forbidden`. The permission the operation requires. See `GrantForbiddenDetails` for the full shape."
+                  },
+                  "credential_kind": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Present when `code == grant_forbidden`. The kind of credential that was refused."
+                  },
+                  "grant_template_key": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Present when `code == grant_forbidden` and the credential holds a template grant."
+                  },
+                  "credential_grant_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Present when `code == grant_forbidden` and the credential holds a concrete grant."
+                  },
+                  "catalog_version": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Present when `code == grant_forbidden`. Version of the permission catalog the decision used."
+                  },
+                  "reason": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Present when `code == grant_forbidden` (why the grant refused) or `grant_not_available` (why the grant cannot be given)."
+                  },
+                  "purpose": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Present when `code == step_up_required`. What the step-up token must be issued for."
+                  },
+                  "step_up_url": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Present when `code == step_up_required`. Dashboard page that issues a step-up token."
                   }
                 }
               },
@@ -17783,6 +20653,18 @@ export const openapiDocument: Record<string, unknown> = {
             "type": "object",
             "additionalProperties": true,
             "description": "Optional client metadata stored with the login session; serialized JSON must be 2048 bytes or fewer"
+          },
+          "login_kind": {
+            "type": "string",
+            "enum": [
+              "org",
+              "user"
+            ],
+            "description": "`user` asks for a login as the person, not bound to one\norganization, that can switch between the person's organizations\n(see `CliUserLoginPollResult`). Servers without this answer\n`400 validation_error`; clients then retry without the field.\n"
+          },
+          "requested_grant": {
+            "type": "string",
+            "description": "Narrow the login's grant. Only `primitive:api` (the person's own\ngrant, as when omitted) is accepted; anything else answers\n`400 grant_not_available`.\n"
           }
         }
       },
@@ -27590,6 +30472,20 @@ export const openapiDocument: Record<string, unknown> = {
               "null"
             ],
             "description": "Suggested personal address; nothing is assigned until explicitly saved."
+          },
+          "grant": {
+            "description": "Present with `include=grant`. Null when the server has no grant for the caller.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/GrantDescription"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "check": {
+            "$ref": "#/components/schemas/PermissionCheck"
           }
         },
         "required": [

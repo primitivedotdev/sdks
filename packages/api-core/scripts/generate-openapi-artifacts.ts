@@ -45,6 +45,7 @@ type OpenApiOperation = {
   >;
   summary?: string;
   tags?: string[];
+  "x-primitive-permission"?: string[];
 };
 
 type OpenApiPathItem = {
@@ -85,6 +86,11 @@ type PrimitiveOperationManifest = {
    * `Idempotency-Key`). `name` is the header name as the spec spells it.
    */
   headerParams: PrimitiveParameterManifest[];
+  /**
+   * Permissions the operation requires, all of them, from the spec's
+   * `x-primitive-permission`. Null when the spec declares none.
+   */
+  permissions: string[] | null;
   /**
    * Resolved JSON Schema for the request body when `hasJsonBody` is
    * true. All `$ref` references into `components/schemas` and
@@ -132,6 +138,7 @@ const specPath = resolve(scriptDir, "../../../openapi/primitive-api.yaml");
 const codegenSpecPath = resolve(scriptDir, "../../../openapi/primitive-api.codegen.json");
 const openapiOutputPath = resolve(scriptDir, "../src/openapi/openapi.generated.ts");
 const manifestOutputPath = resolve(scriptDir, "../src/openapi/operations.generated.ts");
+const permissionsOutputPath = resolve(scriptDir, "../src/openapi/permissions.generated.ts");
 
 function toKebabCase(value: string): string {
   return value
@@ -428,6 +435,17 @@ function hasBinaryResponse(doc: Record<string, unknown>, operation: OpenApiOpera
   return false;
 }
 
+function operationPermissions(operation: OpenApiOperation): string[] | null {
+  const raw = operation["x-primitive-permission"];
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  return raw.map((value) => {
+    if (typeof value !== "string" || !/^[a-z][a-z0-9_.]*:[a-z][a-z0-9_]*$/.test(value)) {
+      throw new Error(`${operation.operationId}: x-primitive-permission entry ${JSON.stringify(value)} is not a permission`);
+    }
+    return value;
+  });
+}
+
 function buildManifest(doc: Record<string, unknown>): PrimitiveOperationManifest[] {
   const manifest: PrimitiveOperationManifest[] = [];
 
@@ -455,6 +473,7 @@ function buildManifest(doc: Record<string, unknown>): PrimitiveOperationManifest
         pathParams: manifestParameters(parameters, "path"),
         queryParams: manifestParameters(parameters, "query"),
         headerParams: manifestParameters(parameters, "header"),
+        permissions: operationPermissions(operation),
         requestSchema: getRequestSchema(doc, operation),
         responseSchema: getResponseSchema(doc, operation),
         sdkName: operation.operationId,
@@ -534,6 +553,11 @@ export type PrimitiveOperationManifest = {
    */
   headerParams: PrimitiveParameterManifest[];
   /**
+   * Permissions the operation requires, all of them, from the spec's
+   * \`x-primitive-permission\`. Null when the spec declares none.
+   */
+  permissions: string[] | null;
+  /**
    * Resolved JSON Schema for the request body when \`hasJsonBody\` is
    * true. \`$ref\`s into the OpenAPI components are inlined.
    */
@@ -551,5 +575,36 @@ export type PrimitiveOperationManifest = {
 };
 
 export const operationManifest: PrimitiveOperationManifest[] = ${JSON.stringify(manifest, null, 2)};
+`,
+);
+
+const permissionSet = new Set<string>();
+const operationPermissionEntries: Array<[string, string[]]> = [];
+for (const operation of manifest) {
+  if (!operation.permissions) continue;
+  operationPermissionEntries.push([operation.operationId, operation.permissions]);
+  for (const permission of operation.permissions) permissionSet.add(permission);
+}
+const permissionList = [...permissionSet].sort();
+operationPermissionEntries.sort(([left], [right]) => left.localeCompare(right));
+
+writeFileSync(
+  permissionsOutputPath,
+  `/**
+ * Permissions declared by the Primitive API, from the spec's
+ * \`x-primitive-permission\` extension.
+ *
+ * AUTO-GENERATED - DO NOT EDIT
+ * Run \`pnpm generate:openapi\` to regenerate.
+ */
+
+/** Every permission an operation in this API version requires. */
+export const PERMISSIONS = ${JSON.stringify(permissionList, null, 2)} as const;
+
+/** A permission an operation can require, such as \`mail:send\`. */
+export type Permission = (typeof PERMISSIONS)[number];
+
+/** The permissions each operation requires, all of them, by operation id. */
+export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[]>> = ${JSON.stringify(Object.fromEntries(operationPermissionEntries), null, 2)};
 `,
 );

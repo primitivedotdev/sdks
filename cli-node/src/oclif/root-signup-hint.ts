@@ -51,7 +51,10 @@ function readRootCredentials(configDir: string): RootCredentials | null {
 
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
-    if (parsed.auth_method !== "oauth") return null;
+    // A login as yourself keeps the current organization's token in the
+    // same field; it may be expired, which only drops the signed-in line.
+    if (parsed.auth_method !== "oauth" && parsed.auth_method !== "user_grant")
+      return null;
     if (
       typeof parsed.access_token !== "string" ||
       !parsed.access_token.trim()

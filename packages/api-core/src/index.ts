@@ -44,6 +44,12 @@ export {
   type PrimitiveOperationManifest,
   type PrimitiveParameterManifest,
 } from "./openapi/operations.generated.js";
+export {
+  OPERATION_PERMISSIONS,
+  PERMISSIONS,
+  type Permission,
+} from "./openapi/permissions.generated.js";
+export { GrantSpec, type GrantSpecMatrixLevel } from "./grant-spec.js";
 
 // Re-export operations as an `operations` object too, mirroring the
 // historical SDK shape that the CLI's generated-command path relies
@@ -57,6 +63,11 @@ export * as operations from "./api/sdk.gen.js";
 export {
   createPrimitiveApiClient,
   DEFAULT_API_BASE_URL,
+  createPrimitiveApiError,
+  GRANT_FORBIDDEN_CODE,
+  GrantForbiddenError,
+  type GrantForbiddenDetailsShape,
+  isGrantForbiddenError,
   PrimitiveApiClient,
   type PrimitiveApiClientOptions,
   PrimitiveApiError,

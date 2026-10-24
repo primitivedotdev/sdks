@@ -33,6 +33,11 @@ export type PrimitiveOperationManifest = {
    */
   headerParams: PrimitiveParameterManifest[];
   /**
+   * Permissions the operation requires, all of them, from the spec's
+   * `x-primitive-permission`. Null when the spec declares none.
+   */
+  permissions: string[] | null;
+  /**
    * Resolved JSON Schema for the request body when `hasJsonBody` is
    * true. `$ref`s into the OpenAPI components are inlined.
    */
@@ -62,6 +67,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "account:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -212,6 +220,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "account:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -286,6 +297,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "webhook_secret:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -316,6 +330,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "member_address:manage"
+    ],
     "requestSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
@@ -371,6 +388,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "webhook_secret:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -401,6 +421,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "account:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -462,7 +485,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "whoami",
-    "description": "Current authenticated identity. member_address is null for machine credentials or an unavailable member address.",
+    "description": "Current authenticated identity. member_address is null for machine\ncredentials or an unavailable member address.\n\nTwo optional query parameters ask for the caller's grant. They are\ndescribed here rather than declared, so generated clients keep the\nsignature they had; pass them as raw query parameters.\n\n- `include=grant` adds `grant` (`GrantDescription`): the grant this\n  credential holds.\n- `check=<permission>`, optionally with\n  `resource=<function|domain|endpoint|route>:<id>`, adds `check`\n  (`PermissionCheck`): whether the grant allows that permission, with\n  the same `reason` and `details` a `403 grant_forbidden` would carry.\n  Nothing is enforced by asking; an unknown permission answers\n  `400 validation_error`.\n\nA server without grants ignores both and omits the fields.\n",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "whoami",
@@ -470,6 +493,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "account:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -526,6 +552,186 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "null"
           ],
           "description": "Suggested personal address; nothing is assigned until explicitly saved."
+        },
+        "grant": {
+          "description": "Present with `include=grant`. Null when the server has no grant for the caller.",
+          "oneOf": [
+            {
+              "type": "object",
+              "description": "The grant a credential holds, as `GET /whoami?include=grant` reports it.",
+              "additionalProperties": true,
+              "properties": {
+                "credential_kind": {
+                  "type": "string"
+                },
+                "actor": {
+                  "description": "Who the credential acts as."
+                },
+                "grant_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "grant_type": {
+                  "type": "string",
+                  "description": "`template`, `concrete` or `computed`."
+                },
+                "template": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "credential_grant_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "computed_from": {
+                  "description": "For a computed grant, the role and delegations it was computed from."
+                },
+                "permissions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "mail_scope": {
+                  "description": "`org`, or the addresses, domains and depth the grant reaches."
+                },
+                "resources": {
+                  "description": "Resource ids the grant is narrowed to, or null."
+                },
+                "expires_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "catalog_version": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "credential_kind",
+                "permissions",
+                "catalog_version"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "check": {
+          "type": "object",
+          "description": "The decision `GET /whoami?check=<permission>` reports. Nothing is enforced by asking.",
+          "additionalProperties": true,
+          "properties": {
+            "permission": {
+              "type": "string"
+            },
+            "allow": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string",
+              "description": "Why the permission is not allowed; same values as `grant_forbidden`."
+            },
+            "details": {
+              "type": "object",
+              "description": "The `details` of a `403 grant_forbidden`: the permission the\noperation needed and the grant that did not hold it.\n",
+              "additionalProperties": true,
+              "properties": {
+                "permission": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The permission the operation requires, for example `mail:send`."
+                },
+                "credential_kind": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The kind of credential that made the request, for example `org_key`."
+                },
+                "grant_template_key": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The grant template, when the credential holds one."
+                },
+                "credential_grant_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The concrete grant id, when the credential holds one."
+                },
+                "catalog_version": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Version of the permission catalog the decision used."
+                },
+                "reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Why the grant did not allow the operation: `permission_missing`,\n`required_permission_missing`, `mail_scope_requires_org`,\n`resource_outside_grant`, `credential_expired` or\n`unknown_permission`. New reasons may be added.\n"
+                },
+                "missing": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "A further permission the operation also requires, when that is the one missing."
+                },
+                "resource": {
+                  "type": "object",
+                  "description": "The resource the decision was about, when it named one.",
+                  "additionalProperties": true,
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "permission",
+                "credential_kind",
+                "catalog_version",
+                "reason"
+              ]
+            },
+            "resource": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "permission",
+            "allow"
+          ]
         }
       },
       "required": [
@@ -556,6 +762,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -696,6 +903,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "account:claim"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -742,6 +952,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -799,6 +1010,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "account:claim"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -850,6 +1064,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -930,6 +1145,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "account:claim"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -1030,6 +1248,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -1168,6 +1387,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "agentConnectionSetup",
@@ -1194,6 +1414,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "required": false,
         "type": "string"
       }
+    ],
+    "permissions": [
+      "agent_connections:update"
     ],
     "requestSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -1446,6 +1669,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "required": false,
         "type": "string"
       }
+    ],
+    "permissions": [
+      "agent_connections:manage"
     ],
     "requestSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -1848,6 +2074,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "permissions": [
+      "agent_connections:manage"
+    ],
     "requestSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
@@ -2078,6 +2307,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "agent_connections:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -2275,6 +2507,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "permissions": [
+      "agent_connections:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -2328,6 +2563,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "agent_connections:update"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -2509,6 +2747,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "agent_networks:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -2650,6 +2891,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "agent_networks:admit"
+    ],
     "requestSchema": {
       "type": "object",
       "description": "Check only a received email already stored for the bound recipient. The server verifies its sender against delivery evidence.",
@@ -2733,6 +2977,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "agent_networks:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -2842,6 +3089,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "agent_networks:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -2920,6 +3170,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "agent_networks:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -3057,6 +3310,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "agent_networks:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -3209,6 +3465,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "agent_networks:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -3247,6 +3506,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "agent_networks:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "description": "Set one or both independent discovery permissions.",
@@ -3445,6 +3707,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "changes:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -4611,6 +4876,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "credentials:revoke_self"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -4651,9 +4919,118 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-cli-orgs",
+    "description": "Lists every organization the person behind a CLI user login belongs\nto, with whether the CLI may be used there and, when it may not, the\nreason. Authenticate with the identity access token (`prim_uat_`) from\na CLI user login; no other credential is accepted. A server without\nCLI user logins answers `404 feature_disabled`.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listCliOrgs",
+    "path": "/cli/orgs",
+    "pathParams": [],
+    "queryParams": [],
+    "headerParams": [],
+    "permissions": null,
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "email": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "email"
+          ]
+        },
+        "user_grant_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "orgs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "role": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "available": {
+                "type": "boolean",
+                "description": "Whether the CLI can switch to this organization."
+              },
+              "reason": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "description": "Why the CLI cannot be used in an organization:\n`not_a_member`, `cli_access_disabled_by_org`, `role_insufficient`\n(the organization's policy does not allow the person's role), or\n`cli_access_revoked` (log in again).\n",
+                    "enum": [
+                      "not_a_member",
+                      "cli_access_disabled_by_org",
+                      "role_insufficient",
+                      "cli_access_revoked"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "available",
+              "reason"
+            ]
+          }
+        }
+      },
+      "required": [
+        "user",
+        "user_grant_id",
+        "orgs"
+      ]
+    },
+    "sdkName": "listCliOrgs",
+    "summary": "List the organizations a CLI login can switch to",
+    "tag": "CLI",
+    "tagCommand": "cli"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": true,
     "command": "poll-cli-login",
-    "description": "Polls a CLI login session until the browser approval either succeeds,\nis denied, expires, or is polled too quickly. The OAuth token set is\ncreated only after approval and is returned exactly once.\n",
+    "description": "Polls a CLI login session until the browser approval either succeeds,\nis denied, expires, or is polled too quickly. The OAuth token set is\ncreated only after approval and is returned exactly once.\nA login started with `login_kind: \"user\"` succeeds with a\n`CliUserLoginPollResult` instead (`auth_method: \"user_grant\"`).\n",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "pollCliLogin",
@@ -4661,6 +5038,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -4764,6 +5142,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -4821,6 +5200,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -4835,6 +5215,18 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "object",
           "additionalProperties": true,
           "description": "Optional client metadata stored with the login session; serialized JSON must be 2048 bytes or fewer"
+        },
+        "login_kind": {
+          "type": "string",
+          "enum": [
+            "org",
+            "user"
+          ],
+          "description": "`user` asks for a login as the person, not bound to one\norganization, that can switch between the person's organizations\n(see `CliUserLoginPollResult`). Servers without this answer\n`400 validation_error`; clients then retry without the field.\n"
+        },
+        "requested_grant": {
+          "type": "string",
+          "description": "Narrow the login's grant. Only `primitive:api` (the person's own\ngrant, as when omitted) is accepted; anything else answers\n`400 grant_not_available`.\n"
         }
       }
     },
@@ -4893,6 +5285,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -4973,6 +5366,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -5110,6 +5504,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "agent_contacts:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -5156,6 +5553,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "contacts:delete"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -5194,6 +5594,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "agent_contact_policy:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -5445,6 +5848,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "contacts:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -5502,6 +5908,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "contacts:policy"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -5634,6 +6043,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "agent_contacts:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -5739,6 +6151,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "contacts:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -5814,6 +6229,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "agent_contacts:manage"
+    ],
     "requestSchema": {
       "oneOf": [
         {
@@ -5956,6 +6374,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "contacts:policy"
+    ],
     "requestSchema": {
       "oneOf": [
         {
@@ -6306,6 +6727,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "contacts:write"
+    ],
     "requestSchema": {
       "oneOf": [
         {
@@ -6407,6 +6831,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "contacts:policy"
+    ],
     "requestSchema": {
       "oneOf": [
         {
@@ -6597,6 +7024,600 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "get-credential-policy",
+    "description": "The rules new keys and CLI access are held to: maximum lifetime,\nrequired expiry, who may create super admin keys and more. Available\nto an owner or admin in a person's session.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getCredentialPolicy",
+    "path": "/credential-policy",
+    "pathParams": [],
+    "queryParams": [],
+    "headerParams": [],
+    "permissions": [
+      "credentials:read"
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "max_key_lifetime_days": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "require_key_expiry": {
+          "type": "boolean"
+        },
+        "super_admin_key_creators": {
+          "type": "string",
+          "enum": [
+            "owners_and_admins",
+            "owners"
+          ]
+        },
+        "members_may_mint_keys": {
+          "type": "boolean"
+        },
+        "allow_org_mail_scope_keys": {
+          "type": "boolean"
+        },
+        "cap_agents_below_person": {
+          "type": "boolean"
+        },
+        "removal_suspends_created": {
+          "type": "boolean"
+        },
+        "oauth_consent_admin_only": {
+          "type": "boolean"
+        },
+        "cli_access": {
+          "type": "string",
+          "description": "Who may use the CLI in the organization. Present only where CLI user logins exist.",
+          "enum": [
+            "owners_and_admins",
+            "all_members",
+            "off"
+          ]
+        }
+      },
+      "required": [
+        "max_key_lifetime_days",
+        "require_key_expiry",
+        "super_admin_key_creators",
+        "members_may_mint_keys",
+        "allow_org_mail_scope_keys",
+        "cap_agents_below_person",
+        "removal_suspends_created",
+        "oauth_consent_admin_only"
+      ]
+    },
+    "sdkName": "getCredentialPolicy",
+    "summary": "Get the organization credential policy",
+    "tag": "Credentials",
+    "tagCommand": "credentials"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-credential-events",
+    "description": "The credential audit trail, newest first, paged with `cursor`.\nFilter by actor, credential, event type and time. Available to an\nowner or admin in a person's session.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listCredentialEvents",
+    "path": "/credential-events",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "description": "The `next_cursor` from the previous page.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Page size.",
+        "enum": null,
+        "maximum": 500,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "Only events by this actor.",
+        "enum": null,
+        "name": "actor_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Only events about this credential.",
+        "enum": null,
+        "name": "credential_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Only events of this type, for example `key.created`.",
+        "enum": null,
+        "name": "event_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Only events at or after this time (ISO 8601).",
+        "enum": null,
+        "name": "since",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Only events before this time (ISO 8601).",
+        "enum": null,
+        "name": "until",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "headerParams": [],
+    "permissions": [
+      "credential_events:read"
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "occurred_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "event_type": {
+                "type": "string",
+                "description": "For example `key.created`, `key.revoked` or `cli_access.granted`."
+              },
+              "credential_kind": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "credential_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "credential_prefix": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "actor_kind": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "actor_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "grant_ref": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "catalog_version": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "request_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            },
+            "required": [
+              "id",
+              "occurred_at",
+              "event_type",
+              "details"
+            ]
+          }
+        },
+        "next_cursor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ]
+    },
+    "sdkName": "listCredentialEvents",
+    "summary": "List credential audit events",
+    "tag": "Credentials",
+    "tagCommand": "credentials"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-credentials",
+    "description": "The credential inventory: organization API keys, Function keys,\nconnected agent keys, OAuth grants and agent delegates, each with its\ngrant, creator, last use, expiry, conditions and the actions it\noffers. Available to an owner or admin in a person's session. Answers\n`404 feature_disabled` where the inventory is not enabled.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listCredentials",
+    "path": "/credentials",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "description": "Only list credentials of this kind.",
+        "enum": null,
+        "name": "kind",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "headerParams": [],
+    "permissions": [
+      "credentials:read"
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "kind": {
+                "type": "string",
+                "description": "`org_key`, `function_key`, `connected_key`, `oauth`,\n`agent_delegate`, or `cli_user_access` (a person's CLI access in the\norganization through a CLI user login, listed only where those\nlogins exist).\n",
+                "enum": [
+                  "org_key",
+                  "function_key",
+                  "connected_key",
+                  "oauth",
+                  "agent_delegate",
+                  "cli_user_access"
+                ]
+              },
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "prefix": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "client": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "client_id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              },
+              "grant": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "ref": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "template",
+                      "concrete",
+                      "computed"
+                    ]
+                  },
+                  "template": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "permissions": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "mail_scope": {
+                    "description": "`org`, or the addresses, domains and depth the grant reaches."
+                  },
+                  "resources": {
+                    "description": "Resource ids the grant is narrowed to, or null."
+                  }
+                }
+              },
+              "creator": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "kind": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "email": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "member",
+                      "departed",
+                      "unknown",
+                      "agent_before_claim",
+                      "system"
+                    ]
+                  }
+                }
+              },
+              "created_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "last_used_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "last_used_ip": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "expires_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "conditions": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "description": "Conditions every use of the key is checked against.",
+                    "additionalProperties": true,
+                    "properties": {
+                      "ip_allowlist": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "minItems": 1,
+                        "maxItems": 100,
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "CIDR ranges (IPv4 or IPv6) the key may be used from."
+                      },
+                      "rate_limit_per_minute": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 100000
+                      },
+                      "suspended_at": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "date-time",
+                        "description": "Set when the key is suspended (read only)."
+                      }
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "flags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "actions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "revoke",
+                    "rotate",
+                    "edit",
+                    "transfer",
+                    "suggest"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "kind",
+              "id",
+              "name",
+              "grant",
+              "creator",
+              "expires_at",
+              "flags",
+              "actions"
+            ]
+          }
+        },
+        "counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        }
+      },
+      "required": [
+        "items",
+        "counts"
+      ]
+    },
+    "sdkName": "listCredentials",
+    "summary": "List every credential in the organization",
+    "tag": "Credentials",
+    "tagCommand": "credentials"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "revoke-credential",
+    "description": "Revokes one credential from the inventory. Function keys are rotated,\nnever revoked, and answer `409 rotate_instead`. Available to an owner\nor admin in a person's session.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "revokeCredential",
+    "path": "/credentials/revoke",
+    "pathParams": [],
+    "queryParams": [],
+    "headerParams": [],
+    "permissions": [
+      "keys:manage"
+    ],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "`org_key`, `function_key`, `connected_key`, `oauth`,\n`agent_delegate`, or `cli_user_access` (a person's CLI access in the\norganization through a CLI user login, listed only where those\nlogins exist).\n",
+          "enum": [
+            "org_key",
+            "function_key",
+            "connected_key",
+            "oauth",
+            "agent_delegate",
+            "cli_user_access"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 200
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "revoked": {
+          "type": "integer"
+        },
+        "kind": {
+          "type": "string",
+          "description": "`org_key`, `function_key`, `connected_key`, `oauth`,\n`agent_delegate`, or `cli_user_access` (a person's CLI access in the\norganization through a CLI user login, listed only where those\nlogins exist).\n",
+          "enum": [
+            "org_key",
+            "function_key",
+            "connected_key",
+            "oauth",
+            "agent_delegate",
+            "cli_user_access"
+          ]
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "revoked",
+        "kind",
+        "id"
+      ]
+    },
+    "sdkName": "revokeCredential",
+    "summary": "Revoke one credential",
+    "tag": "Credentials",
+    "tagCommand": "credentials"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "get-credit-balance",
     "description": "Read the organization credit position. `prepaid_credit` is the prepaid\nusage credit (paid top-ups, redeemed credit codes and granted credit)\nthat can still pay for usage. `budget` is the active agent spending\nbudget an operator funded for top-ups, or null when there is none.\nAmounts are strings of integer micros (1 USD = 1000000 micros).\n",
     "hasJsonBody": false,
@@ -6606,6 +7627,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "credits:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -6730,6 +7754,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "permissions": [
+      "credits:redeem"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -6818,6 +7845,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "domains:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -6978,6 +8008,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "domains:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -7567,6 +8600,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "domains:manage"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteDomain",
@@ -7602,6 +8638,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "domains:read"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadDomainZoneFile",
@@ -7621,6 +8660,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "domains:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -7815,6 +8857,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "domains:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -7909,6 +8954,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "domains:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "oneOf": [
@@ -8144,6 +9192,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "mail:delete"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteEmail",
@@ -8171,6 +9222,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "mail.state:write"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -8222,6 +9276,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadAttachments",
@@ -8263,6 +9320,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadEmailAttachmentArchiveMember",
@@ -8298,6 +9358,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadEmailAttachmentByFilename",
@@ -8334,6 +9397,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadEmailAttachmentPart",
@@ -8369,6 +9435,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "mail.raw:read"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadRawEmail",
@@ -8404,6 +9473,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -8651,6 +9723,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -9544,6 +10619,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -9744,6 +10822,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -10213,6 +11294,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "mail.state:write"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -10471,6 +11555,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -11023,6 +12110,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "endpoints:pull"
+    ],
     "requestSchema": {
       "oneOf": [
         {
@@ -11325,6 +12415,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "endpoints.pull:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -11590,6 +12683,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "endpoints.pull:manage"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteEndpoint",
@@ -11609,6 +12705,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "endpoints.pull:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -11814,6 +12913,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "endpoints:pull"
+    ],
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -11989,6 +13091,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "endpoints:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -12036,6 +13141,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "endpoints:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -12163,6 +13271,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "endpoints:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -12394,6 +13505,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "filters:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -12497,6 +13611,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "filters:manage"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteFilter",
@@ -12516,6 +13633,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "filters:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -12592,6 +13712,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "filters:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -12668,6 +13791,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "functions:deploy"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -12753,6 +13879,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "secrets:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -12819,6 +13948,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "secrets:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -12893,6 +14025,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "functions:manage"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteFunction",
@@ -12927,6 +14062,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "secrets:manage"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteFunctionSecret",
@@ -12954,6 +14092,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "secrets:manage"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteOrgSecret",
@@ -12981,6 +14122,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "functions:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -13063,6 +14207,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "functions:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "oneOf": [
@@ -13180,6 +14327,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "functions:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -13741,6 +14891,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "functions:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -13887,6 +15040,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "functions:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -13983,6 +15139,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "secrets:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -14052,6 +15211,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "functions:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -14120,6 +15282,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "secrets:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -14179,6 +15344,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "functions:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "description": "Target for a route binding. Either a specific verified domain\n(scoped) or the org-wide fallback. Pass `takeover: true` to\ndeactivate any conflicting binding before installing this one.\n",
@@ -14385,6 +15553,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "secrets:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -14452,6 +15623,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "secrets:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -14519,6 +15693,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "functions:deploy"
+    ],
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -14613,6 +15790,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "functions:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -14653,6 +15833,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "functions:deploy"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -14751,6 +15934,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "account:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -14985,6 +16171,737 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "create-key",
+    "description": "Creates an organization API key with a preset or a custom grant, an\noptional expiry and optional conditions. The secret is returned once,\nin `key`. A person's session may call this directly. An OAuth token\n(such as a CLI login) needs a single-use step-up token from the\ndashboard in the `Primitive-Step-Up` header; without one the answer\nis `403 step_up_required` with `details.step_up_url`. A grant the\ncaller may not give, or one the server does not offer, answers\n`409 grant_not_available` with a `reason`.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "createKey",
+    "path": "/keys",
+    "pathParams": [],
+    "queryParams": [],
+    "headerParams": [
+      {
+        "description": "A single-use step-up token (`pstep_...`) from the dashboard's\nstep-up page. Needed when an OAuth token, such as a CLI login,\ncreates or rotates a key.\n",
+        "enum": null,
+        "name": "Primitive-Step-Up",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "permissions": [
+      "keys:manage"
+    ],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "grant": {
+          "description": "A preset name, or a grant spec.",
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "`super_admin` (every ordinary permission, as keys have today),\n`send_only`, `read_only`, `own_addresses` and\n`own_addresses_read_only` (both need `addresses`), or `custom`.\n",
+              "enum": [
+                "super_admin",
+                "send_only",
+                "read_only",
+                "own_addresses",
+                "own_addresses_read_only",
+                "custom"
+              ]
+            },
+            {
+              "type": "object",
+              "description": "A key's grant: a preset, optionally narrowed. Use `matrix` (area to\n`none`, `read` or `write`, areas from `GET /keys/builder`) or\n`permissions` for a custom grant, `addresses` and `domains` to limit\nmail, and `resources` to limit Functions, domains, endpoints or\nroutes to selected ids. The server adds the permissions a choice\nimplies and reports them in `warnings`.\n",
+              "additionalProperties": false,
+              "properties": {
+                "preset": {
+                  "type": "string",
+                  "description": "`super_admin` (every ordinary permission, as keys have today),\n`send_only`, `read_only`, `own_addresses` and\n`own_addresses_read_only` (both need `addresses`), or `custom`.\n",
+                  "enum": [
+                    "super_admin",
+                    "send_only",
+                    "read_only",
+                    "own_addresses",
+                    "own_addresses_read_only",
+                    "custom"
+                  ]
+                },
+                "matrix": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "read",
+                      "write"
+                    ]
+                  }
+                },
+                "permissions": {
+                  "type": "array",
+                  "maxItems": 200,
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "addresses": {
+                  "type": "array",
+                  "maxItems": 100,
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "domains": {
+                  "type": "array",
+                  "maxItems": 50,
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "resources": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "preset"
+              ]
+            }
+          ]
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the key stops working. Use this or `expires_in_days`."
+        },
+        "expires_in_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3650,
+          "description": "Days until the key stops working. Use this or `expires_at`."
+        },
+        "conditions": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ip_allowlist": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "minItems": 1,
+              "maxItems": 100,
+              "items": {
+                "type": "string"
+              },
+              "description": "CIDR ranges (IPv4 or IPv6) the key may be used from."
+            },
+            "rate_limit_per_minute": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 100000
+            }
+          }
+        }
+      }
+    },
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "key": {
+          "type": "string",
+          "description": "The secret. Shown once; store it now."
+        },
+        "key_prefix": {
+          "type": "string"
+        },
+        "grant": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "template": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "credential_grant_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "permissions": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "mail_scope": {
+              "description": "`org`, or the addresses, domains and depth the grant reaches."
+            },
+            "resources": {
+              "description": "Resource ids the grant is narrowed to, or null."
+            }
+          }
+        },
+        "expires_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "conditions": {
+          "description": "The key's conditions, or null."
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "description": "A permission the server added because a chosen one implies it.",
+            "additionalProperties": true,
+            "properties": {
+              "permission": {
+                "type": "string"
+              },
+              "adds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "why": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "permission",
+              "adds",
+              "why",
+              "description"
+            ]
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "key",
+        "key_prefix",
+        "grant",
+        "expires_at",
+        "warnings"
+      ]
+    },
+    "sdkName": "createKey",
+    "summary": "Create an API key",
+    "tag": "Keys",
+    "tagCommand": "keys"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-key-builder",
+    "description": "The presets a key can be created from, with whether each is available\nand why not, the per-area permission matrix and the credential\npolicy.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getKeyBuilder",
+    "path": "/keys/builder",
+    "pathParams": [],
+    "queryParams": [],
+    "headerParams": [],
+    "permissions": [
+      "keys:read"
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "presets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "available": {
+                "type": "boolean"
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "description",
+              "available",
+              "reason",
+              "message"
+            ]
+          }
+        },
+        "matrix": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "read": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "write": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "resource": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "description",
+              "read",
+              "write",
+              "resource"
+            ]
+          }
+        },
+        "policy": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "max_key_lifetime_days": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "require_key_expiry": {
+              "type": "boolean"
+            },
+            "super_admin_key_creators": {
+              "type": "string",
+              "enum": [
+                "owners_and_admins",
+                "owners"
+              ]
+            },
+            "members_may_mint_keys": {
+              "type": "boolean"
+            },
+            "allow_org_mail_scope_keys": {
+              "type": "boolean"
+            },
+            "cap_agents_below_person": {
+              "type": "boolean"
+            },
+            "removal_suspends_created": {
+              "type": "boolean"
+            },
+            "oauth_consent_admin_only": {
+              "type": "boolean"
+            },
+            "cli_access": {
+              "type": "string",
+              "description": "Who may use the CLI in the organization. Present only where CLI user logins exist.",
+              "enum": [
+                "owners_and_admins",
+                "all_members",
+                "off"
+              ]
+            }
+          },
+          "required": [
+            "max_key_lifetime_days",
+            "require_key_expiry",
+            "super_admin_key_creators",
+            "members_may_mint_keys",
+            "allow_org_mail_scope_keys",
+            "cap_agents_below_person",
+            "removal_suspends_created",
+            "oauth_consent_admin_only"
+          ]
+        }
+      },
+      "required": [
+        "enabled",
+        "presets",
+        "matrix",
+        "policy"
+      ]
+    },
+    "sdkName": "getKeyBuilder",
+    "summary": "Get the key presets and permission matrix",
+    "tag": "Keys",
+    "tagCommand": "keys"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "rotate-key",
+    "description": "Mints a successor with the same grant, name, expiry and conditions,\nand brings the old key's expiry forward to the end of the overlap\n(default 24 hours; `0` revokes it at once). The new secret is\nreturned once. An OAuth token needs a step-up token, as for\n`createKey`.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "rotateKey",
+    "path": "/keys/{id}/rotate",
+    "pathParams": [
+      {
+        "description": "API key id",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "headerParams": [
+      {
+        "description": "A single-use step-up token (`pstep_...`) from the dashboard's\nstep-up page. Needed when an OAuth token, such as a CLI login,\ncreates or rotates a key.\n",
+        "enum": null,
+        "name": "Primitive-Step-Up",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "permissions": [
+      "keys:manage"
+    ],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "overlap_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 604800,
+          "description": "Seconds the old key keeps working. Default 86400; 0 revokes it at once."
+        }
+      }
+    },
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string",
+          "description": "The new secret. Shown once; store it now."
+        },
+        "key_prefix": {
+          "type": "string"
+        },
+        "previous_key_id": {
+          "type": "string"
+        },
+        "previous_key_expires_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "key",
+        "key_prefix",
+        "previous_key_id",
+        "previous_key_expires_at"
+      ]
+    },
+    "sdkName": "rotateKey",
+    "summary": "Rotate an API key",
+    "tag": "Keys",
+    "tagCommand": "keys"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "update-key",
+    "description": "Renames a key or changes its expiry, grant, conditions or suspension.\nA grant change is recorded as a new grant version. Available in a\nperson's session.\n",
+    "hasJsonBody": true,
+    "method": "PATCH",
+    "operationId": "updateKey",
+    "path": "/keys/{id}",
+    "pathParams": [
+      {
+        "description": "API key id",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "headerParams": [],
+    "permissions": [
+      "keys:manage"
+    ],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "expires_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "grant": {
+          "description": "A preset name, or a grant spec.",
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "`super_admin` (every ordinary permission, as keys have today),\n`send_only`, `read_only`, `own_addresses` and\n`own_addresses_read_only` (both need `addresses`), or `custom`.\n",
+              "enum": [
+                "super_admin",
+                "send_only",
+                "read_only",
+                "own_addresses",
+                "own_addresses_read_only",
+                "custom"
+              ]
+            },
+            {
+              "type": "object",
+              "description": "A key's grant: a preset, optionally narrowed. Use `matrix` (area to\n`none`, `read` or `write`, areas from `GET /keys/builder`) or\n`permissions` for a custom grant, `addresses` and `domains` to limit\nmail, and `resources` to limit Functions, domains, endpoints or\nroutes to selected ids. The server adds the permissions a choice\nimplies and reports them in `warnings`.\n",
+              "additionalProperties": false,
+              "properties": {
+                "preset": {
+                  "type": "string",
+                  "description": "`super_admin` (every ordinary permission, as keys have today),\n`send_only`, `read_only`, `own_addresses` and\n`own_addresses_read_only` (both need `addresses`), or `custom`.\n",
+                  "enum": [
+                    "super_admin",
+                    "send_only",
+                    "read_only",
+                    "own_addresses",
+                    "own_addresses_read_only",
+                    "custom"
+                  ]
+                },
+                "matrix": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "read",
+                      "write"
+                    ]
+                  }
+                },
+                "permissions": {
+                  "type": "array",
+                  "maxItems": 200,
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "addresses": {
+                  "type": "array",
+                  "maxItems": 100,
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "domains": {
+                  "type": "array",
+                  "maxItems": 50,
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "resources": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "preset"
+              ]
+            }
+          ]
+        },
+        "conditions": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "ip_allowlist": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "minItems": 1,
+                  "maxItems": 100,
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "CIDR ranges (IPv4 or IPv6) the key may be used from."
+                },
+                "rate_limit_per_minute": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 1,
+                  "maximum": 100000
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "suspended": {
+          "type": "boolean"
+        }
+      }
+    },
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "changed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "description": "A permission the server added because a chosen one implies it.",
+            "additionalProperties": true,
+            "properties": {
+              "permission": {
+                "type": "string"
+              },
+              "adds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "why": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "permission",
+              "adds",
+              "why",
+              "description"
+            ]
+          }
+        }
+      },
+      "required": [
+        "id",
+        "changed",
+        "warnings"
+      ]
+    },
+    "sdkName": "updateKey",
+    "summary": "Update an API key",
+    "tag": "Keys",
+    "tagCommand": "keys"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": false,
     "command": "delete-memory",
     "description": "Delete one active memory by key and scope. Deletes are idempotent when\n`if_version` is omitted: deleting a missing key returns `deleted:\nfalse`. With `if_version`, a missing key still returns `deleted: false`,\nbut a stale version returns `memory_conflict`.\n\nA successful delete records memory write usage.\n",
@@ -15034,6 +16951,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "required": false,
         "type": "string"
       }
+    ],
+    "permissions": [
+      "memories:write"
     ],
     "requestSchema": null,
     "responseSchema": {
@@ -15125,6 +17045,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "required": false,
         "type": "string"
       }
+    ],
+    "permissions": [
+      "memories:read"
     ],
     "requestSchema": null,
     "responseSchema": {
@@ -15357,6 +17280,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "permissions": [
+      "memories:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -15521,6 +17447,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "required": false,
         "type": "string"
       }
+    ],
+    "permissions": [
+      "memories:write"
     ],
     "requestSchema": {
       "type": "object",
@@ -15786,6 +17715,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -16042,6 +17972,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "permissions": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -16242,6 +18173,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -16447,6 +18379,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -16506,6 +18439,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -16579,6 +18513,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -16655,6 +18590,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -16781,6 +18717,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -16885,6 +18822,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -16978,6 +18916,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -17064,6 +19003,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -17111,6 +19051,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -17197,6 +19138,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteRegistry",
@@ -17224,6 +19166,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -17304,6 +19247,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -17363,6 +19307,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -17450,6 +19395,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -17543,6 +19489,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -17605,6 +19552,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": {
       "type": "object",
       "description": "Publish an agent into a registry. When display_name is present the agent identity is defined (create-or-get by address) in the same call before publishing; omit the define fields to publish an already-defined agent.",
@@ -17726,6 +19674,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -17813,6 +19762,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "unpublishAgent",
@@ -17840,6 +19790,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": {
       "type": "object",
       "minProperties": 1,
@@ -17907,6 +19858,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "sent:manage"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteRepeatingSend",
@@ -17934,6 +19888,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "sent:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -18114,6 +20071,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "sent:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -18290,6 +20250,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "mail:signal"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -18368,6 +20331,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "sent:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -18576,6 +20542,318 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-access-mode",
+    "description": "Whether mailbox access follows the whole organization or explicit\ndelegations. Owners and admins also see the preview of a switch and\nthe decisions recorded for it.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getAccessMode",
+    "path": "/access-mode",
+    "pathParams": [],
+    "queryParams": [],
+    "headerParams": [],
+    "permissions": [
+      "members:read"
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "whole_org",
+            "delegated"
+          ]
+        },
+        "version": {
+          "type": "integer"
+        },
+        "changed_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "preview": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "decisions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "gate": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "mode",
+        "version",
+        "changed_at"
+      ]
+    },
+    "sdkName": "getAccessMode",
+    "summary": "Get the organization access mode",
+    "tag": "Roles",
+    "tagCommand": "roles"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-groups",
+    "description": "Groups of members, each with its members and an optional role.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listGroups",
+    "path": "/groups",
+    "pathParams": [],
+    "queryParams": [],
+    "headerParams": [],
+    "permissions": [
+      "members:read"
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "role_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "members": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "members"
+            ]
+          }
+        }
+      },
+      "required": [
+        "groups"
+      ]
+    },
+    "sdkName": "listGroups",
+    "summary": "List groups",
+    "tag": "Roles",
+    "tagCommand": "roles"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-mailbox-access",
+    "description": "Every mailbox and domain access entry (delegation) in the organization.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listMailboxAccess",
+    "path": "/mailbox-access",
+    "pathParams": [],
+    "queryParams": [],
+    "headerParams": [],
+    "permissions": [
+      "members:read"
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "required": [
+        "entries"
+      ]
+    },
+    "sdkName": "listMailboxAccess",
+    "summary": "List mailbox access entries",
+    "tag": "Roles",
+    "tagCommand": "roles"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-roles",
+    "description": "The organization's roles (built-in, template and custom), the role\ntemplates that can be assigned, and whether role assignment is\navailable. Readable by any person in the organization.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listRoles",
+    "path": "/roles",
+    "pathParams": [],
+    "queryParams": [],
+    "headerParams": [],
+    "permissions": [
+      "members:read"
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "key": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "builtin",
+                  "template",
+                  "custom"
+                ]
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "permissions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "mail_scope": {
+                "description": "`org`, or the addresses, domains and depth the role reaches."
+              },
+              "version": {
+                "type": "integer"
+              },
+              "catalog_version": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "predates_catalog": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "key",
+              "kind",
+              "name",
+              "permissions",
+              "version"
+            ]
+          }
+        },
+        "templates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "permissions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "key",
+              "name",
+              "description",
+              "permissions"
+            ]
+          }
+        },
+        "assignment": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "available": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "available",
+            "reason"
+          ]
+        }
+      },
+      "required": [
+        "roles",
+        "templates",
+        "assignment"
+      ]
+    },
+    "sdkName": "listRoles",
+    "summary": "List roles",
+    "tag": "Roles",
+    "tagCommand": "roles"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-route",
     "description": "Binds a recipient pattern to a destination. Provide exactly one of\n`endpoint_id` (an existing endpoint) or `function_id`. With `function_id`,\na dedicated route-target endpoint is minted for that function in the same\ntransaction, enabling per-address function routing (e.g.\n`alice@acme.com -> functionA`).\n",
@@ -18586,6 +20864,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "routes:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -18732,6 +21013,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "routes:manage"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteRoute",
@@ -18751,6 +21035,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "routes:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -18843,6 +21130,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "routes:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -18967,6 +21257,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "routes:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -19124,6 +21417,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "routes:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -19250,6 +21546,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "mail.search:semantic"
+    ],
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -19537,6 +21836,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -19672,6 +21974,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "sent:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "description": "Full sent-email record, including `body_text` and\n`body_html`. Returned by /sent-emails/{id}.\n",
@@ -20448,6 +22753,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "sent:cancel"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -21252,6 +23560,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "sent:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -21317,6 +23628,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadSentAttachmentArchiveMember",
@@ -21352,6 +23666,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadSentAttachmentByFilename",
@@ -21388,6 +23705,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadSentAttachmentPart",
@@ -21407,6 +23727,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "account:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -21514,6 +23837,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "account:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -21663,6 +23989,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "description": "Full sent-email record, including `body_text` and\n`body_html`. Returned by /sent-emails/{id}.\n",
@@ -22454,6 +24783,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -22612,6 +24944,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -23175,6 +25510,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "mail:reply"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -23488,6 +25826,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "sent:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -24285,6 +26626,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "permissions": [
+      "mail:send"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -24714,6 +27058,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -25136,6 +27481,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "functions:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -25225,6 +27573,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "templates:install",
+      "functions:deploy"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -25367,6 +27719,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -25493,6 +27846,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -25683,6 +28039,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "wake:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -25796,6 +28155,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "wake:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -25941,6 +28303,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "wake:manage"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteWakeAuthorization",
@@ -25968,6 +28333,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "wake:manage"
+    ],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteWakeSchedule",
@@ -25995,6 +28363,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "wake:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -26096,6 +28467,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "wake:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -26180,6 +28554,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "wake:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -26261,6 +28638,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "wake:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -26365,6 +28745,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "wake:manage"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -26395,6 +28778,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "wake:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -26484,6 +28870,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "wake:manage"
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -26683,6 +29072,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
+    "permissions": [
+      "webhooks:read"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -26838,6 +29230,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "headerParams": [],
+    "permissions": [
+      "webhooks:replay"
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",

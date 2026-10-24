@@ -4,6 +4,10 @@ import {
   pullFile,
   pushFile,
 } from "@primitivedotdev/sdk/payloads";
+import {
+  createAuthenticatedCliApiClient,
+  selectedOrgFromEnv,
+} from "../api-client.js";
 import { resolveCliAuth } from "../auth.js";
 
 const DEFAULT_API_BASE_URL = "https://api.primitive.dev";
@@ -21,15 +25,29 @@ const authFlags = {
   }),
 };
 
-function resolveClient(
+async function resolveClient(
   configDir: string,
   flags: { "api-key"?: string; "api-base-url"?: string },
-): { baseUrl: string; apiKey: string } {
-  const auth = resolveCliAuth({
+): Promise<{ baseUrl: string; apiKey: string }> {
+  let auth = resolveCliAuth({
     configDir,
     apiKey: flags["api-key"],
     apiBaseUrl: flags["api-base-url"],
   });
+  // A login as yourself (or --org) needs a per-org token for the selected
+  // organization, which the shared client resolves and exchanges.
+  if (
+    auth.credentials?.auth_method === "user_grant" ||
+    selectedOrgFromEnv() !== null
+  ) {
+    auth = (
+      await createAuthenticatedCliApiClient({
+        apiKey: flags["api-key"],
+        apiBaseUrl: flags["api-base-url"],
+        configDir,
+      })
+    ).auth;
+  }
   if (!auth.apiKey) {
     throw new Error(
       "Not authenticated: set PRIMITIVE_API_KEY, pass --api-key, or run `primitive login`.",
@@ -86,7 +104,10 @@ export class PayloadsPushCommand extends Command {
 
   async run(): Promise<void> {
     const { args, flags } = await this.parse(PayloadsPushCommand);
-    const { baseUrl, apiKey } = resolveClient(this.config.configDir, flags);
+    const { baseUrl, apiKey } = await resolveClient(
+      this.config.configDir,
+      flags,
+    );
     const result = await pushFile(args.file, {
       baseUrl,
       apiKey,
@@ -142,7 +163,10 @@ export class PayloadsPullCommand extends Command {
 
   async run(): Promise<void> {
     const { args, flags } = await this.parse(PayloadsPullCommand);
-    const { baseUrl, apiKey } = resolveClient(this.config.configDir, flags);
+    const { baseUrl, apiKey } = await resolveClient(
+      this.config.configDir,
+      flags,
+    );
     const manifest = await pullFile(args.root, flags.out, {
       baseUrl,
       apiKey,

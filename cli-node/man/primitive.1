@@ -186,6 +186,35 @@ Run
 .B primitive logout --force
 to remove local credentials, pending email-code auth state, and stale credential locks without contacting Primitive.
 .PP
+Where the server supports it, browser login logs you in as yourself. Run
+.B primitive orgs
+to list your organizations and whether the CLI may be used in each, and
+.B primitive org use ORG
+to switch by name or id. Pass
+.B --org ORG
+to any command, or set
+.BR PRIMITIVE_CLI_ORG ,
+to act in another organization for that command.
+.B primitive memories
+keeps its own boolean
+.B --org
+flag. A login saved by an earlier CLI, an API key and a connected agent
+profile are bound to one organization and refuse a different one.
+.PP
+Run
+.B primitive keys create
+with
+.BR --preset ,
+.BR --permission ,
+.B --expires
+and
+.B --step-up
+to create a narrowed API key, and
+.B primitive keys rotate KEY_ID
+to rotate one.
+.B primitive whoami --check PERMISSION
+reports whether the current credential may use a permission.
+.PP
 Run
 .B primitive whoami
 to verify account authentication. With PRIMITIVE_AGENT_PROFILE selected, it

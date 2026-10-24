@@ -1,4 +1,6 @@
 from .client import (
+    GRANT_FORBIDDEN_CODE,
+    GrantForbiddenError,
     PrimitiveAPIError,
     PrimitiveClient,
     RateLimit,
@@ -256,6 +258,8 @@ __all__ = [
     "ParsedError",
     "ParsedStatus",
     "PrimitiveAPIError",
+    "GrantForbiddenError",
+    "GRANT_FORBIDDEN_CODE",
     "PrimitiveClient",
     "PrimitiveWebhookError",
     "RAW_EMAIL_ERRORS",

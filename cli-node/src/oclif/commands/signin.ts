@@ -99,7 +99,7 @@ export class SigninCommand extends BrowserLoginCommand {
   static description =
     `Sign in or log in to an existing Primitive account and save an org-scoped OAuth session locally.
 
-Run \`primitive signin <email> --accept-terms\` for email-code sign-in, then \`primitive signin confirm <email> <code>\`. Run \`primitive signin\` with no email to use browser approval; \`primitive signin browser\` is the explicit browser form. \`primitive login\` supports the same flows with login-shaped commands. \`primitive otp <email>\` is the shortest email-code auth form. For new account creation, use \`primitive signup <email>\`.`;
+Run \`primitive signin <email> --accept-terms\` for email-code sign-in, then \`primitive signin confirm <email> <code>\`. Run \`primitive signin\` with no email to use browser approval; \`primitive signin browser\` is the explicit browser form. \`primitive login\` supports the same flows with login-shaped commands. \`primitive otp <email>\` is the shortest email-code auth form. For new account creation, use \`primitive signup <email>\`. Browser approval logs you in as yourself where the server supports it, so you can switch organizations with \`primitive org use <org>\` or \`--org <org>\` on any command.`;
 
   static summary = "Sign in to an existing account";
 
@@ -127,6 +127,11 @@ Run \`primitive signin <email> --accept-terms\` for email-code sign-in, then \`p
     const commandClass = this.constructor as typeof SigninCommand;
     const { args, flags } = await this.parse(commandClass);
 
+    if (args.email && (flags as LoginFlags).permission?.length) {
+      throw cliError(
+        "--permission applies to browser login. Run the command without an email to use it.",
+      );
+    }
     if (!args.email) {
       if (flags["accept-terms"]) {
         throw cliError(
@@ -167,7 +172,7 @@ export class LoginCommand extends SigninCommand {
   static description =
     `Log in or sign in to an existing Primitive account and save an org-scoped OAuth session locally.
 
-Run \`primitive login <email> --accept-terms\` for email-code login, then \`primitive login confirm <email> <code>\`. Run \`primitive login\` with no email to use browser approval; \`primitive login browser\` is the explicit browser form. \`primitive signin\` supports the same flows with signin-shaped commands. \`primitive otp <email>\` is the shortest email-code auth form. For new account creation, use \`primitive signup <email>\`.`;
+Run \`primitive login <email> --accept-terms\` for email-code login, then \`primitive login confirm <email> <code>\`. Run \`primitive login\` with no email to use browser approval; \`primitive login browser\` is the explicit browser form. \`primitive signin\` supports the same flows with signin-shaped commands. \`primitive otp <email>\` is the shortest email-code auth form. For new account creation, use \`primitive signup <email>\`. Browser approval logs you in as yourself where the server supports it, so you can switch organizations with \`primitive org use <org>\` or \`--org <org>\` on any command.`;
 
   static summary = "Log in to an existing account";
 

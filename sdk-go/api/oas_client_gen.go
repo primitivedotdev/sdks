@@ -323,6 +323,19 @@ type Invoker interface {
 	//
 	// POST /functions/{id}/secrets
 	CreateFunctionSecret(ctx context.Context, request *CreateFunctionSecretInput, params CreateFunctionSecretParams) (CreateFunctionSecretRes, error)
+	// CreateKey invokes createKey operation.
+	//
+	// Creates an organization API key with a preset or a custom grant, an
+	// optional expiry and optional conditions. The secret is returned once,
+	// in `key`. A person's session may call this directly. An OAuth token
+	// (such as a CLI login) needs a single-use step-up token from the
+	// dashboard in the `Primitive-Step-Up` header; without one the answer
+	// is `403 step_up_required` with `details.step_up_url`. A grant the
+	// caller may not give, or one the server does not offer, answers
+	// `409 grant_not_available` with a `reason`.
+	//
+	// POST /keys
+	CreateKey(ctx context.Context, request *CreateKeyInput, params CreateKeyParams) (CreateKeyRes, error)
 	// CreateOrgSecret invokes createOrgSecret operation.
 	//
 	// Idempotent insert-or-update keyed on `(org_id, key)`. Returns
@@ -642,6 +655,14 @@ type Invoker interface {
 	//
 	// GET /sent-emails/{id}/attachments/{part_index}
 	DownloadSentAttachmentPart(ctx context.Context, params DownloadSentAttachmentPartParams) (DownloadSentAttachmentPartRes, error)
+	// GetAccessMode invokes getAccessMode operation.
+	//
+	// Whether mailbox access follows the whole organization or explicit
+	// delegations. Owners and admins also see the preview of a switch and
+	// the decisions recorded for it.
+	//
+	// GET /access-mode
+	GetAccessMode(ctx context.Context) (GetAccessModeRes, error)
 	// GetAccount invokes getAccount operation.
 	//
 	// Get account info.
@@ -784,6 +805,14 @@ type Invoker interface {
 	//
 	// GET /emails/{id}/conversation
 	GetConversation(ctx context.Context, params GetConversationParams) (GetConversationRes, error)
+	// GetCredentialPolicy invokes getCredentialPolicy operation.
+	//
+	// The rules new keys and CLI access are held to: maximum lifetime,
+	// required expiry, who may create super admin keys and more. Available
+	// to an owner or admin in a person's session.
+	//
+	// GET /credential-policy
+	GetCredentialPolicy(ctx context.Context) (GetCredentialPolicyRes, error)
 	// GetCreditBalance invokes getCreditBalance operation.
 	//
 	// Read the organization credit position. `prepaid_credit` is the prepaid
@@ -865,6 +894,14 @@ type Invoker interface {
 	//
 	// GET /inbox/status
 	GetInboxStatus(ctx context.Context) (GetInboxStatusRes, error)
+	// GetKeyBuilder invokes getKeyBuilder operation.
+	//
+	// The presets a key can be created from, with whether each is available
+	// and why not, the per-area permission matrix and the credential
+	// policy.
+	//
+	// GET /keys/builder
+	GetKeyBuilder(ctx context.Context) (GetKeyBuilderRes, error)
 	// GetMemory invokes getMemory operation.
 	//
 	// Fetch one active memory by key and scope. Omit scope parameters to use
@@ -1124,6 +1161,16 @@ type Invoker interface {
 	//
 	// GET /changes
 	ListChanges(ctx context.Context, params ListChangesParams) (ListChangesRes, error)
+	// ListCliOrgs invokes listCliOrgs operation.
+	//
+	// Lists every organization the person behind a CLI user login belongs
+	// to, with whether the CLI may be used there and, when it may not, the
+	// reason. Authenticate with the identity access token (`prim_uat_`) from
+	// a CLI user login; no other credential is accepted. A server without
+	// CLI user logins answers `404 feature_disabled`.
+	//
+	// GET /cli/orgs
+	ListCliOrgs(ctx context.Context) (ListCliOrgsRes, error)
 	// ListContacts invokes listContacts operation.
 	//
 	// Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -1142,6 +1189,24 @@ type Invoker interface {
 	//
 	// GET /contacts
 	ListContacts(ctx context.Context, params ListContactsParams) (ListContactsRes, error)
+	// ListCredentialEvents invokes listCredentialEvents operation.
+	//
+	// The credential audit trail, newest first, paged with `cursor`.
+	// Filter by actor, credential, event type and time. Available to an
+	// owner or admin in a person's session.
+	//
+	// GET /credential-events
+	ListCredentialEvents(ctx context.Context, params ListCredentialEventsParams) (ListCredentialEventsRes, error)
+	// ListCredentials invokes listCredentials operation.
+	//
+	// The credential inventory: organization API keys, Function keys,
+	// connected agent keys, OAuth grants and agent delegates, each with its
+	// grant, creator, last use, expiry, conditions and the actions it
+	// offers. Available to an owner or admin in a person's session. Answers
+	// `404 feature_disabled` where the inventory is not enabled.
+	//
+	// GET /credentials
+	ListCredentials(ctx context.Context, params ListCredentialsParams) (ListCredentialsRes, error)
 	// ListDeclinedPayments invokes listDeclinedPayments operation.
 	//
 	// The 50 most recent payments your org's spend policy declined, newest
@@ -1261,6 +1326,18 @@ type Invoker interface {
 	//
 	// GET /functions
 	ListFunctions(ctx context.Context) (ListFunctionsRes, error)
+	// ListGroups invokes listGroups operation.
+	//
+	// Groups of members, each with its members and an optional role.
+	//
+	// GET /groups
+	ListGroups(ctx context.Context) (ListGroupsRes, error)
+	// ListMailboxAccess invokes listMailboxAccess operation.
+	//
+	// Every mailbox and domain access entry (delegation) in the organization.
+	//
+	// GET /mailbox-access
+	ListMailboxAccess(ctx context.Context) (ListMailboxAccessRes, error)
 	// ListOrgSecrets invokes listOrgSecrets operation.
 	//
 	// Returns metadata for every org-level secret. Org secrets apply
@@ -1304,6 +1381,14 @@ type Invoker interface {
 	//
 	// GET /repeating-sends
 	ListRepeatingSends(ctx context.Context, params ListRepeatingSendsParams) (ListRepeatingSendsRes, error)
+	// ListRoles invokes listRoles operation.
+	//
+	// The organization's roles (built-in, template and custom), the role
+	// templates that can be assigned, and whether role assignment is
+	// available. Readable by any person in the organization.
+	//
+	// GET /roles
+	ListRoles(ctx context.Context) (ListRolesRes, error)
 	// ListRoutes invokes listRoutes operation.
 	//
 	// Returns the org's recipient routing rules in evaluation order. Each rule
@@ -1396,6 +1481,8 @@ type Invoker interface {
 	// Polls a CLI login session until the browser approval either succeeds,
 	// is denied, expires, or is polled too quickly. The OAuth token set is
 	// created only after approval and is returned exactly once.
+	// A login started with `login_kind: "user"` succeeds with a
+	// `CliUserLoginPollResult` instead (`auth_method: "user_grant"`).
 	//
 	// POST /cli/login/poll
 	PollCliLogin(ctx context.Context, request *PollCliLoginInput) (PollCliLoginRes, error)
@@ -1683,6 +1770,24 @@ type Invoker interface {
 	//
 	// DELETE /agent-connections/{address}
 	RevokeAgentConnection(ctx context.Context, params RevokeAgentConnectionParams) (RevokeAgentConnectionRes, error)
+	// RevokeCredential invokes revokeCredential operation.
+	//
+	// Revokes one credential from the inventory. Function keys are rotated,
+	// never revoked, and answer `409 rotate_instead`. Available to an owner
+	// or admin in a person's session.
+	//
+	// POST /credentials/revoke
+	RevokeCredential(ctx context.Context, request *RevokeCredentialInput) (RevokeCredentialRes, error)
+	// RotateKey invokes rotateKey operation.
+	//
+	// Mints a successor with the same grant, name, expiry and conditions,
+	// and brings the old key's expiry forward to the end of the overlap
+	// (default 24 hours; `0` revokes it at once). The new secret is
+	// returned once. An OAuth token needs a step-up token, as for
+	// `createKey`.
+	//
+	// POST /keys/{id}/rotate
+	RotateKey(ctx context.Context, request OptRotateKeyInput, params RotateKeyParams) (RotateKeyRes, error)
 	// RotateWebhookSecret invokes rotateWebhookSecret operation.
 	//
 	// Generates a new webhook signing secret, replacing the current one.
@@ -1996,6 +2101,14 @@ type Invoker interface {
 	//
 	// PUT /functions/{id}
 	UpdateFunction(ctx context.Context, request *UpdateFunctionInput, params UpdateFunctionParams) (UpdateFunctionRes, error)
+	// UpdateKey invokes updateKey operation.
+	//
+	// Renames a key or changes its expiry, grant, conditions or suspension.
+	// A grant change is recorded as a new grant version. Available in a
+	// person's session.
+	//
+	// PATCH /keys/{id}
+	UpdateKey(ctx context.Context, request *UpdateKeyInput, params UpdateKeyParams) (UpdateKeyRes, error)
 	// UpdateRegistry invokes updateRegistry operation.
 	//
 	// Update a registry you own.
@@ -2089,8 +2202,20 @@ type Invoker interface {
 	VerifyDomain(ctx context.Context, params VerifyDomainParams) (VerifyDomainRes, error)
 	// Whoami invokes whoami operation.
 	//
-	// Current authenticated identity. member_address is null for machine credentials or an unavailable
-	// member address.
+	// Current authenticated identity. member_address is null for machine
+	// credentials or an unavailable member address.
+	// Two optional query parameters ask for the caller's grant. They are
+	// described here rather than declared, so generated clients keep the
+	// signature they had; pass them as raw query parameters.
+	// - `include=grant` adds `grant` (`GrantDescription`): the grant this
+	// credential holds.
+	// - `check=<permission>`, optionally with
+	// `resource=<function|domain|endpoint|route>:<id>`, adds `check`
+	// (`PermissionCheck`): whether the grant allows that permission, with
+	// the same `reason` and `details` a `403 grant_forbidden` would carry.
+	// Nothing is enforced by asking; an unknown permission answers
+	// `400 validation_error`.
+	// A server without grants ignores both and omits the fields.
 	//
 	// GET /whoami
 	Whoami(ctx context.Context) (WhoamiRes, error)
@@ -4598,6 +4723,140 @@ func (c *Client) sendCreateFunctionSecret(ctx context.Context, request *CreateFu
 
 	stage = "DecodeResponse"
 	result, err := decodeCreateFunctionSecretResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// CreateKey invokes createKey operation.
+//
+// Creates an organization API key with a preset or a custom grant, an
+// optional expiry and optional conditions. The secret is returned once,
+// in `key`. A person's session may call this directly. An OAuth token
+// (such as a CLI login) needs a single-use step-up token from the
+// dashboard in the `Primitive-Step-Up` header; without one the answer
+// is `403 step_up_required` with `details.step_up_url`. A grant the
+// caller may not give, or one the server does not offer, answers
+// `409 grant_not_available` with a `reason`.
+//
+// POST /keys
+func (c *Client) CreateKey(ctx context.Context, request *CreateKeyInput, params CreateKeyParams) (CreateKeyRes, error) {
+	res, err := c.sendCreateKey(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendCreateKey(ctx context.Context, request *CreateKeyInput, params CreateKeyParams) (res CreateKeyRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createKey"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/keys"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateKeyOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/keys"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCreateKeyRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Primitive-Step-Up",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.PrimitiveStepUp.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CreateKeyOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCreateKeyResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -9172,6 +9431,115 @@ func (c *Client) sendDownloadSentAttachmentPart(ctx context.Context, params Down
 	return result, nil
 }
 
+// GetAccessMode invokes getAccessMode operation.
+//
+// Whether mailbox access follows the whole organization or explicit
+// delegations. Owners and admins also see the preview of a switch and
+// the decisions recorded for it.
+//
+// GET /access-mode
+func (c *Client) GetAccessMode(ctx context.Context) (GetAccessModeRes, error) {
+	res, err := c.sendGetAccessMode(ctx)
+	return res, err
+}
+
+func (c *Client) sendGetAccessMode(ctx context.Context) (res GetAccessModeRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getAccessMode"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/access-mode"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetAccessModeOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/access-mode"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetAccessModeOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetAccessModeResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetAccount invokes getAccount operation.
 //
 // Get account info.
@@ -10112,6 +10480,115 @@ func (c *Client) sendGetConversation(ctx context.Context, params GetConversation
 	return result, nil
 }
 
+// GetCredentialPolicy invokes getCredentialPolicy operation.
+//
+// The rules new keys and CLI access are held to: maximum lifetime,
+// required expiry, who may create super admin keys and more. Available
+// to an owner or admin in a person's session.
+//
+// GET /credential-policy
+func (c *Client) GetCredentialPolicy(ctx context.Context) (GetCredentialPolicyRes, error) {
+	res, err := c.sendGetCredentialPolicy(ctx)
+	return res, err
+}
+
+func (c *Client) sendGetCredentialPolicy(ctx context.Context) (res GetCredentialPolicyRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getCredentialPolicy"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/credential-policy"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetCredentialPolicyOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/credential-policy"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetCredentialPolicyOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetCredentialPolicyResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetCreditBalance invokes getCreditBalance operation.
 //
 // Read the organization credit position. `prepaid_credit` is the prepaid
@@ -11004,6 +11481,115 @@ func (c *Client) sendGetInboxStatus(ctx context.Context) (res GetInboxStatusRes,
 
 	stage = "DecodeResponse"
 	result, err := decodeGetInboxStatusResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetKeyBuilder invokes getKeyBuilder operation.
+//
+// The presets a key can be created from, with whether each is available
+// and why not, the per-area permission matrix and the credential
+// policy.
+//
+// GET /keys/builder
+func (c *Client) GetKeyBuilder(ctx context.Context) (GetKeyBuilderRes, error) {
+	res, err := c.sendGetKeyBuilder(ctx)
+	return res, err
+}
+
+func (c *Client) sendGetKeyBuilder(ctx context.Context) (res GetKeyBuilderRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getKeyBuilder"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/keys/builder"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetKeyBuilderOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/keys/builder"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetKeyBuilderOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetKeyBuilderResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -13685,6 +14271,117 @@ func (c *Client) sendListChanges(ctx context.Context, params ListChangesParams) 
 	return result, nil
 }
 
+// ListCliOrgs invokes listCliOrgs operation.
+//
+// Lists every organization the person behind a CLI user login belongs
+// to, with whether the CLI may be used there and, when it may not, the
+// reason. Authenticate with the identity access token (`prim_uat_`) from
+// a CLI user login; no other credential is accepted. A server without
+// CLI user logins answers `404 feature_disabled`.
+//
+// GET /cli/orgs
+func (c *Client) ListCliOrgs(ctx context.Context) (ListCliOrgsRes, error) {
+	res, err := c.sendListCliOrgs(ctx)
+	return res, err
+}
+
+func (c *Client) sendListCliOrgs(ctx context.Context) (res ListCliOrgsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listCliOrgs"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/cli/orgs"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListCliOrgsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/cli/orgs"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListCliOrgsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListCliOrgsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ListContacts invokes listContacts operation.
 //
 // Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -13835,6 +14532,370 @@ func (c *Client) sendListContacts(ctx context.Context, params ListContactsParams
 
 	stage = "DecodeResponse"
 	result, err := decodeListContactsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListCredentialEvents invokes listCredentialEvents operation.
+//
+// The credential audit trail, newest first, paged with `cursor`.
+// Filter by actor, credential, event type and time. Available to an
+// owner or admin in a person's session.
+//
+// GET /credential-events
+func (c *Client) ListCredentialEvents(ctx context.Context, params ListCredentialEventsParams) (ListCredentialEventsRes, error) {
+	res, err := c.sendListCredentialEvents(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListCredentialEvents(ctx context.Context, params ListCredentialEventsParams) (res ListCredentialEventsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listCredentialEvents"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/credential-events"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListCredentialEventsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/credential-events"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "cursor" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Cursor.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "limit" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Limit.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "actor_id" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "actor_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.ActorID.Get(); ok {
+				return e.EncodeValue(conv.UUIDToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "credential_id" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "credential_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.CredentialID.Get(); ok {
+				return e.EncodeValue(conv.UUIDToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "event_type" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "event_type",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.EventType.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "since" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "since",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Since.Get(); ok {
+				return e.EncodeValue(conv.DateTimeToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "until" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "until",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Until.Get(); ok {
+				return e.EncodeValue(conv.DateTimeToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListCredentialEventsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListCredentialEventsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListCredentials invokes listCredentials operation.
+//
+// The credential inventory: organization API keys, Function keys,
+// connected agent keys, OAuth grants and agent delegates, each with its
+// grant, creator, last use, expiry, conditions and the actions it
+// offers. Available to an owner or admin in a person's session. Answers
+// `404 feature_disabled` where the inventory is not enabled.
+//
+// GET /credentials
+func (c *Client) ListCredentials(ctx context.Context, params ListCredentialsParams) (ListCredentialsRes, error) {
+	res, err := c.sendListCredentials(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListCredentials(ctx context.Context, params ListCredentialsParams) (res ListCredentialsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listCredentials"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/credentials"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListCredentialsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/credentials"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "kind" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "kind",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Kind.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListCredentialsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListCredentialsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -15796,6 +16857,220 @@ func (c *Client) sendListFunctions(ctx context.Context) (res ListFunctionsRes, e
 	return result, nil
 }
 
+// ListGroups invokes listGroups operation.
+//
+// Groups of members, each with its members and an optional role.
+//
+// GET /groups
+func (c *Client) ListGroups(ctx context.Context) (ListGroupsRes, error) {
+	res, err := c.sendListGroups(ctx)
+	return res, err
+}
+
+func (c *Client) sendListGroups(ctx context.Context) (res ListGroupsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listGroups"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/groups"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListGroupsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/groups"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListGroupsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListGroupsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListMailboxAccess invokes listMailboxAccess operation.
+//
+// Every mailbox and domain access entry (delegation) in the organization.
+//
+// GET /mailbox-access
+func (c *Client) ListMailboxAccess(ctx context.Context) (ListMailboxAccessRes, error) {
+	res, err := c.sendListMailboxAccess(ctx)
+	return res, err
+}
+
+func (c *Client) sendListMailboxAccess(ctx context.Context) (res ListMailboxAccessRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listMailboxAccess"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/mailbox-access"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListMailboxAccessOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/mailbox-access"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListMailboxAccessOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListMailboxAccessResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ListOrgSecrets invokes listOrgSecrets operation.
 //
 // Returns metadata for every org-level secret. Org secrets apply
@@ -16540,6 +17815,115 @@ func (c *Client) sendListRepeatingSends(ctx context.Context, params ListRepeatin
 
 	stage = "DecodeResponse"
 	result, err := decodeListRepeatingSendsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListRoles invokes listRoles operation.
+//
+// The organization's roles (built-in, template and custom), the role
+// templates that can be assigned, and whether role assignment is
+// available. Readable by any person in the organization.
+//
+// GET /roles
+func (c *Client) ListRoles(ctx context.Context) (ListRolesRes, error) {
+	res, err := c.sendListRoles(ctx)
+	return res, err
+}
+
+func (c *Client) sendListRoles(ctx context.Context) (res ListRolesRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listRoles"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/roles"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListRolesOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/roles"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListRolesOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListRolesResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -17779,6 +19163,8 @@ func (c *Client) sendPayChallenge(ctx context.Context, request *PayChallengeInpu
 // Polls a CLI login session until the browser approval either succeeds,
 // is denied, expires, or is polled too quickly. The OAuth token set is
 // created only after approval and is returned exactly once.
+// A login started with `login_kind: "user"` succeeds with a
+// `CliUserLoginPollResult` instead (`auth_method: "user_grant"`).
 //
 // POST /cli/login/poll
 func (c *Client) PollCliLogin(ctx context.Context, request *PollCliLoginInput) (PollCliLoginRes, error) {
@@ -20414,6 +21800,268 @@ func (c *Client) sendRevokeAgentConnection(ctx context.Context, params RevokeAge
 
 	stage = "DecodeResponse"
 	result, err := decodeRevokeAgentConnectionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// RevokeCredential invokes revokeCredential operation.
+//
+// Revokes one credential from the inventory. Function keys are rotated,
+// never revoked, and answer `409 rotate_instead`. Available to an owner
+// or admin in a person's session.
+//
+// POST /credentials/revoke
+func (c *Client) RevokeCredential(ctx context.Context, request *RevokeCredentialInput) (RevokeCredentialRes, error) {
+	res, err := c.sendRevokeCredential(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendRevokeCredential(ctx context.Context, request *RevokeCredentialInput) (res RevokeCredentialRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("revokeCredential"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/credentials/revoke"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, RevokeCredentialOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/credentials/revoke"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeRevokeCredentialRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, RevokeCredentialOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeRevokeCredentialResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// RotateKey invokes rotateKey operation.
+//
+// Mints a successor with the same grant, name, expiry and conditions,
+// and brings the old key's expiry forward to the end of the overlap
+// (default 24 hours; `0` revokes it at once). The new secret is
+// returned once. An OAuth token needs a step-up token, as for
+// `createKey`.
+//
+// POST /keys/{id}/rotate
+func (c *Client) RotateKey(ctx context.Context, request OptRotateKeyInput, params RotateKeyParams) (RotateKeyRes, error) {
+	res, err := c.sendRotateKey(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendRotateKey(ctx context.Context, request OptRotateKeyInput, params RotateKeyParams) (res RotateKeyRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("rotateKey"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/keys/{id}/rotate"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, RotateKeyOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/keys/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/rotate"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeRotateKeyRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Primitive-Step-Up",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.PrimitiveStepUp.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, RotateKeyOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeRotateKeyResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -24374,6 +26022,136 @@ func (c *Client) sendUpdateFunction(ctx context.Context, request *UpdateFunction
 	return result, nil
 }
 
+// UpdateKey invokes updateKey operation.
+//
+// Renames a key or changes its expiry, grant, conditions or suspension.
+// A grant change is recorded as a new grant version. Available in a
+// person's session.
+//
+// PATCH /keys/{id}
+func (c *Client) UpdateKey(ctx context.Context, request *UpdateKeyInput, params UpdateKeyParams) (UpdateKeyRes, error) {
+	res, err := c.sendUpdateKey(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendUpdateKey(ctx context.Context, request *UpdateKeyInput, params UpdateKeyParams) (res UpdateKeyRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("updateKey"),
+		semconv.HTTPRequestMethodKey.String("PATCH"),
+		semconv.URLTemplateKey.String("/keys/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, UpdateKeyOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/keys/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PATCH", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeUpdateKeyRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, UpdateKeyOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeUpdateKeyResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // UpdateRegistry invokes updateRegistry operation.
 //
 // Update a registry you own.
@@ -25547,8 +27325,20 @@ func (c *Client) sendVerifyDomain(ctx context.Context, params VerifyDomainParams
 
 // Whoami invokes whoami operation.
 //
-// Current authenticated identity. member_address is null for machine credentials or an unavailable
-// member address.
+// Current authenticated identity. member_address is null for machine
+// credentials or an unavailable member address.
+// Two optional query parameters ask for the caller's grant. They are
+// described here rather than declared, so generated clients keep the
+// signature they had; pass them as raw query parameters.
+// - `include=grant` adds `grant` (`GrantDescription`): the grant this
+// credential holds.
+// - `check=<permission>`, optionally with
+// `resource=<function|domain|endpoint|route>:<id>`, adds `check`
+// (`PermissionCheck`): whether the grant allows that permission, with
+// the same `reason` and `details` a `403 grant_forbidden` would carry.
+// Nothing is enforced by asking; an unknown permission answers
+// `400 validation_error`.
+// A server without grants ignores both and omits the fields.
 //
 // GET /whoami
 func (c *Client) Whoami(ctx context.Context) (WhoamiRes, error) {

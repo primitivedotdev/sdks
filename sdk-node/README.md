@@ -227,6 +227,55 @@ try {
 }
 ```
 
+### Grants and narrowed keys
+
+A credential with a narrowed grant that calls an operation outside it gets a
+`403 grant_forbidden`, thrown as `GrantForbiddenError` (a subclass of
+`PrimitiveApiError`) with the missing permission and the reason:
+
+```ts
+import { GrantForbiddenError } from "@primitivedotdev/sdk";
+
+try {
+  await client.send({ from, to, subject, bodyText });
+} catch (err) {
+  if (err instanceof GrantForbiddenError) {
+    console.error(err.permission, err.reason, err.grant.credential_kind);
+  }
+  throw err;
+}
+```
+
+`PERMISSIONS` and the `Permission` type list the permissions operations
+require in this SDK version, and `OPERATION_PERMISSIONS` maps each operation
+id to its permissions; both come from the spec's `x-primitive-permission`.
+`client.account.whoami({ grant: true })` returns the caller's grant, and
+`client.account.checkPermission("mail:send")` asks whether the grant allows a
+permission (null from a server that does not answer checks).
+
+`client.keys.create`, `rotate` and `update` manage organization API keys;
+`GrantSpec` builds a typed grant for them:
+
+```ts
+import { GrantSpec } from "@primitivedotdev/sdk";
+
+const key = await client.keys.create(
+  {
+    name: "support-reader",
+    grant: GrantSpec.custom().allow("mail:read").addresses("support@example.com").build(),
+    expires_in_days: 30,
+  },
+  { stepUp: process.env.PRIMITIVE_STEP_UP },
+);
+```
+
+Managing keys is for people: a dashboard session, or an OAuth token with a
+step-up token from the dashboard. The server does not let API keys create or
+rotate keys.
+`client.credentials` reads the credential inventory, audit events and policy,
+and `client.roles` reads roles, groups, mailbox access and the access mode.
+Routes a server has not enabled answer `404 feature_disabled`.
+
 ## The normalized email object
 
 `primitive.receive(...)` returns a normalized inbound email object that keeps the common case clean:

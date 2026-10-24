@@ -226,6 +226,38 @@ Use `primitive logout --force` to remove local CLI credentials, pending email-co
 
 Use `primitive signup <email>` for new account creation, then `primitive signup confirm <email> <code>` with the emailed verification code. Non-interactive signup is available with `--accept-terms`.
 
+### Switching organizations
+
+Where the server supports it, browser login (`primitive login` with no email) logs you in as yourself rather than into one organization. The organization you choose in the browser becomes the current one, and you can switch without logging in again:
+
+```bash
+primitive orgs                 # your organizations, your role, and whether the CLI may be used there
+primitive org use acme         # switch by name or id
+primitive emails list --org beta   # act in another organization for one command
+```
+
+`--org` works on every command (set `PRIMITIVE_CLI_ORG` for the same effect; `primitive memories` keeps its own `--org` flag for organization-scoped memories). Each organization decides who may use the CLI there; when it refuses, `primitive orgs` and `primitive org use` show the reason (`not_a_member`, `cli_access_disabled_by_org`, `role_insufficient` or `cli_access_revoked`). The CLI keeps a short-lived access token per organization and gets a new one when it expires or is rejected. `primitive logout` signs you out of every organization.
+
+Against a server without organization switching, and for logins saved by earlier CLI versions, the login stays bound to one organization and works as before. `--org` naming a different organization is refused for such a login, for an API key and for a connected agent profile.
+
+`primitive login --permission <permission>` asks for a narrowed login. A server that does not offer narrowed CLI logins refuses it, and the CLI stops rather than logging in with a wider grant.
+
+### Grants and keys
+
+`primitive whoami` shows your organization, role and grant when the server reports them. `primitive whoami --check mail:send` asks whether the current credential may use a permission, prints the decision, and exits 1 when it may not; nothing is enforced by asking. A request refused because the credential's grant lacks a permission fails with `grant_forbidden`, and the CLI names the permission.
+
+```bash
+primitive keys create --name ci --preset send_only --expires 30d --step-up <token>
+primitive keys create --name reader --permission mail:read --address support@example.com --step-up <token>
+primitive keys rotate <key-id> --overlap 1h --step-up <token>
+primitive keys list
+primitive keys revoke <key-id>
+```
+
+`keys create` and `keys rotate` print the new secret once on stdout. From a CLI login the server asks for a single-use step-up token from the dashboard; the command prints where to get it, then you rerun with `--step-up`. `--expires` takes a duration (`30d`, `12h`) or a date; `--ip` and `--rate-limit` add conditions. `keys list` and `keys revoke` use the credential inventory, which the server answers only for an owner or admin in a dashboard session, so from the CLI they show the server's refusal.
+
+`primitive roles list`, `primitive roles groups`, `primitive roles mailbox-access` and `primitive roles access-mode` read roles, groups, mailbox access and the access mode. Where the server has not enabled them, they print `feature_disabled`.
+
 ## Reply state and the agent loop
 
 Every inbound email carries reply state: `awaiting` is `you` when the latest

@@ -3,7 +3,10 @@ import { join } from "node:path";
 import { Writable } from "node:stream";
 import { Command, Errors, Flags } from "@oclif/core";
 import { savedReceiver } from "../agent-connect.js";
-import { resolveCliApiRequestConfig } from "../api-client.js";
+import {
+  refuseOrgSelectionForProfile,
+  resolveCliApiRequestConfig,
+} from "../api-client.js";
 import { API_BASE_URL_FLAG_DESCRIPTION } from "../api-command.js";
 import { resolveCliAuth } from "../auth.js";
 import { dispatchAutoRead } from "../auto-signals.js";
@@ -452,6 +455,10 @@ export default class ListenCommand extends Command {
         !isConnectedAgentKey(connectionAuth.apiKey))
     )
       throw new Errors.CLIError(AGENT_CONNECTION_REQUIRED_MESSAGE);
+    // A connected agent acts only in its own organization. Refuse --org here,
+    // before a background listener is started that would inherit it.
+    if (connectionAuth && !flags.status && !flags.stop)
+      refuseOrgSelectionForProfile(connectionAuth.connectedAgent?.profileName);
     const target =
       connectionAuth && flags["notify-session"]
         ? {
