@@ -679,3 +679,26 @@ it("announces unannounced pending mail first and never repeats it", () => {
   expect(again.result.stderr).toBe("");
   expect(again.runs).toBe(1);
 });
+
+it("claims older mail a live wake stands for instead of showing it again", () => {
+  const older = "55555555-5555-4555-8555-555555555555";
+  const notice = (id: string, at: string) => ({
+    email_id: id,
+    received_at: at,
+    sender: "peer@example.com",
+    thread_id: thread,
+    in_thread: true,
+    newer: null,
+  });
+  const { result, claimed } = runSequence([received], {
+    journaled: [
+      notice(older, "2026-10-01T00:00:00.000Z"),
+      notice(received, "2026-10-01T00:00:05.000Z"),
+    ],
+  });
+  expect(result.status).toBe(2);
+  expect(result.stderr).toBe(
+    `${line(received)}1 older pending message in thread ${thread} is covered by ${received}; reading or answering it clears that one too.\n`,
+  );
+  expect(claimed.sort()).toEqual([older, received].sort());
+});

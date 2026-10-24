@@ -345,8 +345,10 @@ function formatLiveMail(notice, receiver) {
 
 /**
  * Ids already announced to the session, read without the writer lock (the
- * CLI replaces the file atomically). Version 1 recorded repeat times; every
- * id in it was announced at least once.
+ * CLI replaces the file atomically). The earlier repeat-timer file (version
+ * 1) also listed ids a hook selected but did not show past its first 10, so
+ * it proves nothing and is ignored: each of its notices is announced once
+ * more after an upgrade rather than possibly never.
  */
 export function announcedPendingMail(configDir, profile, sessionId) {
   const directory = profileDirectory(configDir, profile);
@@ -382,19 +384,24 @@ export function selectPendingMail(
   notices,
   exclude = [],
 ) {
-  const skip = announcedPendingMail(configDir, profile, sessionId);
-  for (const id of exclude) skip.add(id);
+  const announced = announcedPendingMail(configDir, profile, sessionId);
+  const live = new Set(exclude);
+  // Threads are grouped with the live wake's own notice still in them, so
+  // the older mail it stands for is claimed with it rather than shown again.
   const fresh = collapsePendingMail(
-    notices.filter((notice) => !skip.has(notice.emailId)),
+    notices.filter((notice) => !announced.has(notice.emailId)),
   );
-  const shown = fresh.slice(0, SHOWN_LIMIT);
+  const liveRows = fresh.filter((notice) => live.has(notice.emailId));
+  const others = fresh.filter((notice) => !live.has(notice.emailId));
+  const shown = others.slice(0, SHOWN_LIMIT);
   return {
     shown,
-    ids: shown.flatMap((notice) => [
+    live: liveRows,
+    ids: [...liveRows, ...shown].flatMap((notice) => [
       notice.emailId,
       ...(notice.coveredIds ?? []),
     ]),
-    remaining: fresh.length - shown.length,
+    remaining: others.length - shown.length,
   };
 }
 
@@ -449,7 +456,7 @@ export function announcePendingMail(
   { cli, configDir, profile, address, sessionId, skillFile },
   extraIds = [],
 ) {
-  const { shown, ids, remaining } = selectPendingMail(
+  const { shown, live, ids, remaining } = selectPendingMail(
     configDir,
     profile,
     sessionId,
@@ -461,9 +468,15 @@ export function announcePendingMail(
     claimPendingMail(cli, configDir, profile, sessionId, wanted) ??
     new Set(wanted);
   const receiver = { profile, address, skillFile, cli };
-  const lines = shown
-    .filter((notice) => claimed.has(notice.emailId))
-    .map((notice) => formatPendingMail(notice, receiver));
+  const lines = [
+    // The live wake prints its own line; say which older mail it covers.
+    ...live
+      .filter((notice) => claimed.has(notice.emailId))
+      .map((notice) => coveredLine(notice)),
+    ...shown
+      .filter((notice) => claimed.has(notice.emailId))
+      .map((notice) => formatPendingMail(notice, receiver)),
+  ].filter(Boolean);
   if (remaining > 0)
     lines.push(
       `${remaining} more pending ${remaining === 1 ? "message" : "messages"}; they are announced next.\n`,

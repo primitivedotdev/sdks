@@ -557,7 +557,8 @@ describe("announcing each notice once", () => {
     ).toEqual([id(2)]);
   });
 
-  it("counts ids the earlier repeat-timer file recorded as announced", async () => {
+  it("does not treat the earlier repeat-timer file as proof of an announcement", async () => {
+    // That file also listed ids a hook selected but never showed.
     writeFileSync(
       announcedPendingMailPath(configDir, profile, session),
       JSON.stringify({ version: 1, times: { [id(1)]: Date.now() } }),
@@ -565,7 +566,7 @@ describe("announcing each notice once", () => {
     );
     expect(
       await claimPendingMail(configDir, profile, session, [id(1), id(2)]),
-    ).toEqual([id(2)]);
+    ).toEqual([id(1), id(2)]);
   });
 
   it("forgets the oldest announced ids past the limit, never listed ones", async () => {

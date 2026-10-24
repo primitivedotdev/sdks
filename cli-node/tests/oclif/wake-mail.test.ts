@@ -203,6 +203,43 @@ function fixture(
 }
 
 describe("Claude mail wake", () => {
+  it("finalizes each contact request when one run takes several", async () => {
+    const f = fixture(false, false);
+    mocks.interaction.mockResolvedValue({ step: "request" });
+    const wake = await createWakeMail({
+      configDir: "/tmp/test",
+      sessionKey: `claude:${f.sessionId}`,
+      sessionId: f.sessionId,
+      contactRequests: true,
+    });
+    await wake.handler(f.delivery as never, new AbortController().signal);
+    const secondId = randomUUID();
+    const first = await mocks.getEmail.mock.results[0]?.value;
+    mocks.getEmail.mockResolvedValue({
+      data: { ...first.data, data: { ...first.data.data, id: secondId } },
+    });
+    // The drain after a wake handles the next delivery before completing.
+    await wake.handler(
+      {
+        ...f.delivery,
+        event_id: randomUUID(),
+        body: JSON.stringify({
+          event: "email.received",
+          email: { id: secondId, smtp: { rcpt_to: ["agent@example.test"] } },
+        }),
+      } as never,
+      new AbortController().signal,
+    );
+    wake.completed();
+    const reserve = mocks.notices.mock.results[0]?.value.reserve;
+    expect(
+      reserve.mock.calls.map(
+        (call: unknown[]) => (call[2] as { emailId: string }).emailId,
+      ),
+    ).toEqual([f.emailId, secondId]);
+    await wake.close();
+  });
+
   it.each(["owner", "member"] as const)(
     "clears prior %s authority when a deferred request replaces the wake email",
     async (relation) => {

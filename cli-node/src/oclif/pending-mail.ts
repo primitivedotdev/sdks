@@ -122,10 +122,11 @@ export function announcedPendingMailPath(
 }
 
 /**
- * Read the announced ids for one session. The first format (version 1,
- * `times`) recorded when each notice was last repeated; every id in it was
- * announced at least once, so it counts as announced too. An unreadable
- * file reads as empty, which can only repeat a notice, never lose one.
+ * Read the announced ids for one session. The earlier repeat-timer file in
+ * this path (version 1, `times`) also listed ids a hook selected but did not
+ * show, so it is not evidence of an announcement and reads as empty. An
+ * unreadable file reads as empty too, which can only repeat a notice once,
+ * never lose one.
  */
 export function readAnnouncedPendingMail(
   configDir: string,
@@ -145,8 +146,7 @@ export function readAnnouncedPendingMail(
     value && typeof value === "object" && !Array.isArray(value)
       ? (value as Record<string, unknown>)
       : null;
-  const ids =
-    row?.version === 2 ? row.ids : row?.version === 1 ? row.times : null;
+  const ids = row?.version === 2 ? row.ids : null;
   if (!ids || typeof ids !== "object" || Array.isArray(ids)) return new Map();
   const announced = new Map<string, number>();
   for (const [id, at] of Object.entries(ids as Record<string, unknown>))

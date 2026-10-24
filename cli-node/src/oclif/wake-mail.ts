@@ -577,7 +577,11 @@ export async function createWakeMail(options: {
       // so a missed hook can never lose the mail; this run wakes nothing.
       if (!(await recordNotice(detail, { kind: "mail", context })))
         return outcome(false);
-      if (admission.kind === "request")
+      if (admission.kind === "request") {
+        // A run can take several deliveries (the drain after a wake). The
+        // earlier request's delivery is already completed, so it is
+        // finalized now rather than replaced by this one.
+        if (pendingRequest) completePending();
         pendingRequest = {
           sender,
           emailId: detail.id,
@@ -585,7 +589,7 @@ export async function createWakeMail(options: {
           decidedSenders: [...policy.members()],
           context,
         };
-      else {
+      } else {
         const wake: Wake = {
           wakeId: detail.id,
           senderRelation: admission.senderRelation,
