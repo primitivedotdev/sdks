@@ -4,6 +4,7 @@ import type { CliLogoutResult } from "@primitivedotdev/api-core";
 import { cliLogout } from "@primitivedotdev/api-core";
 import {
   createAuthenticatedCliApiClient,
+  resolveCliApiRequestConfig,
   SAVED_CLI_OAUTH_SESSION_EXPIRED_MESSAGE,
 } from "../api-client.js";
 import {
@@ -22,6 +23,7 @@ import {
 } from "../auth.js";
 import { chatStatePath } from "../chat-state.js";
 import { requireDefaultLoginProfile } from "../connected-agent-profile.js";
+import { revokeUserLogin } from "../user-grant.js";
 import { deletePendingAgentSignup, pendingSignupPath } from "./signup.js";
 
 function cliError(message: string): Errors.CLIError {
@@ -41,6 +43,7 @@ type LogoutFlags = {
 type LogoutDeps = {
   cliLogout?: typeof cliLogout;
   createAuthenticatedCliApiClient?: typeof createAuthenticatedCliApiClient;
+  fetch?: typeof fetch;
 };
 
 function isSavedOAuthSessionExpiredError(error: unknown): boolean {
@@ -77,6 +80,35 @@ export async function runLogoutWithCredentialLock(params: {
     throw cliError(
       "Not logged in. Run `primitive signin` to create saved CLI credentials.",
     );
+  }
+
+  if (credentials.auth_method === "user_grant") {
+    // A login as yourself: revoking its refresh token signs out of every
+    // organization at once, and needs no organization selected.
+    const requestConfig = resolveCliApiRequestConfig({
+      apiBaseUrl: params.flags["api-base-url"],
+      configDir: params.configDir,
+    });
+    const revoked = await revokeUserLogin({
+      apiBaseUrl: credentials.api_base_url,
+      credentials,
+      fetch: deps.fetch,
+      headers: requestConfig.headers,
+    });
+    if (!revoked.ok) {
+      process.stderr.write(
+        `Could not revoke the saved Primitive CLI login: ${revoked.message}\n`,
+      );
+      throw cliError(
+        "Could not revoke the saved Primitive CLI login. Retry, or run `primitive logout --force` to remove it locally without revoking it.",
+      );
+    }
+    deleteCliCredentials(params.configDir);
+    const loginId = credentials.user_grant?.user_grant_id;
+    process.stderr.write(
+      `Logged out of every organization and revoked CLI login${loginId ? ` ${loginId}` : ""}.\n`,
+    );
+    return;
   }
 
   let authenticated: Awaited<

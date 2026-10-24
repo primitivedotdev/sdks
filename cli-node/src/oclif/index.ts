@@ -1,9 +1,7 @@
 import { Args, Command, Errors } from "@oclif/core";
-import {
-  operationManifest,
-  type PrimitiveOperationManifest,
-} from "@primitivedotdev/api-core";
+import type { PrimitiveOperationManifest } from "@primitivedotdev/api-core";
 import { createOperationCommand } from "./api-command.js";
+import { cliOperationManifest } from "./cli-operations.js";
 import AgentCheckMailCommand from "./commands/agent-check-mail.js";
 import AgentConnectCommand from "./commands/agent-connect.js";
 import AgentContactsAddCommand from "./commands/agent-contacts-add.js";
@@ -76,6 +74,7 @@ import FunctionsTestFunctionCommand from "./commands/functions-test-function.js"
 import InboxNextCommand from "./commands/inbox-next.js";
 import InboxSetupCommand from "./commands/inbox-setup.js";
 import InboxStatusCommand from "./commands/inbox-status.js";
+import { KeysListCommand } from "./commands/keys.js";
 import ListenCommand from "./commands/listen.js";
 import ListenInitCommand from "./commands/listen-init.js";
 import ListenPendingCommand from "./commands/listen-pending.js";
@@ -100,6 +99,7 @@ import {
 import OrgSecretsListCommand from "./commands/org-secrets-list.js";
 import OrgSecretsRemoveCommand from "./commands/org-secrets-remove.js";
 import OrgSecretsSetCommand from "./commands/org-secrets-set.js";
+import { OrgsCommand, OrgUseCommand } from "./commands/orgs.js";
 import {
   PayloadsPullCommand,
   PayloadsPushCommand,
@@ -119,6 +119,12 @@ import {
   RepeatsResumeCommand,
 } from "./commands/repeats.js";
 import ReplyCommand from "./commands/reply.js";
+import {
+  RolesAccessModeCommand,
+  RolesGroupsCommand,
+  RolesListCommand,
+  RolesMailboxAccessCommand,
+} from "./commands/roles.js";
 import RoutesAddCommand from "./commands/routes-add.js";
 import RoutesListCommand from "./commands/routes-list.js";
 import RoutesRemoveCommand from "./commands/routes-remove.js";
@@ -185,7 +191,7 @@ class ListOperationsCommand extends Command {
   static summary = "List all generated API operations (JSON)";
 
   async run(): Promise<void> {
-    this.log(JSON.stringify(operationManifest, null, 2));
+    this.log(JSON.stringify(cliOperationManifest, null, 2));
   }
 }
 
@@ -276,7 +282,7 @@ export function lookupOperation(id: string): {
   const trimmed = resolveOperationAlias(id.trim());
 
   const match =
-    operationManifest.find((op) =>
+    cliOperationManifest.find((op) =>
       operationLookupTokens(op).some(
         (token) =>
           token === trimmed ||
@@ -286,7 +292,7 @@ export function lookupOperation(id: string): {
 
   if (match) return { match, candidates: [] };
 
-  const candidates = operationManifest
+  const candidates = cliOperationManifest
     .map((op) => ({ id: operationId(op), score: scoreOperation(trimmed, op) }))
     .filter(({ score }) => score >= 45)
     .sort(
@@ -538,10 +544,13 @@ const OVERRIDDEN_OPERATION_IDS = new Set<string>([
   // requires an Idempotency-Key header, which generated wrappers do not send.
   // The friendly `credits:redeem` shares the same command.
   "credits:redeem-credit-code",
+  // `cli:list-cli-orgs` needs the login's identity token, not the per-org
+  // token every generated command sends; `primitive orgs` serves the id.
+  "cli:list-cli-orgs",
 ]);
 
 const generatedCommands = Object.fromEntries(
-  operationManifest
+  cliOperationManifest
     .filter(
       (operation) => !OVERRIDDEN_OPERATION_IDS.has(operationId(operation)),
     )
@@ -777,6 +786,20 @@ export const COMMANDS: Record<string, typeof Command> = {
   "functions:set-secret": FunctionsSetSecretCommand,
   // Org-level ("global") secrets, shared across every function. Hand-rolled
   // with raw fetch because /v1/org/secrets is not on the generated client yet.
+  // Organization switching for a login made as yourself.
+  orgs: OrgsCommand,
+  "org:use": OrgUseCommand,
+  // `cli list-cli-orgs` authenticates with the login's identity token, which
+  // only the hand-rolled `orgs` holds, so the id is served by it.
+  "cli:list-cli-orgs": OrgsCommand,
+  // API keys: list only. Keys are created, rotated and revoked in the
+  // dashboard; see DASHBOARD_ONLY_OPERATION_IDS in cli-operations.ts.
+  "keys:list": KeysListCommand,
+  // Read-only role views.
+  "roles:list": RolesListCommand,
+  "roles:groups": RolesGroupsCommand,
+  "roles:mailbox-access": RolesMailboxAccessCommand,
+  "roles:access-mode": RolesAccessModeCommand,
   "org:secrets:list": OrgSecretsListCommand,
   "org:secrets:set": OrgSecretsSetCommand,
   "org:secrets:remove": OrgSecretsRemoveCommand,

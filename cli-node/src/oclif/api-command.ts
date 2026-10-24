@@ -590,10 +590,42 @@ const NETWORK_ERROR_HINTS: Record<string, string> = {
 // to advise on. Replaces the bare
 // `process.stderr.write(${formatErrorPayload(p)}\n)` dance every
 // command was doing.
+/**
+ * The hint for a `403 grant_forbidden`: which permission the credential's
+ * grant lacks, and how to check a credential before using it.
+ */
+export function grantForbiddenHint(payload: unknown): string {
+  const details =
+    payload && typeof payload === "object"
+      ? (payload as { details?: unknown }).details
+      : undefined;
+  const record =
+    details && typeof details === "object"
+      ? (details as Record<string, unknown>)
+      : {};
+  const permission =
+    typeof record.permission === "string" && record.permission
+      ? record.permission
+      : null;
+  const reason = typeof record.reason === "string" ? record.reason : null;
+  const missing = typeof record.missing === "string" ? record.missing : null;
+  const what = permission
+    ? `This credential's grant does not include ${missing ?? permission}${reason ? ` (${reason})` : ""}.`
+    : "This credential's grant does not allow this operation.";
+  const check = permission
+    ? ` Check a credential with \`primitive whoami --check ${missing ?? permission}\`.`
+    : "";
+  return `Hint: ${what} Use a credential whose grant includes it, or ask an owner or admin to widen it.${check}`;
+}
+
 export function writeErrorWithHints(payload: unknown): void {
   process.stderr.write(`${formatErrorPayload(payload)}\n`);
   const code = extractErrorCode(payload);
   if (!code) return;
+  if (code === "grant_forbidden") {
+    process.stderr.write(`${grantForbiddenHint(payload)}\n`);
+    return;
+  }
   if (code in ERROR_CODE_HINTS) {
     const hint = ERROR_CODE_HINTS[code as keyof typeof ERROR_CODE_HINTS];
     process.stderr.write(`${hint}\n`);

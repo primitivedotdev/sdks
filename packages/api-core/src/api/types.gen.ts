@@ -5,6 +5,574 @@ export type ClientOptions = {
 };
 
 /**
+ * The `details` of a `403 grant_forbidden`: the permission the
+ * operation needed and the grant that did not hold it.
+ *
+ */
+export type GrantForbiddenDetails = {
+    /**
+     * The permission the operation requires, for example `mail:send`.
+     */
+    permission: string | null;
+    /**
+     * The kind of credential that made the request, for example `org_key`.
+     */
+    credential_kind: string | null;
+    /**
+     * The grant template, when the credential holds one.
+     */
+    grant_template_key?: string | null;
+    /**
+     * The concrete grant id, when the credential holds one.
+     */
+    credential_grant_id?: string | null;
+    /**
+     * Version of the permission catalog the decision used.
+     */
+    catalog_version: string | null;
+    /**
+     * Why the grant did not allow the operation: `permission_missing`,
+     * `required_permission_missing`, `mail_scope_requires_org`,
+     * `resource_outside_grant`, `credential_expired` or
+     * `unknown_permission`. New reasons may be added.
+     *
+     */
+    reason: string | null;
+    /**
+     * A further permission the operation also requires, when that is the one missing.
+     */
+    missing?: string | null;
+    /**
+     * The resource the decision was about, when it named one.
+     */
+    resource?: {
+        type?: string;
+        id?: string;
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+};
+
+/**
+ * The grant a credential holds, as `GET /whoami?include=grant` reports it.
+ */
+export type GrantDescription = {
+    credential_kind: string;
+    /**
+     * Who the credential acts as.
+     */
+    actor?: unknown;
+    grant_ref?: string | null;
+    /**
+     * `template`, `concrete` or `computed`.
+     */
+    grant_type?: string;
+    template?: string | null;
+    credential_grant_id?: string | null;
+    /**
+     * For a computed grant, the role and delegations it was computed from.
+     */
+    computed_from?: unknown;
+    permissions: Array<string>;
+    /**
+     * `org`, or the addresses, domains and depth the grant reaches.
+     */
+    mail_scope?: unknown;
+    /**
+     * Resource ids the grant is narrowed to, or null.
+     */
+    resources?: unknown;
+    expires_at?: string | null;
+    catalog_version: string;
+    [key: string]: unknown;
+};
+
+/**
+ * The decision `GET /whoami?check=<permission>` reports. Nothing is enforced by asking.
+ */
+export type PermissionCheck = {
+    permission: string;
+    allow: boolean;
+    /**
+     * Why the permission is not allowed; same values as `grant_forbidden`.
+     */
+    reason?: string;
+    details?: GrantForbiddenDetails;
+    resource?: {
+        type?: string;
+        id?: string;
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+};
+
+/**
+ * A successful poll of a CLI login started with `login_kind: "user"`.
+ * The identity token (`prim_uat_`) and refresh token (`prim_urt_`)
+ * belong to the person, not to an organization: they authenticate
+ * only `GET /cli/orgs` and the token exchange. `org` is a ready access
+ * token for the organization chosen in the browser, or null with
+ * `org_refusal` saying why the CLI cannot be used there.
+ *
+ */
+export type CliUserLoginPollResult = {
+    auth_method: 'user_grant';
+    user_grant_id: string;
+    user_id: string;
+    /**
+     * Identity access token for the org list and the token exchange
+     */
+    access_token: string;
+    /**
+     * Refresh token for the identity access token
+     */
+    refresh_token: string;
+    token_type: 'Bearer';
+    /**
+     * Seconds until access_token expires
+     */
+    expires_in: number;
+    oauth_client_id: string;
+    org: CliOrgAccessToken | null;
+    org_refusal: CliOrgRefusal | null;
+};
+
+/**
+ * A short-lived access token in one organization, from a CLI user login.
+ */
+export type CliOrgAccessToken = {
+    access_token: string;
+    token_type: 'Bearer';
+    expires_in: number;
+    scope?: string;
+    org_id: string;
+    org_name: string | null;
+    /**
+     * Your role's key in the organization, such as a `BuiltinRoleKey` value.
+     */
+    role: string;
+    oauth_grant_id: string;
+};
+
+/**
+ * Why the CLI cannot be used in an organization:
+ * `not_a_member`, `cli_access_disabled_by_org`, `role_insufficient`
+ * (the organization's policy does not allow the person's role), or
+ * `cli_access_revoked` (log in again).
+ *
+ */
+export type CliOrgRefusalReason = 'not_a_member' | 'cli_access_disabled_by_org' | 'role_insufficient' | 'cli_access_revoked';
+
+export type CliOrgRefusal = {
+    org_id: string;
+    reason: CliOrgRefusalReason;
+    message: string;
+};
+
+export type CliOrg = {
+    id: string;
+    name: string | null;
+    /**
+     * Your role's key in the organization, such as a `BuiltinRoleKey` value.
+     */
+    role?: string | null;
+    /**
+     * Whether the CLI can switch to this organization.
+     */
+    available: boolean;
+    reason: CliOrgRefusalReason | null;
+    message?: string | null;
+};
+
+export type CliOrgList = {
+    user: {
+        id: string;
+        email: string | null;
+    };
+    user_grant_id: string;
+    orgs: Array<CliOrg>;
+};
+
+/**
+ * `org_key`, `function_key`, `connected_key`, `oauth`,
+ * `agent_delegate`, or `cli_user_access` (a person's CLI access in the
+ * organization through a CLI user login, listed only where those
+ * logins exist).
+ *
+ */
+export type CredentialKind = 'org_key' | 'function_key' | 'connected_key' | 'oauth' | 'agent_delegate' | 'cli_user_access';
+
+export type CredentialRow = {
+    kind: CredentialKind;
+    id: string;
+    name: string | null;
+    prefix?: string | null;
+    client?: {
+        client_id?: string;
+        name?: string | null;
+    } | null;
+    grant: {
+        ref?: string | null;
+        type?: 'template' | 'concrete' | 'computed';
+        template?: string | null;
+        permissions?: Array<string> | null;
+        /**
+         * `org`, or the addresses, domains and depth the grant reaches.
+         */
+        mail_scope?: unknown;
+        /**
+         * Resource ids the grant is narrowed to, or null.
+         */
+        resources?: unknown;
+        [key: string]: unknown;
+    };
+    creator: {
+        kind?: string | null;
+        id?: string | null;
+        email?: string | null;
+        status?: 'member' | 'departed' | 'unknown' | 'agent_before_claim' | 'system';
+        [key: string]: unknown;
+    };
+    created_at?: string | null;
+    last_used_at?: string | null;
+    last_used_ip?: string | null;
+    expires_at: string | null;
+    conditions?: KeyConditions | null;
+    flags: Array<string>;
+    actions: Array<'revoke' | 'rotate' | 'edit' | 'transfer' | 'suggest'>;
+    [key: string]: unknown;
+};
+
+export type CredentialList = {
+    items: Array<CredentialRow>;
+    counts: {
+        [key: string]: number;
+    };
+    [key: string]: unknown;
+};
+
+export type RevokeCredentialInput = {
+    kind: CredentialKind;
+    id: string;
+    reason?: string;
+};
+
+export type RevokeCredentialResult = {
+    revoked: number;
+    kind: CredentialKind;
+    id: string;
+    [key: string]: unknown;
+};
+
+export type CredentialEvent = {
+    id: string;
+    occurred_at: string;
+    /**
+     * For example `key.created`, `key.revoked` or `cli_access.granted`.
+     */
+    event_type: string;
+    credential_kind?: string | null;
+    credential_id?: string | null;
+    credential_prefix?: string | null;
+    actor_kind?: string | null;
+    actor_id?: string | null;
+    grant_ref?: string | null;
+    catalog_version?: string | null;
+    request_id?: string | null;
+    details: {
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+};
+
+export type CredentialEventList = {
+    items: Array<CredentialEvent>;
+    next_cursor: string | null;
+    [key: string]: unknown;
+};
+
+export type CredentialPolicy = {
+    max_key_lifetime_days: number | null;
+    require_key_expiry: boolean;
+    super_admin_key_creators: 'owners_and_admins' | 'owners';
+    members_may_mint_keys: boolean;
+    allow_org_mail_scope_keys: boolean;
+    cap_agents_below_person: boolean;
+    removal_suspends_created: boolean;
+    oauth_consent_admin_only: boolean;
+    /**
+     * Who may use the CLI in the organization. Present only where CLI
+     * user logins exist. `owners_and_admins` admits the `owner`, `admin`
+     * and `operator` roles.
+     *
+     */
+    cli_access?: 'owners_and_admins' | 'all_members' | 'off';
+    [key: string]: unknown;
+};
+
+/**
+ * `super_admin` (every ordinary permission, as keys have today),
+ * `send_only`, `read_only`, `own_addresses` and
+ * `own_addresses_read_only` (both need `addresses`), or `custom`.
+ *
+ */
+export type KeyPreset = 'super_admin' | 'send_only' | 'read_only' | 'own_addresses' | 'own_addresses_read_only' | 'custom';
+
+/**
+ * A key's grant: a preset, optionally narrowed. Use `matrix` (area to
+ * `none`, `read` or `write`, areas from `GET /keys/builder`) or
+ * `permissions` for a custom grant, `addresses` and `domains` to limit
+ * mail, and `resources` to limit Functions, domains, endpoints or
+ * routes to selected ids. The server adds the permissions a choice
+ * implies and reports them in `warnings`.
+ *
+ */
+export type KeyGrantSpec = {
+    preset: KeyPreset;
+    matrix?: {
+        [key: string]: 'none' | 'read' | 'write';
+    };
+    permissions?: Array<string>;
+    addresses?: Array<string>;
+    domains?: Array<string>;
+    resources?: {
+        [key: string]: Array<string>;
+    };
+};
+
+/**
+ * A preset name, or a grant spec.
+ */
+export type KeyGrant = KeyPreset | KeyGrantSpec;
+
+/**
+ * Conditions every use of the key is checked against.
+ */
+export type KeyConditions = {
+    /**
+     * CIDR ranges (IPv4 or IPv6) the key may be used from.
+     */
+    ip_allowlist?: Array<string> | null;
+    rate_limit_per_minute?: number | null;
+    /**
+     * Set when the key is suspended (read only).
+     */
+    suspended_at?: string | null;
+    [key: string]: unknown;
+};
+
+export type CreateKeyInput = {
+    name?: string;
+    grant?: KeyGrant;
+    /**
+     * When the key stops working. Use this or `expires_in_days`.
+     */
+    expires_at?: string;
+    /**
+     * Days until the key stops working. Use this or `expires_at`.
+     */
+    expires_in_days?: number;
+    conditions?: KeyConditionsInput;
+};
+
+export type KeyConditionsInput = {
+    /**
+     * CIDR ranges (IPv4 or IPv6) the key may be used from.
+     */
+    ip_allowlist?: Array<string> | null;
+    rate_limit_per_minute?: number | null;
+};
+
+/**
+ * A permission the server added because a chosen one implies it.
+ */
+export type KeyGrantWarning = {
+    permission: string;
+    adds: Array<string>;
+    why: string;
+    description: string;
+    [key: string]: unknown;
+};
+
+export type CreatedKey = {
+    id: string;
+    name: string | null;
+    /**
+     * The secret. Shown once; store it now.
+     */
+    key: string;
+    key_prefix: string;
+    grant: {
+        template?: string | null;
+        credential_grant_id?: string | null;
+        permissions?: Array<string> | null;
+        /**
+         * `org`, or the addresses, domains and depth the grant reaches.
+         */
+        mail_scope?: unknown;
+        /**
+         * Resource ids the grant is narrowed to, or null.
+         */
+        resources?: unknown;
+        [key: string]: unknown;
+    };
+    expires_at: string | null;
+    /**
+     * The key's conditions, or null.
+     */
+    conditions?: unknown;
+    warnings: Array<KeyGrantWarning>;
+    [key: string]: unknown;
+};
+
+export type RotateKeyInput = {
+    /**
+     * Seconds the old key keeps working. Default 86400; 0 revokes it at once.
+     */
+    overlap_seconds?: number;
+};
+
+export type RotatedKey = {
+    id: string;
+    /**
+     * The new secret. Shown once; store it now.
+     */
+    key: string;
+    key_prefix: string;
+    previous_key_id: string;
+    previous_key_expires_at: string;
+    [key: string]: unknown;
+};
+
+export type UpdateKeyInput = {
+    name?: string;
+    expires_at?: string | null;
+    grant?: KeyGrant;
+    conditions?: KeyConditionsInput | null;
+    suspended?: boolean;
+};
+
+export type UpdatedKey = {
+    id: string;
+    changed: Array<string>;
+    warnings: Array<KeyGrantWarning>;
+    [key: string]: unknown;
+};
+
+export type KeyBuilder = {
+    enabled: boolean;
+    presets: Array<{
+        id: string;
+        label: string;
+        description: string;
+        available: boolean;
+        reason: string | null;
+        message: string | null;
+        [key: string]: unknown;
+    }>;
+    matrix: Array<{
+        id: string;
+        label: string;
+        description: string;
+        read: Array<string>;
+        write: Array<string>;
+        resource: string | null;
+        [key: string]: unknown;
+    }>;
+    policy: CredentialPolicy;
+    [key: string]: unknown;
+};
+
+/**
+ * The key of a built-in role. `operator` has every permission `admin`
+ * has except managing members, changing roles, sending invitations and
+ * billing. By default the CLI may be used by `owner`, `admin` and
+ * `operator`.
+ *
+ */
+export type BuiltinRoleKey = 'owner' | 'admin' | 'operator' | 'member';
+
+export type Role = {
+    id: string;
+    /**
+     * The role's key. A built-in role uses one of the `BuiltinRoleKey`
+     * values (`owner`, `admin`, `operator` or `member`);
+     * template and custom roles use their own keys. Other values can
+     * appear, so read the key as a string.
+     *
+     */
+    key: string;
+    kind: 'builtin' | 'template' | 'custom';
+    name: string;
+    description?: string | null;
+    permissions: Array<string>;
+    /**
+     * `org`, or the addresses, domains and depth the role reaches.
+     */
+    mail_scope?: unknown;
+    version: number;
+    catalog_version?: string | null;
+    predates_catalog?: boolean;
+    [key: string]: unknown;
+};
+
+export type RoleTemplate = {
+    key: string;
+    name: string;
+    description: string;
+    permissions: Array<string>;
+    [key: string]: unknown;
+};
+
+export type RoleList = {
+    roles: Array<Role>;
+    templates: Array<RoleTemplate>;
+    assignment: {
+        available: boolean;
+        reason: string | null;
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+};
+
+export type Group = {
+    id: string;
+    name: string;
+    description?: string | null;
+    role_id?: string | null;
+    members: Array<string>;
+    [key: string]: unknown;
+};
+
+export type GroupList = {
+    groups: Array<Group>;
+    [key: string]: unknown;
+};
+
+export type MailboxAccessList = {
+    entries: Array<{
+        [key: string]: unknown;
+    }>;
+    [key: string]: unknown;
+};
+
+export type AccessMode = {
+    mode: 'whole_org' | 'delegated';
+    version: number;
+    changed_at: string | null;
+    preview?: Array<{
+        [key: string]: unknown;
+    }>;
+    decisions?: {
+        [key: string]: string;
+    };
+    gate?: {
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+};
+
+/**
  * Stored addressing and threading headers. A member is null when absent or withheld.
  */
 export type IncludedMessageHeaders = {
@@ -734,7 +1302,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'connection_removed' | 'connection_create_request_conflict' | 'connection_already_claimed' | 'connection_revoked' | 'connection_cleanup_pending' | 'attachment_name_ambiguous' | 'attachment_not_archive' | 'archive_unsafe_path' | 'archive_invalid' | 'archive_unsupported' | 'archive_limit_exceeded' | 'archive_busy' | 'latest_message_mismatch' | 'latest_message_thread_unresolved' | 'thread_busy' | 'sent_mail_search_unavailable' | 'member_address_unavailable' | 'member_address_history_confirmation_required' | 'member_address_immutable' | 'member_address_domain_unavailable' | 'email_admission_unavailable' | 'pull_subscription_requires_agent_connection' | 'address_in_use' | 'address_not_owned' | 'address_owned_by_another_org' | 'agent_account_managed_domain_only' | 'agent_changed' | 'agent_limit' | 'agent_misconfigured' | 'agent_not_defined' | 'agent_not_found' | 'agent_unreachable' | 'already_claimed' | 'already_member' | 'bad_request' | 'body_not_supported' | 'build_failed' | 'builder_unavailable' | 'chunk_too_large' | 'chunks_missing' | 'claim_not_pending' | 'clerk_failed' | 'code_expired' | 'contact_request_invalid' | 'contact_request_not_ready' | 'contact_request_unauthenticated' | 'contact_request_unavailable' | 'cursor_expired' | 'delete_failed' | 'deploy_failed' | 'direct_delivery_failed' | 'direct_delivery_unavailable' | 'directory_limit' | 'dns_publication_failed' | 'dns_publication_pending' | 'dns_verification_failed' | 'download_token_expired' | 'download_token_invalid' | 'email_in_use' | 'embedding_provider_unavailable' | 'expired' | 'fresh_send_not_authorized' | 'function_effect_email_mismatch' | 'function_effect_mismatch' | 'function_forked' | 'function_github_linked' | 'function_not_deployed' | 'function_scope_forbidden' | 'handle_in_cooldown' | 'handle_reserved' | 'handle_taken' | 'hash_mismatch' | 'hipaa_mode_check_unavailable' | 'hipaa_mode_external_send_blocked' | 'idempotency_conflict' | 'invalid_code' | 'invalid_cursor' | 'invalid_email' | 'invalid_input' | 'invalid_payload_reference' | 'invalid_request' | 'invalid_step' | 'invalid_token' | 'invalid_topic_sources' | 'invitation_accepted' | 'invitation_changed' | 'invitation_pending' | 'invitation_sending' | 'invitation_unconfirmed' | 'invitations_pending' | 'mail_relay_unavailable' | 'mail_routing_conflict' | 'mail_topic_edit_conflict' | 'mail_topic_generation_conflict' | 'mailbox_not_found' | 'managed_build_failed' | 'managed_domain' | 'member_changed' | 'message_not_found' | 'name_taken' | 'network_member_excluded' | 'network_member_not_found' | 'network_peer_not_found' | 'network_view_denied' | 'no_code' | 'no_endpoint' | 'not_a_template_install' | 'not_claimable' | 'not_pending' | 'open_policy_not_allowed' | 'outbound_edge_rejected' | 'outbound_email_limit_exceeded' | 'outbound_relay_timeout' | 'payload_too_large' | 'presence_admission_busy' | 'presence_idempotency_conflict' | 'presence_probe_stale' | 'pro_plan_required' | 'project_changed' | 'protocol_unavailable' | 'publication_not_found' | 'publish_policy_denied' | 'recipient_changed' | 'recipient_suppressed' | 'registry_create_not_allowed' | 'registry_not_found' | 'rename_not_allowed' | 'resend_limit_exceeded' | 'resend_too_soon' | 'schedule_allowlist_not_provided' | 'schedule_sender_collision' | 'schedule_wake_disabled' | 'scheduled_payload_invalid' | 'search_unavailable' | 'semantic_search_not_enabled' | 'send_failed' | 'sender_not_authorized' | 'sent_email_tail_unavailable' | 'settlement_unresolved' | 'shared_parent_recipient' | 'shopping_binding_conflict' | 'shopping_decision_conflict' | 'shopping_identity_conflict' | 'shopping_not_found' | 'shopping_owner_mail_required' | 'shopping_package_not_found' | 'shopping_proposal_expired' | 'shopping_replay_conflict' | 'shopping_source_unavailable' | 'shopping_too_many_shipments' | 'shopping_tracking_invalid' | 'shopping_version_conflict' | 'shopping_wake_unavailable' | 'shredded' | 'sign_in_email_change_required' | 'signal_not_allowed' | 'signal_parent_not_ready' | 'signal_sender_unauthenticated' | 'slug_taken' | 'step_rejected' | 'storage_error' | 'storage_limit_exceeded' | 'template_unavailable' | 'template_update_failed' | 'terms_not_accepted' | 'too_many_attempts' | 'too_many_concurrent_builds' | 'too_many_resends' | 'topic_edit_too_large' | 'topic_generation_too_large' | 'unavailable' | 'unknown_chunk' | 'update_needs_input' | 'upstream_error' | 'usage_limit_exceeded' | 'vendor_unavailable';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'connection_removed' | 'connection_create_request_conflict' | 'connection_already_claimed' | 'connection_revoked' | 'connection_cleanup_pending' | 'attachment_name_ambiguous' | 'attachment_not_archive' | 'archive_unsafe_path' | 'archive_invalid' | 'archive_unsupported' | 'archive_limit_exceeded' | 'archive_busy' | 'latest_message_mismatch' | 'latest_message_thread_unresolved' | 'thread_busy' | 'sent_mail_search_unavailable' | 'member_address_unavailable' | 'member_address_history_confirmation_required' | 'member_address_immutable' | 'member_address_domain_unavailable' | 'email_admission_unavailable' | 'pull_subscription_requires_agent_connection' | 'address_in_use' | 'address_not_owned' | 'address_owned_by_another_org' | 'agent_account_managed_domain_only' | 'agent_changed' | 'agent_limit' | 'agent_misconfigured' | 'agent_not_defined' | 'agent_not_found' | 'agent_unreachable' | 'already_claimed' | 'already_member' | 'bad_request' | 'body_not_supported' | 'build_failed' | 'builder_unavailable' | 'chunk_too_large' | 'chunks_missing' | 'claim_not_pending' | 'clerk_failed' | 'code_expired' | 'contact_request_invalid' | 'contact_request_not_ready' | 'contact_request_unauthenticated' | 'contact_request_unavailable' | 'cursor_expired' | 'delete_failed' | 'deploy_failed' | 'direct_delivery_failed' | 'direct_delivery_unavailable' | 'directory_limit' | 'dns_publication_failed' | 'dns_publication_pending' | 'dns_verification_failed' | 'download_token_expired' | 'download_token_invalid' | 'email_in_use' | 'embedding_provider_unavailable' | 'expired' | 'fresh_send_not_authorized' | 'function_effect_email_mismatch' | 'function_effect_mismatch' | 'function_forked' | 'function_github_linked' | 'function_not_deployed' | 'function_scope_forbidden' | 'handle_in_cooldown' | 'handle_reserved' | 'handle_taken' | 'hash_mismatch' | 'hipaa_mode_check_unavailable' | 'hipaa_mode_external_send_blocked' | 'idempotency_conflict' | 'invalid_code' | 'invalid_cursor' | 'invalid_email' | 'invalid_input' | 'invalid_payload_reference' | 'invalid_request' | 'invalid_step' | 'invalid_token' | 'invalid_topic_sources' | 'invitation_accepted' | 'invitation_changed' | 'invitation_pending' | 'invitation_sending' | 'invitation_unconfirmed' | 'invitations_pending' | 'mail_relay_unavailable' | 'mail_routing_conflict' | 'mail_topic_edit_conflict' | 'mail_topic_generation_conflict' | 'mailbox_not_found' | 'managed_build_failed' | 'managed_domain' | 'member_changed' | 'message_not_found' | 'name_taken' | 'network_member_excluded' | 'network_member_not_found' | 'network_peer_not_found' | 'network_view_denied' | 'no_code' | 'no_endpoint' | 'not_a_template_install' | 'not_claimable' | 'not_pending' | 'open_policy_not_allowed' | 'outbound_edge_rejected' | 'outbound_email_limit_exceeded' | 'outbound_relay_timeout' | 'payload_too_large' | 'presence_admission_busy' | 'presence_idempotency_conflict' | 'presence_probe_stale' | 'pro_plan_required' | 'project_changed' | 'protocol_unavailable' | 'publication_not_found' | 'publish_policy_denied' | 'recipient_changed' | 'recipient_suppressed' | 'registry_create_not_allowed' | 'registry_not_found' | 'rename_not_allowed' | 'resend_limit_exceeded' | 'resend_too_soon' | 'schedule_allowlist_not_provided' | 'schedule_sender_collision' | 'schedule_wake_disabled' | 'scheduled_payload_invalid' | 'search_unavailable' | 'semantic_search_not_enabled' | 'send_failed' | 'sender_not_authorized' | 'sent_email_tail_unavailable' | 'settlement_unresolved' | 'shared_parent_recipient' | 'shopping_binding_conflict' | 'shopping_decision_conflict' | 'shopping_identity_conflict' | 'shopping_not_found' | 'shopping_owner_mail_required' | 'shopping_package_not_found' | 'shopping_proposal_expired' | 'shopping_replay_conflict' | 'shopping_source_unavailable' | 'shopping_too_many_shipments' | 'shopping_tracking_invalid' | 'shopping_version_conflict' | 'shopping_wake_unavailable' | 'shredded' | 'sign_in_email_change_required' | 'signal_not_allowed' | 'signal_parent_not_ready' | 'signal_sender_unauthenticated' | 'slug_taken' | 'step_rejected' | 'storage_error' | 'storage_limit_exceeded' | 'template_unavailable' | 'template_update_failed' | 'terms_not_accepted' | 'too_many_attempts' | 'too_many_concurrent_builds' | 'too_many_resends' | 'topic_edit_too_large' | 'topic_generation_too_large' | 'unavailable' | 'unknown_chunk' | 'update_needs_input' | 'upstream_error' | 'usage_limit_exceeded' | 'vendor_unavailable' | 'grant_forbidden' | 'grant_not_available' | 'step_up_required' | 'step_up_invalid' | 'step_up_refused' | 'step_up_not_accepted' | 'pending_owner_confirmation' | 'ip_not_allowed' | 'rotate_instead' | 'role_assignment_unavailable';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -772,6 +1340,38 @@ export type ErrorResponse = {
              * Effective idempotency key associated with the original request.
              */
             client_idempotency_key?: string;
+            /**
+             * Present when `code == grant_forbidden`. The permission the operation requires. See `GrantForbiddenDetails` for the full shape.
+             */
+            permission?: string | null;
+            /**
+             * Present when `code == grant_forbidden`. The kind of credential that was refused.
+             */
+            credential_kind?: string | null;
+            /**
+             * Present when `code == grant_forbidden` and the credential holds a template grant.
+             */
+            grant_template_key?: string | null;
+            /**
+             * Present when `code == grant_forbidden` and the credential holds a concrete grant.
+             */
+            credential_grant_id?: string | null;
+            /**
+             * Present when `code == grant_forbidden`. Version of the permission catalog the decision used.
+             */
+            catalog_version?: string | null;
+            /**
+             * Present when `code == grant_forbidden` (why the grant refused) or `grant_not_available` (why the grant cannot be given).
+             */
+            reason?: string | null;
+            /**
+             * Present when `code == step_up_required`. What the step-up token must be issued for.
+             */
+            purpose?: string | null;
+            /**
+             * Present when `code == step_up_required`. Dashboard page that issues a step-up token.
+             */
+            step_up_url?: string | null;
             [key: string]: unknown;
         };
         /**
@@ -831,6 +1431,21 @@ export type StartCliLoginInput = {
     metadata?: {
         [key: string]: unknown;
     };
+    /**
+     * `user` asks for a login as the person, not bound to one
+     * organization, that can switch between the person's organizations
+     * (see `CliUserLoginPollResult`). Servers without this answer
+     * `400 validation_error`; clients then retry without the field.
+     *
+     */
+    login_kind?: 'org' | 'user';
+    /**
+     * Narrow the login's grant. Only `primitive:api` (the person's own
+     * grant, as when omitted) is accepted; anything else answers
+     * `400 grant_not_available`.
+     *
+     */
+    requested_grant?: string;
 };
 
 export type CliLoginStartResult = {
@@ -5758,7 +6373,20 @@ export type CallerIdentity = {
      * Suggested personal address; nothing is assigned until explicitly saved.
      */
     member_address_suggestion: string | null;
+    /**
+     * Present with `include=grant`. Null when the server has no grant for the caller.
+     */
+    grant?: GrantDescription | null;
+    check?: PermissionCheck;
 };
+
+/**
+ * A single-use step-up token (`pstep_...`) from the dashboard's
+ * step-up page. Needed when an OAuth token, such as a CLI login,
+ * creates or rotates a key.
+ *
+ */
+export type PrimitiveStepUp = string;
 
 /**
  * The attachment's exact filename from its metadata. Any name, digits only included. No other query parameter is accepted.
@@ -14330,3 +14958,556 @@ export type ProvisionMemberAddressResponses = {
 };
 
 export type ProvisionMemberAddressResponse = ProvisionMemberAddressResponses[keyof ProvisionMemberAddressResponses];
+
+export type ListCliOrgsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/cli/orgs';
+};
+
+export type ListCliOrgsErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type ListCliOrgsError = ListCliOrgsErrors[keyof ListCliOrgsErrors];
+
+export type ListCliOrgsResponses = {
+    /**
+     * Organizations for the signed-in person
+     */
+    200: SuccessEnvelope & {
+        data: CliOrgList;
+    };
+};
+
+export type ListCliOrgsResponse = ListCliOrgsResponses[keyof ListCliOrgsResponses];
+
+export type ListCredentialsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Only list credentials of this kind.
+         */
+        kind?: CredentialKind;
+    };
+    url: '/credentials';
+};
+
+export type ListCredentialsErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type ListCredentialsError = ListCredentialsErrors[keyof ListCredentialsErrors];
+
+export type ListCredentialsResponses = {
+    /**
+     * The credential inventory
+     */
+    200: SuccessEnvelope & {
+        data: CredentialList;
+    };
+};
+
+export type ListCredentialsResponse = ListCredentialsResponses[keyof ListCredentialsResponses];
+
+export type RevokeCredentialData = {
+    body: RevokeCredentialInput;
+    path?: never;
+    query?: never;
+    url: '/credentials/revoke';
+};
+
+export type RevokeCredentialErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+};
+
+export type RevokeCredentialError = RevokeCredentialErrors[keyof RevokeCredentialErrors];
+
+export type RevokeCredentialResponses = {
+    /**
+     * Credential revoked
+     */
+    200: SuccessEnvelope & {
+        data: RevokeCredentialResult;
+    };
+};
+
+export type RevokeCredentialResponse = RevokeCredentialResponses[keyof RevokeCredentialResponses];
+
+export type ListCredentialEventsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * The `next_cursor` from the previous page.
+         */
+        cursor?: string;
+        /**
+         * Page size.
+         */
+        limit?: number;
+        /**
+         * Only events by this actor.
+         */
+        actor_id?: string;
+        /**
+         * Only events about this credential.
+         */
+        credential_id?: string;
+        /**
+         * Only events of this type, for example `key.created`.
+         */
+        event_type?: string;
+        /**
+         * Only events at or after this time (ISO 8601).
+         */
+        since?: string;
+        /**
+         * Only events before this time (ISO 8601).
+         */
+        until?: string;
+    };
+    url: '/credential-events';
+};
+
+export type ListCredentialEventsErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type ListCredentialEventsError = ListCredentialEventsErrors[keyof ListCredentialEventsErrors];
+
+export type ListCredentialEventsResponses = {
+    /**
+     * One page of credential events
+     */
+    200: SuccessEnvelope & {
+        data: CredentialEventList;
+    };
+};
+
+export type ListCredentialEventsResponse = ListCredentialEventsResponses[keyof ListCredentialEventsResponses];
+
+export type GetCredentialPolicyData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/credential-policy';
+};
+
+export type GetCredentialPolicyErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type GetCredentialPolicyError = GetCredentialPolicyErrors[keyof GetCredentialPolicyErrors];
+
+export type GetCredentialPolicyResponses = {
+    /**
+     * The credential policy
+     */
+    200: SuccessEnvelope & {
+        data: CredentialPolicy;
+    };
+};
+
+export type GetCredentialPolicyResponse = GetCredentialPolicyResponses[keyof GetCredentialPolicyResponses];
+
+export type CreateKeyData = {
+    body: CreateKeyInput;
+    headers?: {
+        /**
+         * A single-use step-up token (`pstep_...`) from the dashboard's
+         * step-up page. Needed when an OAuth token, such as a CLI login,
+         * creates or rotates a key.
+         *
+         */
+        'Primitive-Step-Up'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/keys';
+};
+
+export type CreateKeyErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+};
+
+export type CreateKeyError = CreateKeyErrors[keyof CreateKeyErrors];
+
+export type CreateKeyResponses = {
+    /**
+     * Key created; the secret is shown once
+     */
+    201: SuccessEnvelope & {
+        data: CreatedKey;
+    };
+};
+
+export type CreateKeyResponse = CreateKeyResponses[keyof CreateKeyResponses];
+
+export type GetKeyBuilderData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/keys/builder';
+};
+
+export type GetKeyBuilderErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type GetKeyBuilderError = GetKeyBuilderErrors[keyof GetKeyBuilderErrors];
+
+export type GetKeyBuilderResponses = {
+    /**
+     * Presets, matrix and policy
+     */
+    200: SuccessEnvelope & {
+        data: KeyBuilder;
+    };
+};
+
+export type GetKeyBuilderResponse = GetKeyBuilderResponses[keyof GetKeyBuilderResponses];
+
+export type RotateKeyData = {
+    body?: RotateKeyInput;
+    headers?: {
+        /**
+         * A single-use step-up token (`pstep_...`) from the dashboard's
+         * step-up page. Needed when an OAuth token, such as a CLI login,
+         * creates or rotates a key.
+         *
+         */
+        'Primitive-Step-Up'?: string;
+    };
+    path: {
+        /**
+         * API key id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/keys/{id}/rotate';
+};
+
+export type RotateKeyErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type RotateKeyError = RotateKeyErrors[keyof RotateKeyErrors];
+
+export type RotateKeyResponses = {
+    /**
+     * Key rotated; the new secret is shown once
+     */
+    200: SuccessEnvelope & {
+        data: RotatedKey;
+    };
+};
+
+export type RotateKeyResponse = RotateKeyResponses[keyof RotateKeyResponses];
+
+export type UpdateKeyData = {
+    body: UpdateKeyInput;
+    path: {
+        /**
+         * API key id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/keys/{id}';
+};
+
+export type UpdateKeyErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+};
+
+export type UpdateKeyError = UpdateKeyErrors[keyof UpdateKeyErrors];
+
+export type UpdateKeyResponses = {
+    /**
+     * Key updated
+     */
+    200: SuccessEnvelope & {
+        data: UpdatedKey;
+    };
+};
+
+export type UpdateKeyResponse = UpdateKeyResponses[keyof UpdateKeyResponses];
+
+export type ListRolesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/roles';
+};
+
+export type ListRolesErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type ListRolesError = ListRolesErrors[keyof ListRolesErrors];
+
+export type ListRolesResponses = {
+    /**
+     * Roles, templates and assignability
+     */
+    200: SuccessEnvelope & {
+        data: RoleList;
+    };
+};
+
+export type ListRolesResponse = ListRolesResponses[keyof ListRolesResponses];
+
+export type ListGroupsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/groups';
+};
+
+export type ListGroupsErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type ListGroupsError = ListGroupsErrors[keyof ListGroupsErrors];
+
+export type ListGroupsResponses = {
+    /**
+     * Groups
+     */
+    200: SuccessEnvelope & {
+        data: GroupList;
+    };
+};
+
+export type ListGroupsResponse = ListGroupsResponses[keyof ListGroupsResponses];
+
+export type ListMailboxAccessData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/mailbox-access';
+};
+
+export type ListMailboxAccessErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type ListMailboxAccessError = ListMailboxAccessErrors[keyof ListMailboxAccessErrors];
+
+export type ListMailboxAccessResponses = {
+    /**
+     * Mailbox access entries
+     */
+    200: SuccessEnvelope & {
+        data: MailboxAccessList;
+    };
+};
+
+export type ListMailboxAccessResponse = ListMailboxAccessResponses[keyof ListMailboxAccessResponses];
+
+export type GetAccessModeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/access-mode';
+};
+
+export type GetAccessModeErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type GetAccessModeError = GetAccessModeErrors[keyof GetAccessModeErrors];
+
+export type GetAccessModeResponses = {
+    /**
+     * The access mode
+     */
+    200: SuccessEnvelope & {
+        data: AccessMode;
+    };
+};
+
+export type GetAccessModeResponse = GetAccessModeResponses[keyof GetAccessModeResponses];

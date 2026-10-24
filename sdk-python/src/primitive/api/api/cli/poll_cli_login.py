@@ -89,6 +89,8 @@ def sync_detailed(
      Polls a CLI login session until the browser approval either succeeds,
     is denied, expires, or is polled too quickly. The OAuth token set is
     created only after approval and is returned exactly once.
+    A login started with `login_kind: "user"` succeeds with a
+    `CliUserLoginPollResult` instead (`auth_method: "user_grant"`).
 
     Args:
         body (PollCliLoginInput):
@@ -124,6 +126,8 @@ def sync(
      Polls a CLI login session until the browser approval either succeeds,
     is denied, expires, or is polled too quickly. The OAuth token set is
     created only after approval and is returned exactly once.
+    A login started with `login_kind: "user"` succeeds with a
+    `CliUserLoginPollResult` instead (`auth_method: "user_grant"`).
 
     Args:
         body (PollCliLoginInput):
@@ -154,6 +158,8 @@ async def asyncio_detailed(
      Polls a CLI login session until the browser approval either succeeds,
     is denied, expires, or is polled too quickly. The OAuth token set is
     created only after approval and is returned exactly once.
+    A login started with `login_kind: "user"` succeeds with a
+    `CliUserLoginPollResult` instead (`auth_method: "user_grant"`).
 
     Args:
         body (PollCliLoginInput):
@@ -189,6 +195,8 @@ async def asyncio(
      Polls a CLI login session until the browser approval either succeeds,
     is denied, expires, or is polled too quickly. The OAuth token set is
     created only after approval and is returned exactly once.
+    A login started with `login_kind: "user"` succeeds with a
+    `CliUserLoginPollResult` instead (`auth_method: "user_grant"`).
 
     Args:
         body (PollCliLoginInput):

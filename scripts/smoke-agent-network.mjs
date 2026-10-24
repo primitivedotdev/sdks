@@ -83,7 +83,7 @@ try {
   const env = { ...process.env, PRIMITIVE_SKIP_NEW_VERSION_CHECK: "1", PRIMITIVE_CONFIG_DIR: configDir };
   delete env.PRIMITIVE_AGENT_PROFILE;
   delete env.PRIMITIVE_API_HEADERS;
-  const invoke = async (args) => (await runFile(process.execPath, [binary, ...args], { env, timeout: 15000 })).stdout;
+  const invoke = async (args) => (await runFile(process.execPath, [binary, ...args], { env, maxBuffer: 64 * 1024 * 1024, timeout: 15000 })).stdout;
   const api = async (args) => invoke([...args, "--api-key", ["local", "network", "fixture"].join("-"), "--api-base-url", base]);
   const memberApi = async (args) => invoke([...args, "--api-key", ["local", "network", "member"].join("-"), "--api-base-url", base]);
 

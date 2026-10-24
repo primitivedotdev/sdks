@@ -312,6 +312,73 @@ class PrimitiveAPIError(Exception):
         self.rate_limit = rate_limit
 
 
+
+GRANT_FORBIDDEN_CODE = "grant_forbidden"
+
+
+class GrantForbiddenError(PrimitiveAPIError):
+    """A 403 ``grant_forbidden``: the credential's grant lacks a permission.
+
+    Returned when the credential's grant does not include a permission the
+    operation requires; ``permission`` and ``reason`` say which one and why.
+    It is a ``PrimitiveAPIError``, so existing ``except PrimitiveAPIError``
+    handlers keep catching it. Fields the server omitted are ``None``.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        status_code: int | None = None,
+        code: str | None = None,
+        gates: list[dict[str, Any]] | None = None,
+        request_id: str | None = None,
+        retry_after: int | None = None,
+        details: dict[str, Any] | None = None,
+        payload: Any = None,
+        rate_limit: RateLimit | None = None,
+    ) -> None:
+        super().__init__(
+            message,
+            status_code=status_code,
+            code=code or GRANT_FORBIDDEN_CODE,
+            gates=gates,
+            request_id=request_id,
+            retry_after=retry_after,
+            details=details,
+            payload=payload,
+            rate_limit=rate_limit,
+        )
+        raw: dict[str, Any] = details if isinstance(details, dict) else {}
+
+        def text(key: str) -> str | None:
+            value = raw.get(key)
+            return value if isinstance(value, str) else None
+
+        # The permission the operation requires, such as ``mail:send``.
+        self.permission: str | None = text("permission")
+        # The kind of credential that was refused, such as ``org_key``.
+        self.credential_kind: str | None = text("credential_kind")
+        self.grant_template_key: str | None = text("grant_template_key")
+        self.credential_grant_id: str | None = text("credential_grant_id")
+        self.catalog_version: str | None = text("catalog_version")
+        # Why the grant refused, such as ``permission_missing``.
+        self.reason: str | None = text("reason")
+        # A further permission the operation requires, when that one is missing.
+        self.missing: str | None = text("missing")
+        resource = raw.get("resource")
+        self.resource: dict[str, str] | None = None
+        if isinstance(resource, dict):
+            resource_type = cast(dict[str, Any], resource).get("type")
+            resource_id = cast(dict[str, Any], resource).get("id")
+            if isinstance(resource_type, str) and isinstance(resource_id, str):
+                self.resource = {"type": resource_type, "id": resource_id}
+
+
+def _api_error_class(code: object) -> type[PrimitiveAPIError]:
+    return GrantForbiddenError if code == GRANT_FORBIDDEN_CODE else PrimitiveAPIError
+
+
 def _validate_address_header(field_name: str, value: str) -> None:
     value_length = len(value.strip())
     max_length = (
@@ -537,7 +604,7 @@ def _raise_api_error(response: Any) -> None:
             if parsed.error.details is not UNSET
             else None
         )
-        raise PrimitiveAPIError(
+        raise _api_error_class(parsed.error.code.value)(
             parsed.error.message,
             status_code=status_code,
             code=parsed.error.code.value,
@@ -552,7 +619,7 @@ def _raise_api_error(response: Any) -> None:
     fallback = _coerce_error_payload(getattr(response, "content", None))
     if fallback is not None and isinstance(fallback.get("error"), dict):
         err = fallback["error"]
-        raise PrimitiveAPIError(
+        raise _api_error_class(err.get("code"))(
             str(err.get("message") or "Primitive API request failed"),
             status_code=status_code,
             code=err.get("code"),

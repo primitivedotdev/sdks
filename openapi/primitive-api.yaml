@@ -286,6 +286,16 @@ tags:
       permission to perform tasks, use tools, or read private information.
   - name: Contacts
     description: Organization contacts and per-address agent preferences.
+  - name: Keys
+    description: |
+      Create and rotate organization API keys with a preset or narrowed
+      grant, an expiry and conditions.
+  - name: Credentials
+    description: |
+      The credential inventory, the credential audit trail and the
+      organization credential policy.
+  - name: Roles
+    description: Roles, groups, mailbox access and the organization access mode.
 paths:
   /cli/login/start:
     post:
@@ -333,6 +343,8 @@ paths:
         Polls a CLI login session until the browser approval either succeeds,
         is denied, expires, or is polled too quickly. The OAuth token set is
         created only after approval and is returned exactly once.
+        A login started with `login_kind: "user"` succeeds with a
+        `CliUserLoginPollResult` instead (`auth_method: "user_grant"`).
       tags:
         - CLI
       security: []
@@ -737,6 +749,8 @@ paths:
           $ref: "#/components/responses/RateLimited"
   /agent/claim/start:
     post:
+      x-primitive-permission:
+        - account:claim
       operationId: startAgentClaim
       summary: Start an agent account email claim
       description: |
@@ -788,6 +802,8 @@ paths:
           $ref: "#/components/responses/RateLimited"
   /agent/claim/verify:
     post:
+      x-primitive-permission:
+        - account:claim
       operationId: verifyAgentClaim
       summary: Verify an agent account email claim
       description: |
@@ -847,6 +863,8 @@ paths:
           $ref: "#/components/responses/RateLimited"
   /agent/claim/link:
     post:
+      x-primitive-permission:
+        - account:claim
       operationId: createAgentClaimLink
       summary: Create a browser claim link
       description: |
@@ -894,6 +912,8 @@ paths:
           $ref: "#/components/responses/RateLimited"
   /cli/logout:
     post:
+      x-primitive-permission:
+        - credentials:revoke_self
       operationId: cliLogout
       summary: Revoke the current CLI OAuth session
       description: |
@@ -930,6 +950,8 @@ paths:
           $ref: "#/components/responses/NotFound"
   /account:
     get:
+      x-primitive-permission:
+        - account:read
       operationId: getAccount
       summary: Get account info
       tags:
@@ -951,6 +973,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     patch:
+      x-primitive-permission:
+        - account:manage
       operationId: updateAccount
       summary: Update account settings
       tags:
@@ -981,6 +1005,8 @@ paths:
           $ref: "#/components/responses/NotFound"
   /account/storage:
     get:
+      x-primitive-permission:
+        - account:read
       operationId: getStorageStats
       summary: Get storage usage
       tags:
@@ -1003,6 +1029,8 @@ paths:
           $ref: "#/components/responses/NotFound"
   /account/webhook-secret:
     get:
+      x-primitive-permission:
+        - webhook_secret:read
       operationId: getWebhookSecret
       summary: Get webhook signing secret
       description: |
@@ -1045,6 +1073,8 @@ paths:
           $ref: "#/components/responses/NotFound"
   /account/webhook-secret/rotate:
     post:
+      x-primitive-permission:
+        - webhook_secret:manage
       operationId: rotateWebhookSecret
       summary: Rotate webhook signing secret
       description: |
@@ -1074,6 +1104,8 @@ paths:
           $ref: "#/components/responses/RateLimited"
   /credits/redeem:
     post:
+      x-primitive-permission:
+        - credits:redeem
       operationId: redeemCreditCode
       summary: Redeem a credit code
       description: |
@@ -1216,6 +1248,8 @@ paths:
                   message: We couldn't redeem that code right now. Try again in a few minutes.
   /credits/balance:
     get:
+      x-primitive-permission:
+        - credits:read
       operationId: getCreditBalance
       summary: Get credit balance
       description: |
@@ -1246,6 +1280,8 @@ paths:
           $ref: "#/components/responses/RateLimited"
   /domains:
     get:
+      x-primitive-permission:
+        - domains:read
       operationId: listDomains
       summary: List all domains
       description: |
@@ -1271,6 +1307,8 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
     post:
+      x-primitive-permission:
+        - domains:manage
       operationId: addDomain
       summary: Claim a new domain
       description: |
@@ -1340,6 +1378,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     patch:
+      x-primitive-permission:
+        - domains:manage
       operationId: updateDomain
       summary: Update domain settings
       description: |
@@ -1372,6 +1412,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      x-primitive-permission:
+        - domains:manage
       operationId: deleteDomain
       summary: Delete a domain
       description: Deletes a verified or unverified domain claim.
@@ -1390,6 +1432,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     post:
+      x-primitive-permission:
+        - domains:manage
       operationId: verifyDomain
       summary: Verify domain ownership
       description: |
@@ -1426,6 +1470,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     post:
+      x-primitive-permission:
+        - domains:read
       operationId: checkDomainDns
       summary: Run an on-demand DNS health check
       description: |
@@ -1483,6 +1529,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     get:
+      x-primitive-permission:
+        - domains:read
       operationId: downloadDomainZoneFile
       summary: Download domain DNS zone file
       description: |
@@ -1524,6 +1572,8 @@ paths:
           $ref: "#/components/responses/RateLimited"
   /inbox/status:
     get:
+      x-primitive-permission:
+        - account:read
       operationId: getInboxStatus
       summary: Get inbound inbox readiness
       description: |
@@ -1556,6 +1606,8 @@ paths:
           $ref: "#/components/responses/RateLimited"
   /emails:
     get:
+      x-primitive-permission:
+        - mail:read
       operationId: listEmails
       summary: List inbound emails
       description: |
@@ -1830,6 +1882,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
   /emails/search:
     get:
+      x-primitive-permission:
+        - mail:read
       operationId: searchEmails
       summary: Search inbound emails
       description: |
@@ -2306,6 +2360,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     get:
+      x-primitive-permission:
+        - mail:read
       operationId: getEmail
       summary: Get inbound email by id
       description: |
@@ -2351,6 +2407,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      x-primitive-permission:
+        - mail:delete
       operationId: deleteEmail
       summary: Delete an email
       tags:
@@ -2368,6 +2426,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     get:
+      x-primitive-permission:
+        - mail.raw:read
       operationId: downloadRawEmail
       summary: Download raw email
       description: |
@@ -2412,6 +2472,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     get:
+      x-primitive-permission:
+        - mail:read
       operationId: downloadAttachments
       summary: Download email attachments
       description: |
@@ -2461,6 +2523,8 @@ paths:
       - $ref: "#/components/parameters/ResourceId"
       - $ref: "#/components/parameters/AttachmentPartIndex"
     get:
+      x-primitive-permission:
+        - mail:read
       operationId: downloadEmailAttachmentPart
       summary: Download one inbound email attachment
       description: >
@@ -2547,6 +2611,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     get:
+      x-primitive-permission:
+        - mail:read
       parameters:
         - $ref: "#/components/parameters/AttachmentFilename"
       operationId: downloadEmailAttachmentByFilename
@@ -2620,6 +2686,8 @@ paths:
       - $ref: "#/components/parameters/ResourceId"
       - $ref: "#/components/parameters/AttachmentSelector"
     get:
+      x-primitive-permission:
+        - mail:read
       operationId: listEmailAttachmentArchiveMembers
       summary: "List the files inside a received zip or tar attachment"
       description: >-
@@ -2699,6 +2767,8 @@ paths:
       - $ref: "#/components/parameters/AttachmentSelector"
       - $ref: "#/components/parameters/ArchiveMemberPath"
     get:
+      x-primitive-permission:
+        - mail:read
       operationId: downloadEmailAttachmentArchiveMember
       summary: "Download one file from inside a received zip or tar attachment"
       description: >-
@@ -2770,6 +2840,8 @@ paths:
       - $ref: "#/components/parameters/ResourceId"
       - $ref: "#/components/parameters/AttachmentPartIndex"
     get:
+      x-primitive-permission:
+        - mail:read
       operationId: downloadSentAttachmentPart
       summary: Download one sent email attachment
       description: >
@@ -2859,6 +2931,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     get:
+      x-primitive-permission:
+        - mail:read
       parameters:
         - $ref: "#/components/parameters/AttachmentFilename"
       operationId: downloadSentAttachmentByFilename
@@ -2932,6 +3006,8 @@ paths:
       - $ref: "#/components/parameters/ResourceId"
       - $ref: "#/components/parameters/AttachmentSelector"
     get:
+      x-primitive-permission:
+        - mail:read
       operationId: listSentAttachmentArchiveMembers
       summary: "List the files inside a sent zip or tar attachment"
       description: >-
@@ -3010,6 +3086,8 @@ paths:
       - $ref: "#/components/parameters/AttachmentSelector"
       - $ref: "#/components/parameters/ArchiveMemberPath"
     get:
+      x-primitive-permission:
+        - mail:read
       operationId: downloadSentAttachmentArchiveMember
       summary: "Download one file from inside a sent zip or tar attachment"
       description: >-
@@ -3080,6 +3158,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     post:
+      x-primitive-permission:
+        - mail:signal
       operationId: stopRepeatFromEmail
       summary: Stop the repeat behind a received message
       description: |
@@ -3136,6 +3216,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     post:
+      x-primitive-permission:
+        - mail:reply
       operationId: replyToEmail
       summary: Reply to an inbound email
       description: |
@@ -3239,6 +3321,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     post:
+      x-primitive-permission:
+        - mail.state:write
       operationId: replayEmailWebhooks
       summary: Replay email webhooks
       description: |
@@ -3273,6 +3357,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     post:
+      x-primitive-permission:
+        - mail.state:write
       operationId: discardEmailContent
       summary: Discard email content
       description: |
@@ -3321,6 +3407,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     get:
+      x-primitive-permission:
+        - mail:read
       operationId: getConversation
       summary: Get the conversation an email belongs to
       description: |
@@ -3398,6 +3486,8 @@ paths:
           $ref: "#/components/responses/NotFound"
   /endpoints:
     get:
+      x-primitive-permission:
+        - endpoints.pull:manage
       operationId: listEndpoints
       summary: List webhook endpoints
       description: Returns all active (non-deleted) webhook endpoints.
@@ -3420,6 +3510,8 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
     post:
+      x-primitive-permission:
+        - endpoints.pull:manage
       operationId: createEndpoint
       summary: Create a webhook endpoint
       description: >-
@@ -3511,6 +3603,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     patch:
+      x-primitive-permission:
+        - endpoints:manage
       operationId: updateEndpoint
       summary: Update a webhook endpoint
       description: >-
@@ -3555,6 +3649,8 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
     delete:
+      x-primitive-permission:
+        - endpoints.pull:manage
       operationId: deleteEndpoint
       summary: Delete a webhook endpoint
       description: |
@@ -3575,6 +3671,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     post:
+      x-primitive-permission:
+        - endpoints:pull
       operationId: pullWebhookEvent
       summary: Receive a pending webhook event without a public endpoint
       description: "Wait up to 30 seconds for one existing event. The body string
@@ -3624,6 +3722,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     post:
+      x-primitive-permission:
+        - endpoints:pull
       operationId: completeWebhookEvent
       summary: Report the outcome of a local webhook delivery attempt
       description: "Report normalized handling evidence for the queue, attempt and
@@ -3674,6 +3774,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     post:
+      x-primitive-permission:
+        - endpoints:manage
       operationId: testEndpoint
       summary: Send a test webhook
       description: |
@@ -3708,6 +3810,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     post:
+      x-primitive-permission:
+        - endpoints:manage
       operationId: testEndpointRules
       summary: Dry-run endpoint rules against a received email
       description: |
@@ -3771,6 +3875,8 @@ paths:
                   message: Email not found
   /filters:
     get:
+      x-primitive-permission:
+        - filters:manage
       operationId: listFilters
       summary: List filter rules
       description: Returns all whitelist and blocklist filter rules.
@@ -3793,6 +3899,8 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
     post:
+      x-primitive-permission:
+        - filters:manage
       operationId: createFilter
       summary: Create a filter rule
       description: |
@@ -3828,6 +3936,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     patch:
+      x-primitive-permission:
+        - filters:manage
       operationId: updateFilter
       summary: Update a filter rule
       description: Toggle a filter's enabled state.
@@ -3858,6 +3968,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      x-primitive-permission:
+        - filters:manage
       operationId: deleteFilter
       summary: Delete a filter rule
       tags:
@@ -3873,6 +3985,8 @@ paths:
           $ref: "#/components/responses/NotFound"
   /wake/schedules:
     get:
+      x-primitive-permission:
+        - wake:manage
       operationId: listWakeSchedules
       summary: List wake schedules
       description: Returns the org's wake.dispatch schedules.
@@ -3895,6 +4009,8 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
     post:
+      x-primitive-permission:
+        - wake:manage
       operationId: createWakeSchedule
       summary: Create a wake schedule
       description: |
@@ -3930,6 +4046,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     get:
+      x-primitive-permission:
+        - wake:manage
       operationId: getWakeSchedule
       summary: Get a wake schedule
       tags:
@@ -3951,6 +4069,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     patch:
+      x-primitive-permission:
+        - wake:manage
       operationId: updateWakeSchedule
       summary: Update a wake schedule
       description: >
@@ -3985,6 +4105,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      x-primitive-permission:
+        - wake:manage
       operationId: deleteWakeSchedule
       summary: Delete a wake schedule
       tags:
@@ -4000,6 +4122,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     post:
+      x-primitive-permission:
+        - wake:manage
       operationId: runWakeSchedule
       summary: Run a wake schedule now
       description: >
@@ -4032,6 +4156,8 @@ paths:
           $ref: "#/components/responses/NotFound"
   /wake/authorizations:
     get:
+      x-primitive-permission:
+        - wake:manage
       operationId: listWakeAuthorizations
       summary: List wake authorizations
       description: |
@@ -4066,6 +4192,8 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
     post:
+      x-primitive-permission:
+        - wake:manage
       operationId: createWakeAuthorization
       summary: Create a wake authorization
       description: >
@@ -4106,6 +4234,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     patch:
+      x-primitive-permission:
+        - wake:manage
       operationId: updateWakeAuthorization
       summary: Update a wake authorization
       description: Toggle a wake authorization's enabled state.
@@ -4136,6 +4266,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      x-primitive-permission:
+        - wake:manage
       operationId: deleteWakeAuthorization
       summary: Delete a wake authorization
       tags:
@@ -4149,6 +4281,8 @@ paths:
           $ref: "#/components/responses/NotFound"
   /wake/dispatches:
     get:
+      x-primitive-permission:
+        - wake:manage
       operationId: listWakeDispatches
       summary: List recent wake dispatches
       description: Read-only audit of recent wake.dispatch interactions for the org.
@@ -4182,6 +4316,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
   /routes:
     get:
+      x-primitive-permission:
+        - routes:manage
       operationId: listRoutes
       summary: List recipient routes
       description: |
@@ -4207,6 +4343,8 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
     post:
+      x-primitive-permission:
+        - routes:manage
       operationId: createRoute
       summary: Create a recipient route
       description: >
@@ -4251,6 +4389,8 @@ paths:
           $ref: "#/components/responses/Conflict"
   /routes/reorder:
     post:
+      x-primitive-permission:
+        - routes:manage
       operationId: reorderRoutes
       summary: Reorder recipient routes
       description: Update the priority of one or more routes in a single call.
@@ -4282,6 +4422,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
   /routes/simulate:
     post:
+      x-primitive-permission:
+        - routes:manage
       operationId: simulateRoute
       summary: Simulate routing for a recipient
       description: >
@@ -4317,6 +4459,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     patch:
+      x-primitive-permission:
+        - routes:manage
       operationId: updateRoute
       summary: Update a recipient route
       tags:
@@ -4350,6 +4494,8 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
     delete:
+      x-primitive-permission:
+        - routes:manage
       operationId: deleteRoute
       summary: Delete a recipient route
       tags:
@@ -4363,6 +4509,8 @@ paths:
           $ref: "#/components/responses/NotFound"
   /webhooks/deliveries:
     get:
+      x-primitive-permission:
+        - webhooks:read
       operationId: listDeliveries
       summary: List webhook deliveries
       description: |
@@ -4460,6 +4608,8 @@ paths:
           Delivery ID, as `id` in the deliveries list: a numeric string or a
           UUID.
     post:
+      x-primitive-permission:
+        - webhooks:replay
       operationId: replayDelivery
       summary: Replay a webhook delivery
       description: |
@@ -4496,6 +4646,8 @@ paths:
           $ref: "#/components/responses/RateLimited"
   /send-permissions:
     get:
+      x-primitive-permission:
+        - account:read
       operationId: getSendPermissions
       summary: List send-permission rules
       description: |
@@ -4554,6 +4706,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
   /send-mail:
     post:
+      x-primitive-permission:
+        - mail:send
       operationId: sendEmail
       summary: Send outbound email
       description: |
@@ -4655,6 +4809,8 @@ paths:
           $ref: "#/components/responses/ServiceUnavailable"
   /semantic-search:
     post:
+      x-primitive-permission:
+        - mail.search:semantic
       operationId: semanticSearch
       summary: Semantic search across received and sent mail
       description: |
@@ -4714,6 +4870,8 @@ paths:
           $ref: "#/components/responses/ServiceUnavailable"
   /outbound/status:
     get:
+      x-primitive-permission:
+        - account:read
       operationId: getOutboundStatus
       summary: Get outbound sending readiness
       description: |
@@ -4749,6 +4907,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
   /repeating-sends:
     get:
+      x-primitive-permission:
+        - sent:manage
       operationId: listRepeatingSends
       summary: List repeating sends
       description: |
@@ -4793,6 +4953,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     get:
+      x-primitive-permission:
+        - sent:manage
       operationId: getRepeatingSend
       summary: Get a repeating send
       tags:
@@ -4814,6 +4976,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     patch:
+      x-primitive-permission:
+        - sent:manage
       operationId: updateRepeatingSend
       summary: Update a repeating send
       description: |
@@ -4849,6 +5013,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      x-primitive-permission:
+        - sent:manage
       operationId: deleteRepeatingSend
       summary: Delete a repeating send
       description: Deletes the repeat and cancels its pending message. Messages already sent are not affected.
@@ -4863,6 +5029,8 @@ paths:
           $ref: "#/components/responses/NotFound"
   /sent-emails:
     get:
+      x-primitive-permission:
+        - mail:read
       operationId: listSentEmails
       summary: List outbound sent emails
       description: |
@@ -5073,6 +5241,8 @@ paths:
                   message: Sent-mail text search (`q`) is not enabled in this environment.
   /sent-emails/{id}:
     delete:
+      x-primitive-permission:
+        - sent:manage
       operationId: deleteSentEmail
       summary: Delete a sent email
       description: >
@@ -5157,6 +5327,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
     get:
+      x-primitive-permission:
+        - mail:read
       operationId: getSentEmail
       summary: Get a sent email by id
       description: |
@@ -5194,6 +5366,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     patch:
+      x-primitive-permission:
+        - sent:manage
       operationId: rescheduleSentEmail
       summary: Reschedule a scheduled send
       description: |
@@ -5258,6 +5432,8 @@ paths:
                     status: delivered
   /agent-connections:
     post:
+      x-primitive-permission:
+        - agent_connections:manage
       operationId: createAgentConnection
       tags:
         - Agent Connections
@@ -5651,6 +5827,8 @@ paths:
                 - name
               additionalProperties: false
     get:
+      x-primitive-permission:
+        - agent_connections:manage
       operationId: listAgentConnections
       tags:
         - Agent Connections
@@ -5918,6 +6096,8 @@ paths:
                   message: Rate limit exceeded
   /agent-connections/{address}/invitation:
     post:
+      x-primitive-permission:
+        - agent_connections:manage
       operationId: inviteAgentConnection
       tags:
         - Agent Connections
@@ -6212,6 +6392,8 @@ paths:
               additionalProperties: false
   /agent-connections/{address}:
     delete:
+      x-primitive-permission:
+        - agent_connections:update
       operationId: revokeAgentConnection
       tags:
         - Agent Connections
@@ -6450,6 +6632,8 @@ paths:
                   message: Rate limit exceeded
   /agent-connections/{address}/remove:
     post:
+      x-primitive-permission:
+        - agent_connections:manage
       operationId: removeAgentConnection
       tags:
         - Agent Connections
@@ -6626,6 +6810,8 @@ paths:
                   message: Rate limit exceeded
   /agent-connections/claim:
     post:
+      x-primitive-permission:
+        - agent_connections:update
       operationId: claimAgentConnection
       tags:
         - Agent Connections
@@ -6996,6 +7182,8 @@ paths:
                   message: Rate limit exceeded
   /changes:
     get:
+      x-primitive-permission:
+        - changes:read
       operationId: listChanges
       summary: Long-poll what changed
       description: >-
@@ -7152,6 +7340,8 @@ paths:
                   message: Rate limit exceeded
   /sent-emails/cancel:
     post:
+      x-primitive-permission:
+        - sent:cancel
       operationId: cancelSentEmailByIdempotencyKey
       summary: Cancel a scheduled send by idempotency key
       description: >-
@@ -7266,6 +7456,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     post:
+      x-primitive-permission:
+        - sent:manage
       operationId: cancelSentEmail
       summary: Cancel a scheduled send
       description: |
@@ -7321,6 +7513,8 @@ paths:
                     status: delivered
   /sent-emails/{id}/reply:
     get:
+      x-primitive-permission:
+        - mail:read
       operationId: awaitReply
       summary: Get (or wait for) the reply to a sent email
       description: |
@@ -7389,6 +7583,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     get:
+      x-primitive-permission:
+        - mail:read
       operationId: getThread
       summary: Get a conversation thread by id
       description: |
@@ -7428,6 +7624,8 @@ paths:
           $ref: "#/components/responses/NotFound"
   /functions:
     get:
+      x-primitive-permission:
+        - functions:read
       operationId: listFunctions
       summary: List functions
       description: |
@@ -7453,6 +7651,8 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
     post:
+      x-primitive-permission:
+        - functions:deploy
       operationId: createFunction
       summary: Deploy a function
       description: |
@@ -7531,6 +7731,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     get:
+      x-primitive-permission:
+        - functions:read
       operationId: getFunction
       summary: Get a function
       description: |
@@ -7556,6 +7758,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     put:
+      x-primitive-permission:
+        - functions:deploy
       operationId: updateFunction
       summary: Update and redeploy a function
       description: |
@@ -7606,6 +7810,8 @@ paths:
         "503":
           $ref: "#/components/responses/DeployFailed"
     delete:
+      x-primitive-permission:
+        - functions:manage
       operationId: deleteFunction
       summary: Delete a function
       description: |
@@ -7632,6 +7838,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     post:
+      x-primitive-permission:
+        - functions:deploy
       operationId: testFunction
       summary: Send a test invocation
       description: |
@@ -7723,6 +7931,8 @@ paths:
           type: string
           format: uuid
     get:
+      x-primitive-permission:
+        - functions:manage
       operationId: getFunctionTestRunTrace
       summary: Get a function test run trace
       description: |
@@ -7755,6 +7965,8 @@ paths:
           $ref: "#/components/responses/NotFound"
   /functions/routing-topology:
     get:
+      x-primitive-permission:
+        - functions:read
       operationId: getOrgRoutingTopology
       summary: Get the org's function routing topology
       description: |
@@ -7785,6 +7997,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     get:
+      x-primitive-permission:
+        - functions:read
       operationId: getFunctionRouting
       summary: Get a function's current route binding
       description: |
@@ -7816,6 +8030,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     put:
+      x-primitive-permission:
+        - functions:manage
       operationId: setFunctionRoute
       summary: Bind a route to a function
       description: |
@@ -7852,6 +8068,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      x-primitive-permission:
+        - functions:manage
       operationId: unsetFunctionRoute
       summary: Unbind any route from a function
       description: |
@@ -7887,6 +8105,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     get:
+      x-primitive-permission:
+        - secrets:manage
       operationId: listFunctionSecrets
       summary: List a function's secrets
       description: |
@@ -7925,6 +8145,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     post:
+      x-primitive-permission:
+        - secrets:manage
       operationId: createFunctionSecret
       summary: Create or update a secret
       description: |
@@ -7986,6 +8208,8 @@ paths:
           type: string
           pattern: ^[A-Z_][A-Z0-9_]*$
     put:
+      x-primitive-permission:
+        - secrets:manage
       operationId: setFunctionSecret
       summary: Set a secret by key
       description: |
@@ -8032,6 +8256,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      x-primitive-permission:
+        - secrets:manage
       operationId: deleteFunctionSecret
       summary: Delete a secret
       description: |
@@ -8053,6 +8279,8 @@ paths:
           $ref: "#/components/responses/NotFound"
   /org/secrets:
     get:
+      x-primitive-permission:
+        - secrets:manage
       operationId: listOrgSecrets
       summary: List org-level (global) secrets
       description: |
@@ -8085,6 +8313,8 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
     post:
+      x-primitive-permission:
+        - secrets:manage
       operationId: createOrgSecret
       summary: Create or update an org secret
       description: |
@@ -8142,6 +8372,8 @@ paths:
           type: string
           pattern: ^[A-Z_][A-Z0-9_]*$
     put:
+      x-primitive-permission:
+        - secrets:manage
       operationId: setOrgSecret
       summary: Set an org secret by key
       description: |
@@ -8184,6 +8416,8 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
     delete:
+      x-primitive-permission:
+        - secrets:manage
       operationId: deleteOrgSecret
       summary: Delete an org secret
       description: |
@@ -8204,6 +8438,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     get:
+      x-primitive-permission:
+        - functions:manage
       operationId: listFunctionLogs
       summary: List a function's execution logs
       description: |
@@ -8275,6 +8511,8 @@ paths:
           $ref: "#/components/responses/NotFound"
   /memories:
     put:
+      x-primitive-permission:
+        - memories:write
       operationId: setMemory
       summary: Set a memory
       description: |
@@ -8348,6 +8586,8 @@ paths:
         "429":
           $ref: "#/components/responses/RateLimited"
     get:
+      x-primitive-permission:
+        - memories:read
       operationId: getMemory
       summary: Get a memory
       description: |
@@ -8396,6 +8636,8 @@ paths:
         "429":
           $ref: "#/components/responses/RateLimited"
     delete:
+      x-primitive-permission:
+        - memories:write
       operationId: deleteMemory
       summary: Delete a memory
       description: |
@@ -8454,6 +8696,8 @@ paths:
           $ref: "#/components/responses/RateLimited"
   /memories/search:
     get:
+      x-primitive-permission:
+        - memories:read
       operationId: searchMemories
       summary: Search memories
       description: |
@@ -8647,6 +8891,9 @@ paths:
           $ref: "#/components/responses/RateLimited"
   /templates/{id}/install:
     post:
+      x-primitive-permission:
+        - templates:install
+        - functions:deploy
       operationId: installTemplate
       summary: Install a function template
       description: |
@@ -8701,6 +8948,8 @@ paths:
           $ref: "#/components/responses/RateLimited"
   /templates/installs/{id}:
     get:
+      x-primitive-permission:
+        - functions:read
       operationId: getTemplateInstall
       summary: Get template install status
       description: |
@@ -9153,6 +9402,8 @@ paths:
           $ref: "#/components/responses/RateLimited"
   /agent-networks:
     get:
+      x-primitive-permission:
+        - agent_networks:read
       operationId: listAgentNetworks
       summary: List your organization's agent networks
       description: An organization member login or an active connected agent allowed
@@ -9180,6 +9431,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
   /agent-networks/default/members:
     get:
+      x-primitive-permission:
+        - agent_networks:manage
       operationId: listDefaultNetworkMembers
       summary: List default network memberships available to your login
       description: An owner or admin sees all connected addresses, including hidden
@@ -9214,6 +9467,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/AgentNetworkAddress"
     patch:
+      x-primitive-permission:
+        - agent_networks:manage
       operationId: updateDefaultNetworkMember
       summary: Change whether an agent can see or be seen in the network
       description: An owner or admin may update any active address. Other human
@@ -9248,6 +9503,8 @@ paths:
         "422":
           $ref: "#/components/responses/ValidationError"
     post:
+      x-primitive-permission:
+        - agent_networks:manage
       operationId: addDefaultNetworkMember
       summary: Add an agent to the default network
       description: Owner or admin login required. Restores an explicitly excluded member.
@@ -9271,6 +9528,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      x-primitive-permission:
+        - agent_networks:manage
       operationId: removeDefaultNetworkMember
       summary: Remove an agent from the default network
       description: Owner or admin login required. The explicit exclusion persists
@@ -9302,6 +9561,8 @@ paths:
           $ref: "#/components/responses/NotFound"
   /agent-networks/default/agents:
     get:
+      x-primitive-permission:
+        - agent_networks:read
       operationId: listDefaultNetworkAgents
       summary: Discover listed agents in your organization network
       description: Requires a connected-agent credential for an active member allowed
@@ -9333,6 +9594,8 @@ paths:
     parameters:
       - $ref: "#/components/parameters/AgentNetworkAddress"
     get:
+      x-primitive-permission:
+        - agent_networks:read
       operationId: getDefaultNetworkAgent
       summary: Get a listed agent by email address
       description: Requires a connected-agent credential allowed to see the network,
@@ -9358,6 +9621,8 @@ paths:
           $ref: "#/components/responses/NotFound"
   /agent-networks/default/contact-admission:
     post:
+      x-primitive-permission:
+        - agent_networks:admit
       operationId: checkDefaultNetworkContactAdmission
       summary: Check whether network mail may wake this connected agent
       description: |
@@ -9815,6 +10080,8 @@ paths:
           $ref: "#/components/responses/NotFound"
   /contacts:
     get:
+      x-primitive-permission:
+        - contacts:read
       operationId: listContacts
       summary: list Contacts
       tags:
@@ -10019,6 +10286,8 @@ paths:
                   message: Rate limit exceeded
   /contacts/{address}:
     get:
+      x-primitive-permission:
+        - contacts:read
       operationId: getContact
       summary: get Contact
       tags:
@@ -10199,6 +10468,8 @@ paths:
                   code: rate_limit_exceeded
                   message: Rate limit exceeded
     put:
+      x-primitive-permission:
+        - contacts:write
       operationId: putContact
       summary: put Contact
       tags:
@@ -10413,6 +10684,8 @@ paths:
                   code: rate_limit_exceeded
                   message: Rate limit exceeded
     delete:
+      x-primitive-permission:
+        - contacts:delete
       operationId: deleteContact
       summary: delete Contact
       tags:
@@ -10579,6 +10852,8 @@ paths:
                   message: Rate limit exceeded
   /agent-contacts/{agent_address}:
     get:
+      x-primitive-permission:
+        - agent_contacts:manage
       operationId: listAgentContacts
       summary: list Agent Contacts
       tags:
@@ -10815,6 +11090,8 @@ paths:
                   message: Rate limit exceeded
   /agent-contacts/{agent_address}/{contact_address}:
     put:
+      x-primitive-permission:
+        - agent_contacts:manage
       operationId: putAgentContact
       summary: put Agent Contact
       tags:
@@ -11065,6 +11342,8 @@ paths:
                   code: rate_limit_exceeded
                   message: Rate limit exceeded
     delete:
+      x-primitive-permission:
+        - agent_contacts:manage
       operationId: deleteAgentContact
       summary: delete Agent Contact
       tags:
@@ -11241,6 +11520,8 @@ paths:
                   message: Rate limit exceeded
   /contact-policy:
     get:
+      x-primitive-permission:
+        - contacts:policy
       operationId: getContactPolicy
       summary: Read organization contact policy
       tags:
@@ -11331,6 +11612,8 @@ paths:
         "429":
           $ref: "#/components/responses/RateLimited"
     put:
+      x-primitive-permission:
+        - contacts:policy
       operationId: putContactPolicy
       summary: Replace organization contact policy
       tags:
@@ -11428,6 +11711,8 @@ paths:
           $ref: "#/components/responses/RateLimited"
   /agent-contact-policy/{agent_address}:
     get:
+      x-primitive-permission:
+        - agent_contact_policy:read
       operationId: getAgentContactPolicy
       summary: Read agent contact policy
       tags:
@@ -11526,6 +11811,8 @@ paths:
         "429":
           $ref: "#/components/responses/RateLimited"
     put:
+      x-primitive-permission:
+        - contacts:policy
       operationId: putAgentContactPolicy
       summary: Replace agent contact policy
       tags:
@@ -11631,6 +11918,8 @@ paths:
           $ref: "#/components/responses/RateLimited"
   /whoami:
     get:
+      x-primitive-permission:
+        - account:read
       operationId: whoami
       summary: Get current caller identity
       tags:
@@ -11653,10 +11942,28 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-      description: Current authenticated identity. member_address is null for machine
+      description: |
+        Current authenticated identity. member_address is null for machine
         credentials or an unavailable member address.
+
+        Two optional query parameters ask for the caller's grant. They are
+        described here rather than declared, so generated clients keep the
+        signature they had; pass them as raw query parameters.
+
+        - `include=grant` adds `grant` (`GrantDescription`): the grant this
+          credential holds.
+        - `check=<permission>`, optionally with
+          `resource=<function|domain|endpoint|route>:<id>`, adds `check`
+          (`PermissionCheck`): whether the grant allows that permission, with
+          the same `reason` and `details` a `403 grant_forbidden` would carry.
+          Nothing is enforced by asking; an unknown permission answers
+          `400 validation_error`.
+
+        A server without grants ignores both and omits the fields.
   /account/member-address:
     put:
+      x-primitive-permission:
+        - member_address:manage
       operationId: provisionMemberAddress
       summary: Provision your member email address
       description: Provision or return this authenticated human member's stable
@@ -11705,6 +12012,551 @@ paths:
               required:
                 - address
               additionalProperties: false
+  /cli/orgs:
+    get:
+      operationId: listCliOrgs
+      summary: List the organizations a CLI login can switch to
+      description: |
+        Lists every organization the person behind a CLI user login belongs
+        to, with whether the CLI may be used there and, when it may not, the
+        reason. Authenticate with the identity access token (`prim_uat_`) from
+        a CLI user login; no other credential is accepted. A server without
+        CLI user logins answers `404 feature_disabled`.
+      tags:
+        - CLI
+      responses:
+        "200":
+          description: Organizations for the signed-in person
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: Always `no-store`
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/CliOrgList"
+                    required:
+                      - data
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /credentials:
+    get:
+      x-primitive-permission:
+        - credentials:read
+      operationId: listCredentials
+      summary: List every credential in the organization
+      description: |
+        The credential inventory: organization API keys, Function keys,
+        connected agent keys, OAuth grants and agent delegates, each with its
+        grant, creator, last use, expiry, conditions and the actions it
+        offers. Available to an owner or admin in a person's session. Answers
+        `404 feature_disabled` where the inventory is not enabled.
+      tags:
+        - Credentials
+      parameters:
+        - name: kind
+          in: query
+          required: false
+          description: Only list credentials of this kind.
+          schema:
+            $ref: "#/components/schemas/CredentialKind"
+      responses:
+        "200":
+          description: The credential inventory
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/CredentialList"
+                    required:
+                      - data
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /credentials/revoke:
+    post:
+      x-primitive-permission:
+        - keys:manage
+      operationId: revokeCredential
+      summary: Revoke one credential
+      description: |
+        Revokes one credential from the inventory. Function keys are rotated,
+        never revoked, and answer `409 rotate_instead`. Available to an owner
+        or admin in a person's session.
+      tags:
+        - Credentials
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RevokeCredentialInput"
+      responses:
+        "200":
+          description: Credential revoked
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/RevokeCredentialResult"
+                    required:
+                      - data
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /credential-events:
+    get:
+      x-primitive-permission:
+        - credential_events:read
+      operationId: listCredentialEvents
+      summary: List credential audit events
+      description: |
+        The credential audit trail, newest first, paged with `cursor`.
+        Filter by actor, credential, event type and time. Available to an
+        owner or admin in a person's session.
+      tags:
+        - Credentials
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          description: The `next_cursor` from the previous page.
+          schema:
+            type: string
+            maxLength: 256
+        - name: limit
+          in: query
+          required: false
+          description: Page size.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+        - name: actor_id
+          in: query
+          required: false
+          description: Only events by this actor.
+          schema:
+            type: string
+            format: uuid
+        - name: credential_id
+          in: query
+          required: false
+          description: Only events about this credential.
+          schema:
+            type: string
+            format: uuid
+        - name: event_type
+          in: query
+          required: false
+          description: Only events of this type, for example `key.created`.
+          schema:
+            type: string
+            maxLength: 100
+        - name: since
+          in: query
+          required: false
+          description: Only events at or after this time (ISO 8601).
+          schema:
+            type: string
+            format: date-time
+        - name: until
+          in: query
+          required: false
+          description: Only events before this time (ISO 8601).
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: One page of credential events
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/CredentialEventList"
+                    required:
+                      - data
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /credential-policy:
+    get:
+      x-primitive-permission:
+        - credentials:read
+      operationId: getCredentialPolicy
+      summary: Get the organization credential policy
+      description: |
+        The rules new keys and CLI access are held to: maximum lifetime,
+        required expiry, who may create super admin keys and more. Available
+        to an owner or admin in a person's session.
+      tags:
+        - Credentials
+      responses:
+        "200":
+          description: The credential policy
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/CredentialPolicy"
+                    required:
+                      - data
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /keys:
+    post:
+      x-primitive-permission:
+        - keys:manage
+      operationId: createKey
+      summary: Create an API key
+      description: |
+        Creates an organization API key with a preset or a custom grant, an
+        optional expiry and optional conditions. The secret is returned once,
+        in `key`. A person's session may call this directly. An OAuth token
+        (such as a CLI login) needs a single-use step-up token from the
+        dashboard in the `Primitive-Step-Up` header; without one the answer
+        is `403 step_up_required` with `details.step_up_url`. A grant the
+        caller may not give, or one the server does not offer, answers
+        `409 grant_not_available` with a `reason`.
+      tags:
+        - Keys
+      parameters:
+        - $ref: "#/components/parameters/PrimitiveStepUp"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateKeyInput"
+      responses:
+        "201":
+          description: Key created; the secret is shown once
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/CreatedKey"
+                    required:
+                      - data
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /keys/builder:
+    get:
+      x-primitive-permission:
+        - keys:read
+      operationId: getKeyBuilder
+      summary: Get the key presets and permission matrix
+      description: |
+        The presets a key can be created from, with whether each is available
+        and why not, the per-area permission matrix and the credential
+        policy.
+      tags:
+        - Keys
+      responses:
+        "200":
+          description: Presets, matrix and policy
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/KeyBuilder"
+                    required:
+                      - data
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /keys/{id}/rotate:
+    post:
+      x-primitive-permission:
+        - keys:manage
+      operationId: rotateKey
+      summary: Rotate an API key
+      description: |
+        Mints a successor with the same grant, name, expiry and conditions,
+        and brings the old key's expiry forward to the end of the overlap
+        (default 24 hours; `0` revokes it at once). The new secret is
+        returned once. An OAuth token needs a step-up token, as for
+        `createKey`.
+      tags:
+        - Keys
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: API key id
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/PrimitiveStepUp"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RotateKeyInput"
+      responses:
+        "200":
+          description: Key rotated; the new secret is shown once
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/RotatedKey"
+                    required:
+                      - data
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /keys/{id}:
+    patch:
+      x-primitive-permission:
+        - keys:manage
+      operationId: updateKey
+      summary: Update an API key
+      description: |
+        Renames a key or changes its expiry, grant, conditions or suspension.
+        A grant change is recorded as a new grant version. Available in a
+        person's session.
+      tags:
+        - Keys
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: API key id
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateKeyInput"
+      responses:
+        "200":
+          description: Key updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/UpdatedKey"
+                    required:
+                      - data
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /roles:
+    get:
+      x-primitive-permission:
+        - members:read
+      operationId: listRoles
+      summary: List roles
+      description: |
+        The organization's roles (built-in, template and custom), the role
+        templates that can be assigned, and whether role assignment is
+        available. The built-in roles are `owner`, `admin`, `operator`
+        and `member` (see `BuiltinRoleKey`). Readable by any person in
+        the organization.
+      tags:
+        - Roles
+      responses:
+        "200":
+          description: Roles, templates and assignability
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/RoleList"
+                    required:
+                      - data
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /groups:
+    get:
+      x-primitive-permission:
+        - members:read
+      operationId: listGroups
+      summary: List groups
+      description: Groups of members, each with its members and an optional role.
+      tags:
+        - Roles
+      responses:
+        "200":
+          description: Groups
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/GroupList"
+                    required:
+                      - data
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /mailbox-access:
+    get:
+      x-primitive-permission:
+        - members:read
+      operationId: listMailboxAccess
+      summary: List mailbox access entries
+      description: Every mailbox and domain access entry (delegation) in the organization.
+      tags:
+        - Roles
+      responses:
+        "200":
+          description: Mailbox access entries
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/MailboxAccessList"
+                    required:
+                      - data
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /access-mode:
+    get:
+      x-primitive-permission:
+        - members:read
+      operationId: getAccessMode
+      summary: Get the organization access mode
+      description: |
+        Whether mailbox access follows the whole organization or explicit
+        delegations. Owners and admins also see the preview of a switch and
+        the decisions recorded for it.
+      tags:
+        - Roles
+      responses:
+        "200":
+          description: The access mode
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AccessMode"
+                    required:
+                      - data
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 components:
   securitySchemes:
     BearerAuth:
@@ -11717,6 +12569,18 @@ components:
       name: token
       description: Signed download token provided in webhook payloads
   parameters:
+    PrimitiveStepUp:
+      name: Primitive-Step-Up
+      in: header
+      required: false
+      description: |
+        A single-use step-up token (`pstep_...`) from the dashboard's
+        step-up page. Needed when an OAuth token, such as a CLI login,
+        creates or rotates a key.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 200
     AttachmentFilename:
       name: filename
       in: query
@@ -12163,6 +13027,1132 @@ components:
                     required:
                       - deleted
   schemas:
+    GrantForbiddenDetails:
+      type: object
+      description: |
+        The `details` of a `403 grant_forbidden`: the permission the
+        operation needed and the grant that did not hold it.
+      additionalProperties: true
+      properties:
+        permission:
+          type:
+            - string
+            - "null"
+          description: The permission the operation requires, for example `mail:send`.
+        credential_kind:
+          type:
+            - string
+            - "null"
+          description: The kind of credential that made the request, for example `org_key`.
+        grant_template_key:
+          type:
+            - string
+            - "null"
+          description: The grant template, when the credential holds one.
+        credential_grant_id:
+          type:
+            - string
+            - "null"
+          description: The concrete grant id, when the credential holds one.
+        catalog_version:
+          type:
+            - string
+            - "null"
+          description: Version of the permission catalog the decision used.
+        reason:
+          type:
+            - string
+            - "null"
+          description: |
+            Why the grant did not allow the operation: `permission_missing`,
+            `required_permission_missing`, `mail_scope_requires_org`,
+            `resource_outside_grant`, `credential_expired` or
+            `unknown_permission`. New reasons may be added.
+        missing:
+          type:
+            - string
+            - "null"
+          description: A further permission the operation also requires, when that is the one missing.
+        resource:
+          type: object
+          description: The resource the decision was about, when it named one.
+          additionalProperties: true
+          properties:
+            type:
+              type: string
+            id:
+              type: string
+      required:
+        - permission
+        - credential_kind
+        - catalog_version
+        - reason
+    GrantDescription:
+      type: object
+      description: The grant a credential holds, as `GET /whoami?include=grant` reports it.
+      additionalProperties: true
+      properties:
+        credential_kind:
+          type: string
+        actor:
+          description: Who the credential acts as.
+        grant_ref:
+          type:
+            - string
+            - "null"
+        grant_type:
+          type: string
+          description: "`template`, `concrete` or `computed`."
+        template:
+          type:
+            - string
+            - "null"
+        credential_grant_id:
+          type:
+            - string
+            - "null"
+        computed_from:
+          description: For a computed grant, the role and delegations it was computed from.
+        permissions:
+          type: array
+          items:
+            type: string
+        mail_scope:
+          description: "`org`, or the addresses, domains and depth the grant reaches."
+        resources:
+          description: Resource ids the grant is narrowed to, or null.
+        expires_at:
+          type:
+            - string
+            - "null"
+        catalog_version:
+          type: string
+      required:
+        - credential_kind
+        - permissions
+        - catalog_version
+    PermissionCheck:
+      type: object
+      description: The decision `GET /whoami?check=<permission>` reports. Nothing is enforced by asking.
+      additionalProperties: true
+      properties:
+        permission:
+          type: string
+        allow:
+          type: boolean
+        reason:
+          type: string
+          description: Why the permission is not allowed; same values as `grant_forbidden`.
+        details:
+          $ref: "#/components/schemas/GrantForbiddenDetails"
+        resource:
+          type: object
+          additionalProperties: true
+          properties:
+            type:
+              type: string
+            id:
+              type: string
+      required:
+        - permission
+        - allow
+    CliUserLoginPollResult:
+      type: object
+      description: |
+        A successful poll of a CLI login started with `login_kind: "user"`.
+        The identity token (`prim_uat_`) and refresh token (`prim_urt_`)
+        belong to the person, not to an organization: they authenticate
+        only `GET /cli/orgs` and the token exchange. `org` is a ready access
+        token for the organization chosen in the browser, or null with
+        `org_refusal` saying why the CLI cannot be used there.
+      properties:
+        auth_method:
+          type: string
+          enum:
+            - user_grant
+        user_grant_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        access_token:
+          type: string
+          description: Identity access token for the org list and the token exchange
+        refresh_token:
+          type: string
+          description: Refresh token for the identity access token
+        token_type:
+          type: string
+          enum:
+            - Bearer
+        expires_in:
+          type: integer
+          description: Seconds until access_token expires
+        oauth_client_id:
+          type: string
+        org:
+          oneOf:
+            - $ref: "#/components/schemas/CliOrgAccessToken"
+            - type: "null"
+        org_refusal:
+          oneOf:
+            - $ref: "#/components/schemas/CliOrgRefusal"
+            - type: "null"
+      required:
+        - auth_method
+        - user_grant_id
+        - user_id
+        - access_token
+        - refresh_token
+        - token_type
+        - expires_in
+        - oauth_client_id
+        - org
+        - org_refusal
+    CliOrgAccessToken:
+      type: object
+      description: A short-lived access token in one organization, from a CLI user login.
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          enum:
+            - Bearer
+        expires_in:
+          type: integer
+        scope:
+          type: string
+        org_id:
+          type: string
+          format: uuid
+        org_name:
+          type:
+            - string
+            - "null"
+        role:
+          type: string
+          description: Your role's key in the organization, such as a `BuiltinRoleKey` value.
+        oauth_grant_id:
+          type: string
+          format: uuid
+      required:
+        - access_token
+        - token_type
+        - expires_in
+        - org_id
+        - org_name
+        - role
+        - oauth_grant_id
+    CliOrgRefusalReason:
+      type: string
+      description: |
+        Why the CLI cannot be used in an organization:
+        `not_a_member`, `cli_access_disabled_by_org`, `role_insufficient`
+        (the organization's policy does not allow the person's role), or
+        `cli_access_revoked` (log in again).
+      enum:
+        - not_a_member
+        - cli_access_disabled_by_org
+        - role_insufficient
+        - cli_access_revoked
+    CliOrgRefusal:
+      type: object
+      properties:
+        org_id:
+          type: string
+          format: uuid
+        reason:
+          $ref: "#/components/schemas/CliOrgRefusalReason"
+        message:
+          type: string
+      required:
+        - org_id
+        - reason
+        - message
+    CliOrg:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type:
+            - string
+            - "null"
+        role:
+          type:
+            - string
+            - "null"
+          description: Your role's key in the organization, such as a `BuiltinRoleKey` value.
+        available:
+          type: boolean
+          description: Whether the CLI can switch to this organization.
+        reason:
+          oneOf:
+            - $ref: "#/components/schemas/CliOrgRefusalReason"
+            - type: "null"
+        message:
+          type:
+            - string
+            - "null"
+      required:
+        - id
+        - name
+        - available
+        - reason
+    CliOrgList:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type:
+                - string
+                - "null"
+          required:
+            - id
+            - email
+        user_grant_id:
+          type: string
+          format: uuid
+        orgs:
+          type: array
+          items:
+            $ref: "#/components/schemas/CliOrg"
+      required:
+        - user
+        - user_grant_id
+        - orgs
+    CredentialKind:
+      type: string
+      description: |
+        `org_key`, `function_key`, `connected_key`, `oauth`,
+        `agent_delegate`, or `cli_user_access` (a person's CLI access in the
+        organization through a CLI user login, listed only where those
+        logins exist).
+      enum:
+        - org_key
+        - function_key
+        - connected_key
+        - oauth
+        - agent_delegate
+        - cli_user_access
+    CredentialRow:
+      type: object
+      additionalProperties: true
+      properties:
+        kind:
+          $ref: "#/components/schemas/CredentialKind"
+        id:
+          type: string
+        name:
+          type:
+            - string
+            - "null"
+        prefix:
+          type:
+            - string
+            - "null"
+        client:
+          type:
+            - object
+            - "null"
+          properties:
+            client_id:
+              type: string
+            name:
+              type:
+                - string
+                - "null"
+        grant:
+          type: object
+          additionalProperties: true
+          properties:
+            ref:
+              type:
+                - string
+                - "null"
+            type:
+              type: string
+              enum:
+                - template
+                - concrete
+                - computed
+            template:
+              type:
+                - string
+                - "null"
+            permissions:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+            mail_scope:
+              description: "`org`, or the addresses, domains and depth the grant reaches."
+            resources:
+              description: Resource ids the grant is narrowed to, or null.
+        creator:
+          type: object
+          additionalProperties: true
+          properties:
+            kind:
+              type:
+                - string
+                - "null"
+            id:
+              type:
+                - string
+                - "null"
+            email:
+              type:
+                - string
+                - "null"
+            status:
+              type: string
+              enum:
+                - member
+                - departed
+                - unknown
+                - agent_before_claim
+                - system
+        created_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+        last_used_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+        last_used_ip:
+          type:
+            - string
+            - "null"
+        expires_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+        conditions:
+          oneOf:
+            - $ref: "#/components/schemas/KeyConditions"
+            - type: "null"
+        flags:
+          type: array
+          items:
+            type: string
+        actions:
+          type: array
+          items:
+            type: string
+            enum:
+              - revoke
+              - rotate
+              - edit
+              - transfer
+              - suggest
+      required:
+        - kind
+        - id
+        - name
+        - grant
+        - creator
+        - expires_at
+        - flags
+        - actions
+    CredentialList:
+      type: object
+      additionalProperties: true
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CredentialRow"
+        counts:
+          type: object
+          additionalProperties:
+            type: integer
+      required:
+        - items
+        - counts
+    RevokeCredentialInput:
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          $ref: "#/components/schemas/CredentialKind"
+        id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          maxLength: 200
+      required:
+        - kind
+        - id
+    RevokeCredentialResult:
+      type: object
+      additionalProperties: true
+      properties:
+        revoked:
+          type: integer
+        kind:
+          $ref: "#/components/schemas/CredentialKind"
+        id:
+          type: string
+      required:
+        - revoked
+        - kind
+        - id
+    CredentialEvent:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+        event_type:
+          type: string
+          description: For example `key.created`, `key.revoked` or `cli_access.granted`.
+        credential_kind:
+          type:
+            - string
+            - "null"
+        credential_id:
+          type:
+            - string
+            - "null"
+        credential_prefix:
+          type:
+            - string
+            - "null"
+        actor_kind:
+          type:
+            - string
+            - "null"
+        actor_id:
+          type:
+            - string
+            - "null"
+        grant_ref:
+          type:
+            - string
+            - "null"
+        catalog_version:
+          type:
+            - string
+            - "null"
+        request_id:
+          type:
+            - string
+            - "null"
+        details:
+          type: object
+          additionalProperties: true
+      required:
+        - id
+        - occurred_at
+        - event_type
+        - details
+    CredentialEventList:
+      type: object
+      additionalProperties: true
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CredentialEvent"
+        next_cursor:
+          type:
+            - string
+            - "null"
+      required:
+        - items
+        - next_cursor
+    CredentialPolicy:
+      type: object
+      additionalProperties: true
+      properties:
+        max_key_lifetime_days:
+          type:
+            - integer
+            - "null"
+        require_key_expiry:
+          type: boolean
+        super_admin_key_creators:
+          type: string
+          enum:
+            - owners_and_admins
+            - owners
+        members_may_mint_keys:
+          type: boolean
+        allow_org_mail_scope_keys:
+          type: boolean
+        cap_agents_below_person:
+          type: boolean
+        removal_suspends_created:
+          type: boolean
+        oauth_consent_admin_only:
+          type: boolean
+        cli_access:
+          type: string
+          description: |
+            Who may use the CLI in the organization. Present only where CLI
+            user logins exist. `owners_and_admins` admits the `owner`, `admin`
+            and `operator` roles.
+          enum:
+            - owners_and_admins
+            - all_members
+            - "off"
+      required:
+        - max_key_lifetime_days
+        - require_key_expiry
+        - super_admin_key_creators
+        - members_may_mint_keys
+        - allow_org_mail_scope_keys
+        - cap_agents_below_person
+        - removal_suspends_created
+        - oauth_consent_admin_only
+    KeyPreset:
+      type: string
+      description: |
+        `super_admin` (every ordinary permission, as keys have today),
+        `send_only`, `read_only`, `own_addresses` and
+        `own_addresses_read_only` (both need `addresses`), or `custom`.
+      enum:
+        - super_admin
+        - send_only
+        - read_only
+        - own_addresses
+        - own_addresses_read_only
+        - custom
+    KeyGrantSpec:
+      type: object
+      description: |
+        A key's grant: a preset, optionally narrowed. Use `matrix` (area to
+        `none`, `read` or `write`, areas from `GET /keys/builder`) or
+        `permissions` for a custom grant, `addresses` and `domains` to limit
+        mail, and `resources` to limit Functions, domains, endpoints or
+        routes to selected ids. The server adds the permissions a choice
+        implies and reports them in `warnings`.
+      additionalProperties: false
+      properties:
+        preset:
+          $ref: "#/components/schemas/KeyPreset"
+        matrix:
+          type: object
+          additionalProperties:
+            type: string
+            enum:
+              - none
+              - read
+              - write
+        permissions:
+          type: array
+          maxItems: 200
+          items:
+            type: string
+        addresses:
+          type: array
+          maxItems: 100
+          items:
+            type: string
+        domains:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+        resources:
+          type: object
+          additionalProperties:
+            type: array
+            maxItems: 100
+            items:
+              type: string
+      required:
+        - preset
+    KeyGrant:
+      description: A preset name, or a grant spec.
+      oneOf:
+        - $ref: "#/components/schemas/KeyPreset"
+        - $ref: "#/components/schemas/KeyGrantSpec"
+    KeyConditions:
+      type: object
+      description: Conditions every use of the key is checked against.
+      additionalProperties: true
+      properties:
+        ip_allowlist:
+          type:
+            - array
+            - "null"
+          minItems: 1
+          maxItems: 100
+          items:
+            type: string
+          description: CIDR ranges (IPv4 or IPv6) the key may be used from.
+        rate_limit_per_minute:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 100000
+        suspended_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: Set when the key is suspended (read only).
+    CreateKeyInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        grant:
+          $ref: "#/components/schemas/KeyGrant"
+        expires_at:
+          type: string
+          format: date-time
+          description: When the key stops working. Use this or `expires_in_days`.
+        expires_in_days:
+          type: integer
+          minimum: 1
+          maximum: 3650
+          description: Days until the key stops working. Use this or `expires_at`.
+        conditions:
+          $ref: "#/components/schemas/KeyConditionsInput"
+    KeyConditionsInput:
+      type: object
+      additionalProperties: false
+      properties:
+        ip_allowlist:
+          type:
+            - array
+            - "null"
+          minItems: 1
+          maxItems: 100
+          items:
+            type: string
+          description: CIDR ranges (IPv4 or IPv6) the key may be used from.
+        rate_limit_per_minute:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 100000
+    KeyGrantWarning:
+      type: object
+      description: A permission the server added because a chosen one implies it.
+      additionalProperties: true
+      properties:
+        permission:
+          type: string
+        adds:
+          type: array
+          items:
+            type: string
+        why:
+          type: string
+        description:
+          type: string
+      required:
+        - permission
+        - adds
+        - why
+        - description
+    CreatedKey:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        name:
+          type:
+            - string
+            - "null"
+        key:
+          type: string
+          description: The secret. Shown once; store it now.
+        key_prefix:
+          type: string
+        grant:
+          type: object
+          additionalProperties: true
+          properties:
+            template:
+              type:
+                - string
+                - "null"
+            credential_grant_id:
+              type:
+                - string
+                - "null"
+            permissions:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+            mail_scope:
+              description: "`org`, or the addresses, domains and depth the grant reaches."
+            resources:
+              description: Resource ids the grant is narrowed to, or null.
+        expires_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+        conditions:
+          description: The key's conditions, or null.
+        warnings:
+          type: array
+          items:
+            $ref: "#/components/schemas/KeyGrantWarning"
+      required:
+        - id
+        - name
+        - key
+        - key_prefix
+        - grant
+        - expires_at
+        - warnings
+    RotateKeyInput:
+      type: object
+      additionalProperties: false
+      properties:
+        overlap_seconds:
+          type: integer
+          minimum: 0
+          maximum: 604800
+          description: Seconds the old key keeps working. Default 86400; 0 revokes it at once.
+    RotatedKey:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        key:
+          type: string
+          description: The new secret. Shown once; store it now.
+        key_prefix:
+          type: string
+        previous_key_id:
+          type: string
+        previous_key_expires_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - key
+        - key_prefix
+        - previous_key_id
+        - previous_key_expires_at
+    UpdateKeyInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        expires_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+        grant:
+          $ref: "#/components/schemas/KeyGrant"
+        conditions:
+          oneOf:
+            - $ref: "#/components/schemas/KeyConditionsInput"
+            - type: "null"
+        suspended:
+          type: boolean
+    UpdatedKey:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        changed:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            $ref: "#/components/schemas/KeyGrantWarning"
+      required:
+        - id
+        - changed
+        - warnings
+    KeyBuilder:
+      type: object
+      additionalProperties: true
+      properties:
+        enabled:
+          type: boolean
+        presets:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+            properties:
+              id:
+                type: string
+              label:
+                type: string
+              description:
+                type: string
+              available:
+                type: boolean
+              reason:
+                type:
+                  - string
+                  - "null"
+              message:
+                type:
+                  - string
+                  - "null"
+            required:
+              - id
+              - label
+              - description
+              - available
+              - reason
+              - message
+        matrix:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+            properties:
+              id:
+                type: string
+              label:
+                type: string
+              description:
+                type: string
+              read:
+                type: array
+                items:
+                  type: string
+              write:
+                type: array
+                items:
+                  type: string
+              resource:
+                type:
+                  - string
+                  - "null"
+            required:
+              - id
+              - label
+              - description
+              - read
+              - write
+              - resource
+        policy:
+          $ref: "#/components/schemas/CredentialPolicy"
+      required:
+        - enabled
+        - presets
+        - matrix
+        - policy
+    BuiltinRoleKey:
+      type: string
+      description: |
+        The key of a built-in role. `operator` has every permission `admin`
+        has except managing members, changing roles, sending invitations and
+        billing. By default the CLI may be used by `owner`, `admin` and
+        `operator`.
+      enum:
+        - owner
+        - admin
+        - operator
+        - member
+    Role:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        key:
+          type: string
+          description: |
+            The role's key. A built-in role uses one of the `BuiltinRoleKey`
+            values (`owner`, `admin`, `operator` or `member`);
+            template and custom roles use their own keys. Other values can
+            appear, so read the key as a string.
+        kind:
+          type: string
+          enum:
+            - builtin
+            - template
+            - custom
+        name:
+          type: string
+        description:
+          type:
+            - string
+            - "null"
+        permissions:
+          type: array
+          items:
+            type: string
+        mail_scope:
+          description: "`org`, or the addresses, domains and depth the role reaches."
+        version:
+          type: integer
+        catalog_version:
+          type:
+            - string
+            - "null"
+        predates_catalog:
+          type: boolean
+      required:
+        - id
+        - key
+        - kind
+        - name
+        - permissions
+        - version
+    RoleTemplate:
+      type: object
+      additionalProperties: true
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+      required:
+        - key
+        - name
+        - description
+        - permissions
+    RoleList:
+      type: object
+      additionalProperties: true
+      properties:
+        roles:
+          type: array
+          items:
+            $ref: "#/components/schemas/Role"
+        templates:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleTemplate"
+        assignment:
+          type: object
+          additionalProperties: true
+          properties:
+            available:
+              type: boolean
+            reason:
+              type:
+                - string
+                - "null"
+          required:
+            - available
+            - reason
+      required:
+        - roles
+        - templates
+        - assignment
+    Group:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type:
+            - string
+            - "null"
+        role_id:
+          type:
+            - string
+            - "null"
+        members:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - name
+        - members
+    GroupList:
+      type: object
+      additionalProperties: true
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/Group"
+      required:
+        - groups
+    MailboxAccessList:
+      type: object
+      additionalProperties: true
+      properties:
+        entries:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      required:
+        - entries
+    AccessMode:
+      type: object
+      additionalProperties: true
+      properties:
+        mode:
+          type: string
+          enum:
+            - whole_org
+            - delegated
+        version:
+          type: integer
+        changed_at:
+          type:
+            - string
+            - "null"
+        preview:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        decisions:
+          type: object
+          additionalProperties:
+            type: string
+        gate:
+          type: object
+          additionalProperties: true
+      required:
+        - mode
+        - version
+        - changed_at
     IncludedMessageHeaders:
       type: object
       description: Stored addressing and threading headers. A member is null when
@@ -13855,6 +15845,16 @@ components:
                 - upstream_error
                 - usage_limit_exceeded
                 - vendor_unavailable
+                - grant_forbidden
+                - grant_not_available
+                - step_up_required
+                - step_up_invalid
+                - step_up_refused
+                - step_up_not_accepted
+                - pending_owner_confirmation
+                - ip_not_allowed
+                - rotate_instead
+                - role_assignment_unavailable
             message:
               type: string
             details:
@@ -13895,6 +15895,54 @@ components:
                 client_idempotency_key:
                   type: string
                   description: Effective idempotency key associated with the original request.
+                permission:
+                  type:
+                    - string
+                    - "null"
+                  description: Present when `code == grant_forbidden`. The permission the
+                    operation requires. See `GrantForbiddenDetails` for the full shape.
+                credential_kind:
+                  type:
+                    - string
+                    - "null"
+                  description: Present when `code == grant_forbidden`. The kind of credential
+                    that was refused.
+                grant_template_key:
+                  type:
+                    - string
+                    - "null"
+                  description: Present when `code == grant_forbidden` and the credential holds
+                    a template grant.
+                credential_grant_id:
+                  type:
+                    - string
+                    - "null"
+                  description: Present when `code == grant_forbidden` and the credential holds
+                    a concrete grant.
+                catalog_version:
+                  type:
+                    - string
+                    - "null"
+                  description: Present when `code == grant_forbidden`. Version of the
+                    permission catalog the decision used.
+                reason:
+                  type:
+                    - string
+                    - "null"
+                  description: Present when `code == grant_forbidden` (why the grant refused)
+                    or `grant_not_available` (why the grant cannot be given).
+                purpose:
+                  type:
+                    - string
+                    - "null"
+                  description: Present when `code == step_up_required`. What the step-up
+                    token must be issued for.
+                step_up_url:
+                  type:
+                    - string
+                    - "null"
+                  description: Present when `code == step_up_required`. Dashboard page that
+                    issues a step-up token.
             gates:
               type: array
               items:
@@ -13972,6 +16020,22 @@ components:
           additionalProperties: true
           description: Optional client metadata stored with the login session; serialized
             JSON must be 2048 bytes or fewer
+        login_kind:
+          type: string
+          enum:
+            - org
+            - user
+          description: |
+            `user` asks for a login as the person, not bound to one
+            organization, that can switch between the person's organizations
+            (see `CliUserLoginPollResult`). Servers without this answer
+            `400 validation_error`; clients then retry without the field.
+        requested_grant:
+          type: string
+          description: |
+            Narrow the login's grant. Only `primitive:api` (the person's own
+            grant, as when omitted) is accepted; anything else answers
+            `400 grant_not_available`.
     CliLoginStartResult:
       type: object
       properties:
@@ -22554,6 +24618,13 @@ components:
             - "null"
           description: Suggested personal address; nothing is assigned until explicitly
             saved.
+        grant:
+          description: Present with `include=grant`. Null when the server has no grant for the caller.
+          oneOf:
+            - $ref: "#/components/schemas/GrantDescription"
+            - type: "null"
+        check:
+          $ref: "#/components/schemas/PermissionCheck"
       required:
         - org_id
         - user_id

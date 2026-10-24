@@ -3,6 +3,8 @@ import { Command, Errors, Flags } from "@oclif/core";
 import type {
   CliLoginPollResult,
   CliLoginStartResult,
+  CliUserLoginPollResult,
+  StartCliLoginInput,
 } from "@primitivedotdev/api-core";
 import {
   getAccount,
@@ -37,6 +39,13 @@ import {
   openBrowser,
 } from "../browser-login-prompt.js";
 import { deleteChatState } from "../chat-state.js";
+import { ORG_SELECTION_ENV } from "../global-org-flag.js";
+import {
+  CliOrgRefusedError,
+  credentialsFromUserLogin,
+  fetchCliOrgs,
+  switchCurrentOrg,
+} from "../user-grant.js";
 
 const MAX_CLI_LOGIN_POLL_INTERVAL_SECONDS = 60;
 
@@ -179,6 +188,30 @@ export async function checkExistingLogin(params: {
   const probeApiBaseUrl =
     requestConfig.apiBaseUrl ?? params.credentials.api_base_url;
   let credentials = params.credentials;
+  if (credentials.auth_method === "user_grant" && !credentials.org_id) {
+    // A login as yourself with no organization selected yet: it is live if
+    // its identity token can still list organizations.
+    try {
+      await fetchCliOrgs({
+        apiBaseUrl: probeApiBaseUrl,
+        configDir: params.configDir,
+        credentials,
+        credentialsLockHeld: params.credentialsLockHeld,
+        headers: requestConfig.headers,
+      });
+      return { status: "valid" };
+    } catch (error) {
+      if (loadCliCredentials(params.configDir) === null) {
+        return { status: "removed_stale" };
+      }
+      return {
+        status: "blocked",
+        payload: error,
+        message:
+          "A saved Primitive CLI login exists, but the CLI could not verify it. Run `primitive logout` before logging in again.",
+      };
+    }
+  }
   try {
     credentials = await refreshStoredCliCredentials({
       apiBaseUrl: probeApiBaseUrl,
@@ -186,6 +219,8 @@ export async function checkExistingLogin(params: {
       credentials,
       credentialsLockHeld: params.credentialsLockHeld,
       headers: requestConfig.headers,
+      // The existing login is checked as it stands; --org applies after.
+      orgSelection: null,
     });
   } catch (error) {
     if (loadCliCredentials(params.configDir) === null) {
@@ -256,11 +291,104 @@ export type LoginFlags = {
   "device-name"?: string;
   "no-browser"?: boolean;
   force?: boolean;
+  permission?: string[];
 };
+
+const PERMISSION_PATTERN = /^[a-z][a-z0-9_.]*:[a-z][a-z0-9_]*$/;
+
+/**
+ * `--permission` values as the login's `requested_grant`: space-separated
+ * permissions, as OAuth scopes are written. Null when none were given.
+ */
+export function requestedGrantFromPermissions(
+  permissions: readonly string[] | undefined,
+): string | null {
+  if (!permissions || permissions.length === 0) return null;
+  const values = permissions
+    .flatMap((value) => value.split(/[\s,]+/))
+    .map((value) => value.trim())
+    .filter(Boolean);
+  for (const value of values) {
+    if (!PERMISSION_PATTERN.test(value)) {
+      throw cliError(
+        `--permission ${JSON.stringify(value)} is not a permission. Permissions look like \`mail:send\`.`,
+      );
+    }
+  }
+  return [...new Set(values)].join(" ");
+}
+
+type StartResponse = { data?: unknown; error?: unknown; response?: Response };
+
+/**
+ * Start a CLI login as the person (`login_kind: "user"`), and fall back to
+ * the org-bound login when the server refuses the field, as servers without
+ * user logins do with `400 validation_error`.
+ */
+export async function startLoginWithFallback(params: {
+  deviceName: string;
+  requestedGrant: string | null;
+  start: (body: StartCliLoginInput) => Promise<StartResponse>;
+}): Promise<{
+  loginKind: "user" | "org";
+  start: CliLoginStartResult;
+}> {
+  const base: StartCliLoginInput = {
+    device_name: params.deviceName,
+    ...(params.requestedGrant
+      ? { requested_grant: params.requestedGrant }
+      : {}),
+  };
+  const attempts: Array<{ kind: "user" | "org"; body: StartCliLoginInput }> = [
+    { kind: "user", body: { ...base, login_kind: "user" } },
+    { kind: "org", body: base },
+  ];
+  let lastPayload: unknown = null;
+  for (const attempt of attempts) {
+    const started = await params.start(attempt.body);
+    if (!started.error) {
+      const start = unwrapData<CliLoginStartResult>(started.data);
+      if (!start) {
+        throw cliError("Primitive API returned an empty CLI login response.");
+      }
+      return { loginKind: attempt.kind, start };
+    }
+    const payload = extractErrorPayload(started.error);
+    const code = extractErrorCode(payload);
+    lastPayload = payload;
+    if (code === "grant_not_available") {
+      writeErrorWithHints(payload);
+      throw cliError(
+        "This server does not offer CLI logins narrowed with --permission. Log in without --permission.",
+      );
+    }
+    if (code !== "validation_error" || attempt.kind === "org") break;
+  }
+  writeErrorWithHints(lastPayload);
+  if (
+    params.requestedGrant &&
+    extractErrorCode(lastPayload) === "validation_error"
+  ) {
+    throw cliError(
+      "This server does not accept --permission for CLI logins. Log in without --permission.",
+    );
+  }
+  throw cliError("Could not start Primitive CLI login.");
+}
+
+export function isUserLoginResult(
+  login: unknown,
+): login is CliUserLoginPollResult {
+  return (
+    login !== null &&
+    typeof login === "object" &&
+    (login as { auth_method?: unknown }).auth_method === "user_grant"
+  );
+}
 
 class LoginCommand extends Command {
   static description =
-    "Log in by opening Primitive in your browser and saving an org-scoped OAuth session locally.";
+    "Log in by opening Primitive in your browser and saving the session locally. Where the server supports it, you log in as yourself and can switch between your organizations with `primitive org use <org>` or `--org <org>` on any command; otherwise the login is bound to the organization you choose in the browser.";
 
   static summary = "Log in with browser approval";
 
@@ -268,6 +396,7 @@ class LoginCommand extends Command {
     "<%= config.bin %> login",
     "<%= config.bin %> login --device-name work-laptop",
     "<%= config.bin %> login --force",
+    "<%= config.bin %> login --org acme",
   ];
 
   static flags = {
@@ -287,6 +416,11 @@ class LoginCommand extends Command {
       char: "f",
       description:
         "Replace saved credentials without first verifying the existing session",
+    }),
+    permission: Flags.string({
+      description:
+        "Ask for a login narrowed to this permission, such as `mail:read`. Repeat for more. Refused by servers that do not offer narrowed CLI logins; the login is never widened instead.",
+      multiple: true,
     }),
   };
 
@@ -366,23 +500,17 @@ class LoginCommand extends Command {
     }
 
     const deviceName = flags["device-name"] ?? hostname();
-    const started = await startCliLogin({
-      body: {
-        device_name: deviceName,
-      },
-      client: apiClient.client,
-      responseStyle: "fields",
+    const requestedGrant = requestedGrantFromPermissions(flags.permission);
+    const { start } = await startLoginWithFallback({
+      deviceName,
+      requestedGrant,
+      start: (body) =>
+        startCliLogin({
+          body,
+          client: apiClient.client,
+          responseStyle: "fields",
+        }),
     });
-
-    if (started.error) {
-      writeErrorWithHints(extractErrorPayload(started.error));
-      throw cliError("Could not start Primitive CLI login.");
-    }
-
-    const start = unwrapData<CliLoginStartResult>(started.data);
-    if (!start) {
-      throw cliError("Primitive API returned an empty CLI login response.");
-    }
 
     const openedBrowser = !flags["no-browser"];
     if (openedBrowser) openBrowser(start.verification_uri_complete);
@@ -416,6 +544,25 @@ class LoginCommand extends Command {
     }
 
     deleteChatState(this.config.configDir);
+    if (isUserLoginResult(login)) {
+      await this.saveUserLogin({
+        apiBaseUrl,
+        headers: requestConfig.headers,
+        login,
+        requestedGrant,
+      });
+      return;
+    }
+    const wantedOrg = process.env[ORG_SELECTION_ENV]?.trim();
+    if (
+      wantedOrg &&
+      wantedOrg.toLowerCase() !== login.org_id.toLowerCase() &&
+      wantedOrg.toLowerCase() !== (login.org_name ?? "").toLowerCase()
+    ) {
+      process.stderr.write(
+        `This server binds a CLI login to the organization chosen in the browser, so --org ${wantedOrg} was not applied.\n`,
+      );
+    }
     saveCliCredentials(this.config.configDir, {
       access_token: login.access_token,
       api_base_url: apiBaseUrl,
@@ -432,6 +579,70 @@ class LoginCommand extends Command {
 
     const org = login.org_name ? ` (${login.org_name})` : "";
     process.stderr.write(`Logged in to org ${login.org_id}${org}.\n`);
+    process.stderr.write(
+      `Saved credentials to ${credentialsPath(this.config.configDir)}.\n`,
+    );
+  }
+
+  private async saveUserLogin(params: {
+    apiBaseUrl: string;
+    headers?: Record<string, string>;
+    login: CliUserLoginPollResult;
+    requestedGrant: string | null;
+  }): Promise<void> {
+    const { login } = params;
+    saveCliCredentials(
+      this.config.configDir,
+      credentialsFromUserLogin({
+        apiBaseUrl: params.apiBaseUrl,
+        login,
+        requestedGrant: params.requestedGrant,
+      }),
+    );
+    process.stderr.write(
+      "Logged in as yourself. Switch organizations with `primitive org use <org>`, or pass --org <org> to one command.\n",
+    );
+    if (login.org) {
+      const name = login.org.org_name ? ` (${login.org.org_name})` : "";
+      process.stderr.write(
+        `Current organization: ${login.org.org_id}${name}, role ${login.org.role}.\n`,
+      );
+    } else if (login.org_refusal) {
+      process.stderr.write(
+        `The organization chosen in the browser (${login.org_refusal.org_id}) cannot be used from the CLI: ${login.org_refusal.message} [${login.org_refusal.reason}]\nRun \`primitive orgs\` to see where you can, then \`primitive org use <org>\`.\n`,
+      );
+    }
+
+    const wantedOrg = process.env[ORG_SELECTION_ENV]?.trim();
+    const alreadyThere =
+      wantedOrg &&
+      login.org &&
+      (wantedOrg.toLowerCase() === login.org.org_id.toLowerCase() ||
+        wantedOrg.toLowerCase() === (login.org.org_name ?? "").toLowerCase());
+    if (wantedOrg && !alreadyThere) {
+      try {
+        const { org } = await switchCurrentOrg({
+          apiBaseUrl: params.apiBaseUrl,
+          configDir: this.config.configDir,
+          // runBrowserLogin holds the credentials lock for the whole login.
+          credentialsLockHeld: true,
+          headers: params.headers,
+          selection: wantedOrg,
+        });
+        const name = org.org_name ? ` (${org.org_name})` : "";
+        process.stderr.write(
+          `Switched to organization ${org.org_id}${name}, role ${org.role ?? "unknown"}.\n`,
+        );
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        const reason =
+          error instanceof CliOrgRefusedError ? ` [${error.reason}]` : "";
+        process.stderr.write(
+          `Logged in, but could not switch to ${wantedOrg}: ${detail}${reason}\n`,
+        );
+        process.exitCode = 1;
+      }
+    }
     process.stderr.write(
       `Saved credentials to ${credentialsPath(this.config.configDir)}.\n`,
     );

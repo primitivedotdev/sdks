@@ -12,6 +12,172 @@ import (
 	"github.com/google/uuid"
 )
 
+// Ref: #/components/schemas/AccessMode
+type AccessMode struct {
+	Mode            AccessModeMode          `json:"mode"`
+	Version         int                     `json:"version"`
+	ChangedAt       NilString               `json:"changed_at"`
+	Preview         []AccessModePreviewItem `json:"preview"`
+	Decisions       OptAccessModeDecisions  `json:"decisions"`
+	Gate            OptAccessModeGate       `json:"gate"`
+	AdditionalProps AccessModeAdditional
+}
+
+// GetMode returns the value of Mode.
+func (s *AccessMode) GetMode() AccessModeMode {
+	return s.Mode
+}
+
+// GetVersion returns the value of Version.
+func (s *AccessMode) GetVersion() int {
+	return s.Version
+}
+
+// GetChangedAt returns the value of ChangedAt.
+func (s *AccessMode) GetChangedAt() NilString {
+	return s.ChangedAt
+}
+
+// GetPreview returns the value of Preview.
+func (s *AccessMode) GetPreview() []AccessModePreviewItem {
+	return s.Preview
+}
+
+// GetDecisions returns the value of Decisions.
+func (s *AccessMode) GetDecisions() OptAccessModeDecisions {
+	return s.Decisions
+}
+
+// GetGate returns the value of Gate.
+func (s *AccessMode) GetGate() OptAccessModeGate {
+	return s.Gate
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *AccessMode) GetAdditionalProps() AccessModeAdditional {
+	return s.AdditionalProps
+}
+
+// SetMode sets the value of Mode.
+func (s *AccessMode) SetMode(val AccessModeMode) {
+	s.Mode = val
+}
+
+// SetVersion sets the value of Version.
+func (s *AccessMode) SetVersion(val int) {
+	s.Version = val
+}
+
+// SetChangedAt sets the value of ChangedAt.
+func (s *AccessMode) SetChangedAt(val NilString) {
+	s.ChangedAt = val
+}
+
+// SetPreview sets the value of Preview.
+func (s *AccessMode) SetPreview(val []AccessModePreviewItem) {
+	s.Preview = val
+}
+
+// SetDecisions sets the value of Decisions.
+func (s *AccessMode) SetDecisions(val OptAccessModeDecisions) {
+	s.Decisions = val
+}
+
+// SetGate sets the value of Gate.
+func (s *AccessMode) SetGate(val OptAccessModeGate) {
+	s.Gate = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *AccessMode) SetAdditionalProps(val AccessModeAdditional) {
+	s.AdditionalProps = val
+}
+
+type AccessModeAdditional map[string]jx.Raw
+
+func (s *AccessModeAdditional) init() AccessModeAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type AccessModeDecisions map[string]string
+
+func (s *AccessModeDecisions) init() AccessModeDecisions {
+	m := *s
+	if m == nil {
+		m = map[string]string{}
+		*s = m
+	}
+	return m
+}
+
+type AccessModeGate map[string]jx.Raw
+
+func (s *AccessModeGate) init() AccessModeGate {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type AccessModeMode string
+
+const (
+	AccessModeModeWholeOrg  AccessModeMode = "whole_org"
+	AccessModeModeDelegated AccessModeMode = "delegated"
+)
+
+// AllValues returns all AccessModeMode values.
+func (AccessModeMode) AllValues() []AccessModeMode {
+	return []AccessModeMode{
+		AccessModeModeWholeOrg,
+		AccessModeModeDelegated,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s AccessModeMode) MarshalText() ([]byte, error) {
+	switch s {
+	case AccessModeModeWholeOrg:
+		return []byte(s), nil
+	case AccessModeModeDelegated:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *AccessModeMode) UnmarshalText(data []byte) error {
+	switch AccessModeMode(data) {
+	case AccessModeModeWholeOrg:
+		*s = AccessModeModeWholeOrg
+		return nil
+	case AccessModeModeDelegated:
+		*s = AccessModeModeDelegated
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type AccessModePreviewItem map[string]jx.Raw
+
+func (s *AccessModePreviewItem) init() AccessModePreviewItem {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
 // Ref: #/components/schemas/Account
 type Account struct {
 	ID     uuid.UUID  `json:"id"`
@@ -2264,6 +2430,9 @@ type CallerIdentity struct {
 	MemberAddress NilCallerIdentityMemberAddress `json:"member_address"`
 	// Suggested personal address; nothing is assigned until explicitly saved.
 	MemberAddressSuggestion NilString `json:"member_address_suggestion"`
+	// Present with `include=grant`. Null when the server has no grant for the caller.
+	Grant OptNilGrantDescription `json:"grant"`
+	Check OptPermissionCheck     `json:"check"`
 }
 
 // GetOrgID returns the value of OrgID.
@@ -2306,6 +2475,16 @@ func (s *CallerIdentity) GetMemberAddressSuggestion() NilString {
 	return s.MemberAddressSuggestion
 }
 
+// GetGrant returns the value of Grant.
+func (s *CallerIdentity) GetGrant() OptNilGrantDescription {
+	return s.Grant
+}
+
+// GetCheck returns the value of Check.
+func (s *CallerIdentity) GetCheck() OptPermissionCheck {
+	return s.Check
+}
+
 // SetOrgID sets the value of OrgID.
 func (s *CallerIdentity) SetOrgID(val string) {
 	s.OrgID = val
@@ -2344,6 +2523,16 @@ func (s *CallerIdentity) SetMemberAddress(val NilCallerIdentityMemberAddress) {
 // SetMemberAddressSuggestion sets the value of MemberAddressSuggestion.
 func (s *CallerIdentity) SetMemberAddressSuggestion(val NilString) {
 	s.MemberAddressSuggestion = val
+}
+
+// SetGrant sets the value of Grant.
+func (s *CallerIdentity) SetGrant(val OptNilGrantDescription) {
+	s.Grant = val
+}
+
+// SetCheck sets the value of Check.
+func (s *CallerIdentity) SetCheck(val OptPermissionCheck) {
+	s.Check = val
 }
 
 type CallerIdentityMemberAddress struct {
@@ -5653,6 +5842,200 @@ func (s *CliLogoutResult) SetOAuthGrantID(val OptUUID) {
 type CliLogoutUnauthorized ErrorResponse
 
 func (*CliLogoutUnauthorized) cliLogoutRes() {}
+
+// Ref: #/components/schemas/CliOrg
+type CliOrg struct {
+	ID   uuid.UUID `json:"id"`
+	Name NilString `json:"name"`
+	// Your role's key in the organization, such as a `BuiltinRoleKey` value.
+	Role OptNilString `json:"role"`
+	// Whether the CLI can switch to this organization.
+	Available bool                   `json:"available"`
+	Reason    NilCliOrgRefusalReason `json:"reason"`
+	Message   OptNilString           `json:"message"`
+}
+
+// GetID returns the value of ID.
+func (s *CliOrg) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *CliOrg) GetName() NilString {
+	return s.Name
+}
+
+// GetRole returns the value of Role.
+func (s *CliOrg) GetRole() OptNilString {
+	return s.Role
+}
+
+// GetAvailable returns the value of Available.
+func (s *CliOrg) GetAvailable() bool {
+	return s.Available
+}
+
+// GetReason returns the value of Reason.
+func (s *CliOrg) GetReason() NilCliOrgRefusalReason {
+	return s.Reason
+}
+
+// GetMessage returns the value of Message.
+func (s *CliOrg) GetMessage() OptNilString {
+	return s.Message
+}
+
+// SetID sets the value of ID.
+func (s *CliOrg) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *CliOrg) SetName(val NilString) {
+	s.Name = val
+}
+
+// SetRole sets the value of Role.
+func (s *CliOrg) SetRole(val OptNilString) {
+	s.Role = val
+}
+
+// SetAvailable sets the value of Available.
+func (s *CliOrg) SetAvailable(val bool) {
+	s.Available = val
+}
+
+// SetReason sets the value of Reason.
+func (s *CliOrg) SetReason(val NilCliOrgRefusalReason) {
+	s.Reason = val
+}
+
+// SetMessage sets the value of Message.
+func (s *CliOrg) SetMessage(val OptNilString) {
+	s.Message = val
+}
+
+// Ref: #/components/schemas/CliOrgList
+type CliOrgList struct {
+	User        CliOrgListUser `json:"user"`
+	UserGrantID uuid.UUID      `json:"user_grant_id"`
+	Orgs        []CliOrg       `json:"orgs"`
+}
+
+// GetUser returns the value of User.
+func (s *CliOrgList) GetUser() CliOrgListUser {
+	return s.User
+}
+
+// GetUserGrantID returns the value of UserGrantID.
+func (s *CliOrgList) GetUserGrantID() uuid.UUID {
+	return s.UserGrantID
+}
+
+// GetOrgs returns the value of Orgs.
+func (s *CliOrgList) GetOrgs() []CliOrg {
+	return s.Orgs
+}
+
+// SetUser sets the value of User.
+func (s *CliOrgList) SetUser(val CliOrgListUser) {
+	s.User = val
+}
+
+// SetUserGrantID sets the value of UserGrantID.
+func (s *CliOrgList) SetUserGrantID(val uuid.UUID) {
+	s.UserGrantID = val
+}
+
+// SetOrgs sets the value of Orgs.
+func (s *CliOrgList) SetOrgs(val []CliOrg) {
+	s.Orgs = val
+}
+
+type CliOrgListUser struct {
+	ID    uuid.UUID `json:"id"`
+	Email NilString `json:"email"`
+}
+
+// GetID returns the value of ID.
+func (s *CliOrgListUser) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetEmail returns the value of Email.
+func (s *CliOrgListUser) GetEmail() NilString {
+	return s.Email
+}
+
+// SetID sets the value of ID.
+func (s *CliOrgListUser) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetEmail sets the value of Email.
+func (s *CliOrgListUser) SetEmail(val NilString) {
+	s.Email = val
+}
+
+// Why the CLI cannot be used in an organization:
+// `not_a_member`, `cli_access_disabled_by_org`, `role_insufficient`
+// (the organization's policy does not allow the person's role), or
+// `cli_access_revoked` (log in again).
+// Ref: #/components/schemas/CliOrgRefusalReason
+type CliOrgRefusalReason string
+
+const (
+	CliOrgRefusalReasonNotAMember             CliOrgRefusalReason = "not_a_member"
+	CliOrgRefusalReasonCliAccessDisabledByOrg CliOrgRefusalReason = "cli_access_disabled_by_org"
+	CliOrgRefusalReasonRoleInsufficient       CliOrgRefusalReason = "role_insufficient"
+	CliOrgRefusalReasonCliAccessRevoked       CliOrgRefusalReason = "cli_access_revoked"
+)
+
+// AllValues returns all CliOrgRefusalReason values.
+func (CliOrgRefusalReason) AllValues() []CliOrgRefusalReason {
+	return []CliOrgRefusalReason{
+		CliOrgRefusalReasonNotAMember,
+		CliOrgRefusalReasonCliAccessDisabledByOrg,
+		CliOrgRefusalReasonRoleInsufficient,
+		CliOrgRefusalReasonCliAccessRevoked,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CliOrgRefusalReason) MarshalText() ([]byte, error) {
+	switch s {
+	case CliOrgRefusalReasonNotAMember:
+		return []byte(s), nil
+	case CliOrgRefusalReasonCliAccessDisabledByOrg:
+		return []byte(s), nil
+	case CliOrgRefusalReasonRoleInsufficient:
+		return []byte(s), nil
+	case CliOrgRefusalReasonCliAccessRevoked:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CliOrgRefusalReason) UnmarshalText(data []byte) error {
+	switch CliOrgRefusalReason(data) {
+	case CliOrgRefusalReasonNotAMember:
+		*s = CliOrgRefusalReasonNotAMember
+		return nil
+	case CliOrgRefusalReasonCliAccessDisabledByOrg:
+		*s = CliOrgRefusalReasonCliAccessDisabledByOrg
+		return nil
+	case CliOrgRefusalReasonRoleInsufficient:
+		*s = CliOrgRefusalReasonRoleInsufficient
+		return nil
+	case CliOrgRefusalReasonCliAccessRevoked:
+		*s = CliOrgRefusalReasonCliAccessRevoked
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 // Ref: #/components/schemas/CliSignupResendResult
 type CliSignupResendResult struct {
@@ -9890,6 +10273,115 @@ type CreateFunctionUnauthorized ErrorResponse
 
 func (*CreateFunctionUnauthorized) createFunctionRes() {}
 
+type CreateKeyBadRequest ErrorResponse
+
+func (*CreateKeyBadRequest) createKeyRes() {}
+
+type CreateKeyConflict ErrorResponse
+
+func (*CreateKeyConflict) createKeyRes() {}
+
+// Merged schema.
+type CreateKeyCreated struct {
+	Success bool       `json:"success"`
+	Data    CreatedKey `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CreateKeyCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CreateKeyCreated) GetData() CreatedKey {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CreateKeyCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CreateKeyCreated) SetData(val CreatedKey) {
+	s.Data = val
+}
+
+func (*CreateKeyCreated) createKeyRes() {}
+
+type CreateKeyForbidden ErrorResponse
+
+func (*CreateKeyForbidden) createKeyRes() {}
+
+// Ref: #/components/schemas/CreateKeyInput
+type CreateKeyInput struct {
+	Name  OptString   `json:"name"`
+	Grant OptKeyGrant `json:"grant"`
+	// When the key stops working. Use this or `expires_in_days`.
+	ExpiresAt OptDateTime `json:"expires_at"`
+	// Days until the key stops working. Use this or `expires_at`.
+	ExpiresInDays OptInt                `json:"expires_in_days"`
+	Conditions    OptKeyConditionsInput `json:"conditions"`
+}
+
+// GetName returns the value of Name.
+func (s *CreateKeyInput) GetName() OptString {
+	return s.Name
+}
+
+// GetGrant returns the value of Grant.
+func (s *CreateKeyInput) GetGrant() OptKeyGrant {
+	return s.Grant
+}
+
+// GetExpiresAt returns the value of ExpiresAt.
+func (s *CreateKeyInput) GetExpiresAt() OptDateTime {
+	return s.ExpiresAt
+}
+
+// GetExpiresInDays returns the value of ExpiresInDays.
+func (s *CreateKeyInput) GetExpiresInDays() OptInt {
+	return s.ExpiresInDays
+}
+
+// GetConditions returns the value of Conditions.
+func (s *CreateKeyInput) GetConditions() OptKeyConditionsInput {
+	return s.Conditions
+}
+
+// SetName sets the value of Name.
+func (s *CreateKeyInput) SetName(val OptString) {
+	s.Name = val
+}
+
+// SetGrant sets the value of Grant.
+func (s *CreateKeyInput) SetGrant(val OptKeyGrant) {
+	s.Grant = val
+}
+
+// SetExpiresAt sets the value of ExpiresAt.
+func (s *CreateKeyInput) SetExpiresAt(val OptDateTime) {
+	s.ExpiresAt = val
+}
+
+// SetExpiresInDays sets the value of ExpiresInDays.
+func (s *CreateKeyInput) SetExpiresInDays(val OptInt) {
+	s.ExpiresInDays = val
+}
+
+// SetConditions sets the value of Conditions.
+func (s *CreateKeyInput) SetConditions(val OptKeyConditionsInput) {
+	s.Conditions = val
+}
+
+type CreateKeyNotFound ErrorResponse
+
+func (*CreateKeyNotFound) createKeyRes() {}
+
+type CreateKeyUnauthorized ErrorResponse
+
+func (*CreateKeyUnauthorized) createKeyRes() {}
+
 type CreateOrgSecretBadRequest ErrorResponse
 
 func (*CreateOrgSecretBadRequest) createOrgSecretRes() {}
@@ -10531,6 +11023,1314 @@ func (s *CreateWakeScheduleInputArgs) init() CreateWakeScheduleInputArgs {
 type CreateWakeScheduleUnauthorized ErrorResponse
 
 func (*CreateWakeScheduleUnauthorized) createWakeScheduleRes() {}
+
+// Ref: #/components/schemas/CreatedKey
+type CreatedKey struct {
+	ID   string    `json:"id"`
+	Name NilString `json:"name"`
+	// The secret. Shown once; store it now.
+	Key       string          `json:"key"`
+	KeyPrefix string          `json:"key_prefix"`
+	Grant     CreatedKeyGrant `json:"grant"`
+	ExpiresAt NilDateTime     `json:"expires_at"`
+	// The key's conditions, or null.
+	Conditions      jx.Raw            `json:"conditions"`
+	Warnings        []KeyGrantWarning `json:"warnings"`
+	AdditionalProps CreatedKeyAdditional
+}
+
+// GetID returns the value of ID.
+func (s *CreatedKey) GetID() string {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *CreatedKey) GetName() NilString {
+	return s.Name
+}
+
+// GetKey returns the value of Key.
+func (s *CreatedKey) GetKey() string {
+	return s.Key
+}
+
+// GetKeyPrefix returns the value of KeyPrefix.
+func (s *CreatedKey) GetKeyPrefix() string {
+	return s.KeyPrefix
+}
+
+// GetGrant returns the value of Grant.
+func (s *CreatedKey) GetGrant() CreatedKeyGrant {
+	return s.Grant
+}
+
+// GetExpiresAt returns the value of ExpiresAt.
+func (s *CreatedKey) GetExpiresAt() NilDateTime {
+	return s.ExpiresAt
+}
+
+// GetConditions returns the value of Conditions.
+func (s *CreatedKey) GetConditions() jx.Raw {
+	return s.Conditions
+}
+
+// GetWarnings returns the value of Warnings.
+func (s *CreatedKey) GetWarnings() []KeyGrantWarning {
+	return s.Warnings
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *CreatedKey) GetAdditionalProps() CreatedKeyAdditional {
+	return s.AdditionalProps
+}
+
+// SetID sets the value of ID.
+func (s *CreatedKey) SetID(val string) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *CreatedKey) SetName(val NilString) {
+	s.Name = val
+}
+
+// SetKey sets the value of Key.
+func (s *CreatedKey) SetKey(val string) {
+	s.Key = val
+}
+
+// SetKeyPrefix sets the value of KeyPrefix.
+func (s *CreatedKey) SetKeyPrefix(val string) {
+	s.KeyPrefix = val
+}
+
+// SetGrant sets the value of Grant.
+func (s *CreatedKey) SetGrant(val CreatedKeyGrant) {
+	s.Grant = val
+}
+
+// SetExpiresAt sets the value of ExpiresAt.
+func (s *CreatedKey) SetExpiresAt(val NilDateTime) {
+	s.ExpiresAt = val
+}
+
+// SetConditions sets the value of Conditions.
+func (s *CreatedKey) SetConditions(val jx.Raw) {
+	s.Conditions = val
+}
+
+// SetWarnings sets the value of Warnings.
+func (s *CreatedKey) SetWarnings(val []KeyGrantWarning) {
+	s.Warnings = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *CreatedKey) SetAdditionalProps(val CreatedKeyAdditional) {
+	s.AdditionalProps = val
+}
+
+type CreatedKeyAdditional map[string]jx.Raw
+
+func (s *CreatedKeyAdditional) init() CreatedKeyAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type CreatedKeyGrant struct {
+	Template          OptNilString      `json:"template"`
+	CredentialGrantID OptNilString      `json:"credential_grant_id"`
+	Permissions       OptNilStringArray `json:"permissions"`
+	// `org`, or the addresses, domains and depth the grant reaches.
+	MailScope jx.Raw `json:"mail_scope"`
+	// Resource ids the grant is narrowed to, or null.
+	Resources       jx.Raw `json:"resources"`
+	AdditionalProps CreatedKeyGrantAdditional
+}
+
+// GetTemplate returns the value of Template.
+func (s *CreatedKeyGrant) GetTemplate() OptNilString {
+	return s.Template
+}
+
+// GetCredentialGrantID returns the value of CredentialGrantID.
+func (s *CreatedKeyGrant) GetCredentialGrantID() OptNilString {
+	return s.CredentialGrantID
+}
+
+// GetPermissions returns the value of Permissions.
+func (s *CreatedKeyGrant) GetPermissions() OptNilStringArray {
+	return s.Permissions
+}
+
+// GetMailScope returns the value of MailScope.
+func (s *CreatedKeyGrant) GetMailScope() jx.Raw {
+	return s.MailScope
+}
+
+// GetResources returns the value of Resources.
+func (s *CreatedKeyGrant) GetResources() jx.Raw {
+	return s.Resources
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *CreatedKeyGrant) GetAdditionalProps() CreatedKeyGrantAdditional {
+	return s.AdditionalProps
+}
+
+// SetTemplate sets the value of Template.
+func (s *CreatedKeyGrant) SetTemplate(val OptNilString) {
+	s.Template = val
+}
+
+// SetCredentialGrantID sets the value of CredentialGrantID.
+func (s *CreatedKeyGrant) SetCredentialGrantID(val OptNilString) {
+	s.CredentialGrantID = val
+}
+
+// SetPermissions sets the value of Permissions.
+func (s *CreatedKeyGrant) SetPermissions(val OptNilStringArray) {
+	s.Permissions = val
+}
+
+// SetMailScope sets the value of MailScope.
+func (s *CreatedKeyGrant) SetMailScope(val jx.Raw) {
+	s.MailScope = val
+}
+
+// SetResources sets the value of Resources.
+func (s *CreatedKeyGrant) SetResources(val jx.Raw) {
+	s.Resources = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *CreatedKeyGrant) SetAdditionalProps(val CreatedKeyGrantAdditional) {
+	s.AdditionalProps = val
+}
+
+type CreatedKeyGrantAdditional map[string]jx.Raw
+
+func (s *CreatedKeyGrantAdditional) init() CreatedKeyGrantAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Ref: #/components/schemas/CredentialEvent
+type CredentialEvent struct {
+	ID         string    `json:"id"`
+	OccurredAt time.Time `json:"occurred_at"`
+	// For example `key.created`, `key.revoked` or `cli_access.granted`.
+	EventType        string                 `json:"event_type"`
+	CredentialKind   OptNilString           `json:"credential_kind"`
+	CredentialID     OptNilString           `json:"credential_id"`
+	CredentialPrefix OptNilString           `json:"credential_prefix"`
+	ActorKind        OptNilString           `json:"actor_kind"`
+	ActorID          OptNilString           `json:"actor_id"`
+	GrantRef         OptNilString           `json:"grant_ref"`
+	CatalogVersion   OptNilString           `json:"catalog_version"`
+	RequestID        OptNilString           `json:"request_id"`
+	Details          CredentialEventDetails `json:"details"`
+	AdditionalProps  CredentialEventAdditional
+}
+
+// GetID returns the value of ID.
+func (s *CredentialEvent) GetID() string {
+	return s.ID
+}
+
+// GetOccurredAt returns the value of OccurredAt.
+func (s *CredentialEvent) GetOccurredAt() time.Time {
+	return s.OccurredAt
+}
+
+// GetEventType returns the value of EventType.
+func (s *CredentialEvent) GetEventType() string {
+	return s.EventType
+}
+
+// GetCredentialKind returns the value of CredentialKind.
+func (s *CredentialEvent) GetCredentialKind() OptNilString {
+	return s.CredentialKind
+}
+
+// GetCredentialID returns the value of CredentialID.
+func (s *CredentialEvent) GetCredentialID() OptNilString {
+	return s.CredentialID
+}
+
+// GetCredentialPrefix returns the value of CredentialPrefix.
+func (s *CredentialEvent) GetCredentialPrefix() OptNilString {
+	return s.CredentialPrefix
+}
+
+// GetActorKind returns the value of ActorKind.
+func (s *CredentialEvent) GetActorKind() OptNilString {
+	return s.ActorKind
+}
+
+// GetActorID returns the value of ActorID.
+func (s *CredentialEvent) GetActorID() OptNilString {
+	return s.ActorID
+}
+
+// GetGrantRef returns the value of GrantRef.
+func (s *CredentialEvent) GetGrantRef() OptNilString {
+	return s.GrantRef
+}
+
+// GetCatalogVersion returns the value of CatalogVersion.
+func (s *CredentialEvent) GetCatalogVersion() OptNilString {
+	return s.CatalogVersion
+}
+
+// GetRequestID returns the value of RequestID.
+func (s *CredentialEvent) GetRequestID() OptNilString {
+	return s.RequestID
+}
+
+// GetDetails returns the value of Details.
+func (s *CredentialEvent) GetDetails() CredentialEventDetails {
+	return s.Details
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *CredentialEvent) GetAdditionalProps() CredentialEventAdditional {
+	return s.AdditionalProps
+}
+
+// SetID sets the value of ID.
+func (s *CredentialEvent) SetID(val string) {
+	s.ID = val
+}
+
+// SetOccurredAt sets the value of OccurredAt.
+func (s *CredentialEvent) SetOccurredAt(val time.Time) {
+	s.OccurredAt = val
+}
+
+// SetEventType sets the value of EventType.
+func (s *CredentialEvent) SetEventType(val string) {
+	s.EventType = val
+}
+
+// SetCredentialKind sets the value of CredentialKind.
+func (s *CredentialEvent) SetCredentialKind(val OptNilString) {
+	s.CredentialKind = val
+}
+
+// SetCredentialID sets the value of CredentialID.
+func (s *CredentialEvent) SetCredentialID(val OptNilString) {
+	s.CredentialID = val
+}
+
+// SetCredentialPrefix sets the value of CredentialPrefix.
+func (s *CredentialEvent) SetCredentialPrefix(val OptNilString) {
+	s.CredentialPrefix = val
+}
+
+// SetActorKind sets the value of ActorKind.
+func (s *CredentialEvent) SetActorKind(val OptNilString) {
+	s.ActorKind = val
+}
+
+// SetActorID sets the value of ActorID.
+func (s *CredentialEvent) SetActorID(val OptNilString) {
+	s.ActorID = val
+}
+
+// SetGrantRef sets the value of GrantRef.
+func (s *CredentialEvent) SetGrantRef(val OptNilString) {
+	s.GrantRef = val
+}
+
+// SetCatalogVersion sets the value of CatalogVersion.
+func (s *CredentialEvent) SetCatalogVersion(val OptNilString) {
+	s.CatalogVersion = val
+}
+
+// SetRequestID sets the value of RequestID.
+func (s *CredentialEvent) SetRequestID(val OptNilString) {
+	s.RequestID = val
+}
+
+// SetDetails sets the value of Details.
+func (s *CredentialEvent) SetDetails(val CredentialEventDetails) {
+	s.Details = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *CredentialEvent) SetAdditionalProps(val CredentialEventAdditional) {
+	s.AdditionalProps = val
+}
+
+type CredentialEventAdditional map[string]jx.Raw
+
+func (s *CredentialEventAdditional) init() CredentialEventAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type CredentialEventDetails map[string]jx.Raw
+
+func (s *CredentialEventDetails) init() CredentialEventDetails {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Ref: #/components/schemas/CredentialEventList
+type CredentialEventList struct {
+	Items           []CredentialEvent `json:"items"`
+	NextCursor      NilString         `json:"next_cursor"`
+	AdditionalProps CredentialEventListAdditional
+}
+
+// GetItems returns the value of Items.
+func (s *CredentialEventList) GetItems() []CredentialEvent {
+	return s.Items
+}
+
+// GetNextCursor returns the value of NextCursor.
+func (s *CredentialEventList) GetNextCursor() NilString {
+	return s.NextCursor
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *CredentialEventList) GetAdditionalProps() CredentialEventListAdditional {
+	return s.AdditionalProps
+}
+
+// SetItems sets the value of Items.
+func (s *CredentialEventList) SetItems(val []CredentialEvent) {
+	s.Items = val
+}
+
+// SetNextCursor sets the value of NextCursor.
+func (s *CredentialEventList) SetNextCursor(val NilString) {
+	s.NextCursor = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *CredentialEventList) SetAdditionalProps(val CredentialEventListAdditional) {
+	s.AdditionalProps = val
+}
+
+type CredentialEventListAdditional map[string]jx.Raw
+
+func (s *CredentialEventListAdditional) init() CredentialEventListAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// `org_key`, `function_key`, `connected_key`, `oauth`,
+// `agent_delegate`, or `cli_user_access` (a person's CLI access in the
+// organization through a CLI user login, listed only where those
+// logins exist).
+// Ref: #/components/schemas/CredentialKind
+type CredentialKind string
+
+const (
+	CredentialKindOrgKey        CredentialKind = "org_key"
+	CredentialKindFunctionKey   CredentialKind = "function_key"
+	CredentialKindConnectedKey  CredentialKind = "connected_key"
+	CredentialKindOAuth         CredentialKind = "oauth"
+	CredentialKindAgentDelegate CredentialKind = "agent_delegate"
+	CredentialKindCliUserAccess CredentialKind = "cli_user_access"
+)
+
+// AllValues returns all CredentialKind values.
+func (CredentialKind) AllValues() []CredentialKind {
+	return []CredentialKind{
+		CredentialKindOrgKey,
+		CredentialKindFunctionKey,
+		CredentialKindConnectedKey,
+		CredentialKindOAuth,
+		CredentialKindAgentDelegate,
+		CredentialKindCliUserAccess,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CredentialKind) MarshalText() ([]byte, error) {
+	switch s {
+	case CredentialKindOrgKey:
+		return []byte(s), nil
+	case CredentialKindFunctionKey:
+		return []byte(s), nil
+	case CredentialKindConnectedKey:
+		return []byte(s), nil
+	case CredentialKindOAuth:
+		return []byte(s), nil
+	case CredentialKindAgentDelegate:
+		return []byte(s), nil
+	case CredentialKindCliUserAccess:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CredentialKind) UnmarshalText(data []byte) error {
+	switch CredentialKind(data) {
+	case CredentialKindOrgKey:
+		*s = CredentialKindOrgKey
+		return nil
+	case CredentialKindFunctionKey:
+		*s = CredentialKindFunctionKey
+		return nil
+	case CredentialKindConnectedKey:
+		*s = CredentialKindConnectedKey
+		return nil
+	case CredentialKindOAuth:
+		*s = CredentialKindOAuth
+		return nil
+	case CredentialKindAgentDelegate:
+		*s = CredentialKindAgentDelegate
+		return nil
+	case CredentialKindCliUserAccess:
+		*s = CredentialKindCliUserAccess
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/CredentialList
+type CredentialList struct {
+	Items           []CredentialRow      `json:"items"`
+	Counts          CredentialListCounts `json:"counts"`
+	AdditionalProps CredentialListAdditional
+}
+
+// GetItems returns the value of Items.
+func (s *CredentialList) GetItems() []CredentialRow {
+	return s.Items
+}
+
+// GetCounts returns the value of Counts.
+func (s *CredentialList) GetCounts() CredentialListCounts {
+	return s.Counts
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *CredentialList) GetAdditionalProps() CredentialListAdditional {
+	return s.AdditionalProps
+}
+
+// SetItems sets the value of Items.
+func (s *CredentialList) SetItems(val []CredentialRow) {
+	s.Items = val
+}
+
+// SetCounts sets the value of Counts.
+func (s *CredentialList) SetCounts(val CredentialListCounts) {
+	s.Counts = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *CredentialList) SetAdditionalProps(val CredentialListAdditional) {
+	s.AdditionalProps = val
+}
+
+type CredentialListAdditional map[string]jx.Raw
+
+func (s *CredentialListAdditional) init() CredentialListAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type CredentialListCounts map[string]int
+
+func (s *CredentialListCounts) init() CredentialListCounts {
+	m := *s
+	if m == nil {
+		m = map[string]int{}
+		*s = m
+	}
+	return m
+}
+
+// Ref: #/components/schemas/CredentialPolicy
+type CredentialPolicy struct {
+	MaxKeyLifetimeDays     NilInt                                `json:"max_key_lifetime_days"`
+	RequireKeyExpiry       bool                                  `json:"require_key_expiry"`
+	SuperAdminKeyCreators  CredentialPolicySuperAdminKeyCreators `json:"super_admin_key_creators"`
+	MembersMayMintKeys     bool                                  `json:"members_may_mint_keys"`
+	AllowOrgMailScopeKeys  bool                                  `json:"allow_org_mail_scope_keys"`
+	CapAgentsBelowPerson   bool                                  `json:"cap_agents_below_person"`
+	RemovalSuspendsCreated bool                                  `json:"removal_suspends_created"`
+	OAuthConsentAdminOnly  bool                                  `json:"oauth_consent_admin_only"`
+	// Who may use the CLI in the organization. Present only where CLI
+	// user logins exist. `owners_and_admins` admits the `owner`, `admin`
+	// and `operator` roles.
+	CliAccess       OptCredentialPolicyCliAccess `json:"cli_access"`
+	AdditionalProps CredentialPolicyAdditional
+}
+
+// GetMaxKeyLifetimeDays returns the value of MaxKeyLifetimeDays.
+func (s *CredentialPolicy) GetMaxKeyLifetimeDays() NilInt {
+	return s.MaxKeyLifetimeDays
+}
+
+// GetRequireKeyExpiry returns the value of RequireKeyExpiry.
+func (s *CredentialPolicy) GetRequireKeyExpiry() bool {
+	return s.RequireKeyExpiry
+}
+
+// GetSuperAdminKeyCreators returns the value of SuperAdminKeyCreators.
+func (s *CredentialPolicy) GetSuperAdminKeyCreators() CredentialPolicySuperAdminKeyCreators {
+	return s.SuperAdminKeyCreators
+}
+
+// GetMembersMayMintKeys returns the value of MembersMayMintKeys.
+func (s *CredentialPolicy) GetMembersMayMintKeys() bool {
+	return s.MembersMayMintKeys
+}
+
+// GetAllowOrgMailScopeKeys returns the value of AllowOrgMailScopeKeys.
+func (s *CredentialPolicy) GetAllowOrgMailScopeKeys() bool {
+	return s.AllowOrgMailScopeKeys
+}
+
+// GetCapAgentsBelowPerson returns the value of CapAgentsBelowPerson.
+func (s *CredentialPolicy) GetCapAgentsBelowPerson() bool {
+	return s.CapAgentsBelowPerson
+}
+
+// GetRemovalSuspendsCreated returns the value of RemovalSuspendsCreated.
+func (s *CredentialPolicy) GetRemovalSuspendsCreated() bool {
+	return s.RemovalSuspendsCreated
+}
+
+// GetOAuthConsentAdminOnly returns the value of OAuthConsentAdminOnly.
+func (s *CredentialPolicy) GetOAuthConsentAdminOnly() bool {
+	return s.OAuthConsentAdminOnly
+}
+
+// GetCliAccess returns the value of CliAccess.
+func (s *CredentialPolicy) GetCliAccess() OptCredentialPolicyCliAccess {
+	return s.CliAccess
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *CredentialPolicy) GetAdditionalProps() CredentialPolicyAdditional {
+	return s.AdditionalProps
+}
+
+// SetMaxKeyLifetimeDays sets the value of MaxKeyLifetimeDays.
+func (s *CredentialPolicy) SetMaxKeyLifetimeDays(val NilInt) {
+	s.MaxKeyLifetimeDays = val
+}
+
+// SetRequireKeyExpiry sets the value of RequireKeyExpiry.
+func (s *CredentialPolicy) SetRequireKeyExpiry(val bool) {
+	s.RequireKeyExpiry = val
+}
+
+// SetSuperAdminKeyCreators sets the value of SuperAdminKeyCreators.
+func (s *CredentialPolicy) SetSuperAdminKeyCreators(val CredentialPolicySuperAdminKeyCreators) {
+	s.SuperAdminKeyCreators = val
+}
+
+// SetMembersMayMintKeys sets the value of MembersMayMintKeys.
+func (s *CredentialPolicy) SetMembersMayMintKeys(val bool) {
+	s.MembersMayMintKeys = val
+}
+
+// SetAllowOrgMailScopeKeys sets the value of AllowOrgMailScopeKeys.
+func (s *CredentialPolicy) SetAllowOrgMailScopeKeys(val bool) {
+	s.AllowOrgMailScopeKeys = val
+}
+
+// SetCapAgentsBelowPerson sets the value of CapAgentsBelowPerson.
+func (s *CredentialPolicy) SetCapAgentsBelowPerson(val bool) {
+	s.CapAgentsBelowPerson = val
+}
+
+// SetRemovalSuspendsCreated sets the value of RemovalSuspendsCreated.
+func (s *CredentialPolicy) SetRemovalSuspendsCreated(val bool) {
+	s.RemovalSuspendsCreated = val
+}
+
+// SetOAuthConsentAdminOnly sets the value of OAuthConsentAdminOnly.
+func (s *CredentialPolicy) SetOAuthConsentAdminOnly(val bool) {
+	s.OAuthConsentAdminOnly = val
+}
+
+// SetCliAccess sets the value of CliAccess.
+func (s *CredentialPolicy) SetCliAccess(val OptCredentialPolicyCliAccess) {
+	s.CliAccess = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *CredentialPolicy) SetAdditionalProps(val CredentialPolicyAdditional) {
+	s.AdditionalProps = val
+}
+
+type CredentialPolicyAdditional map[string]jx.Raw
+
+func (s *CredentialPolicyAdditional) init() CredentialPolicyAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Who may use the CLI in the organization. Present only where CLI
+// user logins exist. `owners_and_admins` admits the `owner`, `admin`
+// and `operator` roles.
+type CredentialPolicyCliAccess string
+
+const (
+	CredentialPolicyCliAccessOwnersAndAdmins CredentialPolicyCliAccess = "owners_and_admins"
+	CredentialPolicyCliAccessAllMembers      CredentialPolicyCliAccess = "all_members"
+	CredentialPolicyCliAccessOff             CredentialPolicyCliAccess = "off"
+)
+
+// AllValues returns all CredentialPolicyCliAccess values.
+func (CredentialPolicyCliAccess) AllValues() []CredentialPolicyCliAccess {
+	return []CredentialPolicyCliAccess{
+		CredentialPolicyCliAccessOwnersAndAdmins,
+		CredentialPolicyCliAccessAllMembers,
+		CredentialPolicyCliAccessOff,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CredentialPolicyCliAccess) MarshalText() ([]byte, error) {
+	switch s {
+	case CredentialPolicyCliAccessOwnersAndAdmins:
+		return []byte(s), nil
+	case CredentialPolicyCliAccessAllMembers:
+		return []byte(s), nil
+	case CredentialPolicyCliAccessOff:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CredentialPolicyCliAccess) UnmarshalText(data []byte) error {
+	switch CredentialPolicyCliAccess(data) {
+	case CredentialPolicyCliAccessOwnersAndAdmins:
+		*s = CredentialPolicyCliAccessOwnersAndAdmins
+		return nil
+	case CredentialPolicyCliAccessAllMembers:
+		*s = CredentialPolicyCliAccessAllMembers
+		return nil
+	case CredentialPolicyCliAccessOff:
+		*s = CredentialPolicyCliAccessOff
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type CredentialPolicySuperAdminKeyCreators string
+
+const (
+	CredentialPolicySuperAdminKeyCreatorsOwnersAndAdmins CredentialPolicySuperAdminKeyCreators = "owners_and_admins"
+	CredentialPolicySuperAdminKeyCreatorsOwners          CredentialPolicySuperAdminKeyCreators = "owners"
+)
+
+// AllValues returns all CredentialPolicySuperAdminKeyCreators values.
+func (CredentialPolicySuperAdminKeyCreators) AllValues() []CredentialPolicySuperAdminKeyCreators {
+	return []CredentialPolicySuperAdminKeyCreators{
+		CredentialPolicySuperAdminKeyCreatorsOwnersAndAdmins,
+		CredentialPolicySuperAdminKeyCreatorsOwners,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CredentialPolicySuperAdminKeyCreators) MarshalText() ([]byte, error) {
+	switch s {
+	case CredentialPolicySuperAdminKeyCreatorsOwnersAndAdmins:
+		return []byte(s), nil
+	case CredentialPolicySuperAdminKeyCreatorsOwners:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CredentialPolicySuperAdminKeyCreators) UnmarshalText(data []byte) error {
+	switch CredentialPolicySuperAdminKeyCreators(data) {
+	case CredentialPolicySuperAdminKeyCreatorsOwnersAndAdmins:
+		*s = CredentialPolicySuperAdminKeyCreatorsOwnersAndAdmins
+		return nil
+	case CredentialPolicySuperAdminKeyCreatorsOwners:
+		*s = CredentialPolicySuperAdminKeyCreatorsOwners
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/CredentialRow
+type CredentialRow struct {
+	Kind            CredentialKind             `json:"kind"`
+	ID              string                     `json:"id"`
+	Name            NilString                  `json:"name"`
+	Prefix          OptNilString               `json:"prefix"`
+	Client          OptNilCredentialRowClient  `json:"client"`
+	Grant           CredentialRowGrant         `json:"grant"`
+	Creator         CredentialRowCreator       `json:"creator"`
+	CreatedAt       OptNilDateTime             `json:"created_at"`
+	LastUsedAt      OptNilDateTime             `json:"last_used_at"`
+	LastUsedIP      OptNilString               `json:"last_used_ip"`
+	ExpiresAt       NilDateTime                `json:"expires_at"`
+	Conditions      OptNilKeyConditions        `json:"conditions"`
+	Flags           []string                   `json:"flags"`
+	Actions         []CredentialRowActionsItem `json:"actions"`
+	AdditionalProps CredentialRowAdditional
+}
+
+// GetKind returns the value of Kind.
+func (s *CredentialRow) GetKind() CredentialKind {
+	return s.Kind
+}
+
+// GetID returns the value of ID.
+func (s *CredentialRow) GetID() string {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *CredentialRow) GetName() NilString {
+	return s.Name
+}
+
+// GetPrefix returns the value of Prefix.
+func (s *CredentialRow) GetPrefix() OptNilString {
+	return s.Prefix
+}
+
+// GetClient returns the value of Client.
+func (s *CredentialRow) GetClient() OptNilCredentialRowClient {
+	return s.Client
+}
+
+// GetGrant returns the value of Grant.
+func (s *CredentialRow) GetGrant() CredentialRowGrant {
+	return s.Grant
+}
+
+// GetCreator returns the value of Creator.
+func (s *CredentialRow) GetCreator() CredentialRowCreator {
+	return s.Creator
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *CredentialRow) GetCreatedAt() OptNilDateTime {
+	return s.CreatedAt
+}
+
+// GetLastUsedAt returns the value of LastUsedAt.
+func (s *CredentialRow) GetLastUsedAt() OptNilDateTime {
+	return s.LastUsedAt
+}
+
+// GetLastUsedIP returns the value of LastUsedIP.
+func (s *CredentialRow) GetLastUsedIP() OptNilString {
+	return s.LastUsedIP
+}
+
+// GetExpiresAt returns the value of ExpiresAt.
+func (s *CredentialRow) GetExpiresAt() NilDateTime {
+	return s.ExpiresAt
+}
+
+// GetConditions returns the value of Conditions.
+func (s *CredentialRow) GetConditions() OptNilKeyConditions {
+	return s.Conditions
+}
+
+// GetFlags returns the value of Flags.
+func (s *CredentialRow) GetFlags() []string {
+	return s.Flags
+}
+
+// GetActions returns the value of Actions.
+func (s *CredentialRow) GetActions() []CredentialRowActionsItem {
+	return s.Actions
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *CredentialRow) GetAdditionalProps() CredentialRowAdditional {
+	return s.AdditionalProps
+}
+
+// SetKind sets the value of Kind.
+func (s *CredentialRow) SetKind(val CredentialKind) {
+	s.Kind = val
+}
+
+// SetID sets the value of ID.
+func (s *CredentialRow) SetID(val string) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *CredentialRow) SetName(val NilString) {
+	s.Name = val
+}
+
+// SetPrefix sets the value of Prefix.
+func (s *CredentialRow) SetPrefix(val OptNilString) {
+	s.Prefix = val
+}
+
+// SetClient sets the value of Client.
+func (s *CredentialRow) SetClient(val OptNilCredentialRowClient) {
+	s.Client = val
+}
+
+// SetGrant sets the value of Grant.
+func (s *CredentialRow) SetGrant(val CredentialRowGrant) {
+	s.Grant = val
+}
+
+// SetCreator sets the value of Creator.
+func (s *CredentialRow) SetCreator(val CredentialRowCreator) {
+	s.Creator = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *CredentialRow) SetCreatedAt(val OptNilDateTime) {
+	s.CreatedAt = val
+}
+
+// SetLastUsedAt sets the value of LastUsedAt.
+func (s *CredentialRow) SetLastUsedAt(val OptNilDateTime) {
+	s.LastUsedAt = val
+}
+
+// SetLastUsedIP sets the value of LastUsedIP.
+func (s *CredentialRow) SetLastUsedIP(val OptNilString) {
+	s.LastUsedIP = val
+}
+
+// SetExpiresAt sets the value of ExpiresAt.
+func (s *CredentialRow) SetExpiresAt(val NilDateTime) {
+	s.ExpiresAt = val
+}
+
+// SetConditions sets the value of Conditions.
+func (s *CredentialRow) SetConditions(val OptNilKeyConditions) {
+	s.Conditions = val
+}
+
+// SetFlags sets the value of Flags.
+func (s *CredentialRow) SetFlags(val []string) {
+	s.Flags = val
+}
+
+// SetActions sets the value of Actions.
+func (s *CredentialRow) SetActions(val []CredentialRowActionsItem) {
+	s.Actions = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *CredentialRow) SetAdditionalProps(val CredentialRowAdditional) {
+	s.AdditionalProps = val
+}
+
+type CredentialRowActionsItem string
+
+const (
+	CredentialRowActionsItemRevoke   CredentialRowActionsItem = "revoke"
+	CredentialRowActionsItemRotate   CredentialRowActionsItem = "rotate"
+	CredentialRowActionsItemEdit     CredentialRowActionsItem = "edit"
+	CredentialRowActionsItemTransfer CredentialRowActionsItem = "transfer"
+	CredentialRowActionsItemSuggest  CredentialRowActionsItem = "suggest"
+)
+
+// AllValues returns all CredentialRowActionsItem values.
+func (CredentialRowActionsItem) AllValues() []CredentialRowActionsItem {
+	return []CredentialRowActionsItem{
+		CredentialRowActionsItemRevoke,
+		CredentialRowActionsItemRotate,
+		CredentialRowActionsItemEdit,
+		CredentialRowActionsItemTransfer,
+		CredentialRowActionsItemSuggest,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CredentialRowActionsItem) MarshalText() ([]byte, error) {
+	switch s {
+	case CredentialRowActionsItemRevoke:
+		return []byte(s), nil
+	case CredentialRowActionsItemRotate:
+		return []byte(s), nil
+	case CredentialRowActionsItemEdit:
+		return []byte(s), nil
+	case CredentialRowActionsItemTransfer:
+		return []byte(s), nil
+	case CredentialRowActionsItemSuggest:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CredentialRowActionsItem) UnmarshalText(data []byte) error {
+	switch CredentialRowActionsItem(data) {
+	case CredentialRowActionsItemRevoke:
+		*s = CredentialRowActionsItemRevoke
+		return nil
+	case CredentialRowActionsItemRotate:
+		*s = CredentialRowActionsItemRotate
+		return nil
+	case CredentialRowActionsItemEdit:
+		*s = CredentialRowActionsItemEdit
+		return nil
+	case CredentialRowActionsItemTransfer:
+		*s = CredentialRowActionsItemTransfer
+		return nil
+	case CredentialRowActionsItemSuggest:
+		*s = CredentialRowActionsItemSuggest
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type CredentialRowAdditional map[string]jx.Raw
+
+func (s *CredentialRowAdditional) init() CredentialRowAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type CredentialRowClient struct {
+	ClientID OptString    `json:"client_id"`
+	Name     OptNilString `json:"name"`
+}
+
+// GetClientID returns the value of ClientID.
+func (s *CredentialRowClient) GetClientID() OptString {
+	return s.ClientID
+}
+
+// GetName returns the value of Name.
+func (s *CredentialRowClient) GetName() OptNilString {
+	return s.Name
+}
+
+// SetClientID sets the value of ClientID.
+func (s *CredentialRowClient) SetClientID(val OptString) {
+	s.ClientID = val
+}
+
+// SetName sets the value of Name.
+func (s *CredentialRowClient) SetName(val OptNilString) {
+	s.Name = val
+}
+
+type CredentialRowCreator struct {
+	Kind            OptNilString                  `json:"kind"`
+	ID              OptNilString                  `json:"id"`
+	Email           OptNilString                  `json:"email"`
+	Status          OptCredentialRowCreatorStatus `json:"status"`
+	AdditionalProps CredentialRowCreatorAdditional
+}
+
+// GetKind returns the value of Kind.
+func (s *CredentialRowCreator) GetKind() OptNilString {
+	return s.Kind
+}
+
+// GetID returns the value of ID.
+func (s *CredentialRowCreator) GetID() OptNilString {
+	return s.ID
+}
+
+// GetEmail returns the value of Email.
+func (s *CredentialRowCreator) GetEmail() OptNilString {
+	return s.Email
+}
+
+// GetStatus returns the value of Status.
+func (s *CredentialRowCreator) GetStatus() OptCredentialRowCreatorStatus {
+	return s.Status
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *CredentialRowCreator) GetAdditionalProps() CredentialRowCreatorAdditional {
+	return s.AdditionalProps
+}
+
+// SetKind sets the value of Kind.
+func (s *CredentialRowCreator) SetKind(val OptNilString) {
+	s.Kind = val
+}
+
+// SetID sets the value of ID.
+func (s *CredentialRowCreator) SetID(val OptNilString) {
+	s.ID = val
+}
+
+// SetEmail sets the value of Email.
+func (s *CredentialRowCreator) SetEmail(val OptNilString) {
+	s.Email = val
+}
+
+// SetStatus sets the value of Status.
+func (s *CredentialRowCreator) SetStatus(val OptCredentialRowCreatorStatus) {
+	s.Status = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *CredentialRowCreator) SetAdditionalProps(val CredentialRowCreatorAdditional) {
+	s.AdditionalProps = val
+}
+
+type CredentialRowCreatorAdditional map[string]jx.Raw
+
+func (s *CredentialRowCreatorAdditional) init() CredentialRowCreatorAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type CredentialRowCreatorStatus string
+
+const (
+	CredentialRowCreatorStatusMember           CredentialRowCreatorStatus = "member"
+	CredentialRowCreatorStatusDeparted         CredentialRowCreatorStatus = "departed"
+	CredentialRowCreatorStatusUnknown          CredentialRowCreatorStatus = "unknown"
+	CredentialRowCreatorStatusAgentBeforeClaim CredentialRowCreatorStatus = "agent_before_claim"
+	CredentialRowCreatorStatusSystem           CredentialRowCreatorStatus = "system"
+)
+
+// AllValues returns all CredentialRowCreatorStatus values.
+func (CredentialRowCreatorStatus) AllValues() []CredentialRowCreatorStatus {
+	return []CredentialRowCreatorStatus{
+		CredentialRowCreatorStatusMember,
+		CredentialRowCreatorStatusDeparted,
+		CredentialRowCreatorStatusUnknown,
+		CredentialRowCreatorStatusAgentBeforeClaim,
+		CredentialRowCreatorStatusSystem,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CredentialRowCreatorStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case CredentialRowCreatorStatusMember:
+		return []byte(s), nil
+	case CredentialRowCreatorStatusDeparted:
+		return []byte(s), nil
+	case CredentialRowCreatorStatusUnknown:
+		return []byte(s), nil
+	case CredentialRowCreatorStatusAgentBeforeClaim:
+		return []byte(s), nil
+	case CredentialRowCreatorStatusSystem:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CredentialRowCreatorStatus) UnmarshalText(data []byte) error {
+	switch CredentialRowCreatorStatus(data) {
+	case CredentialRowCreatorStatusMember:
+		*s = CredentialRowCreatorStatusMember
+		return nil
+	case CredentialRowCreatorStatusDeparted:
+		*s = CredentialRowCreatorStatusDeparted
+		return nil
+	case CredentialRowCreatorStatusUnknown:
+		*s = CredentialRowCreatorStatusUnknown
+		return nil
+	case CredentialRowCreatorStatusAgentBeforeClaim:
+		*s = CredentialRowCreatorStatusAgentBeforeClaim
+		return nil
+	case CredentialRowCreatorStatusSystem:
+		*s = CredentialRowCreatorStatusSystem
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type CredentialRowGrant struct {
+	Ref         OptNilString              `json:"ref"`
+	Type        OptCredentialRowGrantType `json:"type"`
+	Template    OptNilString              `json:"template"`
+	Permissions OptNilStringArray         `json:"permissions"`
+	// `org`, or the addresses, domains and depth the grant reaches.
+	MailScope jx.Raw `json:"mail_scope"`
+	// Resource ids the grant is narrowed to, or null.
+	Resources       jx.Raw `json:"resources"`
+	AdditionalProps CredentialRowGrantAdditional
+}
+
+// GetRef returns the value of Ref.
+func (s *CredentialRowGrant) GetRef() OptNilString {
+	return s.Ref
+}
+
+// GetType returns the value of Type.
+func (s *CredentialRowGrant) GetType() OptCredentialRowGrantType {
+	return s.Type
+}
+
+// GetTemplate returns the value of Template.
+func (s *CredentialRowGrant) GetTemplate() OptNilString {
+	return s.Template
+}
+
+// GetPermissions returns the value of Permissions.
+func (s *CredentialRowGrant) GetPermissions() OptNilStringArray {
+	return s.Permissions
+}
+
+// GetMailScope returns the value of MailScope.
+func (s *CredentialRowGrant) GetMailScope() jx.Raw {
+	return s.MailScope
+}
+
+// GetResources returns the value of Resources.
+func (s *CredentialRowGrant) GetResources() jx.Raw {
+	return s.Resources
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *CredentialRowGrant) GetAdditionalProps() CredentialRowGrantAdditional {
+	return s.AdditionalProps
+}
+
+// SetRef sets the value of Ref.
+func (s *CredentialRowGrant) SetRef(val OptNilString) {
+	s.Ref = val
+}
+
+// SetType sets the value of Type.
+func (s *CredentialRowGrant) SetType(val OptCredentialRowGrantType) {
+	s.Type = val
+}
+
+// SetTemplate sets the value of Template.
+func (s *CredentialRowGrant) SetTemplate(val OptNilString) {
+	s.Template = val
+}
+
+// SetPermissions sets the value of Permissions.
+func (s *CredentialRowGrant) SetPermissions(val OptNilStringArray) {
+	s.Permissions = val
+}
+
+// SetMailScope sets the value of MailScope.
+func (s *CredentialRowGrant) SetMailScope(val jx.Raw) {
+	s.MailScope = val
+}
+
+// SetResources sets the value of Resources.
+func (s *CredentialRowGrant) SetResources(val jx.Raw) {
+	s.Resources = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *CredentialRowGrant) SetAdditionalProps(val CredentialRowGrantAdditional) {
+	s.AdditionalProps = val
+}
+
+type CredentialRowGrantAdditional map[string]jx.Raw
+
+func (s *CredentialRowGrantAdditional) init() CredentialRowGrantAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type CredentialRowGrantType string
+
+const (
+	CredentialRowGrantTypeTemplate CredentialRowGrantType = "template"
+	CredentialRowGrantTypeConcrete CredentialRowGrantType = "concrete"
+	CredentialRowGrantTypeComputed CredentialRowGrantType = "computed"
+)
+
+// AllValues returns all CredentialRowGrantType values.
+func (CredentialRowGrantType) AllValues() []CredentialRowGrantType {
+	return []CredentialRowGrantType{
+		CredentialRowGrantTypeTemplate,
+		CredentialRowGrantTypeConcrete,
+		CredentialRowGrantTypeComputed,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CredentialRowGrantType) MarshalText() ([]byte, error) {
+	switch s {
+	case CredentialRowGrantTypeTemplate:
+		return []byte(s), nil
+	case CredentialRowGrantTypeConcrete:
+		return []byte(s), nil
+	case CredentialRowGrantTypeComputed:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CredentialRowGrantType) UnmarshalText(data []byte) error {
+	switch CredentialRowGrantType(data) {
+	case CredentialRowGrantTypeTemplate:
+		*s = CredentialRowGrantTypeTemplate
+		return nil
+	case CredentialRowGrantTypeConcrete:
+		*s = CredentialRowGrantTypeConcrete
+		return nil
+	case CredentialRowGrantTypeComputed:
+		*s = CredentialRowGrantTypeComputed
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 // Ref: #/components/schemas/CreditBalance
 type CreditBalance struct {
@@ -18250,6 +20050,16 @@ const (
 	ErrorResponseErrorCodeUpstreamError                            ErrorResponseErrorCode = "upstream_error"
 	ErrorResponseErrorCodeUsageLimitExceeded                       ErrorResponseErrorCode = "usage_limit_exceeded"
 	ErrorResponseErrorCodeVendorUnavailable                        ErrorResponseErrorCode = "vendor_unavailable"
+	ErrorResponseErrorCodeGrantForbidden                           ErrorResponseErrorCode = "grant_forbidden"
+	ErrorResponseErrorCodeGrantNotAvailable                        ErrorResponseErrorCode = "grant_not_available"
+	ErrorResponseErrorCodeStepUpRequired                           ErrorResponseErrorCode = "step_up_required"
+	ErrorResponseErrorCodeStepUpInvalid                            ErrorResponseErrorCode = "step_up_invalid"
+	ErrorResponseErrorCodeStepUpRefused                            ErrorResponseErrorCode = "step_up_refused"
+	ErrorResponseErrorCodeStepUpNotAccepted                        ErrorResponseErrorCode = "step_up_not_accepted"
+	ErrorResponseErrorCodePendingOwnerConfirmation                 ErrorResponseErrorCode = "pending_owner_confirmation"
+	ErrorResponseErrorCodeIPNotAllowed                             ErrorResponseErrorCode = "ip_not_allowed"
+	ErrorResponseErrorCodeRotateInstead                            ErrorResponseErrorCode = "rotate_instead"
+	ErrorResponseErrorCodeRoleAssignmentUnavailable                ErrorResponseErrorCode = "role_assignment_unavailable"
 )
 
 // AllValues returns all ErrorResponseErrorCode values.
@@ -18523,6 +20333,16 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeUpstreamError,
 		ErrorResponseErrorCodeUsageLimitExceeded,
 		ErrorResponseErrorCodeVendorUnavailable,
+		ErrorResponseErrorCodeGrantForbidden,
+		ErrorResponseErrorCodeGrantNotAvailable,
+		ErrorResponseErrorCodeStepUpRequired,
+		ErrorResponseErrorCodeStepUpInvalid,
+		ErrorResponseErrorCodeStepUpRefused,
+		ErrorResponseErrorCodeStepUpNotAccepted,
+		ErrorResponseErrorCodePendingOwnerConfirmation,
+		ErrorResponseErrorCodeIPNotAllowed,
+		ErrorResponseErrorCodeRotateInstead,
+		ErrorResponseErrorCodeRoleAssignmentUnavailable,
 	}
 }
 
@@ -19064,6 +20884,26 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeUsageLimitExceeded:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeVendorUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeGrantForbidden:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeGrantNotAvailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeStepUpRequired:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeStepUpInvalid:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeStepUpRefused:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeStepUpNotAccepted:
+		return []byte(s), nil
+	case ErrorResponseErrorCodePendingOwnerConfirmation:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeIPNotAllowed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRotateInstead:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRoleAssignmentUnavailable:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -19877,6 +21717,36 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 	case ErrorResponseErrorCodeVendorUnavailable:
 		*s = ErrorResponseErrorCodeVendorUnavailable
 		return nil
+	case ErrorResponseErrorCodeGrantForbidden:
+		*s = ErrorResponseErrorCodeGrantForbidden
+		return nil
+	case ErrorResponseErrorCodeGrantNotAvailable:
+		*s = ErrorResponseErrorCodeGrantNotAvailable
+		return nil
+	case ErrorResponseErrorCodeStepUpRequired:
+		*s = ErrorResponseErrorCodeStepUpRequired
+		return nil
+	case ErrorResponseErrorCodeStepUpInvalid:
+		*s = ErrorResponseErrorCodeStepUpInvalid
+		return nil
+	case ErrorResponseErrorCodeStepUpRefused:
+		*s = ErrorResponseErrorCodeStepUpRefused
+		return nil
+	case ErrorResponseErrorCodeStepUpNotAccepted:
+		*s = ErrorResponseErrorCodeStepUpNotAccepted
+		return nil
+	case ErrorResponseErrorCodePendingOwnerConfirmation:
+		*s = ErrorResponseErrorCodePendingOwnerConfirmation
+		return nil
+	case ErrorResponseErrorCodeIPNotAllowed:
+		*s = ErrorResponseErrorCodeIPNotAllowed
+		return nil
+	case ErrorResponseErrorCodeRotateInstead:
+		*s = ErrorResponseErrorCodeRotateInstead
+		return nil
+	case ErrorResponseErrorCodeRoleAssignmentUnavailable:
+		*s = ErrorResponseErrorCodeRoleAssignmentUnavailable
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
@@ -19896,7 +21766,25 @@ type ErrorResponseErrorDetails struct {
 	ContentHash OptString `json:"content_hash"`
 	// Effective idempotency key associated with the original request.
 	ClientIdempotencyKey OptString `json:"client_idempotency_key"`
-	AdditionalProps      ErrorResponseErrorDetailsAdditional
+	// Present when `code == grant_forbidden`. The permission the operation requires. See
+	// `GrantForbiddenDetails` for the full shape.
+	Permission OptNilString `json:"permission"`
+	// Present when `code == grant_forbidden`. The kind of credential that was refused.
+	CredentialKind OptNilString `json:"credential_kind"`
+	// Present when `code == grant_forbidden` and the credential holds a template grant.
+	GrantTemplateKey OptNilString `json:"grant_template_key"`
+	// Present when `code == grant_forbidden` and the credential holds a concrete grant.
+	CredentialGrantID OptNilString `json:"credential_grant_id"`
+	// Present when `code == grant_forbidden`. Version of the permission catalog the decision used.
+	CatalogVersion OptNilString `json:"catalog_version"`
+	// Present when `code == grant_forbidden` (why the grant refused) or `grant_not_available` (why the
+	// grant cannot be given).
+	Reason OptNilString `json:"reason"`
+	// Present when `code == step_up_required`. What the step-up token must be issued for.
+	Purpose OptNilString `json:"purpose"`
+	// Present when `code == step_up_required`. Dashboard page that issues a step-up token.
+	StepUpURL       OptNilString `json:"step_up_url"`
+	AdditionalProps ErrorResponseErrorDetailsAdditional
 }
 
 // GetMxConflict returns the value of MxConflict.
@@ -19922,6 +21810,46 @@ func (s *ErrorResponseErrorDetails) GetContentHash() OptString {
 // GetClientIdempotencyKey returns the value of ClientIdempotencyKey.
 func (s *ErrorResponseErrorDetails) GetClientIdempotencyKey() OptString {
 	return s.ClientIdempotencyKey
+}
+
+// GetPermission returns the value of Permission.
+func (s *ErrorResponseErrorDetails) GetPermission() OptNilString {
+	return s.Permission
+}
+
+// GetCredentialKind returns the value of CredentialKind.
+func (s *ErrorResponseErrorDetails) GetCredentialKind() OptNilString {
+	return s.CredentialKind
+}
+
+// GetGrantTemplateKey returns the value of GrantTemplateKey.
+func (s *ErrorResponseErrorDetails) GetGrantTemplateKey() OptNilString {
+	return s.GrantTemplateKey
+}
+
+// GetCredentialGrantID returns the value of CredentialGrantID.
+func (s *ErrorResponseErrorDetails) GetCredentialGrantID() OptNilString {
+	return s.CredentialGrantID
+}
+
+// GetCatalogVersion returns the value of CatalogVersion.
+func (s *ErrorResponseErrorDetails) GetCatalogVersion() OptNilString {
+	return s.CatalogVersion
+}
+
+// GetReason returns the value of Reason.
+func (s *ErrorResponseErrorDetails) GetReason() OptNilString {
+	return s.Reason
+}
+
+// GetPurpose returns the value of Purpose.
+func (s *ErrorResponseErrorDetails) GetPurpose() OptNilString {
+	return s.Purpose
+}
+
+// GetStepUpURL returns the value of StepUpURL.
+func (s *ErrorResponseErrorDetails) GetStepUpURL() OptNilString {
+	return s.StepUpURL
 }
 
 // GetAdditionalProps returns the value of AdditionalProps.
@@ -19952,6 +21880,46 @@ func (s *ErrorResponseErrorDetails) SetContentHash(val OptString) {
 // SetClientIdempotencyKey sets the value of ClientIdempotencyKey.
 func (s *ErrorResponseErrorDetails) SetClientIdempotencyKey(val OptString) {
 	s.ClientIdempotencyKey = val
+}
+
+// SetPermission sets the value of Permission.
+func (s *ErrorResponseErrorDetails) SetPermission(val OptNilString) {
+	s.Permission = val
+}
+
+// SetCredentialKind sets the value of CredentialKind.
+func (s *ErrorResponseErrorDetails) SetCredentialKind(val OptNilString) {
+	s.CredentialKind = val
+}
+
+// SetGrantTemplateKey sets the value of GrantTemplateKey.
+func (s *ErrorResponseErrorDetails) SetGrantTemplateKey(val OptNilString) {
+	s.GrantTemplateKey = val
+}
+
+// SetCredentialGrantID sets the value of CredentialGrantID.
+func (s *ErrorResponseErrorDetails) SetCredentialGrantID(val OptNilString) {
+	s.CredentialGrantID = val
+}
+
+// SetCatalogVersion sets the value of CatalogVersion.
+func (s *ErrorResponseErrorDetails) SetCatalogVersion(val OptNilString) {
+	s.CatalogVersion = val
+}
+
+// SetReason sets the value of Reason.
+func (s *ErrorResponseErrorDetails) SetReason(val OptNilString) {
+	s.Reason = val
+}
+
+// SetPurpose sets the value of Purpose.
+func (s *ErrorResponseErrorDetails) SetPurpose(val OptNilString) {
+	s.Purpose = val
+}
+
+// SetStepUpURL sets the value of StepUpURL.
+func (s *ErrorResponseErrorDetails) SetStepUpURL(val OptNilString) {
+	s.StepUpURL = val
 }
 
 // SetAdditionalProps sets the value of AdditionalProps.
@@ -22395,6 +24363,46 @@ func (s *GateFixAction) UnmarshalText(data []byte) error {
 	}
 }
 
+type GetAccessModeForbidden ErrorResponse
+
+func (*GetAccessModeForbidden) getAccessModeRes() {}
+
+type GetAccessModeNotFound ErrorResponse
+
+func (*GetAccessModeNotFound) getAccessModeRes() {}
+
+// Merged schema.
+type GetAccessModeOK struct {
+	Success bool       `json:"success"`
+	Data    AccessMode `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetAccessModeOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetAccessModeOK) GetData() AccessMode {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetAccessModeOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetAccessModeOK) SetData(val AccessMode) {
+	s.Data = val
+}
+
+func (*GetAccessModeOK) getAccessModeRes() {}
+
+type GetAccessModeUnauthorized ErrorResponse
+
+func (*GetAccessModeUnauthorized) getAccessModeRes() {}
+
 type GetAccountNotFound ErrorResponse
 
 func (*GetAccountNotFound) getAccountRes() {}
@@ -22869,6 +24877,46 @@ type GetConversationUnauthorized ErrorResponse
 
 func (*GetConversationUnauthorized) getConversationRes() {}
 
+type GetCredentialPolicyForbidden ErrorResponse
+
+func (*GetCredentialPolicyForbidden) getCredentialPolicyRes() {}
+
+type GetCredentialPolicyNotFound ErrorResponse
+
+func (*GetCredentialPolicyNotFound) getCredentialPolicyRes() {}
+
+// Merged schema.
+type GetCredentialPolicyOK struct {
+	Success bool             `json:"success"`
+	Data    CredentialPolicy `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetCredentialPolicyOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetCredentialPolicyOK) GetData() CredentialPolicy {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetCredentialPolicyOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetCredentialPolicyOK) SetData(val CredentialPolicy) {
+	s.Data = val
+}
+
+func (*GetCredentialPolicyOK) getCredentialPolicyRes() {}
+
+type GetCredentialPolicyUnauthorized ErrorResponse
+
+func (*GetCredentialPolicyUnauthorized) getCredentialPolicyRes() {}
+
 type GetCreditBalanceForbidden ErrorResponse
 
 func (*GetCreditBalanceForbidden) getCreditBalanceRes() {}
@@ -23128,6 +25176,46 @@ func (s *GetInboxStatusOK) SetData(val InboxStatus) {
 }
 
 func (*GetInboxStatusOK) getInboxStatusRes() {}
+
+type GetKeyBuilderForbidden ErrorResponse
+
+func (*GetKeyBuilderForbidden) getKeyBuilderRes() {}
+
+type GetKeyBuilderNotFound ErrorResponse
+
+func (*GetKeyBuilderNotFound) getKeyBuilderRes() {}
+
+// Merged schema.
+type GetKeyBuilderOK struct {
+	Success bool       `json:"success"`
+	Data    KeyBuilder `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetKeyBuilderOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetKeyBuilderOK) GetData() KeyBuilder {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetKeyBuilderOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetKeyBuilderOK) SetData(val KeyBuilder) {
+	s.Data = val
+}
+
+func (*GetKeyBuilderOK) getKeyBuilderRes() {}
+
+type GetKeyBuilderUnauthorized ErrorResponse
+
+func (*GetKeyBuilderUnauthorized) getKeyBuilderRes() {}
 
 type GetMemoryBadRequest ErrorResponse
 
@@ -23643,6 +25731,463 @@ func (*GetWebhookSecretOK) getWebhookSecretRes() {}
 type GetWebhookSecretUnauthorized ErrorResponse
 
 func (*GetWebhookSecretUnauthorized) getWebhookSecretRes() {}
+
+// The grant a credential holds, as `GET /whoami?include=grant` reports it.
+// Ref: #/components/schemas/GrantDescription
+type GrantDescription struct {
+	CredentialKind string `json:"credential_kind"`
+	// Who the credential acts as.
+	Actor    jx.Raw       `json:"actor"`
+	GrantRef OptNilString `json:"grant_ref"`
+	// `template`, `concrete` or `computed`.
+	GrantType         OptString    `json:"grant_type"`
+	Template          OptNilString `json:"template"`
+	CredentialGrantID OptNilString `json:"credential_grant_id"`
+	// For a computed grant, the role and delegations it was computed from.
+	ComputedFrom jx.Raw   `json:"computed_from"`
+	Permissions  []string `json:"permissions"`
+	// `org`, or the addresses, domains and depth the grant reaches.
+	MailScope jx.Raw `json:"mail_scope"`
+	// Resource ids the grant is narrowed to, or null.
+	Resources       jx.Raw       `json:"resources"`
+	ExpiresAt       OptNilString `json:"expires_at"`
+	CatalogVersion  string       `json:"catalog_version"`
+	AdditionalProps GrantDescriptionAdditional
+}
+
+// GetCredentialKind returns the value of CredentialKind.
+func (s *GrantDescription) GetCredentialKind() string {
+	return s.CredentialKind
+}
+
+// GetActor returns the value of Actor.
+func (s *GrantDescription) GetActor() jx.Raw {
+	return s.Actor
+}
+
+// GetGrantRef returns the value of GrantRef.
+func (s *GrantDescription) GetGrantRef() OptNilString {
+	return s.GrantRef
+}
+
+// GetGrantType returns the value of GrantType.
+func (s *GrantDescription) GetGrantType() OptString {
+	return s.GrantType
+}
+
+// GetTemplate returns the value of Template.
+func (s *GrantDescription) GetTemplate() OptNilString {
+	return s.Template
+}
+
+// GetCredentialGrantID returns the value of CredentialGrantID.
+func (s *GrantDescription) GetCredentialGrantID() OptNilString {
+	return s.CredentialGrantID
+}
+
+// GetComputedFrom returns the value of ComputedFrom.
+func (s *GrantDescription) GetComputedFrom() jx.Raw {
+	return s.ComputedFrom
+}
+
+// GetPermissions returns the value of Permissions.
+func (s *GrantDescription) GetPermissions() []string {
+	return s.Permissions
+}
+
+// GetMailScope returns the value of MailScope.
+func (s *GrantDescription) GetMailScope() jx.Raw {
+	return s.MailScope
+}
+
+// GetResources returns the value of Resources.
+func (s *GrantDescription) GetResources() jx.Raw {
+	return s.Resources
+}
+
+// GetExpiresAt returns the value of ExpiresAt.
+func (s *GrantDescription) GetExpiresAt() OptNilString {
+	return s.ExpiresAt
+}
+
+// GetCatalogVersion returns the value of CatalogVersion.
+func (s *GrantDescription) GetCatalogVersion() string {
+	return s.CatalogVersion
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *GrantDescription) GetAdditionalProps() GrantDescriptionAdditional {
+	return s.AdditionalProps
+}
+
+// SetCredentialKind sets the value of CredentialKind.
+func (s *GrantDescription) SetCredentialKind(val string) {
+	s.CredentialKind = val
+}
+
+// SetActor sets the value of Actor.
+func (s *GrantDescription) SetActor(val jx.Raw) {
+	s.Actor = val
+}
+
+// SetGrantRef sets the value of GrantRef.
+func (s *GrantDescription) SetGrantRef(val OptNilString) {
+	s.GrantRef = val
+}
+
+// SetGrantType sets the value of GrantType.
+func (s *GrantDescription) SetGrantType(val OptString) {
+	s.GrantType = val
+}
+
+// SetTemplate sets the value of Template.
+func (s *GrantDescription) SetTemplate(val OptNilString) {
+	s.Template = val
+}
+
+// SetCredentialGrantID sets the value of CredentialGrantID.
+func (s *GrantDescription) SetCredentialGrantID(val OptNilString) {
+	s.CredentialGrantID = val
+}
+
+// SetComputedFrom sets the value of ComputedFrom.
+func (s *GrantDescription) SetComputedFrom(val jx.Raw) {
+	s.ComputedFrom = val
+}
+
+// SetPermissions sets the value of Permissions.
+func (s *GrantDescription) SetPermissions(val []string) {
+	s.Permissions = val
+}
+
+// SetMailScope sets the value of MailScope.
+func (s *GrantDescription) SetMailScope(val jx.Raw) {
+	s.MailScope = val
+}
+
+// SetResources sets the value of Resources.
+func (s *GrantDescription) SetResources(val jx.Raw) {
+	s.Resources = val
+}
+
+// SetExpiresAt sets the value of ExpiresAt.
+func (s *GrantDescription) SetExpiresAt(val OptNilString) {
+	s.ExpiresAt = val
+}
+
+// SetCatalogVersion sets the value of CatalogVersion.
+func (s *GrantDescription) SetCatalogVersion(val string) {
+	s.CatalogVersion = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *GrantDescription) SetAdditionalProps(val GrantDescriptionAdditional) {
+	s.AdditionalProps = val
+}
+
+type GrantDescriptionAdditional map[string]jx.Raw
+
+func (s *GrantDescriptionAdditional) init() GrantDescriptionAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// The `details` of a `403 grant_forbidden`: the permission the
+// operation needed and the grant that did not hold it.
+// Ref: #/components/schemas/GrantForbiddenDetails
+type GrantForbiddenDetails struct {
+	// The permission the operation requires, for example `mail:send`.
+	Permission NilString `json:"permission"`
+	// The kind of credential that made the request, for example `org_key`.
+	CredentialKind NilString `json:"credential_kind"`
+	// The grant template, when the credential holds one.
+	GrantTemplateKey OptNilString `json:"grant_template_key"`
+	// The concrete grant id, when the credential holds one.
+	CredentialGrantID OptNilString `json:"credential_grant_id"`
+	// Version of the permission catalog the decision used.
+	CatalogVersion NilString `json:"catalog_version"`
+	// Why the grant did not allow the operation: `permission_missing`,
+	// `required_permission_missing`, `mail_scope_requires_org`,
+	// `resource_outside_grant`, `credential_expired` or
+	// `unknown_permission`. New reasons may be added.
+	Reason NilString `json:"reason"`
+	// A further permission the operation also requires, when that is the one missing.
+	Missing OptNilString `json:"missing"`
+	// The resource the decision was about, when it named one.
+	Resource        OptGrantForbiddenDetailsResource `json:"resource"`
+	AdditionalProps GrantForbiddenDetailsAdditional
+}
+
+// GetPermission returns the value of Permission.
+func (s *GrantForbiddenDetails) GetPermission() NilString {
+	return s.Permission
+}
+
+// GetCredentialKind returns the value of CredentialKind.
+func (s *GrantForbiddenDetails) GetCredentialKind() NilString {
+	return s.CredentialKind
+}
+
+// GetGrantTemplateKey returns the value of GrantTemplateKey.
+func (s *GrantForbiddenDetails) GetGrantTemplateKey() OptNilString {
+	return s.GrantTemplateKey
+}
+
+// GetCredentialGrantID returns the value of CredentialGrantID.
+func (s *GrantForbiddenDetails) GetCredentialGrantID() OptNilString {
+	return s.CredentialGrantID
+}
+
+// GetCatalogVersion returns the value of CatalogVersion.
+func (s *GrantForbiddenDetails) GetCatalogVersion() NilString {
+	return s.CatalogVersion
+}
+
+// GetReason returns the value of Reason.
+func (s *GrantForbiddenDetails) GetReason() NilString {
+	return s.Reason
+}
+
+// GetMissing returns the value of Missing.
+func (s *GrantForbiddenDetails) GetMissing() OptNilString {
+	return s.Missing
+}
+
+// GetResource returns the value of Resource.
+func (s *GrantForbiddenDetails) GetResource() OptGrantForbiddenDetailsResource {
+	return s.Resource
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *GrantForbiddenDetails) GetAdditionalProps() GrantForbiddenDetailsAdditional {
+	return s.AdditionalProps
+}
+
+// SetPermission sets the value of Permission.
+func (s *GrantForbiddenDetails) SetPermission(val NilString) {
+	s.Permission = val
+}
+
+// SetCredentialKind sets the value of CredentialKind.
+func (s *GrantForbiddenDetails) SetCredentialKind(val NilString) {
+	s.CredentialKind = val
+}
+
+// SetGrantTemplateKey sets the value of GrantTemplateKey.
+func (s *GrantForbiddenDetails) SetGrantTemplateKey(val OptNilString) {
+	s.GrantTemplateKey = val
+}
+
+// SetCredentialGrantID sets the value of CredentialGrantID.
+func (s *GrantForbiddenDetails) SetCredentialGrantID(val OptNilString) {
+	s.CredentialGrantID = val
+}
+
+// SetCatalogVersion sets the value of CatalogVersion.
+func (s *GrantForbiddenDetails) SetCatalogVersion(val NilString) {
+	s.CatalogVersion = val
+}
+
+// SetReason sets the value of Reason.
+func (s *GrantForbiddenDetails) SetReason(val NilString) {
+	s.Reason = val
+}
+
+// SetMissing sets the value of Missing.
+func (s *GrantForbiddenDetails) SetMissing(val OptNilString) {
+	s.Missing = val
+}
+
+// SetResource sets the value of Resource.
+func (s *GrantForbiddenDetails) SetResource(val OptGrantForbiddenDetailsResource) {
+	s.Resource = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *GrantForbiddenDetails) SetAdditionalProps(val GrantForbiddenDetailsAdditional) {
+	s.AdditionalProps = val
+}
+
+type GrantForbiddenDetailsAdditional map[string]jx.Raw
+
+func (s *GrantForbiddenDetailsAdditional) init() GrantForbiddenDetailsAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// The resource the decision was about, when it named one.
+type GrantForbiddenDetailsResource struct {
+	Type            OptString `json:"type"`
+	ID              OptString `json:"id"`
+	AdditionalProps GrantForbiddenDetailsResourceAdditional
+}
+
+// GetType returns the value of Type.
+func (s *GrantForbiddenDetailsResource) GetType() OptString {
+	return s.Type
+}
+
+// GetID returns the value of ID.
+func (s *GrantForbiddenDetailsResource) GetID() OptString {
+	return s.ID
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *GrantForbiddenDetailsResource) GetAdditionalProps() GrantForbiddenDetailsResourceAdditional {
+	return s.AdditionalProps
+}
+
+// SetType sets the value of Type.
+func (s *GrantForbiddenDetailsResource) SetType(val OptString) {
+	s.Type = val
+}
+
+// SetID sets the value of ID.
+func (s *GrantForbiddenDetailsResource) SetID(val OptString) {
+	s.ID = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *GrantForbiddenDetailsResource) SetAdditionalProps(val GrantForbiddenDetailsResourceAdditional) {
+	s.AdditionalProps = val
+}
+
+type GrantForbiddenDetailsResourceAdditional map[string]jx.Raw
+
+func (s *GrantForbiddenDetailsResourceAdditional) init() GrantForbiddenDetailsResourceAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Ref: #/components/schemas/Group
+type Group struct {
+	ID              string       `json:"id"`
+	Name            string       `json:"name"`
+	Description     OptNilString `json:"description"`
+	RoleID          OptNilString `json:"role_id"`
+	Members         []string     `json:"members"`
+	AdditionalProps GroupAdditional
+}
+
+// GetID returns the value of ID.
+func (s *Group) GetID() string {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *Group) GetName() string {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *Group) GetDescription() OptNilString {
+	return s.Description
+}
+
+// GetRoleID returns the value of RoleID.
+func (s *Group) GetRoleID() OptNilString {
+	return s.RoleID
+}
+
+// GetMembers returns the value of Members.
+func (s *Group) GetMembers() []string {
+	return s.Members
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *Group) GetAdditionalProps() GroupAdditional {
+	return s.AdditionalProps
+}
+
+// SetID sets the value of ID.
+func (s *Group) SetID(val string) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *Group) SetName(val string) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *Group) SetDescription(val OptNilString) {
+	s.Description = val
+}
+
+// SetRoleID sets the value of RoleID.
+func (s *Group) SetRoleID(val OptNilString) {
+	s.RoleID = val
+}
+
+// SetMembers sets the value of Members.
+func (s *Group) SetMembers(val []string) {
+	s.Members = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *Group) SetAdditionalProps(val GroupAdditional) {
+	s.AdditionalProps = val
+}
+
+type GroupAdditional map[string]jx.Raw
+
+func (s *GroupAdditional) init() GroupAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Ref: #/components/schemas/GroupList
+type GroupList struct {
+	Groups          []Group `json:"groups"`
+	AdditionalProps GroupListAdditional
+}
+
+// GetGroups returns the value of Groups.
+func (s *GroupList) GetGroups() []Group {
+	return s.Groups
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *GroupList) GetAdditionalProps() GroupListAdditional {
+	return s.AdditionalProps
+}
+
+// SetGroups sets the value of Groups.
+func (s *GroupList) SetGroups(val []Group) {
+	s.Groups = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *GroupList) SetAdditionalProps(val GroupListAdditional) {
+	s.AdditionalProps = val
+}
+
+type GroupListAdditional map[string]jx.Raw
+
+func (s *GroupListAdditional) init() GroupListAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
 
 // Ref: #/components/schemas/InboxStatus
 type InboxStatus struct {
@@ -24931,6 +27476,703 @@ type InviteAgentConnectionUnauthorized ErrorResponseHeaders
 
 func (*InviteAgentConnectionUnauthorized) inviteAgentConnectionRes() {}
 
+// Ref: #/components/schemas/KeyBuilder
+type KeyBuilder struct {
+	Enabled         bool                    `json:"enabled"`
+	Presets         []KeyBuilderPresetsItem `json:"presets"`
+	Matrix          []KeyBuilderMatrixItem  `json:"matrix"`
+	Policy          CredentialPolicy        `json:"policy"`
+	AdditionalProps KeyBuilderAdditional
+}
+
+// GetEnabled returns the value of Enabled.
+func (s *KeyBuilder) GetEnabled() bool {
+	return s.Enabled
+}
+
+// GetPresets returns the value of Presets.
+func (s *KeyBuilder) GetPresets() []KeyBuilderPresetsItem {
+	return s.Presets
+}
+
+// GetMatrix returns the value of Matrix.
+func (s *KeyBuilder) GetMatrix() []KeyBuilderMatrixItem {
+	return s.Matrix
+}
+
+// GetPolicy returns the value of Policy.
+func (s *KeyBuilder) GetPolicy() CredentialPolicy {
+	return s.Policy
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *KeyBuilder) GetAdditionalProps() KeyBuilderAdditional {
+	return s.AdditionalProps
+}
+
+// SetEnabled sets the value of Enabled.
+func (s *KeyBuilder) SetEnabled(val bool) {
+	s.Enabled = val
+}
+
+// SetPresets sets the value of Presets.
+func (s *KeyBuilder) SetPresets(val []KeyBuilderPresetsItem) {
+	s.Presets = val
+}
+
+// SetMatrix sets the value of Matrix.
+func (s *KeyBuilder) SetMatrix(val []KeyBuilderMatrixItem) {
+	s.Matrix = val
+}
+
+// SetPolicy sets the value of Policy.
+func (s *KeyBuilder) SetPolicy(val CredentialPolicy) {
+	s.Policy = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *KeyBuilder) SetAdditionalProps(val KeyBuilderAdditional) {
+	s.AdditionalProps = val
+}
+
+type KeyBuilderAdditional map[string]jx.Raw
+
+func (s *KeyBuilderAdditional) init() KeyBuilderAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type KeyBuilderMatrixItem struct {
+	ID              string    `json:"id"`
+	Label           string    `json:"label"`
+	Description     string    `json:"description"`
+	Read            []string  `json:"read"`
+	Write           []string  `json:"write"`
+	Resource        NilString `json:"resource"`
+	AdditionalProps KeyBuilderMatrixItemAdditional
+}
+
+// GetID returns the value of ID.
+func (s *KeyBuilderMatrixItem) GetID() string {
+	return s.ID
+}
+
+// GetLabel returns the value of Label.
+func (s *KeyBuilderMatrixItem) GetLabel() string {
+	return s.Label
+}
+
+// GetDescription returns the value of Description.
+func (s *KeyBuilderMatrixItem) GetDescription() string {
+	return s.Description
+}
+
+// GetRead returns the value of Read.
+func (s *KeyBuilderMatrixItem) GetRead() []string {
+	return s.Read
+}
+
+// GetWrite returns the value of Write.
+func (s *KeyBuilderMatrixItem) GetWrite() []string {
+	return s.Write
+}
+
+// GetResource returns the value of Resource.
+func (s *KeyBuilderMatrixItem) GetResource() NilString {
+	return s.Resource
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *KeyBuilderMatrixItem) GetAdditionalProps() KeyBuilderMatrixItemAdditional {
+	return s.AdditionalProps
+}
+
+// SetID sets the value of ID.
+func (s *KeyBuilderMatrixItem) SetID(val string) {
+	s.ID = val
+}
+
+// SetLabel sets the value of Label.
+func (s *KeyBuilderMatrixItem) SetLabel(val string) {
+	s.Label = val
+}
+
+// SetDescription sets the value of Description.
+func (s *KeyBuilderMatrixItem) SetDescription(val string) {
+	s.Description = val
+}
+
+// SetRead sets the value of Read.
+func (s *KeyBuilderMatrixItem) SetRead(val []string) {
+	s.Read = val
+}
+
+// SetWrite sets the value of Write.
+func (s *KeyBuilderMatrixItem) SetWrite(val []string) {
+	s.Write = val
+}
+
+// SetResource sets the value of Resource.
+func (s *KeyBuilderMatrixItem) SetResource(val NilString) {
+	s.Resource = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *KeyBuilderMatrixItem) SetAdditionalProps(val KeyBuilderMatrixItemAdditional) {
+	s.AdditionalProps = val
+}
+
+type KeyBuilderMatrixItemAdditional map[string]jx.Raw
+
+func (s *KeyBuilderMatrixItemAdditional) init() KeyBuilderMatrixItemAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type KeyBuilderPresetsItem struct {
+	ID              string    `json:"id"`
+	Label           string    `json:"label"`
+	Description     string    `json:"description"`
+	Available       bool      `json:"available"`
+	Reason          NilString `json:"reason"`
+	Message         NilString `json:"message"`
+	AdditionalProps KeyBuilderPresetsItemAdditional
+}
+
+// GetID returns the value of ID.
+func (s *KeyBuilderPresetsItem) GetID() string {
+	return s.ID
+}
+
+// GetLabel returns the value of Label.
+func (s *KeyBuilderPresetsItem) GetLabel() string {
+	return s.Label
+}
+
+// GetDescription returns the value of Description.
+func (s *KeyBuilderPresetsItem) GetDescription() string {
+	return s.Description
+}
+
+// GetAvailable returns the value of Available.
+func (s *KeyBuilderPresetsItem) GetAvailable() bool {
+	return s.Available
+}
+
+// GetReason returns the value of Reason.
+func (s *KeyBuilderPresetsItem) GetReason() NilString {
+	return s.Reason
+}
+
+// GetMessage returns the value of Message.
+func (s *KeyBuilderPresetsItem) GetMessage() NilString {
+	return s.Message
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *KeyBuilderPresetsItem) GetAdditionalProps() KeyBuilderPresetsItemAdditional {
+	return s.AdditionalProps
+}
+
+// SetID sets the value of ID.
+func (s *KeyBuilderPresetsItem) SetID(val string) {
+	s.ID = val
+}
+
+// SetLabel sets the value of Label.
+func (s *KeyBuilderPresetsItem) SetLabel(val string) {
+	s.Label = val
+}
+
+// SetDescription sets the value of Description.
+func (s *KeyBuilderPresetsItem) SetDescription(val string) {
+	s.Description = val
+}
+
+// SetAvailable sets the value of Available.
+func (s *KeyBuilderPresetsItem) SetAvailable(val bool) {
+	s.Available = val
+}
+
+// SetReason sets the value of Reason.
+func (s *KeyBuilderPresetsItem) SetReason(val NilString) {
+	s.Reason = val
+}
+
+// SetMessage sets the value of Message.
+func (s *KeyBuilderPresetsItem) SetMessage(val NilString) {
+	s.Message = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *KeyBuilderPresetsItem) SetAdditionalProps(val KeyBuilderPresetsItemAdditional) {
+	s.AdditionalProps = val
+}
+
+type KeyBuilderPresetsItemAdditional map[string]jx.Raw
+
+func (s *KeyBuilderPresetsItemAdditional) init() KeyBuilderPresetsItemAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Conditions every use of the key is checked against.
+// Ref: #/components/schemas/KeyConditions
+type KeyConditions struct {
+	// CIDR ranges (IPv4 or IPv6) the key may be used from.
+	IPAllowlist        OptNilStringArray `json:"ip_allowlist"`
+	RateLimitPerMinute OptNilInt         `json:"rate_limit_per_minute"`
+	// Set when the key is suspended (read only).
+	SuspendedAt     OptNilDateTime `json:"suspended_at"`
+	AdditionalProps KeyConditionsAdditional
+}
+
+// GetIPAllowlist returns the value of IPAllowlist.
+func (s *KeyConditions) GetIPAllowlist() OptNilStringArray {
+	return s.IPAllowlist
+}
+
+// GetRateLimitPerMinute returns the value of RateLimitPerMinute.
+func (s *KeyConditions) GetRateLimitPerMinute() OptNilInt {
+	return s.RateLimitPerMinute
+}
+
+// GetSuspendedAt returns the value of SuspendedAt.
+func (s *KeyConditions) GetSuspendedAt() OptNilDateTime {
+	return s.SuspendedAt
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *KeyConditions) GetAdditionalProps() KeyConditionsAdditional {
+	return s.AdditionalProps
+}
+
+// SetIPAllowlist sets the value of IPAllowlist.
+func (s *KeyConditions) SetIPAllowlist(val OptNilStringArray) {
+	s.IPAllowlist = val
+}
+
+// SetRateLimitPerMinute sets the value of RateLimitPerMinute.
+func (s *KeyConditions) SetRateLimitPerMinute(val OptNilInt) {
+	s.RateLimitPerMinute = val
+}
+
+// SetSuspendedAt sets the value of SuspendedAt.
+func (s *KeyConditions) SetSuspendedAt(val OptNilDateTime) {
+	s.SuspendedAt = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *KeyConditions) SetAdditionalProps(val KeyConditionsAdditional) {
+	s.AdditionalProps = val
+}
+
+type KeyConditionsAdditional map[string]jx.Raw
+
+func (s *KeyConditionsAdditional) init() KeyConditionsAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Ref: #/components/schemas/KeyConditionsInput
+type KeyConditionsInput struct {
+	// CIDR ranges (IPv4 or IPv6) the key may be used from.
+	IPAllowlist        OptNilStringArray `json:"ip_allowlist"`
+	RateLimitPerMinute OptNilInt         `json:"rate_limit_per_minute"`
+}
+
+// GetIPAllowlist returns the value of IPAllowlist.
+func (s *KeyConditionsInput) GetIPAllowlist() OptNilStringArray {
+	return s.IPAllowlist
+}
+
+// GetRateLimitPerMinute returns the value of RateLimitPerMinute.
+func (s *KeyConditionsInput) GetRateLimitPerMinute() OptNilInt {
+	return s.RateLimitPerMinute
+}
+
+// SetIPAllowlist sets the value of IPAllowlist.
+func (s *KeyConditionsInput) SetIPAllowlist(val OptNilStringArray) {
+	s.IPAllowlist = val
+}
+
+// SetRateLimitPerMinute sets the value of RateLimitPerMinute.
+func (s *KeyConditionsInput) SetRateLimitPerMinute(val OptNilInt) {
+	s.RateLimitPerMinute = val
+}
+
+// A preset name, or a grant spec.
+// Ref: #/components/schemas/KeyGrant
+// KeyGrant represents sum type.
+type KeyGrant struct {
+	Type         KeyGrantType // switch on this field
+	KeyPreset    KeyPreset
+	KeyGrantSpec KeyGrantSpec
+}
+
+// KeyGrantType is oneOf type of KeyGrant.
+type KeyGrantType string
+
+// Possible values for KeyGrantType.
+const (
+	KeyPresetKeyGrant    KeyGrantType = "KeyPreset"
+	KeyGrantSpecKeyGrant KeyGrantType = "KeyGrantSpec"
+)
+
+// IsKeyPreset reports whether KeyGrant is KeyPreset.
+func (s KeyGrant) IsKeyPreset() bool { return s.Type == KeyPresetKeyGrant }
+
+// IsKeyGrantSpec reports whether KeyGrant is KeyGrantSpec.
+func (s KeyGrant) IsKeyGrantSpec() bool { return s.Type == KeyGrantSpecKeyGrant }
+
+// SetKeyPreset sets KeyGrant to KeyPreset.
+func (s *KeyGrant) SetKeyPreset(v KeyPreset) {
+	s.Type = KeyPresetKeyGrant
+	s.KeyPreset = v
+}
+
+// GetKeyPreset returns KeyPreset and true boolean if KeyGrant is KeyPreset.
+func (s KeyGrant) GetKeyPreset() (v KeyPreset, ok bool) {
+	if !s.IsKeyPreset() {
+		return v, false
+	}
+	return s.KeyPreset, true
+}
+
+// NewKeyPresetKeyGrant returns new KeyGrant from KeyPreset.
+func NewKeyPresetKeyGrant(v KeyPreset) KeyGrant {
+	var s KeyGrant
+	s.SetKeyPreset(v)
+	return s
+}
+
+// SetKeyGrantSpec sets KeyGrant to KeyGrantSpec.
+func (s *KeyGrant) SetKeyGrantSpec(v KeyGrantSpec) {
+	s.Type = KeyGrantSpecKeyGrant
+	s.KeyGrantSpec = v
+}
+
+// GetKeyGrantSpec returns KeyGrantSpec and true boolean if KeyGrant is KeyGrantSpec.
+func (s KeyGrant) GetKeyGrantSpec() (v KeyGrantSpec, ok bool) {
+	if !s.IsKeyGrantSpec() {
+		return v, false
+	}
+	return s.KeyGrantSpec, true
+}
+
+// NewKeyGrantSpecKeyGrant returns new KeyGrant from KeyGrantSpec.
+func NewKeyGrantSpecKeyGrant(v KeyGrantSpec) KeyGrant {
+	var s KeyGrant
+	s.SetKeyGrantSpec(v)
+	return s
+}
+
+// A key's grant: a preset, optionally narrowed. Use `matrix` (area to
+// `none`, `read` or `write`, areas from `GET /keys/builder`) or
+// `permissions` for a custom grant, `addresses` and `domains` to limit
+// mail, and `resources` to limit Functions, domains, endpoints or
+// routes to selected ids. The server adds the permissions a choice
+// implies and reports them in `warnings`.
+// Ref: #/components/schemas/KeyGrantSpec
+type KeyGrantSpec struct {
+	Preset      KeyPreset                `json:"preset"`
+	Matrix      OptKeyGrantSpecMatrix    `json:"matrix"`
+	Permissions []string                 `json:"permissions"`
+	Addresses   []string                 `json:"addresses"`
+	Domains     []string                 `json:"domains"`
+	Resources   OptKeyGrantSpecResources `json:"resources"`
+}
+
+// GetPreset returns the value of Preset.
+func (s *KeyGrantSpec) GetPreset() KeyPreset {
+	return s.Preset
+}
+
+// GetMatrix returns the value of Matrix.
+func (s *KeyGrantSpec) GetMatrix() OptKeyGrantSpecMatrix {
+	return s.Matrix
+}
+
+// GetPermissions returns the value of Permissions.
+func (s *KeyGrantSpec) GetPermissions() []string {
+	return s.Permissions
+}
+
+// GetAddresses returns the value of Addresses.
+func (s *KeyGrantSpec) GetAddresses() []string {
+	return s.Addresses
+}
+
+// GetDomains returns the value of Domains.
+func (s *KeyGrantSpec) GetDomains() []string {
+	return s.Domains
+}
+
+// GetResources returns the value of Resources.
+func (s *KeyGrantSpec) GetResources() OptKeyGrantSpecResources {
+	return s.Resources
+}
+
+// SetPreset sets the value of Preset.
+func (s *KeyGrantSpec) SetPreset(val KeyPreset) {
+	s.Preset = val
+}
+
+// SetMatrix sets the value of Matrix.
+func (s *KeyGrantSpec) SetMatrix(val OptKeyGrantSpecMatrix) {
+	s.Matrix = val
+}
+
+// SetPermissions sets the value of Permissions.
+func (s *KeyGrantSpec) SetPermissions(val []string) {
+	s.Permissions = val
+}
+
+// SetAddresses sets the value of Addresses.
+func (s *KeyGrantSpec) SetAddresses(val []string) {
+	s.Addresses = val
+}
+
+// SetDomains sets the value of Domains.
+func (s *KeyGrantSpec) SetDomains(val []string) {
+	s.Domains = val
+}
+
+// SetResources sets the value of Resources.
+func (s *KeyGrantSpec) SetResources(val OptKeyGrantSpecResources) {
+	s.Resources = val
+}
+
+type KeyGrantSpecMatrix map[string]KeyGrantSpecMatrixItem
+
+func (s *KeyGrantSpecMatrix) init() KeyGrantSpecMatrix {
+	m := *s
+	if m == nil {
+		m = map[string]KeyGrantSpecMatrixItem{}
+		*s = m
+	}
+	return m
+}
+
+type KeyGrantSpecMatrixItem string
+
+const (
+	KeyGrantSpecMatrixItemNone  KeyGrantSpecMatrixItem = "none"
+	KeyGrantSpecMatrixItemRead  KeyGrantSpecMatrixItem = "read"
+	KeyGrantSpecMatrixItemWrite KeyGrantSpecMatrixItem = "write"
+)
+
+// AllValues returns all KeyGrantSpecMatrixItem values.
+func (KeyGrantSpecMatrixItem) AllValues() []KeyGrantSpecMatrixItem {
+	return []KeyGrantSpecMatrixItem{
+		KeyGrantSpecMatrixItemNone,
+		KeyGrantSpecMatrixItemRead,
+		KeyGrantSpecMatrixItemWrite,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s KeyGrantSpecMatrixItem) MarshalText() ([]byte, error) {
+	switch s {
+	case KeyGrantSpecMatrixItemNone:
+		return []byte(s), nil
+	case KeyGrantSpecMatrixItemRead:
+		return []byte(s), nil
+	case KeyGrantSpecMatrixItemWrite:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *KeyGrantSpecMatrixItem) UnmarshalText(data []byte) error {
+	switch KeyGrantSpecMatrixItem(data) {
+	case KeyGrantSpecMatrixItemNone:
+		*s = KeyGrantSpecMatrixItemNone
+		return nil
+	case KeyGrantSpecMatrixItemRead:
+		*s = KeyGrantSpecMatrixItemRead
+		return nil
+	case KeyGrantSpecMatrixItemWrite:
+		*s = KeyGrantSpecMatrixItemWrite
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type KeyGrantSpecResources map[string][]string
+
+func (s *KeyGrantSpecResources) init() KeyGrantSpecResources {
+	m := *s
+	if m == nil {
+		m = map[string][]string{}
+		*s = m
+	}
+	return m
+}
+
+// A permission the server added because a chosen one implies it.
+// Ref: #/components/schemas/KeyGrantWarning
+type KeyGrantWarning struct {
+	Permission      string   `json:"permission"`
+	Adds            []string `json:"adds"`
+	Why             string   `json:"why"`
+	Description     string   `json:"description"`
+	AdditionalProps KeyGrantWarningAdditional
+}
+
+// GetPermission returns the value of Permission.
+func (s *KeyGrantWarning) GetPermission() string {
+	return s.Permission
+}
+
+// GetAdds returns the value of Adds.
+func (s *KeyGrantWarning) GetAdds() []string {
+	return s.Adds
+}
+
+// GetWhy returns the value of Why.
+func (s *KeyGrantWarning) GetWhy() string {
+	return s.Why
+}
+
+// GetDescription returns the value of Description.
+func (s *KeyGrantWarning) GetDescription() string {
+	return s.Description
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *KeyGrantWarning) GetAdditionalProps() KeyGrantWarningAdditional {
+	return s.AdditionalProps
+}
+
+// SetPermission sets the value of Permission.
+func (s *KeyGrantWarning) SetPermission(val string) {
+	s.Permission = val
+}
+
+// SetAdds sets the value of Adds.
+func (s *KeyGrantWarning) SetAdds(val []string) {
+	s.Adds = val
+}
+
+// SetWhy sets the value of Why.
+func (s *KeyGrantWarning) SetWhy(val string) {
+	s.Why = val
+}
+
+// SetDescription sets the value of Description.
+func (s *KeyGrantWarning) SetDescription(val string) {
+	s.Description = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *KeyGrantWarning) SetAdditionalProps(val KeyGrantWarningAdditional) {
+	s.AdditionalProps = val
+}
+
+type KeyGrantWarningAdditional map[string]jx.Raw
+
+func (s *KeyGrantWarningAdditional) init() KeyGrantWarningAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// `super_admin` (every ordinary permission, as keys have today),
+// `send_only`, `read_only`, `own_addresses` and
+// `own_addresses_read_only` (both need `addresses`), or `custom`.
+// Ref: #/components/schemas/KeyPreset
+type KeyPreset string
+
+const (
+	KeyPresetSuperAdmin           KeyPreset = "super_admin"
+	KeyPresetSendOnly             KeyPreset = "send_only"
+	KeyPresetReadOnly             KeyPreset = "read_only"
+	KeyPresetOwnAddresses         KeyPreset = "own_addresses"
+	KeyPresetOwnAddressesReadOnly KeyPreset = "own_addresses_read_only"
+	KeyPresetCustom               KeyPreset = "custom"
+)
+
+// AllValues returns all KeyPreset values.
+func (KeyPreset) AllValues() []KeyPreset {
+	return []KeyPreset{
+		KeyPresetSuperAdmin,
+		KeyPresetSendOnly,
+		KeyPresetReadOnly,
+		KeyPresetOwnAddresses,
+		KeyPresetOwnAddressesReadOnly,
+		KeyPresetCustom,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s KeyPreset) MarshalText() ([]byte, error) {
+	switch s {
+	case KeyPresetSuperAdmin:
+		return []byte(s), nil
+	case KeyPresetSendOnly:
+		return []byte(s), nil
+	case KeyPresetReadOnly:
+		return []byte(s), nil
+	case KeyPresetOwnAddresses:
+		return []byte(s), nil
+	case KeyPresetOwnAddressesReadOnly:
+		return []byte(s), nil
+	case KeyPresetCustom:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *KeyPreset) UnmarshalText(data []byte) error {
+	switch KeyPreset(data) {
+	case KeyPresetSuperAdmin:
+		*s = KeyPresetSuperAdmin
+		return nil
+	case KeyPresetSendOnly:
+		*s = KeyPresetSendOnly
+		return nil
+	case KeyPresetReadOnly:
+		*s = KeyPresetReadOnly
+		return nil
+	case KeyPresetOwnAddresses:
+		*s = KeyPresetOwnAddresses
+		return nil
+	case KeyPresetOwnAddressesReadOnly:
+		*s = KeyPresetOwnAddressesReadOnly
+		return nil
+	case KeyPresetCustom:
+		*s = KeyPresetCustom
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 type ListAgentConnectionsBadRequest ErrorResponse
 
 func (*ListAgentConnectionsBadRequest) listAgentConnectionsRes() {}
@@ -25802,6 +29044,68 @@ type ListChangesUnauthorized ErrorResponse
 
 func (*ListChangesUnauthorized) listChangesRes() {}
 
+type ListCliOrgsNotFound ErrorResponse
+
+func (*ListCliOrgsNotFound) listCliOrgsRes() {}
+
+// Merged schema.
+type ListCliOrgsOK struct {
+	Success bool       `json:"success"`
+	Data    CliOrgList `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListCliOrgsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListCliOrgsOK) GetData() CliOrgList {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListCliOrgsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListCliOrgsOK) SetData(val CliOrgList) {
+	s.Data = val
+}
+
+// ListCliOrgsOKHeaders wraps ListCliOrgsOK with response headers.
+type ListCliOrgsOKHeaders struct {
+	CacheControl OptString
+	Response     ListCliOrgsOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *ListCliOrgsOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetResponse returns the value of Response.
+func (s *ListCliOrgsOKHeaders) GetResponse() ListCliOrgsOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *ListCliOrgsOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetResponse sets the value of Response.
+func (s *ListCliOrgsOKHeaders) SetResponse(val ListCliOrgsOK) {
+	s.Response = val
+}
+
+func (*ListCliOrgsOKHeaders) listCliOrgsRes() {}
+
+type ListCliOrgsUnauthorized ErrorResponse
+
+func (*ListCliOrgsUnauthorized) listCliOrgsRes() {}
+
 type ListContactsBadRequest ErrorResponse
 
 func (*ListContactsBadRequest) listContactsRes() {}
@@ -26015,6 +29319,94 @@ func (s *ListContactsOKMeta) SetCursor(val NilString) {
 type ListContactsUnauthorized ErrorResponse
 
 func (*ListContactsUnauthorized) listContactsRes() {}
+
+type ListCredentialEventsBadRequest ErrorResponse
+
+func (*ListCredentialEventsBadRequest) listCredentialEventsRes() {}
+
+type ListCredentialEventsForbidden ErrorResponse
+
+func (*ListCredentialEventsForbidden) listCredentialEventsRes() {}
+
+type ListCredentialEventsNotFound ErrorResponse
+
+func (*ListCredentialEventsNotFound) listCredentialEventsRes() {}
+
+// Merged schema.
+type ListCredentialEventsOK struct {
+	Success bool                `json:"success"`
+	Data    CredentialEventList `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListCredentialEventsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListCredentialEventsOK) GetData() CredentialEventList {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListCredentialEventsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListCredentialEventsOK) SetData(val CredentialEventList) {
+	s.Data = val
+}
+
+func (*ListCredentialEventsOK) listCredentialEventsRes() {}
+
+type ListCredentialEventsUnauthorized ErrorResponse
+
+func (*ListCredentialEventsUnauthorized) listCredentialEventsRes() {}
+
+type ListCredentialsBadRequest ErrorResponse
+
+func (*ListCredentialsBadRequest) listCredentialsRes() {}
+
+type ListCredentialsForbidden ErrorResponse
+
+func (*ListCredentialsForbidden) listCredentialsRes() {}
+
+type ListCredentialsNotFound ErrorResponse
+
+func (*ListCredentialsNotFound) listCredentialsRes() {}
+
+// Merged schema.
+type ListCredentialsOK struct {
+	Success bool           `json:"success"`
+	Data    CredentialList `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListCredentialsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListCredentialsOK) GetData() CredentialList {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListCredentialsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListCredentialsOK) SetData(val CredentialList) {
+	s.Data = val
+}
+
+func (*ListCredentialsOK) listCredentialsRes() {}
+
+type ListCredentialsUnauthorized ErrorResponse
+
+func (*ListCredentialsUnauthorized) listCredentialsRes() {}
 
 type ListDeclinedPaymentsForbidden ErrorResponse
 
@@ -26764,6 +30156,86 @@ func (s *ListFunctionsOK) SetData(val []FunctionListItem) {
 
 func (*ListFunctionsOK) listFunctionsRes() {}
 
+type ListGroupsForbidden ErrorResponse
+
+func (*ListGroupsForbidden) listGroupsRes() {}
+
+type ListGroupsNotFound ErrorResponse
+
+func (*ListGroupsNotFound) listGroupsRes() {}
+
+// Merged schema.
+type ListGroupsOK struct {
+	Success bool      `json:"success"`
+	Data    GroupList `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListGroupsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListGroupsOK) GetData() GroupList {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListGroupsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListGroupsOK) SetData(val GroupList) {
+	s.Data = val
+}
+
+func (*ListGroupsOK) listGroupsRes() {}
+
+type ListGroupsUnauthorized ErrorResponse
+
+func (*ListGroupsUnauthorized) listGroupsRes() {}
+
+type ListMailboxAccessForbidden ErrorResponse
+
+func (*ListMailboxAccessForbidden) listMailboxAccessRes() {}
+
+type ListMailboxAccessNotFound ErrorResponse
+
+func (*ListMailboxAccessNotFound) listMailboxAccessRes() {}
+
+// Merged schema.
+type ListMailboxAccessOK struct {
+	Success bool              `json:"success"`
+	Data    MailboxAccessList `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListMailboxAccessOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListMailboxAccessOK) GetData() MailboxAccessList {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListMailboxAccessOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListMailboxAccessOK) SetData(val MailboxAccessList) {
+	s.Data = val
+}
+
+func (*ListMailboxAccessOK) listMailboxAccessRes() {}
+
+type ListMailboxAccessUnauthorized ErrorResponse
+
+func (*ListMailboxAccessUnauthorized) listMailboxAccessRes() {}
+
 // Merged schema.
 type ListOrgSecretsOK struct {
 	Success bool                 `json:"success"`
@@ -26978,6 +30450,46 @@ func (*ListRepeatingSendsOK) listRepeatingSendsRes() {}
 type ListRepeatingSendsUnauthorized ErrorResponse
 
 func (*ListRepeatingSendsUnauthorized) listRepeatingSendsRes() {}
+
+type ListRolesForbidden ErrorResponse
+
+func (*ListRolesForbidden) listRolesRes() {}
+
+type ListRolesNotFound ErrorResponse
+
+func (*ListRolesNotFound) listRolesRes() {}
+
+// Merged schema.
+type ListRolesOK struct {
+	Success bool     `json:"success"`
+	Data    RoleList `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListRolesOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListRolesOK) GetData() RoleList {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListRolesOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListRolesOK) SetData(val RoleList) {
+	s.Data = val
+}
+
+func (*ListRolesOK) listRolesRes() {}
+
+type ListRolesUnauthorized ErrorResponse
+
+func (*ListRolesUnauthorized) listRolesRes() {}
 
 // Merged schema.
 type ListRoutesOK struct {
@@ -27241,6 +30753,54 @@ func (s *ListWakeSchedulesOK) SetData(val []WakeSchedule) {
 }
 
 func (*ListWakeSchedulesOK) listWakeSchedulesRes() {}
+
+// Ref: #/components/schemas/MailboxAccessList
+type MailboxAccessList struct {
+	Entries         []MailboxAccessListEntriesItem `json:"entries"`
+	AdditionalProps MailboxAccessListAdditional
+}
+
+// GetEntries returns the value of Entries.
+func (s *MailboxAccessList) GetEntries() []MailboxAccessListEntriesItem {
+	return s.Entries
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *MailboxAccessList) GetAdditionalProps() MailboxAccessListAdditional {
+	return s.AdditionalProps
+}
+
+// SetEntries sets the value of Entries.
+func (s *MailboxAccessList) SetEntries(val []MailboxAccessListEntriesItem) {
+	s.Entries = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *MailboxAccessList) SetAdditionalProps(val MailboxAccessListAdditional) {
+	s.AdditionalProps = val
+}
+
+type MailboxAccessListAdditional map[string]jx.Raw
+
+func (s *MailboxAccessListAdditional) init() MailboxAccessListAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type MailboxAccessListEntriesItem map[string]jx.Raw
+
+func (s *MailboxAccessListEntriesItem) init() MailboxAccessListEntriesItem {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
 
 // Ref: #/components/schemas/MemberAddress
 type MemberAddress struct {
@@ -28269,6 +31829,51 @@ func (o NilChangeReason) Or(d ChangeReason) ChangeReason {
 	return d
 }
 
+// NewNilCliOrgRefusalReason returns new NilCliOrgRefusalReason with value set to v.
+func NewNilCliOrgRefusalReason(v CliOrgRefusalReason) NilCliOrgRefusalReason {
+	return NilCliOrgRefusalReason{
+		Value: v,
+	}
+}
+
+// NilCliOrgRefusalReason is nullable CliOrgRefusalReason.
+type NilCliOrgRefusalReason struct {
+	Value CliOrgRefusalReason
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilCliOrgRefusalReason) SetTo(v CliOrgRefusalReason) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilCliOrgRefusalReason) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilCliOrgRefusalReason) SetToNull() {
+	o.Null = true
+	var v CliOrgRefusalReason
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilCliOrgRefusalReason) Get() (v CliOrgRefusalReason, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilCliOrgRefusalReason) Or(d CliOrgRefusalReason) CliOrgRefusalReason {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilCreditBalanceBudget returns new NilCreditBalanceBudget with value set to v.
 func NewNilCreditBalanceBudget(v CreditBalanceBudget) NilCreditBalanceBudget {
 	return NilCreditBalanceBudget{
@@ -29171,6 +32776,98 @@ func (o NilUUID) Or(d uuid.UUID) uuid.UUID {
 
 type NumericString string
 
+// NewOptAccessModeDecisions returns new OptAccessModeDecisions with value set to v.
+func NewOptAccessModeDecisions(v AccessModeDecisions) OptAccessModeDecisions {
+	return OptAccessModeDecisions{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptAccessModeDecisions is optional AccessModeDecisions.
+type OptAccessModeDecisions struct {
+	Value AccessModeDecisions
+	Set   bool
+}
+
+// IsSet returns true if OptAccessModeDecisions was set.
+func (o OptAccessModeDecisions) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptAccessModeDecisions) Reset() {
+	var v AccessModeDecisions
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptAccessModeDecisions) SetTo(v AccessModeDecisions) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptAccessModeDecisions) Get() (v AccessModeDecisions, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptAccessModeDecisions) Or(d AccessModeDecisions) AccessModeDecisions {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptAccessModeGate returns new OptAccessModeGate with value set to v.
+func NewOptAccessModeGate(v AccessModeGate) OptAccessModeGate {
+	return OptAccessModeGate{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptAccessModeGate is optional AccessModeGate.
+type OptAccessModeGate struct {
+	Value AccessModeGate
+	Set   bool
+}
+
+// IsSet returns true if OptAccessModeGate was set.
+func (o OptAccessModeGate) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptAccessModeGate) Reset() {
+	var v AccessModeGate
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptAccessModeGate) SetTo(v AccessModeGate) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptAccessModeGate) Get() (v AccessModeGate, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptAccessModeGate) Or(d AccessModeGate) AccessModeGate {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptAgentNetworkContactAdmissionSenderRelation returns new OptAgentNetworkContactAdmissionSenderRelation with value set to v.
 func NewOptAgentNetworkContactAdmissionSenderRelation(v AgentNetworkContactAdmissionSenderRelation) OptAgentNetworkContactAdmissionSenderRelation {
 	return OptAgentNetworkContactAdmissionSenderRelation{
@@ -29763,6 +33460,190 @@ func (o OptCreateWakeScheduleInputArgs) Get() (v CreateWakeScheduleInputArgs, ok
 
 // Or returns value if set, or given parameter if does not.
 func (o OptCreateWakeScheduleInputArgs) Or(d CreateWakeScheduleInputArgs) CreateWakeScheduleInputArgs {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptCredentialKind returns new OptCredentialKind with value set to v.
+func NewOptCredentialKind(v CredentialKind) OptCredentialKind {
+	return OptCredentialKind{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCredentialKind is optional CredentialKind.
+type OptCredentialKind struct {
+	Value CredentialKind
+	Set   bool
+}
+
+// IsSet returns true if OptCredentialKind was set.
+func (o OptCredentialKind) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCredentialKind) Reset() {
+	var v CredentialKind
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCredentialKind) SetTo(v CredentialKind) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCredentialKind) Get() (v CredentialKind, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCredentialKind) Or(d CredentialKind) CredentialKind {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptCredentialPolicyCliAccess returns new OptCredentialPolicyCliAccess with value set to v.
+func NewOptCredentialPolicyCliAccess(v CredentialPolicyCliAccess) OptCredentialPolicyCliAccess {
+	return OptCredentialPolicyCliAccess{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCredentialPolicyCliAccess is optional CredentialPolicyCliAccess.
+type OptCredentialPolicyCliAccess struct {
+	Value CredentialPolicyCliAccess
+	Set   bool
+}
+
+// IsSet returns true if OptCredentialPolicyCliAccess was set.
+func (o OptCredentialPolicyCliAccess) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCredentialPolicyCliAccess) Reset() {
+	var v CredentialPolicyCliAccess
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCredentialPolicyCliAccess) SetTo(v CredentialPolicyCliAccess) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCredentialPolicyCliAccess) Get() (v CredentialPolicyCliAccess, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCredentialPolicyCliAccess) Or(d CredentialPolicyCliAccess) CredentialPolicyCliAccess {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptCredentialRowCreatorStatus returns new OptCredentialRowCreatorStatus with value set to v.
+func NewOptCredentialRowCreatorStatus(v CredentialRowCreatorStatus) OptCredentialRowCreatorStatus {
+	return OptCredentialRowCreatorStatus{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCredentialRowCreatorStatus is optional CredentialRowCreatorStatus.
+type OptCredentialRowCreatorStatus struct {
+	Value CredentialRowCreatorStatus
+	Set   bool
+}
+
+// IsSet returns true if OptCredentialRowCreatorStatus was set.
+func (o OptCredentialRowCreatorStatus) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCredentialRowCreatorStatus) Reset() {
+	var v CredentialRowCreatorStatus
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCredentialRowCreatorStatus) SetTo(v CredentialRowCreatorStatus) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCredentialRowCreatorStatus) Get() (v CredentialRowCreatorStatus, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCredentialRowCreatorStatus) Or(d CredentialRowCreatorStatus) CredentialRowCreatorStatus {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptCredentialRowGrantType returns new OptCredentialRowGrantType with value set to v.
+func NewOptCredentialRowGrantType(v CredentialRowGrantType) OptCredentialRowGrantType {
+	return OptCredentialRowGrantType{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCredentialRowGrantType is optional CredentialRowGrantType.
+type OptCredentialRowGrantType struct {
+	Value CredentialRowGrantType
+	Set   bool
+}
+
+// IsSet returns true if OptCredentialRowGrantType was set.
+func (o OptCredentialRowGrantType) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCredentialRowGrantType) Reset() {
+	var v CredentialRowGrantType
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCredentialRowGrantType) SetTo(v CredentialRowGrantType) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCredentialRowGrantType) Get() (v CredentialRowGrantType, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCredentialRowGrantType) Or(d CredentialRowGrantType) CredentialRowGrantType {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -30367,6 +34248,98 @@ func (o OptGateFix) Or(d GateFix) GateFix {
 	return d
 }
 
+// NewOptGrantForbiddenDetails returns new OptGrantForbiddenDetails with value set to v.
+func NewOptGrantForbiddenDetails(v GrantForbiddenDetails) OptGrantForbiddenDetails {
+	return OptGrantForbiddenDetails{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptGrantForbiddenDetails is optional GrantForbiddenDetails.
+type OptGrantForbiddenDetails struct {
+	Value GrantForbiddenDetails
+	Set   bool
+}
+
+// IsSet returns true if OptGrantForbiddenDetails was set.
+func (o OptGrantForbiddenDetails) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptGrantForbiddenDetails) Reset() {
+	var v GrantForbiddenDetails
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptGrantForbiddenDetails) SetTo(v GrantForbiddenDetails) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptGrantForbiddenDetails) Get() (v GrantForbiddenDetails, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptGrantForbiddenDetails) Or(d GrantForbiddenDetails) GrantForbiddenDetails {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptGrantForbiddenDetailsResource returns new OptGrantForbiddenDetailsResource with value set to v.
+func NewOptGrantForbiddenDetailsResource(v GrantForbiddenDetailsResource) OptGrantForbiddenDetailsResource {
+	return OptGrantForbiddenDetailsResource{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptGrantForbiddenDetailsResource is optional GrantForbiddenDetailsResource.
+type OptGrantForbiddenDetailsResource struct {
+	Value GrantForbiddenDetailsResource
+	Set   bool
+}
+
+// IsSet returns true if OptGrantForbiddenDetailsResource was set.
+func (o OptGrantForbiddenDetailsResource) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptGrantForbiddenDetailsResource) Reset() {
+	var v GrantForbiddenDetailsResource
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptGrantForbiddenDetailsResource) SetTo(v GrantForbiddenDetailsResource) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptGrantForbiddenDetailsResource) Get() (v GrantForbiddenDetailsResource, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptGrantForbiddenDetailsResource) Or(d GrantForbiddenDetailsResource) GrantForbiddenDetailsResource {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptInstallTemplateBodySecrets returns new OptInstallTemplateBodySecrets with value set to v.
 func NewOptInstallTemplateBodySecrets(v InstallTemplateBodySecrets) OptInstallTemplateBodySecrets {
 	return OptInstallTemplateBodySecrets{
@@ -30499,6 +34472,190 @@ func (o OptInt) Get() (v int, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptInt) Or(d int) int {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptKeyConditionsInput returns new OptKeyConditionsInput with value set to v.
+func NewOptKeyConditionsInput(v KeyConditionsInput) OptKeyConditionsInput {
+	return OptKeyConditionsInput{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptKeyConditionsInput is optional KeyConditionsInput.
+type OptKeyConditionsInput struct {
+	Value KeyConditionsInput
+	Set   bool
+}
+
+// IsSet returns true if OptKeyConditionsInput was set.
+func (o OptKeyConditionsInput) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptKeyConditionsInput) Reset() {
+	var v KeyConditionsInput
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptKeyConditionsInput) SetTo(v KeyConditionsInput) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptKeyConditionsInput) Get() (v KeyConditionsInput, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptKeyConditionsInput) Or(d KeyConditionsInput) KeyConditionsInput {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptKeyGrant returns new OptKeyGrant with value set to v.
+func NewOptKeyGrant(v KeyGrant) OptKeyGrant {
+	return OptKeyGrant{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptKeyGrant is optional KeyGrant.
+type OptKeyGrant struct {
+	Value KeyGrant
+	Set   bool
+}
+
+// IsSet returns true if OptKeyGrant was set.
+func (o OptKeyGrant) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptKeyGrant) Reset() {
+	var v KeyGrant
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptKeyGrant) SetTo(v KeyGrant) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptKeyGrant) Get() (v KeyGrant, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptKeyGrant) Or(d KeyGrant) KeyGrant {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptKeyGrantSpecMatrix returns new OptKeyGrantSpecMatrix with value set to v.
+func NewOptKeyGrantSpecMatrix(v KeyGrantSpecMatrix) OptKeyGrantSpecMatrix {
+	return OptKeyGrantSpecMatrix{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptKeyGrantSpecMatrix is optional KeyGrantSpecMatrix.
+type OptKeyGrantSpecMatrix struct {
+	Value KeyGrantSpecMatrix
+	Set   bool
+}
+
+// IsSet returns true if OptKeyGrantSpecMatrix was set.
+func (o OptKeyGrantSpecMatrix) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptKeyGrantSpecMatrix) Reset() {
+	var v KeyGrantSpecMatrix
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptKeyGrantSpecMatrix) SetTo(v KeyGrantSpecMatrix) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptKeyGrantSpecMatrix) Get() (v KeyGrantSpecMatrix, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptKeyGrantSpecMatrix) Or(d KeyGrantSpecMatrix) KeyGrantSpecMatrix {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptKeyGrantSpecResources returns new OptKeyGrantSpecResources with value set to v.
+func NewOptKeyGrantSpecResources(v KeyGrantSpecResources) OptKeyGrantSpecResources {
+	return OptKeyGrantSpecResources{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptKeyGrantSpecResources is optional KeyGrantSpecResources.
+type OptKeyGrantSpecResources struct {
+	Value KeyGrantSpecResources
+	Set   bool
+}
+
+// IsSet returns true if OptKeyGrantSpecResources was set.
+func (o OptKeyGrantSpecResources) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptKeyGrantSpecResources) Reset() {
+	var v KeyGrantSpecResources
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptKeyGrantSpecResources) SetTo(v KeyGrantSpecResources) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptKeyGrantSpecResources) Get() (v KeyGrantSpecResources, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptKeyGrantSpecResources) Or(d KeyGrantSpecResources) KeyGrantSpecResources {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -32145,6 +36302,69 @@ func (o OptNilCreateAgentConnectionOKData1ConnectionPresence) Or(d CreateAgentCo
 	return d
 }
 
+// NewOptNilCredentialRowClient returns new OptNilCredentialRowClient with value set to v.
+func NewOptNilCredentialRowClient(v CredentialRowClient) OptNilCredentialRowClient {
+	return OptNilCredentialRowClient{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilCredentialRowClient is optional nullable CredentialRowClient.
+type OptNilCredentialRowClient struct {
+	Value CredentialRowClient
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilCredentialRowClient was set.
+func (o OptNilCredentialRowClient) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilCredentialRowClient) Reset() {
+	var v CredentialRowClient
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilCredentialRowClient) SetTo(v CredentialRowClient) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilCredentialRowClient) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilCredentialRowClient) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v CredentialRowClient
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilCredentialRowClient) Get() (v CredentialRowClient, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilCredentialRowClient) Or(d CredentialRowClient) CredentialRowClient {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilCreditBalancePrepaidCredit returns new OptNilCreditBalancePrepaidCredit with value set to v.
 func NewOptNilCreditBalancePrepaidCredit(v CreditBalancePrepaidCredit) OptNilCreditBalancePrepaidCredit {
 	return OptNilCreditBalancePrepaidCredit{
@@ -33657,6 +37877,69 @@ func (o OptNilGateDenialArray) Or(d []GateDenial) []GateDenial {
 	return d
 }
 
+// NewOptNilGrantDescription returns new OptNilGrantDescription with value set to v.
+func NewOptNilGrantDescription(v GrantDescription) OptNilGrantDescription {
+	return OptNilGrantDescription{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilGrantDescription is optional nullable GrantDescription.
+type OptNilGrantDescription struct {
+	Value GrantDescription
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilGrantDescription was set.
+func (o OptNilGrantDescription) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilGrantDescription) Reset() {
+	var v GrantDescription
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilGrantDescription) SetTo(v GrantDescription) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilGrantDescription) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilGrantDescription) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v GrantDescription
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilGrantDescription) Get() (v GrantDescription, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilGrantDescription) Or(d GrantDescription) GrantDescription {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilIncludedMessageHeaders returns new OptNilIncludedMessageHeaders with value set to v.
 func NewOptNilIncludedMessageHeaders(v IncludedMessageHeaders) OptNilIncludedMessageHeaders {
 	return OptNilIncludedMessageHeaders{
@@ -33840,6 +38123,132 @@ func (o OptNilInviteAgentConnectionOKDataConnectionPresence) Get() (v InviteAgen
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilInviteAgentConnectionOKDataConnectionPresence) Or(d InviteAgentConnectionOKDataConnectionPresence) InviteAgentConnectionOKDataConnectionPresence {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilKeyConditions returns new OptNilKeyConditions with value set to v.
+func NewOptNilKeyConditions(v KeyConditions) OptNilKeyConditions {
+	return OptNilKeyConditions{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilKeyConditions is optional nullable KeyConditions.
+type OptNilKeyConditions struct {
+	Value KeyConditions
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilKeyConditions was set.
+func (o OptNilKeyConditions) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilKeyConditions) Reset() {
+	var v KeyConditions
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilKeyConditions) SetTo(v KeyConditions) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilKeyConditions) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilKeyConditions) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v KeyConditions
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilKeyConditions) Get() (v KeyConditions, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilKeyConditions) Or(d KeyConditions) KeyConditions {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilKeyConditionsInput returns new OptNilKeyConditionsInput with value set to v.
+func NewOptNilKeyConditionsInput(v KeyConditionsInput) OptNilKeyConditionsInput {
+	return OptNilKeyConditionsInput{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilKeyConditionsInput is optional nullable KeyConditionsInput.
+type OptNilKeyConditionsInput struct {
+	Value KeyConditionsInput
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilKeyConditionsInput was set.
+func (o OptNilKeyConditionsInput) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilKeyConditionsInput) Reset() {
+	var v KeyConditionsInput
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilKeyConditionsInput) SetTo(v KeyConditionsInput) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilKeyConditionsInput) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilKeyConditionsInput) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v KeyConditionsInput
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilKeyConditionsInput) Get() (v KeyConditionsInput, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilKeyConditionsInput) Or(d KeyConditionsInput) KeyConditionsInput {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -34900,6 +39309,98 @@ func (o OptNumericString) Or(d NumericString) NumericString {
 	return d
 }
 
+// NewOptPermissionCheck returns new OptPermissionCheck with value set to v.
+func NewOptPermissionCheck(v PermissionCheck) OptPermissionCheck {
+	return OptPermissionCheck{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptPermissionCheck is optional PermissionCheck.
+type OptPermissionCheck struct {
+	Value PermissionCheck
+	Set   bool
+}
+
+// IsSet returns true if OptPermissionCheck was set.
+func (o OptPermissionCheck) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptPermissionCheck) Reset() {
+	var v PermissionCheck
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptPermissionCheck) SetTo(v PermissionCheck) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptPermissionCheck) Get() (v PermissionCheck, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptPermissionCheck) Or(d PermissionCheck) PermissionCheck {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptPermissionCheckResource returns new OptPermissionCheckResource with value set to v.
+func NewOptPermissionCheckResource(v PermissionCheckResource) OptPermissionCheckResource {
+	return OptPermissionCheckResource{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptPermissionCheckResource is optional PermissionCheckResource.
+type OptPermissionCheckResource struct {
+	Value PermissionCheckResource
+	Set   bool
+}
+
+// IsSet returns true if OptPermissionCheckResource was set.
+func (o OptPermissionCheckResource) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptPermissionCheckResource) Reset() {
+	var v PermissionCheckResource
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptPermissionCheckResource) SetTo(v PermissionCheckResource) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptPermissionCheckResource) Get() (v PermissionCheckResource, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptPermissionCheckResource) Or(d PermissionCheckResource) PermissionCheckResource {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptPresenceProfile returns new OptPresenceProfile with value set to v.
 func NewOptPresenceProfile(v PresenceProfile) OptPresenceProfile {
 	return OptPresenceProfile{
@@ -35262,6 +39763,52 @@ func (o OptReplyInputHeaders) Get() (v ReplyInputHeaders, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptReplyInputHeaders) Or(d ReplyInputHeaders) ReplyInputHeaders {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptRotateKeyInput returns new OptRotateKeyInput with value set to v.
+func NewOptRotateKeyInput(v RotateKeyInput) OptRotateKeyInput {
+	return OptRotateKeyInput{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptRotateKeyInput is optional RotateKeyInput.
+type OptRotateKeyInput struct {
+	Value RotateKeyInput
+	Set   bool
+}
+
+// IsSet returns true if OptRotateKeyInput was set.
+func (o OptRotateKeyInput) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptRotateKeyInput) Reset() {
+	var v RotateKeyInput
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptRotateKeyInput) SetTo(v RotateKeyInput) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptRotateKeyInput) Get() (v RotateKeyInput, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptRotateKeyInput) Or(d RotateKeyInput) RotateKeyInput {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -36136,6 +40683,52 @@ func (o OptStartCliLoginInput) Get() (v StartCliLoginInput, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptStartCliLoginInput) Or(d StartCliLoginInput) StartCliLoginInput {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptStartCliLoginInputLoginKind returns new OptStartCliLoginInputLoginKind with value set to v.
+func NewOptStartCliLoginInputLoginKind(v StartCliLoginInputLoginKind) OptStartCliLoginInputLoginKind {
+	return OptStartCliLoginInputLoginKind{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptStartCliLoginInputLoginKind is optional StartCliLoginInputLoginKind.
+type OptStartCliLoginInputLoginKind struct {
+	Value StartCliLoginInputLoginKind
+	Set   bool
+}
+
+// IsSet returns true if OptStartCliLoginInputLoginKind was set.
+func (o OptStartCliLoginInputLoginKind) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptStartCliLoginInputLoginKind) Reset() {
+	var v StartCliLoginInputLoginKind
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptStartCliLoginInputLoginKind) SetTo(v StartCliLoginInputLoginKind) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptStartCliLoginInputLoginKind) Get() (v StartCliLoginInputLoginKind, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptStartCliLoginInputLoginKind) Or(d StartCliLoginInputLoginKind) StartCliLoginInputLoginKind {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -37513,6 +42106,136 @@ func (*PayChallengeUnauthorized) payChallengeRes() {}
 type PayChallengeUnprocessableEntity ErrorResponse
 
 func (*PayChallengeUnprocessableEntity) payChallengeRes() {}
+
+// The decision `GET /whoami?check=<permission>` reports. Nothing is enforced by asking.
+// Ref: #/components/schemas/PermissionCheck
+type PermissionCheck struct {
+	Permission string `json:"permission"`
+	Allow      bool   `json:"allow"`
+	// Why the permission is not allowed; same values as `grant_forbidden`.
+	Reason          OptString                  `json:"reason"`
+	Details         OptGrantForbiddenDetails   `json:"details"`
+	Resource        OptPermissionCheckResource `json:"resource"`
+	AdditionalProps PermissionCheckAdditional
+}
+
+// GetPermission returns the value of Permission.
+func (s *PermissionCheck) GetPermission() string {
+	return s.Permission
+}
+
+// GetAllow returns the value of Allow.
+func (s *PermissionCheck) GetAllow() bool {
+	return s.Allow
+}
+
+// GetReason returns the value of Reason.
+func (s *PermissionCheck) GetReason() OptString {
+	return s.Reason
+}
+
+// GetDetails returns the value of Details.
+func (s *PermissionCheck) GetDetails() OptGrantForbiddenDetails {
+	return s.Details
+}
+
+// GetResource returns the value of Resource.
+func (s *PermissionCheck) GetResource() OptPermissionCheckResource {
+	return s.Resource
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *PermissionCheck) GetAdditionalProps() PermissionCheckAdditional {
+	return s.AdditionalProps
+}
+
+// SetPermission sets the value of Permission.
+func (s *PermissionCheck) SetPermission(val string) {
+	s.Permission = val
+}
+
+// SetAllow sets the value of Allow.
+func (s *PermissionCheck) SetAllow(val bool) {
+	s.Allow = val
+}
+
+// SetReason sets the value of Reason.
+func (s *PermissionCheck) SetReason(val OptString) {
+	s.Reason = val
+}
+
+// SetDetails sets the value of Details.
+func (s *PermissionCheck) SetDetails(val OptGrantForbiddenDetails) {
+	s.Details = val
+}
+
+// SetResource sets the value of Resource.
+func (s *PermissionCheck) SetResource(val OptPermissionCheckResource) {
+	s.Resource = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *PermissionCheck) SetAdditionalProps(val PermissionCheckAdditional) {
+	s.AdditionalProps = val
+}
+
+type PermissionCheckAdditional map[string]jx.Raw
+
+func (s *PermissionCheckAdditional) init() PermissionCheckAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type PermissionCheckResource struct {
+	Type            OptString `json:"type"`
+	ID              OptString `json:"id"`
+	AdditionalProps PermissionCheckResourceAdditional
+}
+
+// GetType returns the value of Type.
+func (s *PermissionCheckResource) GetType() OptString {
+	return s.Type
+}
+
+// GetID returns the value of ID.
+func (s *PermissionCheckResource) GetID() OptString {
+	return s.ID
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *PermissionCheckResource) GetAdditionalProps() PermissionCheckResourceAdditional {
+	return s.AdditionalProps
+}
+
+// SetType sets the value of Type.
+func (s *PermissionCheckResource) SetType(val OptString) {
+	s.Type = val
+}
+
+// SetID sets the value of ID.
+func (s *PermissionCheckResource) SetID(val OptString) {
+	s.ID = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *PermissionCheckResource) SetAdditionalProps(val PermissionCheckResourceAdditional) {
+	s.AdditionalProps = val
+}
+
+type PermissionCheckResourceAdditional map[string]jx.Raw
+
+func (s *PermissionCheckResourceAdditional) init() PermissionCheckResourceAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
 
 // Plan-derived quota limits for an account.
 // Ref: #/components/schemas/PlanLimits
@@ -39653,6 +44376,7 @@ func (*RateLimitedHeaders) getSpendPolicyRes()         {}
 func (*RateLimitedHeaders) getTemplateInstallRes()     {}
 func (*RateLimitedHeaders) getTemplateRes()            {}
 func (*RateLimitedHeaders) installTemplateRes()        {}
+func (*RateLimitedHeaders) listCliOrgsRes()            {}
 func (*RateLimitedHeaders) listDeclinedPaymentsRes()   {}
 func (*RateLimitedHeaders) listPayoutAddressesRes()    {}
 func (*RateLimitedHeaders) listTemplatesRes()          {}
@@ -42216,6 +46940,575 @@ type RevokeAgentConnectionUnauthorized ErrorResponseHeaders
 
 func (*RevokeAgentConnectionUnauthorized) revokeAgentConnectionRes() {}
 
+type RevokeCredentialBadRequest ErrorResponse
+
+func (*RevokeCredentialBadRequest) revokeCredentialRes() {}
+
+type RevokeCredentialConflict ErrorResponse
+
+func (*RevokeCredentialConflict) revokeCredentialRes() {}
+
+type RevokeCredentialForbidden ErrorResponse
+
+func (*RevokeCredentialForbidden) revokeCredentialRes() {}
+
+// Ref: #/components/schemas/RevokeCredentialInput
+type RevokeCredentialInput struct {
+	Kind   CredentialKind `json:"kind"`
+	ID     uuid.UUID      `json:"id"`
+	Reason OptString      `json:"reason"`
+}
+
+// GetKind returns the value of Kind.
+func (s *RevokeCredentialInput) GetKind() CredentialKind {
+	return s.Kind
+}
+
+// GetID returns the value of ID.
+func (s *RevokeCredentialInput) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetReason returns the value of Reason.
+func (s *RevokeCredentialInput) GetReason() OptString {
+	return s.Reason
+}
+
+// SetKind sets the value of Kind.
+func (s *RevokeCredentialInput) SetKind(val CredentialKind) {
+	s.Kind = val
+}
+
+// SetID sets the value of ID.
+func (s *RevokeCredentialInput) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetReason sets the value of Reason.
+func (s *RevokeCredentialInput) SetReason(val OptString) {
+	s.Reason = val
+}
+
+type RevokeCredentialNotFound ErrorResponse
+
+func (*RevokeCredentialNotFound) revokeCredentialRes() {}
+
+// Merged schema.
+type RevokeCredentialOK struct {
+	Success bool                   `json:"success"`
+	Data    RevokeCredentialResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *RevokeCredentialOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *RevokeCredentialOK) GetData() RevokeCredentialResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *RevokeCredentialOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *RevokeCredentialOK) SetData(val RevokeCredentialResult) {
+	s.Data = val
+}
+
+func (*RevokeCredentialOK) revokeCredentialRes() {}
+
+// Ref: #/components/schemas/RevokeCredentialResult
+type RevokeCredentialResult struct {
+	Revoked         int            `json:"revoked"`
+	Kind            CredentialKind `json:"kind"`
+	ID              string         `json:"id"`
+	AdditionalProps RevokeCredentialResultAdditional
+}
+
+// GetRevoked returns the value of Revoked.
+func (s *RevokeCredentialResult) GetRevoked() int {
+	return s.Revoked
+}
+
+// GetKind returns the value of Kind.
+func (s *RevokeCredentialResult) GetKind() CredentialKind {
+	return s.Kind
+}
+
+// GetID returns the value of ID.
+func (s *RevokeCredentialResult) GetID() string {
+	return s.ID
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *RevokeCredentialResult) GetAdditionalProps() RevokeCredentialResultAdditional {
+	return s.AdditionalProps
+}
+
+// SetRevoked sets the value of Revoked.
+func (s *RevokeCredentialResult) SetRevoked(val int) {
+	s.Revoked = val
+}
+
+// SetKind sets the value of Kind.
+func (s *RevokeCredentialResult) SetKind(val CredentialKind) {
+	s.Kind = val
+}
+
+// SetID sets the value of ID.
+func (s *RevokeCredentialResult) SetID(val string) {
+	s.ID = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *RevokeCredentialResult) SetAdditionalProps(val RevokeCredentialResultAdditional) {
+	s.AdditionalProps = val
+}
+
+type RevokeCredentialResultAdditional map[string]jx.Raw
+
+func (s *RevokeCredentialResultAdditional) init() RevokeCredentialResultAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type RevokeCredentialUnauthorized ErrorResponse
+
+func (*RevokeCredentialUnauthorized) revokeCredentialRes() {}
+
+// Ref: #/components/schemas/Role
+type Role struct {
+	ID string `json:"id"`
+	// The role's key. A built-in role uses one of the `BuiltinRoleKey`
+	// values (`owner`, `admin`, `operator` or `member`);
+	// template and custom roles use their own keys. Other values can
+	// appear, so read the key as a string.
+	Key         string       `json:"key"`
+	Kind        RoleKind     `json:"kind"`
+	Name        string       `json:"name"`
+	Description OptNilString `json:"description"`
+	Permissions []string     `json:"permissions"`
+	// `org`, or the addresses, domains and depth the role reaches.
+	MailScope       jx.Raw       `json:"mail_scope"`
+	Version         int          `json:"version"`
+	CatalogVersion  OptNilString `json:"catalog_version"`
+	PredatesCatalog OptBool      `json:"predates_catalog"`
+	AdditionalProps RoleAdditional
+}
+
+// GetID returns the value of ID.
+func (s *Role) GetID() string {
+	return s.ID
+}
+
+// GetKey returns the value of Key.
+func (s *Role) GetKey() string {
+	return s.Key
+}
+
+// GetKind returns the value of Kind.
+func (s *Role) GetKind() RoleKind {
+	return s.Kind
+}
+
+// GetName returns the value of Name.
+func (s *Role) GetName() string {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *Role) GetDescription() OptNilString {
+	return s.Description
+}
+
+// GetPermissions returns the value of Permissions.
+func (s *Role) GetPermissions() []string {
+	return s.Permissions
+}
+
+// GetMailScope returns the value of MailScope.
+func (s *Role) GetMailScope() jx.Raw {
+	return s.MailScope
+}
+
+// GetVersion returns the value of Version.
+func (s *Role) GetVersion() int {
+	return s.Version
+}
+
+// GetCatalogVersion returns the value of CatalogVersion.
+func (s *Role) GetCatalogVersion() OptNilString {
+	return s.CatalogVersion
+}
+
+// GetPredatesCatalog returns the value of PredatesCatalog.
+func (s *Role) GetPredatesCatalog() OptBool {
+	return s.PredatesCatalog
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *Role) GetAdditionalProps() RoleAdditional {
+	return s.AdditionalProps
+}
+
+// SetID sets the value of ID.
+func (s *Role) SetID(val string) {
+	s.ID = val
+}
+
+// SetKey sets the value of Key.
+func (s *Role) SetKey(val string) {
+	s.Key = val
+}
+
+// SetKind sets the value of Kind.
+func (s *Role) SetKind(val RoleKind) {
+	s.Kind = val
+}
+
+// SetName sets the value of Name.
+func (s *Role) SetName(val string) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *Role) SetDescription(val OptNilString) {
+	s.Description = val
+}
+
+// SetPermissions sets the value of Permissions.
+func (s *Role) SetPermissions(val []string) {
+	s.Permissions = val
+}
+
+// SetMailScope sets the value of MailScope.
+func (s *Role) SetMailScope(val jx.Raw) {
+	s.MailScope = val
+}
+
+// SetVersion sets the value of Version.
+func (s *Role) SetVersion(val int) {
+	s.Version = val
+}
+
+// SetCatalogVersion sets the value of CatalogVersion.
+func (s *Role) SetCatalogVersion(val OptNilString) {
+	s.CatalogVersion = val
+}
+
+// SetPredatesCatalog sets the value of PredatesCatalog.
+func (s *Role) SetPredatesCatalog(val OptBool) {
+	s.PredatesCatalog = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *Role) SetAdditionalProps(val RoleAdditional) {
+	s.AdditionalProps = val
+}
+
+type RoleAdditional map[string]jx.Raw
+
+func (s *RoleAdditional) init() RoleAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type RoleKind string
+
+const (
+	RoleKindBuiltin  RoleKind = "builtin"
+	RoleKindTemplate RoleKind = "template"
+	RoleKindCustom   RoleKind = "custom"
+)
+
+// AllValues returns all RoleKind values.
+func (RoleKind) AllValues() []RoleKind {
+	return []RoleKind{
+		RoleKindBuiltin,
+		RoleKindTemplate,
+		RoleKindCustom,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s RoleKind) MarshalText() ([]byte, error) {
+	switch s {
+	case RoleKindBuiltin:
+		return []byte(s), nil
+	case RoleKindTemplate:
+		return []byte(s), nil
+	case RoleKindCustom:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *RoleKind) UnmarshalText(data []byte) error {
+	switch RoleKind(data) {
+	case RoleKindBuiltin:
+		*s = RoleKindBuiltin
+		return nil
+	case RoleKindTemplate:
+		*s = RoleKindTemplate
+		return nil
+	case RoleKindCustom:
+		*s = RoleKindCustom
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/RoleList
+type RoleList struct {
+	Roles           []Role             `json:"roles"`
+	Templates       []RoleTemplate     `json:"templates"`
+	Assignment      RoleListAssignment `json:"assignment"`
+	AdditionalProps RoleListAdditional
+}
+
+// GetRoles returns the value of Roles.
+func (s *RoleList) GetRoles() []Role {
+	return s.Roles
+}
+
+// GetTemplates returns the value of Templates.
+func (s *RoleList) GetTemplates() []RoleTemplate {
+	return s.Templates
+}
+
+// GetAssignment returns the value of Assignment.
+func (s *RoleList) GetAssignment() RoleListAssignment {
+	return s.Assignment
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *RoleList) GetAdditionalProps() RoleListAdditional {
+	return s.AdditionalProps
+}
+
+// SetRoles sets the value of Roles.
+func (s *RoleList) SetRoles(val []Role) {
+	s.Roles = val
+}
+
+// SetTemplates sets the value of Templates.
+func (s *RoleList) SetTemplates(val []RoleTemplate) {
+	s.Templates = val
+}
+
+// SetAssignment sets the value of Assignment.
+func (s *RoleList) SetAssignment(val RoleListAssignment) {
+	s.Assignment = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *RoleList) SetAdditionalProps(val RoleListAdditional) {
+	s.AdditionalProps = val
+}
+
+type RoleListAdditional map[string]jx.Raw
+
+func (s *RoleListAdditional) init() RoleListAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type RoleListAssignment struct {
+	Available       bool      `json:"available"`
+	Reason          NilString `json:"reason"`
+	AdditionalProps RoleListAssignmentAdditional
+}
+
+// GetAvailable returns the value of Available.
+func (s *RoleListAssignment) GetAvailable() bool {
+	return s.Available
+}
+
+// GetReason returns the value of Reason.
+func (s *RoleListAssignment) GetReason() NilString {
+	return s.Reason
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *RoleListAssignment) GetAdditionalProps() RoleListAssignmentAdditional {
+	return s.AdditionalProps
+}
+
+// SetAvailable sets the value of Available.
+func (s *RoleListAssignment) SetAvailable(val bool) {
+	s.Available = val
+}
+
+// SetReason sets the value of Reason.
+func (s *RoleListAssignment) SetReason(val NilString) {
+	s.Reason = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *RoleListAssignment) SetAdditionalProps(val RoleListAssignmentAdditional) {
+	s.AdditionalProps = val
+}
+
+type RoleListAssignmentAdditional map[string]jx.Raw
+
+func (s *RoleListAssignmentAdditional) init() RoleListAssignmentAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Ref: #/components/schemas/RoleTemplate
+type RoleTemplate struct {
+	Key             string   `json:"key"`
+	Name            string   `json:"name"`
+	Description     string   `json:"description"`
+	Permissions     []string `json:"permissions"`
+	AdditionalProps RoleTemplateAdditional
+}
+
+// GetKey returns the value of Key.
+func (s *RoleTemplate) GetKey() string {
+	return s.Key
+}
+
+// GetName returns the value of Name.
+func (s *RoleTemplate) GetName() string {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *RoleTemplate) GetDescription() string {
+	return s.Description
+}
+
+// GetPermissions returns the value of Permissions.
+func (s *RoleTemplate) GetPermissions() []string {
+	return s.Permissions
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *RoleTemplate) GetAdditionalProps() RoleTemplateAdditional {
+	return s.AdditionalProps
+}
+
+// SetKey sets the value of Key.
+func (s *RoleTemplate) SetKey(val string) {
+	s.Key = val
+}
+
+// SetName sets the value of Name.
+func (s *RoleTemplate) SetName(val string) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *RoleTemplate) SetDescription(val string) {
+	s.Description = val
+}
+
+// SetPermissions sets the value of Permissions.
+func (s *RoleTemplate) SetPermissions(val []string) {
+	s.Permissions = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *RoleTemplate) SetAdditionalProps(val RoleTemplateAdditional) {
+	s.AdditionalProps = val
+}
+
+type RoleTemplateAdditional map[string]jx.Raw
+
+func (s *RoleTemplateAdditional) init() RoleTemplateAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type RotateKeyBadRequest ErrorResponse
+
+func (*RotateKeyBadRequest) rotateKeyRes() {}
+
+type RotateKeyForbidden ErrorResponse
+
+func (*RotateKeyForbidden) rotateKeyRes() {}
+
+// Ref: #/components/schemas/RotateKeyInput
+type RotateKeyInput struct {
+	// Seconds the old key keeps working. Default 86400; 0 revokes it at once.
+	OverlapSeconds OptInt `json:"overlap_seconds"`
+}
+
+// GetOverlapSeconds returns the value of OverlapSeconds.
+func (s *RotateKeyInput) GetOverlapSeconds() OptInt {
+	return s.OverlapSeconds
+}
+
+// SetOverlapSeconds sets the value of OverlapSeconds.
+func (s *RotateKeyInput) SetOverlapSeconds(val OptInt) {
+	s.OverlapSeconds = val
+}
+
+type RotateKeyNotFound ErrorResponse
+
+func (*RotateKeyNotFound) rotateKeyRes() {}
+
+// Merged schema.
+type RotateKeyOK struct {
+	Success bool       `json:"success"`
+	Data    RotatedKey `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *RotateKeyOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *RotateKeyOK) GetData() RotatedKey {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *RotateKeyOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *RotateKeyOK) SetData(val RotatedKey) {
+	s.Data = val
+}
+
+func (*RotateKeyOK) rotateKeyRes() {}
+
+type RotateKeyUnauthorized ErrorResponse
+
+func (*RotateKeyUnauthorized) rotateKeyRes() {}
+
 type RotateWebhookSecretBadRequest ErrorResponse
 
 func (*RotateWebhookSecretBadRequest) rotateWebhookSecretRes() {}
@@ -42255,6 +47548,88 @@ func (*RotateWebhookSecretOK) rotateWebhookSecretRes() {}
 type RotateWebhookSecretUnauthorized ErrorResponse
 
 func (*RotateWebhookSecretUnauthorized) rotateWebhookSecretRes() {}
+
+// Ref: #/components/schemas/RotatedKey
+type RotatedKey struct {
+	ID string `json:"id"`
+	// The new secret. Shown once; store it now.
+	Key                  string    `json:"key"`
+	KeyPrefix            string    `json:"key_prefix"`
+	PreviousKeyID        string    `json:"previous_key_id"`
+	PreviousKeyExpiresAt time.Time `json:"previous_key_expires_at"`
+	AdditionalProps      RotatedKeyAdditional
+}
+
+// GetID returns the value of ID.
+func (s *RotatedKey) GetID() string {
+	return s.ID
+}
+
+// GetKey returns the value of Key.
+func (s *RotatedKey) GetKey() string {
+	return s.Key
+}
+
+// GetKeyPrefix returns the value of KeyPrefix.
+func (s *RotatedKey) GetKeyPrefix() string {
+	return s.KeyPrefix
+}
+
+// GetPreviousKeyID returns the value of PreviousKeyID.
+func (s *RotatedKey) GetPreviousKeyID() string {
+	return s.PreviousKeyID
+}
+
+// GetPreviousKeyExpiresAt returns the value of PreviousKeyExpiresAt.
+func (s *RotatedKey) GetPreviousKeyExpiresAt() time.Time {
+	return s.PreviousKeyExpiresAt
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *RotatedKey) GetAdditionalProps() RotatedKeyAdditional {
+	return s.AdditionalProps
+}
+
+// SetID sets the value of ID.
+func (s *RotatedKey) SetID(val string) {
+	s.ID = val
+}
+
+// SetKey sets the value of Key.
+func (s *RotatedKey) SetKey(val string) {
+	s.Key = val
+}
+
+// SetKeyPrefix sets the value of KeyPrefix.
+func (s *RotatedKey) SetKeyPrefix(val string) {
+	s.KeyPrefix = val
+}
+
+// SetPreviousKeyID sets the value of PreviousKeyID.
+func (s *RotatedKey) SetPreviousKeyID(val string) {
+	s.PreviousKeyID = val
+}
+
+// SetPreviousKeyExpiresAt sets the value of PreviousKeyExpiresAt.
+func (s *RotatedKey) SetPreviousKeyExpiresAt(val time.Time) {
+	s.PreviousKeyExpiresAt = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *RotatedKey) SetAdditionalProps(val RotatedKeyAdditional) {
+	s.AdditionalProps = val
+}
+
+type RotatedKeyAdditional map[string]jx.Raw
+
+func (s *RotatedKeyAdditional) init() RotatedKeyAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
 
 // Ref: #/components/schemas/RouteEvaluatedEntry
 type RouteEvaluatedEntry struct {
@@ -48446,6 +53821,15 @@ type StartCliLoginInput struct {
 	DeviceName OptString `json:"device_name"`
 	// Optional client metadata stored with the login session; serialized JSON must be 2048 bytes or fewer.
 	Metadata OptStartCliLoginInputMetadata `json:"metadata"`
+	// `user` asks for a login as the person, not bound to one
+	// organization, that can switch between the person's organizations
+	// (see `CliUserLoginPollResult`). Servers without this answer
+	// `400 validation_error`; clients then retry without the field.
+	LoginKind OptStartCliLoginInputLoginKind `json:"login_kind"`
+	// Narrow the login's grant. Only `primitive:api` (the person's own
+	// grant, as when omitted) is accepted; anything else answers
+	// `400 grant_not_available`.
+	RequestedGrant OptString `json:"requested_grant"`
 }
 
 // GetDeviceName returns the value of DeviceName.
@@ -48458,6 +53842,16 @@ func (s *StartCliLoginInput) GetMetadata() OptStartCliLoginInputMetadata {
 	return s.Metadata
 }
 
+// GetLoginKind returns the value of LoginKind.
+func (s *StartCliLoginInput) GetLoginKind() OptStartCliLoginInputLoginKind {
+	return s.LoginKind
+}
+
+// GetRequestedGrant returns the value of RequestedGrant.
+func (s *StartCliLoginInput) GetRequestedGrant() OptString {
+	return s.RequestedGrant
+}
+
 // SetDeviceName sets the value of DeviceName.
 func (s *StartCliLoginInput) SetDeviceName(val OptString) {
 	s.DeviceName = val
@@ -48466,6 +53860,61 @@ func (s *StartCliLoginInput) SetDeviceName(val OptString) {
 // SetMetadata sets the value of Metadata.
 func (s *StartCliLoginInput) SetMetadata(val OptStartCliLoginInputMetadata) {
 	s.Metadata = val
+}
+
+// SetLoginKind sets the value of LoginKind.
+func (s *StartCliLoginInput) SetLoginKind(val OptStartCliLoginInputLoginKind) {
+	s.LoginKind = val
+}
+
+// SetRequestedGrant sets the value of RequestedGrant.
+func (s *StartCliLoginInput) SetRequestedGrant(val OptString) {
+	s.RequestedGrant = val
+}
+
+// `user` asks for a login as the person, not bound to one
+// organization, that can switch between the person's organizations
+// (see `CliUserLoginPollResult`). Servers without this answer
+// `400 validation_error`; clients then retry without the field.
+type StartCliLoginInputLoginKind string
+
+const (
+	StartCliLoginInputLoginKindOrg  StartCliLoginInputLoginKind = "org"
+	StartCliLoginInputLoginKindUser StartCliLoginInputLoginKind = "user"
+)
+
+// AllValues returns all StartCliLoginInputLoginKind values.
+func (StartCliLoginInputLoginKind) AllValues() []StartCliLoginInputLoginKind {
+	return []StartCliLoginInputLoginKind{
+		StartCliLoginInputLoginKindOrg,
+		StartCliLoginInputLoginKindUser,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s StartCliLoginInputLoginKind) MarshalText() ([]byte, error) {
+	switch s {
+	case StartCliLoginInputLoginKindOrg:
+		return []byte(s), nil
+	case StartCliLoginInputLoginKindUser:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *StartCliLoginInputLoginKind) UnmarshalText(data []byte) error {
+	switch StartCliLoginInputLoginKind(data) {
+	case StartCliLoginInputLoginKindOrg:
+		*s = StartCliLoginInputLoginKindOrg
+		return nil
+	case StartCliLoginInputLoginKindUser:
+		*s = StartCliLoginInputLoginKindUser
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Optional client metadata stored with the login session; serialized JSON must be 2048 bytes or fewer.
@@ -51548,6 +56997,113 @@ type UpdateFunctionUnauthorized ErrorResponse
 
 func (*UpdateFunctionUnauthorized) updateFunctionRes() {}
 
+type UpdateKeyBadRequest ErrorResponse
+
+func (*UpdateKeyBadRequest) updateKeyRes() {}
+
+type UpdateKeyConflict ErrorResponse
+
+func (*UpdateKeyConflict) updateKeyRes() {}
+
+type UpdateKeyForbidden ErrorResponse
+
+func (*UpdateKeyForbidden) updateKeyRes() {}
+
+// Ref: #/components/schemas/UpdateKeyInput
+type UpdateKeyInput struct {
+	Name       OptString                `json:"name"`
+	ExpiresAt  OptNilDateTime           `json:"expires_at"`
+	Grant      OptKeyGrant              `json:"grant"`
+	Conditions OptNilKeyConditionsInput `json:"conditions"`
+	Suspended  OptBool                  `json:"suspended"`
+}
+
+// GetName returns the value of Name.
+func (s *UpdateKeyInput) GetName() OptString {
+	return s.Name
+}
+
+// GetExpiresAt returns the value of ExpiresAt.
+func (s *UpdateKeyInput) GetExpiresAt() OptNilDateTime {
+	return s.ExpiresAt
+}
+
+// GetGrant returns the value of Grant.
+func (s *UpdateKeyInput) GetGrant() OptKeyGrant {
+	return s.Grant
+}
+
+// GetConditions returns the value of Conditions.
+func (s *UpdateKeyInput) GetConditions() OptNilKeyConditionsInput {
+	return s.Conditions
+}
+
+// GetSuspended returns the value of Suspended.
+func (s *UpdateKeyInput) GetSuspended() OptBool {
+	return s.Suspended
+}
+
+// SetName sets the value of Name.
+func (s *UpdateKeyInput) SetName(val OptString) {
+	s.Name = val
+}
+
+// SetExpiresAt sets the value of ExpiresAt.
+func (s *UpdateKeyInput) SetExpiresAt(val OptNilDateTime) {
+	s.ExpiresAt = val
+}
+
+// SetGrant sets the value of Grant.
+func (s *UpdateKeyInput) SetGrant(val OptKeyGrant) {
+	s.Grant = val
+}
+
+// SetConditions sets the value of Conditions.
+func (s *UpdateKeyInput) SetConditions(val OptNilKeyConditionsInput) {
+	s.Conditions = val
+}
+
+// SetSuspended sets the value of Suspended.
+func (s *UpdateKeyInput) SetSuspended(val OptBool) {
+	s.Suspended = val
+}
+
+type UpdateKeyNotFound ErrorResponse
+
+func (*UpdateKeyNotFound) updateKeyRes() {}
+
+// Merged schema.
+type UpdateKeyOK struct {
+	Success bool       `json:"success"`
+	Data    UpdatedKey `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *UpdateKeyOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *UpdateKeyOK) GetData() UpdatedKey {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *UpdateKeyOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *UpdateKeyOK) SetData(val UpdatedKey) {
+	s.Data = val
+}
+
+func (*UpdateKeyOK) updateKeyRes() {}
+
+type UpdateKeyUnauthorized ErrorResponse
+
+func (*UpdateKeyUnauthorized) updateKeyRes() {}
+
 type UpdateRegistryForbidden ErrorResponse
 
 func (*UpdateRegistryForbidden) updateRegistryRes() {}
@@ -52287,6 +57843,65 @@ func (*UpdateWakeScheduleOK) updateWakeScheduleRes() {}
 type UpdateWakeScheduleUnauthorized ErrorResponse
 
 func (*UpdateWakeScheduleUnauthorized) updateWakeScheduleRes() {}
+
+// Ref: #/components/schemas/UpdatedKey
+type UpdatedKey struct {
+	ID              string            `json:"id"`
+	Changed         []string          `json:"changed"`
+	Warnings        []KeyGrantWarning `json:"warnings"`
+	AdditionalProps UpdatedKeyAdditional
+}
+
+// GetID returns the value of ID.
+func (s *UpdatedKey) GetID() string {
+	return s.ID
+}
+
+// GetChanged returns the value of Changed.
+func (s *UpdatedKey) GetChanged() []string {
+	return s.Changed
+}
+
+// GetWarnings returns the value of Warnings.
+func (s *UpdatedKey) GetWarnings() []KeyGrantWarning {
+	return s.Warnings
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *UpdatedKey) GetAdditionalProps() UpdatedKeyAdditional {
+	return s.AdditionalProps
+}
+
+// SetID sets the value of ID.
+func (s *UpdatedKey) SetID(val string) {
+	s.ID = val
+}
+
+// SetChanged sets the value of Changed.
+func (s *UpdatedKey) SetChanged(val []string) {
+	s.Changed = val
+}
+
+// SetWarnings sets the value of Warnings.
+func (s *UpdatedKey) SetWarnings(val []KeyGrantWarning) {
+	s.Warnings = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *UpdatedKey) SetAdditionalProps(val UpdatedKeyAdditional) {
+	s.AdditionalProps = val
+}
+
+type UpdatedKeyAdditional map[string]jx.Raw
+
+func (s *UpdatedKeyAdditional) init() UpdatedKeyAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
 
 // Ref: #/components/schemas/VerifiedDomain
 type VerifiedDomain struct {

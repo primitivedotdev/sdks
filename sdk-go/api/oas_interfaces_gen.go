@@ -81,6 +81,10 @@ type CreateFunctionSecretRes interface {
 	createFunctionSecretRes()
 }
 
+type CreateKeyRes interface {
+	createKeyRes()
+}
+
 type CreateOrgSecretRes interface {
 	createOrgSecretRes()
 }
@@ -213,6 +217,10 @@ type DownloadSentAttachmentPartRes interface {
 	downloadSentAttachmentPartRes()
 }
 
+type GetAccessModeRes interface {
+	getAccessModeRes()
+}
+
 type GetAccountRes interface {
 	getAccountRes()
 }
@@ -241,6 +249,10 @@ type GetConversationRes interface {
 	getConversationRes()
 }
 
+type GetCredentialPolicyRes interface {
+	getCredentialPolicyRes()
+}
+
 type GetCreditBalanceRes interface {
 	getCreditBalanceRes()
 }
@@ -267,6 +279,10 @@ type GetFunctionTestRunTraceRes interface {
 
 type GetInboxStatusRes interface {
 	getInboxStatusRes()
+}
+
+type GetKeyBuilderRes interface {
+	getKeyBuilderRes()
 }
 
 type GetMemoryRes interface {
@@ -349,8 +365,20 @@ type ListChangesRes interface {
 	listChangesRes()
 }
 
+type ListCliOrgsRes interface {
+	listCliOrgsRes()
+}
+
 type ListContactsRes interface {
 	listContactsRes()
+}
+
+type ListCredentialEventsRes interface {
+	listCredentialEventsRes()
+}
+
+type ListCredentialsRes interface {
+	listCredentialsRes()
 }
 
 type ListDeclinedPaymentsRes interface {
@@ -401,6 +429,14 @@ type ListFunctionsRes interface {
 	listFunctionsRes()
 }
 
+type ListGroupsRes interface {
+	listGroupsRes()
+}
+
+type ListMailboxAccessRes interface {
+	listMailboxAccessRes()
+}
+
 type ListOrgSecretsRes interface {
 	listOrgSecretsRes()
 }
@@ -419,6 +455,10 @@ type ListRegistryRequestsRes interface {
 
 type ListRepeatingSendsRes interface {
 	listRepeatingSendsRes()
+}
+
+type ListRolesRes interface {
+	listRolesRes()
 }
 
 type ListRoutesRes interface {
@@ -537,6 +577,14 @@ type RevokeAgentConnectionRes interface {
 	revokeAgentConnectionRes()
 }
 
+type RevokeCredentialRes interface {
+	revokeCredentialRes()
+}
+
+type RotateKeyRes interface {
+	rotateKeyRes()
+}
+
 type RotateWebhookSecretRes interface {
 	rotateWebhookSecretRes()
 }
@@ -643,6 +691,10 @@ type UpdateFilterRes interface {
 
 type UpdateFunctionRes interface {
 	updateFunctionRes()
+}
+
+type UpdateKeyRes interface {
+	updateKeyRes()
 }
 
 type UpdateRegistryRes interface {

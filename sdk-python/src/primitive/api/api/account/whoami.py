@@ -77,8 +77,23 @@ def sync_detailed(
 ) -> Response[ErrorResponse | WhoamiResponse200]:
     """ Get current caller identity
 
-     Current authenticated identity. member_address is null for machine credentials or an unavailable
-    member address.
+     Current authenticated identity. member_address is null for machine
+    credentials or an unavailable member address.
+
+    Two optional query parameters ask for the caller's grant. They are
+    described here rather than declared, so generated clients keep the
+    signature they had; pass them as raw query parameters.
+
+    - `include=grant` adds `grant` (`GrantDescription`): the grant this
+      credential holds.
+    - `check=<permission>`, optionally with
+      `resource=<function|domain|endpoint|route>:<id>`, adds `check`
+      (`PermissionCheck`): whether the grant allows that permission, with
+      the same `reason` and `details` a `403 grant_forbidden` would carry.
+      Nothing is enforced by asking; an unknown permission answers
+      `400 validation_error`.
+
+    A server without grants ignores both and omits the fields.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -106,8 +121,23 @@ def sync(
 ) -> ErrorResponse | WhoamiResponse200 | None:
     """ Get current caller identity
 
-     Current authenticated identity. member_address is null for machine credentials or an unavailable
-    member address.
+     Current authenticated identity. member_address is null for machine
+    credentials or an unavailable member address.
+
+    Two optional query parameters ask for the caller's grant. They are
+    described here rather than declared, so generated clients keep the
+    signature they had; pass them as raw query parameters.
+
+    - `include=grant` adds `grant` (`GrantDescription`): the grant this
+      credential holds.
+    - `check=<permission>`, optionally with
+      `resource=<function|domain|endpoint|route>:<id>`, adds `check`
+      (`PermissionCheck`): whether the grant allows that permission, with
+      the same `reason` and `details` a `403 grant_forbidden` would carry.
+      Nothing is enforced by asking; an unknown permission answers
+      `400 validation_error`.
+
+    A server without grants ignores both and omits the fields.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -130,8 +160,23 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | WhoamiResponse200]:
     """ Get current caller identity
 
-     Current authenticated identity. member_address is null for machine credentials or an unavailable
-    member address.
+     Current authenticated identity. member_address is null for machine
+    credentials or an unavailable member address.
+
+    Two optional query parameters ask for the caller's grant. They are
+    described here rather than declared, so generated clients keep the
+    signature they had; pass them as raw query parameters.
+
+    - `include=grant` adds `grant` (`GrantDescription`): the grant this
+      credential holds.
+    - `check=<permission>`, optionally with
+      `resource=<function|domain|endpoint|route>:<id>`, adds `check`
+      (`PermissionCheck`): whether the grant allows that permission, with
+      the same `reason` and `details` a `403 grant_forbidden` would carry.
+      Nothing is enforced by asking; an unknown permission answers
+      `400 validation_error`.
+
+    A server without grants ignores both and omits the fields.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -159,8 +204,23 @@ async def asyncio(
 ) -> ErrorResponse | WhoamiResponse200 | None:
     """ Get current caller identity
 
-     Current authenticated identity. member_address is null for machine credentials or an unavailable
-    member address.
+     Current authenticated identity. member_address is null for machine
+    credentials or an unavailable member address.
+
+    Two optional query parameters ask for the caller's grant. They are
+    described here rather than declared, so generated clients keep the
+    signature they had; pass them as raw query parameters.
+
+    - `include=grant` adds `grant` (`GrantDescription`): the grant this
+      credential holds.
+    - `check=<permission>`, optionally with
+      `resource=<function|domain|endpoint|route>:<id>`, adds `check`
+      (`PermissionCheck`): whether the grant allows that permission, with
+      the same `reason` and `details` a `403 grant_forbidden` would carry.
+      Nothing is enforced by asking; an unknown permission answers
+      `400 validation_error`.
+
+    A server without grants ignores both and omits the fields.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

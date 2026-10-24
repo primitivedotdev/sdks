@@ -27,6 +27,7 @@ export default defineConfig({
     "oclif/receiver-heal": "src/oclif/receiver-heal.ts",
     "oclif/auto-signals": "src/oclif/auto-signals.ts",
     "oclif/auto-signal-worker": "src/oclif/auto-signal-worker.ts",
+    "oclif/global-org-flag": "src/oclif/global-org-flag.ts",
   },
   format: ["esm"],
   // Keep `.js` so the bin and oclif config keep resolving the
