@@ -709,3 +709,42 @@ it("persists the contact wait classifier and refuses reuse as an ordinary task w
   expect(resumed.requestId).toBe(requestId);
   await resumed.close();
 });
+
+it("finds a new reply without first reading every retained older email", async () => {
+  const f = fixture();
+  // Exact-parent search has not indexed the reply yet when the wait starts.
+  f.state.page = { data: [], meta: { cursor: null } };
+  const reply = f.state.detail;
+  reply.received_at = new Date().toISOString();
+  const waiter = await openConnectedReplyWait({
+    ...f.options,
+    pageSize: 2,
+    deadline: Date.now() + 5000,
+  });
+  const store = waiter.receiver.store;
+  // Retained history from long before this wait. Reading any of it would
+  // be an unexpected request: the fixture serves only the reply.
+  for (let index = 0; index < 9; index++)
+    await store.ingest({
+      emailId: randomUUID(),
+      eventId: randomUUID(),
+      receivedAt: "2026-01-01T00:00:00.000Z",
+    });
+  let delivered = false;
+  hooks.changed.mockImplementation(async (changed) => {
+    if (delivered) return;
+    delivered = true;
+    await changed.ingest({
+      emailId: reply.id,
+      eventId: randomUUID(),
+      receivedAt: reply.received_at,
+    });
+  });
+  expect((await waiter.next())?.id).toBe(reply.id);
+  expect(
+    f.requests.filter(
+      (path) => path.startsWith("/v1/emails/") && !path.endsWith("/search"),
+    ),
+  ).toEqual([`/v1/emails/${reply.id}`]);
+  await waiter.close();
+});
