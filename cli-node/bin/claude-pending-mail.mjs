@@ -431,7 +431,10 @@ export function claimPendingMail(cli, configDir, profile, sessionId, ids) {
         sessionId,
         ...ids.flatMap((id) => ["--claim", id]),
       ],
-      { env, encoding: "utf8", timeout: 8_000, maxBuffer: 262_144 },
+      // PostToolUse hooks have 10 seconds in all: the mail check takes at
+      // most 5.5 and the claim 3, so a hook is never cut off after claiming
+      // notices it has not printed yet.
+      { env, encoding: "utf8", timeout: 3_000, maxBuffer: 262_144 },
     );
     if (result.status !== 0) return null;
     const claimed = JSON.parse(result.stdout)?.claimed;
@@ -601,7 +604,7 @@ async function main() {
           }),
           encoding: "utf8",
           env,
-          timeout: 8_000,
+          timeout: 5_500,
           maxBuffer: 16_384,
         },
       );
