@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { agentProfileDirectory } from "../../src/oclif/connected-agent-profile.js";
+import { appendRegistrationLog } from "../../src/oclif/registration-log.js";
 import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 const session = "11111111-1111-4111-8111-111111111111";
@@ -58,13 +59,67 @@ describe("whoami command", () => {
     const output = formatWhoamiSummary(makeAccount(), null);
 
     expect(output).toContain("Authenticated as cli@example.com");
-    expect(output).toContain("Account id: acct-1");
+    expect(output).toContain("Organization id: acct-1");
     expect(output).toContain("Plan: pro");
     expect(output).not.toContain("onboarding");
     expect(output).not.toContain("stripe");
     expect(output).not.toContain("webhook");
     expect(output).not.toContain("Managed inbox");
   });
+
+  it("names the organization when the saved login recorded its name", () => {
+    const output = formatWhoamiSummary(makeAccount(), null, "Acme Agents");
+
+    expect(output).toContain("Organization: Acme Agents (acct-1)");
+    expect(output).not.toContain("Organization id:");
+  });
+
+  it.each([
+    [
+      "the saved login's organization",
+      "acct-1",
+      "Organization: Acme Agents (acct-1)",
+      "Acme Agents",
+    ],
+    [
+      "another organization's saved login",
+      "org-other",
+      "Organization id: acct-1",
+      null,
+    ],
+    ["no saved login (an API key)", null, "Organization id: acct-1", null],
+  ])(
+    "names the organization from %s in text and JSON",
+    async (_case, savedOrgId, line, jsonName) => {
+      mocks.auth.mockResolvedValue({
+        apiClient: { client: {} },
+        auth: {
+          credentials: savedOrgId
+            ? { org_id: savedOrgId, org_name: "Acme Agents" }
+            : null,
+        },
+        baseUrlOverridden: false,
+      });
+      mocks.account.mockResolvedValue({ data: { data: makeAccount() } });
+      const output: string[] = [];
+      vi.spyOn(console, "log").mockImplementation((value: unknown) => {
+        output.push(String(value));
+      });
+      const root = resolve(import.meta.dirname, "../..");
+      await WhoamiCommand.run([], { root });
+      expect(output.join("\n")).toContain(line);
+      output.length = 0;
+      await WhoamiCommand.run(["--json"], { root });
+      const json = JSON.parse(output.join("\n"));
+      expect(json.org_name).toBe(jsonName);
+      // The account payload passes through unchanged beside the new field.
+      expect(json).toMatchObject({
+        id: "acct-1",
+        email: "cli@example.com",
+        plan: "pro",
+      });
+    },
+  );
 
   it("includes the managed inbox line when a managed domain is present", () => {
     const output = formatWhoamiSummary(
@@ -221,6 +276,56 @@ describe("whoami command", () => {
         expect(mocks.account).not.toHaveBeenCalled();
       } finally {
         vi.unstubAllEnvs();
+      }
+    },
+  );
+
+  it.each([true, false])(
+    "names this session's failed registration under the member login (json %s)",
+    async (json) => {
+      const directory = mkdtempSync(join(tmpdir(), "primitive-whoami-"));
+      try {
+        vi.stubEnv("PRIMITIVE_CONFIG_DIR", directory);
+        vi.stubEnv("CLAUDE_CODE_SESSION_ID", session);
+        appendRegistrationLog(directory, `session-${session}`, {
+          event: "failed",
+          phase: "setup_attempted",
+          code: "setup_unfinished",
+          orgId: "org-1",
+          address: "pending@example.test",
+          detail:
+            "This session's agent pending@example.test is created but not connected: in the Primitive app open it and choose Copy again, then paste that setup instruction here; `agent connect` finishes the same address.",
+        });
+        mocks.auth.mockResolvedValue({
+          apiClient: { client: {} },
+          auth: { apiKey: undefined },
+          baseUrlOverridden: false,
+        });
+        mocks.account.mockResolvedValue({ data: { data: makeAccount() } });
+        const output: string[] = [];
+        vi.spyOn(console, "log").mockImplementation((value: unknown) => {
+          output.push(String(value));
+        });
+        await WhoamiCommand.run(json ? ["--json"] : [], {
+          root: resolve(import.meta.dirname, "../.."),
+        });
+        const text = output.join("\n");
+        if (json)
+          expect(JSON.parse(text)).toMatchObject({
+            id: "acct-1",
+            session_registration: {
+              address: "pending@example.test",
+              lastFailure: { code: "setup_unfinished" },
+            },
+          });
+        else
+          expect(text).toContain(
+            "The last registration attempt for this session (pending@example.test) failed at",
+          );
+        expect(text).toContain("choose Copy again");
+      } finally {
+        vi.unstubAllEnvs();
+        rmSync(directory, { recursive: true, force: true });
       }
     },
   );

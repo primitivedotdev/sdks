@@ -19,6 +19,12 @@ import {
   readTargetedReplyPage,
 } from "./targeted-replies.js";
 
+/**
+ * Slack for clock differences between this machine, which records when a
+ * wait was created, and the server, which records when mail was received.
+ */
+export const REPLY_CLOCK_SKEW_MS = 10 * 60_000;
+
 function recoveryEventId(id: string): string {
   const h = createHash("sha256").update(`reply-recovery:${id}`).digest("hex");
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
@@ -39,6 +45,8 @@ export async function openConnectedReplyWait(options: {
   resumeReply?: { emailId: string; requestId: string };
   idempotencyKey?: string;
   createdAt?: string;
+  /** When the send being waited on was created, for a wait on an existing send. */
+  sentAt?: string;
   since?: string;
   pageSize: number;
   deadline?: number | null;
@@ -172,6 +180,27 @@ export async function openConnectedReplyWait(options: {
   let closing: Promise<void> | undefined;
   const timedOut = () =>
     options.deadline != null && Date.now() >= options.deadline;
+  let earliestReply: number | undefined;
+  /**
+   * The earliest receipt time a reply to this wait's send can have: the wait
+   * is registered before the send, so mail received well before it is
+   * retained history, not a reply.
+   */
+  async function replyFloor(): Promise<number> {
+    if (earliestReply !== undefined) return earliestReply;
+    const intent = await store.readWait(requestId);
+    // A caller's explicit --since may reach further back than the wait.
+    // A wait on an existing send may start long after it, so the send's own
+    // time and an explicit --since both reach further back than the wait.
+    const created = Date.parse(intent?.createdAt ?? "");
+    const earlier = [options.sentAt, options.since]
+      .map((value) => Date.parse(value ?? ""))
+      .filter(Number.isFinite);
+    earliestReply = Number.isFinite(created)
+      ? Math.min(created, ...earlier) - REPLY_CLOCK_SKEW_MS
+      : Number.NEGATIVE_INFINITY;
+    return earliestReply;
+  }
   async function release() {
     if (released) return;
     // The receiver's signal has already expired on the normal timeout path.
@@ -276,6 +305,7 @@ export async function openConnectedReplyWait(options: {
       requestId = bound.requestId;
       sentId = bound.sentEmailId ?? undefined;
       recoveryNeeded = true;
+      earliestReply = undefined;
     },
     uncertain: () => store.markWaitUncertain(requestId),
     async cancelBeforeSend() {
@@ -399,7 +429,14 @@ export async function openConnectedReplyWait(options: {
             limit: options.pageSize,
             cursor: localCursor,
           });
+          const floor = await replyFloor();
           for (const row of local.emails) {
+            // Unclassified retained history is skipped without a read:
+            // inspecting every older email first made a new reply wait
+            // behind a scan of the whole local store, often past the wait's
+            // deadline. Only the local scan skips it: exact-parent search
+            // still returns an older reply and has it inspected.
+            if (!row.details && Date.parse(row.receivedAt) < floor) continue;
             if (
               row.details &&
               row.details.authorization !== "pending" &&

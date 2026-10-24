@@ -130,6 +130,8 @@ function setup(connected = true) {
     ],
     pages: [["22222222-2222-4222-8222-222222222222"]],
     requests: [] as URL[],
+    /** Responses served, in order, before the normal one for a path. */
+    failures: {} as Record<string, Array<() => Response>>,
     error: false,
     stallPath: "",
     aborted: false,
@@ -153,6 +155,8 @@ function setup(connected = true) {
         });
       if (request.method !== "GET")
         throw new Error("Wait must never send mail");
+      const failure = fixture.failures[url.pathname]?.shift();
+      if (failure) return failure();
       if (url.pathname === `/v1/sent-emails/${sentId}`)
         return Response.json(
           fixture.error
@@ -516,5 +520,146 @@ describe("connected emails wait", () => {
     expect(fixture.requests[0]?.searchParams.get("date_from")).toBe(
       "2026-09-27T00:00:00.000Z",
     );
+  });
+});
+
+describe("connected emails wait with transient API failures", () => {
+  const replyPath = "/v1/emails/22222222-2222-4222-8222-222222222222";
+  const rateLimited = (retryAfter?: string) => () =>
+    Response.json(
+      {
+        success: false,
+        error: { code: "rate_limit_exceeded", message: "Too many requests" },
+      },
+      {
+        status: 429,
+        headers: retryAfter === undefined ? {} : { "Retry-After": retryAfter },
+      },
+    );
+  const unavailable = () =>
+    Response.json(
+      {
+        success: false,
+        error: { code: "service_unavailable", message: "try again" },
+      },
+      { status: 503 },
+    );
+
+  it("waits out a 429 with Retry-After on the sent email read and returns the reply", async () => {
+    const fixture = setup();
+    fixture.failures[`/v1/sent-emails/${sentId}`] = [rateLimited("60")];
+    const result = await run(args);
+    expect(result.failure).toBeUndefined();
+    expect(JSON.parse(result.stdout).id).toBe(
+      "22222222-2222-4222-8222-222222222222",
+    );
+    expect(result.stderr).toContain(
+      "primitive: rate limited; retrying in 60 s.",
+    );
+    expect(mocks.sleep).toHaveBeenCalledWith(60_000);
+    expect(fixture.requests.map((url) => url.pathname)).toEqual([
+      `/v1/sent-emails/${sentId}`,
+      `/v1/sent-emails/${sentId}`,
+      "/v1/emails/search",
+      replyPath,
+    ]);
+  });
+
+  it("honours a Retry-After HTTP-date on the reply read", async () => {
+    const fixture = setup();
+    // The fixture clock stands at 2026-09-27T00:00:00Z.
+    fixture.failures[replyPath] = [
+      rateLimited("Sun, 27 Sep 2026 00:00:45 GMT"),
+    ];
+    const result = await run(args);
+    expect(result.failure).toBeUndefined();
+    expect(JSON.parse(result.stdout).id).toBe(
+      "22222222-2222-4222-8222-222222222222",
+    );
+    expect(mocks.sleep).toHaveBeenCalledWith(45_000);
+    expect(result.stderr).toContain("retrying in 45 s");
+  });
+
+  it("retries a 503 from the targeted search with backoff", async () => {
+    const fixture = setup();
+    fixture.failures["/v1/emails/search"] = [unavailable, unavailable];
+    const result = await run(args);
+    expect(result.failure).toBeUndefined();
+    expect(JSON.parse(result.stdout).id).toBe(
+      "22222222-2222-4222-8222-222222222222",
+    );
+    expect(
+      result.stderr.match(
+        /primitive: API unavailable \(HTTP 503\); retrying in/g,
+      ),
+    ).toHaveLength(2);
+    expect(
+      fixture.requests.filter((url) => url.pathname === "/v1/emails/search"),
+    ).toHaveLength(3);
+  });
+
+  it("times out cleanly when the rate limit outlasts the wait", async () => {
+    const fixture = setup();
+    fixture.failures[`/v1/sent-emails/${sentId}`] = Array.from(
+      { length: 10 },
+      () => rateLimited("60"),
+    );
+    const result = await run([...args, "--timeout", "90"]);
+    expect(result.failure).toBeUndefined();
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain(
+      "primitive: rate limited; retrying in 60 s.",
+    );
+    expect(result.stderr).toContain(
+      "primitive: rate limited (retry after 60 s); this wait times out in 30 s.",
+    );
+    expect(result.stderr).toContain("Timed out");
+    expect(
+      fixture.requests.filter(
+        (url) => url.pathname === `/v1/sent-emails/${sentId}`,
+      ),
+    ).toHaveLength(2);
+  });
+
+  it("fails a 404 on a reply candidate with the API's code and message", async () => {
+    const fixture = setup();
+    fixture.failures[replyPath] = [
+      () =>
+        Response.json(
+          {
+            success: false,
+            error: { code: "not_found", message: "Email not found" },
+          },
+          { status: 404 },
+        ),
+    ];
+    const result = await run(args);
+    expect(String(result.failure)).toContain(
+      "Could not inspect reply candidate 22222222-2222-4222-8222-222222222222: not_found (Email not found).",
+    );
+    expect(result.stderr).not.toContain("retrying");
+    expect(
+      fixture.requests.filter((url) => url.pathname === replyPath),
+    ).toHaveLength(1);
+  });
+
+  it("keeps the do-not-resend guidance with the code of a failed sent email read", async () => {
+    const fixture = setup();
+    fixture.failures[`/v1/sent-emails/${sentId}`] = [
+      () =>
+        Response.json(
+          {
+            success: false,
+            error: { code: "forbidden", message: "Not your send" },
+          },
+          { status: 403 },
+        ),
+    ];
+    const result = await run(args);
+    expect(String(result.failure)).toContain(
+      "Could not read that sent email with the connected credential: forbidden (Not your send). Inspect the existing send before retrying; do not send it again.",
+    );
+    expect(fixture.requests).toHaveLength(1);
   });
 });

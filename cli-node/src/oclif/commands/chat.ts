@@ -89,6 +89,12 @@ import {
   thrownErrorExitCode,
 } from "../send-outcome.js";
 import {
+  pauseForTransientFailure,
+  retryTransient,
+  type TransientFailure,
+  transientFailure,
+} from "../transient-retry.js";
+import {
   collectNewAcceptedEmails,
   DEFAULT_EMAIL_POLL_INTERVAL_SECONDS,
   DEFAULT_EMAIL_POLL_PAGE_SIZE,
@@ -2766,7 +2772,7 @@ type WaitForReplyParams = {
   timeoutSeconds: number;
 };
 
-async function waitForReply(
+export async function waitForReply(
   params: WaitForReplyParams,
 ): Promise<ChatReplyResult | null> {
   const notice =
@@ -2816,14 +2822,34 @@ async function waitForReply(
   // the fallback handle it (or time out under --strict-only).
   let strictFilterUnsupported = false;
 
+  // When a rate limit's Retry-After outlasted the strict phase, the fallback
+  // search must not start before the server allows it.
+  let notBefore = 0;
+  const holdRetryAfter = (failure: TransientFailure) => {
+    if (failure.retryAfterMs !== undefined)
+      notBefore = Math.max(notBefore, Date.now() + failure.retryAfterMs);
+  };
   for (const phase of phases) {
     if (phase.label === "strict" && strictFilterUnsupported) continue;
+    if (notBefore > Date.now()) {
+      const remaining =
+        totalDeadline === null
+          ? Number.POSITIVE_INFINITY
+          : totalDeadline - Date.now();
+      if (remaining <= notBefore - Date.now()) {
+        await sleep(Math.max(0, remaining));
+        return null;
+      }
+      await sleep(notBefore - Date.now());
+    }
     // Per-phase seenIds: when the strict phase silently drops the
     // filter (old server), the actual reply may surface in both
     // phases' result sets. A shared Set would let strict's rejection
     // poison fallback's view of the same row.
     const seenIds = new Set<string>();
     let cursor: string | null = null;
+    // Consecutive transient failures, for backoff.
+    let failures = 0;
     while (true) {
       if (phase.deadline !== null && Date.now() >= phase.deadline) break;
       const page = await fetchEmailSearchPage({
@@ -2835,14 +2861,29 @@ async function waitForReply(
       });
 
       if (!page.ok) {
+        const failure = transientFailure(page);
+        if (failure) {
+          // Rate limited or briefly unavailable: back off within this phase.
+          if (
+            !(await pauseForTransientFailure(failure, failures, {
+              deadline: phase.deadline,
+              notice,
+              onTransientFailure: holdRetryAfter,
+            }))
+          )
+            break;
+          failures += 1;
+          continue;
+        }
         const payload = extractErrorPayload(page.error);
-        writeErrorWithHints(payload);
+        writeErrorWithHints(payload, page.response);
         surfaceUnauthorizedHint({
           ...params.authFailureContext,
           payload,
         });
         throw new Errors.CLIError("Failed to poll for reply.", { exit: 1 });
       }
+      failures = 0;
 
       // Advance cursor only to the last accepted/completed row in the
       // page. If we instead used page.cursor we would skip past
@@ -2863,14 +2904,25 @@ async function waitForReply(
 
       const matches = collectNewAcceptedEmails(page.rows, seenIds);
       for (const match of matches) {
-        const full = await getEmail({
-          client: params.apiClient.client,
-          path: { id: match.id },
-          responseStyle: "fields",
-        });
+        const full = await retryTransient(
+          () =>
+            getEmail({
+              client: params.apiClient.client,
+              path: { id: match.id },
+              responseStyle: "fields",
+            }),
+          {
+            deadline: phase.deadline,
+            notice,
+            onTransientFailure: holdRetryAfter,
+          },
+        );
+        // This phase ran out while the API was rate limited or unavailable;
+        // the loop moves on to the next phase, or ends the wait.
+        if (full === null) break;
         if (full.error) {
           const payload = extractErrorPayload(full.error);
-          writeErrorWithHints(payload);
+          writeErrorWithHints(payload, full.response);
           surfaceUnauthorizedHint({
             ...params.authFailureContext,
             payload,

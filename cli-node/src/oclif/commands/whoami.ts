@@ -12,7 +12,12 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import {
+  failedSessionRegistration,
+  registrationSummaryLine,
+} from "../registration-log.js";
 import { isConnectedChatCredential } from "../scoped-chat.js";
+import { guardedSession } from "../session-address-guard.js";
 import { agentIdentitySource } from "../session-agent-env.js";
 
 // `primitive whoami` is the credentials smoke test. Default output stays
@@ -25,13 +30,18 @@ import { agentIdentitySource } from "../session-agent-env.js";
 // it removes the post-signup hunt for the assigned *.primitive.email
 // domain that drove the original AGX pain.
 
+// The account id is the organization's id. Its name comes from the saved
+// OAuth login (recorded at sign-in); an API key alone carries no name.
 export function formatWhoamiSummary(
   account: Account,
   managedInboxDomain: string | null,
+  orgName: string | null = null,
 ): string {
   const lines = [
     `Authenticated as ${account.email}`,
-    `Account id: ${account.id}`,
+    orgName
+      ? `Organization: ${orgName} (${account.id})`
+      : `Organization id: ${account.id}`,
     `Plan: ${account.plan}`,
   ];
   if (managedInboxDomain) {
@@ -199,10 +209,31 @@ class WhoamiCommand extends Command {
         // see comment above; keep going without the inbox line
       }
 
+      const orgName =
+        auth.credentials?.org_id === account.id
+          ? (auth.credentials.org_name ?? null)
+          : null;
+      // This session's own registration failed: say why here, so nobody
+      // has to open the private profile files to find out.
+      const session = guardedSession(undefined, process.env);
+      let registration: ReturnType<typeof failedSessionRegistration> = null;
+      try {
+        registration = session
+          ? failedSessionRegistration(this.config.configDir, session)
+          : null;
+      } catch {
+        registration = null;
+      }
+
       if (flags.json) {
         this.log(
           JSON.stringify(
-            { ...account, managed_inbox_domain: managedInboxDomain },
+            {
+              ...account,
+              managed_inbox_domain: managedInboxDomain,
+              org_name: orgName,
+              ...(registration ? { session_registration: registration } : {}),
+            },
             null,
             2,
           ),
@@ -210,7 +241,8 @@ class WhoamiCommand extends Command {
         return;
       }
 
-      this.log(formatWhoamiSummary(account, managedInboxDomain));
+      this.log(formatWhoamiSummary(account, managedInboxDomain, orgName));
+      if (registration) this.log(registrationSummaryLine(registration));
     });
   }
 }

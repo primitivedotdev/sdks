@@ -52,6 +52,7 @@ import {
   ReplyStateUnsupportedError,
 } from "../reply-state.js";
 import { followUpCommandPrefix } from "../send-outcome.js";
+import { retryingOperation, WaitDeadlineReached } from "../transient-retry.js";
 
 // `primitive inbox next` is the agent-loop verb: hand me the one email
 // that is waiting on my reply, with its whole conversation, and tell me
@@ -355,6 +356,38 @@ export type InboxNextApi = {
 };
 
 const DEFAULT_API: InboxNextApi = { getConversation, getEmail, listEmails };
+
+/**
+ * The API for a wait: a rate limit, gateway failure or network error backs
+ * off and reads again until the deadline (null: no deadline), then throws
+ * WaitDeadlineReached. These are all reads, so a retry repeats nothing.
+ */
+export function waitingInboxApi(
+  deadline: number | null,
+  api: InboxNextApi = DEFAULT_API,
+): InboxNextApi {
+  const options = { deadline };
+  return {
+    ...api,
+    getConversation: retryingOperation(api.getConversation, options),
+    getEmail: retryingOperation(api.getEmail, options),
+    // A long-poll retried after a backoff holds only for the time left, so
+    // the wait never outlasts its deadline.
+    listEmails: retryingOperation(api.listEmails, options, (input) => {
+      const query = (input as { query?: { wait?: number } }).query;
+      if (deadline === null || query?.wait === undefined) return input;
+      const remainingMs = deadline - Date.now();
+      if (remainingMs <= 0) return null;
+      return {
+        ...input,
+        query: {
+          ...query,
+          wait: Math.min(query.wait, Math.floor(remainingMs / 1000)),
+        },
+      } as typeof input;
+    }),
+  };
+}
 
 type ListPage = {
   rows: LooseRecord[];
@@ -830,7 +863,7 @@ class InboxNextCommand extends Command {
 
   NOT A WORK QUEUE. Nothing is claimed or locked. Two agents running \`inbox next\` on the same inbox get the same email until one of them replies, and both may answer it. Run one agent per inbox, or coordinate outside Primitive.
 
-  --wait blocks until something awaits you. It takes the inbox's newest position before checking, then long-polls from that position, re-checking reply state whenever mail arrives and at least every 30 seconds, so nothing that arrives between the check and the wait is missed.
+  --wait blocks until something awaits you. It takes the inbox's newest position before checking, then long-polls from that position, re-checking reply state whenever mail arrives and at least every 30 seconds, so nothing that arrives between the check and the wait is missed. A rate limit (HTTP 429, honouring Retry-After), a 502, 503 or 504, or a network error during the wait is retried with backoff until --timeout, with one note on stderr per retry; if it lasts until then, the wait exits 5 as if nothing arrived.
 
   --json prints one stable envelope (version ${INBOX_NEXT_JSON_VERSION}): \`outcome\` ("email" | "empty" | "error"), \`email\` (id, thread_id, message_id, received_at, from, from_email, to, subject, awaiting, reply_count, last_replied_at, body_text, from_known_address, auth { spf, dmarc }), \`automated\` ({ automated, reasons[], automation_headers_known }, the server's verdict), \`conversation\` (thread_id, subject, message_count, truncated, messages[] with role user|assistant), \`reply_command\`, \`interaction\` ({ hint, kind, fyi, category, plain_reply_completes, no_reply_needed }, decided by the server from a DKIM-authenticated interaction part; null when not reported), \`next_actions\` (the commands that answer the email, best first: each has kind, command, argv, description, placeholders, requires_message; empty when no reply is needed or this CLI cannot answer the interaction), \`automated_awaiting\` ({ total, capped }: automated mail also awaiting a reply, on the empty outcome; null otherwise), and \`error\` ({ code, message }) on failure.
 
@@ -920,15 +953,18 @@ class InboxNextCommand extends Command {
         ? Date.now() + flags.timeout * 1000
         : null;
 
+    const api = flags.wait ? waitingInboxApi(deadline) : undefined;
+
     try {
       // Taken before the first check so the wait cannot miss mail that
       // lands between the check and the long-poll.
-      let since = flags.wait ? await baselineCursor({ apiClient }) : null;
+      let since = flags.wait ? await baselineCursor({ apiClient, api }) : null;
       let announcedWait = false;
 
       for (;;) {
         const result = await findNextAwaiting({
           apiClient,
+          api,
           includeAutomated: flags["include-automated"],
         });
 
@@ -963,6 +999,7 @@ class InboxNextCommand extends Command {
         const pollStartedAt = Date.now();
         since = await waitForActivity({
           apiClient,
+          api,
           since,
           seconds: Math.floor(remainingMs / 1000),
         });
@@ -974,6 +1011,17 @@ class InboxNextCommand extends Command {
         }
       }
     } catch (error) {
+      if (error instanceof WaitDeadlineReached) {
+        // The API stayed rate limited or unavailable until --timeout: the
+        // same outcome as a wait that saw nothing.
+        await this.printResult(
+          { outcome: "empty", automated_awaiting: null },
+          bin,
+          flags,
+          apiClient,
+        );
+        return;
+      }
       if (
         error instanceof ReplyStateUnsupportedError ||
         error instanceof AutomatedFilterUnsupportedError

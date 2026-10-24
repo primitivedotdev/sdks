@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { rmdirSync } from "node:fs";
 import { join } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import { cliInvocation } from "./agent-identity-suggestions.js";
 import { claudeWakeHookStatus } from "./claude-wake-install.js";
 import {
@@ -61,6 +62,13 @@ export class AgentInvitationRejectedError extends AgentConnectionSetupError {
     super(message);
   }
 }
+
+/**
+ * The claim was never sent: another setup on this machine held the claim
+ * lock for the whole wait. Unlike an uncertain claim, the invitation is
+ * untouched, so a caller may discard what it created for this run.
+ */
+export class ClaimNotSubmittedError extends AgentConnectionSetupError {}
 
 const NOTHING_CHANGED = "Nothing was changed on this machine.";
 
@@ -616,6 +624,12 @@ export async function connectAgent(params: {
   presence?: boolean;
   /** The caller already holds the agent-connection-setup lock. */
   claimLockHeld?: boolean;
+  /**
+   * How long to wait for another claim on this machine to finish before
+   * refusing. Claims are short, so a session that starts while another one
+   * registers waits instead of failing. Zero refuses at once.
+   */
+  claimLockWaitMs?: number;
 }): Promise<AgentConnectResult> {
   const profileName = agentProfileName(params.profileName);
   const invitation = parseAgentInvitation(params.invitation);
@@ -624,13 +638,23 @@ export async function connectAgent(params: {
   let release: (() => void) | undefined;
   try {
     privateMailDirectory(directory, true);
-    release = params.claimLockHeld
-      ? () => {}
-      : acquireListenLock(directory, "agent-connection-setup");
   } catch {
-    throw new AgentConnectionSetupError(
-      "Agent setup is already running, or its private directory is unavailable. No invitation was submitted.",
+    throw new ClaimNotSubmittedError(
+      "This machine's private agent directory is unavailable. No invitation was submitted.",
     );
+  }
+  if (params.claimLockHeld) release = () => {};
+  const deadline = Date.now() + Math.max(0, params.claimLockWaitMs ?? 0);
+  while (!release) {
+    try {
+      release = acquireListenLock(directory, "agent-connection-setup");
+    } catch {
+      if (Date.now() >= deadline)
+        throw new ClaimNotSubmittedError(
+          "Agent setup is already running on this machine, so this invitation was not submitted; rerun the same command when it finishes.",
+        );
+      await sleep(Math.min(250, Math.max(1, deadline - Date.now())));
+    }
   }
   try {
     const existing = loadConnectedAgentProfile(params.configDir, profileName);

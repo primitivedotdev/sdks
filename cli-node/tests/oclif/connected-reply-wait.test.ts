@@ -709,3 +709,81 @@ it("persists the contact wait classifier and refuses reuse as an ordinary task w
   expect(resumed.requestId).toBe(requestId);
   await resumed.close();
 });
+
+it("finds a new reply without first reading every retained older email", async () => {
+  const f = fixture();
+  // Exact-parent search has not indexed the reply yet when the wait starts.
+  f.state.page = { data: [], meta: { cursor: null } };
+  const reply = f.state.detail;
+  reply.received_at = new Date().toISOString();
+  const waiter = await openConnectedReplyWait({
+    ...f.options,
+    pageSize: 2,
+    deadline: Date.now() + 5000,
+  });
+  const store = waiter.receiver.store;
+  // Retained history from long before this wait. Reading any of it would
+  // be an unexpected request: the fixture serves only the reply.
+  for (let index = 0; index < 9; index++)
+    await store.ingest({
+      emailId: randomUUID(),
+      eventId: randomUUID(),
+      receivedAt: "2026-01-01T00:00:00.000Z",
+    });
+  let delivered = false;
+  hooks.changed.mockImplementation(async (changed) => {
+    if (delivered) return;
+    delivered = true;
+    await changed.ingest({
+      emailId: reply.id,
+      eventId: randomUUID(),
+      receivedAt: reply.received_at,
+    });
+  });
+  expect((await waiter.next())?.id).toBe(reply.id);
+  expect(
+    f.requests.filter(
+      (path) => path.startsWith("/v1/emails/") && !path.endsWith("/search"),
+    ),
+  ).toEqual([`/v1/emails/${reply.id}`]);
+  await waiter.close();
+});
+
+it("still matches an older reply exact-parent search returns after the local scan skipped it", async () => {
+  const f = fixture();
+  // A wait started long after the send: the reply is older than the wait.
+  f.state.detail.received_at = new Date(Date.now() - 3600_000).toISOString();
+  // The first search page is empty, so one local page is scanned first.
+  f.state.pages.push({ data: [], meta: { cursor: "second-page" } });
+  const waiter = await openConnectedReplyWait({
+    ...f.options,
+    pageSize: 1,
+    deadline: Date.now() + 5000,
+  });
+  await waiter.receiver.store.ingest({
+    emailId: f.state.detail.id,
+    eventId: randomUUID(),
+    receivedAt: f.state.detail.received_at,
+  });
+  expect((await waiter.next())?.id).toBe(f.state.detail.id);
+  await waiter.close();
+});
+
+it("reaches back to the send's own time for a wait on an existing send", async () => {
+  const f = fixture();
+  f.state.page = { data: [], meta: { cursor: null } };
+  f.state.detail.received_at = new Date(Date.now() - 3600_000).toISOString();
+  const waiter = await openConnectedReplyWait({
+    ...f.options,
+    sentAt: new Date(Date.now() - 2 * 3600_000).toISOString(),
+    deadline: Date.now() + 5000,
+  });
+  // Exact-parent search has not indexed it; the local store has it.
+  await waiter.receiver.store.ingest({
+    emailId: f.state.detail.id,
+    eventId: randomUUID(),
+    receivedAt: f.state.detail.received_at,
+  });
+  expect((await waiter.next())?.id).toBe(f.state.detail.id);
+  await waiter.close();
+});

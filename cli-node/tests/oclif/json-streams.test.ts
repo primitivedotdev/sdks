@@ -187,10 +187,12 @@ const jsonCommandIds = Object.entries(COMMANDS)
   .sort();
 
 // Argument lists that fail fast for commands whose bare `--json` form
-// would wait on stdin or a local session.
+// would wait on stdin or a local session, or would retry the fixture's 503
+// until a long default timeout.
 const FAILURE_ARGV: Record<string, string[]> = {
   "agent-connections:claim-agent-connection": ["--status", "--json"],
   "agent:connect": ["--status", "--json"],
+  wait: ["--json", "--timeout", "1"],
 };
 
 const cleanedEnvPrefixes = ["PRIMITIVE_", "CLAUDE", "CODEX"];

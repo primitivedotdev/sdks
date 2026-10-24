@@ -447,6 +447,16 @@ export async function seedAgentInfoNote(
 
 type Skip = { step: string; reason: string };
 
+/** What a claim that replaced an unfinished setup did to its agent. */
+function unfinishedNote(
+  replaced: { address: string | null; sameAddress: boolean | null } | undefined,
+): string {
+  if (!replaced?.address) return "";
+  return replaced.sameAddress
+    ? `This finished the session's unfinished agent ${replaced.address}. `
+    : `This invitation was for a different address, so the session's earlier unfinished agent ${replaced.address} stays unconnected in the Primitive app; tell the owner so they can remove it there if it is not needed. `;
+}
+
 /**
  * One call: self check, install the matching skill, claim and verify, start
  * receiving, seed AGENT_INFO, and report everything as one result. Every step
@@ -782,13 +792,16 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
     ...(result.ownerNotifications
       ? { ownerNotifications: result.ownerNotifications }
       : {}),
+    ...(result.replacedUnfinished
+      ? { replacedUnfinished: result.replacedUnfinished }
+      : {}),
     agentInfo: agentInfoState,
     resumeNote,
     skipped,
     warnings,
     selectProfile: `PRIMITIVE_AGENT_PROFILE=${result.identity.profileName}`,
     resumeCommand,
-    guidance: `${result.guidance} ${ownerReportGuidance(identity)}`,
+    guidance: `${unfinishedNote(result.replacedUnfinished)}${result.guidance} ${ownerReportGuidance(identity)}`,
     identity,
     externalHook,
   };

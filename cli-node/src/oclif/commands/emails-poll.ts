@@ -61,7 +61,7 @@ export type EmailPollFilterFlags = {
 
 export type EmailSearchPageResult =
   | { ok: true; cursor: string | null; rows: EmailSearchResult[] }
-  | { ok: false; error: unknown };
+  | { ok: false; error: unknown; response?: Response };
 
 type SearchQuery = NonNullable<SearchEmailsData["query"]>;
 
@@ -236,7 +236,7 @@ export async function fetchEmailSearchPage(params: {
     if (wantsAutomated && isAutomatedRejectedError(result.error)) {
       throw automatedRejectedError("GET /emails/search");
     }
-    return { ok: false, error: result.error };
+    return { ok: false, error: result.error, response: result.response };
   }
 
   const envelope = result.data as SearchEmailsResponse | undefined;
