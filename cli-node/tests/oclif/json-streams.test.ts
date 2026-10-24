@@ -1280,6 +1280,22 @@ describe("collaboration commands with --json", () => {
       session_id: session,
       notices: [expect.objectContaining({ email_id: emailId })],
     });
+    // A claim reports only the ids this call claimed, and keeps mail listed.
+    const claim = () =>
+      runMerged("listen:pending", [
+        "--session",
+        session,
+        "--claim",
+        emailId,
+        "--json",
+      ]);
+    const first = await claim();
+    expect(first.exitCode).toBe(0);
+    expect(expectOneDocument(first)).toMatchObject({
+      claimed: [emailId],
+      notices: [expect.objectContaining({ email_id: emailId })],
+    });
+    expect(expectOneDocument(await claim())).toMatchObject({ claimed: [] });
     const cleared = await runMerged("listen:pending", [
       "--session",
       session,

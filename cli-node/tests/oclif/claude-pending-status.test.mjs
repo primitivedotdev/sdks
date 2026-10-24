@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import {
-  clearDeliveredStatus,
+  claimPendingMail,
   formatPendingMail,
 } from "../../bin/claude-pending-mail.mjs";
 
@@ -13,14 +13,18 @@ afterEach(() => {
     rmSync(root, { recursive: true, force: true });
 });
 
-it("formats a status notice and clears it after delivery", () => {
+it("formats a status notice and claims it through the CLI", () => {
   const root = mkdtempSync(join(tmpdir(), "primitive-pending-status-"));
   roots.push(root);
   const cli = join(root, "cli.mjs");
   const record = join(root, "args.json");
   writeFileSync(
     cli,
-    'import {writeFileSync} from "node:fs"; writeFileSync(process.env.TEST_ARGS, JSON.stringify(process.argv.slice(2)));',
+    [
+      'import {writeFileSync} from "node:fs";',
+      "writeFileSync(process.env.TEST_ARGS, JSON.stringify({ args: process.argv.slice(2), profile: process.env.PRIMITIVE_AGENT_PROFILE, key: process.env.PRIMITIVE_API_KEY }));",
+      'process.stdout.write(JSON.stringify({ claimed: ["22222222-2222-4222-8222-222222222222"] }));',
+    ].join("\n"),
   );
   const notice = {
     kind: "status",
@@ -29,28 +33,57 @@ it("formats a status notice and clears it after delivery", () => {
     sender: "peer@example.com",
   };
   expect(formatPendingMail(notice)).toContain("not a new task");
-  const prior = process.env.TEST_ARGS;
+  const prior = {
+    args: process.env.TEST_ARGS,
+    key: process.env.PRIMITIVE_API_KEY,
+  };
   process.env.TEST_ARGS = record;
+  process.env.PRIMITIVE_API_KEY = "must-not-reach-child";
+  let claimed;
   try {
-    clearDeliveredStatus(
+    claimed = claimPendingMail(
       cli,
       root,
       "test-profile",
       "11111111-1111-4111-8111-111111111111",
-      [notice],
+      [notice.emailId, "44444444-4444-4444-8444-444444444444"],
     );
   } finally {
-    if (prior === undefined) delete process.env.TEST_ARGS;
-    else process.env.TEST_ARGS = prior;
+    if (prior.args === undefined) delete process.env.TEST_ARGS;
+    else process.env.TEST_ARGS = prior.args;
+    if (prior.key === undefined) delete process.env.PRIMITIVE_API_KEY;
+    else process.env.PRIMITIVE_API_KEY = prior.key;
   }
-  expect(JSON.parse(readFileSync(record, "utf8"))).toEqual([
-    "listen",
-    "pending",
-    "--session",
-    "11111111-1111-4111-8111-111111111111",
-    "--clear",
-    notice.emailId,
-  ]);
+  expect([...claimed]).toEqual([notice.emailId]);
+  expect(JSON.parse(readFileSync(record, "utf8"))).toEqual({
+    args: [
+      "listen",
+      "pending",
+      "--session",
+      "11111111-1111-4111-8111-111111111111",
+      "--claim",
+      notice.emailId,
+      "--claim",
+      "44444444-4444-4444-8444-444444444444",
+    ],
+    profile: "test-profile",
+  });
+});
+
+it("reports a claim that could not run as null, so notices are still shown", () => {
+  const root = mkdtempSync(join(tmpdir(), "primitive-pending-status-"));
+  roots.push(root);
+  const cli = join(root, "cli.mjs");
+  writeFileSync(cli, "process.exit(2);");
+  expect(
+    claimPendingMail(
+      cli,
+      root,
+      "test-profile",
+      "11111111-1111-4111-8111-111111111111",
+      ["22222222-2222-4222-8222-222222222222"],
+    ),
+  ).toBeNull();
 });
 
 it("names the interaction in a mail notice, from the stored label only", () => {

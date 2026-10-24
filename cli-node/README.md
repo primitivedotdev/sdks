@@ -1348,6 +1348,23 @@ hooks print the same line as the live wake, including the load-the-skill line
 for verified mail (notices recorded by older CLI versions keep a shorter form
 with the same `to=` field and profile-selecting read command).
 
+Each email is announced to a session once. The hook that shows a notice first
+claims its id with `primitive listen pending --claim <email-id>`, under the
+profile's notice lock, so a Stop, resume or PostToolUse hook running at the
+same time skips it, and a later hook never repeats it, even when the session
+handled the mail without reading it through this CLI. The claimed ids are kept
+in `pending-mail-<session>.announced.json` next to the notices. A wake also
+reports the other mail the listener took meanwhile: after waking it keeps
+taking already queued mail for about a second and a half, and the hook lists
+every notice not yet announced with the wake's own line. A hook shows at most
+10 notices; a final line counts the rest, which the next hook announces. Past
+50 mail notices the oldest already announced one gives way to new mail; mail
+the session has not been shown is never dropped.
+
+`--timeout` bounds how long the listener waits for a delivery, not a delivery
+it already holds: that one is still handled and completed, so a short hook
+check never leaves a leased event to expire and count as a failed attempt.
+
 Mail in one thread is announced once, by its newest message. A message whose
 thread already has newer mail (`newer=` above zero) does not wake the session
 on its own: the listener moves on to the newer one, and wakes for the held

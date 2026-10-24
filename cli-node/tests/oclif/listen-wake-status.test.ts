@@ -115,8 +115,15 @@ it("ends the Claude one-event listener with a typed external status", async () =
       ["--once", "--wake", "--hook-session", "--events", "email.received"],
       { root },
     );
-    expect(mocks.runListen).toHaveBeenCalledOnce();
-    expect(completed).toHaveBeenCalledOnce();
+    // The one-event run, then a short drain of mail queued alongside it.
+    expect(mocks.runListen).toHaveBeenCalledTimes(2);
+    const [wakeRun, drainRun] = mocks.runListen.mock.calls.map(
+      (call) => call[0] as { number?: number; stopReceiving?: AbortSignal },
+    );
+    expect(wakeRun?.number).toBe(1);
+    expect(drainRun?.number).toBeUndefined();
+    expect(drainRun?.stopReceiving).toBeInstanceOf(AbortSignal);
+    expect(completed).toHaveBeenCalledTimes(2);
     expect(process.exitCode).toBe(2);
     expect(stderr.join("")).toContain(
       `Primitive status arrived: ${status.emailId} to=unavailable working peer@example.com ${status.sentEmailId}. This is activity on an exact conversation this session started, not a new task.\n`,
@@ -231,7 +238,9 @@ it("resumed SessionStart waits for the prior Stop listener to release the exact 
     status: () => undefined,
   });
   let consumed = 0;
-  mocks.runListen.mockImplementation(async () => {
+  mocks.runListen.mockImplementation(async (options: { number?: number }) => {
+    // The drain after the wake runs once the subscription is free.
+    if (options.number === undefined) return;
     const current = resolveListenSubscription(directory, "same-account", name);
     try {
       consumed++;
@@ -286,7 +295,8 @@ it("starts the resume retry window at the first lock collision after a slow look
     ["--once", "--wake", "--hook-session", "--events", "email.received"],
     { root },
   );
-  expect(mocks.runListen).toHaveBeenCalledTimes(2);
+  // Two one-event attempts, then the drain after the wake.
+  expect(mocks.runListen).toHaveBeenCalledTimes(3);
   expect(process.exitCode).toBe(2);
 });
 
@@ -804,7 +814,8 @@ it("wakes once for a thread's newest message instead of each superseded one", as
   });
   // Each run delivers the next queued message: every one but the newest
   // knows of newer mail in its thread, so it is held, not surfaced.
-  mocks.runListen.mockImplementation(async () => {
+  mocks.runListen.mockImplementation(async (options: { number?: number }) => {
+    if (options.number === undefined) return;
     const index = delivered++;
     if (ids.length - 1 - index > 0) held = ids[index];
     else woke = ids[index];
@@ -814,7 +825,8 @@ it("wakes once for a thread's newest message instead of each superseded one", as
       ["--once", "--wake", "--hook-session", "--events", "email.received"],
       { root },
     );
-    expect(mocks.runListen).toHaveBeenCalledTimes(24);
+    // 24 one-event runs, then the drain after the wake.
+    expect(mocks.runListen).toHaveBeenCalledTimes(25);
     const output = stderr.join("");
     expect(output.match(/Primitive mail arrived: /g)).toHaveLength(1);
     expect(output).toContain(`Primitive mail arrived: ${ids[23]} `);
@@ -866,7 +878,8 @@ it("wakes for a held message when nothing newer arrives", async () => {
   });
   let calls = 0;
   mocks.runListen.mockImplementation(
-    async (options: { signal: AbortSignal }) => {
+    async (options: { number?: number; stopReceiving: AbortSignal }) => {
+      if (options.number === undefined) return;
       calls++;
       if (calls === 1) {
         held = emailId;
@@ -874,7 +887,9 @@ it("wakes for a held message when nothing newer arrives", async () => {
       }
       // The newer message never arrives: wait until the short settle ends.
       await new Promise<void>((done) =>
-        options.signal.addEventListener("abort", () => done(), { once: true }),
+        options.stopReceiving.addEventListener("abort", () => done(), {
+          once: true,
+        }),
       );
     },
   );

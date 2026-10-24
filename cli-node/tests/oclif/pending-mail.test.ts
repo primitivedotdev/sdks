@@ -15,6 +15,9 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { saveConnectedAgentProfile } from "../../src/oclif/connected-agent-profile.js";
 import { acquireListenLock } from "../../src/oclif/listen-state.js";
 import {
+  ANNOUNCED_LIMIT,
+  announcedPendingMailPath,
+  claimPendingMail,
   clearConsumedPendingMail,
   clearReadPendingMail,
   PENDING_MAIL_LIMIT,
@@ -22,6 +25,7 @@ import {
   PendingMailFullError,
   type PendingMailNotice,
   pendingMailPath,
+  readAnnouncedPendingMail,
   readPendingMail,
   recordPendingMail,
   removePendingMail,
@@ -514,4 +518,105 @@ describe("pending mail in one thread", () => {
     await clearConsumedPendingMail(configDir, `claude:${session}`, id(1));
     expect(readPendingMail(configDir, profile, session)).toEqual([]);
   });
+});
+
+describe("announcing each notice once", () => {
+  it("claims an id once, however many hooks ask", async () => {
+    await recordPendingMail(configDir, profile, session, mail(1));
+    await recordPendingMail(configDir, profile, session, mail(2));
+    const claims = await Promise.all(
+      Array.from({ length: 6 }, () =>
+        claimPendingMail(configDir, profile, session, [id(1), id(2)]),
+      ),
+    );
+    // Exactly one concurrent hook wins each id.
+    expect(claims.flat().sort()).toEqual([id(1), id(2)]);
+    expect(
+      await claimPendingMail(configDir, profile, session, [id(1), id(3)]),
+    ).toEqual([id(3)]);
+    // Mail notices stay listed until read; claiming only marks them shown.
+    expect(
+      readPendingMail(configDir, profile, session).map((row) => row.email_id),
+    ).toEqual([id(1), id(2)]);
+    expect([
+      ...readAnnouncedPendingMail(configDir, profile, session).keys(),
+    ]).toEqual(expect.arrayContaining([id(1), id(2), id(3)]));
+  });
+
+  it("removes a claimed status notice, which has nothing to read", async () => {
+    await recordPendingMail(configDir, profile, session, {
+      ...mail(1),
+      kind: "status",
+      in_thread: true,
+      ref_sent_email_id: id(900),
+    });
+    await recordPendingMail(configDir, profile, session, mail(2));
+    await claimPendingMail(configDir, profile, session, [id(1), id(2)]);
+    expect(
+      readPendingMail(configDir, profile, session).map((row) => row.email_id),
+    ).toEqual([id(2)]);
+  });
+
+  it("counts ids the earlier repeat-timer file recorded as announced", async () => {
+    writeFileSync(
+      announcedPendingMailPath(configDir, profile, session),
+      JSON.stringify({ version: 1, times: { [id(1)]: Date.now() } }),
+      { mode: 0o600 },
+    );
+    expect(
+      await claimPendingMail(configDir, profile, session, [id(1), id(2)]),
+    ).toEqual([id(2)]);
+  });
+
+  it("forgets the oldest announced ids past the limit, never listed ones", async () => {
+    await recordPendingMail(configDir, profile, session, mail(1));
+    await claimPendingMail(configDir, profile, session, [id(1)], 1);
+    const ids = Array.from({ length: ANNOUNCED_LIMIT + 5 }, (_, n) =>
+      id(1000 + n),
+    );
+    await claimPendingMail(configDir, profile, session, ids.slice(0, 5), 10);
+    await claimPendingMail(configDir, profile, session, ids.slice(5), 20);
+    const announced = readAnnouncedPendingMail(configDir, profile, session);
+    // The listed notice stays announced however old its claim.
+    expect(announced.has(id(1))).toBe(true);
+    expect(announced.size).toBe(ANNOUNCED_LIMIT + 1);
+    expect(announced.has(ids.at(-1) ?? "")).toBe(true);
+    expect(ids.slice(0, 5).some((value) => announced.has(value))).toBe(false);
+  });
+
+  it("lets the oldest announced mail give way at the cap", async () => {
+    for (let n = 1; n <= PENDING_MAIL_LIMIT; n++)
+      await recordPendingMail(configDir, profile, session, mail(n));
+    await claimPendingMail(configDir, profile, session, [id(2), id(3)]);
+    await recordPendingMail(
+      configDir,
+      profile,
+      session,
+      mail(PENDING_MAIL_LIMIT + 1),
+    );
+    await recordPendingMail(
+      configDir,
+      profile,
+      session,
+      mail(PENDING_MAIL_LIMIT + 2),
+    );
+    const rows = readPendingMail(configDir, profile, session).map(
+      (row) => row.email_id,
+    );
+    expect(rows).toHaveLength(PENDING_MAIL_LIMIT);
+    // Only the announced notices went; unannounced mail is all still there.
+    expect(rows).not.toContain(id(2));
+    expect(rows).not.toContain(id(3));
+    expect(rows).toContain(id(1));
+    expect(rows.at(-1)).toBe(id(PENDING_MAIL_LIMIT + 2));
+    // With nothing announced left to give way, new mail is refused.
+    await expect(
+      recordPendingMail(
+        configDir,
+        profile,
+        session,
+        mail(PENDING_MAIL_LIMIT + 3),
+      ),
+    ).rejects.toBeInstanceOf(PendingMailFullError);
+  }, 30_000);
 });

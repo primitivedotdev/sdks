@@ -357,6 +357,55 @@ describe("local webhook runner", () => {
   });
 });
 
+describe("a closing receive window", () => {
+  it("finishes and completes a delivery already in hand", async () => {
+    const window = new AbortController();
+    options.stopReceiving = window.signal;
+    options.number = undefined;
+    options.handler = vi.fn(async (_delivery, signal: AbortSignal) => {
+      // The receive window closes while the handler runs.
+      window.abort();
+      await Promise.resolve();
+      expect(signal.aborted).toBe(false);
+      return {
+        succeeded: true,
+        outcome: { mode: "exec" as const, exit_code: 0, duration_ms: 2 },
+      };
+    });
+    expect(await runListen(options)).toBe(1);
+    expect(options.handler).toHaveBeenCalledTimes(1);
+    // Completed, so the server never sees an abandoned lease.
+    expect(bodies("/complete")).toHaveLength(1);
+    // No further receive once the window closed.
+    expect(bodies("/pull")).toHaveLength(1);
+  });
+
+  it("stops waiting without a delivery and without an error", async () => {
+    const window = new AbortController();
+    options.stopReceiving = window.signal;
+    steps["/v1/endpoints/endpoint-a/pull"] = [
+      () => {
+        window.abort();
+        return pull(null);
+      },
+    ];
+    expect(await runListen(options)).toBe(0);
+    expect(options.handler).not.toHaveBeenCalled();
+    expect(bodies("/complete")).toEqual([]);
+  });
+
+  it("still abandons a handler when the listener itself is cancelled", async () => {
+    options.stopReceiving = new AbortController().signal;
+    options.handler = vi.fn(async () => {
+      controller.abort();
+      await Promise.resolve();
+      throw new Error("cancelled");
+    });
+    expect(await runListen(options)).toBe(0);
+    expect(bodies("/complete")).toEqual([]);
+  });
+});
+
 it("backs off nonstandard 5xx responses and prevents tight empty-poll loops", async () => {
   steps["/v1/endpoints/endpoint-a/pull"] = [
     apiError(507, "overloaded"),

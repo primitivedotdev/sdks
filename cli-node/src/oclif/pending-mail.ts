@@ -14,6 +14,7 @@ import {
 import { isWakeInteractionLabel } from "./interaction-actions.js";
 import {
   privateMailPermissions,
+  readMailJson,
   syncMailDirectory,
   withMailLock,
   writeMailJson,
@@ -34,6 +35,11 @@ const RELATIONSHIPS: readonly string[] = [
  * acknowledgement cannot lose it, and stays until the session reads that
  * exact email (`primitive emails get --id <id>`). Notices carry only
  * server-derived metadata, never subject or body text.
+ *
+ * Each notice is announced to the session at most once: the hook that shows
+ * it first claims its id (`claimPendingMail`), and every later hook skips a
+ * claimed id. Mail the session handles without reading it through this CLI
+ * is therefore never announced again.
  *
  * File: <configDir>/agent-connections/profiles/<profile>/pending-mail-<session>.json
  * Shape: {"version":1,"session_id":"<id>","notices":[PendingMailNotice, ...]}
@@ -76,6 +82,12 @@ export const PENDING_MAIL_LIMIT = 50;
  * oldest status notice gives way, never mail.
  */
 export const PENDING_STATUS_HEADROOM = 10;
+/**
+ * Announced ids kept per session beyond those still listed as notices.
+ * Older ids are forgotten; their events were acknowledged long ago, so the
+ * server does not deliver them again.
+ */
+export const ANNOUNCED_LIMIT = 1000;
 const UUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/;
 const FILE =
   /^pending-mail-([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})\.json$/;
@@ -95,6 +107,100 @@ export function pendingMailPath(
     agentProfileDirectory(configDir, profileName),
     `pending-mail-${sessionId(session)}.json`,
   );
+}
+
+/** The ids already announced to the session, with when each was claimed. */
+export function announcedPendingMailPath(
+  configDir: string,
+  profileName: string,
+  session: string,
+): string {
+  return join(
+    agentProfileDirectory(configDir, profileName),
+    `pending-mail-${sessionId(session)}.announced.json`,
+  );
+}
+
+/**
+ * Read the announced ids for one session. The first format (version 1,
+ * `times`) recorded when each notice was last repeated; every id in it was
+ * announced at least once, so it counts as announced too. An unreadable
+ * file reads as empty, which can only repeat a notice, never lose one.
+ */
+export function readAnnouncedPendingMail(
+  configDir: string,
+  profileName: string,
+  session: string,
+): Map<string, number> {
+  let value: unknown;
+  try {
+    value = readMailJson(
+      announcedPendingMailPath(configDir, profileName, session),
+      262_144,
+    );
+  } catch {
+    return new Map();
+  }
+  const row =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : null;
+  const ids =
+    row?.version === 2 ? row.ids : row?.version === 1 ? row.times : null;
+  if (!ids || typeof ids !== "object" || Array.isArray(ids)) return new Map();
+  const announced = new Map<string, number>();
+  for (const [id, at] of Object.entries(ids as Record<string, unknown>))
+    if (UUID.test(id) && typeof at === "number" && Number.isFinite(at))
+      announced.set(id, at);
+  return announced;
+}
+
+/**
+ * Claim exact ids for announcement to the session. Returns the ids this call
+ * claimed; an id another hook already claimed is left out, so concurrent
+ * Stop, resume and PostToolUse hooks announce each email at most once.
+ * Claimed status notices are removed, since they have nothing to read; mail
+ * notices stay until the email is read. Ids need not be listed as notices: a
+ * live wake for a status whose notice could not be written is claimed too.
+ */
+export async function claimPendingMail(
+  configDir: string,
+  profileName: string,
+  session: string,
+  emailIds: string[],
+  now: number = Date.now(),
+): Promise<string[]> {
+  const wanted = [...new Set(emailIds.map((id) => id.toLowerCase()))];
+  if (wanted.some((id) => !UUID.test(id)))
+    throw new Error("A pending mail claim takes exact email ids.");
+  return withMailLock(lockDirectory(configDir, profileName), () => {
+    const announced = readAnnouncedPendingMail(configDir, profileName, session);
+    const claimed = wanted.filter((id) => !announced.has(id));
+    if (claimed.length === 0) return [];
+    for (const id of claimed) announced.set(id, now);
+    const current = readPendingMail(configDir, profileName, session, true);
+    const listed = new Set(current.map((row) => row.email_id));
+    // Ids still listed as notices are always kept; of the rest, the newest.
+    const kept = [...announced.entries()]
+      .filter(([id]) => !listed.has(id))
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, ANNOUNCED_LIMIT);
+    writeMailJson(announcedPendingMailPath(configDir, profileName, session), {
+      version: 2,
+      session_id: sessionId(session),
+      ids: Object.fromEntries([
+        ...[...announced.entries()].filter(([id]) => listed.has(id)),
+        ...kept,
+      ]),
+    });
+    const claimedSet = new Set(claimed);
+    const next = current.filter(
+      (row) => !(row.kind === "status" && claimedSet.has(row.email_id)),
+    );
+    if (next.length !== current.length)
+      write(configDir, profileName, session, next);
+    return claimed;
+  });
 }
 
 function lockDirectory(configDir: string, profileName: string): string {
@@ -262,21 +368,25 @@ function coveredBy(
 }
 
 /**
- * The notice list is full of unread mail. Nothing is dropped: the caller
- * leaves the event unacknowledged, so the mail stays queued and is
- * recorded once the session reads some of its notices.
+ * The notice list is full of unread mail the session has not yet been told
+ * about. Nothing is dropped: the caller leaves the event unacknowledged, so
+ * the mail stays queued and is recorded once some notices are announced or
+ * read.
  */
 export class PendingMailFullError extends Error {
   constructor() {
     super(
-      `This session already has ${PENDING_MAIL_LIMIT} unread pending notices. Read some with primitive emails get --id <id>; newer mail stays queued until then.`,
+      `This session already has ${PENDING_MAIL_LIMIT} pending notices it has not been shown. Read some with primitive emails get --id <id>; newer mail stays queued until then.`,
     );
   }
 }
 
 /**
- * Add or refresh one notice, deduplicated by email id. Unread mail is never
- * evicted: a mail notice past PENDING_MAIL_LIMIT fails with
+ * Add or refresh one notice, deduplicated by email id. Past
+ * PENDING_MAIL_LIMIT mail notices, the oldest mail notice already announced
+ * to the session gives way: the session was told about it, and it stays
+ * readable by id. Mail the session has not been shown is never evicted; when
+ * every listed notice is unannounced a new mail notice fails with
  * PendingMailFullError. A status notice always fits, using the headroom
  * above that cap and replacing the oldest status notice when it is full.
  */
@@ -309,14 +419,28 @@ export async function recordPendingMail(
       ),
       row,
     ];
-    // Unread mail is capped and never evicted; a new mail notice past the
-    // cap is refused so its event stays queued.
-    if (
-      row.kind !== "status" &&
-      next.filter((existing) => existing.kind !== "status").length >
-        PENDING_MAIL_LIMIT
-    )
-      throw new PendingMailFullError();
+    // Mail notices are capped. Announced ones give way first, oldest first;
+    // a notice the session has not been shown is never evicted, so a new
+    // mail notice past the cap is then refused and its event stays queued.
+    const mailCount = () =>
+      next.filter((existing) => existing.kind !== "status").length;
+    if (row.kind !== "status" && mailCount() > PENDING_MAIL_LIMIT) {
+      const announced = readAnnouncedPendingMail(
+        configDir,
+        profileName,
+        session,
+      );
+      while (mailCount() > PENDING_MAIL_LIMIT) {
+        const index = next.findIndex(
+          (existing) =>
+            existing !== row &&
+            existing.kind !== "status" &&
+            announced.has(existing.email_id),
+        );
+        if (index === -1) throw new PendingMailFullError();
+        next.splice(index, 1);
+      }
+    }
     // Status notices use the headroom above the mail cap, so one can always
     // be journaled; past it the oldest other status notice gives way.
     while (next.length > PENDING_MAIL_LIMIT + PENDING_STATUS_HEADROOM) {

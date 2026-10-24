@@ -2,6 +2,7 @@ import { Command, Flags } from "@oclif/core";
 import { resolveCliAuth } from "../auth.js";
 import { currentMailSessionKey } from "../mail-session.js";
 import {
+  claimPendingMail,
   PENDING_MAIL_LIMIT,
   pendingMailPath,
   readPendingMail,
@@ -15,7 +16,7 @@ export default class ListenPendingCommand extends Command {
   static summary =
     "List mail a session's wake listener accepted but not yet read";
   static description =
-    `Prints the durable pending notices for one Claude Code session of the selected connected profile. A notice is written before its wake event is acknowledged and is removed when the session reads that exact email with \`primitive emails get --id <id>\`. Notices carry only server-derived metadata (sender, thread, whether this profile sent in the thread, newer-mail count), never subject or body. Status notices (kind status) name a peer signal on a message this session sent and have nothing to read; clear them with --clear after delivering them. Unread mail notices are never dropped: at ${PENDING_MAIL_LIMIT} notices the list reports full and newer mail stays queued, unacknowledged, until some are read. Reading never takes the writer lock, so it works while a listener holds it.`;
+    `Prints the durable pending notices for one Claude Code session of the selected connected profile. A notice is written before its wake event is acknowledged and is removed when the session reads that exact email with \`primitive emails get --id <id>\`. Notices carry only server-derived metadata (sender, thread, whether this profile sent in the thread, newer-mail count), never subject or body. Status notices (kind status) name a peer signal on a message this session sent and have nothing to read; clear them with --clear after delivering them. --claim marks exact ids as announced to the session and prints the ids this call claimed as \`claimed\`; receive hooks use it so each email is announced at most once. Past ${PENDING_MAIL_LIMIT} mail notices the oldest announced one gives way; mail the session has not been shown is never dropped, so when all ${PENDING_MAIL_LIMIT} are unannounced the list reports full and newer mail stays queued, unacknowledged. Reading never takes the writer lock, so it works while a listener holds it.`;
   static examples = [
     "PRIMITIVE_AGENT_PROFILE=work <%= config.bin %> listen pending --session <claude-session-id>",
     "PRIMITIVE_AGENT_PROFILE=work <%= config.bin %> listen pending --session <claude-session-id> --clear <email-id>",
@@ -29,6 +30,12 @@ export default class ListenPendingCommand extends Command {
       multiple: true,
       description:
         "Remove these exact email IDs after delivering them (repeatable)",
+    }),
+    claim: Flags.string({
+      multiple: true,
+      exclusive: ["clear"],
+      description:
+        "Mark these exact email IDs as announced to the session and report which ones this call claimed (repeatable)",
     }),
     json: Flags.boolean({ description: "Print JSON (already the default)" }),
   };
@@ -52,6 +59,17 @@ export default class ListenPendingCommand extends Command {
     const clear = flags.clear ?? [];
     if (clear.some((id) => !UUID.test(id)))
       this.error("--clear takes exact email UUIDs.");
+    const claim = flags.claim ?? [];
+    if (claim.some((id) => !UUID.test(id)))
+      this.error("--claim takes exact email UUIDs.");
+    const claimed = claim.length
+      ? await claimPendingMail(
+          this.config.configDir,
+          profileName,
+          session,
+          claim,
+        )
+      : undefined;
     const notices = clear.length
       ? await removePendingMail(
           this.config.configDir,
@@ -71,6 +89,7 @@ export default class ListenPendingCommand extends Command {
           path: pendingMailPath(this.config.configDir, profileName, session),
           // At the cap, newer mail waits in the queue until notices are read.
           full: notices.length >= PENDING_MAIL_LIMIT,
+          ...(claimed ? { claimed } : {}),
           notices,
         },
         null,

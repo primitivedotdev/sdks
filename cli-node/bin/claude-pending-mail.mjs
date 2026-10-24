@@ -24,18 +24,19 @@ const interactionPattern =
   /^(?:fyi|unknown|[a-z][a-z0-9._-]{0,63}\/[1-9][0-9]{0,3})$/;
 const relationships = ["owner", "member", "agent", "contact", "other"];
 const pollIntervalMs = 20_000;
-const announceIntervalMs = 60_000;
+/** The most notices one hook shows; the rest wait for the next hook. */
+export const SHOWN_LIMIT = 10;
 
 function profileDirectory(configDir, profile) {
   if (!profilePattern.test(profile)) return null;
   return join(resolve(configDir), "agent-connections", "profiles", profile);
 }
 
-function readJson(path) {
+function readJson(path, maxBytes = 65_536) {
   try {
     const stat = lstatSync(path);
     // A full pending list (mail cap plus status headroom) can pass 16 KiB.
-    if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 65_536)
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size > maxBytes)
       return null;
     return JSON.parse(readFileSync(path, "utf8"));
   } catch {
@@ -134,7 +135,8 @@ const REPEAT_TICK = "repeat.tick/1";
  * A repeating message's tick that knows of newer mail in its thread is
  * superseded even when that newer tick has no notice yet, since the newer
  * one will arrive. Status notices and mail outside a thread are never
- * collapsed. A kept notice carries `covered`, how many it stands for.
+ * collapsed. A kept notice carries `covered`, how many it stands for, and
+ * `coveredIds`, their ids.
  * Order is kept, so the oldest remaining notice still comes first.
  */
 export function collapsePendingMail(notices) {
@@ -153,7 +155,10 @@ export function collapsePendingMail(notices) {
   const kept = notices.filter((notice, index) => {
     if (notice.kind === "status" || !notice.threadId) return true;
     if (newest.get(notice.threadId) !== index) {
-      covered.set(notice.threadId, (covered.get(notice.threadId) ?? 0) + 1);
+      covered.set(notice.threadId, [
+        ...(covered.get(notice.threadId) ?? []),
+        notice.emailId,
+      ]);
       return false;
     }
     return !(
@@ -164,7 +169,11 @@ export function collapsePendingMail(notices) {
   });
   return kept.map((notice) =>
     notice.kind !== "status" && notice.threadId && covered.get(notice.threadId)
-      ? { ...notice, covered: covered.get(notice.threadId) }
+      ? {
+          ...notice,
+          covered: covered.get(notice.threadId).length,
+          coveredIds: covered.get(notice.threadId),
+        }
       : notice,
   );
 }
@@ -334,17 +343,69 @@ function formatLiveMail(notice, receiver) {
   return `${skillFirst}Primitive mail arrived: ${notice.emailId}${recipientField(receiver.address)} from=${sender} relationship=${relationship} thread=${notice.threadId ?? "none"} in_thread=${notice.inThread ? "yes" : "no"} attachments=${notice.attachments ? "yes" : "no"}${newer}${interaction ? ` interaction=${interaction}` : ""}. Read with ${readCommand(notice.emailId, receiver.profile, receiver.cli)}.${interaction ? wakeSentence(interaction) : ""} ${authority}\n`;
 }
 
-export function clearDeliveredStatus(
-  cli,
+/**
+ * Ids already announced to the session, read without the writer lock (the
+ * CLI replaces the file atomically). Version 1 recorded repeat times; every
+ * id in it was announced at least once.
+ */
+export function announcedPendingMail(configDir, profile, sessionId) {
+  const directory = profileDirectory(configDir, profile);
+  if (!directory || !uuid.test(sessionId)) return new Set();
+  const state = readJson(
+    join(directory, `pending-mail-${sessionId.toLowerCase()}.announced.json`),
+    262_144,
+  );
+  const ids =
+    state?.version === 2
+      ? state.ids
+      : state?.version === 1
+        ? state.times
+        : null;
+  return new Set(
+    ids && typeof ids === "object" && !Array.isArray(ids)
+      ? Object.keys(ids).map((id) => id.toLowerCase())
+      : [],
+  );
+}
+
+/**
+ * The notices this hook would show: those not yet announced, one per
+ * thread, at most SHOWN_LIMIT, leaving out `exclude` (a live wake's own
+ * email, announced by its own line). `ids` are what showing them claims: each
+ * shown notice and the older notices in its thread it stands for.
+ * `remaining` counts the unannounced notices left for a later hook.
+ */
+export function selectPendingMail(
   configDir,
   profile,
   sessionId,
   notices,
+  exclude = [],
 ) {
-  const ids = notices
-    .filter((notice) => notice.kind === "status")
-    .map((notice) => notice.emailId);
-  if (!ids.length) return;
+  const skip = announcedPendingMail(configDir, profile, sessionId);
+  for (const id of exclude) skip.add(id);
+  const fresh = collapsePendingMail(
+    notices.filter((notice) => !skip.has(notice.emailId)),
+  );
+  const shown = fresh.slice(0, SHOWN_LIMIT);
+  return {
+    shown,
+    ids: shown.flatMap((notice) => [
+      notice.emailId,
+      ...(notice.coveredIds ?? []),
+    ]),
+    remaining: fresh.length - shown.length,
+  };
+}
+
+/**
+ * Claim exact ids through the CLI, which takes the profile's writer lock, so
+ * each id is announced by one hook only. Returns the ids this call claimed,
+ * or null when the claim could not run (an older CLI, say); the caller then
+ * shows its notices anyway rather than risk never showing them.
+ */
+export function claimPendingMail(cli, configDir, profile, sessionId, ids) {
+  if (!ids.length) return new Set();
   const env = {
     ...process.env,
     PRIMITIVE_CONFIG_DIR: configDir,
@@ -352,55 +413,62 @@ export function clearDeliveredStatus(
   };
   delete env.PRIMITIVE_API_KEY;
   delete env.PRIMITIVE_KEY;
-  spawnSync(
-    process.execPath,
-    [
-      cli,
-      "listen",
-      "pending",
-      "--session",
-      sessionId,
-      ...ids.flatMap((id) => ["--clear", id]),
-    ],
-    {
-      env,
-      encoding: "utf8",
-      timeout: 8_000,
-      maxBuffer: 16_384,
-    },
-  );
+  try {
+    const result = spawnSync(
+      process.execPath,
+      [
+        cli,
+        "listen",
+        "pending",
+        "--session",
+        sessionId,
+        ...ids.flatMap((id) => ["--claim", id]),
+      ],
+      { env, encoding: "utf8", timeout: 8_000, maxBuffer: 262_144 },
+    );
+    if (result.status !== 0) return null;
+    const claimed = JSON.parse(result.stdout)?.claimed;
+    if (!Array.isArray(claimed)) return null;
+    return new Set(
+      claimed
+        .filter((id) => typeof id === "string" && uuid.test(id))
+        .map((id) => id.toLowerCase()),
+    );
+  } catch {
+    return null;
+  }
 }
 
-export function duePendingMail(configDir, profile, sessionId, notices) {
-  const directory = profileDirectory(configDir, profile);
-  if (!directory || !uuid.test(sessionId) || notices.length === 0) return [];
-  mkdirSync(directory, { recursive: true, mode: 0o700 });
-  const path = join(
-    directory,
-    `pending-mail-${sessionId.toLowerCase()}.announced.json`,
+/**
+ * Lines for the pending notices this hook claims, at most SHOWN_LIMIT, plus
+ * a count of those left for a later hook. `extraIds` (a live wake's own id)
+ * are claimed in the same call but not shown; `claimed` says which ids this
+ * hook won.
+ */
+export function announcePendingMail(
+  { cli, configDir, profile, address, sessionId, skillFile },
+  extraIds = [],
+) {
+  const { shown, ids, remaining } = selectPendingMail(
+    configDir,
+    profile,
+    sessionId,
+    readPendingMail(configDir, profile, sessionId),
+    extraIds,
   );
-  const state = readJson(path);
-  const previous =
-    state?.version === 1 && state.times && typeof state.times === "object"
-      ? state.times
-      : {};
-  const now = Date.now();
-  const due = notices.filter((notice) => {
-    const at = previous[notice.emailId];
-    return !Number.isFinite(at) || at > now || now - at >= announceIntervalMs;
-  });
-  if (due.length) {
-    const times = Object.fromEntries(
-      notices.map((notice) => [
-        notice.emailId,
-        due.some((item) => item.emailId === notice.emailId)
-          ? now
-          : (previous[notice.emailId] ?? now),
-      ]),
+  const wanted = [...new Set([...extraIds, ...ids])];
+  const claimed =
+    claimPendingMail(cli, configDir, profile, sessionId, wanted) ??
+    new Set(wanted);
+  const receiver = { profile, address, skillFile, cli };
+  const lines = shown
+    .filter((notice) => claimed.has(notice.emailId))
+    .map((notice) => formatPendingMail(notice, receiver));
+  if (remaining > 0)
+    lines.push(
+      `${remaining} more pending ${remaining === 1 ? "message" : "messages"}; they are announced next.\n`,
     );
-    writeJson(path, { version: 1, times });
-  }
-  return due;
+  return { lines, claimed };
 }
 
 function pollDue(configDir, profile, sessionId) {
@@ -419,13 +487,8 @@ function pollDue(configDir, profile, sessionId) {
   return true;
 }
 
-function context(notices, receiver) {
-  if (notices.length === 0) return;
-  const lines = notices
-    .slice(0, 10)
-    .map((notice) => formatPendingMail(notice, receiver));
-  if (notices.length > 10)
-    lines.push(`${notices.length - 10} more pending messages.\n`);
+function context(lines) {
+  if (lines.length === 0) return;
   process.stdout.write(
     JSON.stringify({
       hookSpecificOutput: {
@@ -530,20 +593,15 @@ async function main() {
         },
       );
     }
-    const notices = collapsePendingMail(
-      readPendingMail(configDir, profile, sessionId),
-    );
-    if (notices.length) {
-      const due = duePendingMail(configDir, profile, sessionId, notices);
-      context(due, { profile, address, skillFile: claudeSkillFile(), cli });
-      clearDeliveredStatus(
-        cli,
-        configDir,
-        profile,
-        sessionId,
-        due.slice(0, 10),
-      );
-    }
+    const { lines } = announcePendingMail({
+      cli,
+      configDir,
+      profile,
+      address,
+      sessionId,
+      skillFile: claudeSkillFile(),
+    });
+    context(lines);
   } finally {
     try {
       rmdirSync(lock);

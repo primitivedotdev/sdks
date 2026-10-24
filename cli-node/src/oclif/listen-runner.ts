@@ -60,6 +60,14 @@ export interface ListenOptions {
   notifySession?: NotifySessionOptions;
   expectedNotificationScope?: string;
   signal: AbortSignal;
+  /**
+   * Stop waiting for deliveries, without abandoning one already in hand: a
+   * delivery received before it fires is still handled and completed under
+   * `signal` alone. An abandoned delivery keeps its lease until it expires
+   * and then counts as a failed attempt on the server, so a short receive
+   * window must never cut a handler short.
+   */
+  stopReceiving?: AbortSignal;
   onReady?: () => void;
   onReceivingState?: (ready: boolean) => void;
   stderr?: { write(value: string): unknown };
@@ -149,7 +157,12 @@ async function runStandaloneListen(options: ListenOptions): Promise<number> {
   const random = options.random ?? Math.random;
   const sleep = options.sleep ?? listenSleep;
   const stderr = options.stderr ?? process.stderr;
-  const signal = options.signal;
+  const hard = options.signal;
+  const receiving = options.stopReceiving
+    ? AbortSignal.any([hard, options.stopReceiving])
+    : hard;
+  // While a delivery is in hand only `hard` applies; otherwise `receiving`.
+  let signal = receiving;
   const mode = options.mode ?? "stdout";
   const events = options.events;
   if (
@@ -403,6 +416,9 @@ async function runStandaloneListen(options: ListenOptions): Promise<number> {
         continue;
       }
       signal.throwIfAborted();
+      // From here the delivery is handled and completed even when the
+      // receive window closes meanwhile.
+      signal = hard;
       let handled: Awaited<ReturnType<ListenHandler>>;
       try {
         handled = await options.handler(delivery, signal);
@@ -468,6 +484,7 @@ async function runStandaloneListen(options: ListenOptions): Promise<number> {
           "Delivery ownership expired before confirmation; it may be delivered again.\n",
         );
       }
+      signal = receiving;
     }
   } catch (error) {
     if (!signal.aborted) throw error;

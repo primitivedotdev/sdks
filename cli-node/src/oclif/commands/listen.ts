@@ -58,6 +58,11 @@ const RESUME_LOCK_RETRY_MS = 4_000;
  * newer mail) waits for that newer mail before waking for the held one.
  */
 const HELD_WAKE_SETTLE_MS = 5_000;
+/**
+ * After a wake, how long the listener keeps taking mail that is already
+ * queued, so mail that arrived together is announced together.
+ */
+const WAKE_DRAIN_MS = 1_500;
 const MAIL_CHECK_RECORD_MS = 5_000;
 const RESUME_LOCK_RETRY_STEP_MS = 250;
 
@@ -640,12 +645,20 @@ export default class ListenCommand extends Command {
     });
     let timedOut = false;
     let lastMailCheckRecord = Number.NEGATIVE_INFINITY;
+    // --timeout stops waiting for deliveries; a delivery already in hand is
+    // still handled and completed, so a short hook poll never abandons a
+    // leased event (which the server would count as a failed attempt).
+    const receiveWindow = new AbortController();
+    const sharedNotify = Boolean(
+      target && flags["notify-session"] && requestConfig,
+    );
     const timer =
       flags.timeout === undefined
         ? undefined
         : setTimeout(() => {
             timedOut = true;
-            controller.abort();
+            receiveWindow.abort();
+            if (sharedNotify) controller.abort();
           }, flags.timeout * 1000);
     const cancel = () => controller.abort();
     process.on("SIGINT", cancel);
@@ -695,6 +708,7 @@ export default class ListenCommand extends Command {
             }
           : undefined,
         handler: wake?.handler ?? handler,
+        stopReceiving: receiveWindow.signal,
         stderr: flags.wake
           ? new Writable({
               write(_chunk, _encoding, done) {
@@ -736,7 +750,10 @@ export default class ListenCommand extends Command {
                 settle
                   ? {
                       ...options,
-                      signal: AbortSignal.any([controller.signal, settle]),
+                      stopReceiving: AbortSignal.any([
+                        receiveWindow.signal,
+                        settle,
+                      ]),
                     }
                   : options,
               );
@@ -765,8 +782,31 @@ export default class ListenCommand extends Command {
           wake &&
           !wake.wakeId() &&
           !wake.status() &&
-          !controller.signal.aborted
+          !controller.signal.aborted &&
+          !receiveWindow.signal.aborted
         );
+        // Mail that arrived alongside this wake is reported with it: take
+        // what is already queued, briefly, so each one is journaled as a
+        // pending notice the hook announces in the same wake.
+        if (
+          wake &&
+          hookSessionId &&
+          (wake.wakeId() || wake.status()) &&
+          !controller.signal.aborted
+        )
+          try {
+            await runListen({
+              ...options,
+              number: undefined,
+              stopReceiving: AbortSignal.any([
+                receiveWindow.signal,
+                AbortSignal.timeout(WAKE_DRAIN_MS),
+              ]),
+            });
+            wake.completed();
+          } catch {
+            // The wake is already final; anything left stays queued.
+          }
       } else {
         const notify = options.notifySession;
         let expectedCwd: string | undefined;
@@ -889,7 +929,7 @@ export default class ListenCommand extends Command {
       // Detached and silent: the wake line and exit status are already final.
       const auto = wake.autoSignal?.();
       if (auto) dispatchAutoRead({ configDir: this.config.configDir, ...auto });
-    } else if (controller.signal.aborted)
+    } else if (controller.signal.aborted || timedOut)
       process.exitCode = timedOut && flags.wake ? 0 : timedOut ? 2 : 130;
   }
 }

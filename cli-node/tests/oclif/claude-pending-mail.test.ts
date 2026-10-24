@@ -17,6 +17,27 @@ const otherSession = "33333333-3333-4333-8333-333333333333";
 const wrapper = join(import.meta.dirname, "../../bin/claude-pending-mail.mjs");
 const stopWrapper = join(import.meta.dirname, "../../bin/claude-wake.mjs");
 
+/**
+ * A fake CLI's answer to `listen pending --claim`, as the real command
+ * answers it: ids not yet in the announced file are claimed and recorded.
+ */
+function withClaim(profileDir: string, body: string): string {
+  const announced = join(profileDir, `pending-mail-${session}.announced.json`);
+  return `
+import * as claimFs from "node:fs";
+if (process.argv.includes("pending")) {
+  const ids = process.argv.flatMap((value, index, all) => all[index - 1] === "--claim" ? [value] : []);
+  const path = ${JSON.stringify(announced)};
+  const state = claimFs.existsSync(path) ? JSON.parse(claimFs.readFileSync(path, "utf8")) : { version: 2, ids: {} };
+  const claimed = ids.filter((id) => !(id in state.ids));
+  for (const id of claimed) state.ids[id] = Date.now();
+  claimFs.writeFileSync(path, JSON.stringify(state));
+  process.stdout.write(JSON.stringify({ claimed }));
+  process.exit(0);
+}
+${body}`;
+}
+
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), "primitive-pending-hook-"));
   const configDir = join(root, "config");
@@ -26,13 +47,16 @@ function fixture() {
   const calls = join(root, "calls.json");
   writeFileSync(
     cli,
-    `
+    withClaim(
+      profileDir,
+      `
 import { writeFileSync } from "node:fs";
 let input = "";
 for await (const chunk of process.stdin) input += String(chunk);
 writeFileSync(${JSON.stringify(calls)}, JSON.stringify({args:process.argv.slice(2),input:JSON.parse(input),env:{config:process.env.PRIMITIVE_CONFIG_DIR,profile:process.env.PRIMITIVE_AGENT_PROFILE,address:process.env.PRIMITIVE_HOOK_AGENT_ADDRESS,key:process.env.PRIMITIVE_API_KEY}}));
 writeFileSync(${JSON.stringify(join(profileDir, `pending-mail-${session}.json`))}, JSON.stringify({version:1,session_id:${JSON.stringify(session)},notices:[{email_id:${JSON.stringify(email)},received_at:new Date().toISOString(),sender:"peer@example.com",thread_id:null,in_thread:false,newer:null}]}));
 `,
+    ),
   );
   const args = [
     wrapper,
@@ -102,7 +126,10 @@ test("PostToolUse checks the exact session and delivers trusted pending metadata
 
 test("PostToolUse ignores malformed pending notices and fails open", () => {
   const fixtureData = fixture();
-  writeFileSync(fixtureData.cli, "process.exit(0);");
+  writeFileSync(
+    fixtureData.cli,
+    withClaim(fixtureData.profileDir, "process.exit(0);"),
+  );
   writeFileSync(
     join(fixtureData.profileDir, `pending-mail-${session}.json`),
     JSON.stringify({
@@ -139,7 +166,10 @@ test("Stop replays an unread exact-session notice before opening the listener", 
   const fixtureData = fixture();
   writeFileSync(
     fixtureData.cli,
-    'if (process.argv.includes("--help")) process.stdout.write("--once --wake --hook-session --events primitive-hook-profile-bound-v2"); else process.exit(9);',
+    withClaim(
+      fixtureData.profileDir,
+      'if (process.argv.includes("--help")) process.stdout.write("--once --wake --hook-session --events primitive-hook-profile-bound-v2"); else process.exit(9);',
+    ),
   );
   writeFileSync(
     join(fixtureData.profileDir, `pending-mail-${session}.json`),
@@ -215,7 +245,10 @@ test("PostToolUse reads a full list, including a status notice past the mail cap
     "../../src/oclif/pending-mail.js"
   );
   const fixtureData = fixture();
-  writeFileSync(fixtureData.cli, "process.exit(0);");
+  writeFileSync(
+    fixtureData.cli,
+    withClaim(fixtureData.profileDir, "process.exit(0);"),
+  );
   // The writer requires private directories.
   for (const dir of [
     fixtureData.configDir,
@@ -350,7 +383,10 @@ test("Stop announces 24 unanswered messages in one thread as one notice", () => 
     const fixtureData = fixture();
     writeFileSync(
       fixtureData.cli,
-      'if (process.argv.includes("--help")) process.stdout.write("--once --wake --hook-session --events primitive-hook-profile-bound-v2"); else process.exit(9);',
+      withClaim(
+        fixtureData.profileDir,
+        'if (process.argv.includes("--help")) process.stdout.write("--once --wake --hook-session --events primitive-hook-profile-bound-v2"); else process.exit(9);',
+      ),
     );
     writeNotices(fixtureData, backlog(interaction));
     const result = stopRun(fixtureData);
@@ -367,7 +403,7 @@ test("Stop announces 24 unanswered messages in one thread as one notice", () => 
         `23 older pending messages in thread ${backlogThread} are covered by ${backlogId(23)}`,
       ),
     );
-    // The next Stop within the announce interval does not repeat it.
+    // The next Stop never repeats it, nor the notices it stands for.
     const again = stopRun(fixtureData);
     assert.doesNotMatch(again.stderr, /Primitive mail arrived: /);
   }
@@ -375,7 +411,10 @@ test("Stop announces 24 unanswered messages in one thread as one notice", () => 
 
 test("PostToolUse announces only the newest message of each thread", () => {
   const fixtureData = fixture();
-  writeFileSync(fixtureData.cli, "process.exit(0);");
+  writeFileSync(
+    fixtureData.cli,
+    withClaim(fixtureData.profileDir, "process.exit(0);"),
+  );
   const lone = "44444444-4444-4444-8444-444444444444";
   writeNotices(fixtureData, [
     ...backlog().slice(0, 3),
