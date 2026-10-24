@@ -1090,8 +1090,8 @@ with status `ok`, `warn`, `fail` or `skip`; `action` (`login`, `install_cli`,
 and the command exits 0 only when every check is ok or skipped. Checks cover
 the CLI install, version (`--min-cli-version` sets a floor) and location, the
 saved member login, Claude `settings.json`, Primitive's Claude SessionStart,
-SessionEnd and per-session receive hooks (each present once, pointing at this
-CLI, with stale copies from older installs removed), the Codex SessionStart hook
+SessionEnd and receive hooks (each present once, pointing at this CLI, with
+stale copies from older installs removed), the Codex SessionStart hook
 in `$CODEX_HOME/hooks.json` (repaired in place without moving any other hook,
 since Codex keys approvals by hook position, and reported as `warn` until the
 approval Codex recorded matches the hook's current hash), a managed block in
@@ -1100,11 +1100,25 @@ content) and `~/.omp/agent/AGENTS.md`, the bundled primitive-connect skill, and
 saved agent profiles that were disconnected in Primitive (moved aside locally;
 nothing changes server side).
 
-`claude.hook.stop` names every per-session receive hook a repair would change
-in `items: [{profile, session, hook, state}]`, where `hook` is the Claude event
+Claude receives mail through one shared set of receive hooks per config
+directory (`Stop`, `SessionStart` on resume, and `PostToolUse`). Each run reads
+the session id from the hook input and looks up the profiles that session
+receives as in `<config>/agent-connections/claude-sessions/<session>.json`,
+which `agent connect`, `agent enroll` and `agent session-register` write and
+`agent disconnect` and `agent session-end` remove from. A session with no
+entry exits at once, so the hooks cost almost nothing in unrelated sessions.
+Earlier versions wrote one exact-session hook set per session; registering a
+session, connecting, or `machine doctor --fix` folds every such hook for the
+config directory into the shared set (recording its profile as a receiver)
+and drops hooks for profiles that are no longer connected. Hooks of other
+tools and of other config directories are left alone.
+
+`claude.hook.stop` names every receive hook a repair would change in
+`items: [{profile, session, hook, state}]`, where `hook` is the Claude event
 (`Stop`, `SessionStart` or `PostToolUse`) and `state` is `missing`, `stale`,
-`duplicate`, `outdated` or `old_address`; `profile` and `session` are null for
-hooks written by old CLI versions that did not record them. After `--fix` it
+`duplicate`, `outdated`, `old_address` or `per_session` (an exact-session hook
+to fold into the shared set); `profile` and `session` are null for the shared
+hooks and for hooks written by old CLI versions that did not record them. After `--fix` it
 also reports `changes`, the same fields plus `action` (`added`, `removed` or
 `updated`), for each hook it changed. `--profile <name>` (repeatable, with
 `--fix`) limits those per-session hook changes to the named profiles; combine it
@@ -1123,11 +1137,11 @@ The SessionStart hook runs `primitive agent session-register --runtime claude --
 It gives the session an address once, named `<runtime>-<repository>`, using the
 saved member login, and only re-verifies on resume; a session whose agent was
 disconnected or removed never gets a second address. The SessionEnd hook runs
-`primitive agent session-end`, which marks the session ended and removes its
-exact-session receive hooks, but keeps the agent's credential and profile, so
+`primitive agent session-end`, which marks the session ended and removes it
+from the receive hooks' session receivers, but keeps the agent's credential and profile, so
 closing a terminal does not cost the session its agent: resuming the session
-(for example `claude --resume <session>`) re-verifies the agent and reinstalls
-the hooks at the same address. Presence lapses on its own once the session
+(for example `claude --resume <session>`) re-verifies the agent and records it
+as the session's receiver again at the same address. Presence lapses on its own once the session
 stops running. Claude reports the same SessionEnd for a restart, a switch to
 another session and a real exit, so the hook waits five minutes first, and a
 start of the same session within that time cancels the end.

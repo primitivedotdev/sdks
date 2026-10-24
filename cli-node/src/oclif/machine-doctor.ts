@@ -30,6 +30,7 @@ import {
   samePath,
   writeClaudeSettings,
 } from "./claude-machine-hooks.js";
+import { addSessionReceiver } from "./claude-session-receivers.js";
 import {
   hasCodexSessionHook,
   inspectCodexHook,
@@ -139,7 +140,7 @@ const TITLES: Record<DoctorCheckId, string> = {
   "claude.settings_valid": "Claude Code settings file",
   "claude.hook.session_start": "Claude SessionStart hook",
   "claude.hook.session_end": "Claude SessionEnd hook",
-  "claude.hook.stop": "Claude per-session receive hooks",
+  "claude.hook.stop": "Claude receive hooks",
   "claude.instructions": "Claude Code instructions",
   "codex.hook.session_start": "Codex SessionStart hook",
   "codex.instructions": "Codex instructions",
@@ -844,14 +845,26 @@ export async function runMachineDoctor(
           );
         }
       if (!repaired.changed.size) return id === "claude.hook.stop";
+      // Receivers are recorded before the hooks that read them are written,
+      // so a session never loses its per-session hook before the shared
+      // hook knows about it.
+      for (const item of repaired.receivers)
+        addSessionReceiver(item.configDir, item.session, {
+          profile: item.profile,
+          address: item.address,
+        });
       // A failed write throws before anything is recorded, so no later check
       // reports a change that was never saved.
-      writeClaudeSettings({
-        claudeDir: paths.claudeDir,
-        read: settingsRead.read,
-        settings: repaired.settings,
-        now,
-      });
+      if (
+        JSON.stringify(repaired.settings) !==
+        JSON.stringify(settingsRead.settings)
+      )
+        writeClaudeSettings({
+          claudeDir: paths.claudeDir,
+          read: settingsRead.read,
+          settings: repaired.settings,
+          now,
+        });
       sessionHookChanges.push(...repaired.changes);
       for (const hook of repaired.changed) repairedAhead.add(hook);
       settingsRead = readClaudeSettings(paths.claudeDir);

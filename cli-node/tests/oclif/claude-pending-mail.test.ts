@@ -460,3 +460,55 @@ test("a repeating message's tick that knows of a newer tick is never announced",
   // Ordinary mail that knows of newer mail still shows until that arrives.
   assert.equal(collapsePendingMail([{ ...tick, interaction: null }]).length, 1);
 });
+
+test("the shared PostToolUse hook checks only the session's recorded receivers", () => {
+  const fixtureData = fixture();
+  const run = (sessionId: string) =>
+    spawnSync(
+      process.execPath,
+      [
+        wrapper,
+        fixtureData.cli,
+        fixtureData.configDir,
+        "primitive-pending-mail-v2",
+      ],
+      {
+        encoding: "utf8",
+        input: JSON.stringify({
+          hook_event_name: "PostToolUse",
+          session_id: sessionId,
+        }),
+      },
+    );
+  // No receivers recorded: nothing runs.
+  const none = run(session);
+  assert.equal(none.status, 0);
+  assert.equal(none.stdout, "");
+  assert.throws(() => readFileSync(fixtureData.calls), /ENOENT/);
+  const directory = join(
+    fixtureData.configDir,
+    "agent-connections",
+    "claude-sessions",
+  );
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(
+    join(directory, `${session}.json`),
+    JSON.stringify({
+      version: 1,
+      session_id: session,
+      receivers: [{ profile: "agent", address: "agent@example.com" }],
+    }),
+  );
+  // Another session still runs nothing.
+  assert.equal(run(otherSession).stdout, "");
+  assert.throws(() => readFileSync(fixtureData.calls), /ENOENT/);
+  const result = run(session);
+  assert.equal(result.status, 0, result.stderr);
+  const call = JSON.parse(readFileSync(fixtureData.calls, "utf8"));
+  assert.equal(call.env.profile, "agent");
+  assert.equal(call.env.address, "agent@example.com");
+  assert.match(
+    JSON.parse(result.stdout).hookSpecificOutput.additionalContext,
+    new RegExp(`${email} to=agent@example.com `),
+  );
+});

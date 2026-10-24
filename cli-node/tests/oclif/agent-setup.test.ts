@@ -23,6 +23,7 @@ import {
   VERIFICATION_BACKOFF_MS,
   verificationReplySubmitted,
 } from "../../src/oclif/agent-setup.js";
+import { readSessionReceivers } from "../../src/oclif/claude-session-receivers.js";
 import {
   agentProfileDirectory,
   agentProfilesDirectory,
@@ -1377,7 +1378,7 @@ describe("reconnecting a profile whose agent was revoked elsewhere", () => {
     expect(f.fetch).toHaveBeenCalledOnce();
   });
 
-  it("reinstalls the session's Claude hooks when the same address reconnects", async () => {
+  it("receives in the session again when the same address reconnects", async () => {
     const f = fixture();
     const claudeDir = join(f.configDir, "claude");
     const bin = join(f.configDir, "bin");
@@ -1434,7 +1435,9 @@ describe("reconnecting a profile whose agent was revoked elsewhere", () => {
       fetch: revokedServer(),
       env,
     });
-    expect(stopHooks()).toHaveLength(0);
+    // The shared hooks stay; the session no longer receives as the profile.
+    expect(stopHooks()).toHaveLength(1);
+    expect(readSessionReceivers(f.configDir, f.params.session)).toEqual([]);
     // The server re-invites the same address with a new credential, pasted
     // into the same session.
     expect(await connect(reconnectInvitation(f))).toMatchObject({
@@ -1445,12 +1448,9 @@ describe("reconnecting a profile whose agent was revoked elsewhere", () => {
     expect(
       loadConnectedAgentProfile(f.configDir, f.params.profileName),
     ).toMatchObject({ agent_address: f.identity.agentAddress });
-    const hooks = stopHooks();
-    expect(hooks).toHaveLength(1);
-    expect(hooks[0]?.hooks[0]?.args.slice(3, 6)).toEqual([
-      f.params.profileName,
-      f.identity.agentAddress,
-      f.params.session,
+    expect(stopHooks()).toHaveLength(1);
+    expect(readSessionReceivers(f.configDir, f.params.session)).toEqual([
+      { profile: f.params.profileName, address: f.identity.agentAddress },
     ]);
   });
 

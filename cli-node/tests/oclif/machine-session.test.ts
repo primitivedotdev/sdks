@@ -17,6 +17,10 @@ import {
 } from "../../src/oclif/agent-disconnect.js";
 import type { enrollAgent } from "../../src/oclif/agent-enroll.js";
 import { saveCliCredentials } from "../../src/oclif/auth.js";
+import {
+  readSessionReceivers,
+  removeSessionReceiver,
+} from "../../src/oclif/claude-session-receivers.js";
 import { installClaudeWakeHook } from "../../src/oclif/claude-wake-install.js";
 import {
   AgentConnectionSetupError,
@@ -288,17 +292,9 @@ describe("agent session-register", () => {
     };
     const settingsPath = join(claudeDir, "settings.json");
     const profilesIn = () =>
-      [
-        ...new Set(
-          (["SessionStart", "Stop", "PostToolUse"] as const).flatMap((event) =>
-            (
-              JSON.parse(readFileSync(settingsPath, "utf8")).hooks[event] ?? []
-            ).flatMap((entry: { hooks: Array<{ args: string[] }> }) =>
-              entry.hooks.map((hook) => hook.args[3]),
-            ),
-          ),
-        ),
-      ].sort();
+      readSessionReceivers(configDir, session)
+        .map((row) => row.profile)
+        .sort();
 
     // The session registers and receives as its own session-<id> profile.
     expect((await registerSession(options)).status).toBe("registered");
@@ -328,13 +324,7 @@ describe("agent session-register", () => {
         env,
       }),
     ).toBe("installed_unverified");
-    const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
-    for (const event of ["SessionStart", "Stop", "PostToolUse"])
-      settings.hooks[event] = settings.hooks[event].filter(
-        (entry: { hooks: Array<{ args: string[] }> }) =>
-          entry.hooks[0]?.args[3] !== `session-${session}`,
-      );
-    writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
+    removeSessionReceiver(configDir, session, `session-${session}`);
     const chosen = readFileSync(settingsPath, "utf8");
     expect(profilesIn()).toEqual(["profile-a"]);
 
@@ -350,8 +340,9 @@ describe("agent session-register", () => {
       "already receives as another connected profile",
     );
     expect(readFileSync(settingsPath, "utf8")).toBe(chosen);
+    expect(profilesIn()).toEqual(["profile-a"]);
 
-    // Once A is disconnected its hooks are stale, and the session's own
+    // Once A is disconnected its receiver is pruned, and the session's own
     // profile is restored as before.
     rmSync(agentProfileDirectory(configDir, "profile-a"), {
       recursive: true,
@@ -360,7 +351,7 @@ describe("agent session-register", () => {
     expect((await registerSession(options)).detail).toBe(
       "This session is already connected.",
     );
-    expect(profilesIn()).toEqual(["profile-a", `session-${session}`]);
+    expect(profilesIn()).toEqual([`session-${session}`]);
   });
 
   it("enrolls as before when the bound profile is not connected, and stops when it cannot be checked", async () => {

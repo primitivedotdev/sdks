@@ -14,6 +14,10 @@ import {
   resolve,
 } from "node:path";
 import {
+  listSessionReceivers,
+  readSessionReceivers,
+} from "./claude-session-receivers.js";
+import {
   agentProfileDirectory,
   agentProfileName,
   agentProfilesDirectory,
@@ -305,7 +309,8 @@ export type SessionHookState =
   | "stale"
   | "duplicate"
   | "outdated"
-  | "old_address";
+  | "old_address"
+  | "per_session";
 
 /** One per-session receive hook that --fix would add, remove or rewrite. */
 export type SessionHookItem = {
@@ -329,6 +334,7 @@ const STATE_PHRASES: Record<SessionHookState, string> = {
   duplicate: "duplicate",
   outdated: "old CLI path",
   old_address: "old agent address",
+  per_session: "per-session hook, now served by the shared receive hooks",
 };
 
 /** "profile my-agent, session 1234...": who a session hook serves. */
@@ -442,6 +448,14 @@ function globalHookCurrent(hook: RecordValue, cli: CliLocation): boolean {
 
 const WAKE_MARKER = "primitive-agent-wake-v1";
 const PENDING_MARKER = "primitive-pending-mail-v1";
+/**
+ * The shared receive hooks: one set per config directory serves every Claude
+ * session. Each run reads its session id from the hook input and looks up
+ * the profiles it receives as (claude-session-receivers.ts), exiting at once
+ * for a session with none.
+ */
+export const SHARED_WAKE_MARKER = "primitive-agent-wake-v2";
+export const SHARED_PENDING_MARKER = "primitive-pending-mail-v2";
 const SESSION_EVENTS = ["Stop", "SessionStart", "PostToolUse"] as const;
 export type SessionEvent = (typeof SESSION_EVENTS)[number];
 
@@ -473,6 +487,13 @@ export function hasSessionReceiveHook(
   /** Null accepts any command: the hook exists, current or not. */
   node: string | null,
 ): boolean {
+  if (
+    hasSharedHook(hooks, event, target.configDir, node) &&
+    readSessionReceivers(target.configDir, target.session).some(
+      (row) => row.profile === target.profile && row.address === target.address,
+    )
+  )
+    return true;
   const entries = hooks[event];
   if (!Array.isArray(entries)) return false;
   const pending = SESSION_HOOK_KIND[event] === "pending";
@@ -502,12 +523,101 @@ export function hasSessionReceiveHook(
   );
 }
 
+/** Whether an event carries the shared receive hook for a config directory. */
+export function hasSharedHook(
+  hooks: RecordValue,
+  event: SessionEvent,
+  configDir: string,
+  /** Null accepts any command: the hook exists, current or not. */
+  node: string | null,
+): boolean {
+  const entries = hooks[event];
+  if (!Array.isArray(entries)) return false;
+  const pending = SESSION_HOOK_KIND[event] === "pending";
+  return entries.some(
+    (entry) =>
+      record(entry) &&
+      (event !== "SessionStart" || entry.matcher === "resume") &&
+      Array.isArray(entry.hooks) &&
+      entry.hooks.some((hook: unknown) => {
+        const parsed = parseSessionHook(hook);
+        return (
+          parsed?.shared === true &&
+          parsed.kind === (pending ? "pending" : "wake") &&
+          resolve(parsed.configDir) === resolve(configDir) &&
+          (node === null || (record(hook) && samePath(hook.command, node)))
+        );
+      }),
+  );
+}
+
+/** The shared hook entry for one event, as installers write it. */
+export function sharedHookEntry(
+  event: SessionEvent,
+  cli: Pick<CliLocation, "node" | "entry" | "wake" | "pending">,
+  configDir: string,
+  node: string = cli.node,
+): RecordValue {
+  const pending = SESSION_HOOK_KIND[event] === "pending";
+  const hook = {
+    type: "command",
+    command: node,
+    args: [
+      pending ? cli.pending : cli.wake,
+      cli.entry,
+      resolve(configDir),
+      pending ? SHARED_PENDING_MARKER : SHARED_WAKE_MARKER,
+    ],
+    ...(pending ? { timeout: 10 } : { asyncRewake: true, timeout: 604800 }),
+  };
+  return event === "SessionStart"
+    ? { matcher: "resume", hooks: [hook] }
+    : { hooks: [hook] };
+}
+
+/**
+ * The receiver an exact-session hook from an earlier version stands for:
+ * its profile, with the address the profile is connected as now, and its
+ * session. Null when the profile is no longer connected.
+ */
+export function foldedReceiver(parsed: {
+  configDir: string;
+  profile: string | null;
+  session: string | null;
+}): BoundSessionProfile | null {
+  if (!parsed.profile || !parsed.session || !SESSION_UUID.test(parsed.session))
+    return null;
+  try {
+    const profile = loadConnectedAgentProfile(
+      resolve(parsed.configDir),
+      parsed.profile,
+    );
+    return profile
+      ? {
+          configDir: resolve(parsed.configDir),
+          profile: parsed.profile,
+          address: profile.agent_address,
+          session: parsed.session.toLowerCase(),
+        }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A per-session receive hook (any version), shared or not. Exported for installers. */
+export function parseReceiveHook(hook: unknown) {
+  return parseSessionHook(hook);
+}
+
 type SessionHook = {
   kind: "wake" | "pending";
   configDir: string;
   profile: string | null;
   address: string | null;
   session: string | null;
+  /** The shared hook for every session of its config directory. */
+  shared?: true;
 };
 
 /** A per-session receive hook written by `agent connect` or `agent enroll`, any version. */
@@ -518,6 +628,20 @@ function parseSessionHook(hook: unknown): SessionHook | null {
   if (!args.every((value) => typeof value === "string")) return null;
   const strings = args as string[];
   const script = basename(strings[0] ?? "");
+  if (
+    strings.length === 4 &&
+    ((script === "claude-wake.mjs" && strings[3] === SHARED_WAKE_MARKER) ||
+      (script === "claude-pending-mail.mjs" &&
+        strings[3] === SHARED_PENDING_MARKER))
+  )
+    return {
+      kind: script === "claude-wake.mjs" ? "wake" : "pending",
+      configDir: strings[2] ?? "",
+      profile: null,
+      address: null,
+      session: null,
+      shared: true,
+    };
   if (script === "claude-pending-mail.mjs")
     return strings.length === 7 && strings[6] === PENDING_MARKER
       ? {
@@ -573,7 +697,8 @@ type SessionHookVerdict =
   | "stale"
   | "duplicate"
   | "outdated"
-  | "old_address";
+  | "old_address"
+  | "per_session";
 
 function sessionHookPathsCurrent(
   hook: RecordValue,
@@ -613,12 +738,20 @@ function judgeSessionHooks(
           existsSync(String(hook.command)) &&
           existsSync(String((hook.args as string[])[0])) &&
           existsSync(String((hook.args as string[])[1]));
-        const live = parsed.profile
-          ? existsSync(parsed.configDir) &&
-            profileStillConnected(parsed.configDir, parsed.profile)
-          : existsSync(parsed.configDir) && pathsExist;
+        const live = parsed.shared
+          ? existsSync(parsed.configDir)
+          : parsed.profile
+            ? existsSync(parsed.configDir) &&
+              profileStillConnected(parsed.configDir, parsed.profile)
+            : existsSync(parsed.configDir) && pathsExist;
         if (!live) {
           verdicts.set(hook, "stale");
+          continue;
+        }
+        // An exact-session hook from an earlier version: the shared hooks
+        // serve its session once its profile is recorded as a receiver.
+        if (parsed.profile && parsed.session) {
+          verdicts.set(hook, "per_session");
           continue;
         }
         // A hook for a connected session that names another address is
@@ -637,7 +770,7 @@ function judgeSessionHooks(
           event,
           parsed.kind,
           resolve(parsed.configDir),
-          parsed.profile ?? "",
+          parsed.shared ? "shared" : (parsed.profile ?? ""),
           parsed.session?.toLowerCase() ?? "",
         ].join("\0");
         if (seen.has(key)) {
@@ -748,8 +881,32 @@ function receivingProfilesBySession(
   hooks: RecordValue,
   /** A key counted even when its profile is not saved as connected. */
   always?: string,
+  /** Config directories whose session receivers count even without a shared hook. */
+  configDirs: readonly string[] = [],
 ): Map<string, Set<string>> {
   const receiving = new Map<string, Set<string>>();
+  // Sessions served by the shared hooks receive as their recorded profiles.
+  const shared = new Set(configDirs.map((dir) => resolve(dir)));
+  for (const event of SESSION_EVENTS) {
+    const entries = hooks[event];
+    if (!Array.isArray(entries)) continue;
+    for (const entry of entries)
+      if (record(entry) && Array.isArray(entry.hooks))
+        for (const hook of entry.hooks) {
+          const parsed = parseSessionHook(hook);
+          if (parsed?.shared) shared.add(resolve(parsed.configDir));
+        }
+  }
+  for (const configDir of shared)
+    for (const [session, receivers] of listSessionReceivers(configDir))
+      for (const row of receivers) {
+        const key = [configDir, row.profile, session].join("\0");
+        if (key !== always && !profileStillConnected(configDir, row.profile))
+          continue;
+        const profiles = receiving.get(session) ?? new Set<string>();
+        profiles.add(key);
+        receiving.set(session, profiles);
+      }
   for (const event of SESSION_EVENTS) {
     const entries = hooks[event];
     if (!Array.isArray(entries)) continue;
@@ -792,7 +949,8 @@ export function otherSessionReceivers(
   const session = target.session.toLowerCase();
   const own = [resolve(target.configDir), target.profile, session].join("\0");
   const present =
-    receivingProfilesBySession(hooks, own).get(session) ?? new Set<string>();
+    receivingProfilesBySession(hooks, own, [target.configDir]).get(session) ??
+    new Set<string>();
   if (present.has(own)) return [];
   return [...present].map((other) => other.split("\0")[1] ?? "").sort();
 }
@@ -868,32 +1026,6 @@ function sessionHookItems(
     }
   }
   return items;
-}
-
-/** The exact entry `agent connect` and `session-register` install. */
-function sessionHookEntry(
-  event: SessionEvent,
-  item: BoundSessionProfile,
-  cli: CliLocation,
-): RecordValue {
-  const pending = SESSION_HOOK_KIND[event] === "pending";
-  const hook = {
-    type: "command",
-    command: cli.node,
-    args: [
-      pending ? cli.pending : cli.wake,
-      cli.entry,
-      item.configDir,
-      item.profile,
-      item.address,
-      item.session,
-      pending ? PENDING_MARKER : WAKE_MARKER,
-    ],
-    ...(pending ? { timeout: 10 } : { asyncRewake: true, timeout: 604800 }),
-  };
-  return event === "SessionStart"
-    ? { matcher: "resume", hooks: [hook] }
-    : { hooks: [hook] };
 }
 
 /** Inspect every Primitive-owned Claude hook without changing anything. */
@@ -991,6 +1123,7 @@ export function inspectClaudeHooks(
     duplicate: 0,
     outdated: 0,
     old_address: 0,
+    per_session: 0,
   };
   const verdicts = judgeSessionHooks(hooks, context.cli, bound);
   for (const verdict of verdicts.values()) counts[verdict]++;
@@ -1005,23 +1138,29 @@ export function inspectClaudeHooks(
     counts.stale ? `${counts.stale} for disconnected or removed sessions` : "",
     counts.duplicate ? `${counts.duplicate} duplicates` : "",
     counts.outdated ? `${counts.outdated} pointing at an old CLI path` : "",
+    counts.per_session
+      ? `${counts.per_session} per-session hooks to fold into the shared receive hooks`
+      : "",
   ].filter(Boolean);
   findings["claude.hook.stop"] = problems.length
     ? {
         status: "fail",
-        detail: `Per-session receive hooks need cleanup: ${problems.join(", ")}. Affected: ${summarizeOwners(items)}.${blockedNote}${heldNote}`,
+        detail: `Receive hooks need cleanup: ${problems.join(", ")}. Affected: ${summarizeOwners(items)}.${blockedNote}${heldNote}`,
         // Removing hooks for dead sessions never needs a CLI path.
         fixable:
           canFix ||
-          (counts.outdated === 0 && missing === 0 && context.blocked === null),
+          (counts.outdated === 0 &&
+            counts.per_session === 0 &&
+            missing === 0 &&
+            context.blocked === null),
         items,
       }
     : {
         status: "ok",
         detail: `${
           counts.keep
-            ? `${counts.keep} per-session receive hooks, each present once and current.`
-            : "No per-session receive hooks; each registered session adds its own exact-session hooks."
+            ? `${counts.keep} receive hooks, each present once and current; the shared hooks serve every registered session.`
+            : "No receive hooks; registering a session adds the shared receive hooks."
         }${heldNote}`,
         fixable: false,
       };
@@ -1067,9 +1206,15 @@ export function repairClaudeHooks(
   changed: Set<HookCheckId>;
   /** Each per-session receive hook added, removed or rewritten. */
   changes: SessionHookChange[];
+  /**
+   * Session receivers to record before the settings are written: the shared
+   * hooks serve a session only for the profiles recorded for it.
+   */
+  receivers: BoundSessionProfile[];
 } {
   const changed = new Set<HookCheckId>();
   const changes: SessionHookChange[] = [];
+  const receivers: BoundSessionProfile[] = [];
   const selected = (profile: string | null) =>
     !options.profiles || (profile !== null && options.profiles.has(profile));
   const hooks: RecordValue = record(settings.hooks)
@@ -1127,6 +1272,13 @@ export function repairClaudeHooks(
         (item) => !held.has(boundKey(item)),
       );
       const verdicts = judgeSessionHooks(hooks, context.cli, bound);
+      const missingBefore = missingSessionHooks(hooks, bound);
+      const planned = new Set<string>();
+      const plan = (item: BoundSessionProfile) => {
+        if (planned.has(boundKey(item))) return;
+        planned.add(boundKey(item));
+        receivers.push(item);
+      };
       for (const event of SESSION_EVENTS) {
         const entries = eventEntries(hooks, event);
         if (entries === "invalid" || entries.length === 0) continue;
@@ -1141,6 +1293,15 @@ export function repairClaudeHooks(
             hook: event,
             state: verdict,
           };
+          if (verdict === "per_session") {
+            // Moving to the shared hooks needs the CLI path they name.
+            if (!cli) return hook;
+            // The session it served keeps receiving as that profile.
+            const current = foldedReceiver(parsed);
+            if (current) plan(current);
+            changes.push({ ...item, action: "removed" });
+            return undefined;
+          }
           if (
             verdict === "stale" ||
             verdict === "duplicate" ||
@@ -1161,13 +1322,11 @@ export function repairClaudeHooks(
           changed.add("claude.hook.stop");
         }
       }
-      // A connected session whose hook was removed gets it back, exactly as
-      // `agent connect` wrote it; mail would otherwise never wake it.
-      if (cli)
-        for (const missing of missingSessionHooks(hooks, bound)) {
+      // A connected session that receives through nothing gets a receiver
+      // record and the shared hooks; mail would otherwise never wake it.
+      if (cli) {
+        for (const missing of missingBefore) {
           if (!selected(missing.bound.profile)) continue;
-          const entries = eventEntries(hooks, missing.event);
-          if (entries === "invalid") continue;
           changes.push({
             profile: missing.bound.profile,
             session: missing.bound.session,
@@ -1175,14 +1334,25 @@ export function repairClaudeHooks(
             state: "missing",
             action: "added",
           });
-          hooks[missing.event] = [
-            ...entries,
-            sessionHookEntry(missing.event, missing.bound, cli),
-          ];
-          changed.add("claude.hook.stop");
+          plan(missing.bound);
         }
+        for (const configDir of new Set(
+          receivers.map((item) => resolve(item.configDir)),
+        ))
+          for (const event of SESSION_EVENTS) {
+            const entries = eventEntries(hooks, event);
+            if (
+              entries === "invalid" ||
+              hasSharedHook(hooks, event, configDir, null)
+            )
+              continue;
+            hooks[event] = [...entries, sharedHookEntry(event, cli, configDir)];
+            changed.add("claude.hook.stop");
+          }
+        if (receivers.length) changed.add("claude.hook.stop");
+      }
     }
   }
-  if (!changed.size) return { settings, changed, changes };
-  return { settings: { ...settings, hooks }, changed, changes };
+  if (!changed.size) return { settings, changed, changes, receivers };
+  return { settings: { ...settings, hooks }, changed, changes, receivers };
 }

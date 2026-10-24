@@ -1,13 +1,23 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import {
   currentCliLocation,
   ensureHookLauncher,
+  foldedReceiver,
   hasSessionReceiveHook,
+  hasSharedHook,
   otherSessionReceivers,
+  parseReceiveHook,
+  profileStillConnected,
+  sharedHookEntry,
   stableNodePath,
 } from "./claude-machine-hooks.js";
+import {
+  addSessionReceiver,
+  pruneSessionReceivers,
+  removeSessionReceiver,
+} from "./claude-session-receivers.js";
 import {
   agentProfileDirectory,
   agentProfileName,
@@ -26,10 +36,7 @@ import {
   writeMailJson,
 } from "./shared-mail-files.js";
 
-const HOOK_MARKER = "primitive-agent-wake-v1";
-const WAKE_EVENTS = ["Stop", "SessionStart"] as const;
-const PENDING_MARKER = "primitive-pending-mail-v1";
-const PENDING_EVENT = "PostToolUse";
+const RECEIVE_EVENTS = ["Stop", "SessionStart", "PostToolUse"] as const;
 
 type RecordValue = Record<string, unknown>;
 
@@ -265,7 +272,14 @@ export function editClaudeSettings(
   }
 }
 
-/** Add exact-session fail-open receiving hooks while preserving unrelated settings. */
+/**
+ * Record this profile as a receiver for the session and make sure the one
+ * shared set of receive hooks is installed, preserving unrelated settings.
+ * Per-session hooks written by earlier versions for this config directory
+ * are folded in: a still-bound profile becomes a recorded receiver and its
+ * hooks are removed; hooks for disconnected profiles or removed config
+ * directories are pruned. Hooks of other tools are never touched.
+ */
 export function installClaudeWakeHook(options: {
   cliPath: string;
   configDir: string;
@@ -276,10 +290,10 @@ export function installClaudeWakeHook(options: {
   /**
    * Set by automatic installs (session-register on every start and resume),
    * which nobody asked for by profile. When the session already receives as
-   * another connected profile and this profile has no receive hook there,
-   * nothing is written: its hooks were removed on purpose, or adding them
-   * would give the session a second address. Commands that name the profile
-   * (agent connect, agent enroll) leave it unset and always install.
+   * another connected profile and this profile is not a receiver there,
+   * nothing is added: it was removed on purpose, or adding it would give the
+   * session a second address. Commands that name the profile (agent connect,
+   * agent enroll) leave it unset and always install.
    */
   yieldToOtherProfiles?: boolean;
   platform?: NodeJS.Platform;
@@ -292,9 +306,6 @@ export function installClaudeWakeHook(options: {
       platform: options.platform,
     });
     if (!cli) return "unavailable";
-    const cliPath = cli.entry;
-    const wrapperPath = cli.wake;
-    const pendingPath = cli.pending;
     const profileName = agentProfileName(options.profileName);
     const agentAddress = mailAddress(options.agentAddress);
     if (!SESSION_UUID.test(options.sessionId)) return "unavailable";
@@ -312,21 +323,18 @@ export function installClaudeWakeHook(options: {
     } catch {
       node = cli.runtimeNode;
     }
+    // Receivers whose profile was disconnected or removed are dropped first,
+    // so they never hold a session for another profile.
+    pruneSessionReceivers(configDir);
     let held = false;
     const installed = editClaudeSettings(claudeDir, (settings) => {
       const hooks = settings.hooks ?? {};
       if (!record(hooks)) throw new Error("Invalid hook settings");
-      for (const event of WAKE_EVENTS)
+      for (const event of RECEIVE_EVENTS)
         if (!Array.isArray(hooks[event] ?? []))
           throw new Error(`Invalid ${event} hooks`);
-      if (!Array.isArray(hooks[PENDING_EVENT] ?? []))
-        throw new Error(`Invalid ${PENDING_EVENT} hooks`);
       // Judged under the settings lock on the file as read, so a concurrent
       // install for the other profile cannot slip between check and write.
-      // A held profile still loses any older hook of its own for this
-      // session (such as a legacy hook without a session argument, which
-      // the check cannot attribute), so the session ends up receiving only
-      // as the other profile.
       held =
         options.yieldToOtherProfiles === true &&
         otherSessionReceivers(hooks, {
@@ -334,69 +342,18 @@ export function installClaudeWakeHook(options: {
           profile: profileName,
           session: sessionId,
         }).length > 0;
-      const hook = {
-        type: "command",
-        command: node,
-        args: [
-          wrapperPath,
-          cliPath,
-          configDir,
-          profileName,
-          agentAddress,
-          sessionId,
-          HOOK_MARKER,
-        ],
-        asyncRewake: true,
-        timeout: 604800,
-      };
-      const pendingHook = {
-        type: "command",
-        command: node,
-        args: [
-          pendingPath,
-          cliPath,
-          configDir,
-          profileName,
-          agentAddress,
-          sessionId,
-          PENDING_MARKER,
-        ],
-        timeout: 10,
-      };
-      // A hook for this exact profile and session is replaced even when an
-      // older CLI install (another path or Node binary) wrote it, so upgrades
-      // never leave a second receive hook behind. One session can carry
-      // several profiles, so hooks of any other profile are always kept.
-      const isOwnPendingHook = (candidate: unknown) =>
-        record(candidate) &&
-        candidate.type === "command" &&
-        Array.isArray(candidate.args) &&
-        candidate.args.length === 7 &&
-        typeof candidate.args[0] === "string" &&
-        basename(candidate.args[0]) === "claude-pending-mail.mjs" &&
-        candidate.args[2] === configDir &&
-        candidate.args[3] === profileName &&
-        candidate.args[5] === sessionId &&
-        candidate.args[6] === PENDING_MARKER;
-      const isOwnHook = (candidate: unknown) => {
-        if (!record(candidate) || !Array.isArray(candidate.args)) return false;
+      const isOwnLegacyHook = (parsed: ReturnType<typeof parseReceiveHook>) => {
+        // An old profile-bearing hook without a session is removable only
+        // when its saved setup proves it belongs to this same session.
+        // Generic legacy hooks have no recoverable target and may still
+        // serve other sessions.
         if (
-          typeof candidate.args[0] !== "string" ||
-          basename(candidate.args[0]) !== "claude-wake.mjs" ||
-          candidate.args[2] !== configDir ||
-          candidate.args[3] !== profileName
+          !parsed ||
+          parsed.shared ||
+          parsed.session !== null ||
+          parsed.profile !== profileName ||
+          resolve(parsed.configDir) !== configDir
         )
-          return false;
-        if (
-          candidate.args.length === 7 &&
-          candidate.args[5] === sessionId &&
-          candidate.args[6] === HOOK_MARKER
-        )
-          return true;
-        // An old profile-bearing hook is removable only when its saved setup
-        // proves it belongs to this same session. Generic legacy hooks have
-        // no recoverable target and may still serve other sessions.
-        if (candidate.args.length !== 6 || candidate.args[5] !== HOOK_MARKER)
           return false;
         try {
           const state = readMailJson(
@@ -407,50 +364,74 @@ export function installClaudeWakeHook(options: {
           return false;
         }
       };
+      const perSession = (parsed: ReturnType<typeof parseReceiveHook>) =>
+        parsed !== null &&
+        !parsed.shared &&
+        parsed.profile !== null &&
+        parsed.session !== null;
+      if (!held)
+        addSessionReceiver(configDir, sessionId, {
+          profile: profileName,
+          address: agentAddress,
+        });
       const nextHooks: RecordValue = { ...hooks };
-      for (const event of WAKE_EVENTS) {
-        const entries = hooks[event] as unknown[] | undefined;
-        const retained = (entries ?? []).flatMap((entry) => {
-          if (!record(entry) || !Array.isArray(entry.hooks)) return [entry];
-          const siblings = entry.hooks.filter(
-            (candidate) => !isOwnHook(candidate),
+      for (const event of RECEIVE_EVENTS) {
+        const entries = (hooks[event] as unknown[] | undefined) ?? [];
+        const ownShared = (candidate: unknown) => {
+          const parsed = parseReceiveHook(candidate);
+          return (
+            parsed?.shared === true && resolve(parsed.configDir) === configDir
           );
+        };
+        const wanted = sharedHookEntry(event, cli, configDir, node);
+        const [wantedHook] = wanted.hooks as unknown[];
+        const existing = entries.flatMap((entry) =>
+          record(entry) && Array.isArray(entry.hooks)
+            ? entry.hooks.filter(ownShared)
+            : [],
+        );
+        // A current shared hook stays where it is, so a repeat install
+        // leaves the file unchanged.
+        const reuse =
+          held ||
+          (existing.length === 1 &&
+            JSON.stringify(existing[0]) === JSON.stringify(wantedHook) &&
+            hasSharedHook(hooks, event, configDir, node));
+        const keep = (candidate: unknown): boolean => {
+          const parsed = parseReceiveHook(candidate);
+          if (!parsed) return true;
+          if (isOwnLegacyHook(parsed)) return false;
+          if (!existsSync(parsed.configDir)) return false;
+          if (parsed.shared)
+            return resolve(parsed.configDir) !== configDir || reuse;
+          if (!perSession(parsed)) return true;
+          if (held && parsed.profile !== profileName) return true;
+          // Hooks of another config directory are folded in by that
+          // directory's own CLI; only dead ones are pruned here.
+          if (resolve(parsed.configDir) !== configDir)
+            return profileStillConnected(
+              parsed.configDir,
+              parsed.profile ?? "",
+            );
+          const current = foldedReceiver(parsed);
+          if (current && !held)
+            addSessionReceiver(configDir, current.session, {
+              profile: current.profile,
+              address: current.address,
+            });
+          return false;
+        };
+        const retained = entries.flatMap((entry) => {
+          if (!record(entry) || !Array.isArray(entry.hooks)) return [entry];
+          const siblings = entry.hooks.filter(keep);
           if (siblings.length === entry.hooks.length) return [entry];
           return siblings.length ? [{ ...entry, hooks: siblings }] : [];
         });
-        if (held) {
-          if (entries) nextHooks[event] = retained;
-        } else
-          nextHooks[event] = [
-            ...retained,
-            event === "SessionStart"
-              ? { matcher: "resume", hooks: [hook] }
-              : { hooks: [hook] },
-          ];
+        if (hooks[event] !== undefined || !reuse)
+          nextHooks[event] = reuse ? retained : [...retained, wanted];
       }
-      const pendingEntries = hooks[PENDING_EVENT] as unknown[] | undefined;
-      const pendingRetained = (pendingEntries ?? []).flatMap((entry) => {
-        if (!record(entry) || !Array.isArray(entry.hooks)) return [entry];
-        const siblings = entry.hooks.filter(
-          (candidate) => !isOwnPendingHook(candidate),
-        );
-        if (siblings.length === entry.hooks.length) return [entry];
-        return siblings.length ? [{ ...entry, hooks: siblings }] : [];
-      });
-      if (held) {
-        if (pendingEntries) nextHooks[PENDING_EVENT] = pendingRetained;
-      } else
-        nextHooks[PENDING_EVENT] = [
-          ...pendingRetained,
-          { hooks: [pendingHook] },
-        ];
-      // A hold that removed nothing leaves the file untouched.
-      if (held && JSON.stringify(nextHooks) === JSON.stringify(hooks))
-        return null;
-      return {
-        ...settings,
-        hooks: nextHooks,
-      };
+      if (JSON.stringify(nextHooks) === JSON.stringify(hooks)) return null;
+      return { ...settings, hooks: nextHooks };
     });
     if (!installed) return "unavailable";
     return held ? "held_for_other_profile" : "installed_unverified";
@@ -459,7 +440,12 @@ export function installClaudeWakeHook(options: {
   }
 }
 
-/** Remove only this profile's exact-session hooks after disconnection. */
+/**
+ * Stop receiving as this profile in the session after disconnection: its
+ * receiver record goes, with any per-session hooks an earlier version wrote
+ * for it. The shared hooks stay; for a session with no receivers they exit
+ * at once.
+ */
 export function uninstallClaudeWakeHook(options: {
   configDir: string;
   profileName: string;
@@ -477,15 +463,14 @@ export function uninstallClaudeWakeHook(options: {
     const claudeDir = resolve(
       env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"),
     );
+    removeSessionReceiver(configDir, sessionId, profileName);
     if (!existsSync(join(claudeDir, "settings.json"))) return true;
     return editClaudeSettings(claudeDir, (settings) => {
       const hooks = settings.hooks ?? {};
       if (!record(hooks)) throw new Error("Invalid hook settings");
-      for (const event of WAKE_EVENTS)
+      for (const event of RECEIVE_EVENTS)
         if (!Array.isArray(hooks[event] ?? []))
           throw new Error(`Invalid ${event} hooks`);
-      if (!Array.isArray(hooks[PENDING_EVENT] ?? []))
-        throw new Error(`Invalid ${PENDING_EVENT} hooks`);
       const legacySessionMatches = () => {
         try {
           const setup = readMailJson(
@@ -497,47 +482,24 @@ export function uninstallClaudeWakeHook(options: {
         }
       };
       const isOwnHook = (candidate: unknown) => {
-        if (!record(candidate) || !Array.isArray(candidate.args)) return false;
-        const args = candidate.args;
+        const parsed = parseReceiveHook(candidate);
         return (
-          candidate.type === "command" &&
-          typeof candidate.command === "string" &&
-          candidate.asyncRewake === true &&
-          typeof args[0] === "string" &&
-          basename(args[0]) === "claude-wake.mjs" &&
-          typeof args[1] === "string" &&
-          args[2] === configDir &&
-          args[3] === profileName &&
-          args[4] === agentAddress &&
-          ((args.length === 7 &&
-            args[5] === sessionId &&
-            args[6] === HOOK_MARKER) ||
-            (args.length === 6 &&
-              args[5] === HOOK_MARKER &&
-              legacySessionMatches()))
-        );
-      };
-      const isOwnPendingHook = (candidate: unknown) => {
-        if (!record(candidate) || !Array.isArray(candidate.args)) return false;
-        const args = candidate.args;
-        return (
-          candidate.type === "command" &&
-          typeof candidate.command === "string" &&
-          typeof args[0] === "string" &&
-          basename(args[0]) === "claude-pending-mail.mjs" &&
-          args[2] === configDir &&
-          args[3] === profileName &&
-          args[4] === agentAddress &&
-          args[5] === sessionId &&
-          args[6] === PENDING_MARKER &&
-          args.length === 7
+          parsed !== null &&
+          !parsed.shared &&
+          resolve(parsed.configDir) === configDir &&
+          parsed.profile === profileName &&
+          parsed.address === agentAddress &&
+          (parsed.session === null
+            ? legacySessionMatches()
+            : parsed.session.toLowerCase() === sessionId)
         );
       };
       let removed = false;
       const nextHooks: RecordValue = { ...hooks };
-      for (const event of WAKE_EVENTS) {
+      for (const event of RECEIVE_EVENTS) {
         const entries = hooks[event] as unknown[] | undefined;
-        nextHooks[event] = (entries ?? []).flatMap((entry) => {
+        if (!entries) continue;
+        nextHooks[event] = entries.flatMap((entry) => {
           if (!record(entry) || !Array.isArray(entry.hooks)) return [entry];
           const siblings = entry.hooks.filter(
             (candidate) => !isOwnHook(candidate),
@@ -547,16 +509,6 @@ export function uninstallClaudeWakeHook(options: {
           return siblings.length ? [{ ...entry, hooks: siblings }] : [];
         });
       }
-      const pendingEntries = hooks[PENDING_EVENT] as unknown[] | undefined;
-      nextHooks[PENDING_EVENT] = (pendingEntries ?? []).flatMap((entry) => {
-        if (!record(entry) || !Array.isArray(entry.hooks)) return [entry];
-        const siblings = entry.hooks.filter(
-          (candidate) => !isOwnPendingHook(candidate),
-        );
-        if (siblings.length === entry.hooks.length) return [entry];
-        removed = true;
-        return siblings.length ? [{ ...entry, hooks: siblings }] : [];
-      });
       return removed ? { ...settings, hooks: nextHooks } : null;
     });
   } catch {

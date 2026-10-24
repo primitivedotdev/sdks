@@ -17,6 +17,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { test } from "vitest";
+import { readSessionReceivers } from "../../src/oclif/claude-session-receivers.js";
 import {
   claudeWakeHookStatus,
   editClaudeSettings,
@@ -33,6 +34,82 @@ import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 const sessionA = "11111111-1111-4111-8111-111111111111";
 const sessionB = "22222222-2222-4222-8222-222222222222";
+
+/** Save a connected profile, optionally bound to a session by its setup. */
+function connect(
+  configDir: string,
+  profile: string,
+  address: string,
+  session?: string,
+) {
+  saveConnectedAgentProfile(configDir, profile, {
+    version: 1,
+    auth_method: "agent_connection",
+    api_key: ["pconn", "fixture", profile].join("_"),
+    api_base_url: "https://api.primitive.dev/v1",
+    org_id: "22222222-2222-4222-8222-222222222222",
+    agent_address: address,
+    owner_address: "owner@example.com",
+    invitation_hash: "a".repeat(64),
+    created_at: "2026-01-01T00:00:00.000Z",
+  });
+  if (session)
+    writeMailJson(
+      join(agentProfileDirectory(configDir, profile), "setup.json"),
+      {
+        session,
+        receiverMode: "external",
+      },
+    );
+}
+
+/** The shared hook arguments for one config directory. */
+function sharedArgs(cliPath: string, configDir: string, pending = false) {
+  return [
+    realpathSync(
+      join(
+        dirname(cliPath),
+        pending ? "claude-pending-mail.mjs" : "claude-wake.mjs",
+      ),
+    ),
+    realpathSync(cliPath),
+    configDir,
+    pending ? "primitive-pending-mail-v2" : "primitive-agent-wake-v2",
+  ];
+}
+
+/** An exact-session hook as earlier versions wrote it. */
+function perSessionHook(
+  cliPath: string,
+  configDir: string,
+  profile: string,
+  address: string,
+  session: string,
+  pending = false,
+) {
+  return {
+    type: "command",
+    command: process.execPath,
+    args: [
+      realpathSync(
+        join(
+          dirname(cliPath),
+          pending ? "claude-pending-mail.mjs" : "claude-wake.mjs",
+        ),
+      ),
+      realpathSync(cliPath),
+      configDir,
+      profile,
+      address,
+      session,
+      pending ? "primitive-pending-mail-v1" : "primitive-agent-wake-v1",
+    ],
+    ...(pending ? { timeout: 10 } : { asyncRewake: true, timeout: 604800 }),
+  };
+}
+
+const receivers = (configDir: string, session: string) =>
+  readSessionReceivers(configDir, session).map((row) => row.profile);
 
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), "primitive-claude-hook-"));
@@ -103,23 +180,15 @@ test("external hook installer preserves other settings and replaces only its own
   assert.deepEqual(settings.hooks.SessionStart[1].hooks[0], hook);
   assert.equal(hook.asyncRewake, true);
   assert.equal(hook.timeout, 604800);
-  assert.deepEqual(hook.args, [
-    realpathSync(join(dirname(cliPath), "claude-wake.mjs")),
-    realpathSync(cliPath),
-    configDir,
-    "session-a",
-    "a@example.com",
-    sessionA,
-    "primitive-agent-wake-v1",
-  ]);
-  assert.deepEqual(settings.hooks.PostToolUse[0].hooks[0].args, [
-    realpathSync(join(dirname(cliPath), "claude-pending-mail.mjs")),
-    realpathSync(cliPath),
-    configDir,
-    "session-a",
-    "a@example.com",
-    sessionA,
-    "primitive-pending-mail-v1",
+  // One shared hook, naming no profile or session; the session's receiver
+  // is recorded beside the profiles instead.
+  assert.deepEqual(hook.args, sharedArgs(cliPath, configDir));
+  assert.deepEqual(
+    settings.hooks.PostToolUse[0].hooks[0].args,
+    sharedArgs(cliPath, configDir, true),
+  );
+  assert.deepEqual(readSessionReceivers(configDir, sessionA), [
+    { profile: "session-a", address: "a@example.com" },
   ]);
   assert.deepEqual(claudeWakeHookStatus(options), {
     installed: true,
@@ -307,74 +376,41 @@ test("malformed SessionStart settings fail closed for install and uninstall", ()
 
 test("external hook installer keeps sibling hooks and entry metadata", () => {
   const { claudeDir, configDir, cliPath } = fixture();
+  connect(configDir, "session-a", "a@example.com", sessionA);
   const settingsPath = join(claudeDir, "settings.json");
   const sibling = { type: "command", command: "true" };
+  const old = perSessionHook(
+    cliPath,
+    configDir,
+    "session-a",
+    "a@example.com",
+    sessionA,
+  );
   writeFileSync(
     settingsPath,
     JSON.stringify({
       hooks: {
-        Stop: [
-          {
-            matcher: "",
-            custom: "keep",
-            hooks: [
-              {
-                type: "command",
-                command: process.execPath,
-                args: [
-                  realpathSync(join(dirname(cliPath), "claude-wake.mjs")),
-                  realpathSync(cliPath),
-                  configDir,
-                  "session-a",
-                  "a@example.com",
-                  sessionA,
-                  "primitive-agent-wake-v1",
-                ],
-              },
-              sibling,
-            ],
-          },
-        ],
+        Stop: [{ matcher: "", custom: "keep", hooks: [old, sibling] }],
         SessionStart: [
-          {
-            matcher: "resume",
-            custom: "keep",
-            hooks: [
-              {
-                type: "command",
-                command: process.execPath,
-                args: [
-                  realpathSync(join(dirname(cliPath), "claude-wake.mjs")),
-                  realpathSync(cliPath),
-                  configDir,
-                  "session-a",
-                  "a@example.com",
-                  sessionA,
-                  "primitive-agent-wake-v1",
-                ],
-              },
-              sibling,
-            ],
-          },
+          { matcher: "resume", custom: "keep", hooks: [old, sibling] },
         ],
       },
     }),
   );
-  assert.equal(
-    installClaudeWakeHook({
-      cliPath,
-      configDir,
-      profileName: "session-a",
-      agentAddress: "a@example.com",
-      sessionId: sessionA,
-      env: { CLAUDE_CONFIG_DIR: claudeDir },
-    }),
-    "installed_unverified",
-  );
+  const options = {
+    cliPath,
+    configDir,
+    profileName: "session-a",
+    agentAddress: "a@example.com",
+    sessionId: sessionA,
+    env: { CLAUDE_CONFIG_DIR: claudeDir },
+  };
+  assert.equal(installClaudeWakeHook(options), "installed_unverified");
   const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
   assert.equal(settings.hooks.Stop.length, 2);
   assert.equal(settings.hooks.SessionStart.length, 2);
   assert.equal(settings.hooks.PostToolUse.length, 1);
+  // The per-session hook is folded in; its siblings and metadata stay.
   assert.deepEqual(settings.hooks.SessionStart[0], {
     matcher: "resume",
     custom: "keep",
@@ -386,31 +422,26 @@ test("external hook installer keeps sibling hooks and entry metadata", () => {
     custom: "keep",
     hooks: [sibling],
   });
-  assert.equal(
-    settings.hooks.Stop[1].hooks[0].args[6],
-    "primitive-agent-wake-v1",
+  assert.deepEqual(
+    settings.hooks.Stop[1].hooks[0].args,
+    sharedArgs(cliPath, configDir),
   );
-  assert.equal(
-    uninstallClaudeWakeHook({
-      configDir,
-      profileName: "session-a",
-      agentAddress: "a@example.com",
-      sessionId: sessionA,
-      env: { CLAUDE_CONFIG_DIR: claudeDir },
-    }),
-    true,
-  );
-  const removed = JSON.parse(readFileSync(settingsPath, "utf8"));
-  assert.deepEqual(removed.hooks.SessionStart, [
-    { matcher: "resume", custom: "keep", hooks: [sibling] },
-  ]);
-  assert.deepEqual(removed.hooks.Stop, [
-    { matcher: "", custom: "keep", hooks: [sibling] },
-  ]);
+  assert.equal(uninstallClaudeWakeHook(options), true);
+  // Disconnecting removes the receiver; the shared hooks stay for others.
+  assert.deepEqual(receivers(configDir, sessionA), []);
+  const after = JSON.parse(readFileSync(settingsPath, "utf8"));
+  assert.deepEqual(after.hooks.Stop[0], {
+    matcher: "",
+    custom: "keep",
+    hooks: [sibling],
+  });
+  assert.equal(after.hooks.Stop.length, 2);
 });
 
-test("two exact Claude sessions retain separate hooks and reinstallation changes only its own", () => {
+test("two Claude sessions share one hook set and keep separate receivers", () => {
   const { claudeDir, configDir, cliPath } = fixture();
+  connect(configDir, "first", "first-new@example.com");
+  connect(configDir, "second", "second@example.com");
   const options = {
     cliPath,
     configDir,
@@ -425,6 +456,7 @@ test("two exact Claude sessions retain separate hooks and reinstallation changes
     }),
     "installed_unverified",
   );
+  const once = readFileSync(join(claudeDir, "settings.json"), "utf8");
   assert.equal(
     installClaudeWakeHook({
       ...options,
@@ -434,6 +466,8 @@ test("two exact Claude sessions retain separate hooks and reinstallation changes
     }),
     "installed_unverified",
   );
+  // A second session adds no hooks at all.
+  assert.equal(readFileSync(join(claudeDir, "settings.json"), "utf8"), once);
   assert.equal(
     installClaudeWakeHook({
       ...options,
@@ -443,47 +477,20 @@ test("two exact Claude sessions retain separate hooks and reinstallation changes
     }),
     "installed_unverified",
   );
-  const settings = JSON.parse(
-    readFileSync(join(claudeDir, "settings.json"), "utf8"),
-  );
-  assert.equal(settings.hooks.Stop.length, 2);
-  assert.equal(settings.hooks.SessionStart.length, 2);
-  assert.equal(settings.hooks.PostToolUse.length, 2);
-  assert.deepEqual(
-    settings.hooks.Stop.map(
-      (entry: { hooks: Array<{ args: string[] }> }) => entry.hooks[0].args[5],
-    ).sort(),
-    [sessionA, sessionB],
-  );
-  assert.deepEqual(
-    settings.hooks.SessionStart.map(
-      (entry: { hooks: Array<{ args: string[] }> }) => entry.hooks[0].args[5],
-    ).sort(),
-    [sessionA, sessionB],
-  );
-  assert.ok(
-    settings.hooks.SessionStart.every(
-      (entry: { matcher: string }) => entry.matcher === "resume",
-    ),
-  );
-  assert.equal(
-    settings.hooks.Stop.find(
-      (entry: { hooks: Array<{ args: string[] }> }) =>
-        entry.hooks[0].args[5] === sessionB,
-    ).hooks[0].args[3],
-    "second",
-  );
-  assert.equal(
-    settings.hooks.Stop.find(
-      (entry: { hooks: Array<{ args: string[] }> }) =>
-        entry.hooks[0].args[5] === sessionA,
-    ).hooks[0].args[4],
-    "first-new@example.com",
-  );
+  const settings = JSON.parse(once);
+  for (const event of ["Stop", "SessionStart", "PostToolUse"])
+    assert.equal(settings.hooks[event].length, 1);
+  assert.equal(settings.hooks.SessionStart[0].matcher, "resume");
+  assert.deepEqual(readSessionReceivers(configDir, sessionA), [
+    { profile: "first", address: "first-new@example.com" },
+  ]);
+  assert.deepEqual(receivers(configDir, sessionB), ["second"]);
 });
 
-test("installing one profile keeps another profile's hooks on the same session", () => {
+test("installing one profile keeps another profile receiving on the same session", () => {
   const { claudeDir, configDir, cliPath } = fixture();
+  connect(configDir, "my-agent", "mine@example.com");
+  connect(configDir, `session-${sessionA}`, "session@example.com");
   const settingsPath = join(claudeDir, "settings.json");
   const base = { cliPath, configDir, env: { CLAUDE_CONFIG_DIR: claudeDir } };
   const connected = {
@@ -499,29 +506,21 @@ test("installing one profile keeps another profile's hooks on the same session",
     sessionId: sessionA,
   };
   assert.equal(installClaudeWakeHook(connected), "installed_unverified");
-  const ownHooks = (profile: string) => {
-    const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
-    return ["Stop", "SessionStart", "PostToolUse"].map(
-      (event) =>
-        settings.hooks[event].filter(
-          (entry: { hooks: Array<{ args: string[] }> }) =>
-            entry.hooks[0].args[3] === profile,
-        ).length,
-    );
-  };
-  assert.deepEqual(ownHooks("my-agent"), [1, 1, 1]);
+  const before = readFileSync(settingsPath, "utf8");
   // Session registration runs on every start, resume, clear and compact.
   for (let run = 0; run < 3; run++)
     assert.equal(installClaudeWakeHook(registered), "installed_unverified");
-  assert.deepEqual(ownHooks("my-agent"), [1, 1, 1]);
-  assert.deepEqual(ownHooks(`session-${sessionA}`), [1, 1, 1]);
-  // Reinstalling the first profile is idempotent and keeps the second.
-  const before = readFileSync(settingsPath, "utf8");
-  assert.equal(installClaudeWakeHook(registered), "installed_unverified");
   assert.equal(readFileSync(settingsPath, "utf8"), before);
+  assert.deepEqual(receivers(configDir, sessionA), [
+    "my-agent",
+    `session-${sessionA}`,
+  ]);
   assert.equal(installClaudeWakeHook(connected), "installed_unverified");
-  assert.deepEqual(ownHooks("my-agent"), [1, 1, 1]);
-  assert.deepEqual(ownHooks(`session-${sessionA}`), [1, 1, 1]);
+  assert.deepEqual(receivers(configDir, sessionA), [
+    "my-agent",
+    `session-${sessionA}`,
+  ]);
+  assert.equal(readFileSync(settingsPath, "utf8"), before);
 });
 
 test("every hook write leaves a backup of the previous settings, and an unchanged install writes nothing", () => {
@@ -549,8 +548,9 @@ test("every hook write leaves a backup of the previous settings, and an unchange
   );
   assert.equal(installClaudeWakeHook(options), "installed_unverified");
   assert.equal(backups().length, 1);
+  // Disconnecting changes only the receiver record, not the settings.
   assert.equal(uninstallClaudeWakeHook(options), true);
-  assert.equal(backups().length, 2);
+  assert.equal(backups().length, 1);
 });
 
 test("hook status reads a shared-readable settings file larger than a private record", () => {
@@ -687,6 +687,8 @@ test("reinstalling (as agent connect --resume does) moves a hook pinned to a rem
 
 test("uninstall removes only the exact profile and session and is idempotent", () => {
   const { claudeDir, configDir, cliPath } = fixture();
+  connect(configDir, "first", "first@example.com");
+  connect(configDir, "second", "second@example.com");
   const base = { cliPath, configDir, env: { CLAUDE_CONFIG_DIR: claudeDir } };
   const first = {
     ...base,
@@ -703,32 +705,21 @@ test("uninstall removes only the exact profile and session and is idempotent", (
   assert.equal(installClaudeWakeHook(first), "installed_unverified");
   assert.equal(installClaudeWakeHook(second), "installed_unverified");
   const settingsPath = join(claudeDir, "settings.json");
+  const installed = readFileSync(settingsPath, "utf8");
   assert.equal(
     uninstallClaudeWakeHook({ ...first, sessionId: sessionB }),
     true,
   );
-  let settings = JSON.parse(readFileSync(settingsPath, "utf8"));
-  assert.equal(settings.hooks.Stop.length, 2);
-  assert.equal(settings.hooks.SessionStart.length, 2);
+  assert.deepEqual(receivers(configDir, sessionA), ["first"]);
+  assert.deepEqual(receivers(configDir, sessionB), ["second"]);
   assert.equal(uninstallClaudeWakeHook(first), true);
-  const once = readFileSync(settingsPath, "utf8");
   assert.equal(uninstallClaudeWakeHook(first), true);
-  assert.equal(readFileSync(settingsPath, "utf8"), once);
-  settings = JSON.parse(once);
-  assert.equal(settings.hooks.Stop.length, 1);
-  assert.equal(settings.hooks.SessionStart.length, 1);
-  assert.equal(settings.hooks.PostToolUse.length, 1);
-  assert.equal(settings.hooks.Stop[0].hooks[0].args[5], sessionB);
-  assert.equal(settings.hooks.SessionStart[0].hooks[0].args[5], sessionB);
+  assert.deepEqual(receivers(configDir, sessionA), []);
+  assert.deepEqual(receivers(configDir, sessionB), ["second"]);
   assert.equal(uninstallClaudeWakeHook(second), true);
-  assert.deepEqual(
-    JSON.parse(readFileSync(settingsPath, "utf8")).hooks.Stop,
-    [],
-  );
-  assert.deepEqual(
-    JSON.parse(readFileSync(settingsPath, "utf8")).hooks.SessionStart,
-    [],
-  );
+  assert.deepEqual(receivers(configDir, sessionB), []);
+  // The shared hooks stay; with no receivers they exit at once.
+  assert.equal(readFileSync(settingsPath, "utf8"), installed);
 });
 
 test("concurrent installers retain every session in one Claude settings file", async () => {
@@ -746,6 +737,9 @@ test("concurrent installers retain every session in one Claude settings file", a
     "../../node_modules/tsx/dist/loader.mjs",
   );
   const sessions = Array.from({ length: 8 }, () => randomUUID());
+  sessions.forEach((_, index) => {
+    connect(configDir, `session-${index}`, `session-${index}@example.com`);
+  });
   const results = await Promise.all(
     sessions.map(
       (sessionId, index) =>
@@ -786,187 +780,110 @@ test("concurrent installers retain every session in one Claude settings file", a
   const settings = JSON.parse(
     readFileSync(join(claudeDir, "settings.json"), "utf8"),
   );
-  assert.deepEqual(
-    settings.hooks.Stop.map(
-      (entry: { hooks: Array<{ args: string[] }> }) => entry.hooks[0].args[5],
-    ).sort(),
-    sessions.sort(),
-  );
-  assert.deepEqual(
-    settings.hooks.SessionStart.map(
-      (entry: { hooks: Array<{ args: string[] }> }) => entry.hooks[0].args[5],
-    ).sort(),
-    sessions,
-  );
+  for (const event of ["Stop", "SessionStart", "PostToolUse"])
+    assert.equal(settings.hooks[event].length, 1);
+  sessions.forEach((sessionId, index) => {
+    assert.deepEqual(receivers(configDir, sessionId), [`session-${index}`]);
+  });
 });
 
-test("legacy generic hook stays available while new sessions gain pinned hooks", () => {
+test("legacy generic hooks stay beside the shared hooks", () => {
   const { claudeDir, configDir, cliPath } = fixture();
+  connect(configDir, `session-${sessionA}`, "a@example.com");
   const wrapperPath = realpathSync(join(dirname(cliPath), "claude-wake.mjs"));
-  const oldProfile = "old-other-session";
-  writeMailJson(
-    join(agentProfileDirectory(configDir, oldProfile), "setup.json"),
-    { session: sessionB },
-  );
+  const generic = {
+    type: "command",
+    command: process.execPath,
+    args: [
+      wrapperPath,
+      realpathSync(cliPath),
+      configDir,
+      "primitive-agent-wake-v1",
+    ],
+    asyncRewake: true,
+  };
+  // A six-argument hook names a profile but no session; it is kept unless
+  // its saved setup ties it to the installing session.
+  const oldProfile = {
+    ...generic,
+    args: [
+      wrapperPath,
+      realpathSync(cliPath),
+      configDir,
+      "old-other-session",
+      "old@example.com",
+      "primitive-agent-wake-v1",
+    ],
+  };
   writeFileSync(
     join(claudeDir, "settings.json"),
     JSON.stringify({
-      hooks: {
-        Stop: [
-          {
-            hooks: [
-              {
-                type: "command",
-                command: process.execPath,
-                args: [
-                  wrapperPath,
-                  realpathSync(cliPath),
-                  configDir,
-                  "primitive-agent-wake-v1",
-                ],
-                asyncRewake: true,
-              },
-            ],
-          },
-          {
-            hooks: [
-              {
-                type: "command",
-                command: process.execPath,
-                args: [
-                  wrapperPath,
-                  realpathSync(cliPath),
-                  configDir,
-                  oldProfile,
-                  "old@example.com",
-                  "primitive-agent-wake-v1",
-                ],
-                asyncRewake: true,
-              },
-            ],
-          },
-        ],
-      },
+      hooks: { Stop: [{ hooks: [generic] }, { hooks: [oldProfile] }] },
     }),
   );
-  const base = { cliPath, configDir, env: { CLAUDE_CONFIG_DIR: claudeDir } };
   assert.equal(
     installClaudeWakeHook({
-      ...base,
+      cliPath,
+      configDir,
       profileName: `session-${sessionA}`,
       agentAddress: "a@example.com",
       sessionId: sessionA,
-    }),
-    "installed_unverified",
-  );
-  let settings = JSON.parse(
-    readFileSync(join(claudeDir, "settings.json"), "utf8"),
-  );
-  assert.equal(settings.hooks.Stop.length, 3);
-  assert.equal(settings.hooks.SessionStart.length, 1);
-  assert.equal(settings.hooks.PostToolUse.length, 1);
-  assert.equal(settings.hooks.Stop[0].hooks[0].args.length, 4);
-  assert.equal(settings.hooks.Stop[1].hooks[0].args[3], oldProfile);
-  assert.equal(settings.hooks.Stop[2].hooks[0].args[5], sessionA);
-  assert.equal(
-    installClaudeWakeHook({
-      ...base,
-      profileName: oldProfile,
-      agentAddress: "old@example.com",
-      sessionId: sessionB,
-    }),
-    "installed_unverified",
-  );
-  settings = JSON.parse(readFileSync(join(claudeDir, "settings.json"), "utf8"));
-  assert.equal(settings.hooks.Stop.length, 3);
-  assert.equal(settings.hooks.SessionStart.length, 2);
-  assert.equal(settings.hooks.Stop[0].hooks[0].args.length, 4);
-  assert.deepEqual(
-    settings.hooks.Stop.slice(1)
-      .map(
-        (entry: { hooks: Array<{ args: string[] }> }) => entry.hooks[0].args[5],
-      )
-      .sort(),
-    [sessionA, sessionB],
-  );
-  assert.equal(
-    uninstallClaudeWakeHook({
-      configDir,
-      profileName: oldProfile,
-      agentAddress: "old@example.com",
-      sessionId: sessionB,
       env: { CLAUDE_CONFIG_DIR: claudeDir },
     }),
-    true,
+    "installed_unverified",
   );
-  settings = JSON.parse(readFileSync(join(claudeDir, "settings.json"), "utf8"));
-  assert.equal(settings.hooks.Stop.length, 2);
-  assert.equal(settings.hooks.SessionStart.length, 1);
-  assert.equal(settings.hooks.Stop[0].hooks[0].args.length, 4);
-  assert.equal(settings.hooks.Stop[1].hooks[0].args[5], sessionA);
+  const settings = JSON.parse(
+    readFileSync(join(claudeDir, "settings.json"), "utf8"),
+  );
+  assert.deepEqual(settings.hooks.Stop[0].hooks[0], generic);
+  assert.deepEqual(settings.hooks.Stop[1].hooks[0], oldProfile);
+  assert.deepEqual(
+    settings.hooks.Stop[2].hooks[0].args,
+    sharedArgs(cliPath, configDir),
+  );
 });
 
-test("reinstalling replaces this session's hooks written by an older CLI path", () => {
-  const { claudeDir, configDir, cliPath } = fixture();
+test("an install folds every per-session hook of its config directory into the shared hooks", () => {
+  const { root, claudeDir, configDir, cliPath } = fixture();
   const settingsPath = join(claudeDir, "settings.json");
-  const oldArgs = (script: string, marker: string, session: string) => [
-    `/old/primitive/bin/${script}`,
-    "/old/primitive/bin/run.js",
-    configDir,
-    "session-a",
-    "a@example.com",
-    session,
-    marker,
-  ];
+  connect(configDir, "session-a", "a@example.com", sessionA);
+  connect(configDir, "session-b", "b@example.com", sessionB);
+  // A profile disconnected since: its hooks are pruned, not folded in.
+  const sessionC = randomUUID();
+  const otherConfig = join(root, "other-config");
+  mkdirSync(otherConfig);
+  connect(otherConfig, "elsewhere", "e@example.com", sessionC);
+  const old = (
+    profile: string,
+    address: string,
+    session: string,
+    pending = false,
+    dir = configDir,
+  ) => ({
+    hooks: [
+      {
+        ...perSessionHook(cliPath, dir, profile, address, session, pending),
+        // Written by an older CLI install at another path.
+        command: "/old/node",
+      },
+    ],
+  });
+  const unrelated = { hooks: [{ type: "command", command: "true" }] };
   writeFileSync(
     settingsPath,
     JSON.stringify({
       hooks: {
         Stop: [
-          {
-            hooks: [
-              {
-                type: "command",
-                command: "/old/node",
-                args: oldArgs(
-                  "claude-wake.mjs",
-                  "primitive-agent-wake-v1",
-                  sessionA,
-                ),
-                asyncRewake: true,
-              },
-            ],
-          },
-          {
-            hooks: [
-              {
-                type: "command",
-                command: "/old/node",
-                args: oldArgs(
-                  "claude-wake.mjs",
-                  "primitive-agent-wake-v1",
-                  sessionB,
-                ),
-                asyncRewake: true,
-              },
-            ],
-          },
+          old("session-a", "a@example.com", sessionA),
+          unrelated,
+          old("session-b", "b@example.com", sessionB),
+          old("gone", "gone@example.com", sessionC),
+          old("elsewhere", "e@example.com", sessionC, false, otherConfig),
         ],
-        PostToolUse: [
-          {
-            hooks: [
-              {
-                type: "command",
-                command: "/old/node",
-                args: oldArgs(
-                  "claude-pending-mail.mjs",
-                  "primitive-pending-mail-v1",
-                  sessionA,
-                ),
-              },
-            ],
-          },
+        SessionStart: [
+          { matcher: "resume", ...old("session-b", "b@example.com", sessionB) },
         ],
+        PostToolUse: [old("session-a", "a@example.com", sessionA, true)],
       },
     }),
   );
@@ -982,31 +899,36 @@ test("reinstalling replaces this session's hooks written by an older CLI path", 
     "installed_unverified",
   );
   const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
-  const sessions = (entries: Array<{ hooks: Array<{ args: string[] }> }>) =>
-    entries.flatMap((entry) => entry.hooks.map((hook) => hook.args[5]));
-  // Another session's hook stays; this session has exactly one, current.
-  assert.deepEqual(sessions(settings.hooks.Stop), [sessionB, sessionA]);
-  assert.deepEqual(sessions(settings.hooks.PostToolUse), [sessionA]);
-  assert.equal(
-    settings.hooks.PostToolUse[0].hooks[0].args[1],
-    realpathSync(cliPath),
-  );
+  // Unrelated hooks and another config directory's hooks are untouched;
+  // this directory's per-session hooks became one shared set.
+  assert.deepEqual(settings.hooks.Stop, [
+    unrelated,
+    old("elsewhere", "e@example.com", sessionC, false, otherConfig),
+    sharedHookEntryFor("Stop", cliPath, configDir, settings),
+  ]);
+  for (const event of ["SessionStart", "PostToolUse"])
+    assert.equal(settings.hooks[event].length, 1);
+  assert.deepEqual(receivers(configDir, sessionA), ["session-a"]);
+  assert.deepEqual(receivers(configDir, sessionB), ["session-b"]);
+  assert.deepEqual(receivers(configDir, sessionC), []);
+  // Running it again changes nothing.
+  const once = readFileSync(settingsPath, "utf8");
+  installClaudeWakeHook({
+    cliPath,
+    configDir,
+    profileName: "session-b",
+    agentAddress: "b@example.com",
+    sessionId: sessionB,
+    env: { CLAUDE_CONFIG_DIR: claudeDir },
+  });
+  assert.equal(readFileSync(settingsPath, "utf8"), once);
 });
 
 test("an automatic install yields to another connected profile the session already receives as", () => {
   const { claudeDir, configDir, cliPath } = fixture();
   const settingsPath = join(claudeDir, "settings.json");
-  saveConnectedAgentProfile(configDir, "profile-a", {
-    version: 1,
-    auth_method: "agent_connection",
-    api_key: ["pconn", "fixture", "x"].join("_"),
-    api_base_url: "https://api.primitive.dev/v1",
-    org_id: "22222222-2222-4222-8222-222222222222",
-    agent_address: "a@example.com",
-    owner_address: "owner@example.com",
-    invitation_hash: "a".repeat(64),
-    created_at: "2026-01-01T00:00:00.000Z",
-  });
+  connect(configDir, "profile-a", "a@example.com");
+  connect(configDir, "profile-b", "b@example.com");
   const common = {
     cliPath,
     configDir,
@@ -1027,60 +949,33 @@ test("an automatic install yields to another connected profile the session alrea
   // The session receives as A.
   assert.equal(installClaudeWakeHook(a), "installed_unverified");
   const onlyA = readFileSync(settingsPath, "utf8");
-  // An automatic install of B writes nothing.
+  // An automatic install of B adds nothing.
   assert.equal(installClaudeWakeHook(b), "held_for_other_profile");
   assert.equal(readFileSync(settingsPath, "utf8"), onlyA);
+  assert.deepEqual(receivers(configDir, sessionA), ["profile-a"]);
   // Another session is unaffected.
   assert.equal(
     installClaudeWakeHook({ ...b, sessionId: sessionB }),
     "installed_unverified",
   );
+  assert.deepEqual(receivers(configDir, sessionB), ["profile-b"]);
   // Naming B explicitly (agent connect, agent enroll) still binds it.
   assert.equal(
     installClaudeWakeHook({ ...b, yieldToOtherProfiles: false }),
     "installed_unverified",
   );
-  const both = JSON.parse(readFileSync(settingsPath, "utf8"));
-  // B keeps any hook it still has, so a partly removed B is repaired.
-  both.hooks.Stop = both.hooks.Stop.filter(
-    (entry: { hooks: Array<{ args: string[] }> }) =>
-      !(
-        entry.hooks[0]?.args[3] === "profile-b" &&
-        entry.hooks[0]?.args[5] === sessionA
-      ),
-  );
-  writeFileSync(settingsPath, JSON.stringify(both));
+  assert.deepEqual(receivers(configDir, sessionA), ["profile-a", "profile-b"]);
+  // Once B receives there, an automatic install keeps it.
   assert.equal(installClaudeWakeHook(b), "installed_unverified");
-  const repaired = JSON.parse(readFileSync(settingsPath, "utf8"));
-  assert.ok(
-    repaired.hooks.Stop.some(
-      (entry: { hooks: Array<{ args: string[] }> }) =>
-        entry.hooks[0]?.args[3] === "profile-b" &&
-        entry.hooks[0]?.args[5] === sessionA,
-    ),
-  );
 });
 
 test("a held install still removes the profile's own legacy hook for the session", () => {
   const { claudeDir, configDir, cliPath } = fixture();
   const settingsPath = join(claudeDir, "settings.json");
-  saveConnectedAgentProfile(configDir, "profile-a", {
-    version: 1,
-    auth_method: "agent_connection",
-    api_key: ["pconn", "fixture", "x"].join("_"),
-    api_base_url: "https://api.primitive.dev/v1",
-    org_id: "22222222-2222-4222-8222-222222222222",
-    agent_address: "a@example.com",
-    owner_address: "owner@example.com",
-    invitation_hash: "a".repeat(64),
-    created_at: "2026-01-01T00:00:00.000Z",
-  });
+  connect(configDir, "profile-a", "a@example.com");
   // B's saved setup ties it to session A, and B still has an older
   // six-argument wake hook, which names no session.
-  writeMailJson(
-    join(agentProfileDirectory(configDir, "profile-b"), "setup.json"),
-    { session: sessionA, receiverMode: "external" },
-  );
+  connect(configDir, "profile-b", "b@example.com", sessionA);
   const legacy = {
     type: "command",
     command: process.execPath,
@@ -1109,7 +1004,7 @@ test("a held install still removes the profile's own legacy hook for the session
     sessionId: sessionA,
     env: { CLAUDE_CONFIG_DIR: claudeDir },
   };
-  // The session receives as A through current hooks.
+  // The session receives as A through the shared hooks.
   assert.equal(
     installClaudeWakeHook({
       ...common,
@@ -1128,16 +1023,10 @@ test("a held install still removes the profile's own legacy hook for the session
     "held_for_other_profile",
   );
   const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
-  const profiles = (["Stop", "SessionStart", "PostToolUse"] as const).flatMap(
-    (event) =>
-      (settings.hooks[event] ?? []).flatMap(
-        (entry: { hooks: Array<{ args?: string[] }> }) =>
-          entry.hooks.flatMap((hook) => (hook.args ? [hook.args[3]] : [])),
-      ),
-  );
   // Only A receives; B's legacy hook is gone and unrelated hooks are kept.
-  assert.deepEqual([...new Set(profiles)], ["profile-a"]);
+  assert.deepEqual(receivers(configDir, sessionA), ["profile-a"]);
   assert.deepEqual(settings.hooks.Stop[0].hooks, [unrelated]);
+  assert.equal(JSON.stringify(settings).includes("profile-b"), false);
   // A second held run finds nothing of B's to remove and writes nothing.
   const after = readFileSync(settingsPath, "utf8");
   assert.equal(
@@ -1151,3 +1040,21 @@ test("a held install still removes the profile's own legacy hook for the session
   );
   assert.equal(readFileSync(settingsPath, "utf8"), after);
 });
+
+/** The shared entry an install writes for one event, read from settings. */
+function sharedHookEntryFor(
+  event: string,
+  cliPath: string,
+  configDir: string,
+  settings: {
+    hooks: Record<string, Array<{ hooks: Array<{ args: string[] }> }>>;
+  },
+) {
+  const entry = settings.hooks[event]?.find(
+    (row) =>
+      JSON.stringify(row.hooks[0]?.args) ===
+      JSON.stringify(sharedArgs(cliPath, configDir, event === "PostToolUse")),
+  );
+  assert.ok(entry, `no shared ${event} hook`);
+  return entry;
+}

@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
   existsSync,
@@ -531,18 +531,123 @@ function tryLock(path) {
   return false;
 }
 
-async function main() {
-  const [cli, configDir, profile, address, expectedSession, marker] =
-    process.argv.slice(2);
+/**
+ * The profiles a session receives as, from the config directory's session
+ * receivers (written when the session registers). Empty when it has none.
+ */
+export function readSessionReceivers(configDir, sessionId) {
+  if (!configDir || !uuid.test(sessionId ?? "")) return [];
+  const state = readJson(
+    join(
+      resolve(configDir),
+      "agent-connections",
+      "claude-sessions",
+      `${sessionId.toLowerCase()}.json`,
+    ),
+  );
   if (
-    marker !== "primitive-pending-mail-v1" ||
-    !cli ||
-    !configDir ||
-    !profilePattern.test(profile ?? "") ||
-    !addressPattern.test(address ?? "") ||
-    !uuid.test(expectedSession ?? "")
+    state?.version !== 1 ||
+    state.session_id !== sessionId.toLowerCase() ||
+    !Array.isArray(state.receivers)
+  )
+    return [];
+  return state.receivers.flatMap((row) =>
+    profilePattern.test(row?.profile ?? "") &&
+    addressPattern.test(row?.address ?? "")
+      ? [{ profile: row.profile, address: row.address.toLowerCase() }]
+      : [],
+  );
+}
+
+function runListener(cli, configDir, profile, address, sessionId) {
+  const env = {
+    ...process.env,
+    PRIMITIVE_CONFIG_DIR: configDir,
+    PRIMITIVE_AGENT_PROFILE: profile,
+    PRIMITIVE_HOOK_AGENT_ADDRESS: address.toLowerCase(),
+  };
+  delete env.PRIMITIVE_API_KEY;
+  delete env.PRIMITIVE_KEY;
+  return new Promise((done) => {
+    const child = spawn(
+      process.execPath,
+      [
+        cli,
+        "listen",
+        "--once",
+        "--wake",
+        "--hook-session",
+        "--events",
+        "email.received",
+        "--timeout",
+        "2",
+      ],
+      { env, stdio: ["pipe", "ignore", "ignore"] },
+    );
+    const timer = setTimeout(() => child.kill("SIGTERM"), 8_000);
+    child.once("error", () => {
+      clearTimeout(timer);
+      done();
+    });
+    child.once("close", () => {
+      clearTimeout(timer);
+      done();
+    });
+    child.stdin.on("error", () => undefined);
+    child.stdin.end(
+      JSON.stringify({ hook_event_name: "Stop", session_id: sessionId }),
+    );
+  });
+}
+
+/** One profile's mail check after a tool call, and the lines it announces. */
+async function checkProfile({ cli, configDir, profile, address, sessionId }) {
+  const directory = profileDirectory(configDir, profile);
+  if (!directory) return [];
+  mkdirSync(directory, { recursive: true, mode: 0o700 });
+  writeJson(join(directory, `pending-mail-${sessionId}.fired.json`), {
+    version: 1,
+    at: new Date().toISOString(),
+  });
+  const lock = join(directory, `pending-mail-${sessionId}.lock`);
+  if (!tryLock(lock)) return [];
+  try {
+    // A pending notice never stops the mail check: new mail keeps being
+    // fetched while an earlier notice waits to be read.
+    if (pollDue(configDir, profile, sessionId))
+      await runListener(cli, configDir, profile, address, sessionId);
+    return announcePendingMail({
+      cli,
+      configDir,
+      profile,
+      address,
+      sessionId,
+      skillFile: claudeSkillFile(),
+    }).lines;
+  } finally {
+    try {
+      rmdirSync(lock);
+    } catch {
+      /* Fail open. */
+    }
+  }
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  // The shared hook names only the CLI and config directory; a per-session
+  // hook from an earlier version also names its profile and session.
+  const shared = args.length === 3 && args[2] === "primitive-pending-mail-v2";
+  const [cli, configDir, profile, address, expectedSession, marker] = args;
+  if (
+    !shared &&
+    (marker !== "primitive-pending-mail-v1" ||
+      !profilePattern.test(profile ?? "") ||
+      !addressPattern.test(address ?? "") ||
+      !uuid.test(expectedSession ?? ""))
   )
     return;
+  if (!cli || !configDir) return;
   let raw = "";
   for await (const part of process.stdin) {
     raw += String(part);
@@ -554,74 +659,28 @@ async function main() {
   } catch {
     return;
   }
-  const sessionId = expectedSession.toLowerCase();
   if (
     input?.hook_event_name !== "PostToolUse" ||
     typeof input.session_id !== "string" ||
-    input.session_id.toLowerCase() !== sessionId
+    !uuid.test(input.session_id)
   )
     return;
-  const directory = profileDirectory(configDir, profile);
-  mkdirSync(directory, { recursive: true, mode: 0o700 });
-  writeJson(join(directory, `pending-mail-${sessionId}.fired.json`), {
-    version: 1,
-    at: new Date().toISOString(),
-  });
-  const lock = join(directory, `pending-mail-${sessionId}.lock`);
-  if (!tryLock(lock)) return;
-  try {
-    // A pending notice never stops the mail check: new mail keeps being
-    // fetched while an earlier notice waits to be read.
-    if (pollDue(configDir, profile, sessionId)) {
-      const env = {
-        ...process.env,
-        PRIMITIVE_CONFIG_DIR: configDir,
-        PRIMITIVE_AGENT_PROFILE: profile,
-        PRIMITIVE_HOOK_AGENT_ADDRESS: address.toLowerCase(),
-      };
-      delete env.PRIMITIVE_API_KEY;
-      delete env.PRIMITIVE_KEY;
-      spawnSync(
-        process.execPath,
-        [
-          cli,
-          "listen",
-          "--once",
-          "--wake",
-          "--hook-session",
-          "--events",
-          "email.received",
-          "--timeout",
-          "2",
-        ],
-        {
-          input: JSON.stringify({
-            hook_event_name: "Stop",
-            session_id: sessionId,
-          }),
-          encoding: "utf8",
-          env,
-          timeout: 8_000,
-          maxBuffer: 16_384,
-        },
-      );
-    }
-    const { lines } = announcePendingMail({
-      cli,
-      configDir,
-      profile,
-      address,
-      sessionId,
-      skillFile: claudeSkillFile(),
-    });
-    context(lines);
-  } finally {
-    try {
-      rmdirSync(lock);
-    } catch {
-      /* Fail open. */
-    }
-  }
+  const sessionId = input.session_id.toLowerCase();
+  if (!shared && sessionId !== expectedSession.toLowerCase()) return;
+  const receivers = shared
+    ? readSessionReceivers(configDir, sessionId)
+    : [{ profile, address }];
+  if (receivers.length === 0) return;
+  const lines = (
+    await Promise.all(
+      receivers.map((receiver) =>
+        checkProfile({ cli, configDir, ...receiver, sessionId }).catch(
+          () => [],
+        ),
+      ),
+    )
+  ).flat();
+  context(lines);
 }
 
 if (

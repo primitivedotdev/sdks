@@ -16,6 +16,11 @@ import { join, relative } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { saveCliCredentials } from "../../src/oclif/auth.js";
 import {
+  addSessionReceiver,
+  listSessionReceivers,
+  readSessionReceivers,
+} from "../../src/oclif/claude-session-receivers.js";
+import {
   claudeWakeHookStatus,
   installClaudeWakeHook,
 } from "../../src/oclif/claude-wake-install.js";
@@ -140,6 +145,16 @@ function snapshot(home: string): Record<string, string> {
   };
   walk(home);
   return files;
+}
+
+/** The shared wake hook's arguments, as installs and repairs write them. */
+function sharedWakeArgs(bin: string, configDir: string, pending = false) {
+  return [
+    join(bin, pending ? "claude-pending-mail.mjs" : "claude-wake.mjs"),
+    join(bin, "run.js"),
+    configDir,
+    pending ? "primitive-pending-mail-v2" : "primitive-agent-wake-v2",
+  ];
 }
 
 function wakeHook(
@@ -358,9 +373,14 @@ describe("primitive machine doctor", () => {
             Array.isArray((hook as { args?: unknown }).args),
         ) as Array<{ command: string; args: string[] }>;
     const stopWakes = wakes(settings.hooks.Stop);
+    // The live session's hooks folded into the one shared hook, and its
+    // profile is a recorded receiver; the dead session's hooks are gone.
     expect(stopWakes).toHaveLength(1);
-    expect(stopWakes[0]?.args[0]).toBe(join(bin, "claude-wake.mjs"));
-    expect(stopWakes[0]?.args[5]).toBe(sessionA);
+    expect(stopWakes[0]?.args).toEqual(sharedWakeArgs(bin, configDir));
+    expect(
+      readSessionReceivers(configDir, sessionA).map((row) => row.profile),
+    ).toEqual([`session-${sessionA}`]);
+    expect(readSessionReceivers(configDir, sessionB)).toEqual([]);
     expect(settings.hooks.Stop[0]).toEqual({ hooks: [userHook] });
     const resumeWakes = wakes(settings.hooks.SessionStart).filter((hook) =>
       hook.args[0]?.endsWith("claude-wake.mjs"),
@@ -859,7 +879,7 @@ describe("primitive machine doctor", () => {
     const before = byId(await runMachineDoctor({ ...options, env }));
     expect(before["claude.hook.stop"].status).toBe("fail");
     expect(before["claude.hook.stop"].detail).toContain(
-      "3 pointing at an old CLI path",
+      "3 per-session hooks to fold into the shared receive hooks",
     );
     const fixed = byId(
       await runMachineDoctor({
@@ -924,8 +944,10 @@ describe("primitive machine doctor", () => {
     expect(status()).toBe(false);
     const before = byId(await runMachineDoctor(options));
     expect(before["claude.hook.stop"].status).toBe("fail");
+    // The hooks naming the old address are folded into the shared hooks,
+    // which receive as the profile's current address.
     expect(before["claude.hook.stop"].detail).toContain(
-      "2 naming an old agent address",
+      "2 per-session hooks to fold into the shared receive hooks",
     );
     expect(before["claude.hook.stop"].detail).toContain(
       "3 missing for connected sessions",
@@ -940,9 +962,21 @@ describe("primitive machine doctor", () => {
     expect(JSON.parse(text).hooks.Stop).toEqual([
       {
         hooks: [
-          wakeHook(bin, configDir, "my-agent", "new@example.test", sessionA),
+          {
+            ...wakeHook(
+              bin,
+              configDir,
+              "my-agent",
+              "new@example.test",
+              sessionA,
+            ),
+            args: sharedWakeArgs(bin, configDir),
+          },
         ],
       },
+    ]);
+    expect(readSessionReceivers(configDir, sessionA)).toEqual([
+      { profile: "my-agent", address: "new@example.test" },
     ]);
     expect(status()).toBe(true);
   });
@@ -1125,21 +1159,27 @@ describe("primitive machine doctor", () => {
       ["test-agent", "missing", false],
     ]);
     const text = readFileSync(settingsPath, "utf8");
-    expect(text).toContain("my-agent@example.test");
-    expect(text).not.toContain("test-agent@example.test");
     expect(JSON.parse(text).hooks.Stop).toEqual([
       {
         hooks: [
-          wakeHook(
-            bin,
-            configDir,
-            "my-agent",
-            "my-agent@example.test",
-            sessionA,
-          ),
+          {
+            ...wakeHook(
+              bin,
+              configDir,
+              "my-agent",
+              "my-agent@example.test",
+              sessionA,
+            ),
+            args: sharedWakeArgs(bin, configDir),
+          },
         ],
       },
     ]);
+    // Only the selected profile became a receiver.
+    expect(readSessionReceivers(configDir, sessionA)).toEqual([
+      { profile: "my-agent", address: "my-agent@example.test" },
+    ]);
+    expect(readSessionReceivers(configDir, sessionB)).toEqual([]);
   });
 
   it("reinstalls a removed receive hook for a connected session, never for an ended one", async () => {
@@ -1181,24 +1221,20 @@ describe("primitive machine doctor", () => {
     });
     const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
     expect(settings.model).toBe("opus");
-    expect(settings.hooks.Stop).toEqual([
-      {
-        hooks: [
-          wakeHook(
-            bin,
-            configDir,
-            "my-agent",
-            "my-agent@example.test",
-            sessionA,
-          ),
-        ],
-      },
-    ]);
+    const shared = {
+      ...wakeHook(
+        bin,
+        configDir,
+        "my-agent",
+        "my-agent@example.test",
+        sessionA,
+      ),
+      args: sharedWakeArgs(bin, configDir),
+    };
+    expect(settings.hooks.Stop).toEqual([{ hooks: [shared] }]);
     expect(settings.hooks.SessionStart).toContainEqual({
       matcher: "resume",
-      hooks: [
-        wakeHook(bin, configDir, "my-agent", "my-agent@example.test", sessionA),
-      ],
+      hooks: [shared],
     });
     expect(settings.hooks.PostToolUse).toEqual([
       {
@@ -1206,20 +1242,16 @@ describe("primitive machine doctor", () => {
           {
             type: "command",
             command: launcherPath(configDir),
-            args: [
-              join(bin, "claude-pending-mail.mjs"),
-              join(bin, "run.js"),
-              configDir,
-              "my-agent",
-              "my-agent@example.test",
-              sessionA,
-              "primitive-pending-mail-v1",
-            ],
+            args: sharedWakeArgs(bin, configDir, true),
             timeout: 10,
           },
         ],
       },
     ]);
+    expect(readSessionReceivers(configDir, sessionA)).toEqual([
+      { profile: "my-agent", address: "my-agent@example.test" },
+    ]);
+    expect(readSessionReceivers(configDir, sessionB)).toEqual([]);
     expect(JSON.stringify(settings)).not.toContain("finished");
 
     const again = byId(await runMachineDoctor({ ...options, fix: true }));
@@ -1244,37 +1276,27 @@ describe("primitive machine doctor", () => {
         { session: sessionA, receiverMode: "external" },
       );
     }
-    const prod = wakeHook(
-      bin,
-      configDir,
-      "prod-agent",
-      "prod-agent@example.test",
-      sessionA,
-    );
-    const pending = {
+    // The session receives as prod-agent through the shared hooks.
+    const shared = (pending: boolean) => ({
       type: "command",
       command: launcherPath(configDir),
-      args: [
-        join(bin, "claude-pending-mail.mjs"),
-        join(bin, "run.js"),
-        configDir,
-        "prod-agent",
-        "prod-agent@example.test",
-        sessionA,
-        "primitive-pending-mail-v1",
-      ],
-      timeout: 10,
-    };
+      args: sharedWakeArgs(bin, configDir, pending),
+      ...(pending ? { timeout: 10 } : { asyncRewake: true, timeout: 604800 }),
+    });
     writeFileSync(
       settingsPath,
       JSON.stringify({
         hooks: {
-          Stop: [{ hooks: [prod] }],
-          SessionStart: [{ matcher: "resume", hooks: [prod] }],
-          PostToolUse: [{ hooks: [pending] }],
+          Stop: [{ hooks: [shared(false)] }],
+          SessionStart: [{ matcher: "resume", hooks: [shared(false)] }],
+          PostToolUse: [{ hooks: [shared(true)] }],
         },
       }),
     );
+    addSessionReceiver(configDir, sessionA, {
+      profile: "prod-agent",
+      address: "prod-agent@example.test",
+    });
     const only = new Set<DoctorCheckId>(["claude.hook.stop"]);
     const before = byId(await runMachineDoctor({ ...options, only }));
     expect(before["claude.hook.stop"].status).toBe("ok");
@@ -1307,9 +1329,10 @@ describe("primitive machine doctor", () => {
       ["other-agent", "added"],
       ["other-agent", "added"],
     ]);
-    const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
-    expect(JSON.stringify(settings.hooks.Stop)).toContain("prod-agent");
-    expect(JSON.stringify(settings.hooks.Stop)).toContain("other-agent");
+    expect(readFileSync(settingsPath, "utf8")).toBe(text);
+    expect(
+      readSessionReceivers(configDir, sessionA).map((row) => row.profile),
+    ).toEqual(["prod-agent", "other-agent"]);
   });
 
   it("restores a profile that lost only some receive hooks, even beside another profile", async () => {
@@ -1352,10 +1375,14 @@ describe("primitive machine doctor", () => {
         change.action,
       ]),
     ).toEqual([
+      // Its per-session Stop hook folds into the shared hooks.
+      ["prod-agent", "Stop", "removed"],
       ["prod-agent", "SessionStart", "added"],
       ["prod-agent", "PostToolUse", "added"],
     ]);
-    expect(readFileSync(settingsPath, "utf8")).not.toContain("other-agent");
+    expect(
+      readSessionReceivers(configDir, sessionA).map((row) => row.profile),
+    ).toEqual(["prod-agent"]);
   });
 
   it("restores the only connected profile when the session's other hook is stale", async () => {
@@ -1410,15 +1437,21 @@ describe("primitive machine doctor", () => {
     expect(JSON.parse(text).hooks.Stop).toEqual([
       {
         hooks: [
-          wakeHook(
-            bin,
-            configDir,
-            "live-agent",
-            "live-agent@example.test",
-            sessionA,
-          ),
+          {
+            ...wakeHook(
+              bin,
+              configDir,
+              "live-agent",
+              "live-agent@example.test",
+              sessionA,
+            ),
+            args: sharedWakeArgs(bin, configDir),
+          },
         ],
       },
+    ]);
+    expect(readSessionReceivers(configDir, sessionA)).toEqual([
+      { profile: "live-agent", address: "live-agent@example.test" },
     ]);
   });
 
@@ -2110,10 +2143,15 @@ describe.runIf(process.platform !== "win32")(
       for (const event of ["Stop", "SessionStart", "PostToolUse"]) {
         expect(hooks[event]).toHaveLength(1);
         expect(hooks[event][0].hooks[0].command).toBe(launcher);
-        expect(hooks[event][0].hooks[0].args[3]).toBe(name);
+        expect(hooks[event][0].hooks[0].args[3]).toMatch(/-v2$/);
         expect(hooks[event][0].hooks[0].args[1]).toBe(join(npx, "run.js"));
       }
       expect(lstatSync(launcher).mode & 0o111).not.toBe(0);
+      expect(
+        [...listSessionReceivers(configDir).values()]
+          .flat()
+          .map((row) => row.profile),
+      ).toEqual([name]);
     });
 
     it("rewrites a deleted launcher", async () => {

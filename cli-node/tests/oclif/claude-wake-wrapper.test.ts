@@ -702,3 +702,115 @@ it("claims older mail a live wake stands for instead of showing it again", () =>
   );
   expect(claimed.sort()).toEqual([older, received].sort());
 });
+
+/** Run the shared hook (no profile or session in its arguments). */
+function runShared(
+  receivers: Array<{ profile: string; address: string }> | null,
+  input: Record<string, unknown> = {
+    hook_event_name: "Stop",
+    session_id: session,
+  },
+) {
+  const root = mkdtempSync(join(tmpdir(), "primitive-wake-shared-"));
+  roots.push(root);
+  const cli = join(root, "cli.mjs");
+  const calls = join(root, "calls.log");
+  if (receivers) {
+    const directory = join(root, "agent-connections", "claude-sessions");
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(
+      join(directory, `${session}.json`),
+      JSON.stringify({ version: 1, session_id: session, receivers }),
+    );
+  }
+  writeFileSync(
+    cli,
+    [
+      'import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";',
+      'appendFileSync(process.env.CALLS, `${process.argv.slice(2).join(" ")} profile=${process.env.PRIMITIVE_AGENT_PROFILE ?? ""}\\n`);',
+      'if (process.argv.includes("--help")) {',
+      '  process.stdout.write("--once --wake --hook-session --events primitive-hook-profile-bound-v2");',
+      '} else if (process.argv.includes("pending")) {',
+      fakeClaim,
+      "} else {",
+      "  for await (const _chunk of process.stdin) {}",
+      // Only the second profile receives mail; the first waits until stopped.
+      '  if (process.env.PRIMITIVE_AGENT_PROFILE !== "second") {',
+      '    process.on("SIGTERM", () => process.exit(0));',
+      "    setTimeout(() => process.exit(0), 8_000);",
+      "  } else {",
+      `    process.stderr.write("Primitive mail arrived: ${received}. Read with PRIMITIVE_AGENT_PROFILE=second primitive emails get --id ${received} --context. ${external}\\n");`,
+      "    process.exitCode = 2;",
+      "  }",
+      "}",
+    ].join("\n"),
+  );
+  const wrapper = resolve(import.meta.dirname, "../../bin/claude-wake.mjs");
+  const started = Date.now();
+  const result = spawnSync(
+    process.execPath,
+    [wrapper, cli, root, "primitive-agent-wake-v2"],
+    {
+      input: JSON.stringify(input),
+      encoding: "utf8",
+      timeout: 10_000,
+      env: {
+        ...process.env,
+        CLAUDE_CONFIG_DIR: join(root, "no-claude-config"),
+        CALLS: calls,
+        CLAIMS_FILE: join(root, "claims.json"),
+      },
+    },
+  );
+  return {
+    result,
+    elapsed: Date.now() - started,
+    calls: existsSync(calls)
+      ? readFileSync(calls, "utf8").trim().split("\n")
+      : [],
+  };
+}
+
+it("the shared hook exits at once for a session with no receivers", () => {
+  const { result, calls } = runShared(null);
+  expect(result.status).toBe(0);
+  expect(result.stderr).toBe("");
+  // Not even the capability check runs.
+  expect(calls).toEqual([]);
+  const empty = runShared([]);
+  expect(empty.result.status).toBe(0);
+  expect(empty.calls).toEqual([]);
+});
+
+it("the shared hook listens as every profile of the session and stops the rest on the first wake", () => {
+  const { result, calls, elapsed } = runShared([
+    { profile: "first", address: "first@example.com" },
+    { profile: "second", address: "second@example.com" },
+  ]);
+  expect(result.status).toBe(2);
+  expect(result.stderr).toBe(
+    `Primitive mail arrived: ${received}. Read with PRIMITIVE_AGENT_PROFILE=second primitive emails get --id ${received} --context. ${external}\n`,
+  );
+  const listeners = calls.filter((call) => call.startsWith("listen --once"));
+  expect(listeners.map((call) => call.split("profile=")[1]).sort()).toEqual([
+    "first",
+    "second",
+  ]);
+  // The waiting listener was stopped rather than left to time out.
+  expect(elapsed).toBeLessThan(7_000);
+  expect(
+    calls.some(
+      (call) =>
+        call.startsWith("listen pending") && call.endsWith("profile=second"),
+    ),
+  ).toBe(true);
+});
+
+it("the shared hook ignores a payload without an exact session", () => {
+  const { result, calls } = runShared(
+    [{ profile: "second", address: "second@example.com" }],
+    { hook_event_name: "Stop" },
+  );
+  expect(result.status).toBe(0);
+  expect(calls).toEqual([]);
+});

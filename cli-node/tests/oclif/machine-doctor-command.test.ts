@@ -136,7 +136,7 @@ it("prints one line per receive hook it would change or changed, capped", async 
     checks: [
       {
         id: "claude.hook.stop",
-        title: "Claude per-session receive hooks",
+        title: "Claude receive hooks",
         status: "fail",
         detail: "Per-session receive hooks need cleanup.",
         fixable: true,
@@ -189,7 +189,7 @@ it("lists hooks excluded by --profile apart from those the run would change", as
     checks: [
       {
         id: "claude.hook.stop",
-        title: "Claude per-session receive hooks",
+        title: "Claude receive hooks",
         status: "fail",
         detail: "Per-session receive hooks need cleanup.",
         fixable: true,

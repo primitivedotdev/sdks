@@ -15,6 +15,7 @@ import {
   disconnectAgent,
   savedSetupRevoked,
 } from "../../src/oclif/agent-disconnect.js";
+import { readSessionReceivers } from "../../src/oclif/claude-session-receivers.js";
 import { installClaudeWakeHook } from "../../src/oclif/claude-wake-install.js";
 import {
   agentProfileDirectory,
@@ -107,7 +108,7 @@ afterEach(() => {
 });
 
 describe("connected agent self-disconnect", () => {
-  it("removes only the disconnected Claude session's Stop hook", async () => {
+  it("stops only the disconnected profile receiving in its Claude session", async () => {
     const directory = configDir();
     const claudeDir = join(directory, "claude");
     const bin = join(directory, "bin");
@@ -151,10 +152,13 @@ describe("connected agent self-disconnect", () => {
     const settings = JSON.parse(
       readFileSync(join(claudeDir, "settings.json"), "utf8"),
     );
+    // The shared hooks stay for the other session, which still receives.
     expect(settings.hooks.Stop).toHaveLength(1);
-    expect(settings.hooks.Stop[0].hooks[0].args[5]).toBe(otherSession);
     expect(settings.hooks.PostToolUse).toHaveLength(1);
-    expect(settings.hooks.PostToolUse[0].hooks[0].args[5]).toBe(otherSession);
+    expect(readSessionReceivers(directory, session)).toEqual([]);
+    expect(
+      readSessionReceivers(directory, otherSession).map((row) => row.profile),
+    ).toEqual(["other"]);
   });
 
   it("revokes only the selected profile at its pinned origin and preserves evidence", async () => {
