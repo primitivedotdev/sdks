@@ -1560,7 +1560,7 @@ describe("inbox next with transient API failures", () => {
 
   it("--wait exits 5 when the API stays unavailable until the timeout", async () => {
     failLongPolls(1000, () => failure(503, "service_unavailable"));
-    const result = await runCommand(["--wait", "--timeout", "1"]);
+    const result = await runCommand(["--wait", "--timeout", "3"]);
     expect(result.exitCode).toBe(INBOX_NEXT_EXIT_CODES.empty);
     expect(result.stderr).toContain(
       "primitive: API unavailable (HTTP 503); retrying in",
