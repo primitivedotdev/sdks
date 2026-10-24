@@ -727,7 +727,7 @@ function runShared(
     cli,
     [
       'import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";',
-      'appendFileSync(process.env.CALLS, `${process.argv.slice(2).join(" ")} profile=${process.env.PRIMITIVE_AGENT_PROFILE ?? ""}\\n`);',
+      'appendFileSync(process.env.CALLS, process.argv.slice(2).join(" ") + " profile=" + (process.env.PRIMITIVE_AGENT_PROFILE ?? "") + "\\n");',
       'if (process.argv.includes("--help")) {',
       '  process.stdout.write("--once --wake --hook-session --events primitive-hook-profile-bound-v2");',
       '} else if (process.argv.includes("pending")) {',
