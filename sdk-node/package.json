@@ -107,7 +107,7 @@
     "sanitize-html": "^2.18.1",
     "tar-stream": "^3.2.2",
     "validator": "^13.15.35",
-    "viem": "^2.57.7"
+    "viem": "^2.57.10"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
