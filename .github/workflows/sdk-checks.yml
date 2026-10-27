@@ -53,6 +53,7 @@ jobs:
               - 'scripts/smoke-*.mjs'
               - 'scripts/scoped-mail-smoke-fixture.mjs'
               - 'scripts/assert-tarball-isolation.mjs'
+              - 'scripts/assert-tarball-isolation.test.mjs'
               - 'packages/api-core/**'
               - 'openapi/**'
               - 'pnpm-lock.yaml'
@@ -175,11 +176,14 @@ jobs:
       - name: Install dependencies
         run: make cli-install
 
+      - name: Check package isolation script
+        run: node --test scripts/assert-tarball-isolation.test.mjs
+
       - name: Build cli package
         run: make cli-build
 
       - name: Assert CLI tarball does not leak api-core or sdk into dependencies
-        run: make cli-tarball-isolation
+        run: make cli-tarball-isolation-built
 
       # cli-smoke-only packs the package built above instead of rebuilding it,
       # and runs the smoke scripts concurrently with per-script results.

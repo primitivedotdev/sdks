@@ -1,0 +1,50 @@
+name: CLI speed experiment
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cli-speed-experiment.yml'
+permissions:
+  contents: read
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+jobs:
+  cli:
+    name: CLI comparison (4 cores, Node 22)
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+        with:
+          version: 10
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install dependencies
+        run: make cli-install
+      - name: Run cli checks
+        run: make cli-check
+  smoke:
+    name: CLI smoke comparison (4 cores, Node 22)
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+        with:
+          version: 10
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install dependencies
+        run: make cli-install
+      - name: Build cli package
+        run: make cli-build
+      - name: Check CLI isolation
+        run: make cli-tarball-isolation-built
+      - name: Smoke test packed cli package
+        run: make cli-smoke-only

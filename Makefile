@@ -1,5 +1,5 @@
 .PHONY: node-install node-generate node-check-generated node-test node-check node-build node-smoke node-tarball-isolation node-coverage
-.PHONY: cli-install cli-test cli-check cli-build cli-smoke cli-smoke-only cli-tarball-isolation cli-coverage
+.PHONY: cli-install cli-test cli-check cli-build cli-smoke cli-smoke-only cli-tarball-isolation cli-tarball-isolation-built cli-coverage
 .PHONY: python-sync python-generate python-check-generated python-test python-check python-build python-smoke python-coverage
 .PHONY: go-generate go-check-generated go-check go-build go-coverage
 .PHONY: shared-check check build release-check ci
@@ -58,15 +58,20 @@ cli-check: node-build
 	pnpm --dir cli-node typecheck
 	pnpm --dir cli-node $(if $(CLI_COVERAGE),test:coverage,test)
 
-cli-build: node-build
+# The CLI package build already builds its SDK dependency.
+cli-build:
 	pnpm --dir cli-node build
 
 cli-tarball-isolation:
 	node scripts/assert-tarball-isolation.mjs cli-node "@primitivedotdev/sdk"
 
+# Only after cli-build; standalone cli-tarball-isolation still runs prepack.
+cli-tarball-isolation-built:
+	node scripts/assert-tarball-isolation.mjs --already-built cli-node "@primitivedotdev/sdk"
+
 # One-shot local smoke: build, check tarball isolation, then smoke the packed
 # package. CI runs those steps separately and calls cli-smoke-only.
-cli-smoke: cli-build cli-tarball-isolation
+cli-smoke: cli-build cli-tarball-isolation-built
 	$(MAKE) cli-smoke-only
 
 # Smoke the packed package without rebuilding it. Expects cli-build to have
