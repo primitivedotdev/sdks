@@ -27,6 +27,7 @@ These are single controlled observations. Queueing, cache state and other checks
 - CLI checks and packaging use four cores; other language jobs retain two.
 - CLI packaging builds the SDK dependency once and reuses compiled output for dependency isolation and packing.
 - Node SDK checks collect coverage during their single test-suite run. Packing and isolation reuse the preceding build.
+- The shared packaged crash/retry Make target opts into reusing its Node SDK build. Standalone proof-script calls retain prepack.
 - Standalone isolation targets retain prepack behavior. Reuse requires a dist directory and built files in the pack manifest. Existing installed-package smoke assertions remain.
 - One-shot smoke targets order isolation after their builds even with parallel make.
 - The temporary comparison workflow was removed after measurement.

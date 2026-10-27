@@ -7,7 +7,7 @@
 
 # Local packaged-SDK crash/retry proof. No real email or deployed API calls.
 signal-retry-smoke: node-build python-build
-	$(PYTHON) scripts/smoke-signal-retry.py
+	$(PYTHON) scripts/smoke-signal-retry.py --reuse-node-build
 
 PYTHON := $(shell if command -v python3 >/dev/null 2>&1; then printf python3; else printf python; fi)
 
