@@ -21,6 +21,13 @@ test("explicit reuse avoids prepack and retains dependency isolation", () => {
     const built = run(dir);
     assert.equal(built.status, 0, built.stderr);
     assert.equal(readFileSync(join(dir, "build-count"), "utf8"), "1");
+    pkg.files = ["build.cjs"];
+    writeFileSync(join(dir, "package.json"), JSON.stringify(pkg));
+    const unpacked = run("--already-built", dir);
+    assert.notEqual(unpacked.status, 0);
+    assert.match(unpacked.stderr, /packed package contains no built dist files/);
+    pkg.files = ["dist"];
+    writeFileSync(join(dir, "package.json"), JSON.stringify(pkg));
     const reused = run("--already-built", dir);
     assert.equal(reused.status, 0, reused.stderr);
     assert.equal(readFileSync(join(dir, "build-count"), "utf8"), "1");

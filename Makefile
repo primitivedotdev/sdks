@@ -1,4 +1,4 @@
-.PHONY: node-install node-generate node-check-generated node-test node-check node-build node-smoke node-tarball-isolation node-coverage
+.PHONY: node-install node-generate node-check-generated node-test node-check node-build node-smoke node-tarball-isolation node-tarball-isolation-built node-coverage
 .PHONY: cli-install cli-test cli-check cli-build cli-smoke cli-smoke-only cli-tarball-isolation cli-tarball-isolation-built cli-coverage
 .PHONY: python-sync python-generate python-check-generated python-test python-check python-build python-smoke python-coverage
 .PHONY: go-generate go-check-generated go-check go-build go-coverage
@@ -20,8 +20,11 @@ node-generate:
 node-check-generated:
 	pnpm --filter @primitivedotdev/sdk generate && git diff --exit-code -- openapi/primitive-api.codegen.json sdk-node/src/schema.generated.ts sdk-node/src/types.generated.ts sdk-node/src/generated packages/api-core/src/api packages/api-core/src/openapi/openapi.generated.ts packages/api-core/src/openapi/operations.generated.ts
 
+# Coverage replaces the ordinary suite in CI instead of repeating it.
+NODE_COVERAGE ?=
+
 node-test:
-	pnpm --dir sdk-node test
+	pnpm --dir sdk-node $(if $(NODE_COVERAGE),test:coverage,test)
 
 node-check: node-check-generated
 	if command -v biome >/dev/null 2>&1; then cd sdk-node && biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/api/events.ts src/api/event-transport.ts src/openapi/index.ts src/payloads src/interactions tests/; else pnpm --dir sdk-node lint; fi
@@ -34,8 +37,13 @@ node-build:
 node-tarball-isolation:
 	node scripts/assert-tarball-isolation.mjs sdk-node "primitive" "@primitivedotdev/cli"
 
-node-smoke: node-build node-tarball-isolation
-	pack_dir=$$(mktemp -d) && smoke_dir=$$(mktemp -d) && tarball=$$(cd sdk-node && npm pack --silent --pack-destination "$$pack_dir" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => { const matches = data.match(/[A-Za-z0-9._-]+\.tgz/g); if (!matches || matches.length === 0) { throw new Error('could not locate tarball name in npm pack output'); } process.stdout.write(matches[matches.length - 1]); });") && cd "$$smoke_dir" && npm init -y && npm install "$$pack_dir/$$tarball" && node --input-type=module -e "const root = await import('@primitivedotdev/sdk'); const webhook = await import('@primitivedotdev/sdk/webhook'); const api = await import('@primitivedotdev/sdk/api'); const openapi = await import('@primitivedotdev/sdk/openapi'); const contract = await import('@primitivedotdev/sdk/contract'); const parser = await import('@primitivedotdev/sdk/parser'); const interactions = await import('@primitivedotdev/sdk/interactions'); if (typeof root.handleWebhook !== 'function') throw new Error('missing root handleWebhook export'); if (typeof webhook.handleWebhook !== 'function') throw new Error('missing webhook handleWebhook export'); if (typeof api.createPrimitiveApiClient !== 'function') throw new Error('missing api client factory'); if (typeof openapi.openapiDocument !== 'object') throw new Error('missing openapi document export'); if (typeof contract.buildEmailReceivedEvent !== 'function') throw new Error('missing contract buildEmailReceivedEvent export'); if (typeof parser.parseEmail !== 'function') throw new Error('missing parser parseEmail export'); if (typeof interactions.parseInteractionEnvelope !== 'function') throw new Error('missing interactions parser export');" && if [ -e "$$smoke_dir/node_modules/.bin/primitive" ]; then echo "SDK tarball must not install a primitive bin (the CLI is the separate primitive package)"; exit 1; fi && if [ -d "$$smoke_dir/node_modules/@primitivedotdev/api-core" ]; then echo "SDK tarball pulled @primitivedotdev/api-core into node_modules; the workspace-internal package must be bundled inline, not declared as a runtime dep."; exit 1; fi
+# Only after node-build; standalone isolation checks still run prepack.
+node-tarball-isolation-built:
+	node scripts/assert-tarball-isolation.mjs --already-built sdk-node "primitive" "@primitivedotdev/cli"
+
+node-smoke: node-build
+	$(MAKE) node-tarball-isolation-built
+	pack_dir=$$(mktemp -d) && smoke_dir=$$(mktemp -d) && tarball=$$(cd sdk-node && npm pack --ignore-scripts --silent --pack-destination "$$pack_dir" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => { const matches = data.match(/[A-Za-z0-9._-]+\.tgz/g); if (!matches || matches.length === 0) { throw new Error('could not locate tarball name in npm pack output'); } process.stdout.write(matches[matches.length - 1]); });") && cd "$$smoke_dir" && npm init -y && npm install "$$pack_dir/$$tarball" && node --input-type=module -e "const root = await import('@primitivedotdev/sdk'); const webhook = await import('@primitivedotdev/sdk/webhook'); const api = await import('@primitivedotdev/sdk/api'); const openapi = await import('@primitivedotdev/sdk/openapi'); const contract = await import('@primitivedotdev/sdk/contract'); const parser = await import('@primitivedotdev/sdk/parser'); const interactions = await import('@primitivedotdev/sdk/interactions'); if (typeof root.handleWebhook !== 'function') throw new Error('missing root handleWebhook export'); if (typeof webhook.handleWebhook !== 'function') throw new Error('missing webhook handleWebhook export'); if (typeof api.createPrimitiveApiClient !== 'function') throw new Error('missing api client factory'); if (typeof openapi.openapiDocument !== 'object') throw new Error('missing openapi document export'); if (typeof contract.buildEmailReceivedEvent !== 'function') throw new Error('missing contract buildEmailReceivedEvent export'); if (typeof parser.parseEmail !== 'function') throw new Error('missing parser parseEmail export'); if (typeof interactions.parseInteractionEnvelope !== 'function') throw new Error('missing interactions parser export');" && if [ -e "$$smoke_dir/node_modules/.bin/primitive" ]; then echo "SDK tarball must not install a primitive bin (the CLI is the separate primitive package)"; exit 1; fi && if [ -d "$$smoke_dir/node_modules/@primitivedotdev/api-core" ]; then echo "SDK tarball pulled @primitivedotdev/api-core into node_modules; the workspace-internal package must be bundled inline, not declared as a runtime dep."; exit 1; fi
 
 node-coverage:
 	pnpm --dir sdk-node test:coverage
@@ -71,7 +79,8 @@ cli-tarball-isolation-built:
 
 # One-shot local smoke: build, check tarball isolation, then smoke the packed
 # package. CI runs those steps separately and calls cli-smoke-only.
-cli-smoke: cli-build cli-tarball-isolation-built
+cli-smoke: cli-build
+	$(MAKE) cli-tarball-isolation-built
 	$(MAKE) cli-smoke-only
 
 # Smoke the packed package without rebuilding it. Expects cli-build to have
