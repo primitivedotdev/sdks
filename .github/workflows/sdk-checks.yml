@@ -85,7 +85,7 @@ jobs:
     name: Node (${{ matrix.node-version }})
     needs: changes
     if: ${{ needs.changes.outputs.node == 'true' || needs.changes.outputs.shared == 'true' }}
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     strategy:
       fail-fast: false
       matrix:
