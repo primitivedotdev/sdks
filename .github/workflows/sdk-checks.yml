@@ -53,6 +53,7 @@ jobs:
               - 'scripts/smoke-*.mjs'
               - 'scripts/scoped-mail-smoke-fixture.mjs'
               - 'scripts/assert-tarball-isolation.mjs'
+              - 'scripts/assert-tarball-isolation.test.mjs'
               - 'packages/api-core/**'
               - 'openapi/**'
               - 'pnpm-lock.yaml'
@@ -105,22 +106,21 @@ jobs:
       - name: Install dependencies
         run: make node-install
 
-      - name: Run node checks
+      - name: Run node checks with coverage
         run: make node-check
+        env:
+          NODE_COVERAGE: '1'
 
       # node-smoke builds the SDK, checks tarball isolation, then tests an
       # installed package. Keep these together so declarations build once.
       - name: Build, check isolation, and smoke test packed node package
         run: make node-smoke
 
-      - name: Collect node coverage
-        run: make node-coverage
-
   cli:
     name: CLI (${{ matrix.node-version }})
     needs: changes
     if: ${{ needs.changes.outputs.cli == 'true' || needs.changes.outputs.shared == 'true' }}
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     strategy:
       fail-fast: false
       matrix:
@@ -154,7 +154,7 @@ jobs:
     name: CLI smoke (${{ matrix.node-version }})
     needs: changes
     if: ${{ needs.changes.outputs.cli == 'true' || needs.changes.outputs.shared == 'true' }}
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     strategy:
       fail-fast: false
       matrix:
@@ -175,11 +175,14 @@ jobs:
       - name: Install dependencies
         run: make cli-install
 
+      - name: Check package isolation script
+        run: node --test scripts/assert-tarball-isolation.test.mjs
+
       - name: Build cli package
         run: make cli-build
 
       - name: Assert CLI tarball does not leak api-core or sdk into dependencies
-        run: make cli-tarball-isolation
+        run: make cli-tarball-isolation-built
 
       # cli-smoke-only packs the package built above instead of rebuilding it,
       # and runs the smoke scripts concurrently with per-script results.
