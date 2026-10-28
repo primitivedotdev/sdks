@@ -19,6 +19,7 @@ import {
 import {
   boundConversationStatus,
   type ConversationStatus,
+  isQuietConversationStatus,
   readBoundSentMessageId,
   reserveConversationStatus,
 } from "./conversation-status.js";
@@ -399,6 +400,9 @@ export async function createWakeMail(options: {
             options.sessionKey,
           )
         : null;
+      // An acknowledgement of this session's send never wakes it and is not
+      // journaled as a notice, which a later hook would announce as a wake.
+      if (status && isQuietConversationStatus(status)) return outcome(true);
       let admission: ContactNotificationAdmission | null | undefined;
       let admissionRetry: NotificationRetryError | undefined;
       try {

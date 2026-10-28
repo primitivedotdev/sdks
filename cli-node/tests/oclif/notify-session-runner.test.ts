@@ -15,6 +15,7 @@ import {
 import { openContactRequestNotices } from "../../src/oclif/contact-request-state.js";
 import { followEmailConversation } from "../../src/oclif/conversation-follow.js";
 import type { ConversationStatus } from "../../src/oclif/conversation-status.js";
+import { buildFyiMessageContent } from "../../src/oclif/fyi-message.js";
 import { muteThread } from "../../src/oclif/thread-mutes.js";
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
@@ -584,6 +585,33 @@ describe("shared notification listener integration", () => {
     });
     expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
       kind: "notification",
+      state: "accepted",
+    });
+  });
+  it("completes an acknowledgement of an exact bound send without notifying the session", async () => {
+    const f = setup();
+    const sentEmailId = randomUUID();
+    await f.bindStatusWait(sentEmailId);
+    // Exactly what `primitive reply --fyi` sends back to this session's send.
+    const fyi = buildFyiMessageContent({
+      parentMessageId: "<parent@example.test>",
+      senderAddress: f.detail.from_email,
+      recipientAddress: f.detail.recipient,
+      note: "Received, no action needed.",
+    });
+    f.detail.body_text = fyi.body_text;
+    f.detail.parsed.body_text = fyi.body_text;
+    f.interaction(
+      JSON.parse(
+        Buffer.from(
+          fyi.attachments[0]?.content_base64 ?? "",
+          "base64",
+        ).toString("utf8"),
+      ),
+    );
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).not.toHaveBeenCalled();
+    expect((await f.store()?.readEmail(f.detail.id))?.route).not.toMatchObject({
       state: "accepted",
     });
   });
