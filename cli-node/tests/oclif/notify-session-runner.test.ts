@@ -611,8 +611,9 @@ describe("shared notification listener integration", () => {
     );
     expect(await runListen(f.options)).toBe(1);
     expect(f.handleDetail).not.toHaveBeenCalled();
-    expect((await f.store()?.readEmail(f.detail.id))?.route).not.toMatchObject({
-      state: "accepted",
+    expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+      kind: "notification",
+      state: "skipped",
     });
   });
   it("retries exact conversation activity after a proven pre-dispatch native failure", async () => {
