@@ -53,14 +53,26 @@ export async function checkConnectionWithServer(
     : { verification: "offline", reason: "unconfirmed" };
 }
 
-/** Whether a listener failure was Primitive refusing the credential (HTTP 401). */
+function listenFailureStatus(error: unknown): unknown {
+  return error instanceof ListenUnauthorizedError ||
+    error instanceof ListenError ||
+    error instanceof EventReceiverError
+    ? (error as { status?: unknown }).status
+    : undefined;
+}
+
+/**
+ * Whether a listener failure was Primitive refusing the credential as
+ * unauthenticated (HTTP 401), the only refusal that may mean revocation.
+ */
 export function unauthorizedListenFailure(error: unknown): boolean {
-  return (
-    (error instanceof ListenUnauthorizedError ||
-      error instanceof ListenError ||
-      error instanceof EventReceiverError) &&
-    (error as { status?: unknown }).status === 401
-  );
+  return listenFailureStatus(error) === 401;
+}
+
+/** Whether Primitive refused the listener's credential at all (HTTP 401 or 403). */
+export function refusedListenFailure(error: unknown): boolean {
+  const status = listenFailureStatus(error);
+  return status === 401 || status === 403;
 }
 
 /**

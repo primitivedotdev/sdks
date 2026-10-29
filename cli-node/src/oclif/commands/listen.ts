@@ -22,7 +22,7 @@ import {
 import {
   type ConnectionCredential,
   confirmRevokedListenFailure,
-  unauthorizedListenFailure,
+  refusedListenFailure,
 } from "../connection-revocation.js";
 import {
   backgroundListenStatus,
@@ -934,7 +934,7 @@ export default class ListenCommand extends Command {
         if (
           hookSessionId &&
           hookProfileName &&
-          (revoked || unauthorizedListenFailure(error))
+          (revoked || refusedListenFailure(error))
         )
           recordHookMailCheckFailure({
             configDir: this.config.configDir,

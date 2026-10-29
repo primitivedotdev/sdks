@@ -121,7 +121,7 @@ function hookMailCheckFailurePath(
  * Why a hook-run listener's mail check failed in a way only the owner or a
  * new setup can fix. `connection_revoked`: Primitive confirmed the
  * credential was revoked. `unauthorized`: Primitive refused the credential
- * but did not confirm a revocation.
+ * (HTTP 401 or 403) but did not confirm a revocation.
  */
 export type HookMailCheckFailure = "connection_revoked" | "unauthorized";
 

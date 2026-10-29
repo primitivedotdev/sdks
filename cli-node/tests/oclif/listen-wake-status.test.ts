@@ -929,6 +929,12 @@ it.each([
     "unauthorized",
     "Primitive receiving stopped because its listener could not continue.",
   ],
+  [
+    "refused with 403",
+    null,
+    "unauthorized",
+    "Primitive receiving stopped because its listener could not continue.",
+  ],
 ] as const)(
   "records a refused hook mail check at once when the credential is %s",
   async (_label, confirm, reason, message) => {
@@ -973,11 +979,12 @@ it.each([
         status: () => undefined,
       });
       mocks.runListen.mockRejectedValue(
-        new ListenUnauthorizedError("refused", 401),
+        new ListenUnauthorizedError("refused", confirm ? 401 : 403),
       );
       // The listener's own 401 is the first refusal; one confirming answer
-      // from the connection's record decides.
-      const answers = [confirm];
+      // from the connection's record decides. A 403 is never a revocation,
+      // so nothing is asked.
+      const answers = confirm ? [confirm] : [];
       const fetchMock = vi.fn(async (input: unknown) => {
         expect(String(input)).toBe(
           "https://api.primitive.dev/v1/agent-connections/me",
