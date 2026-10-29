@@ -4,6 +4,8 @@
  * package README.
  */
 import {
+  CONTACT_POLICY_RETRY_MAX_MS,
+  CONTACT_POLICY_RETRY_MIN_MS,
   type ContactNotificationAdmission,
   ContactPolicyReadRetryError,
   createNotificationContactPolicy,
@@ -134,7 +136,8 @@ export class WakePolicyError extends Error {
 }
 
 function publicError(error: unknown, signal: AbortSignal): unknown {
-  if (signal.aborted || error instanceof WakePolicyError) return error;
+  if (signal.aborted) return signal.reason;
+  if (error instanceof WakePolicyError) return error;
   if (error instanceof NetworkAdmissionPendingError)
     return new WakePolicyError("network_admission_pending");
   if (error instanceof ContactPolicyReadRetryError)
@@ -156,6 +159,33 @@ function transient<A extends unknown[], R>(
         error.code === "policy_read_failed"
       )
         throw new ContactPolicyReadRetryError();
+      throw error;
+    }
+  };
+}
+
+/**
+ * The policy backs off its own reads but not the network read, which runs per
+ * email. Give that read the same backoff so a receiver that retries right away
+ * does not keep calling a failing server.
+ */
+function paced<A extends unknown[], R>(
+  read: (...args: A) => Promise<R>,
+): (...args: A) => Promise<R> {
+  let retryAt = 0;
+  let retryDelay = CONTACT_POLICY_RETRY_MIN_MS;
+  return async (...args) => {
+    if (performance.now() < retryAt) throw new ContactPolicyReadRetryError();
+    try {
+      const value = await read(...args);
+      retryAt = 0;
+      retryDelay = CONTACT_POLICY_RETRY_MIN_MS;
+      return value;
+    } catch (error) {
+      if (error instanceof ContactPolicyReadRetryError) {
+        retryAt = performance.now() + retryDelay;
+        retryDelay = Math.min(retryDelay * 2, CONTACT_POLICY_RETRY_MAX_MS);
+      }
       throw error;
     }
   };
@@ -187,7 +217,7 @@ export function createWakePolicy(options: WakePolicyOptions): WakePolicy {
     contactRequests: options.contactRequests === true,
     readPolicy: transient(options.readContactPolicy),
     readPage: transient(options.readContactPage),
-    readNetworkAdmission: transient(options.readNetworkAdmission),
+    readNetworkAdmission: paced(transient(options.readNetworkAdmission)),
   });
   const issued = new WeakMap<WakeAdmission, ContactNotificationAdmission>();
 

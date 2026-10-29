@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type ContactPage,
   createWakePolicy,
@@ -39,6 +39,9 @@ function harness(options: { contactRequests?: boolean } = {}) {
     policy: emptyContactPolicy(recipient),
     page: { data: [contactRow()], cursor: null } as ContactPage,
     network: notAdmitted,
+    networkFailure: undefined as unknown,
+    networkReads: 0,
+    onNetworkRead: undefined as (() => void) | undefined,
     policyFailure: undefined as unknown,
   };
   const policy = createWakePolicy({
@@ -49,7 +52,12 @@ function harness(options: { contactRequests?: boolean } = {}) {
       return state.policy;
     },
     readContactPage: async () => state.page,
-    readNetworkAdmission: async () => state.network,
+    readNetworkAdmission: async () => {
+      state.networkReads += 1;
+      state.onNetworkRead?.();
+      if (state.networkFailure) throw state.networkFailure;
+      return state.network;
+    },
   });
   return { state, policy };
 }
@@ -83,6 +91,10 @@ function expectCode(error: WakePolicyError, code: WakePolicyErrorCode) {
     retryable: code !== "policy_unavailable",
   });
 }
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("primitive/receiver wake policy", () => {
   it("admits mail from a contact and confirms it right before wake", async () => {
@@ -180,6 +192,50 @@ describe("primitive/receiver wake policy", () => {
     fatal.state.policyFailure = cause;
     const error = await rejection(fatal.policy.admit(email, signal));
     expectCode(error, "policy_unavailable");
+  });
+
+  it("backs off the network read after a temporary failure", async () => {
+    let clock = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => clock);
+    const { state, policy } = harness();
+    const email = () => ({
+      emailId: randomUUID(),
+      sender: stranger,
+      receivedAt,
+    });
+    state.networkFailure = new WakePolicyError("policy_read_failed");
+    expectCode(
+      await rejection(policy.admit(email(), signal)),
+      "policy_read_failed",
+    );
+    expectCode(
+      await rejection(policy.admit(email(), signal)),
+      "policy_read_failed",
+    );
+    expect(state.networkReads).toBe(1);
+
+    clock += 1000;
+    state.networkFailure = undefined;
+    expect(await policy.admit(email(), signal)).toEqual({ kind: "denied" });
+    expect(state.networkReads).toBe(2);
+  });
+
+  it("reports cancellation by the signal's reason", async () => {
+    const { state, policy } = harness();
+    const controller = new AbortController();
+    const reason = new Error("receiver stopped");
+    state.networkFailure = new WakePolicyError("policy_read_failed");
+    state.onNetworkRead = () => controller.abort(reason);
+    const error = await policy
+      .admit(
+        { emailId: randomUUID(), sender: stranger, receivedAt },
+        controller.signal,
+      )
+      .then(
+        () => undefined,
+        (caught: unknown) => caught,
+      );
+    expect(error).toBe(reason);
   });
 
   it("fails the recheck when permission changed after admission", async () => {
