@@ -209,6 +209,142 @@ test("Stop replays an unread exact-session notice before opening the listener", 
   assert.match(result.stderr, /sender=peer@example.com/);
 });
 
+/** A fake listener that records a confirmed revocation, as `listen --wake` does, and exits 1. */
+function revokedListener(profileDir: string): string {
+  const failed = join(
+    profileDir,
+    `pending-mail-${session}.mail-check-failed.json`,
+  );
+  return withClaim(
+    profileDir,
+    `
+import { writeFileSync as writeRevoked } from "node:fs";
+if (process.argv.includes("--help")) {
+  process.stdout.write("--once --wake --hook-session --events primitive-hook-profile-bound-v2");
+} else {
+  for await (const chunk of process.stdin) void chunk;
+  writeRevoked(${JSON.stringify(failed)}, JSON.stringify({ version: 1, at: new Date().toISOString(), reason: "connection_revoked" }));
+  process.stderr.write("listener detail that must not be forwarded");
+  process.exitCode = 1;
+}
+`,
+  );
+}
+
+const revokedLine =
+  "Primitive connection revoked: agent@example.com no longer receives mail and its API calls are refused. Tell the owner, and ask them to copy a fresh setup instruction from the app and run it here to connect again.";
+
+test("Stop tells the session once when its listener finds the connection revoked", () => {
+  const fixtureData = fixture();
+  writeFileSync(fixtureData.cli, revokedListener(fixtureData.profileDir));
+  const stop = () =>
+    spawnSync(
+      process.execPath,
+      [
+        stopWrapper,
+        fixtureData.cli,
+        fixtureData.configDir,
+        "agent",
+        "agent@example.com",
+        session,
+        "primitive-agent-wake-v1",
+      ],
+      {
+        encoding: "utf8",
+        input: JSON.stringify({ hook_event_name: "Stop", session_id: session }),
+      },
+    );
+  const first = stop();
+  assert.equal(first.status, 2, first.stderr);
+  assert.equal(first.stderr, `${revokedLine}\n`);
+  // Told once: a later Stop finds the same revocation and stays quiet, so
+  // the session is not kept running by it.
+  const again = stop();
+  assert.equal(again.status, 0, again.stderr);
+  assert.equal(again.stderr, "");
+});
+
+test("PostToolUse tells the session once when its listener finds the connection revoked", () => {
+  const fixtureData = fixture();
+  writeFileSync(fixtureData.cli, revokedListener(fixtureData.profileDir));
+  const first = fixtureData.run();
+  assert.equal(first.status, 0, first.stderr);
+  assert.equal(
+    JSON.parse(first.stdout).hookSpecificOutput.additionalContext,
+    revokedLine,
+  );
+  assert.doesNotMatch(first.stdout, /must not be forwarded/);
+  // The next check is not due yet; force it so the listener runs again.
+  writeFileSync(
+    join(fixtureData.profileDir, `pending-mail-${session}.checked.json`),
+    JSON.stringify({ version: 1, at: 0 }),
+  );
+  assert.equal(fixtureData.run().stdout, "");
+});
+
+test("a revocation is announced again only after a mail check succeeded since", async () => {
+  const { announceRevokedConnection } = (await import(wrapper)) as {
+    announceRevokedConnection: (options: {
+      configDir: string;
+      profile: string;
+      address: string;
+      sessionId: string;
+    }) => string[];
+  };
+  const fixtureData = fixture();
+  const options = {
+    configDir: fixtureData.configDir,
+    profile: "agent",
+    address: "agent@example.com",
+    sessionId: session,
+  };
+  const failed = join(
+    fixtureData.profileDir,
+    `pending-mail-${session}.mail-check-failed.json`,
+  );
+  const checked = join(
+    fixtureData.profileDir,
+    `pending-mail-${session}.mail-check.json`,
+  );
+  assert.deepEqual(announceRevokedConnection(options), []);
+  writeFileSync(
+    failed,
+    JSON.stringify({
+      version: 1,
+      at: "2026-03-01T00:00:00.000Z",
+      reason: "unauthorized",
+    }),
+  );
+  assert.deepEqual(announceRevokedConnection(options), []);
+  writeFileSync(
+    failed,
+    JSON.stringify({
+      version: 1,
+      at: "2026-03-01T00:00:00.000Z",
+      reason: "connection_revoked",
+    }),
+  );
+  assert.deepEqual(announceRevokedConnection(options), [`${revokedLine}\n`]);
+  assert.deepEqual(announceRevokedConnection(options), []);
+  // A later successful check supersedes the revocation.
+  writeFileSync(
+    checked,
+    JSON.stringify({ version: 1, at: "2026-03-02T00:00:00.000Z" }),
+  );
+  assert.deepEqual(announceRevokedConnection(options), []);
+  // A new revocation after that success is announced again, once.
+  writeFileSync(
+    failed,
+    JSON.stringify({
+      version: 1,
+      at: "2026-03-03T00:00:00.000Z",
+      reason: "connection_revoked",
+    }),
+  );
+  assert.deepEqual(announceRevokedConnection(options), [`${revokedLine}\n`]);
+  assert.deepEqual(announceRevokedConnection(options), []);
+});
+
 test("PostToolUse still checks for new mail while an earlier notice is unread", () => {
   const fixtureData = fixture();
   const older = "44444444-4444-4444-8444-444444444444";

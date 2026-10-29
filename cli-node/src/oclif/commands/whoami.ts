@@ -13,6 +13,11 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import {
+  CONNECTION_REVOKED_GUIDANCE,
+  checkConnectionWithServer,
+  connectionRevokedMessage,
+} from "../connection-revocation.js";
+import {
   failedSessionRegistration,
   registrationSummaryLine,
 } from "../registration-log.js";
@@ -54,9 +59,9 @@ class WhoamiCommand extends Command {
   static description =
     `Print the account currently authenticated by saved OAuth credentials or an explicit API key. For account credentials this is a live credentials smoke test. Use account whoami for the authenticated caller, their assigned member address and an address suggestion; account provision-member-address --address <email> saves your chosen personal address.
 
-  With PRIMITIVE_AGENT_PROFILE selected, print the saved connected-agent identity offline, with no API call. The first line is the agent's email address alone; --json adds address, profile and source (session_hook when the selected profile is this Claude Code session's own agent exported by the session start hook, env otherwise). This does not verify live authentication, app pairing, or listener readiness. Inspect the receiver separately: the output names the command for the profile's receiver mode (agent connect --status for Claude hook and poll receivers, listen --status --notify-session for a native listener).
+  With PRIMITIVE_AGENT_PROFILE selected, print the saved connected-agent identity and ask Primitive, with that credential, whether the connection is still accepted. The first line is the agent's email address alone; --json adds address, profile and source (session_hook when the selected profile is this Claude Code session's own agent exported by the session start hook, env otherwise) and verification: live when Primitive accepted the connection, offline when Primitive could not be reached (the saved identity is printed as before, labelled unverified). When Primitive confirms the connection was revoked, whoami says so and exits 1. This does not verify app pairing or listener readiness. Inspect the receiver separately: the output names the command for the profile's receiver mode (agent connect --status for Claude hook and poll receivers, listen --status --notify-session for a native listener).
 
-  The default output is a concise human summary. Pass --json for the full /account response or the explicit offline connected-agent identity envelope.`;
+  The default output is a concise human summary. Pass --json for the full /account response or the connected-agent identity envelope.`;
 
   static summary = "Print the live account or saved connected-agent identity";
 
@@ -80,7 +85,7 @@ class WhoamiCommand extends Command {
     }),
     json: Flags.boolean({
       description:
-        "Print the account JSON response, or the saved connected identity marked verification: offline. Never prints credentials.",
+        "Print the account JSON response, or the saved connected identity with its verification (live, offline or revoked). Never prints credentials.",
     }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
@@ -100,12 +105,50 @@ class WhoamiCommand extends Command {
 
       if (auth.connectedAgent) {
         const identity = auth.connectedAgent;
+        // The saved profile alone cannot tell that the owner revoked this
+        // connection, so ask Primitive with the same credential. Without an
+        // answer, the saved identity is printed as before, labelled offline.
+        const server = auth.apiKey
+          ? await checkConnectionWithServer({
+              api_base_url: identity.apiBaseUrl,
+              api_key: auth.apiKey,
+              agent_address: identity.agentAddress,
+            })
+          : ({ verification: "offline", reason: "unreachable" } as const);
+        if (server.verification === "revoked") {
+          const message = connectionRevokedMessage(identity.agentAddress);
+          this.log(
+            flags.json
+              ? JSON.stringify(
+                  {
+                    address: identity.agentAddress,
+                    profile: identity.profileName,
+                    auth_method: "agent_connection",
+                    verification: "revoked",
+                    guidance: CONNECTION_REVOKED_GUIDANCE,
+                  },
+                  null,
+                  2,
+                )
+              : message,
+          );
+          process.exitCode = 1;
+          return;
+        }
         const statusCommand = `${cliInvocation(process.argv[1])} agent connect --profile ${identity.profileName} --status --json`;
         const receiver = receiverStatusCommand(
           this.config.configDir,
           identity.profileName,
         );
-        const guidance = `Saved identity only. Live authentication, app pairing, and receiving readiness are not verified. Inspect the ${
+        const verified =
+          server.verification === "live"
+            ? server.state === "connected"
+              ? "Primitive accepted this connection."
+              : "Primitive accepted this credential; the connection is not fully set up yet."
+            : server.reason === "unreachable"
+              ? "Saved identity only: Primitive could not be reached, so live authentication is not verified."
+              : "Saved identity only: Primitive refused this credential once but did not confirm a revocation, so live authentication is not verified.";
+        const guidance = `${verified} App pairing and receiving readiness are not verified. Inspect the ${
           receiver.mode === "external"
             ? "Claude hook receiver"
             : receiver.mode === "poll"
@@ -125,7 +168,10 @@ class WhoamiCommand extends Command {
                   profile: identity.profileName,
                   source,
                   auth_method: "agent_connection",
-                  verification: "offline",
+                  verification: server.verification,
+                  ...(server.verification === "live"
+                    ? { connection_state: server.state }
+                    : { offline_reason: server.reason }),
                   identity,
                   status_command: statusCommand,
                   guidance,

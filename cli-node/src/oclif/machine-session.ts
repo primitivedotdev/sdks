@@ -298,7 +298,10 @@ type ConnectionState =
 
 /** Read the connection's own record with its credential. */
 export async function agentConnectionState(
-  profile: ConnectedAgentProfile,
+  profile: Pick<
+    ConnectedAgentProfile,
+    "api_base_url" | "api_key" | "agent_address"
+  >,
   fetchImpl: typeof fetch = fetch,
   timeoutMs = 5_000,
 ): Promise<ConnectionState> {
