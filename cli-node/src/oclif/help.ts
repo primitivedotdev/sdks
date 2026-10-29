@@ -24,9 +24,11 @@ type ShortHelpFlag = {
   allowNo?: boolean;
   char?: string;
   description?: string;
+  exactlyOne?: readonly string[];
   helpValue?: string | string[];
   hidden?: boolean;
   multiple?: boolean;
+  required?: boolean;
   summary?: string;
   type: "boolean" | "option";
 };
@@ -104,6 +106,14 @@ function section(header: string, lines: readonly string[]): string[] {
     : ["", header, ...lines.map((line) => `  ${line}`)];
 }
 
+/** A rule the parser enforces, kept in front so clipping never drops it. */
+function flagRule(flag: ShortHelpFlag): string {
+  if (flag.required) return "(required) ";
+  if (flag.exactlyOne?.length)
+    return `(exactly one of ${flag.exactlyOne.map((name) => `--${name}`).join(", ")}) `;
+  return "";
+}
+
 /** One screen of help: what the command does, how to call it, and each flag in a line. */
 function formatShortHelp(
   command: ShortHelpCommand,
@@ -118,7 +128,9 @@ function formatShortHelp(
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([name, flag]) => ({
       name: flagName(name, flag),
-      text: render(firstSentence(flag.summary ?? flag.description ?? "")),
+      text:
+        flagRule(flag) +
+        render(firstSentence(flag.summary ?? flag.description ?? "")),
     }));
   const nameWidth = Math.min(
     MAX_FLAG_NAME_WIDTH,
@@ -185,9 +197,17 @@ export default class PrimitiveHelp extends Help {
         id: sub.id.replaceAll(":", " "),
         summary: sub.summary ?? sub.description,
       }));
+    // The cached manifest drops `exactlyOne`, so read it from the command class.
+    const loaded = await command.load();
+    const flags = Object.fromEntries(
+      Object.entries(command.flags ?? {}).map(([name, flag]) => [
+        name,
+        { ...flag, exactlyOne: loaded.flags?.[name]?.exactlyOne },
+      ]),
+    );
     this.log(
       formatShortHelp(
-        { ...command, id: command.id.replaceAll(":", " ") },
+        { ...command, flags, id: command.id.replaceAll(":", " ") },
         { bin: this.config.bin, subcommands, width: terminalWidth() },
       ),
     );

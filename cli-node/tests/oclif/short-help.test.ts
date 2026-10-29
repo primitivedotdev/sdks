@@ -84,6 +84,16 @@ describe("short command help", () => {
       expect(line.length).toBeLessThanOrEqual(100);
   });
 
+  it("keeps the rules the parser enforces on each flag", async () => {
+    const help = await commandHelp("reply");
+    expect(help).toMatch(
+      /^ {2}--id=<value> +\(exactly one of --id, --thread\) Inbound email id to reply to\.$/m,
+    );
+    expect(help).toMatch(
+      /^ {2}--thread=<value> +\(exactly one of --id, --thread\) /m,
+    );
+  });
+
   it("answers -h the same as --help", async () => {
     expect(await commandHelp("reply", "-h")).toBe(await commandHelp("reply"));
   });
