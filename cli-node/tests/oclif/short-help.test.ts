@@ -94,6 +94,12 @@ describe("short command help", () => {
     );
   });
 
+  it("keeps piped examples", async () => {
+    expect(await commandHelp("chat")).toContain(
+      "$ cat error.log | primitive chat help@agent.acme.dev",
+    );
+  });
+
   it("answers -h the same as --help", async () => {
     expect(await commandHelp("reply", "-h")).toBe(await commandHelp("reply"));
   });

@@ -89,6 +89,16 @@ function usageLine(command: ShortHelpCommand, bin: string): string {
   return ["$", bin, command.id, ...args, "[flags]"].join(" ");
 }
 
+/** A shell line that runs the CLI, alone, after a pipe, or after env assignments. */
+function runsBin(line: string, bin: string): boolean {
+  return line.split("|").some((part) =>
+    part
+      .trim()
+      .replace(/^(?:[A-Z_][A-Z0-9_]*=\S*\s+)*/, "")
+      .startsWith(`${bin} `),
+  );
+}
+
 function exampleCommands(example: ShortHelpExample, bin: string): string[] {
   const lines =
     typeof example === "string"
@@ -96,7 +106,7 @@ function exampleCommands(example: ShortHelpExample, bin: string): string[] {
       : [example.command.trim()];
   return lines
     .map((line) => renderTemplate(line, bin))
-    .filter((line) => line.startsWith(`${bin} `) || line.startsWith("$ "))
+    .filter((line) => line.startsWith("$ ") || runsBin(line, bin))
     .map((line) => (line.startsWith("$ ") ? line : `$ ${line}`));
 }
 
