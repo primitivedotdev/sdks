@@ -16,32 +16,9 @@ import {
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
+import type { AgentRuntime } from "./runtime-session.js";
+
 export const CONNECT_SKILL_NAME = "primitive-connect";
-
-export type AgentRuntime = "claude" | "codex";
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/**
- * The runtime whose tool environment names this exact session. A session ID
- * that matches neither runtime's variable has no detectable runtime.
- */
-export function detectAgentRuntime(
-  session: string,
-  env: Record<string, string | undefined> = process.env,
-): AgentRuntime | null {
-  const wanted = session.toLowerCase();
-  const claude = env.CLAUDE_CODE_SESSION_ID?.trim().toLowerCase();
-  // The loaded Codex thread is the receiving identity; the process session
-  // ID is only a fallback when no thread ID is exposed.
-  const codex = (
-    env.CODEX_THREAD_ID?.trim() || env.CODEX_SESSION_ID?.trim()
-  )?.toLowerCase();
-  if (!UUID.test(wanted)) return null;
-  if (claude === wanted && codex !== wanted) return "claude";
-  if (codex === wanted && claude !== wanted) return "codex";
-  return null;
-}
 
 export function connectSkillTarget(options: {
   runtime: AgentRuntime;
