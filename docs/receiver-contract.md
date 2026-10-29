@@ -159,9 +159,12 @@ PRIMITIVE_AGENT_PROFILE=<profile> primitive emails get --id <email-id> --context
 ## Show each email once
 
 Key every notice by email ID. The session reads mail by email ID, and
-`pending-mail.ts` and `agent check-mail` both deduplicate by it. A crash between
-save and acknowledgement redelivers the same event, so the receiver sees that
-email again.
+`pending-mail.ts` deduplicates by it. `agent check-mail` does not: it keeps its
+own per-profile cursor and never sees the receiver's queued or shown IDs, so
+falling back to polling can list mail the session already saw. Keep one record
+of shown email IDs and check it on both the push path and the poll path. A crash
+between save and acknowledgement redelivers the same event, so the receiver sees
+that email again.
 
 - Before you save a notice, skip any email ID that is already queued or already
   shown.
