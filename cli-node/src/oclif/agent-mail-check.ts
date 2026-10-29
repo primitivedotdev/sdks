@@ -6,10 +6,7 @@ import {
   type PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
 import { loadSkillLine } from "./agent-identity-suggestions.js";
-import {
-  type AgentRuntime,
-  installedConnectSkillFile,
-} from "./connect-skill.js";
+import { installedConnectSkillFile } from "./connect-skill.js";
 import {
   agentProfileDirectory,
   type ConnectedAgentIdentity,
@@ -18,6 +15,7 @@ import { acquireListenLock } from "./listen-state.js";
 import { currentMailSessionKey } from "./mail-session.js";
 import { refreshOwnerMemberAddressPeriodically } from "./owner-member-address.js";
 import { presenceDisposition } from "./presence-provenance.js";
+import type { AgentRuntime } from "./runtime-session.js";
 import {
   privateMailDirectory,
   readMailJson,

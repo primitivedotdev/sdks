@@ -33,9 +33,7 @@ import {
   installClaudeWakeHook,
 } from "./claude-wake-install.js";
 import {
-  type AgentRuntime,
   type ConnectSkillInstall,
-  detectAgentRuntime,
   installConnectSkill,
   readBundledConnectSkill,
 } from "./connect-skill.js";
@@ -54,6 +52,7 @@ import {
   ownerReportGuidance,
   refreshOwnerMemberAddress,
 } from "./owner-member-address.js";
+import { type AgentRuntime, detectAgentRuntime } from "./runtime-session.js";
 import {
   readMailJson,
   removeMailFile,
