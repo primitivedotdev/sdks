@@ -455,22 +455,31 @@ export default class ListenCommand extends Command {
           apiKey: flags["api-key"],
         })
       : undefined;
-    // The selected connected credential, read again when a failure needs
-    // Primitive to confirm whether it was revoked. Null for anything else.
+    // The connected credential this listener runs with, used when a failure
+    // needs Primitive to confirm whether that same credential was revoked.
+    // A session listener keeps the one it started with; otherwise the
+    // selected profile is read only when a failure needs it. Null for
+    // anything that is not a connected-agent profile.
+    const connectedCredential = (
+      auth: ReturnType<typeof resolveCliAuth>,
+    ): ConnectionCredential | null =>
+      auth.connectedAgent && auth.apiKey
+        ? {
+            api_base_url: auth.apiBaseUrl,
+            api_key: auth.apiKey,
+            agent_address: auth.connectedAgent.agentAddress,
+          }
+        : null;
     const listenCredential = (): ConnectionCredential | null => {
+      if (connectionAuth) return connectedCredential(connectionAuth);
       try {
-        const current = resolveCliAuth({
-          configDir: this.config.configDir,
-          apiBaseUrl: requestConfig?.apiBaseUrl ?? flags["api-base-url"],
-          apiKey: flags["api-key"],
-        });
-        return current.connectedAgent && current.apiKey
-          ? {
-              api_base_url: current.apiBaseUrl,
-              api_key: current.apiKey,
-              agent_address: current.connectedAgent.agentAddress,
-            }
-          : null;
+        return connectedCredential(
+          resolveCliAuth({
+            configDir: this.config.configDir,
+            apiBaseUrl: flags["api-base-url"],
+            apiKey: flags["api-key"],
+          }),
+        );
       } catch {
         return null;
       }
