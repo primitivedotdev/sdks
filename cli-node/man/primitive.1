@@ -12,6 +12,10 @@ primitive \- command line interface for Primitive email and Functions
 .B primitive
 .I command
 .B --help
+.br
+.B primitive
+.I command
+.B --help-full
 .SH DESCRIPTION
 .B primitive
 is the command line interface for Primitive. It sends mail, inspects inbound and outbound email, manages domains and webhook endpoints, deploys Primitive Functions, and exposes generated API operations for scripting.
@@ -116,7 +120,7 @@ The generated commands
 and
 .B endpoints complete-webhook-event
 expose local webhook delivery on API hosts where it is enabled. Each command
-makes one API request. Use their --help output for the input fields. Consumers
+makes one API request. Use their --help-full output for the input fields. Consumers
 deduplicate event IDs and report the outcome with the returned attempt and lease.
 Queue retention does not extend source-content retention; inspect gap counts.
 .SH AGENT LOOP
@@ -345,8 +349,11 @@ Use an explicit Primitive API key for this command.
 .B --time
 Print command duration to standard error after completion.
 .TP
-.B --help
-Show command help.
+.B -h, --help
+Show short command help: a summary, usage, one line per flag, and two examples.
+.TP
+.B --help-full
+Show the complete command help, with full flag descriptions and every example.
 .SH EXIT STATUS
 .B primitive chat,
 .B primitive chat reply,
