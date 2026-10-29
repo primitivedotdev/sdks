@@ -92,12 +92,12 @@ try {
     assert.match(overview, new RegExp(`primitive network ${action}`));
   for (const action of ["list", "members", "peers", "get", "set", "add", "remove"])
     assert.match(await invoke(["network", action, "--help"]), /USAGE|DESCRIPTION/i);
-  assert.match((await invoke(["network", "peers", "--help"])).replace(/\s+/g, " "), /recorded API activity/);
-  const setHelp = (await invoke(["network", "set", "--help"])).replace(/\s+/g, " ");
+  assert.match((await invoke(["network", "peers", "--help-full"])).replace(/\s+/g, " "), /recorded API activity/);
+  const setHelp = (await invoke(["network", "set", "--help-full"])).replace(/\s+/g, " ");
   assert.match(setHelp, /initiating network-driven mail wake/);
   assert.match(setHelp, /network-driven wake from viewing senders/);
   assert.match(setHelp, /currently owned personal agents/);
-  assert.match((await invoke(["network", "members", "--help"])).replace(/\s+/g, " "), /currently owned personal agents/);
+  assert.match((await invoke(["network", "members", "--help-full"])).replace(/\s+/g, " "), /currently owned personal agents/);
   assert.match(await invoke(["agent-networks"]), /check-default-network-contact-admission/);
   assert.match(await invoke(["agent-networks", "check-default-network-contact-admission", "--help"]), /--email-id/);
   assert.match(await invoke(["network", "--help"]), /agent network/i);

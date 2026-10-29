@@ -15,7 +15,7 @@ try {
   const parent = await f.run(["emails"]);
   assert.equal(parent.code, 0, parent.stderr);
   assert.match(parent.stdout + parent.stderr, /emails wait/);
-  const help = await f.run(["emails", "wait", "--help"]);
+  const help = await f.run(["emails", "wait", "--help-full"]);
   assert.equal(help.code, 0);
   assert.match(help.stdout, /never scan inbox history/);
   const bare = await f.run(["emails", "wait"]);

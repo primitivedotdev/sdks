@@ -103,11 +103,11 @@ the readiness message: `primitive endpoints delete --id DESTINATION_ID`.
 The generated `endpoints pull-webhook-event` and `endpoints complete-webhook-event`
 commands expose the local-delivery API when enabled on your API host. These are
 single API calls; a receive loop must retain the destination identity and report
-each attempt's outcome. Use `--help` to inspect the request fields:
+each attempt's outcome. Use `--help-full` to inspect the request fields:
 
 ```sh
-primitive endpoints pull-webhook-event --help
-primitive endpoints complete-webhook-event --help
+primitive endpoints pull-webhook-event --help-full
+primitive endpoints complete-webhook-event --help-full
 ```
 
 Completion uses a mode-specific JSON body. For a successful process handler:
@@ -140,7 +140,7 @@ primitive emails latest --limit 5
 primitive inbox next
 ```
 
-Run `primitive --help` for the full command list. Per-command help (`primitive functions deploy --help`) carries enough detail that an agent can compose any operation without leaving the terminal.
+Run `primitive --help` for the full command list. Per-command help (`primitive functions deploy --help`, or `-h`) is one screen: a summary, usage, one line per flag, and two examples. `primitive functions deploy --help-full` prints the complete text, with every flag's full description, behavior notes, and all examples, so an agent can compose any operation without leaving the terminal.
 
 ## Verification codes and sign-in links
 

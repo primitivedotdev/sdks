@@ -89,7 +89,7 @@ cli-smoke-only:
 	bin="$$smoke_dir/node_modules/.bin/primitive" && \
 	"$$bin" --version | grep -qF -- "primitive/$$cli_version " && \
 	node "$$smoke_runner" "$$bin" && \
-	"$$bin" inbox next --help | grep -q -- "NOT A WORK QUEUE" && \
+	"$$bin" inbox next --help-full | grep -q -- "NOT A WORK QUEUE" && \
 	"$$bin" emails latest --help | grep -q -- "--awaiting" && \
 	"$$bin" list-operations >/dev/null && \
 	"$$bin" completion fish >/dev/null && \
@@ -97,12 +97,12 @@ cli-smoke-only:
 	"$$bin" send --help | grep -q -- "--attachment" && \
 	"$$bin" reply --help | grep -q -- "--wait" && \
 	"$$bin" reply --help | grep -q -- "--attachment" && \
-	if "$$bin" reply --help | grep -q -- "--wait-timeout-ms"; then echo "reply help must not advertise unsupported --wait-timeout-ms"; exit 1; fi && \
-	"$$bin" sending reply-to-email --help | grep -q -- "attachments" && \
-	"$$bin" sending send-email --help | grep -q -- "attachments" && \
+	if "$$bin" reply --help-full | grep -q -- "--wait-timeout-ms"; then echo "reply help must not advertise unsupported --wait-timeout-ms"; exit 1; fi && \
+	"$$bin" sending reply-to-email --help-full | grep -q -- "attachments" && \
+	"$$bin" sending send-email --help-full | grep -q -- "attachments" && \
 	"$$bin" domains list --json --help | grep -q -- "--json" && \
 	"$$bin" domains list --help | grep -q -- "--json" && \
-	"$$bin" sending permissions --help | grep -q -- "where you may send mail to" && \
+	"$$bin" sending permissions --help-full | grep -q -- "where you may send mail to" && \
 	"$$bin" domains add --help | grep -q -- "--confirmed" && \
 	"$$bin" describe addDomain >/dev/null && \
 	"$$bin" describe verifyDomain >/dev/null && \
@@ -126,10 +126,10 @@ cli-smoke-only:
 	"$$bin" payments pay-email-step --help | grep -q -- "--challenge-file" && \
 	"$$bin" payments create-email-challenge --help | grep -q -- "--from" && \
 	"$$bin" whoami --help | grep -q -- "--json" && \
-	"$$bin" signin --help | grep -q -- "signin <email>" && \
-	"$$bin" signin --help | grep -q -- "signin confirm" && \
-	"$$bin" login --help | grep -q -- "login <email>" && \
-	"$$bin" login --help | grep -q -- "login confirm" && \
+	"$$bin" signin --help-full | grep -q -- "signin <email>" && \
+	"$$bin" signin --help-full | grep -q -- "signin confirm" && \
+	"$$bin" login --help-full | grep -q -- "login <email>" && \
+	"$$bin" login --help-full | grep -q -- "login confirm" && \
 	"$$bin" login browser --help | grep -q -- "Log in with browser approval" && \
 	"$$bin" login confirm --help | grep -q -- "Confirm email-code login" && \
 	"$$bin" otp --help | grep -q -- "Start email-code auth" && \
@@ -154,8 +154,8 @@ cli-smoke-only:
 	mkdir -p "$$lock_dir/credentials.lock" && \
 	if HOME="$$lock_home" XDG_CONFIG_HOME="$$lock_root" PRIMITIVE_CONFIG_DIR= "$$bin" signin smoke@example.com --accept-terms >"$$smoke_dir/auth-lock.out" 2>"$$smoke_dir/auth-lock.err"; then echo "signin should fail while credentials lock exists"; exit 1; fi && \
 	grep -q -- "primitive logout --force" "$$smoke_dir/auth-lock.err" && \
-	"$$bin" chat --help | grep -q -- "follow-up commands" && \
-	if "$$bin" chat --help | grep -q -- "--subject"; then echo "chat help must not advertise --subject"; exit 1; fi && \
+	"$$bin" chat --help-full | grep -q -- "follow-up commands" && \
+	if "$$bin" chat --help-full | grep -q -- "--subject"; then echo "chat help must not advertise --subject"; exit 1; fi && \
 	"$$bin" chat --help | grep -q -- "--reply-to-email-id" && \
 	"$$bin" chat --help | grep -q -- "--strict-only" && \
 	"$$bin" chat --help | grep -q -- "--attachment" && \

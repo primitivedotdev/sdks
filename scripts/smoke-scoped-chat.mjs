@@ -10,7 +10,7 @@ try {
   assert.notEqual(bare.code, 0);
   const replyBare = await f.run(["chat", "reply"]);
   assert.notEqual(replyBare.code, 0);
-  const help = await f.run(["chat", "--help"]);
+  const help = await f.run(["chat", "--help-full"]);
   assert.equal(help.code, 0);
   assert.match(help.stdout, /share an address event receiver/);
   const replyHelp = await f.run(["chat", "reply", "--help"]);

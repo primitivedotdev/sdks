@@ -44,7 +44,7 @@ try {
   assert.notEqual(absent.exit, 0);
   assert.match(absent.stderr, /not configured/i);
 
-  const help = await invoke(["agent", "disconnect", "--help"]);
+  const help = await invoke(["agent", "disconnect", "--help-full"]);
   assert.equal(help.exit, 0);
   assert.match(help.stdout, /pinned Primitive\s+origin/);
   assert.match(help.stdout, /--profile/);
