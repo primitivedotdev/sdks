@@ -76,26 +76,7 @@ export function apiContactPolicy(
             !result.data.data
           )
             readFailure(result, signal);
-          const decision = result.data.data;
-          if (
-            typeof decision.allowed !== "boolean" ||
-            typeof decision.pending !== "boolean" ||
-            typeof decision.member_policy_required !== "boolean" ||
-            (decision.member_policy_required &&
-              decision.allowed &&
-              !decision.sender_relation) ||
-            (decision.sender_relation !== undefined &&
-              (!decision.member_policy_required ||
-                !["owner", "member"].includes(decision.sender_relation))) ||
-            (decision.pending && decision.allowed) ||
-            (decision.pending && decision.allowed_since !== null) ||
-            (decision.allowed && typeof decision.allowed_since !== "string") ||
-            (!decision.allowed && decision.allowed_since !== null)
-          )
-            throw new ListenStateError(
-              "Network contact admission was invalid.",
-            );
-          return decision;
+          return result.data.data;
         }
       : undefined,
     async readPolicy(signal) {

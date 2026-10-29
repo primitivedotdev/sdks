@@ -25,6 +25,13 @@ export class ContactPolicyReadRetryError extends NotificationRetryError {
   }
 }
 export type ContactPolicyPage = { data: unknown; cursor: unknown };
+export type NetworkAdmissionDecision = {
+  allowed: boolean;
+  allowed_since: string | null;
+  pending: boolean;
+  member_policy_required: boolean;
+  sender_relation?: "owner" | "member";
+};
 export type ContactNotificationAdmission = {
   sender: string;
   emailId?: string;
@@ -41,6 +48,29 @@ type Snapshot = {
   senders: Map<string, NotificationMembership>;
   policy: AgentContactPolicy;
 };
+
+/** A network decision is trusted only when every field agrees with the others. */
+function consistentNetworkAdmission(
+  decision: NetworkAdmissionDecision,
+): boolean {
+  const relation = decision.sender_relation;
+  return (
+    typeof decision.allowed === "boolean" &&
+    typeof decision.pending === "boolean" &&
+    typeof decision.member_policy_required === "boolean" &&
+    (relation === undefined ||
+      (decision.member_policy_required &&
+        (relation === "owner" || relation === "member"))) &&
+    !(decision.member_policy_required && decision.allowed && !relation) &&
+    !(
+      decision.pending &&
+      (decision.allowed || decision.allowed_since !== null)
+    ) &&
+    (decision.allowed
+      ? typeof decision.allowed_since === "string"
+      : decision.allowed_since === null)
+  );
+}
 
 const unavailable = () =>
   new ListenStateError(
@@ -63,13 +93,7 @@ export function createNotificationContactPolicy(options: {
     emailId: string,
     sender: string,
     signal: AbortSignal,
-  ): Promise<{
-    allowed: boolean;
-    allowed_since: string | null;
-    pending: boolean;
-    member_policy_required: boolean;
-    sender_relation?: "owner" | "member";
-  }>;
+  ): Promise<NetworkAdmissionDecision>;
   contactRequests?: boolean;
   now?: () => number;
 }) {
@@ -217,16 +241,8 @@ export function createNotificationContactPolicy(options: {
     // may have lost membership or carry an inherited owner mute.
     const network = await networkReader(emailId, sender, signal);
     signal.throwIfAborted();
-    if (typeof network.member_policy_required !== "boolean")
-      throw unavailable();
-    if (
-      network.sender_relation !== undefined &&
-      (!network.member_policy_required ||
-        !["owner", "member"].includes(network.sender_relation))
-    )
-      throw unavailable();
+    if (!consistentNetworkAdmission(network)) throw unavailable();
     if (network.member_policy_required) {
-      if (network.allowed && !network.sender_relation) throw unavailable();
       if (network.pending) throw new NetworkAdmissionPendingError();
       if (!network.allowed) return null;
       // Verified membership does not override an explicit local mute or its

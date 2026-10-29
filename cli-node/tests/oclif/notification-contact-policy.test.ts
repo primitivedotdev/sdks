@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
+import { ListenStateError } from "../../src/oclif/listen-state.js";
 import {
   CONTACT_POLICY_MAX_AGE_MS,
   CONTACT_POLICY_RETRY_MAX_MS,
@@ -7,8 +8,10 @@ import {
   type ContactPolicyPage,
   ContactPolicyReadRetryError,
   createNotificationContactPolicy,
+  type NetworkAdmissionDecision,
   NetworkAdmissionPendingError,
 } from "../../src/oclif/notification-contact-policy.js";
+import { NotificationRetryError } from "../../src/oclif/notify-session-content.js";
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
 const recipient = "agent@example.com";
@@ -163,6 +166,27 @@ describe("contact notification policy", () => {
       await policy.admit(sender, received, signal, randomUUID()),
     ).toBeNull();
     expect(readNetworkAdmission).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { allowed: true, allowed_since: activation, pending: true },
+    { allowed: false, allowed_since: activation, pending: false },
+    { allowed: true, allowed_since: null, pending: false },
+    { allowed: "true", allowed_since: activation, pending: false },
+  ])("never admits on an inconsistent network decision %o", async (fields) => {
+    const policy = createNotificationContactPolicy({
+      recipient,
+      readPolicy: async () => emptyContactPolicy(recipient),
+      readPage: async () => ({ data: [], cursor: null }),
+      readNetworkAdmission: async () =>
+        ({
+          ...fields,
+          member_policy_required: false,
+        }) as NetworkAdmissionDecision,
+    });
+    const admission = policy.admit(sender, received, signal, randomUUID());
+    await expect(admission).rejects.toBeInstanceOf(ListenStateError);
+    await expect(admission).rejects.not.toBeInstanceOf(NotificationRetryError);
   });
 
   it("leaves an exact inbound email pending until delivery evidence settles", async () => {
