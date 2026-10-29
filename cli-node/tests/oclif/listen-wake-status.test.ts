@@ -60,6 +60,7 @@ import ListenCommand from "../../src/oclif/commands/listen.js";
 import { agentProfileDirectory } from "../../src/oclif/connected-agent-profile.js";
 import {
   ListenStateError,
+  ListenUnauthorizedError,
   resolveListenSubscription,
 } from "../../src/oclif/listen-state.js";
 
@@ -905,3 +906,108 @@ it("wakes for a held message when nothing newer arrives", async () => {
     process.exitCode = previousExit;
   }
 }, 15_000);
+
+it.each([
+  [
+    "confirmed revoked",
+    () => new Response("{}", { status: 401 }),
+    "connection_revoked",
+    "Primitive receiving stopped. Primitive no longer accepts the connection for invited@example.com.",
+  ],
+  [
+    "not confirmed",
+    () =>
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            connection: { address: "invited@example.com", status: "connected" },
+          },
+        }),
+        { status: 200 },
+      ),
+    "unauthorized",
+    "Primitive receiving stopped because its listener could not continue.",
+  ],
+] as const)(
+  "records a refused hook mail check at once when the credential is %s",
+  async (_label, confirm, reason, message) => {
+    const configDir = mkdtempSync(join(tmpdir(), "listen-wake-revoked-"));
+    const previousConfig = process.env.PRIMITIVE_CONFIG_DIR;
+    process.env.PRIMITIVE_CONFIG_DIR = configDir;
+    try {
+      const stdin = Readable.from([JSON.stringify(stopInput)]);
+      vi.spyOn(process, "stdin", "get").mockReturnValue(
+        stdin as typeof process.stdin,
+      );
+      const stderr: string[] = [];
+      vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+        stderr.push(String(chunk));
+        return true;
+      });
+      process.env.PRIMITIVE_AGENT_PROFILE = "invited-profile";
+      process.env.PRIMITIVE_HOOK_AGENT_ADDRESS = "invited@example.com";
+      mocks.readMailJson.mockReturnValue({
+        session,
+        receiverMode: "external",
+        phase: "sent",
+        receipt: { status: "delivered" },
+      });
+      mocks.loadConnectedAgentProfile.mockReturnValue({
+        version: 1,
+        auth_method: "agent_connection",
+        api_key: ["pconn", "hook"].join("_"),
+        api_base_url: "https://api.primitive.dev/v1",
+        org_id: "org-1",
+        agent_address: "invited@example.com",
+        owner_address: "owner@example.com",
+        invitation_hash: "a".repeat(64),
+        created_at: "2026-01-01T00:00:00.000Z",
+      });
+      mocks.createWakeMail.mockResolvedValue({
+        handler: vi.fn(),
+        close: vi.fn(),
+        receiving: vi.fn(),
+        completed: vi.fn(),
+        wakeId: () => undefined,
+        status: () => undefined,
+      });
+      mocks.runListen.mockRejectedValue(
+        new ListenUnauthorizedError("refused", 401),
+      );
+      // The listener's own 401 is the first refusal; one confirming answer
+      // from the connection's record decides.
+      const answers = [confirm];
+      const fetchMock = vi.fn(async (input: unknown) => {
+        expect(String(input)).toBe(
+          "https://api.primitive.dev/v1/agent-connections/me",
+        );
+        const next = answers.shift();
+        if (!next) throw new Error("unexpected extra request");
+        return next();
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      await ListenCommand.run(
+        ["--once", "--wake", "--hook-session", "--events", "email.received"],
+        { root },
+      );
+      expect(process.exitCode).toBe(1);
+      expect(stderr.join("")).toContain(message);
+      const recorded = JSON.parse(
+        readFileSync(
+          join(
+            agentProfileDirectory(configDir, "invited-profile"),
+            `pending-mail-${session}.mail-check-failed.json`,
+          ),
+          "utf8",
+        ),
+      );
+      expect(recorded).toMatchObject({ version: 1, reason });
+    } finally {
+      vi.unstubAllGlobals();
+      if (previousConfig === undefined) delete process.env.PRIMITIVE_CONFIG_DIR;
+      else process.env.PRIMITIVE_CONFIG_DIR = previousConfig;
+      rmSync(configDir, { recursive: true, force: true });
+    }
+  },
+);

@@ -711,6 +711,27 @@ describe("listener lifecycle state", () => {
     expect(backgroundListenRestartable(current)).toBe(false);
   });
 
+  it("holds a receiver whose connection Primitive confirmed revoked", async () => {
+    const primary = new Error("synthetic refusal");
+    const f = running(
+      async () => {
+        throw primary;
+      },
+      () => false,
+      { failureCode: () => "connection-revoked" },
+    );
+    await expect(f.done).rejects.toBe(primary);
+    const current = backgroundListenStatus(target);
+    expect(current).toMatchObject({
+      phase: "failed",
+      reason: "failed",
+      healthy: false,
+      failureCode: "connection-revoked",
+    });
+    expect(current.detail).toContain("connection was revoked");
+    expect(backgroundListenRestartable(current)).toBe(false);
+  });
+
   it("reads a failure code from a newer CLI without rejecting the record or restarting it", async () => {
     const f = running();
     await vi.waitFor(() =>
@@ -1028,6 +1049,7 @@ describe("detached synthetic listener processes", () => {
     ["native-session-unavailable", "same native session"],
     ["notification-outcome-unknown", "do not delete receipts"],
     ["connection-changed", "profile and API origin"],
+    ["connection-revoked", "connection was revoked"],
     ["receiving-failed", "without --background"],
   ] as const)(
     "reports safe %s diagnostics in startup, state and IPC",

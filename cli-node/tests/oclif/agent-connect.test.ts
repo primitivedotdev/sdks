@@ -29,6 +29,7 @@ import { resolveCliAuth } from "../../src/oclif/auth.js";
 import {
   installClaudeWakeHook,
   recordHookMailCheck,
+  recordHookMailCheckFailure,
 } from "../../src/oclif/claude-wake-install.js";
 import {
   agentProfileDirectory,
@@ -214,6 +215,35 @@ describe("connected-agent setup", () => {
       reason: "hook_liveness_unverified",
       lastFiredAt: new Date(stale).toISOString(),
       liveness: "unknown",
+    });
+    // A hook-run listener whose mail check Primitive refused reports the
+    // receiver down at once, naming a confirmed revocation.
+    recordHookMailCheckFailure({
+      configDir,
+      profileName: "work",
+      sessionId: orgId,
+      reason: "connection_revoked",
+      at: Date.now() + 1_000,
+    });
+    const revoked = agentConnectionStatus(configDir, "work", env).receiving;
+    expect(revoked).toMatchObject({
+      state: "down",
+      reason: "connection_revoked",
+      liveness: "check_failed",
+    });
+    expect(JSON.stringify(revoked)).toContain("connection was revoked");
+    recordHookMailCheckFailure({
+      configDir,
+      profileName: "work",
+      sessionId: orgId,
+      reason: "unauthorized",
+      at: Date.now() + 2_000,
+    });
+    expect(
+      agentConnectionStatus(configDir, "work", env).receiving,
+    ).toMatchObject({
+      state: "down",
+      reason: "hook_mail_check_unauthorized",
     });
   });
   it("advertises presence only for session setup and persists its trusted fixed return profile", async () => {

@@ -49,6 +49,13 @@ beforeEach(() => {
   delete process.env.CODEX_THREAD_ID;
   delete process.env.CODEX_SESSION_ID;
   outputs = [];
+  // Primitive is unreachable unless a test answers for it.
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => {
+      throw new TypeError("fetch failed");
+    }),
+  );
   for (const command of [AgentConnectCommand, AgentStatusCommand])
     vi.spyOn(command.prototype, "log").mockImplementation((line) => {
       outputs.push(String(line));
@@ -56,12 +63,38 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   delete process.env.PRIMITIVE_CONFIG_DIR;
   delete process.env.PRIMITIVE_AGENT_PROFILE;
   delete process.env.CODEX_THREAD_ID;
   rmSync(home, { recursive: true, force: true });
   process.exitCode = undefined;
 });
+
+function connectionRecord(status: string, address = "work@example.test") {
+  return new Response(
+    JSON.stringify({
+      success: true,
+      data: { connection: { address, status } },
+    }),
+    { status: 200 },
+  );
+}
+
+/** Answer /agent-connections/me with each response in turn. */
+function serverAnswers(...responses: Array<() => Response>) {
+  const fetchMock = vi.fn(async (input: unknown, init?: RequestInit) => {
+    expect(String(input)).toMatch(/\/v1\/agent-connections\/me$/);
+    expect(new Headers(init?.headers).get("authorization")).toBe(
+      `Bearer ${["pconn", "fixture", "work"].join("_")}`,
+    );
+    const next = responses.shift();
+    if (!next) throw new Error("unexpected extra request");
+    return next();
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
 
 describe("agent status", () => {
   it("is a hidden registered alias", () => {
@@ -172,5 +205,118 @@ describe("agent status", () => {
     expect(
       statusProfile({ configDir, env: { CODEX_THREAD_ID: session } }),
     ).toEqual({ profile: null, session, bound: ["one", "two"] });
+  });
+  it("labels a status Primitive could not confirm as local only", async () => {
+    savedProfile("work", "work@example.test", session);
+    await AgentConnectCommand.run(["--status", "--profile", "work", "--json"], {
+      root,
+    });
+    expect(process.exitCode).toBeUndefined();
+    expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
+      status: "configured",
+      connection: { verification: "offline", reason: "unreachable" },
+    });
+    outputs = [];
+    await AgentConnectCommand.run(["--status", "--profile", "work"], { root });
+    expect(outputs[0]).toContain(
+      "Primitive could not be reached, so this status comes from local files only.",
+    );
+  });
+
+  it("reports a connection Primitive accepts as live", async () => {
+    savedProfile("work", "work@example.test", session);
+    serverAnswers(() => connectionRecord("connected"));
+    await AgentConnectCommand.run(["--status", "--profile", "work", "--json"], {
+      root,
+    });
+    expect(process.exitCode).toBeUndefined();
+    expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
+      status: "configured",
+      connection: { verification: "live", state: "connected" },
+      receiving: { mode: "poll", state: "poll" },
+    });
+  });
+
+  it("reports a connection Primitive confirms revoked, with receiving down, and exits 1", async () => {
+    savedProfile("work", "work@example.test", session);
+    serverAnswers(
+      () => new Response("{}", { status: 401 }),
+      () => new Response("{}", { status: 401 }),
+    );
+    await AgentConnectCommand.run(["--status", "--profile", "work", "--json"], {
+      root,
+    });
+    expect(process.exitCode).toBe(1);
+    const result = JSON.parse(outputs[0] ?? "");
+    expect(result).toMatchObject({
+      status: "revoked",
+      identity: { profileName: "work", agentAddress: "work@example.test" },
+      connection: { verification: "revoked", source: "server" },
+      receiving: { state: "down", reason: "connection_revoked" },
+    });
+    expect(outputs[0]).not.toContain(["pconn", "fixture", "work"].join("_"));
+    process.exitCode = undefined;
+    outputs = [];
+    serverAnswers(
+      () => new Response("{}", { status: 401 }),
+      () => connectionRecord("revoked"),
+    );
+    await AgentStatusCommand.run(["--profile", "work"], { root });
+    expect(process.exitCode).toBe(1);
+    expect(outputs[0]).toContain(
+      "Primitive reports its connection was revoked. Local receiving: down (connection_revoked).",
+    );
+  });
+
+  it("does not call a single refused request a revocation", async () => {
+    savedProfile("work", "work@example.test", session);
+    serverAnswers(
+      () => new Response("{}", { status: 401 }),
+      () => connectionRecord("connected"),
+    );
+    await AgentConnectCommand.run(["--status", "--profile", "work", "--json"], {
+      root,
+    });
+    expect(process.exitCode).toBeUndefined();
+    expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
+      status: "configured",
+      connection: { verification: "offline", reason: "unconfirmed" },
+    });
+  });
+
+  it("reads a revocation this machine already confirmed without asking Primitive", async () => {
+    const directory = agentProfileDirectory(configDir, "work");
+    writeMailJson(join(directory, "setup.json"), {
+      version: 1,
+      session,
+      receiverMode: "poll",
+      invitationHash: "a".repeat(64),
+    });
+    writeMailJson(join(directory, `disconnected-${"a".repeat(64)}.json`), {
+      version: 1,
+      address: "work@example.test",
+      revoked_at: "2026-02-01T00:00:00.000Z",
+      reason: "server_revoked",
+    });
+    const fetchMock = serverAnswers();
+    await AgentConnectCommand.run(["--status", "--profile", "work", "--json"], {
+      root,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+    const result = JSON.parse(outputs[0] ?? "");
+    expect(result).toMatchObject({
+      status: "revoked",
+      profileName: "work",
+      connection: {
+        verification: "revoked",
+        source: "local",
+        revokedAt: "2026-02-01T00:00:00.000Z",
+        reason: "server_revoked",
+      },
+    });
+    expect(result.detail).toContain(
+      "Primitive confirmed its connection was already revoked",
+    );
   });
 });

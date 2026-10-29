@@ -8,7 +8,10 @@ import { API_BASE_URL_FLAG_DESCRIPTION } from "../api-command.js";
 import { resolveCliAuth } from "../auth.js";
 import { dispatchAutoRead } from "../auto-signals.js";
 import { boundSessionProfiles } from "../claude-machine-hooks.js";
-import { recordHookMailCheck } from "../claude-wake-install.js";
+import {
+  recordHookMailCheck,
+  recordHookMailCheckFailure,
+} from "../claude-wake-install.js";
 import { installedConnectSkillFile } from "../connect-skill.js";
 import {
   AGENT_PROFILE_ENV,
@@ -16,6 +19,11 @@ import {
   agentProfileName,
   loadConnectedAgentProfile,
 } from "../connected-agent-profile.js";
+import {
+  type ConnectionCredential,
+  confirmRevokedListenFailure,
+  unauthorizedListenFailure,
+} from "../connection-revocation.js";
 import {
   backgroundListenStatus,
   backgroundListenToken,
@@ -35,7 +43,7 @@ import {
   type ListenOptions,
   runListen,
 } from "../listen-runner.js";
-import { ListenStateError } from "../listen-state.js";
+import { ConnectionRevokedError, ListenStateError } from "../listen-state.js";
 import { ContactPolicyReadRetryError } from "../notification-contact-policy.js";
 import { explainNotification } from "../notification-diagnostic.js";
 import { notificationScope, notificationSenders } from "../notify-session.js";
@@ -447,6 +455,26 @@ export default class ListenCommand extends Command {
           apiKey: flags["api-key"],
         })
       : undefined;
+    // The selected connected credential, read again when a failure needs
+    // Primitive to confirm whether it was revoked. Null for anything else.
+    const listenCredential = (): ConnectionCredential | null => {
+      try {
+        const current = resolveCliAuth({
+          configDir: this.config.configDir,
+          apiBaseUrl: requestConfig?.apiBaseUrl ?? flags["api-base-url"],
+          apiKey: flags["api-key"],
+        });
+        return current.connectedAgent && current.apiKey
+          ? {
+              api_base_url: current.apiBaseUrl,
+              api_key: current.apiKey,
+              agent_address: current.connectedAgent.agentAddress,
+            }
+          : null;
+      } catch {
+        return null;
+      }
+    };
     // Refuse an account credential before any listener state is written.
     // Stop and status still work, so an existing listener can be managed.
     if (
@@ -820,11 +848,13 @@ export default class ListenCommand extends Command {
           failureCode: (error) =>
             error instanceof NotificationOutcomeUnknownError
               ? "notification-outcome-unknown"
-              : connectionChanged
-                ? "connection-changed"
-                : error instanceof NativeSessionError
-                  ? "native-session-unavailable"
-                  : "receiving-failed",
+              : error instanceof ConnectionRevokedError
+                ? "connection-revoked"
+                : connectionChanged
+                  ? "connection-changed"
+                  : error instanceof NativeSessionError
+                    ? "native-session-unavailable"
+                    : "receiving-failed",
           retryable: (error) =>
             error instanceof ContactPolicyReadRetryError ||
             (childToken !== null &&
@@ -851,33 +881,62 @@ export default class ListenCommand extends Command {
             }
             const attempt = new AbortController();
             let disconnected: NativeSessionError | undefined;
-            await runListen({
-              ...options,
-              signal: AbortSignal.any([signal, attempt.signal]),
-              onReady,
-              notifySession: {
-                ...notify,
-                expectedCwd,
-                onVerifiedCwd: (cwd) => {
-                  expectedCwd ??= cwd;
+            try {
+              await runListen({
+                ...options,
+                signal: AbortSignal.any([signal, attempt.signal]),
+                onReady,
+                notifySession: {
+                  ...notify,
+                  expectedCwd,
+                  onVerifiedCwd: (cwd) => {
+                    expectedCwd ??= cwd;
+                  },
+                  onDisconnect: (error) => {
+                    disconnected = error;
+                    attempt.abort(error);
+                  },
                 },
-                onDisconnect: (error) => {
-                  disconnected = error;
-                  attempt.abort(error);
-                },
-              },
-            });
+              });
+            } catch (error) {
+              // A refused credential that Primitive confirms revoked holds
+              // the receiver instead of restarting it forever.
+              if (signal.aborted) throw error;
+              throw await confirmRevokedListenFailure(
+                error,
+                listenCredential(),
+              );
+            }
             // Wait for dispatch reconciliation before choosing to reconnect.
             // A terminal unknown submission thrown by runListen takes priority.
             if (disconnected && !signal.aborted) throw disconnected;
           },
         });
       }
-    } catch (error) {
+    } catch (caught) {
+      const error = controller.signal.aborted
+        ? caught
+        : await confirmRevokedListenFailure(caught, listenCredential());
       if (flags.wake) {
         if (isListenLockContention(error)) return;
+        const revoked = error instanceof ConnectionRevokedError;
+        // A refused mail check marks the hook receiver down at once, rather
+        // than leaving status on the last successful check until it ages out.
+        if (
+          hookSessionId &&
+          hookProfileName &&
+          (revoked || unauthorizedListenFailure(error))
+        )
+          recordHookMailCheckFailure({
+            configDir: this.config.configDir,
+            profileName: hookProfileName,
+            sessionId: hookSessionId,
+            reason: revoked ? "connection_revoked" : "unauthorized",
+          });
         process.stderr.write(
-          "Primitive receiving stopped because its listener could not continue. Check this session's Primitive connection before relying on automatic mail.\n",
+          revoked
+            ? `Primitive receiving stopped. ${error.message}\n`
+            : "Primitive receiving stopped because its listener could not continue. Check this session's Primitive connection before relying on automatic mail.\n",
         );
         process.exitCode = 1;
         return;

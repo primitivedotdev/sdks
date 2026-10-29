@@ -26,7 +26,7 @@ import {
 } from "./conversation-status.js";
 import { AGENT_CONNECTION_REQUIRED_MESSAGE } from "./listen-credential.js";
 import type { ListenOptions } from "./listen-runner.js";
-import { ListenStateError } from "./listen-state.js";
+import { ListenStateError, ListenUnauthorizedError } from "./listen-state.js";
 import {
   type ContactNotificationAdmission,
   NETWORK_ADMISSION_PENDING_RETRY_MS,
@@ -299,9 +299,11 @@ export async function runSharedNotificationListen(
       const detail = result.data?.data;
       if (result.error || !detail) {
         if (result.response?.status === 404) return true;
-        if ([401, 403].includes(result.response?.status ?? 0))
-          throw new ListenStateError(
+        const status = result.response?.status ?? 0;
+        if (status === 401 || status === 403)
+          throw new ListenUnauthorizedError(
             "Shared notification authorization was revoked.",
+            status,
           );
         throw new NotificationRetryError(
           `Email ${row.emailId} is not available yet.`,
