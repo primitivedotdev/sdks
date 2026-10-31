@@ -15,7 +15,7 @@
  * coupling that the bundler refactor was specifically meant to break.
  *
  * Usage:
- *   node scripts/assert-tarball-isolation.mjs <package-dir> [forbiddenName...]
+ *   node scripts/assert-tarball-isolation.mjs [--already-built] <package-dir> [forbiddenName...]
  *
  *   <package-dir>      Directory containing the package.json to pack.
  *   forbiddenName...   Optional extra forbidden specifier names. Always
@@ -29,26 +29,36 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { resolve } from "node:path";
+import { resolve, join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 
 const FORBIDDEN_BASELINE = ["@primitivedotdev/api-core"];
 
-const [, , pkgDirArg, ...extra] = process.argv;
+const args = process.argv.slice(2);
+const alreadyBuilt = args[0] === "--already-built";
+if (alreadyBuilt) args.shift();
+const [pkgDirArg, ...extra] = args;
 if (!pkgDirArg) {
-  console.error("usage: assert-tarball-isolation.mjs <package-dir> [forbiddenName...]");
+  console.error("usage: assert-tarball-isolation.mjs [--already-built] <package-dir> [forbiddenName...]");
   process.exit(2);
 }
 
 const pkgDir = resolve(pkgDirArg);
 const forbidden = new Set([...FORBIDDEN_BASELINE, ...extra]);
+if (alreadyBuilt && !existsSync(join(pkgDir, "dist"))) {
+  console.error(`missing dist in ${pkgDir}; build the package before using --already-built`);
+  process.exit(1);
+}
 
 // npm pack --dry-run --json is the canonical way to inspect what
 // would land in the tarball without actually writing one. It honors
 // the `files` allowlist and runs the prepack scripts, so the
-// returned manifest is the same one consumers would see.
+// returned manifest is the same one consumers would see. An explicit
+// --already-built call reuses the preceding build instead of invoking prepack
+// again. Standalone calls keep their original lifecycle behavior.
 let raw;
 try {
-  raw = execFileSync("npm", ["pack", "--dry-run", "--json"], {
+  raw = execFileSync("npm", ["pack", "--dry-run", "--json", ...(alreadyBuilt ? ["--ignore-scripts"] : [])], {
     cwd: pkgDir,
     encoding: "utf8",
     // Suppress prepack stdout chatter; we only want the JSON tail.
@@ -81,6 +91,10 @@ if (startLine === -1) {
 }
 const packed = JSON.parse(lines.slice(startLine).join("\n"));
 const entry = packed[0];
+if (alreadyBuilt && !entry?.files?.some((file) => file.path.startsWith("dist/"))) {
+  console.error("packed package contains no built dist files");
+  process.exit(1);
+}
 if (!entry) {
   console.error("npm pack returned no entries");
   process.exit(1);
@@ -91,12 +105,7 @@ if (!entry) {
 // (the tarball would carry the exact same content because npm
 // only rewrites workspace specifiers via `pnpm publish`, not the
 // vanilla `npm pack` we are gating here).
-const pkg = JSON.parse(
-  execFileSync("node", [
-    "-e",
-    `const fs=require("fs");const p=JSON.parse(fs.readFileSync("${pkgDir}/package.json","utf8"));process.stdout.write(JSON.stringify(p));`,
-  ], { encoding: "utf8" }),
-);
+const pkg = JSON.parse(readFileSync(join(pkgDir, "package.json"), "utf8"));
 
 const offenses = [];
 for (const field of ["dependencies", "peerDependencies", "optionalDependencies"]) {
