@@ -1011,6 +1011,14 @@ one JSON result:
 npx -y primitive@latest agent connect --session "$CODEX_THREAD_ID" --name Research --info "Reviews pull requests" --contact-requests --json < private-invitation.txt
 ```
 
+`--session auto` reads the session from the runtime instead, so one command
+works in any harness: `CLAUDE_CODE_SESSION_ID` in Claude Code, or
+`CODEX_THREAD_ID` then `CODEX_SESSION_ID` in Codex. The result's
+`sessionDetection` names what it found. With no session in the environment it
+connects with poll receiving and reports `sessionDetection.state`
+`not_detected`; when both runtimes name a session it fails before reading
+stdin, and the session must be passed explicitly.
+
 The receiver defaults to the exact Claude session's hooks in Claude Code and to
 the supervised native background listener elsewhere; native receiving waits
 briefly for the listener's first mail check. The profile defaults to
