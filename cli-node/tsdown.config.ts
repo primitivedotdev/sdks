@@ -18,37 +18,55 @@ import { defineConfig } from "tsdown";
 //
 // Using a record form for `entry` keeps the dist/oclif/ subdirectory;
 // the array form flattens to dist/index.js.
-export default defineConfig({
-  entry: {
-    "oclif/index": "src/oclif/index.ts",
-    "oclif/proxy-auto-detect": "src/oclif/proxy-auto-detect.ts",
-    "oclif/root-signup-hint": "src/oclif/root-signup-hint.ts",
-    "oclif/listen-supervisor": "src/oclif/listen-supervisor.ts",
-    "oclif/receiver-heal": "src/oclif/receiver-heal.ts",
-    "oclif/auto-signals": "src/oclif/auto-signals.ts",
-    "oclif/auto-signal-worker": "src/oclif/auto-signal-worker.ts",
+const bundled = {
+  // Inline api-core's source so the published tarball needs no
+  // runtime resolution of the private workspace package. Without
+  // this, every CLI command would fail at startup with a missing-
+  // module error on the api-core specifier.
+  //
+  // @primitivedotdev/sdk is bundled too: the payments commands use its
+  // x402 client + signer, and the tarball-isolation check forbids the SDK
+  // as a runtime dependency. viem (the SDK's and our own crypto dep) stays
+  // external and is declared as a runtime dependency.
+  alwaysBundle: ["@primitivedotdev/api-core", "@primitivedotdev/sdk"],
+};
+
+export default defineConfig([
+  {
+    entry: {
+      "oclif/index": "src/oclif/index.ts",
+      "oclif/proxy-auto-detect": "src/oclif/proxy-auto-detect.ts",
+      "oclif/root-signup-hint": "src/oclif/root-signup-hint.ts",
+      "oclif/listen-supervisor": "src/oclif/listen-supervisor.ts",
+      "oclif/receiver-heal": "src/oclif/receiver-heal.ts",
+      "oclif/auto-signals": "src/oclif/auto-signals.ts",
+      "oclif/auto-signal-worker": "src/oclif/auto-signal-worker.ts",
+    },
+    format: ["esm"],
+    // Keep `.js` so the bin and oclif config keep resolving the
+    // documented paths. tsdown defaults to `.mjs` on the node
+    // platform; we override.
+    fixedExtension: false,
+    // dts is unnecessary for the CLI: nothing imports it as a
+    // library, only the bin and oclif's command runner load these
+    // files at runtime.
+    dts: false,
+    deps: bundled,
+    clean: true,
+    sourcemap: false,
   },
-  format: ["esm"],
-  // Keep `.js` so the bin and oclif config keep resolving the
-  // documented paths. tsdown defaults to `.mjs` on the node
-  // platform; we override.
-  fixedExtension: false,
-  // dts is unnecessary for the CLI: nothing imports it as a
-  // library, only the bin and oclif's command runner load these
-  // files at runtime.
-  dts: false,
-  deps: {
-    // Inline api-core's source so the published tarball needs no
-    // runtime resolution of the private workspace package. Without
-    // this, every CLI command would fail at startup with a missing-
-    // module error on the api-core specifier.
-    //
-    // @primitivedotdev/sdk is bundled too: the payments commands use its
-    // x402 client + signer, and the tarball-isolation check forbids the SDK
-    // as a runtime dependency. viem (the SDK's and our own crypto dep) stays
-    // external and is declared as a runtime dependency.
-    alwaysBundle: ["@primitivedotdev/api-core", "@primitivedotdev/sdk"],
+  // The public `primitive/receiver` library entry is built on its own so
+  // it is one self-contained file at a stable path, with declarations,
+  // and shares no hashed chunk with the CLI.
+  {
+    entry: { receiver: "src/receiver.ts" },
+    format: ["esm"],
+    fixedExtension: false,
+    // tsconfig's declarationMap would ship maps that point at unpublished
+    // sources.
+    dts: { compilerOptions: { declarationMap: false } },
+    deps: bundled,
+    clean: false,
+    sourcemap: false,
   },
-  clean: true,
-  sourcemap: false,
-});
+]);

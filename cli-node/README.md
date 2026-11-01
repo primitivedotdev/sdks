@@ -689,6 +689,80 @@ export PRIMITIVE_X402_PRIVATE_KEY=0x...
 
 A `--private-key` flag is available as an escape hatch for scripted use, but the environment variable is preferred. The non-signing commands (`charge`, `get-challenge`, `list-payout-addresses`, `get-spend-policy`, `update-spend-policy`) need only your Primitive API key. Run `primitive payments <command> --help` for the full flag list of any command.
 
+## Supported receiver API
+
+A receiver in a coding harness that the CLI does not support must decide
+which received emails may wake its session. `primitive/receiver` exposes the
+CLI's own contact admission policy for that decision. It is the only
+supported library import from this package.
+
+```ts
+import { createWakePolicy, WakePolicyError } from "primitive/receiver";
+
+const policy = createWakePolicy({
+  recipient: "agent@example.com",
+  contactRequests: false,
+  readContactPolicy: (signal) => readPolicy(signal),
+  readContactPage: (cursor, signal) => readContacts(cursor, signal),
+  readNetworkAdmission: (emailId, sender, signal) =>
+    checkNetworkAdmission(emailId, sender, signal),
+});
+
+const decision = await policy.admit({ emailId, sender, receivedAt }, signal);
+if (decision.kind !== "denied") {
+  const confirm = await policy.recheck(decision, signal);
+  confirm(); // immediately before the wake
+  wake(decision.kind === "request" ? "contact request" : "mail");
+}
+```
+
+The three readers call the API as the connected address. Each returns the
+`data` of one operation:
+
+| Reader | API operation | CLI command |
+| --- | --- | --- |
+| `readContactPolicy` | `getAgentContactPolicy` | `primitive contacts get-agent-contact-policy` |
+| `readContactPage` | `listAgentContacts`, 100 rows per page, with the next `cursor` or `null` | `primitive agent contacts list` |
+| `readNetworkAdmission` | `checkDefaultNetworkContactAdmission` | `primitive agent-networks check-default-network-contact-admission` |
+
+`admit` returns one of three decisions for an email:
+
+- `allowed`: the email may wake the session.
+- `request`: a first-contact request from an unknown sender. It is returned
+  only when `contactRequests` is true and the owner allows contact requests.
+  Show it as a request, never as a task. Allow at most one per sender.
+- `denied`: the email must not wake the session.
+
+An admission carries the email ID, sender and received time, normalized to
+lower case and ISO 8601. Pass the sender only after you check that it is
+authenticated.
+
+Permission can change between admission and wake. Call `recheck` with the
+admission that `admit` returned, then call the function it returns
+synchronously right before the wake. That function throws when the
+permission was refreshed since, or when the policy read behind it is older
+than 30 seconds. Admissions are bound to the policy that issued them, so
+`recheck` rejects any other object with a `TypeError`.
+
+Failures are `WakePolicyError` values. Branch on `code`:
+
+| `code` | `retryable` | Meaning |
+| --- | --- | --- |
+| `policy_read_failed` | true | A policy read failed temporarily. The policy paces repeated reads itself. |
+| `network_admission_pending` | true | The server has not settled network admission for this email. Retry in a few seconds. |
+| `permission_changed` | true | Permission changed or expired before the wake. Admit the email again. |
+| `policy_unavailable` | false | The policy is invalid or access was lost. Retrying will not help until access is restored. |
+
+A reader reports a temporary failure, such as a rate limit, a 5xx response
+or a dropped connection, by throwing `new WakePolicyError("policy_read_failed")`.
+Any other error from a reader makes the policy unavailable. An aborted signal
+rejects with the signal's reason.
+
+The package also resolves `primitive/bin/*`, `primitive/dist/*` and
+`primitive/man/*` so existing deep imports keep working. Those paths are not
+supported. File names under `dist/` other than `dist/receiver.js` change
+between releases, and the paths may stop resolving in a later major version.
+
 ## Migrating from `@primitivedotdev/sdk` CLI
 
 The CLI previously shipped inside `@primitivedotdev/sdk`. The shipped surface area is identical; only the package name changes.
