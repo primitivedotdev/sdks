@@ -49,6 +49,23 @@ describe("mentionsAddress", () => {
     expect(mentionsAddress("builder@agents.example.test.org", SELF)).toBe(
       false,
     );
+    for (const prefix of ["support!", "a/", "x=", "q?", "h#", "t~", "p|"])
+      expect(
+        mentionsAddress(`mail ${prefix}builder@agents.example.test`, SELF),
+        prefix,
+      ).toBe(false);
+    expect(mentionsAddress("ping a!@builder", SELF)).toBe(false);
+  });
+
+  it("matches an address in quotes, code or brackets", () => {
+    for (const text of [
+      "'builder@agents.example.test'",
+      "`builder@agents.example.test`",
+      "[@builder]",
+      "@builder's turn",
+      "@builder?",
+    ])
+      expect(mentionsAddress(text, SELF), text).toBe(true);
   });
 });
 
@@ -105,6 +122,19 @@ describe("mentionsOnlyOthers", () => {
       "> @reviewer take a look",
     ].join("\n");
     expect(mentionsOnlyOthers(email(body), SELF)).toBe(false);
+  });
+
+  it("ignores mentions in quoted lines of an inline reply", () => {
+    const body = [
+      "> @reviewer check this",
+      "Done. Both of you can continue.",
+      "> and the tests?",
+      "Passing.",
+    ].join("\n");
+    expect(mentionsOnlyOthers(email(body), SELF)).toBe(false);
+    expect(
+      mentionsOnlyOthers(email(`${body}\n@reviewer please merge`), SELF),
+    ).toBe(true);
   });
 
   it("reads an HTML-only message as text", () => {

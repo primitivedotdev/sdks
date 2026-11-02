@@ -131,8 +131,8 @@ in this order:
 5. Mail in a muted thread does not wake.
 6. Group mail that mentions only other recipients does not wake
    (`mention-wake.ts`). When To or Cc names the bound address and at least one
-   other address, and the new text (quoted history removed) mentions one of
-   those addresses as `@local-part` or the full address, only the mentioned
+   other address, and the new text (quoted history and `>` lines removed)
+   mentions one of those addresses as `@local-part` or the full address, only the mentioned
    addresses wake. Group mail that mentions none of them, and mail to the bound
    address alone, wakes as before.
 7. Mail that the contact policy does not admit does not wake. The policy keeps
