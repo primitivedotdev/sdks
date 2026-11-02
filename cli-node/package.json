@@ -107,6 +107,9 @@
       "filters": {
         "description": "Manage whitelist and blocklist filter rules"
       },
+      "email-rules": {
+        "description": "Manage plain-English rules that pick out received mail. Needs your own `primitive login`, not narrowed; API keys and connected agents are refused."
+      },
       "webhook-deliveries": {
         "description": "View and replay webhook delivery attempts. Prefer `primitive webhook-deliveries list` and `primitive webhook-deliveries replay`."
       },

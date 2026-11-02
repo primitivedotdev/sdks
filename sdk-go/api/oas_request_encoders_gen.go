@@ -86,6 +86,20 @@ func encodeCliLogoutRequest(
 	return nil
 }
 
+func encodeCompileEmailRuleRequest(
+	req *CompileEmailRuleInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeCompleteWebhookEventRequest(
 	req CompleteWebhookInput,
 	r *http.Request,
@@ -160,6 +174,20 @@ func encodeCreateChallengeRequest(
 
 func encodeCreateEmailChallengeRequest(
 	req *CreateEmailChallengeInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeCreateEmailRuleRequest(
+	req *CreateEmailRuleInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -822,6 +850,20 @@ func encodeUpdateDefaultNetworkMemberRequest(
 
 func encodeUpdateDomainRequest(
 	req *UpdateDomainInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateEmailRuleRequest(
+	req *UpdateEmailRuleInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

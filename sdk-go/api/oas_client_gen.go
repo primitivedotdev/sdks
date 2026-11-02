@@ -155,6 +155,13 @@ type Invoker interface {
 	//
 	// POST /cli/logout
 	CliLogout(ctx context.Context, request OptCliLogoutInput) (CliLogoutRes, error)
+	// CompileEmailRule invokes compileEmailRule operation.
+	//
+	// Compiles a plain-English description into a rule tree, with an
+	// explanation, assumptions and warnings. Nothing is saved.
+	//
+	// POST /email-rules/compile
+	CompileEmailRule(ctx context.Context, request *CompileEmailRuleInput) (CompileEmailRuleRes, error)
 	// CompleteWebhookEvent invokes completeWebhookEvent operation.
 	//
 	// Report normalized handling evidence for the queue, attempt and lease. Required JSON fields:
@@ -241,6 +248,14 @@ type Invoker interface {
 	//
 	// POST /x402/email-challenges
 	CreateEmailChallenge(ctx context.Context, request *CreateEmailChallengeInput, params CreateEmailChallengeParams) (CreateEmailChallengeRes, error)
+	// CreateEmailRule invokes createEmailRule operation.
+	//
+	// Saves a new rule with its first version. New rules start in `observe`
+	// unless `state` is `draft`. The rule never reaches mail the author cannot
+	// read.
+	//
+	// POST /email-rules
+	CreateEmailRule(ctx context.Context, request *CreateEmailRuleInput) (CreateEmailRuleRes, error)
 	// CreateEndpoint invokes createEndpoint operation.
 	//
 	// Creates a new webhook endpoint. If a deactivated endpoint
@@ -428,6 +443,14 @@ type Invoker interface {
 	//
 	// DELETE /emails/{id}
 	DeleteEmail(ctx context.Context, params DeleteEmailParams) (DeleteEmailRes, error)
+	// DeleteEmailRule invokes deleteEmailRule operation.
+	//
+	// Deletes a rule with its versions, its decisions and the access it
+	// granted. The author, or a caller who reads the whole organization's
+	// mail, may delete it.
+	//
+	// DELETE /email-rules/{id}
+	DeleteEmailRule(ctx context.Context, params DeleteEmailRuleParams) (DeleteEmailRuleRes, error)
 	// DeleteEndpoint invokes deleteEndpoint operation.
 	//
 	// Soft-deletes a webhook endpoint. The endpoint will no longer
@@ -825,6 +848,12 @@ type Invoker interface {
 	//
 	// GET /emails/{id}
 	GetEmail(ctx context.Context, params GetEmailParams) (GetEmailRes, error)
+	// GetEmailRule invokes getEmailRule operation.
+	//
+	// A rule and its current version.
+	//
+	// GET /email-rules/{id}
+	GetEmailRule(ctx context.Context, params GetEmailRuleParams) (GetEmailRuleRes, error)
 	// GetFunction invokes getFunction operation.
 	//
 	// Returns the full record for a function, including its current
@@ -1197,6 +1226,19 @@ type Invoker interface {
 	//
 	// GET /emails/{id}/attachments/{attachment}/members
 	ListEmailAttachmentArchiveMembers(ctx context.Context, params ListEmailAttachmentArchiveMembersParams) (ListEmailAttachmentArchiveMembersRes, error)
+	// ListEmailRuleDecisions invokes listEmailRuleDecisions operation.
+	//
+	// What the rule decided for each email it was evaluated against, newest
+	// first, for emails the caller can read.
+	//
+	// GET /email-rules/{id}/decisions
+	ListEmailRuleDecisions(ctx context.Context, params ListEmailRuleDecisionsParams) (ListEmailRuleDecisionsRes, error)
+	// ListEmailRules invokes listEmailRules operation.
+	//
+	// Rules the caller can see, newest first.
+	//
+	// GET /email-rules
+	ListEmailRules(ctx context.Context, params ListEmailRulesParams) (ListEmailRulesRes, error)
 	// ListEmails invokes listEmails operation.
 	//
 	// Returns a paginated list of INBOUND emails received at your
@@ -1965,6 +2007,14 @@ type Invoker interface {
 	//
 	// PATCH /domains/{id}
 	UpdateDomain(ctx context.Context, request *UpdateDomainInput, params UpdateDomainParams) (UpdateDomainRes, error)
+	// UpdateEmailRule invokes updateEmailRule operation.
+	//
+	// Renames the rule, saves a new version, or changes its state. Only the
+	// author may rename it, add a version, or set `observe` or `active`;
+	// others may only set `draft`.
+	//
+	// PATCH /email-rules/{id}
+	UpdateEmailRule(ctx context.Context, request *UpdateEmailRuleInput, params UpdateEmailRuleParams) (UpdateEmailRuleRes, error)
 	// UpdateEndpoint invokes updateEndpoint operation.
 	//
 	// Updates an active webhook endpoint. If the URL is changed, the old
@@ -3356,6 +3406,117 @@ func (c *Client) sendCliLogout(ctx context.Context, request OptCliLogoutInput) (
 	return result, nil
 }
 
+// CompileEmailRule invokes compileEmailRule operation.
+//
+// Compiles a plain-English description into a rule tree, with an
+// explanation, assumptions and warnings. Nothing is saved.
+//
+// POST /email-rules/compile
+func (c *Client) CompileEmailRule(ctx context.Context, request *CompileEmailRuleInput) (CompileEmailRuleRes, error) {
+	res, err := c.sendCompileEmailRule(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendCompileEmailRule(ctx context.Context, request *CompileEmailRuleInput) (res CompileEmailRuleRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("compileEmailRule"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/email-rules/compile"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CompileEmailRuleOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/email-rules/compile"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCompileEmailRuleRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CompileEmailRuleOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCompileEmailRuleResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // CompleteWebhookEvent invokes completeWebhookEvent operation.
 //
 // Report normalized handling evidence for the queue, attempt and lease. Required JSON fields:
@@ -4081,6 +4242,118 @@ func (c *Client) sendCreateEmailChallenge(ctx context.Context, request *CreateEm
 
 	stage = "DecodeResponse"
 	result, err := decodeCreateEmailChallengeResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// CreateEmailRule invokes createEmailRule operation.
+//
+// Saves a new rule with its first version. New rules start in `observe`
+// unless `state` is `draft`. The rule never reaches mail the author cannot
+// read.
+//
+// POST /email-rules
+func (c *Client) CreateEmailRule(ctx context.Context, request *CreateEmailRuleInput) (CreateEmailRuleRes, error) {
+	res, err := c.sendCreateEmailRule(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendCreateEmailRule(ctx context.Context, request *CreateEmailRuleInput) (res CreateEmailRuleRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createEmailRule"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/email-rules"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateEmailRuleOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/email-rules"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCreateEmailRuleRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CreateEmailRuleOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCreateEmailRuleResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -5999,6 +6272,133 @@ func (c *Client) sendDeleteEmail(ctx context.Context, params DeleteEmailParams) 
 
 	stage = "DecodeResponse"
 	result, err := decodeDeleteEmailResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// DeleteEmailRule invokes deleteEmailRule operation.
+//
+// Deletes a rule with its versions, its decisions and the access it
+// granted. The author, or a caller who reads the whole organization's
+// mail, may delete it.
+//
+// DELETE /email-rules/{id}
+func (c *Client) DeleteEmailRule(ctx context.Context, params DeleteEmailRuleParams) (DeleteEmailRuleRes, error) {
+	res, err := c.sendDeleteEmailRule(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDeleteEmailRule(ctx context.Context, params DeleteEmailRuleParams) (res DeleteEmailRuleRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("deleteEmailRule"),
+		semconv.HTTPRequestMethodKey.String("DELETE"),
+		semconv.URLTemplateKey.String("/email-rules/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DeleteEmailRuleOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/email-rules/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "DELETE", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, DeleteEmailRuleOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDeleteEmailRuleResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -10492,6 +10892,152 @@ func (c *Client) sendGetEmail(ctx context.Context, params GetEmailParams) (res G
 	return result, nil
 }
 
+// GetEmailRule invokes getEmailRule operation.
+//
+// A rule and its current version.
+//
+// GET /email-rules/{id}
+func (c *Client) GetEmailRule(ctx context.Context, params GetEmailRuleParams) (GetEmailRuleRes, error) {
+	res, err := c.sendGetEmailRule(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetEmailRule(ctx context.Context, params GetEmailRuleParams) (res GetEmailRuleRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getEmailRule"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/email-rules/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetEmailRuleOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/email-rules/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "include_sql" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "include_sql",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IncludeSQL.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetEmailRuleOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetEmailRuleResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetFunction invokes getFunction operation.
 //
 // Returns the full record for a function, including its current
@@ -14784,6 +15330,316 @@ func (c *Client) sendListEmailAttachmentArchiveMembers(ctx context.Context, para
 
 	stage = "DecodeResponse"
 	result, err := decodeListEmailAttachmentArchiveMembersResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListEmailRuleDecisions invokes listEmailRuleDecisions operation.
+//
+// What the rule decided for each email it was evaluated against, newest
+// first, for emails the caller can read.
+//
+// GET /email-rules/{id}/decisions
+func (c *Client) ListEmailRuleDecisions(ctx context.Context, params ListEmailRuleDecisionsParams) (ListEmailRuleDecisionsRes, error) {
+	res, err := c.sendListEmailRuleDecisions(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListEmailRuleDecisions(ctx context.Context, params ListEmailRuleDecisionsParams) (res ListEmailRuleDecisionsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listEmailRuleDecisions"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/email-rules/{id}/decisions"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListEmailRuleDecisionsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/email-rules/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/decisions"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "limit" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Limit.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "cursor" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Cursor.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListEmailRuleDecisionsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListEmailRuleDecisionsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListEmailRules invokes listEmailRules operation.
+//
+// Rules the caller can see, newest first.
+//
+// GET /email-rules
+func (c *Client) ListEmailRules(ctx context.Context, params ListEmailRulesParams) (ListEmailRulesRes, error) {
+	res, err := c.sendListEmailRules(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListEmailRules(ctx context.Context, params ListEmailRulesParams) (res ListEmailRulesRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listEmailRules"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/email-rules"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListEmailRulesOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/email-rules"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "limit" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Limit.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "cursor" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Cursor.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListEmailRulesOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListEmailRulesResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -23970,6 +24826,136 @@ func (c *Client) sendUpdateDomain(ctx context.Context, request *UpdateDomainInpu
 
 	stage = "DecodeResponse"
 	result, err := decodeUpdateDomainResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// UpdateEmailRule invokes updateEmailRule operation.
+//
+// Renames the rule, saves a new version, or changes its state. Only the
+// author may rename it, add a version, or set `observe` or `active`;
+// others may only set `draft`.
+//
+// PATCH /email-rules/{id}
+func (c *Client) UpdateEmailRule(ctx context.Context, request *UpdateEmailRuleInput, params UpdateEmailRuleParams) (UpdateEmailRuleRes, error) {
+	res, err := c.sendUpdateEmailRule(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendUpdateEmailRule(ctx context.Context, request *UpdateEmailRuleInput, params UpdateEmailRuleParams) (res UpdateEmailRuleRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("updateEmailRule"),
+		semconv.HTTPRequestMethodKey.String("PATCH"),
+		semconv.URLTemplateKey.String("/email-rules/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, UpdateEmailRuleOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/email-rules/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PATCH", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeUpdateEmailRuleRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, UpdateEmailRuleOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeUpdateEmailRuleResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated, Literal, TypeVar
+from typing import Annotated, Any, Literal, TypeVar
 
 from pydantic import (
     AnyUrl,
@@ -418,6 +418,61 @@ class Spamassassin(BaseModel):
             description="Overall spam score (sum of all rule scores). Higher scores indicate higher likelihood of spam. Unbounded - can be negative (ham) or very high (spam)."
         ),
     ]
+
+
+class SenderAnalysis(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    authenticated: Annotated[
+        bool,
+        Field(description="True when the sender is authenticated for the From domain."),
+    ]
+    basis: Annotated[
+        str,
+        Field(
+            description="How the sender was authenticated, for example `dmarc_aligned`, `spf_aligned` or `unauthenticated`. Treat an unfamiliar value as one added after your client was built."
+        ),
+    ]
+    reasons: Annotated[
+        list[str], Field(description="Human-readable reasons, for display only.")
+    ]
+
+
+class UnderstandingFact(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    value: Annotated[
+        bool | float | str | list[Any] | dict[str, Any],
+        Field(
+            description="The fact's value. Its JSON type depends on the fact; never null."
+        ),
+    ]
+    confidence: Annotated[
+        float | None, Field(description="Confidence, from 0 to 1.")
+    ] = None
+
+
+class UnderstandingRuleCondition(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    explanation: Annotated[
+        str | None, Field(description="The condition in plain English.")
+    ] = None
+    matched: Annotated[bool, Field(description="Whether the condition held.")]
+
+
+class UnderstandingRuleQuestion(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    question: Annotated[str | None, Field(description="The question.")] = None
+    answer: Annotated[bool, Field(description="The answer; true for yes.")]
+    confidence: Annotated[
+        float | None, Field(description="Confidence, from 0 to 1.")
+    ] = None
 
 
 class Type(StrEnum):
@@ -838,6 +893,29 @@ class ParsedDataFailed(BaseModel):
     ]
 
 
+class UnderstandingRule(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    id: Annotated[str, Field(description="Rule id, as the email rules API returns it.")]
+    version: Annotated[int | None, Field(description="Rule version that matched.")] = (
+        None
+    )
+    name: Annotated[str | None, Field(description="Rule name.")] = None
+    description: Annotated[
+        str | None,
+        Field(description="The plain-English description the rule was written from."),
+    ] = None
+    conditions: Annotated[
+        list[UnderstandingRuleCondition] | None,
+        Field(description="The rule's conditions and whether each held."),
+    ] = None
+    questions: Annotated[
+        list[UnderstandingRuleQuestion] | None,
+        Field(description="The rule's questions and their answers."),
+    ] = None
+
+
 class ForwardVerification(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -960,6 +1038,44 @@ class ParsedData(RootModel[ParsedDataComplete | ParsedDataFailed]):
         ParsedDataComplete | ParsedDataFailed,
         Field(description="Parsed email content - a discriminated union on `status`."),
     ]
+
+
+class EmailUnderstanding(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    version: Annotated[int, Field(description="Shape version of this object.")]
+    status: Annotated[
+        str,
+        Field(
+            description="`ready` (classified), `pending` (not classified yet) or `unavailable` (no classification). Treat an unfamiliar value as one added after your client was built."
+        ),
+    ]
+    classification_id: Annotated[
+        str | None, Field(description="Opaque classification id. Present when `ready`.")
+    ] = None
+    vocabulary: Annotated[
+        str | None,
+        Field(
+            description="Vocabulary version, for example `v1`. Present when `ready`."
+        ),
+    ] = None
+    classified_at: Annotated[
+        AwareDatetime | None,
+        Field(description="When the email was classified. Present when `ready`."),
+    ] = None
+    facts: Annotated[
+        dict[str, UnderstandingFact] | None,
+        Field(
+            description="Facts keyed by name. Present when `ready`. Ignore names you do not recognize.\n\nVocabulary `v1`:\n- `is_cold_outreach` (boolean)\n- `intent` (strings): `request`, `offer`, `scheduling`, `payment`, `recruiting`, `support`, `sales_outreach`, `informational`, `personal`, `other`\n- `doc_type` (strings): `correspondence`, `invoice`, `receipt`, `contract`, `resume`, `calendar_invite`, `newsletter`, `notification`, `other`\n- `sender_relationship` (string): `vendor`, `customer`, `candidate`, `investor`, `advisor`, `internal`, `community`, `unknown`\n\nTreat an unfamiliar value as one added after your client was built."
+        ),
+    ] = None
+    rules: Annotated[
+        list[UnderstandingRule] | None,
+        Field(
+            description="Rules that matched this email and granted this delivery. Present only on rule-granted deliveries."
+        ),
+    ] = None
 
 
 class ForwardResultInline(BaseModel):
@@ -1131,9 +1247,26 @@ class EmailAnalysis(BaseModel):
             description="DMARC aggregate report analysis (RFC 7489).\n\nPresent on `email.dmarc_report` events: a receiver's periodic aggregate report of DMARC authentication results for your domain. Absent on all other event types."
         ),
     ] = None
+    sender: Annotated[
+        SenderAnalysis | None,
+        Field(description="Sender authentication verdict, derived from `email.auth`."),
+    ] = None
+    understanding: Annotated[
+        EmailUnderstanding | None,
+        Field(
+            description="Classified facts about the email and, on rule-granted deliveries, the rules that matched. Present only for organizations with email rules enabled."
+        ),
+    ] = None
 
     @field_validator(
-        "spamassassin", "forward", "bounce", "tls_report", "dmarc_report", mode="before"
+        "spamassassin",
+        "forward",
+        "bounce",
+        "tls_report",
+        "dmarc_report",
+        "sender",
+        "understanding",
+        mode="before",
     )
     @classmethod
     def reject_explicit_null_optional_objects(cls, value):

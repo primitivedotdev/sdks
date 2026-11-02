@@ -159,6 +159,25 @@ type EmailReceivedEvent struct {
 	Version  string   `json:"version"`
 	Delivery Delivery `json:"delivery"`
 	Email    Email    `json:"email"`
+	// Routing is the recipient-routing decision. Nil when routing did not
+	// run.
+	Routing *RoutingDecision `json:"routing,omitempty"`
+}
+
+// RoutingDecision is the recipient-routing decision for an inbound email.
+type RoutingDecision struct {
+	// Version is the decision shape version.
+	Version int64 `json:"version,omitempty"`
+	// Outcome is "matched", "defaulted" or "none".
+	Outcome string `json:"outcome"`
+	// EndpointID is the destination endpoint, or nil when none resolved.
+	EndpointID *string `json:"endpoint_id,omitempty"`
+	// MatchedRouteID is the matching route, or nil unless "matched".
+	MatchedRouteID *string `json:"matched_route_id,omitempty"`
+	// MatchedTier is "exact", "wildcard" or "regex", or nil unless "matched".
+	MatchedTier *string `json:"matched_tier,omitempty"`
+	// DefaultScope is "domain" or "org", or nil unless "defaulted".
+	DefaultScope *string `json:"default_scope,omitempty"`
 }
 
 func (e EmailReceivedEvent) GetEvent() string { return e.Event }
@@ -306,8 +325,9 @@ type ParsedError struct {
 //
 // All fields are optional (pointer types). Which fields are present depends on
 // the analysis pipeline processing the email. Primitive's managed service
-// populates all fields. Self-hosted or third-party deployments may include
-// some, all, or none of these fields depending on their pipeline configuration.
+// populates the fields that apply to the email and the organization.
+// Self-hosted or third-party deployments may include some, all, or none of
+// these fields depending on their pipeline configuration.
 //
 // A nil field means that particular analysis was not performed, not that
 // analysis produced no results.
@@ -333,6 +353,135 @@ type EmailAnalysis struct {
 	// DMARCReport holds parsed DMARC aggregate report (RFC 7489) details.
 	// Present on email.dmarc_report events; absent on all other event types.
 	DMARCReport *DMARCReportAnalysis `json:"dmarc_report,omitempty"`
+
+	// Sender is the sender authentication verdict, derived from Email.Auth.
+	Sender *SenderAnalysis `json:"sender,omitempty"`
+
+	// Understanding holds classified facts about the email and, on
+	// rule-granted deliveries, the rules that matched. Present only for
+	// organizations with email rules enabled.
+	Understanding *EmailUnderstanding `json:"understanding,omitempty"`
+}
+
+// SenderAnalysis says whether the sender is authenticated for the From
+// domain. Not whether the email is safe.
+type SenderAnalysis struct {
+	// Authenticated is true when the sender is authenticated for the From
+	// domain.
+	Authenticated bool `json:"authenticated"`
+	// Basis is how the sender was authenticated, for example "dmarc_aligned",
+	// "spf_aligned" or "unauthenticated". Treat an unfamiliar value as one
+	// added after this SDK was built.
+	Basis string `json:"basis"`
+	// Reasons are human-readable reasons, for display only.
+	Reasons []string `json:"reasons"`
+}
+
+// EmailUnderstanding is what Primitive understood about an inbound email.
+// Only Version and Status are always set.
+type EmailUnderstanding struct {
+	// Version is the shape version of this object.
+	Version int64 `json:"version"`
+	// Status is "ready" (classified), "pending" (not classified yet) or
+	// "unavailable" (no classification). Treat an unfamiliar value as one
+	// added after this SDK was built.
+	Status string `json:"status"`
+	// ClassificationID is an opaque classification id. Set when "ready".
+	ClassificationID string `json:"classification_id,omitempty"`
+	// Vocabulary is the vocabulary version, for example "v1". Set when
+	// "ready".
+	Vocabulary string `json:"vocabulary,omitempty"`
+	// ClassifiedAt is when the email was classified. Set when "ready".
+	ClassifiedAt string `json:"classified_at,omitempty"`
+	// Facts are keyed by name. Set when "ready". Ignore names you do not
+	// recognize, and treat an unfamiliar option value as one added after this
+	// SDK was built.
+	Facts map[string]UnderstandingFact `json:"facts,omitempty"`
+	// Rules matched this email and granted this delivery. Set only on
+	// rule-granted deliveries.
+	Rules []UnderstandingRule `json:"rules,omitempty"`
+}
+
+// UnderstandingFact is a classified fact.
+type UnderstandingFact struct {
+	// Value is the fact's value as decoded by encoding/json. Read it with
+	// AsBool, AsString, AsStrings or AsNumber.
+	Value any `json:"value"`
+	// Confidence is from 0 to 1. Nil when omitted.
+	Confidence *float64 `json:"confidence,omitempty"`
+}
+
+// AsBool returns the value and true when it is a boolean.
+func (f UnderstandingFact) AsBool() (bool, bool) {
+	v, ok := f.Value.(bool)
+	return v, ok
+}
+
+// AsString returns the value and true when it is a string.
+func (f UnderstandingFact) AsString() (string, bool) {
+	v, ok := f.Value.(string)
+	return v, ok
+}
+
+// AsNumber returns the value and true when it is a number.
+func (f UnderstandingFact) AsNumber() (float64, bool) {
+	v, ok := f.Value.(float64)
+	return v, ok
+}
+
+// AsStrings returns the value and true when it is a list of strings.
+func (f UnderstandingFact) AsStrings() ([]string, bool) {
+	switch v := f.Value.(type) {
+	case []string:
+		return v, true
+	case []any:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			s, ok := item.(string)
+			if !ok {
+				return nil, false
+			}
+			out = append(out, s)
+		}
+		return out, true
+	default:
+		return nil, false
+	}
+}
+
+// UnderstandingRule is a rule that matched the email and granted this
+// delivery.
+type UnderstandingRule struct {
+	// ID is the rule id, as the email rules API returns it.
+	ID string `json:"id"`
+	// Version is the rule version that matched.
+	Version int64 `json:"version,omitempty"`
+	// Name is the rule name.
+	Name string `json:"name,omitempty"`
+	// Description is the plain-English description the rule was written from.
+	Description string `json:"description,omitempty"`
+	// Conditions are the rule's conditions and whether each held.
+	Conditions []UnderstandingRuleCondition `json:"conditions,omitempty"`
+	// Questions are the rule's questions and their answers.
+	Questions []UnderstandingRuleQuestion `json:"questions,omitempty"`
+}
+
+// UnderstandingRuleCondition is a rule condition.
+type UnderstandingRuleCondition struct {
+	// Explanation is the condition in plain English.
+	Explanation string `json:"explanation,omitempty"`
+	// Matched reports whether the condition held.
+	Matched bool `json:"matched"`
+}
+
+// UnderstandingRuleQuestion is a rule question and its answer.
+type UnderstandingRuleQuestion struct {
+	// Question is the question.
+	Question string `json:"question,omitempty"`
+	// Answer is true for yes.
+	Answer bool `json:"answer"`
+	// Confidence is from 0 to 1. Nil when omitted.
+	Confidence *float64 `json:"confidence,omitempty"`
 }
 
 // BounceAnalysis is the parsed delivery status notification carried on

@@ -135,6 +135,13 @@ type Handler interface {
 	//
 	// POST /cli/logout
 	CliLogout(ctx context.Context, req OptCliLogoutInput) (CliLogoutRes, error)
+	// CompileEmailRule implements compileEmailRule operation.
+	//
+	// Compiles a plain-English description into a rule tree, with an
+	// explanation, assumptions and warnings. Nothing is saved.
+	//
+	// POST /email-rules/compile
+	CompileEmailRule(ctx context.Context, req *CompileEmailRuleInput) (CompileEmailRuleRes, error)
 	// CompleteWebhookEvent implements completeWebhookEvent operation.
 	//
 	// Report normalized handling evidence for the queue, attempt and lease. Required JSON fields:
@@ -221,6 +228,14 @@ type Handler interface {
 	//
 	// POST /x402/email-challenges
 	CreateEmailChallenge(ctx context.Context, req *CreateEmailChallengeInput, params CreateEmailChallengeParams) (CreateEmailChallengeRes, error)
+	// CreateEmailRule implements createEmailRule operation.
+	//
+	// Saves a new rule with its first version. New rules start in `observe`
+	// unless `state` is `draft`. The rule never reaches mail the author cannot
+	// read.
+	//
+	// POST /email-rules
+	CreateEmailRule(ctx context.Context, req *CreateEmailRuleInput) (CreateEmailRuleRes, error)
 	// CreateEndpoint implements createEndpoint operation.
 	//
 	// Creates a new webhook endpoint. If a deactivated endpoint
@@ -408,6 +423,14 @@ type Handler interface {
 	//
 	// DELETE /emails/{id}
 	DeleteEmail(ctx context.Context, params DeleteEmailParams) (DeleteEmailRes, error)
+	// DeleteEmailRule implements deleteEmailRule operation.
+	//
+	// Deletes a rule with its versions, its decisions and the access it
+	// granted. The author, or a caller who reads the whole organization's
+	// mail, may delete it.
+	//
+	// DELETE /email-rules/{id}
+	DeleteEmailRule(ctx context.Context, params DeleteEmailRuleParams) (DeleteEmailRuleRes, error)
 	// DeleteEndpoint implements deleteEndpoint operation.
 	//
 	// Soft-deletes a webhook endpoint. The endpoint will no longer
@@ -805,6 +828,12 @@ type Handler interface {
 	//
 	// GET /emails/{id}
 	GetEmail(ctx context.Context, params GetEmailParams) (GetEmailRes, error)
+	// GetEmailRule implements getEmailRule operation.
+	//
+	// A rule and its current version.
+	//
+	// GET /email-rules/{id}
+	GetEmailRule(ctx context.Context, params GetEmailRuleParams) (GetEmailRuleRes, error)
 	// GetFunction implements getFunction operation.
 	//
 	// Returns the full record for a function, including its current
@@ -1177,6 +1206,19 @@ type Handler interface {
 	//
 	// GET /emails/{id}/attachments/{attachment}/members
 	ListEmailAttachmentArchiveMembers(ctx context.Context, params ListEmailAttachmentArchiveMembersParams) (ListEmailAttachmentArchiveMembersRes, error)
+	// ListEmailRuleDecisions implements listEmailRuleDecisions operation.
+	//
+	// What the rule decided for each email it was evaluated against, newest
+	// first, for emails the caller can read.
+	//
+	// GET /email-rules/{id}/decisions
+	ListEmailRuleDecisions(ctx context.Context, params ListEmailRuleDecisionsParams) (ListEmailRuleDecisionsRes, error)
+	// ListEmailRules implements listEmailRules operation.
+	//
+	// Rules the caller can see, newest first.
+	//
+	// GET /email-rules
+	ListEmailRules(ctx context.Context, params ListEmailRulesParams) (ListEmailRulesRes, error)
 	// ListEmails implements listEmails operation.
 	//
 	// Returns a paginated list of INBOUND emails received at your
@@ -1945,6 +1987,14 @@ type Handler interface {
 	//
 	// PATCH /domains/{id}
 	UpdateDomain(ctx context.Context, req *UpdateDomainInput, params UpdateDomainParams) (UpdateDomainRes, error)
+	// UpdateEmailRule implements updateEmailRule operation.
+	//
+	// Renames the rule, saves a new version, or changes its state. Only the
+	// author may rename it, add a version, or set `observe` or `active`;
+	// others may only set `draft`.
+	//
+	// PATCH /email-rules/{id}
+	UpdateEmailRule(ctx context.Context, req *UpdateEmailRuleInput, params UpdateEmailRuleParams) (UpdateEmailRuleRes, error)
 	// UpdateEndpoint implements updateEndpoint operation.
 	//
 	// Updates an active webhook endpoint. If the URL is changed, the old

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -56,6 +57,27 @@ def _load_text(*parts: str) -> str:
     return FIXTURES.joinpath(*parts).read_text()
 
 
+def _dump_with_instants(model: Any) -> Any:
+    """Dump a model to JSON values, with `classified_at` as a datetime so a
+    fixture's millisecond timestamp compares equal to Pydantic's output."""
+    if model is None:
+        return None
+    dumped = model.model_dump(mode="json")
+    if isinstance(dumped.get("classified_at"), str):
+        dumped["classified_at"] = _instant(dumped["classified_at"])
+    return dumped
+
+
+def _instant(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+def _expected_with_instants(expected: Any) -> Any:
+    if not isinstance(expected, dict) or "classified_at" not in expected:
+        return expected
+    return {**expected, "classified_at": _instant(expected["classified_at"])}
+
+
 def test_shared_webhook_validation_cases() -> None:
     fixtures = _load_json("webhook", "validation-cases.json")["cases"]
     for case in fixtures:
@@ -75,6 +97,18 @@ def test_shared_webhook_validation_cases() -> None:
                     event.email.automated_reasons
                     == case["expected"]["automated_reasons"]
                 ), case["name"]
+            if "understanding" in case["expected"]:
+                assert _dump_with_instants(
+                    event.email.analysis.understanding
+                ) == _expected_with_instants(case["expected"]["understanding"]), case[
+                    "name"
+                ]
+            if "sender" in case["expected"]:
+                sender = event.email.analysis.sender
+                actual_sender = (
+                    None if sender is None else sender.model_dump(mode="json")
+                )
+                assert actual_sender == case["expected"]["sender"], case["name"]
             if "bounce" in case["expected"]:
                 bounce = event.email.analysis.bounce
                 actual_bounce = {

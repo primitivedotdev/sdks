@@ -76,6 +76,10 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 					// reason; JSON null means "expect the field absent".
 					Automated        json.RawMessage `json:"automated"`
 					AutomatedReasons json.RawMessage `json:"automated_reasons"`
+					// Understanding and Sender stay raw for the same reason:
+					// JSON null means "expect the block absent".
+					Understanding json.RawMessage `json:"understanding"`
+					Sender        json.RawMessage `json:"sender"`
 					// Bounce, when set, asserts the bounce link fields;
 					// null values mean nil.
 					Bounce *struct {
@@ -120,6 +124,24 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 					}
 					if !reflect.DeepEqual(event.Email.AutomatedReasons, wantReasons) {
 						t.Fatalf("%s: unexpected automated_reasons %#v, want %#v", testCase.Name, event.Email.AutomatedReasons, wantReasons)
+					}
+				}
+				if len(testCase.Expected.Understanding) > 0 {
+					var wantUnderstanding *EmailUnderstanding
+					if err := json.Unmarshal(testCase.Expected.Understanding, &wantUnderstanding); err != nil {
+						t.Fatalf("%s: decode expected understanding: %v", testCase.Name, err)
+					}
+					if !reflect.DeepEqual(event.Email.Analysis.Understanding, wantUnderstanding) {
+						t.Fatalf("%s: unexpected understanding %+v, want %+v", testCase.Name, event.Email.Analysis.Understanding, wantUnderstanding)
+					}
+				}
+				if len(testCase.Expected.Sender) > 0 {
+					var wantSender *SenderAnalysis
+					if err := json.Unmarshal(testCase.Expected.Sender, &wantSender); err != nil {
+						t.Fatalf("%s: decode expected sender: %v", testCase.Name, err)
+					}
+					if !reflect.DeepEqual(event.Email.Analysis.Sender, wantSender) {
+						t.Fatalf("%s: unexpected sender %+v, want %+v", testCase.Name, event.Email.Analysis.Sender, wantSender)
 					}
 				}
 				if want := testCase.Expected.Bounce; want != nil {

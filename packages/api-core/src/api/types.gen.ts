@@ -734,7 +734,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'connection_removed' | 'connection_create_request_conflict' | 'connection_already_claimed' | 'connection_revoked' | 'connection_cleanup_pending' | 'attachment_name_ambiguous' | 'attachment_not_archive' | 'archive_unsafe_path' | 'archive_invalid' | 'archive_unsupported' | 'archive_limit_exceeded' | 'archive_busy' | 'latest_message_mismatch' | 'latest_message_thread_unresolved' | 'thread_busy' | 'sent_mail_search_unavailable' | 'member_address_unavailable' | 'member_address_history_confirmation_required' | 'member_address_immutable' | 'member_address_domain_unavailable' | 'email_admission_unavailable' | 'pull_subscription_requires_agent_connection' | 'address_in_use' | 'address_not_owned' | 'address_owned_by_another_org' | 'agent_account_managed_domain_only' | 'agent_changed' | 'agent_limit' | 'agent_misconfigured' | 'agent_not_defined' | 'agent_not_found' | 'agent_unreachable' | 'already_claimed' | 'already_member' | 'bad_request' | 'body_not_supported' | 'build_failed' | 'builder_unavailable' | 'chunk_too_large' | 'chunks_missing' | 'claim_not_pending' | 'clerk_failed' | 'code_expired' | 'contact_request_invalid' | 'contact_request_not_ready' | 'contact_request_unauthenticated' | 'contact_request_unavailable' | 'cursor_expired' | 'delete_failed' | 'deploy_failed' | 'direct_delivery_failed' | 'direct_delivery_unavailable' | 'directory_limit' | 'dns_publication_failed' | 'dns_publication_pending' | 'dns_verification_failed' | 'download_token_expired' | 'download_token_invalid' | 'email_in_use' | 'embedding_provider_unavailable' | 'expired' | 'fresh_send_not_authorized' | 'function_effect_email_mismatch' | 'function_effect_mismatch' | 'function_forked' | 'function_github_linked' | 'function_not_deployed' | 'function_scope_forbidden' | 'handle_in_cooldown' | 'handle_reserved' | 'handle_taken' | 'hash_mismatch' | 'hipaa_mode_check_unavailable' | 'hipaa_mode_external_send_blocked' | 'idempotency_conflict' | 'invalid_code' | 'invalid_cursor' | 'invalid_email' | 'invalid_input' | 'invalid_payload_reference' | 'invalid_request' | 'invalid_step' | 'invalid_token' | 'invalid_topic_sources' | 'invitation_accepted' | 'invitation_changed' | 'invitation_pending' | 'invitation_sending' | 'invitation_unconfirmed' | 'invitations_pending' | 'mail_relay_unavailable' | 'mail_routing_conflict' | 'mail_topic_edit_conflict' | 'mail_topic_generation_conflict' | 'mailbox_not_found' | 'managed_build_failed' | 'managed_domain' | 'member_changed' | 'message_not_found' | 'name_taken' | 'network_member_excluded' | 'network_member_not_found' | 'network_peer_not_found' | 'network_view_denied' | 'no_code' | 'no_endpoint' | 'not_a_template_install' | 'not_claimable' | 'not_pending' | 'open_policy_not_allowed' | 'outbound_edge_rejected' | 'outbound_email_limit_exceeded' | 'outbound_relay_timeout' | 'payload_too_large' | 'presence_admission_busy' | 'presence_idempotency_conflict' | 'presence_probe_stale' | 'pro_plan_required' | 'project_changed' | 'protocol_unavailable' | 'publication_not_found' | 'publish_policy_denied' | 'recipient_changed' | 'recipient_suppressed' | 'registry_create_not_allowed' | 'registry_not_found' | 'rename_not_allowed' | 'resend_limit_exceeded' | 'resend_too_soon' | 'schedule_allowlist_not_provided' | 'schedule_sender_collision' | 'schedule_wake_disabled' | 'scheduled_payload_invalid' | 'search_unavailable' | 'semantic_search_not_enabled' | 'send_failed' | 'sender_not_authorized' | 'sent_email_tail_unavailable' | 'settlement_unresolved' | 'shared_parent_recipient' | 'shopping_binding_conflict' | 'shopping_decision_conflict' | 'shopping_identity_conflict' | 'shopping_not_found' | 'shopping_owner_mail_required' | 'shopping_package_not_found' | 'shopping_proposal_expired' | 'shopping_replay_conflict' | 'shopping_source_unavailable' | 'shopping_too_many_shipments' | 'shopping_tracking_invalid' | 'shopping_version_conflict' | 'shopping_wake_unavailable' | 'shredded' | 'sign_in_email_change_required' | 'signal_not_allowed' | 'signal_parent_not_ready' | 'signal_sender_unauthenticated' | 'slug_taken' | 'step_rejected' | 'storage_error' | 'storage_limit_exceeded' | 'template_unavailable' | 'template_update_failed' | 'terms_not_accepted' | 'too_many_attempts' | 'too_many_concurrent_builds' | 'too_many_resends' | 'topic_edit_too_large' | 'topic_generation_too_large' | 'unavailable' | 'unknown_chunk' | 'update_needs_input' | 'upstream_error' | 'usage_limit_exceeded' | 'vendor_unavailable';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'connection_removed' | 'connection_create_request_conflict' | 'connection_already_claimed' | 'connection_revoked' | 'connection_cleanup_pending' | 'attachment_name_ambiguous' | 'attachment_not_archive' | 'archive_unsafe_path' | 'archive_invalid' | 'archive_unsupported' | 'archive_limit_exceeded' | 'archive_busy' | 'latest_message_mismatch' | 'latest_message_thread_unresolved' | 'thread_busy' | 'sent_mail_search_unavailable' | 'member_address_unavailable' | 'member_address_history_confirmation_required' | 'member_address_immutable' | 'member_address_domain_unavailable' | 'email_admission_unavailable' | 'pull_subscription_requires_agent_connection' | 'address_in_use' | 'address_not_owned' | 'address_owned_by_another_org' | 'agent_account_managed_domain_only' | 'agent_changed' | 'agent_limit' | 'agent_misconfigured' | 'agent_not_defined' | 'agent_not_found' | 'agent_unreachable' | 'already_claimed' | 'already_member' | 'bad_request' | 'body_not_supported' | 'build_failed' | 'builder_unavailable' | 'chunk_too_large' | 'chunks_missing' | 'claim_not_pending' | 'clerk_failed' | 'code_expired' | 'contact_request_invalid' | 'contact_request_not_ready' | 'contact_request_unauthenticated' | 'contact_request_unavailable' | 'cursor_expired' | 'delete_failed' | 'deploy_failed' | 'direct_delivery_failed' | 'direct_delivery_unavailable' | 'directory_limit' | 'dns_publication_failed' | 'dns_publication_pending' | 'dns_verification_failed' | 'download_token_expired' | 'download_token_invalid' | 'email_in_use' | 'email_rule_author_only' | 'email_rule_compiler_unavailable' | 'email_rule_conflict' | 'email_rule_not_compiled' | 'embedding_provider_unavailable' | 'expired' | 'fresh_send_not_authorized' | 'function_effect_email_mismatch' | 'function_effect_mismatch' | 'function_forked' | 'function_github_linked' | 'function_not_deployed' | 'function_scope_forbidden' | 'grant_forbidden' | 'handle_in_cooldown' | 'handle_reserved' | 'handle_taken' | 'hash_mismatch' | 'hipaa_mode_check_unavailable' | 'hipaa_mode_external_send_blocked' | 'idempotency_conflict' | 'invalid_code' | 'invalid_cursor' | 'invalid_email' | 'invalid_input' | 'invalid_payload_reference' | 'invalid_request' | 'invalid_step' | 'invalid_token' | 'invalid_topic_sources' | 'invitation_accepted' | 'invitation_changed' | 'invitation_pending' | 'invitation_sending' | 'invitation_unconfirmed' | 'invitations_pending' | 'mail_relay_unavailable' | 'mail_routing_conflict' | 'mail_topic_edit_conflict' | 'mail_topic_generation_conflict' | 'mailbox_not_found' | 'managed_build_failed' | 'managed_domain' | 'member_changed' | 'message_not_found' | 'name_taken' | 'network_member_excluded' | 'network_member_not_found' | 'network_peer_not_found' | 'network_view_denied' | 'no_code' | 'no_endpoint' | 'not_a_template_install' | 'not_claimable' | 'not_pending' | 'open_policy_not_allowed' | 'outbound_edge_rejected' | 'outbound_email_limit_exceeded' | 'outbound_relay_timeout' | 'payload_too_large' | 'presence_admission_busy' | 'presence_idempotency_conflict' | 'presence_probe_stale' | 'pro_plan_required' | 'project_changed' | 'protocol_unavailable' | 'publication_not_found' | 'publish_policy_denied' | 'recipient_changed' | 'recipient_suppressed' | 'registry_create_not_allowed' | 'registry_not_found' | 'rename_not_allowed' | 'resend_limit_exceeded' | 'resend_too_soon' | 'schedule_allowlist_not_provided' | 'schedule_sender_collision' | 'schedule_wake_disabled' | 'scheduled_payload_invalid' | 'search_unavailable' | 'semantic_search_not_enabled' | 'send_failed' | 'sender_not_authorized' | 'sent_email_tail_unavailable' | 'settlement_unresolved' | 'shared_parent_recipient' | 'shopping_binding_conflict' | 'shopping_decision_conflict' | 'shopping_identity_conflict' | 'shopping_not_found' | 'shopping_owner_mail_required' | 'shopping_package_not_found' | 'shopping_proposal_expired' | 'shopping_replay_conflict' | 'shopping_source_unavailable' | 'shopping_too_many_shipments' | 'shopping_tracking_invalid' | 'shopping_version_conflict' | 'shopping_wake_unavailable' | 'shredded' | 'sign_in_email_change_required' | 'signal_not_allowed' | 'signal_parent_not_ready' | 'signal_sender_unauthenticated' | 'slug_taken' | 'step_rejected' | 'storage_error' | 'storage_limit_exceeded' | 'template_unavailable' | 'template_update_failed' | 'terms_not_accepted' | 'too_many_attempts' | 'too_many_concurrent_builds' | 'too_many_resends' | 'topic_edit_too_large' | 'topic_generation_too_large' | 'unavailable' | 'unknown_chunk' | 'update_needs_input' | 'upstream_error' | 'usage_limit_exceeded' | 'vendor_unavailable';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -5761,6 +5761,266 @@ export type CallerIdentity = {
 };
 
 /**
+ * A compiled rule. The server checks it against the column contract on save.
+ */
+export type EmailRuleTree = {
+    /**
+     * Tree format version.
+     */
+    version: number;
+    /**
+     * Column contract version, for example `v1`.
+     */
+    vocabulary: string;
+    /**
+     * The rule's conditions, as a condition or an `all`, `any` or `not` group.
+     */
+    when: {
+        [key: string]: unknown;
+    };
+    /**
+     * Yes/no questions asked after the conditions match. Every answer must be yes.
+     */
+    questions: Array<string>;
+};
+
+/**
+ * The SQL a rule renders to.
+ */
+export type EmailRuleSql = {
+    /**
+     * A parameterized boolean expression.
+     */
+    expression: string;
+    /**
+     * Values bound to the expression's parameters.
+     */
+    params: Array<unknown>;
+};
+
+export type CompileEmailRuleInput = {
+    /**
+     * What the rule should match, in plain English.
+     */
+    english: string;
+    /**
+     * Also return the rule's SQL.
+     */
+    include_sql?: boolean;
+};
+
+export type CompiledEmailRule = {
+    tree: EmailRuleTree;
+    /**
+     * What the rule matches.
+     */
+    explanation: string;
+    /**
+     * Readings chosen where the description was ambiguous.
+     */
+    assumptions: Array<string>;
+    /**
+     * What the column contract cannot express, and how the rule handles it.
+     */
+    warnings: Array<string>;
+    /**
+     * Opaque compiler version. Compare only for equality.
+     */
+    compiled_by: string;
+    sql?: EmailRuleSql;
+};
+
+export type CreateEmailRuleInput = {
+    /**
+     * Rule name.
+     */
+    name: string;
+    /**
+     * `observe` (default) records matches and grants nothing; `draft` is not evaluated.
+     */
+    state?: 'draft' | 'observe';
+    /**
+     * The plain-English description the rule was compiled from.
+     */
+    english: string;
+    tree: EmailRuleTree;
+    /**
+     * What the rule matches.
+     */
+    explanation: string;
+    /**
+     * Readings chosen where the description was ambiguous.
+     */
+    assumptions?: Array<string>;
+    /**
+     * What the rule does not express.
+     */
+    warnings?: Array<string>;
+    /**
+     * The compile response's `compiled_by`, or `member` (default) for a tree you wrote.
+     */
+    compiled_by?: string;
+};
+
+/**
+ * Send at least one field. A new version needs `english`, `tree` and `explanation`; `assumptions`, `warnings` and `compiled_by` come only with them.
+ */
+export type UpdateEmailRuleInput = {
+    /**
+     * Rule name.
+     */
+    name?: string;
+    /**
+     * `draft` disables the rule, `observe` records decisions, `active` also grants matches.
+     */
+    state?: 'draft' | 'observe' | 'active';
+    /**
+     * The plain-English description the new version was compiled from.
+     */
+    english?: string;
+    tree?: EmailRuleTree;
+    /**
+     * What the new version matches.
+     */
+    explanation?: string;
+    /**
+     * Readings chosen where the description was ambiguous.
+     */
+    assumptions?: Array<string>;
+    /**
+     * What the rule does not express.
+     */
+    warnings?: Array<string>;
+    /**
+     * The compile response's `compiled_by`, or `member` (default) for a tree you wrote.
+     */
+    compiled_by?: string;
+};
+
+export type EmailRule = {
+    /**
+     * Rule id.
+     */
+    id: string;
+    /**
+     * Rule name.
+     */
+    name: string;
+    /**
+     * `draft`, `observe` or `active`. Treat an unfamiliar value as one added after your client was built.
+     */
+    state: string;
+    /**
+     * Current version number, or null.
+     */
+    current_version: number | null;
+    /**
+     * The member who wrote the rule.
+     */
+    author_user_id: string;
+    /**
+     * Whether the caller wrote the rule.
+     */
+    is_author: boolean;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
+ * A saved rule version.
+ */
+export type EmailRuleVersion = {
+    /**
+     * Version number.
+     */
+    version: number;
+    /**
+     * The plain-English description it was compiled from.
+     */
+    english: string;
+    tree: EmailRuleTree;
+    /**
+     * What it matches.
+     */
+    explanation: string;
+    /**
+     * Readings chosen where the description was ambiguous.
+     */
+    assumptions: Array<string>;
+    /**
+     * What it does not express.
+     */
+    warnings: Array<string>;
+    /**
+     * Who produced the tree, as the saver stated it (`member` or a compiler version). Not verified.
+     */
+    compiled_by: string;
+    /**
+     * Column contract version.
+     */
+    vocabulary: string;
+    created_at: string;
+    sql?: EmailRuleSql;
+};
+
+export type EmailRuleDetail = EmailRule & {
+    /**
+     * Current version, or null.
+     */
+    current: EmailRuleVersion | null;
+};
+
+/**
+ * A rule's decision for one email.
+ */
+export type EmailRuleDecision = {
+    id: string;
+    /**
+     * The email.
+     */
+    email_id: string;
+    /**
+     * The deciding rule version.
+     */
+    rule_version: number;
+    /**
+     * The classification it used.
+     */
+    classification_id: string;
+    /**
+     * Whether the rule matched.
+     */
+    matched: boolean;
+    /**
+     * Whether all but one part held.
+     */
+    near_miss: boolean;
+    /**
+     * How each top-level part decided.
+     */
+    parts: Array<unknown>;
+    /**
+     * Answers to the rule's questions, when asked.
+     */
+    question_answers: Array<unknown>;
+    created_at: string;
+};
+
+/**
+ * Paging.
+ */
+export type EmailRulePageMeta = {
+    /**
+     * Page size.
+     */
+    limit: number;
+    /**
+     * Next page cursor, or null on the last page.
+     */
+    cursor: string | null;
+};
+
+/**
  * The attachment's exact filename from its metadata. Any name, digits only included. No other query parameter is accepted.
  */
 export type AttachmentFilename = string;
@@ -5843,6 +6103,16 @@ export type MemoryScopeQueryType = 'org' | 'function';
  *
  */
 export type MemoryScopeId = string;
+
+/**
+ * Page size.
+ */
+export type EmailRuleLimit = number;
+
+/**
+ * `meta.cursor` from the previous page.
+ */
+export type EmailRuleCursor = string;
 
 export type StartCliLoginData = {
     body?: StartCliLoginInput;
@@ -14330,3 +14600,351 @@ export type ProvisionMemberAddressResponses = {
 };
 
 export type ProvisionMemberAddressResponse = ProvisionMemberAddressResponses[keyof ProvisionMemberAddressResponses];
+
+export type CompileEmailRuleData = {
+    body: CompileEmailRuleInput;
+    path?: never;
+    query?: never;
+    url: '/email-rules/compile';
+};
+
+export type CompileEmailRuleErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * `email_rule_not_compiled`: the description could not be compiled. `details.reason` is `refused`, `invalid` or `truncated`.
+     */
+    422: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+    /**
+     * `email_rule_compiler_unavailable`: retry later.
+     */
+    503: ErrorResponse;
+};
+
+export type CompileEmailRuleError = CompileEmailRuleErrors[keyof CompileEmailRuleErrors];
+
+export type CompileEmailRuleResponses = {
+    /**
+     * The compiled rule
+     */
+    200: SuccessEnvelope & {
+        data?: CompiledEmailRule;
+    };
+};
+
+export type CompileEmailRuleResponse = CompileEmailRuleResponses[keyof CompileEmailRuleResponses];
+
+export type ListEmailRulesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page size.
+         */
+        limit?: number;
+        /**
+         * `meta.cursor` from the previous page.
+         */
+        cursor?: string;
+    };
+    url: '/email-rules';
+};
+
+export type ListEmailRulesErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type ListEmailRulesError = ListEmailRulesErrors[keyof ListEmailRulesErrors];
+
+export type ListEmailRulesResponses = {
+    /**
+     * A page of rules
+     */
+    200: SuccessEnvelope & {
+        data?: Array<EmailRule>;
+        meta?: EmailRulePageMeta;
+    };
+};
+
+export type ListEmailRulesResponse = ListEmailRulesResponses[keyof ListEmailRulesResponses];
+
+export type CreateEmailRuleData = {
+    body: CreateEmailRuleInput;
+    path?: never;
+    query?: never;
+    url: '/email-rules';
+};
+
+export type CreateEmailRuleErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type CreateEmailRuleError = CreateEmailRuleErrors[keyof CreateEmailRuleErrors];
+
+export type CreateEmailRuleResponses = {
+    /**
+     * The created rule with its first version
+     */
+    201: SuccessEnvelope & {
+        data?: EmailRuleDetail;
+    };
+};
+
+export type CreateEmailRuleResponse = CreateEmailRuleResponses[keyof CreateEmailRuleResponses];
+
+export type DeleteEmailRuleData = {
+    body?: never;
+    path: {
+        /**
+         * The rule id.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/email-rules/{id}';
+};
+
+export type DeleteEmailRuleErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type DeleteEmailRuleError = DeleteEmailRuleErrors[keyof DeleteEmailRuleErrors];
+
+export type DeleteEmailRuleResponses = {
+    /**
+     * Resource deleted
+     */
+    200: SuccessEnvelope & {
+        data?: {
+            deleted: boolean;
+        };
+    };
+};
+
+export type DeleteEmailRuleResponse = DeleteEmailRuleResponses[keyof DeleteEmailRuleResponses];
+
+export type GetEmailRuleData = {
+    body?: never;
+    path: {
+        /**
+         * The rule id.
+         */
+        id: string;
+    };
+    query?: {
+        /**
+         * `true` to include the SQL.
+         */
+        include_sql?: 'true' | 'false';
+    };
+    url: '/email-rules/{id}';
+};
+
+export type GetEmailRuleErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type GetEmailRuleError = GetEmailRuleErrors[keyof GetEmailRuleErrors];
+
+export type GetEmailRuleResponses = {
+    /**
+     * The rule with its current version
+     */
+    200: SuccessEnvelope & {
+        data?: EmailRuleDetail;
+    };
+};
+
+export type GetEmailRuleResponse = GetEmailRuleResponses[keyof GetEmailRuleResponses];
+
+export type UpdateEmailRuleData = {
+    body: UpdateEmailRuleInput;
+    path: {
+        /**
+         * The rule id.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/email-rules/{id}';
+};
+
+export type UpdateEmailRuleErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * `email_rule_author_only`: only the author may make this change. Credential checks return `forbidden` or `grant_forbidden`.
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * `email_rule_conflict`: the rule changed while saving. Read it and retry.
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type UpdateEmailRuleError = UpdateEmailRuleErrors[keyof UpdateEmailRuleErrors];
+
+export type UpdateEmailRuleResponses = {
+    /**
+     * The rule with its current version
+     */
+    200: SuccessEnvelope & {
+        data?: EmailRuleDetail;
+    };
+};
+
+export type UpdateEmailRuleResponse = UpdateEmailRuleResponses[keyof UpdateEmailRuleResponses];
+
+export type ListEmailRuleDecisionsData = {
+    body?: never;
+    path: {
+        /**
+         * The rule id.
+         */
+        id: string;
+    };
+    query?: {
+        /**
+         * Page size.
+         */
+        limit?: number;
+        /**
+         * `meta.cursor` from the previous page.
+         */
+        cursor?: string;
+    };
+    url: '/email-rules/{id}/decisions';
+};
+
+export type ListEmailRuleDecisionsErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type ListEmailRuleDecisionsError = ListEmailRuleDecisionsErrors[keyof ListEmailRuleDecisionsErrors];
+
+export type ListEmailRuleDecisionsResponses = {
+    /**
+     * A page of decisions
+     */
+    200: SuccessEnvelope & {
+        data?: Array<EmailRuleDecision>;
+        meta?: EmailRulePageMeta;
+    };
+};
+
+export type ListEmailRuleDecisionsResponse = ListEmailRuleDecisionsResponses[keyof ListEmailRuleDecisionsResponses];
