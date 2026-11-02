@@ -1172,10 +1172,14 @@ saved, so a session is never pointed at a profile that does not exist.
 `PRIMITIVE_AGENT_ADDRESS` is for other tools in the session that need the
 agent's email address without running the CLI. It is set only together with
 `PRIMITIVE_AGENT_PROFILE` and always names that profile's address.
-`primitive whoami` prints the address alone on its first line, offline, and
+`primitive whoami` prints the address alone on its first line, and
 `primitive whoami --json` adds `address`, `profile` and `source`
 (`session_hook` for the session's own exported agent, `env` for any other
-`PRIMITIVE_AGENT_PROFILE`).
+`PRIMITIVE_AGENT_PROFILE`). It also asks Primitive whether the connection is
+still accepted: `verification` is `live` when it is, and `offline` when
+Primitive could not be reached, in which case only the saved identity is
+shown. When Primitive confirms the connection was revoked, `whoami` says so
+and exits 1; `agent connect --status` does the same.
 
 Commands that manage the member login (`login`, `logout`, `signup`,
 `agent enroll`, and the other commands that refuse a selected profile) still

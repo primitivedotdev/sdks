@@ -106,6 +106,68 @@ export function recordHookMailCheck(options: {
   }
 }
 
+function hookMailCheckFailurePath(
+  configDir: string,
+  profileName: string,
+  sessionId: string,
+): string {
+  return join(
+    agentProfileDirectory(configDir, profileName),
+    `pending-mail-${sessionId}.mail-check-failed.json`,
+  );
+}
+
+/**
+ * Why a hook-run listener's mail check failed in a way only the owner or a
+ * new setup can fix. `connection_revoked`: Primitive confirmed the
+ * credential was revoked. `unauthorized`: Primitive refused the credential
+ * (HTTP 401 or 403) but did not confirm a revocation.
+ */
+export type HookMailCheckFailure = "connection_revoked" | "unauthorized";
+
+/**
+ * Record that a listener run by this session's receive hook had its mail
+ * check refused by Primitive, so status reports the receiver down at once
+ * instead of waiting for the last successful check to age out. A later
+ * successful check supersedes it. Fails open.
+ */
+export function recordHookMailCheckFailure(options: {
+  configDir: string;
+  profileName: string;
+  sessionId: string;
+  reason: HookMailCheckFailure;
+  at?: number;
+}): void {
+  try {
+    if (!SESSION_UUID.test(options.sessionId)) return;
+    writeMailJson(
+      hookMailCheckFailurePath(
+        resolve(options.configDir),
+        agentProfileName(options.profileName),
+        options.sessionId.toLowerCase(),
+      ),
+      {
+        version: 1,
+        at: new Date(options.at ?? Date.now()).toISOString(),
+        reason: options.reason,
+      },
+    );
+  } catch {
+    /* Status falls back to the last successful check. */
+  }
+}
+
+function recordedFailure(
+  value: unknown,
+): { at: string; reason: HookMailCheckFailure } | null {
+  const at = recordedAt(value);
+  if (at === null || !record(value)) return null;
+  return value.reason === "connection_revoked" ||
+    value.reason === "unauthorized"
+    ? { at, reason: value.reason }
+    : null;
+}
+
 function recordedAt(value: unknown): string | null {
   return record(value) &&
     value.version === 1 &&
@@ -119,9 +181,14 @@ function recordedAt(value: unknown): string | null {
  * `checked_recently`: a listener run by this session's receive hook
  * completed a mail check with the server within HOOK_RECENT_MS. It shows the
  * hook receiver works; it does not prove a wake from idle, which only
- * arriving mail shows.
+ * arriving mail shows. `check_failed`: the latest mail check a hook-run
+ * listener attempted was refused by Primitive (see lastMailCheckFailure),
+ * and no successful check has been recorded since.
  */
-export type ClaudeWakeHookLiveness = "checked_recently" | "unknown";
+export type ClaudeWakeHookLiveness =
+  | "checked_recently"
+  | "check_failed"
+  | "unknown";
 
 export function claudeWakeHookStatus(options: {
   configDir: string;
@@ -137,6 +204,8 @@ export function claudeWakeHookStatus(options: {
   lastFiredAt: string | null;
   /** When a hook-run listener last completed a mail check. */
   lastMailCheckAt: string | null;
+  /** The latest refused mail check, when no successful one followed it. */
+  lastMailCheckFailure: { at: string; reason: HookMailCheckFailure } | null;
   firedRecently: boolean;
   liveness: ClaudeWakeHookLiveness;
 } {
@@ -144,6 +213,7 @@ export function claudeWakeHookStatus(options: {
     installed: false,
     lastFiredAt: null,
     lastMailCheckAt: null,
+    lastMailCheckFailure: null,
     firedRecently: false,
     liveness: "unknown" as const,
   };
@@ -197,6 +267,15 @@ export function claudeWakeHookStatus(options: {
     const lastMailCheckAt = recordedAt(
       readMailJson(hookMailCheckPath(configDir, profileName, sessionId)),
     );
+    const failure = recordedFailure(
+      readMailJson(hookMailCheckFailurePath(configDir, profileName, sessionId)),
+    );
+    const lastMailCheckFailure =
+      failure &&
+      (lastMailCheckAt === null ||
+        Date.parse(failure.at) >= Date.parse(lastMailCheckAt))
+        ? failure
+        : null;
     const now = options.now ?? Date.now();
     const recent = (at: string | null) => {
       if (at === null) return false;
@@ -207,11 +286,17 @@ export function claudeWakeHookStatus(options: {
       installed,
       lastFiredAt,
       lastMailCheckAt,
+      lastMailCheckFailure,
       firedRecently: installed && recent(lastFiredAt),
       // A hook that runs is not enough: its mail check may fail. Only a
-      // completed check counts.
-      liveness:
-        installed && recent(lastMailCheckAt) ? "checked_recently" : "unknown",
+      // completed check counts, and a refused check newer than it wins.
+      liveness: !installed
+        ? "unknown"
+        : lastMailCheckFailure
+          ? "check_failed"
+          : recent(lastMailCheckAt)
+            ? "checked_recently"
+            : "unknown",
     };
   } catch {
     return unavailable;
