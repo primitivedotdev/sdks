@@ -1,4 +1,5 @@
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -39,6 +40,7 @@ import {
   retryPendingDisconnects,
   revokeStaleSessionAgents,
   type SessionRegisterDependencies,
+  sessionRegisterSkipped,
   staleSessionAgents,
 } from "../../src/oclif/machine-session.js";
 import { replaceSessionAddresses } from "../../src/oclif/session-address-guard.js";
@@ -620,6 +622,48 @@ describe("agent session-register", () => {
       dependencies,
     });
     expect(codex.status).toBe("registered");
+  });
+
+  it("skips with skipped_setup when PRIMITIVE_SESSION_REGISTER=skip, writing no record", async () => {
+    const { configDir } = setup();
+    const { calls, dependencies } = fakeDependencies(configDir);
+    for (const runtime of ["claude", "codex"] as const) {
+      const result = await registerSession({
+        configDir,
+        runtime,
+        env: {
+          PRIMITIVE_SESSION_REGISTER: "skip",
+          CLAUDE_CODE_SESSION_ID: session,
+          CODEX_THREAD_ID: session,
+        },
+        cliPath: "/cli/bin/run.js",
+        dependencies,
+      });
+      expect(result).toMatchObject({
+        status: "skipped_setup",
+        session: null,
+        profile: null,
+        address: null,
+      });
+    }
+    expect(
+      sessionRegisterSkipped({ PRIMITIVE_SESSION_REGISTER: " SKIP " }),
+    ).toBe(true);
+    expect(calls.enroll).toHaveLength(0);
+    expect(readSessionRecord(configDir, session)).toBeNull();
+    expect(
+      existsSync(agentProfileDirectory(configDir, `session-${session}`)),
+    ).toBe(false);
+    // Any other value, or none, registers as before.
+    const registered = await registerSession({
+      configDir,
+      runtime: "claude",
+      env: { PRIMITIVE_SESSION_REGISTER: "", CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    expect(registered.status).toBe("registered");
+    expect(calls.enroll).toHaveLength(1);
   });
 
   it("reports no session instead of guessing one", async () => {

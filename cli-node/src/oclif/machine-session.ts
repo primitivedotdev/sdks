@@ -70,6 +70,7 @@ export type SessionRegisterStatus =
   | "not_logged_in"
   | "no_session"
   | "skipped_headless"
+  | "skipped_setup"
   | "offline"
   | "busy"
   | "failed";
@@ -288,6 +289,19 @@ export function headlessClaudeRun(env: Env): boolean {
 
 const HEADLESS_DETAIL =
   "This is a non-interactive Claude run (CLAUDE_CODE_ENTRYPOINT), so no address is used for it.";
+
+/**
+ * Set by a launcher that starts a session to connect it with `agent connect`
+ * (for example a one-click setup from the Primitive app), so the session gets
+ * only the address it is being set up with and no registration of its own.
+ */
+export const SESSION_REGISTER_ENV = "PRIMITIVE_SESSION_REGISTER";
+
+export function sessionRegisterSkipped(env: Env): boolean {
+  return env[SESSION_REGISTER_ENV]?.trim().toLowerCase() === "skip";
+}
+
+const SKIPPED_SETUP_DETAIL = `${SESSION_REGISTER_ENV}=skip is set: this session is being connected by \`agent connect\`, so no address is created for it here and nothing was changed.`;
 
 type ConnectionState =
   | "connected"
@@ -900,6 +914,8 @@ export async function registerSession(
   } as const;
   if (runtime === "claude" && headlessClaudeRun(env))
     return { ...base, status: "skipped_headless", detail: HEADLESS_DETAIL };
+  if (sessionRegisterSkipped(env))
+    return { ...base, status: "skipped_setup", detail: SKIPPED_SETUP_DETAIL };
   let session: string | null;
   try {
     session =

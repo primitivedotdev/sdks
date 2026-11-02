@@ -59,6 +59,10 @@ import { connectedProfilesForSession } from "../../src/oclif/machine-session.js"
 import { appendRegistrationLog } from "../../src/oclif/registration-log.js";
 import { ALREADY_CONNECTED_EXIT_CODE } from "../../src/oclif/session-address-guard.js";
 import {
+  readSessionRecord,
+  sessionRecordsDirectory,
+} from "../../src/oclif/session-records.js";
+import {
   removeMailFile,
   writeMailJson,
 } from "../../src/oclif/shared-mail-files.js";
@@ -852,6 +856,237 @@ describe("one address per session", () => {
     expect(process.exitCode).not.toBe(ALREADY_CONNECTED_EXIT_CODE);
     expect(mocks.enrollAgent).toHaveBeenCalledTimes(1);
     expect(mocks.disconnectAgent).not.toHaveBeenCalled();
+  });
+});
+
+/** The record `agent session-register` writes for a session it enrolled. */
+function hookRecord(
+  recordSession: string,
+  profile: string,
+  address: string | null,
+) {
+  writeMailJson(
+    join(sessionRecordsDirectory(configDir), `${recordSession}.json`),
+    {
+      version: 1,
+      runtime: "claude",
+      session: recordSession,
+      profile,
+      name: "claude-home",
+      createdBy: "session-register",
+      address,
+      invitationHash: "a".repeat(64),
+      agentInfo: "created",
+      registeredAt: "2026-01-01T00:00:00.000Z",
+      endedAt: null,
+      disconnect: null,
+      deferredUntil: null,
+      revokeOnEnd: false,
+      endReason: null,
+      release: null,
+    },
+  );
+}
+
+describe("agent connect --setup-session", () => {
+  const hookProfile = `session-${session}`;
+
+  it("replaces only the address session-register created for this same session", async () => {
+    process.env.CLAUDE_CODE_SESSION_ID = session;
+    savedProfile(hookProfile, "claude-home-2@example.test", session);
+    hookRecord(session, hookProfile, "claude-home-2@example.test");
+    mocks.setupAgent.mockResolvedValue(setupResult("test-2"));
+    await AgentConnectCommand.run(
+      [
+        "--profile",
+        "test-2",
+        "--session",
+        session,
+        "--setup-session",
+        "--no-skill",
+        "--json",
+      ],
+      { root },
+    );
+    expect(process.exitCode).not.toBe(ALREADY_CONNECTED_EXIT_CODE);
+    expect(mocks.disconnectAgent).toHaveBeenCalledTimes(1);
+    expect(mocks.disconnectAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ configDir, profileName: hookProfile }),
+    );
+    expect(mocks.disconnectAgent.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.setupAgent.mock.invocationCallOrder[0] ?? 0,
+    );
+    expect(mocks.setupAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ profileName: "test-2", session, invitation }),
+    );
+    const output = JSON.parse(outputs[0] ?? "");
+    expect(output).toMatchObject({
+      address: "new@example.test",
+      replacedSessionAddress: {
+        profile: hookProfile,
+        address: "claude-home-2@example.test",
+      },
+    });
+    expect(output.replacedExisting).toBeUndefined();
+    // A later resume reuses the profile being connected, not the replaced one.
+    expect(readSessionRecord(configDir, session)).toMatchObject({
+      createdBy: "existing",
+      profile: "test-2",
+      address: null,
+      release: {
+        reason: "replaced_by_connect",
+        registeredAddress: "claude-home-2@example.test",
+      },
+    });
+  });
+
+  it("replaces the hook address when it sits in the target profile", async () => {
+    process.env.CLAUDE_CODE_SESSION_ID = session;
+    savedProfile(hookProfile, "claude-home-2@example.test", session);
+    hookRecord(session, hookProfile, "claude-home-2@example.test");
+    mocks.setupAgent.mockResolvedValue(setupResult(hookProfile));
+    await AgentConnectCommand.run(
+      ["--session", session, "--setup-session", "--no-skill", "--json"],
+      { root },
+    );
+    expect(process.exitCode).not.toBe(ALREADY_CONNECTED_EXIT_CODE);
+    expect(mocks.disconnectAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ profileName: hookProfile }),
+    );
+    expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
+      replacedSessionAddress: { profile: hookProfile },
+    });
+    expect(readSessionRecord(configDir, session)).toMatchObject({
+      createdBy: "existing",
+      profile: hookProfile,
+    });
+  });
+
+  it("still refuses an address session-register did not create", async () => {
+    process.env.CLAUDE_CODE_SESSION_ID = session;
+    savedProfile("work", "work@example.test", session);
+    await AgentConnectCommand.run(
+      [
+        "--profile",
+        "test-2",
+        "--session",
+        session,
+        "--setup-session",
+        "--json",
+      ],
+      { root },
+    );
+    expect(process.exitCode).toBe(ALREADY_CONNECTED_EXIT_CODE);
+    expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
+      status: "already_connected",
+      bound: [{ profile: "work", address: "work@example.test" }],
+    });
+    expect(mocks.readAgentInvitation).not.toHaveBeenCalled();
+    expect(mocks.disconnectAgent).not.toHaveBeenCalled();
+    expect(mocks.setupAgent).not.toHaveBeenCalled();
+  });
+
+  it("still refuses a session-register address from another session", async () => {
+    process.env.CLAUDE_CODE_SESSION_ID = session;
+    // Bound to this session, but the record that enrolled it is another session's.
+    savedProfile(
+      `session-${otherSession}`,
+      "claude-other@example.test",
+      session,
+    );
+    hookRecord(
+      otherSession,
+      `session-${otherSession}`,
+      "claude-other@example.test",
+    );
+    await AgentConnectCommand.run(
+      [
+        "--profile",
+        "test-2",
+        "--session",
+        session,
+        "--setup-session",
+        "--json",
+      ],
+      { root },
+    );
+    expect(process.exitCode).toBe(ALREADY_CONNECTED_EXIT_CODE);
+    expect(mocks.disconnectAgent).not.toHaveBeenCalled();
+    expect(mocks.setupAgent).not.toHaveBeenCalled();
+  });
+
+  it("still refuses when the record names a different address", async () => {
+    process.env.CLAUDE_CODE_SESSION_ID = session;
+    savedProfile(hookProfile, "connected-later@example.test", session);
+    hookRecord(session, hookProfile, "claude-home-2@example.test");
+    await AgentConnectCommand.run(
+      [
+        "--profile",
+        "test-2",
+        "--session",
+        session,
+        "--setup-session",
+        "--json",
+      ],
+      { root },
+    );
+    expect(process.exitCode).toBe(ALREADY_CONNECTED_EXIT_CODE);
+    expect(mocks.disconnectAgent).not.toHaveBeenCalled();
+  });
+
+  it("still refuses when another address is bound beside the hook address", async () => {
+    process.env.CLAUDE_CODE_SESSION_ID = session;
+    savedProfile(hookProfile, "claude-home-2@example.test", session);
+    hookRecord(session, hookProfile, "claude-home-2@example.test");
+    savedProfile("work", "work@example.test", session);
+    await AgentConnectCommand.run(
+      [
+        "--profile",
+        "test-2",
+        "--session",
+        session,
+        "--setup-session",
+        "--json",
+      ],
+      { root },
+    );
+    expect(process.exitCode).toBe(ALREADY_CONNECTED_EXIT_CODE);
+    expect(JSON.parse(outputs[0] ?? "").bound).toHaveLength(2);
+    expect(mocks.disconnectAgent).not.toHaveBeenCalled();
+    expect(mocks.setupAgent).not.toHaveBeenCalled();
+  });
+
+  it("connects normally when nothing is bound", async () => {
+    process.env.CLAUDE_CODE_SESSION_ID = session;
+    mocks.setupAgent.mockResolvedValue(setupResult("test-2"));
+    await AgentConnectCommand.run(
+      [
+        "--profile",
+        "test-2",
+        "--session",
+        session,
+        "--setup-session",
+        "--no-skill",
+        "--json",
+      ],
+      { root },
+    );
+    expect(process.exitCode).not.toBe(ALREADY_CONNECTED_EXIT_CODE);
+    expect(mocks.disconnectAgent).not.toHaveBeenCalled();
+    expect(JSON.parse(outputs[0] ?? "").replacedSessionAddress).toBeUndefined();
+  });
+
+  it("rejects --setup-session together with --keep-existing or --replace-existing", async () => {
+    for (const other of ["--keep-existing", "--replace-existing"])
+      await expect(
+        AgentConnectCommand.run(
+          ["--session", session, "--setup-session", other],
+          {
+            root,
+          },
+        ),
+      ).rejects.toThrow(/cannot also be provided/);
+    expect(mocks.readAgentInvitation).not.toHaveBeenCalled();
   });
 });
 
