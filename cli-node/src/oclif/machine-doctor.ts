@@ -950,7 +950,7 @@ export async function runMachineDoctor(
             `${unreadable} saved profiles could not be read; they were left unchanged.`,
           )
         : check("profiles.orphaned", "ok", "No saved agent profiles.");
-    let member: StoredCliCredentials | null | undefined;
+    let member: StoredCliCredentials | null;
     const unconfirmed: string[] = [];
     // Rejected profiles the saved sign-in cannot check at all: another
     // organization or another Primitive API (such as staging).
@@ -960,30 +960,88 @@ export async function runMachineDoctor(
       | undefined;
     let unknown = 0;
     let connected = 0;
-    // A few requests at a time: this runs on a timer and a machine can
-    // hold many old session profiles.
+    // Profiles Primitive refused to check because the organization's request
+    // budget was spent. They are reported, never guessed at.
+    let limited = 0;
+    member = await memberCredentialsFor(options);
+    const checkableBy = (
+      credentials: StoredCliCredentials | null | undefined,
+      profile: ConnectedAgentProfile,
+    ): credentials is StoredCliCredentials =>
+      !!credentials &&
+      credentials.org_id === profile.org_id &&
+      credentials.api_base_url === profile.api_base_url;
+    // One read of the owner's connection list answers for every profile of
+    // the signed-in organization, so a check costs a handful of requests
+    // however many old session profiles the machine holds. Reading each
+    // profile's own record instead costs one request per profile, and a
+    // machine with a few hundred of them spends the organization's whole
+    // rate limit on every run, refusing its other agents and sign-ins too.
+    if (profiles.some((entry) => checkableBy(member, entry.profile)) && member)
+      ownerList = await ownerConnectionStatuses(member, fetchImpl);
+    const sharedAddresses = new Set<string>();
+    {
+      const seen = new Set<string>();
+      for (const entry of profiles) {
+        const address = entry.profile.agent_address.toLowerCase();
+        if (seen.has(address)) sharedAddresses.add(address);
+        seen.add(address);
+      }
+    }
+    const unresolved: typeof profiles = [];
+    for (const entry of profiles) {
+      // Only a status the list names settles a profile. Absence is not
+      // enough on its own: the profile's own record still has to reject its
+      // key first. Two profiles holding one address cannot both hold its
+      // current key, so each reads its own record to tell which is stale.
+      const listed =
+        ownerList &&
+        checkableBy(member, entry.profile) &&
+        !sharedAddresses.has(entry.profile.agent_address.toLowerCase())
+          ? ownerList.statuses.get(entry.profile.agent_address)
+          : undefined;
+      if (listed === "revoked") orphans.push(entry);
+      else if (
+        listed === "connected" ||
+        listed === "claimed" ||
+        listed === "pending"
+      )
+        connected++;
+      else unresolved.push(entry);
+    }
+    // The rest read their own record, a few at a time. A 429 means the
+    // organization's budget is spent: stop asking rather than spend more of
+    // it on requests that will be refused too.
+    let rateLimited = false;
+    const observedFetch = (async (input, init) => {
+      const response = await fetchImpl(input, init);
+      if (response.status === 429) rateLimited = true;
+      return response;
+    }) as typeof fetch;
     const states: Array<
       (typeof profiles)[number] & {
         state: Awaited<ReturnType<typeof agentConnectionState>>;
       }
     > = [];
-    for (let start = 0; start < profiles.length; start += 8)
+    for (let start = 0; start < unresolved.length; start += 8) {
+      if (rateLimited) {
+        limited = unresolved.length - start;
+        unknown += limited;
+        break;
+      }
       states.push(
         ...(await Promise.all(
-          profiles.slice(start, start + 8).map(async (entry) => ({
+          unresolved.slice(start, start + 8).map(async (entry) => ({
             ...entry,
-            state: await agentConnectionState(entry.profile, fetchImpl),
+            state: await agentConnectionState(entry.profile, observedFetch),
           })),
         )),
       );
+    }
     for (const entry of states) {
       if (entry.state === "revoked") orphans.push(entry);
       else if (entry.state === "rejected") {
-        member ??= await memberCredentialsFor(options);
-        const checkable =
-          !!member &&
-          member.org_id === entry.profile.org_id &&
-          member.api_base_url === entry.profile.api_base_url;
+        const checkable = checkableBy(member, entry.profile);
         if (member && !checkable) elsewhere++;
         if (checkable && member && ownerList === undefined)
           ownerList = await ownerConnectionStatuses(member, fetchImpl);
@@ -1024,16 +1082,19 @@ export async function runMachineDoctor(
           .join("; ")
           .concat("; they were left unchanged."),
       );
+    const limitedNote = limited
+      ? ` Primitive rate limited this check, so ${limited} saved profiles were not asked about; the next run checks them.`
+      : "";
     if (unknown && !connected)
       return check(
         "profiles.orphaned",
         "skip",
-        "Primitive could not be reached to check saved profiles.",
+        `Primitive could not be reached to check saved profiles.${limitedNote}`,
       );
     return check(
       "profiles.orphaned",
       "ok",
-      `${connected} saved profiles are connected${unknown ? `; ${unknown} could not be checked` : ""}.`,
+      `${connected} saved profiles are connected${unknown ? `; ${unknown} could not be checked` : ""}.${limitedNote}`,
     );
   };
   const moveOrphans = async (): Promise<boolean> => {

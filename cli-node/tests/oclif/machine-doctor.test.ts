@@ -1536,6 +1536,161 @@ describe("primitive machine doctor", () => {
     expect(readFileSync(settingsPath, "utf8")).toBe("{}\n");
   });
 
+  it("answers for the signed-in organization's profiles from one connection list", async () => {
+    const { configDir, options } = machine();
+    for (let index = 0; index < 205; index++)
+      saveConnectedAgentProfile(
+        configDir,
+        `profile-${index}`,
+        profile(`agent${index}@example.test`),
+      );
+    saveCliCredentials(configDir, {
+      auth_method: "oauth",
+      access_token: ["member", "token"].join("-"),
+      refresh_token: ["inert", "refresh"].join("-"),
+      token_type: "Bearer",
+      expires_at: "2099-01-01T00:00:00.000Z",
+      oauth_grant_id: "grant",
+      oauth_client_id: "fixture",
+      org_id: "33333333-3333-4333-8333-333333333333",
+      org_name: null,
+      api_base_url: "https://api.primitive.dev/v1",
+      created_at: "2026-01-01T00:00:00.000Z",
+    });
+    let ownRecordReads = 0;
+    let listReads = 0;
+    const fetchStub = (async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/agent-connections/me")) {
+        ownRecordReads++;
+        return new Response(JSON.stringify({ success: false }), {
+          status: 500,
+        });
+      }
+      if (url.pathname.endsWith("/agent-connections")) {
+        listReads++;
+        const page = Number(url.searchParams.get("cursor") ?? "0");
+        const data = Array.from({ length: 50 }, (_, offset) => page + offset)
+          .filter((index) => index < 205)
+          .map((index) => ({
+            address: `agent${index}@example.test`,
+            status: index === 7 ? "revoked" : "connected",
+          }));
+        const next = page + 50;
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data,
+            meta: { cursor: next < 205 ? String(next) : null },
+          }),
+          { status: 200 },
+        );
+      }
+      throw new TypeError("offline");
+    }) as typeof fetch;
+    const report = byId(
+      await runMachineDoctor({ ...options, fetch: fetchStub }),
+    );
+    expect(ownRecordReads).toBe(0);
+    expect(listReads).toBe(5);
+    expect(report["profiles.orphaned"]).toMatchObject({
+      status: "fail",
+      fixable: true,
+    });
+    expect(report["profiles.orphaned"].detail).toContain("agent7@example.test");
+  }, 30_000);
+
+  it("still reads each record when two profiles hold the same address", async () => {
+    const { configDir, options } = machine();
+    saveConnectedAgentProfile(configDir, "first", profile("twin@example.test"));
+    saveConnectedAgentProfile(configDir, "second", {
+      ...profile("twin@example.test"),
+      api_key: "pconn_fixture_twin_old",
+    });
+    saveCliCredentials(configDir, {
+      auth_method: "oauth",
+      access_token: ["member", "token"].join("-"),
+      refresh_token: ["inert", "refresh"].join("-"),
+      token_type: "Bearer",
+      expires_at: "2099-01-01T00:00:00.000Z",
+      oauth_grant_id: "grant",
+      oauth_client_id: "fixture",
+      org_id: "33333333-3333-4333-8333-333333333333",
+      org_name: null,
+      api_base_url: "https://api.primitive.dev/v1",
+      created_at: "2026-01-01T00:00:00.000Z",
+    });
+    const fetchStub = (async (
+      input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/agent-connections/me"))
+        return new Headers(init?.headers).get("authorization") ===
+          "Bearer pconn_fixture_twin_old"
+          ? new Response(JSON.stringify({ success: false }), { status: 401 })
+          : new Response(
+              JSON.stringify({
+                success: true,
+                data: {
+                  connection: {
+                    address: "twin@example.test",
+                    status: "connected",
+                  },
+                },
+              }),
+              { status: 200 },
+            );
+      if (url.pathname.endsWith("/agent-connections"))
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: [{ address: "twin@example.test", status: "connected" }],
+            meta: { cursor: null },
+          }),
+          { status: 200 },
+        );
+      throw new TypeError("offline");
+    }) as typeof fetch;
+    const report = byId(
+      await runMachineDoctor({ ...options, fetch: fetchStub }),
+    );
+    expect(report["profiles.orphaned"].status).toBe("warn");
+    expect(report["profiles.orphaned"].detail).toContain(
+      "1 saved profiles have credentials Primitive no longer accepts (twin@example.test)",
+    );
+  });
+
+  it("stops reading profiles once Primitive rate limits the check", async () => {
+    const { configDir, options } = machine();
+    for (let index = 0; index < 40; index++)
+      saveConnectedAgentProfile(
+        configDir,
+        `profile-${index}`,
+        profile(`agent${index}@example.test`),
+      );
+    let ownRecordReads = 0;
+    const fetchStub = (async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/agent-connections/me")) {
+        ownRecordReads++;
+        return new Response(JSON.stringify({ success: false }), {
+          status: 429,
+          headers: { "retry-after": "30" },
+        });
+      }
+      throw new TypeError("offline");
+    }) as typeof fetch;
+    const report = byId(
+      await runMachineDoctor({ ...options, fetch: fetchStub }),
+    );
+    expect(ownRecordReads).toBe(8);
+    expect(report["profiles.orphaned"].status).toBe("skip");
+    expect(report["profiles.orphaned"].detail).toContain(
+      "Primitive rate limited this check, so 32 saved profiles were not asked about",
+    );
+  });
+
   it("checks every saved profile, however many there are", async () => {
     const { configDir, options } = machine();
     for (let index = 0; index < 205; index++)
