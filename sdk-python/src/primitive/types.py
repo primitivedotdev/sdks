@@ -124,9 +124,6 @@ from .models_generated import (
     UnderstandingRule as GeneratedUnderstandingRule,
 )
 from .models_generated import (
-    UnderstandingRuleCondition as GeneratedUnderstandingRuleCondition,
-)
-from .models_generated import (
     UnderstandingRuleQuestion as GeneratedUnderstandingRuleQuestion,
 )
 from .models_generated import (
@@ -182,7 +179,6 @@ SenderAnalysis = GeneratedSenderAnalysis
 EmailUnderstanding = GeneratedEmailUnderstanding
 UnderstandingFact = GeneratedUnderstandingFact
 UnderstandingRule = GeneratedUnderstandingRule
-UnderstandingRuleCondition = GeneratedUnderstandingRuleCondition
 UnderstandingRuleQuestion = GeneratedUnderstandingRuleQuestion
 RoutingDecision = GeneratedRoutingDecision
 DkimSignature = GeneratedDkimSignature

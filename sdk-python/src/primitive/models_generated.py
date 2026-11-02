@@ -454,16 +454,6 @@ class UnderstandingFact(BaseModel):
     ] = None
 
 
-class UnderstandingRuleCondition(BaseModel):
-    model_config = ConfigDict(
-        extra="allow",
-    )
-    explanation: Annotated[
-        str | None, Field(description="The condition in plain English.")
-    ] = None
-    matched: Annotated[bool, Field(description="Whether the condition held.")]
-
-
 class UnderstandingRuleQuestion(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -906,9 +896,8 @@ class UnderstandingRule(BaseModel):
         str | None,
         Field(description="The plain-English description the rule was written from."),
     ] = None
-    conditions: Annotated[
-        list[UnderstandingRuleCondition] | None,
-        Field(description="The rule's conditions and whether each held."),
+    explanation: Annotated[
+        str | None, Field(description="What the rule matches, in plain English.")
     ] = None
     questions: Annotated[
         list[UnderstandingRuleQuestion] | None,
@@ -1048,7 +1037,7 @@ class EmailUnderstanding(BaseModel):
     status: Annotated[
         str,
         Field(
-            description="`ready` (classified), `pending` (not classified yet) or `unavailable` (no classification). Treat an unfamiliar value as one added after your client was built."
+            description="Current classification state: `ready` (classified), `pending` (not classified yet, or a failed classification that may be retried) or `unavailable` (no classification). Treat an unfamiliar value as one added after your client was built."
         ),
     ]
     classification_id: Annotated[

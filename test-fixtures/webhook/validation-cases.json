@@ -1827,6 +1827,266 @@
       }
     },
     {
+      "name": "valid_captured_payload_with_understanding_ready",
+      "payload": {
+        "id": "evt_1111111111111111111111111111111111111111111111111111111111111111",
+        "event": "email.received",
+        "version": "2025-12-14",
+        "delivery": {
+          "endpoint_id": "00000000-0000-4000-8000-000000000103",
+          "attempt": 1,
+          "attempted_at": "2026-11-02T20:21:59.000Z"
+        },
+        "email": {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "received_at": "2026-11-02T20:21:56.539Z",
+          "smtp": {
+            "helo": "mail.example.com",
+            "mail_from": "sender@example.com",
+            "rcpt_to": ["support@example.com"]
+          },
+          "headers": {
+            "message_id": "<msg-0101@example.com>",
+            "subject": "Refund request for order 5521",
+            "from": "sender@example.com",
+            "to": "support@example.com",
+            "date": "Mon, 02 Nov 2026 20:21:56 +0000"
+          },
+          "content": {
+            "raw": null,
+            "download": null
+          },
+          "parsed": {
+            "status": "complete",
+            "error": null,
+            "body_text": "Hi, I was charged twice for order 5521 last week. Could you refund the duplicate charge to my card? Thanks.\n",
+            "body_html": null,
+            "reply_to": null,
+            "cc": null,
+            "bcc": null,
+            "to_addresses": [
+              {
+                "name": null,
+                "address": "support@example.com"
+              }
+            ],
+            "in_reply_to": null,
+            "references": null,
+            "attachments": [],
+            "attachments_download_url": null
+          },
+          "analysis": {
+            "sender": {
+              "authenticated": true,
+              "basis": "dmarc_aligned",
+              "reasons": ["DKIM signature aligned with the From domain"]
+            },
+            "understanding": {
+              "version": 1,
+              "status": "ready",
+              "classification_id": "00000000-0000-4000-8000-000000000104",
+              "vocabulary": "v1",
+              "classified_at": "2026-11-02T20:21:56.950Z",
+              "facts": {
+                "intent": {
+                  "value": ["request", "payment", "support"],
+                  "confidence": 0.89
+                },
+                "doc_type": {
+                  "value": ["correspondence"],
+                  "confidence": 0.54
+                },
+                "is_cold_outreach": {
+                  "value": true,
+                  "confidence": 0.9314
+                },
+                "sender_relationship": {
+                  "value": "customer",
+                  "confidence": 0.54
+                }
+              }
+            }
+          },
+          "auth": {
+            "spf": "pass",
+            "dmarc": "pass",
+            "dmarcPolicy": "none",
+            "dmarcFromDomain": "example.com",
+            "dmarcSpfAligned": true,
+            "dmarcDkimAligned": true,
+            "dmarcSpfStrict": false,
+            "dmarcDkimStrict": false,
+            "dkimSignatures": [
+              {
+                "algo": "rsa-sha256",
+                "domain": "example.com",
+                "result": "pass",
+                "aligned": true,
+                "keyBits": 2048,
+                "selector": "default"
+              }
+            ]
+          },
+          "thread_id": "00000000-0000-4000-8000-000000000102",
+          "relay": null,
+          "automated": false,
+          "automated_reasons": []
+        }
+      },
+      "expected": {
+        "valid": true,
+        "id": "evt_1111111111111111111111111111111111111111111111111111111111111111",
+        "understanding": {
+          "version": 1,
+          "status": "ready",
+          "classification_id": "00000000-0000-4000-8000-000000000104",
+          "vocabulary": "v1",
+          "classified_at": "2026-11-02T20:21:56.950Z",
+          "facts": {
+            "intent": {
+              "value": ["request", "payment", "support"],
+              "confidence": 0.89
+            },
+            "doc_type": {
+              "value": ["correspondence"],
+              "confidence": 0.54
+            },
+            "is_cold_outreach": {
+              "value": true,
+              "confidence": 0.9314
+            },
+            "sender_relationship": {
+              "value": "customer",
+              "confidence": 0.54
+            }
+          }
+        },
+        "sender": {
+          "authenticated": true,
+          "basis": "dmarc_aligned",
+          "reasons": ["DKIM signature aligned with the From domain"]
+        }
+      }
+    },
+    {
+      "name": "valid_captured_payload_with_understanding_pending",
+      "payload": {
+        "id": "evt_2222222222222222222222222222222222222222222222222222222222222222",
+        "event": "email.received",
+        "version": "2025-12-14",
+        "delivery": {
+          "endpoint_id": "00000000-0000-4000-8000-000000000103",
+          "attempt": 1,
+          "attempted_at": "2026-11-02T20:21:56.000Z"
+        },
+        "email": {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "received_at": "2026-11-02T20:21:56.539Z",
+          "smtp": {
+            "helo": "mail.example.com",
+            "mail_from": "sender@example.com",
+            "rcpt_to": ["support@example.com"]
+          },
+          "headers": {
+            "message_id": "<msg-0101@example.com>",
+            "subject": "Refund request for order 5521",
+            "from": "sender@example.com",
+            "to": "support@example.com",
+            "date": "Mon, 02 Nov 2026 20:21:56 +0000"
+          },
+          "content": {
+            "raw": {
+              "included": true,
+              "encoding": "base64",
+              "max_inline_bytes": 262144,
+              "size_bytes": 336,
+              "sha256": "d564cd6fe2029c33ffa78f51674e7fa3f460428197b41f4613de0aac73a49d75",
+              "data": "RnJvbTogc2VuZGVyQGV4YW1wbGUuY29tDQpUbzogc3VwcG9ydEBleGFtcGxlLmNvbQ0KU3ViamVjdDogUmVmdW5kIHJlcXVlc3QgZm9yIG9yZGVyIDU1MjENCk1lc3NhZ2UtSUQ6IDxtc2ctMDEwMUBleGFtcGxlLmNvbT4NCkRhdGU6IE1vbiwgMDIgTm92IDIwMjYgMjA6MjE6NTYgKzAwMDANCk1JTUUtVmVyc2lvbjogMS4wDQpDb250ZW50LVR5cGU6IHRleHQvcGxhaW47IGNoYXJzZXQ9dXRmLTgNCg0KSGksIEkgd2FzIGNoYXJnZWQgdHdpY2UgZm9yIG9yZGVyIDU1MjEgbGFzdCB3ZWVrLiBDb3VsZCB5b3UgcmVmdW5kIHRoZSBkdXBsaWNhdGUgY2hhcmdlIHRvIG15IGNhcmQ/IFRoYW5rcy4K"
+            },
+            "download": {
+              "url": "https://api.primitive.dev/v1/downloads/raw/token123",
+              "expires_at": "2026-11-03T20:21:56.000Z"
+            }
+          },
+          "parsed": {
+            "status": "complete",
+            "error": null,
+            "body_text": "Hi, I was charged twice for order 5521 last week. Could you refund the duplicate charge to my card? Thanks.\n",
+            "body_html": null,
+            "reply_to": null,
+            "cc": null,
+            "bcc": null,
+            "to_addresses": [
+              {
+                "name": null,
+                "address": "support@example.com"
+              }
+            ],
+            "in_reply_to": null,
+            "references": null,
+            "attachments": [],
+            "attachments_download_url": null
+          },
+          "analysis": {
+            "sender": {
+              "authenticated": true,
+              "basis": "dmarc_aligned",
+              "reasons": ["DKIM signature aligned with the From domain"]
+            },
+            "understanding": {
+              "version": 1,
+              "status": "pending"
+            }
+          },
+          "auth": {
+            "spf": "pass",
+            "dmarc": "pass",
+            "dmarcPolicy": "none",
+            "dmarcFromDomain": "example.com",
+            "dmarcSpfAligned": true,
+            "dmarcDkimAligned": true,
+            "dmarcSpfStrict": false,
+            "dmarcDkimStrict": false,
+            "dkimSignatures": [
+              {
+                "domain": "example.com",
+                "selector": "default",
+                "result": "pass",
+                "aligned": true,
+                "keyBits": 2048,
+                "algo": "rsa-sha256"
+              }
+            ]
+          },
+          "thread_id": "00000000-0000-4000-8000-000000000102",
+          "relay": null,
+          "automated": false,
+          "automated_reasons": []
+        },
+        "routing": {
+          "outcome": "defaulted",
+          "version": 2,
+          "endpoint_id": "00000000-0000-4000-8000-000000000103",
+          "matched_tier": null,
+          "default_scope": "org",
+          "matched_route_id": null
+        }
+      },
+      "expected": {
+        "valid": true,
+        "id": "evt_2222222222222222222222222222222222222222222222222222222222222222",
+        "understanding": {
+          "version": 1,
+          "status": "pending"
+        },
+        "sender": {
+          "authenticated": true,
+          "basis": "dmarc_aligned",
+          "reasons": ["DKIM signature aligned with the From domain"]
+        }
+      }
+    },
+    {
       "name": "valid_payload_with_understanding_ready",
       "payload": {
         "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
@@ -1919,16 +2179,7 @@
                   "version": 2,
                   "name": "Internship applicants",
                   "description": "college students looking for internships",
-                  "conditions": [
-                    {
-                      "explanation": "The sender is cold outreach",
-                      "matched": true
-                    },
-                    {
-                      "explanation": "The email is or includes a resume",
-                      "matched": true
-                    }
-                  ],
+                  "explanation": "Cold outreach that includes a resume, from a college student looking for an internship.",
                   "questions": [
                     {
                       "question": "Is the sender a college student looking for an internship?",
@@ -1995,16 +2246,7 @@
               "version": 2,
               "name": "Internship applicants",
               "description": "college students looking for internships",
-              "conditions": [
-                {
-                  "explanation": "The sender is cold outreach",
-                  "matched": true
-                },
-                {
-                  "explanation": "The email is or includes a resume",
-                  "matched": true
-                }
-              ],
+              "explanation": "Cold outreach that includes a resume, from a college student looking for an internship.",
               "questions": [
                 {
                   "question": "Is the sender a college student looking for an internship?",
@@ -2399,12 +2641,7 @@
                   "name": "Invoices from vendors",
                   "description": "invoices from our vendors",
                   "some_future_rule_field": "added later",
-                  "conditions": [
-                    {
-                      "explanation": "The email is an invoice",
-                      "matched": true
-                    }
-                  ],
+                  "explanation": "Invoices sent by vendors.",
                   "questions": []
                 }
               ]
@@ -2481,12 +2718,7 @@
               "name": "Invoices from vendors",
               "description": "invoices from our vendors",
               "some_future_rule_field": "added later",
-              "conditions": [
-                {
-                  "explanation": "The email is an invoice",
-                  "matched": true
-                }
-              ],
+              "explanation": "Invoices sent by vendors.",
               "questions": []
             }
           ]

@@ -942,7 +942,7 @@ export interface EmailUnderstanding {
  */
 version: number
 /**
- * `ready` (classified), `pending` (not classified yet) or `unavailable` (no classification). Treat an unfamiliar value as one added after your client was built.
+ * Current classification state: `ready` (classified), `pending` (not classified yet, or a failed classification that may be retried) or `unavailable` (no classification). Treat an unfamiliar value as one added after your client was built.
  */
 status: string
 /**
@@ -1018,29 +1018,13 @@ name?: string
  */
 description?: string
 /**
- * The rule's conditions and whether each held.
+ * What the rule matches, in plain English.
  */
-conditions?: UnderstandingRuleCondition[]
+explanation?: string
 /**
  * The rule's questions and their answers.
  */
 questions?: UnderstandingRuleQuestion[]
-}
-/**
- * A rule condition.
- *
- * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
- * via the `definition` "UnderstandingRuleCondition".
- */
-export interface UnderstandingRuleCondition {
-/**
- * The condition in plain English.
- */
-explanation?: string
-/**
- * Whether the condition held.
- */
-matched: boolean
 }
 /**
  * A rule question and its answer.
@@ -1458,7 +1442,7 @@ export interface EmailUnderstanding1 {
  */
 version: number
 /**
- * `ready` (classified), `pending` (not classified yet) or `unavailable` (no classification). Treat an unfamiliar value as one added after your client was built.
+ * Current classification state: `ready` (classified), `pending` (not classified yet, or a failed classification that may be retried) or `unavailable` (no classification). Treat an unfamiliar value as one added after your client was built.
  */
 status: string
 /**

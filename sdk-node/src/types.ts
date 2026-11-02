@@ -74,10 +74,6 @@ export type UnderstandingRule = NonNullable<
   EmailUnderstanding["rules"]
 >[number];
 
-export type UnderstandingRuleCondition = NonNullable<
-  UnderstandingRule["conditions"]
->[number];
-
 export type UnderstandingRuleQuestion = NonNullable<
   UnderstandingRule["questions"]
 >[number];

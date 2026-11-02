@@ -196,7 +196,6 @@ export type {
   TlsReportAnalysis,
   UnderstandingFact,
   UnderstandingRule,
-  UnderstandingRuleCondition,
   UnderstandingRuleQuestion,
   UnknownEvent,
   ValidateEmailAuthResult,

@@ -382,9 +382,10 @@ type SenderAnalysis struct {
 type EmailUnderstanding struct {
 	// Version is the shape version of this object.
 	Version int64 `json:"version"`
-	// Status is "ready" (classified), "pending" (not classified yet) or
-	// "unavailable" (no classification). Treat an unfamiliar value as one
-	// added after this SDK was built.
+	// Status is the current classification state: "ready" (classified),
+	// "pending" (not classified yet, or a failed classification that may be
+	// retried) or "unavailable" (no classification). Treat an unfamiliar
+	// value as one added after this SDK was built.
 	Status string `json:"status"`
 	// ClassificationID is an opaque classification id. Set when "ready".
 	ClassificationID string `json:"classification_id,omitempty"`
@@ -460,18 +461,10 @@ type UnderstandingRule struct {
 	Name string `json:"name,omitempty"`
 	// Description is the plain-English description the rule was written from.
 	Description string `json:"description,omitempty"`
-	// Conditions are the rule's conditions and whether each held.
-	Conditions []UnderstandingRuleCondition `json:"conditions,omitempty"`
+	// Explanation is what the rule matches, in plain English.
+	Explanation string `json:"explanation,omitempty"`
 	// Questions are the rule's questions and their answers.
 	Questions []UnderstandingRuleQuestion `json:"questions,omitempty"`
-}
-
-// UnderstandingRuleCondition is a rule condition.
-type UnderstandingRuleCondition struct {
-	// Explanation is the condition in plain English.
-	Explanation string `json:"explanation,omitempty"`
-	// Matched reports whether the condition held.
-	Matched bool `json:"matched"`
 }
 
 // UnderstandingRuleQuestion is a rule question and its answer.

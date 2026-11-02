@@ -16,7 +16,7 @@ func TestEmailUnderstandingDecodesEveryField(t *testing.T) {
 		"rules": [{
 			"id": "rule_1", "version": 2, "name": "Internship applicants",
 			"description": "college students looking for internships",
-			"conditions": [{"explanation": "The sender is cold outreach", "matched": true}],
+			"explanation": "Cold outreach from a college student looking for an internship.",
 			"questions": [{"question": "Is the sender a student?", "answer": true, "confidence": 0.99}]
 		}]
 	}`
@@ -37,8 +37,8 @@ func TestEmailUnderstandingDecodesEveryField(t *testing.T) {
 	if rule.ID != "rule_1" || rule.Version != 2 || rule.Name != "Internship applicants" || rule.Description != "college students looking for internships" {
 		t.Fatalf("unexpected rule %+v", rule)
 	}
-	if len(rule.Conditions) != 1 || rule.Conditions[0].Explanation != "The sender is cold outreach" || !rule.Conditions[0].Matched {
-		t.Fatalf("unexpected conditions %+v", rule.Conditions)
+	if rule.Explanation != "Cold outreach from a college student looking for an internship." {
+		t.Fatalf("unexpected explanation %q", rule.Explanation)
 	}
 	q := rule.Questions
 	if len(q) != 1 || q[0].Question != "Is the sender a student?" || !q[0].Answer || q[0].Confidence == nil || *q[0].Confidence != 0.99 {

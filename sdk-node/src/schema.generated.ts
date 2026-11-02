@@ -869,7 +869,7 @@ export const emailReceivedEventJsonSchema = {
         },
         "status": {
           "type": "string",
-          "description": "`ready` (classified), `pending` (not classified yet) or `unavailable` (no classification). Treat an unfamiliar value as one added after your client was built."
+          "description": "Current classification state: `ready` (classified), `pending` (not classified yet, or a failed classification that may be retried) or `unavailable` (no classification). Treat an unfamiliar value as one added after your client was built."
         },
         "classification_id": {
           "type": "string",
@@ -947,12 +947,9 @@ export const emailReceivedEventJsonSchema = {
           "type": "string",
           "description": "The plain-English description the rule was written from."
         },
-        "conditions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/UnderstandingRuleCondition"
-          },
-          "description": "The rule's conditions and whether each held."
+        "explanation": {
+          "type": "string",
+          "description": "What the rule matches, in plain English."
         },
         "questions": {
           "type": "array",
@@ -964,23 +961,6 @@ export const emailReceivedEventJsonSchema = {
       },
       "required": [
         "id"
-      ]
-    },
-    "UnderstandingRuleCondition": {
-      "type": "object",
-      "description": "A rule condition.",
-      "properties": {
-        "explanation": {
-          "type": "string",
-          "description": "The condition in plain English."
-        },
-        "matched": {
-          "type": "boolean",
-          "description": "Whether the condition held."
-        }
-      },
-      "required": [
-        "matched"
       ]
     },
     "UnderstandingRuleQuestion": {
