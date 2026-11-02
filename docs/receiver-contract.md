@@ -129,9 +129,15 @@ in this order:
    email's `auth` result and `From` header with `isTrustedSender` from
    `@primitivedotdev/sdk/webhook` (`scoped-chat.ts`).
 5. Mail in a muted thread does not wake.
-6. Mail that the contact policy does not admit does not wake. The policy keeps
+6. Group mail that mentions only other recipients does not wake
+   (`mention-wake.ts`). When To or Cc names the bound address and at least one
+   other address, and the new text (quoted history removed) mentions one of
+   those addresses as `@local-part` or the full address, only the mentioned
+   addresses wake. Group mail that mentions none of them, and mail to the bound
+   address alone, wakes as before.
+7. Mail that the contact policy does not admit does not wake. The policy keeps
    explicit silences, activation cutoffs, membership, and network admission.
-7. Read the policy again immediately before you wake the session. Permission can
+8. Read the policy again immediately before you wake the session. Permission can
    change between admission and dispatch.
 
 The CLI also handles verified presence probes without a model turn
@@ -195,7 +201,7 @@ behavior that no public interface describes. Treat each one as unstable.
 
 ### Contact admission is an internal function
 
-The rules in step 6 live in `createNotificationContactPolicy` in
+The rules in step 7 live in `createNotificationContactPolicy` in
 `notification-contact-policy.ts`. No package export exposes it. CLI 1.73.0
 bundles it into `dist/machine-session-B6V5-grn.js` and exports it as `N`. The
 chunk name and the export letter come from the bundler and can change in any
@@ -291,5 +297,6 @@ Then cover the failure paths:
 - **Close and resume.** Send mail while the session is closed, then resume it.
   The receiver restarts, the saved notice appears once, and a notice already
   shown does not appear again.
-- **Ineligible mail.** Mail in a muted thread and mail from a sender the policy
-  does not admit do not wake the session.
+- **Ineligible mail.** Mail in a muted thread, group mail that mentions only
+  another recipient, and mail from a sender the policy does not admit do not
+  wake the session.

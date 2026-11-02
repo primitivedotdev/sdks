@@ -1091,6 +1091,66 @@ describe("Claude wake metadata, mutes and pending notices", () => {
     await wake.close();
   });
 
+  function groupMail(body: string) {
+    const read = mocks.getEmail.getMockImplementation();
+    mocks.getEmail.mockImplementation(async (...args: unknown[]) => {
+      const response = await read?.(...args);
+      return {
+        data: {
+          ...response.data,
+          data: {
+            ...response.data.data,
+            body_text: body,
+            parsed: {
+              ...response.data.data.parsed,
+              to_addresses: [
+                { address: "agent@example.test" },
+                { address: "reviewer@example.test" },
+              ],
+            },
+          },
+        },
+      };
+    });
+  }
+
+  it("completes group mail that mentions only another agent without waking", async () => {
+    const f = setup();
+    groupMail("@reviewer please take this one.");
+    const wake = await createWakeMail({
+      configDir,
+      sessionKey: `claude:${f.sessionId}`,
+      sessionId: f.sessionId,
+      contactRequests: false,
+    });
+    const handled = await wake.handler(
+      f.delivery as never,
+      new AbortController().signal,
+    );
+    expect(handled).toMatchObject({ succeeded: true });
+    expect(wake.wakeId()).toBeUndefined();
+    expect(existsSync(pendingMailPath(configDir, "work", f.sessionId))).toBe(
+      false,
+    );
+    await wake.close();
+  });
+
+  it("wakes for group mail that mentions this agent or nobody", async () => {
+    for (const body of ["@agent please take this one.", "Anyone free?"]) {
+      const f = setup();
+      groupMail(body);
+      const wake = await createWakeMail({
+        configDir,
+        sessionKey: `claude:${f.sessionId}`,
+        sessionId: f.sessionId,
+        contactRequests: false,
+      });
+      await wake.handler(f.delivery as never, new AbortController().signal);
+      expect(wake.wakeId()).toBe(f.emailId);
+      await wake.close();
+    }
+  });
+
   it("still wakes when the thread is muted only for another session", async () => {
     const f = setup();
     await muteThread(configDir, "work", thread, `claude:${randomUUID()}`);

@@ -25,6 +25,7 @@ import {
 } from "./conversation-status.js";
 import { ListenStateError } from "./listen-state.js";
 import type { ListenHandler } from "./listen-types.js";
+import { mentionsOnlyOthers } from "./mention-wake.js";
 import {
   type ContactNotificationAdmission,
   ContactPolicyReadRetryError,
@@ -350,6 +351,9 @@ export async function createWakeMail(options: {
       // mute is local or the server reports it for this address. The event
       // is still completed so it is not redelivered.
       if (muted(detail.thread_id) || serverMuted(detail)) return outcome(true);
+      // Group mail that mentions only other agents wakes only them; this
+      // session leaves the event completed, as for a muted thread.
+      if (mentionsOnlyOthers(detail, recipient)) return outcome(true);
       const requested = detail.reply_to_sent_email_id
         ? await store.findWaitByParent(detail.reply_to_sent_email_id)
         : null;
