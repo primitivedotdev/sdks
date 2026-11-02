@@ -543,6 +543,8 @@ forward?: ForwardAnalysis
 bounce?: BounceAnalysis
 tls_report?: TlsReportAnalysis
 dmarc_report?: DmarcReportAnalysis
+sender?: SenderAnalysis
+understanding?: EmailUnderstanding
 }
 /**
  * Forward detection and analysis results.
@@ -915,6 +917,136 @@ spf: (string | null)
 header_from: (string | null)
 }
 /**
+ * Sender authentication verdict, derived from `email.auth`.
+ */
+export interface SenderAnalysis {
+/**
+ * True when the sender is authenticated for the From domain.
+ */
+authenticated: boolean
+/**
+ * How the sender was authenticated, for example `dmarc_aligned`, `spf_aligned` or `unauthenticated`. Treat an unfamiliar value as one added after your client was built.
+ */
+basis: string
+/**
+ * Human-readable reasons, for display only.
+ */
+reasons: string[]
+}
+/**
+ * Classified facts about the email and, on rule-granted deliveries, the rules that matched. Present only for organizations with email rules enabled.
+ */
+export interface EmailUnderstanding {
+/**
+ * Shape version of this object.
+ */
+version: number
+/**
+ * Current classification state: `ready` (classified), `pending` (not classified yet, or a failed classification that may be retried) or `unavailable` (no classification). Treat an unfamiliar value as one added after your client was built.
+ */
+status: string
+/**
+ * Opaque classification id. Present when `ready`.
+ */
+classification_id?: string
+/**
+ * Vocabulary version, for example `v1`. Present when `ready`.
+ */
+vocabulary?: string
+/**
+ * When the email was classified. Present when `ready`.
+ */
+classified_at?: string
+/**
+ * Facts keyed by name. Present when `ready`. Ignore names you do not recognize.
+ *
+ * Vocabulary `v1`:
+ * - `is_cold_outreach` (boolean)
+ * - `intent` (strings): `request`, `offer`, `scheduling`, `payment`, `recruiting`, `support`, `sales_outreach`, `informational`, `personal`, `other`
+ * - `doc_type` (strings): `correspondence`, `invoice`, `receipt`, `contract`, `resume`, `calendar_invite`, `newsletter`, `notification`, `other`
+ * - `sender_relationship` (string): `vendor`, `customer`, `candidate`, `investor`, `advisor`, `internal`, `community`, `unknown`
+ *
+ * Treat an unfamiliar value as one added after your client was built.
+ */
+facts?: {
+[k: string]: UnderstandingFact
+}
+/**
+ * Rules that matched this email and granted this delivery. Present only on rule-granted deliveries.
+ */
+rules?: UnderstandingRule[]
+}
+/**
+ * A classified fact.
+ *
+ * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
+ * via the `definition` "UnderstandingFact".
+ */
+export interface UnderstandingFact {
+/**
+ * The fact's value. Its JSON type depends on the fact; never null.
+ */
+value: (boolean | number | string | unknown[] | {
+
+})
+/**
+ * Confidence, from 0 to 1.
+ */
+confidence?: number
+}
+/**
+ * A rule that matched the email and granted this delivery.
+ *
+ * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
+ * via the `definition` "UnderstandingRule".
+ */
+export interface UnderstandingRule {
+/**
+ * Rule id, as the email rules API returns it.
+ */
+id: string
+/**
+ * Rule version that matched.
+ */
+version?: number
+/**
+ * Rule name.
+ */
+name?: string
+/**
+ * The plain-English description the rule was written from.
+ */
+description?: string
+/**
+ * What the rule matches, in plain English.
+ */
+explanation?: string
+/**
+ * The rule's questions and their answers.
+ */
+questions?: UnderstandingRuleQuestion[]
+}
+/**
+ * A rule question and its answer.
+ *
+ * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
+ * via the `definition` "UnderstandingRuleQuestion".
+ */
+export interface UnderstandingRuleQuestion {
+/**
+ * The question.
+ */
+question?: string
+/**
+ * The answer; true for yes.
+ */
+answer: boolean
+/**
+ * Confidence, from 0 to 1.
+ */
+confidence?: number
+}
+/**
  * Email authentication results (SPF, DKIM, DMARC).
  */
 export interface EmailAuth {
@@ -1250,7 +1382,7 @@ retryable: boolean
 /**
  * Email analysis and classification results.
  *
- * All properties in this object are optional. Which fields are present depends on the analysis pipeline processing the email. Primitive's managed service populates all fields. Self-hosted or third-party deployments may include some, all, or none of these fields depending on their pipeline configuration.
+ * All properties in this object are optional. Which fields are present depends on the analysis pipeline processing the email. Primitive's managed service populates the fields that apply to the email and the organization. Self-hosted or third-party deployments may include some, all, or none of these fields depending on their pipeline configuration.
  *
  * When a field is absent, it means that particular analysis was not performed, not that the analysis produced no results. For example, a missing `spamassassin` field means SpamAssassin was not run, not that the email scored 0.
  *
@@ -1275,6 +1407,74 @@ forward?: ForwardAnalysis
 bounce?: BounceAnalysis
 tls_report?: TlsReportAnalysis
 dmarc_report?: DmarcReportAnalysis
+sender?: SenderAnalysis
+understanding?: EmailUnderstanding
+}
+/**
+ * Whether the sender is authenticated for the From domain. Not whether the email is safe.
+ *
+ * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
+ * via the `definition` "SenderAnalysis".
+ */
+export interface SenderAnalysis1 {
+/**
+ * True when the sender is authenticated for the From domain.
+ */
+authenticated: boolean
+/**
+ * How the sender was authenticated, for example `dmarc_aligned`, `spf_aligned` or `unauthenticated`. Treat an unfamiliar value as one added after your client was built.
+ */
+basis: string
+/**
+ * Human-readable reasons, for display only.
+ */
+reasons: string[]
+}
+/**
+ * What Primitive understood about an inbound email. Only `version` and `status` are always present; other fields are omitted, never null.
+ *
+ * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
+ * via the `definition` "EmailUnderstanding".
+ */
+export interface EmailUnderstanding1 {
+/**
+ * Shape version of this object.
+ */
+version: number
+/**
+ * Current classification state: `ready` (classified), `pending` (not classified yet, or a failed classification that may be retried) or `unavailable` (no classification). Treat an unfamiliar value as one added after your client was built.
+ */
+status: string
+/**
+ * Opaque classification id. Present when `ready`.
+ */
+classification_id?: string
+/**
+ * Vocabulary version, for example `v1`. Present when `ready`.
+ */
+vocabulary?: string
+/**
+ * When the email was classified. Present when `ready`.
+ */
+classified_at?: string
+/**
+ * Facts keyed by name. Present when `ready`. Ignore names you do not recognize.
+ *
+ * Vocabulary `v1`:
+ * - `is_cold_outreach` (boolean)
+ * - `intent` (strings): `request`, `offer`, `scheduling`, `payment`, `recruiting`, `support`, `sales_outreach`, `informational`, `personal`, `other`
+ * - `doc_type` (strings): `correspondence`, `invoice`, `receipt`, `contract`, `resume`, `calendar_invite`, `newsletter`, `notification`, `other`
+ * - `sender_relationship` (string): `vendor`, `customer`, `candidate`, `investor`, `advisor`, `internal`, `community`, `unknown`
+ *
+ * Treat an unfamiliar value as one added after your client was built.
+ */
+facts?: {
+[k: string]: UnderstandingFact
+}
+/**
+ * Rules that matched this email and granted this delivery. Present only on rule-granted deliveries.
+ */
+rules?: UnderstandingRule[]
 }
 /**
  * Parsed delivery status notification (bounce). Present as `email.analysis.bounce` on `email.bounced` events.

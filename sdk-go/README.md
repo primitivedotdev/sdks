@@ -719,6 +719,12 @@ if sent, ok := event.(primitive.SentEmailEvent); ok {
 
 `ValidateSentEmailEvent` / `SafeValidateSentEmailEvent` validate an already parsed body, and the schema is exported as `SentEmailEventJSONSchema`. An `email.bounced` event's `Email.Analysis.Bounce` carries `SentEmailID` (the send the bounce belongs to, or nil when it could not be linked) and `FailedRecipients` (every failed address, up to 100).
 
+### Email understanding and email rules
+
+For organizations with email rules enabled, `email.received` events carry `Email.Analysis.Understanding` (`*EmailUnderstanding`): a `Version`, a `Status`, and when `"ready"`, `Facts` keyed by name, each with a `Value` (read with `AsBool`, `AsString`, `AsStrings` or `AsNumber`) and `Confidence`. Rule-granted deliveries also list the matching `Rules`. Treat an unfamiliar `Status`, fact name or value as one added after your SDK was built. `Email.Analysis.Sender` (`*SenderAnalysis`) is the sender authentication verdict.
+
+The Email Rules operations on the generated `api` client need a member's own OAuth token that is not narrowed, such as the one `primitive login` stores. API keys and connected agent credentials are refused.
+
 ### Payment and interaction webhook events
 
 Webhooks are not email-only. The same endpoint also receives `payment.*` settlement notifications and `interaction.x402.*` events from the x402-over-email flow. The event name is carried in the **`X-Webhook-Event` header** for every family. The body is sent verbatim with no envelope, so it is the header (not a body field) that names the event: an `email.*` body carries `event`, a `payment.*` body carries the name in `type`, and an `interaction.*` body is just `{"interaction": {...}}` with no event/type field at all.

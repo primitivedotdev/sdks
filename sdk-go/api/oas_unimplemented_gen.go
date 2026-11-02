@@ -173,6 +173,16 @@ func (UnimplementedHandler) CliLogout(ctx context.Context, req OptCliLogoutInput
 	return r, ht.ErrNotImplemented
 }
 
+// CompileEmailRule implements compileEmailRule operation.
+//
+// Compiles a plain-English description into a rule tree, with an
+// explanation, assumptions and warnings. Nothing is saved.
+//
+// POST /email-rules/compile
+func (UnimplementedHandler) CompileEmailRule(ctx context.Context, req *CompileEmailRuleInput) (r CompileEmailRuleRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // CompleteWebhookEvent implements completeWebhookEvent operation.
 //
 // Report normalized handling evidence for the queue, attempt and lease. Required JSON fields:
@@ -276,6 +286,17 @@ func (UnimplementedHandler) CreateChallenge(ctx context.Context, req *CreateChal
 //
 // POST /x402/email-challenges
 func (UnimplementedHandler) CreateEmailChallenge(ctx context.Context, req *CreateEmailChallengeInput, params CreateEmailChallengeParams) (r CreateEmailChallengeRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// CreateEmailRule implements createEmailRule operation.
+//
+// Saves a new rule with its first version. New rules start in `observe`
+// unless `state` is `draft`. The rule never reaches mail the author cannot
+// read.
+//
+// POST /email-rules
+func (UnimplementedHandler) CreateEmailRule(ctx context.Context, req *CreateEmailRuleInput) (r CreateEmailRuleRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -508,6 +529,17 @@ func (UnimplementedHandler) DeleteDomain(ctx context.Context, params DeleteDomai
 //
 // DELETE /emails/{id}
 func (UnimplementedHandler) DeleteEmail(ctx context.Context, params DeleteEmailParams) (r DeleteEmailRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DeleteEmailRule implements deleteEmailRule operation.
+//
+// Deletes a rule with its versions, its decisions and the access it
+// granted. The author, or a caller who reads the whole organization's
+// mail, may delete it.
+//
+// DELETE /email-rules/{id}
+func (UnimplementedHandler) DeleteEmailRule(ctx context.Context, params DeleteEmailRuleParams) (r DeleteEmailRuleRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1017,6 +1049,15 @@ func (UnimplementedHandler) GetEmail(ctx context.Context, params GetEmailParams)
 	return r, ht.ErrNotImplemented
 }
 
+// GetEmailRule implements getEmailRule operation.
+//
+// A rule and its current version.
+//
+// GET /email-rules/{id}
+func (UnimplementedHandler) GetEmailRule(ctx context.Context, params GetEmailRuleParams) (r GetEmailRuleRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetFunction implements getFunction operation.
 //
 // Returns the full record for a function, including its current
@@ -1484,6 +1525,25 @@ func (UnimplementedHandler) ListDomains(ctx context.Context) (r ListDomainsRes, 
 //
 // GET /emails/{id}/attachments/{attachment}/members
 func (UnimplementedHandler) ListEmailAttachmentArchiveMembers(ctx context.Context, params ListEmailAttachmentArchiveMembersParams) (r ListEmailAttachmentArchiveMembersRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListEmailRuleDecisions implements listEmailRuleDecisions operation.
+//
+// What the rule decided for each email it was evaluated against, newest
+// first, for emails the caller can read.
+//
+// GET /email-rules/{id}/decisions
+func (UnimplementedHandler) ListEmailRuleDecisions(ctx context.Context, params ListEmailRuleDecisionsParams) (r ListEmailRuleDecisionsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListEmailRules implements listEmailRules operation.
+//
+// Rules the caller can see, newest first.
+//
+// GET /email-rules
+func (UnimplementedHandler) ListEmailRules(ctx context.Context, params ListEmailRulesParams) (r ListEmailRulesRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2459,6 +2519,17 @@ func (UnimplementedHandler) UpdateDefaultNetworkMember(ctx context.Context, req 
 //
 // PATCH /domains/{id}
 func (UnimplementedHandler) UpdateDomain(ctx context.Context, req *UpdateDomainInput, params UpdateDomainParams) (r UpdateDomainRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateEmailRule implements updateEmailRule operation.
+//
+// Renames the rule, saves a new version, or changes its state. Only the
+// author may rename it, add a version, or set `observe` or `active`;
+// others may only set `draft`.
+//
+// PATCH /email-rules/{id}
+func (UnimplementedHandler) UpdateEmailRule(ctx context.Context, req *UpdateEmailRuleInput, params UpdateEmailRuleParams) (r UpdateEmailRuleRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

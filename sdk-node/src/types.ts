@@ -58,6 +58,26 @@ export type TlsReportAnalysis = NonNullable<EmailAnalysis["tls_report"]>;
 
 export type DmarcReportAnalysis = NonNullable<EmailAnalysis["dmarc_report"]>;
 
+/** The sender authentication verdict, derived from `email.auth`. */
+export type SenderAnalysis = NonNullable<EmailAnalysis["sender"]>;
+
+/** What Primitive understood about the email. */
+export type EmailUnderstanding = NonNullable<EmailAnalysis["understanding"]>;
+
+/** A classified fact. */
+export type UnderstandingFact = NonNullable<
+  EmailUnderstanding["facts"]
+>[string];
+
+/** A rule that matched the email and granted this delivery. */
+export type UnderstandingRule = NonNullable<
+  EmailUnderstanding["rules"]
+>[number];
+
+export type UnderstandingRuleQuestion = NonNullable<
+  UnderstandingRule["questions"]
+>[number];
+
 export type ForwardResultInline = Extract<ForwardResult, { type: "inline" }>;
 
 export type ForwardResultAttachmentAnalyzed = Extract<

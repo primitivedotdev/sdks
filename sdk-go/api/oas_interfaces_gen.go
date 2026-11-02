@@ -41,6 +41,10 @@ type CliLogoutRes interface {
 	cliLogoutRes()
 }
 
+type CompileEmailRuleRes interface {
+	compileEmailRuleRes()
+}
+
 type CompleteWebhookEventRes interface {
 	completeWebhookEventRes()
 }
@@ -63,6 +67,10 @@ type CreateChallengeRes interface {
 
 type CreateEmailChallengeRes interface {
 	createEmailChallengeRes()
+}
+
+type CreateEmailRuleRes interface {
+	createEmailRuleRes()
 }
 
 type CreateEndpointRes interface {
@@ -123,6 +131,10 @@ type DeleteDomainRes interface {
 
 type DeleteEmailRes interface {
 	deleteEmailRes()
+}
+
+type DeleteEmailRuleRes interface {
+	deleteEmailRuleRes()
 }
 
 type DeleteEndpointRes interface {
@@ -253,6 +265,10 @@ type GetEmailRes interface {
 	getEmailRes()
 }
 
+type GetEmailRuleRes interface {
+	getEmailRuleRes()
+}
+
 type GetFunctionRes interface {
 	getFunctionRes()
 }
@@ -375,6 +391,14 @@ type ListDomainsRes interface {
 
 type ListEmailAttachmentArchiveMembersRes interface {
 	listEmailAttachmentArchiveMembersRes()
+}
+
+type ListEmailRuleDecisionsRes interface {
+	listEmailRuleDecisionsRes()
+}
+
+type ListEmailRulesRes interface {
+	listEmailRulesRes()
 }
 
 type ListEmailsRes interface {
@@ -631,6 +655,10 @@ type UpdateDefaultNetworkMemberRes interface {
 
 type UpdateDomainRes interface {
 	updateDomainRes()
+}
+
+type UpdateEmailRuleRes interface {
+	updateEmailRuleRes()
 }
 
 type UpdateEndpointRes interface {

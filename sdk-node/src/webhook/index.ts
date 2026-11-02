@@ -173,6 +173,7 @@ export type {
   EmailAuth,
   EmailReceivedEvent,
   EmailRelay,
+  EmailUnderstanding,
   // Forward analysis types
   ForwardAnalysis,
   ForwardOriginalSender,
@@ -191,7 +192,11 @@ export type {
   RawContentInline,
   // Recipient-routing decision
   RoutingDecision,
+  SenderAnalysis,
   TlsReportAnalysis,
+  UnderstandingFact,
+  UnderstandingRule,
+  UnderstandingRuleQuestion,
   UnknownEvent,
   ValidateEmailAuthResult,
   WebhookAttachment,

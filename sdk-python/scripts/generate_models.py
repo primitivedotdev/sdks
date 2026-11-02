@@ -97,10 +97,16 @@ def _patch_generated_models() -> None:
             f"class {enum_name}(StrEnum):",
         )
 
+    # A schema value of any JSON type makes the generator import Any.
+    typing_import = (
+        "from typing import Annotated, Any, Literal\n"
+        if "from typing import Annotated, Any, Literal\n" in text
+        else "from typing import Annotated, Literal\n"
+    )
     text = _replace_once(
         text,
-        "from typing import Annotated, Literal\n\nfrom pydantic import AnyUrl, AwareDatetime, BaseModel, ConfigDict, Field, RootModel\n",
-        "from typing import Annotated, Literal, TypeVar\n\n"
+        typing_import + "\nfrom pydantic import AnyUrl, AwareDatetime, BaseModel, ConfigDict, Field, RootModel\n",
+        typing_import.replace("Literal\n", "Literal, TypeVar\n") + "\n"
         "from pydantic import (\n"
         "    AnyUrl,\n"
         "    AwareDatetime,\n"
@@ -167,7 +173,14 @@ def _patch_generated_models() -> None:
         "    ] = None\n\n\nclass Email(BaseModel):\n",
         "    ] = None\n\n"
         "    @field_validator(\n"
-        "        \"spamassassin\", \"forward\", \"bounce\", \"tls_report\", \"dmarc_report\", mode=\"before\"\n"
+        "        \"spamassassin\",\n"
+        "        \"forward\",\n"
+        "        \"bounce\",\n"
+        "        \"tls_report\",\n"
+        "        \"dmarc_report\",\n"
+        "        \"sender\",\n"
+        "        \"understanding\",\n"
+        "        mode=\"before\",\n"
         "    )\n"
         "    @classmethod\n"
         "    def reject_explicit_null_optional_objects(cls, value):\n"

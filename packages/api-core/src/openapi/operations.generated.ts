@@ -8126,6 +8126,1111 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "compile-email-rule",
+    "description": "Compiles a plain-English description into a rule tree, with an\nexplanation, assumptions and warnings. Nothing is saved.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "compileEmailRule",
+    "path": "/email-rules/compile",
+    "pathParams": [],
+    "queryParams": [],
+    "headerParams": [],
+    "requestSchema": {
+      "type": "object",
+      "properties": {
+        "english": {
+          "type": "string",
+          "description": "What the rule should match, in plain English."
+        },
+        "include_sql": {
+          "type": "boolean",
+          "description": "Also return the rule's SQL."
+        }
+      },
+      "required": [
+        "english"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "tree": {
+          "type": "object",
+          "description": "A compiled rule. The server checks it against the column contract on save.",
+          "properties": {
+            "version": {
+              "type": "integer",
+              "description": "Tree format version."
+            },
+            "vocabulary": {
+              "type": "string",
+              "description": "Column contract version, for example `v1`."
+            },
+            "when": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "The rule's conditions, as a condition or an `all`, `any` or `not` group."
+            },
+            "questions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Yes/no questions asked after the conditions match. Every answer must be yes."
+            }
+          },
+          "required": [
+            "version",
+            "vocabulary",
+            "when",
+            "questions"
+          ]
+        },
+        "explanation": {
+          "type": "string",
+          "description": "What the rule matches."
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Readings chosen where the description was ambiguous."
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "What the column contract cannot express, and how the rule handles it."
+        },
+        "compiled_by": {
+          "type": "string",
+          "description": "Opaque compiler version. Compare only for equality."
+        },
+        "sql": {
+          "type": "object",
+          "description": "The SQL a rule renders to.",
+          "properties": {
+            "expression": {
+              "type": "string",
+              "description": "A parameterized boolean expression."
+            },
+            "params": {
+              "type": "array",
+              "items": {},
+              "description": "Values bound to the expression's parameters."
+            }
+          },
+          "required": [
+            "expression",
+            "params"
+          ]
+        }
+      },
+      "required": [
+        "tree",
+        "explanation",
+        "assumptions",
+        "warnings",
+        "compiled_by"
+      ]
+    },
+    "sdkName": "compileEmailRule",
+    "summary": "Compile a rule description",
+    "tag": "Email Rules",
+    "tagCommand": "email-rules"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "create-email-rule",
+    "description": "Saves a new rule with its first version. New rules start in `observe`\nunless `state` is `draft`. The rule never reaches mail the author cannot\nread.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "createEmailRule",
+    "path": "/email-rules",
+    "pathParams": [],
+    "queryParams": [],
+    "headerParams": [],
+    "requestSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Rule name."
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "observe"
+          ],
+          "description": "`observe` (default) records matches and grants nothing; `draft` is not evaluated."
+        },
+        "english": {
+          "type": "string",
+          "description": "The plain-English description the rule was compiled from."
+        },
+        "tree": {
+          "type": "object",
+          "description": "A compiled rule. The server checks it against the column contract on save.",
+          "properties": {
+            "version": {
+              "type": "integer",
+              "description": "Tree format version."
+            },
+            "vocabulary": {
+              "type": "string",
+              "description": "Column contract version, for example `v1`."
+            },
+            "when": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "The rule's conditions, as a condition or an `all`, `any` or `not` group."
+            },
+            "questions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Yes/no questions asked after the conditions match. Every answer must be yes."
+            }
+          },
+          "required": [
+            "version",
+            "vocabulary",
+            "when",
+            "questions"
+          ]
+        },
+        "explanation": {
+          "type": "string",
+          "description": "What the rule matches."
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Readings chosen where the description was ambiguous."
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "What the rule does not express."
+        },
+        "compiled_by": {
+          "type": "string",
+          "description": "The compile response's `compiled_by`, or `member` (default) for a tree you wrote."
+        }
+      },
+      "required": [
+        "name",
+        "english",
+        "tree",
+        "explanation"
+      ]
+    },
+    "responseSchema": {
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Rule id."
+            },
+            "name": {
+              "type": "string",
+              "description": "Rule name."
+            },
+            "state": {
+              "type": "string",
+              "description": "`draft`, `observe` or `active`. Treat an unfamiliar value as one added after your client was built."
+            },
+            "current_version": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Current version number, or null."
+            },
+            "author_user_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The member who wrote the rule."
+            },
+            "is_author": {
+              "type": "boolean",
+              "description": "Whether the caller wrote the rule."
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "state",
+            "current_version",
+            "author_user_id",
+            "is_author",
+            "created_at",
+            "updated_at"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "current": {
+              "description": "Current version, or null.",
+              "oneOf": [
+                {
+                  "type": "object",
+                  "description": "A saved rule version.",
+                  "properties": {
+                    "version": {
+                      "type": "integer",
+                      "description": "Version number."
+                    },
+                    "english": {
+                      "type": "string",
+                      "description": "The plain-English description it was compiled from."
+                    },
+                    "tree": {
+                      "type": "object",
+                      "description": "A compiled rule. The server checks it against the column contract on save.",
+                      "properties": {
+                        "version": {
+                          "type": "integer",
+                          "description": "Tree format version."
+                        },
+                        "vocabulary": {
+                          "type": "string",
+                          "description": "Column contract version, for example `v1`."
+                        },
+                        "when": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "The rule's conditions, as a condition or an `all`, `any` or `not` group."
+                        },
+                        "questions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Yes/no questions asked after the conditions match. Every answer must be yes."
+                        }
+                      },
+                      "required": [
+                        "version",
+                        "vocabulary",
+                        "when",
+                        "questions"
+                      ]
+                    },
+                    "explanation": {
+                      "type": "string",
+                      "description": "What it matches."
+                    },
+                    "assumptions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Readings chosen where the description was ambiguous."
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "What it does not express."
+                    },
+                    "compiled_by": {
+                      "type": "string",
+                      "description": "Who produced the tree, as the saver stated it (`member` or a compiler version). Not verified."
+                    },
+                    "vocabulary": {
+                      "type": "string",
+                      "description": "Column contract version."
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "sql": {
+                      "type": "object",
+                      "description": "The SQL a rule renders to.",
+                      "properties": {
+                        "expression": {
+                          "type": "string",
+                          "description": "A parameterized boolean expression."
+                        },
+                        "params": {
+                          "type": "array",
+                          "items": {},
+                          "description": "Values bound to the expression's parameters."
+                        }
+                      },
+                      "required": [
+                        "expression",
+                        "params"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "version",
+                    "english",
+                    "tree",
+                    "explanation",
+                    "assumptions",
+                    "warnings",
+                    "compiled_by",
+                    "vocabulary",
+                    "created_at"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "current"
+          ]
+        }
+      ]
+    },
+    "sdkName": "createEmailRule",
+    "summary": "Create a rule",
+    "tag": "Email Rules",
+    "tagCommand": "email-rules"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "delete-email-rule",
+    "description": "Deletes a rule with its versions, its decisions and the access it\ngranted. The author, or a caller who reads the whole organization's\nmail, may delete it.\n",
+    "hasJsonBody": false,
+    "method": "DELETE",
+    "operationId": "deleteEmailRule",
+    "path": "/email-rules/{id}",
+    "pathParams": [
+      {
+        "description": "The rule id.",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "headerParams": [],
+    "requestSchema": null,
+    "responseSchema": null,
+    "sdkName": "deleteEmailRule",
+    "summary": "Delete a rule",
+    "tag": "Email Rules",
+    "tagCommand": "email-rules"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-email-rule",
+    "description": "A rule and its current version.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getEmailRule",
+    "path": "/email-rules/{id}",
+    "pathParams": [
+      {
+        "description": "The rule id.",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [
+      {
+        "description": "`true` to include the SQL.",
+        "enum": [
+          "true",
+          "false"
+        ],
+        "name": "include_sql",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "headerParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Rule id."
+            },
+            "name": {
+              "type": "string",
+              "description": "Rule name."
+            },
+            "state": {
+              "type": "string",
+              "description": "`draft`, `observe` or `active`. Treat an unfamiliar value as one added after your client was built."
+            },
+            "current_version": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Current version number, or null."
+            },
+            "author_user_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The member who wrote the rule."
+            },
+            "is_author": {
+              "type": "boolean",
+              "description": "Whether the caller wrote the rule."
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "state",
+            "current_version",
+            "author_user_id",
+            "is_author",
+            "created_at",
+            "updated_at"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "current": {
+              "description": "Current version, or null.",
+              "oneOf": [
+                {
+                  "type": "object",
+                  "description": "A saved rule version.",
+                  "properties": {
+                    "version": {
+                      "type": "integer",
+                      "description": "Version number."
+                    },
+                    "english": {
+                      "type": "string",
+                      "description": "The plain-English description it was compiled from."
+                    },
+                    "tree": {
+                      "type": "object",
+                      "description": "A compiled rule. The server checks it against the column contract on save.",
+                      "properties": {
+                        "version": {
+                          "type": "integer",
+                          "description": "Tree format version."
+                        },
+                        "vocabulary": {
+                          "type": "string",
+                          "description": "Column contract version, for example `v1`."
+                        },
+                        "when": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "The rule's conditions, as a condition or an `all`, `any` or `not` group."
+                        },
+                        "questions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Yes/no questions asked after the conditions match. Every answer must be yes."
+                        }
+                      },
+                      "required": [
+                        "version",
+                        "vocabulary",
+                        "when",
+                        "questions"
+                      ]
+                    },
+                    "explanation": {
+                      "type": "string",
+                      "description": "What it matches."
+                    },
+                    "assumptions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Readings chosen where the description was ambiguous."
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "What it does not express."
+                    },
+                    "compiled_by": {
+                      "type": "string",
+                      "description": "Who produced the tree, as the saver stated it (`member` or a compiler version). Not verified."
+                    },
+                    "vocabulary": {
+                      "type": "string",
+                      "description": "Column contract version."
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "sql": {
+                      "type": "object",
+                      "description": "The SQL a rule renders to.",
+                      "properties": {
+                        "expression": {
+                          "type": "string",
+                          "description": "A parameterized boolean expression."
+                        },
+                        "params": {
+                          "type": "array",
+                          "items": {},
+                          "description": "Values bound to the expression's parameters."
+                        }
+                      },
+                      "required": [
+                        "expression",
+                        "params"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "version",
+                    "english",
+                    "tree",
+                    "explanation",
+                    "assumptions",
+                    "warnings",
+                    "compiled_by",
+                    "vocabulary",
+                    "created_at"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "current"
+          ]
+        }
+      ]
+    },
+    "sdkName": "getEmailRule",
+    "summary": "Read a rule",
+    "tag": "Email Rules",
+    "tagCommand": "email-rules"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-email-rule-decisions",
+    "description": "What the rule decided for each email it was evaluated against, newest\nfirst, for emails the caller can read.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listEmailRuleDecisions",
+    "path": "/email-rules/{id}/decisions",
+    "pathParams": [
+      {
+        "description": "The rule id.",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [
+      {
+        "description": "Page size.",
+        "enum": null,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "`meta.cursor` from the previous page.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "headerParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "A rule's decision for one email.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The email."
+          },
+          "rule_version": {
+            "type": "integer",
+            "description": "The deciding rule version."
+          },
+          "classification_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The classification it used."
+          },
+          "matched": {
+            "type": "boolean",
+            "description": "Whether the rule matched."
+          },
+          "near_miss": {
+            "type": "boolean",
+            "description": "Whether all but one part held."
+          },
+          "parts": {
+            "type": "array",
+            "items": {},
+            "description": "How each top-level part decided."
+          },
+          "question_answers": {
+            "type": "array",
+            "items": {},
+            "description": "Answers to the rule's questions, when asked."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "email_id",
+          "rule_version",
+          "classification_id",
+          "matched",
+          "near_miss",
+          "parts",
+          "question_answers",
+          "created_at"
+        ]
+      }
+    },
+    "sdkName": "listEmailRuleDecisions",
+    "summary": "List a rule's decisions",
+    "tag": "Email Rules",
+    "tagCommand": "email-rules"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-email-rules",
+    "description": "Rules the caller can see, newest first.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listEmailRules",
+    "path": "/email-rules",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "description": "Page size.",
+        "enum": null,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "`meta.cursor` from the previous page.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "headerParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Rule id."
+          },
+          "name": {
+            "type": "string",
+            "description": "Rule name."
+          },
+          "state": {
+            "type": "string",
+            "description": "`draft`, `observe` or `active`. Treat an unfamiliar value as one added after your client was built."
+          },
+          "current_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Current version number, or null."
+          },
+          "author_user_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The member who wrote the rule."
+          },
+          "is_author": {
+            "type": "boolean",
+            "description": "Whether the caller wrote the rule."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "state",
+          "current_version",
+          "author_user_id",
+          "is_author",
+          "created_at",
+          "updated_at"
+        ]
+      }
+    },
+    "sdkName": "listEmailRules",
+    "summary": "List rules",
+    "tag": "Email Rules",
+    "tagCommand": "email-rules"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "update-email-rule",
+    "description": "Renames the rule, saves a new version, or changes its state. Only the\nauthor may rename it, add a version, or set `observe` or `active`;\nothers may only set `draft`.\n",
+    "hasJsonBody": true,
+    "method": "PATCH",
+    "operationId": "updateEmailRule",
+    "path": "/email-rules/{id}",
+    "pathParams": [
+      {
+        "description": "The rule id.",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "headerParams": [],
+    "requestSchema": {
+      "type": "object",
+      "description": "Send at least one field. A new version needs `english`, `tree` and `explanation`; `assumptions`, `warnings` and `compiled_by` come only with them.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Rule name."
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "observe",
+            "active"
+          ],
+          "description": "`draft` disables the rule, `observe` records decisions, `active` also grants matches."
+        },
+        "english": {
+          "type": "string",
+          "description": "The plain-English description the new version was compiled from."
+        },
+        "tree": {
+          "type": "object",
+          "description": "A compiled rule. The server checks it against the column contract on save.",
+          "properties": {
+            "version": {
+              "type": "integer",
+              "description": "Tree format version."
+            },
+            "vocabulary": {
+              "type": "string",
+              "description": "Column contract version, for example `v1`."
+            },
+            "when": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "The rule's conditions, as a condition or an `all`, `any` or `not` group."
+            },
+            "questions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Yes/no questions asked after the conditions match. Every answer must be yes."
+            }
+          },
+          "required": [
+            "version",
+            "vocabulary",
+            "when",
+            "questions"
+          ]
+        },
+        "explanation": {
+          "type": "string",
+          "description": "What the new version matches."
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Readings chosen where the description was ambiguous."
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "What the rule does not express."
+        },
+        "compiled_by": {
+          "type": "string",
+          "description": "The compile response's `compiled_by`, or `member` (default) for a tree you wrote."
+        }
+      }
+    },
+    "responseSchema": {
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Rule id."
+            },
+            "name": {
+              "type": "string",
+              "description": "Rule name."
+            },
+            "state": {
+              "type": "string",
+              "description": "`draft`, `observe` or `active`. Treat an unfamiliar value as one added after your client was built."
+            },
+            "current_version": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Current version number, or null."
+            },
+            "author_user_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The member who wrote the rule."
+            },
+            "is_author": {
+              "type": "boolean",
+              "description": "Whether the caller wrote the rule."
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "state",
+            "current_version",
+            "author_user_id",
+            "is_author",
+            "created_at",
+            "updated_at"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "current": {
+              "description": "Current version, or null.",
+              "oneOf": [
+                {
+                  "type": "object",
+                  "description": "A saved rule version.",
+                  "properties": {
+                    "version": {
+                      "type": "integer",
+                      "description": "Version number."
+                    },
+                    "english": {
+                      "type": "string",
+                      "description": "The plain-English description it was compiled from."
+                    },
+                    "tree": {
+                      "type": "object",
+                      "description": "A compiled rule. The server checks it against the column contract on save.",
+                      "properties": {
+                        "version": {
+                          "type": "integer",
+                          "description": "Tree format version."
+                        },
+                        "vocabulary": {
+                          "type": "string",
+                          "description": "Column contract version, for example `v1`."
+                        },
+                        "when": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "The rule's conditions, as a condition or an `all`, `any` or `not` group."
+                        },
+                        "questions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Yes/no questions asked after the conditions match. Every answer must be yes."
+                        }
+                      },
+                      "required": [
+                        "version",
+                        "vocabulary",
+                        "when",
+                        "questions"
+                      ]
+                    },
+                    "explanation": {
+                      "type": "string",
+                      "description": "What it matches."
+                    },
+                    "assumptions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Readings chosen where the description was ambiguous."
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "What it does not express."
+                    },
+                    "compiled_by": {
+                      "type": "string",
+                      "description": "Who produced the tree, as the saver stated it (`member` or a compiler version). Not verified."
+                    },
+                    "vocabulary": {
+                      "type": "string",
+                      "description": "Column contract version."
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "sql": {
+                      "type": "object",
+                      "description": "The SQL a rule renders to.",
+                      "properties": {
+                        "expression": {
+                          "type": "string",
+                          "description": "A parameterized boolean expression."
+                        },
+                        "params": {
+                          "type": "array",
+                          "items": {},
+                          "description": "Values bound to the expression's parameters."
+                        }
+                      },
+                      "required": [
+                        "expression",
+                        "params"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "version",
+                    "english",
+                    "tree",
+                    "explanation",
+                    "assumptions",
+                    "warnings",
+                    "compiled_by",
+                    "vocabulary",
+                    "created_at"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "current"
+          ]
+        }
+      ]
+    },
+    "sdkName": "updateEmailRule",
+    "summary": "Change a rule",
+    "tag": "Email Rules",
+    "tagCommand": "email-rules"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": false,
     "command": "delete-email",
     "description": null,

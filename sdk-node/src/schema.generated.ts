@@ -821,9 +821,168 @@ export const emailReceivedEventJsonSchema = {
         "dmarc_report": {
           "$ref": "#/definitions/DmarcReportAnalysis",
           "description": "DMARC aggregate report analysis (RFC 7489).\n\nPresent on `email.dmarc_report` events: a receiver's periodic aggregate report of DMARC authentication results for your domain. Absent on all other event types."
+        },
+        "sender": {
+          "$ref": "#/definitions/SenderAnalysis",
+          "description": "Sender authentication verdict, derived from `email.auth`."
+        },
+        "understanding": {
+          "$ref": "#/definitions/EmailUnderstanding",
+          "description": "Classified facts about the email and, on rule-granted deliveries, the rules that matched. Present only for organizations with email rules enabled."
         }
       },
-      "description": "Email analysis and classification results.\n\nAll properties in this object are optional. Which fields are present depends on the analysis pipeline processing the email. Primitive's managed service populates all fields. Self-hosted or third-party deployments may include some, all, or none of these fields depending on their pipeline configuration.\n\nWhen a field is absent, it means that particular analysis was not performed, not that the analysis produced no results. For example, a missing `spamassassin` field means SpamAssassin was not run, not that the email scored 0.\n\nThese fields may be omitted from the payload entirely but must not be set to null."
+      "description": "Email analysis and classification results.\n\nAll properties in this object are optional. Which fields are present depends on the analysis pipeline processing the email. Primitive's managed service populates the fields that apply to the email and the organization. Self-hosted or third-party deployments may include some, all, or none of these fields depending on their pipeline configuration.\n\nWhen a field is absent, it means that particular analysis was not performed, not that the analysis produced no results. For example, a missing `spamassassin` field means SpamAssassin was not run, not that the email scored 0.\n\nThese fields may be omitted from the payload entirely but must not be set to null."
+    },
+    "SenderAnalysis": {
+      "type": "object",
+      "description": "Whether the sender is authenticated for the From domain. Not whether the email is safe.",
+      "properties": {
+        "authenticated": {
+          "type": "boolean",
+          "description": "True when the sender is authenticated for the From domain."
+        },
+        "basis": {
+          "type": "string",
+          "description": "How the sender was authenticated, for example `dmarc_aligned`, `spf_aligned` or `unauthenticated`. Treat an unfamiliar value as one added after your client was built."
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Human-readable reasons, for display only."
+        }
+      },
+      "required": [
+        "authenticated",
+        "basis",
+        "reasons"
+      ]
+    },
+    "EmailUnderstanding": {
+      "type": "object",
+      "description": "What Primitive understood about an inbound email. Only `version` and `status` are always present; other fields are omitted, never null.",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "description": "Shape version of this object."
+        },
+        "status": {
+          "type": "string",
+          "description": "Current classification state: `ready` (classified), `pending` (not classified yet, or a failed classification that may be retried) or `unavailable` (no classification). Treat an unfamiliar value as one added after your client was built."
+        },
+        "classification_id": {
+          "type": "string",
+          "description": "Opaque classification id. Present when `ready`."
+        },
+        "vocabulary": {
+          "type": "string",
+          "description": "Vocabulary version, for example `v1`. Present when `ready`."
+        },
+        "classified_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the email was classified. Present when `ready`."
+        },
+        "facts": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/UnderstandingFact"
+          },
+          "description": "Facts keyed by name. Present when `ready`. Ignore names you do not recognize.\n\nVocabulary `v1`:\n- `is_cold_outreach` (boolean)\n- `intent` (strings): `request`, `offer`, `scheduling`, `payment`, `recruiting`, `support`, `sales_outreach`, `informational`, `personal`, `other`\n- `doc_type` (strings): `correspondence`, `invoice`, `receipt`, `contract`, `resume`, `calendar_invite`, `newsletter`, `notification`, `other`\n- `sender_relationship` (string): `vendor`, `customer`, `candidate`, `investor`, `advisor`, `internal`, `community`, `unknown`\n\nTreat an unfamiliar value as one added after your client was built."
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UnderstandingRule"
+          },
+          "description": "Rules that matched this email and granted this delivery. Present only on rule-granted deliveries."
+        }
+      },
+      "required": [
+        "version",
+        "status"
+      ]
+    },
+    "UnderstandingFact": {
+      "type": "object",
+      "description": "A classified fact.",
+      "properties": {
+        "value": {
+          "type": [
+            "boolean",
+            "number",
+            "string",
+            "array",
+            "object"
+          ],
+          "description": "The fact's value. Its JSON type depends on the fact; never null."
+        },
+        "confidence": {
+          "type": "number",
+          "description": "Confidence, from 0 to 1."
+        }
+      },
+      "required": [
+        "value"
+      ]
+    },
+    "UnderstandingRule": {
+      "type": "object",
+      "description": "A rule that matched the email and granted this delivery.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Rule id, as the email rules API returns it."
+        },
+        "version": {
+          "type": "integer",
+          "description": "Rule version that matched."
+        },
+        "name": {
+          "type": "string",
+          "description": "Rule name."
+        },
+        "description": {
+          "type": "string",
+          "description": "The plain-English description the rule was written from."
+        },
+        "explanation": {
+          "type": "string",
+          "description": "What the rule matches, in plain English."
+        },
+        "questions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UnderstandingRuleQuestion"
+          },
+          "description": "The rule's questions and their answers."
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "UnderstandingRuleQuestion": {
+      "type": "object",
+      "description": "A rule question and its answer.",
+      "properties": {
+        "question": {
+          "type": "string",
+          "description": "The question."
+        },
+        "answer": {
+          "type": "boolean",
+          "description": "The answer; true for yes."
+        },
+        "confidence": {
+          "type": "number",
+          "description": "Confidence, from 0 to 1."
+        }
+      },
+      "required": [
+        "answer"
+      ]
     },
     "BounceAnalysis": {
       "type": "object",

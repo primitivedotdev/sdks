@@ -72,6 +72,9 @@ from .cli_signup_start_result import CliSignupStartResult
 from .cli_signup_verify_result import CliSignupVerifyResult
 from .cli_signup_verify_result_auth_method import CliSignupVerifyResultAuthMethod
 from .cli_signup_verify_result_token_type import CliSignupVerifyResultTokenType
+from .compile_email_rule_input import CompileEmailRuleInput
+from .compile_email_rule_response_200 import CompileEmailRuleResponse200
+from .compiled_email_rule import CompiledEmailRule
 from .complete_webhook_exec_input import CompleteWebhookExecInput
 from .complete_webhook_exec_input_mode import CompleteWebhookExecInputMode
 from .complete_webhook_exec_input_transport_error import CompleteWebhookExecInputTransportError
@@ -122,6 +125,9 @@ from .create_email_challenge_input import CreateEmailChallengeInput
 from .create_email_challenge_input_network import CreateEmailChallengeInputNetwork
 from .create_email_challenge_response_200 import CreateEmailChallengeResponse200
 from .create_email_challenge_response_201 import CreateEmailChallengeResponse201
+from .create_email_rule_input import CreateEmailRuleInput
+from .create_email_rule_input_state import CreateEmailRuleInputState
+from .create_email_rule_response_201 import CreateEmailRuleResponse201
 from .create_endpoint_input import CreateEndpointInput
 from .create_endpoint_input_kind import CreateEndpointInputKind
 from .create_endpoint_input_rules import CreateEndpointInputRules
@@ -171,6 +177,8 @@ from .delete_domain_response_200 import DeleteDomainResponse200
 from .delete_domain_response_200_data import DeleteDomainResponse200Data
 from .delete_email_response_200 import DeleteEmailResponse200
 from .delete_email_response_200_data import DeleteEmailResponse200Data
+from .delete_email_rule_response_200 import DeleteEmailRuleResponse200
+from .delete_email_rule_response_200_data import DeleteEmailRuleResponse200Data
 from .delete_endpoint_response_200 import DeleteEndpointResponse200
 from .delete_endpoint_response_200_data import DeleteEndpointResponse200Data
 from .delete_filter_response_200 import DeleteFilterResponse200
@@ -221,6 +229,14 @@ from .email_detail_relay_type_0_delivery_item import EmailDetailRelayType0Delive
 from .email_detail_repeat_type_0 import EmailDetailRepeatType0
 from .email_detail_reply import EmailDetailReply
 from .email_detail_sender_member_type_0 import EmailDetailSenderMemberType0
+from .email_rule import EmailRule
+from .email_rule_decision import EmailRuleDecision
+from .email_rule_detail import EmailRuleDetail
+from .email_rule_page_meta import EmailRulePageMeta
+from .email_rule_sql import EmailRuleSql
+from .email_rule_tree import EmailRuleTree
+from .email_rule_tree_when import EmailRuleTreeWhen
+from .email_rule_version import EmailRuleVersion
 from .email_search_facet_bucket import EmailSearchFacetBucket
 from .email_search_facets import EmailSearchFacets
 from .email_search_facets_has_attachment import EmailSearchFacetsHasAttachment
@@ -299,6 +315,8 @@ from .get_conversation_response_200 import GetConversationResponse200
 from .get_credit_balance_response_200 import GetCreditBalanceResponse200
 from .get_default_network_agent_response_200 import GetDefaultNetworkAgentResponse200
 from .get_email_response_200 import GetEmailResponse200
+from .get_email_rule_include_sql import GetEmailRuleIncludeSql
+from .get_email_rule_response_200 import GetEmailRuleResponse200
 from .get_function_response_200 import GetFunctionResponse200
 from .get_function_routing_response_200 import GetFunctionRoutingResponse200
 from .get_function_test_run_trace_response_200 import GetFunctionTestRunTraceResponse200
@@ -361,6 +379,8 @@ from .list_deliveries_response_200 import ListDeliveriesResponse200
 from .list_deliveries_status import ListDeliveriesStatus
 from .list_domains_response_200 import ListDomainsResponse200
 from .list_email_attachment_archive_members_response_200 import ListEmailAttachmentArchiveMembersResponse200
+from .list_email_rule_decisions_response_200 import ListEmailRuleDecisionsResponse200
+from .list_email_rules_response_200 import ListEmailRulesResponse200
 from .list_emails_automated import ListEmailsAutomated
 from .list_emails_awaiting import ListEmailsAwaiting
 from .list_emails_exclude_fyi import ListEmailsExcludeFyi
@@ -632,6 +652,9 @@ from .update_agent_network_member_input import UpdateAgentNetworkMemberInput
 from .update_default_network_member_response_200 import UpdateDefaultNetworkMemberResponse200
 from .update_domain_input import UpdateDomainInput
 from .update_domain_response_200 import UpdateDomainResponse200
+from .update_email_rule_input import UpdateEmailRuleInput
+from .update_email_rule_input_state import UpdateEmailRuleInputState
+from .update_email_rule_response_200 import UpdateEmailRuleResponse200
 from .update_endpoint_input import UpdateEndpointInput
 from .update_endpoint_input_rules import UpdateEndpointInputRules
 from .update_endpoint_response_200 import UpdateEndpointResponse200
@@ -764,6 +787,9 @@ __all__ = (
     "CliSignupVerifyResult",
     "CliSignupVerifyResultAuthMethod",
     "CliSignupVerifyResultTokenType",
+    "CompiledEmailRule",
+    "CompileEmailRuleInput",
+    "CompileEmailRuleResponse200",
     "CompleteWebhookExecInput",
     "CompleteWebhookExecInputMode",
     "CompleteWebhookExecInputTransportError",
@@ -814,6 +840,9 @@ __all__ = (
     "CreateEmailChallengeInputNetwork",
     "CreateEmailChallengeResponse200",
     "CreateEmailChallengeResponse201",
+    "CreateEmailRuleInput",
+    "CreateEmailRuleInputState",
+    "CreateEmailRuleResponse201",
     "CreateEndpointInput",
     "CreateEndpointInputKind",
     "CreateEndpointInputRules",
@@ -863,6 +892,8 @@ __all__ = (
     "DeleteDomainResponse200Data",
     "DeleteEmailResponse200",
     "DeleteEmailResponse200Data",
+    "DeleteEmailRuleResponse200",
+    "DeleteEmailRuleResponse200Data",
     "DeleteEndpointResponse200",
     "DeleteEndpointResponse200Data",
     "DeleteFilterResponse200",
@@ -913,6 +944,14 @@ __all__ = (
     "EmailDetailRepeatType0",
     "EmailDetailReply",
     "EmailDetailSenderMemberType0",
+    "EmailRule",
+    "EmailRuleDecision",
+    "EmailRuleDetail",
+    "EmailRulePageMeta",
+    "EmailRuleSql",
+    "EmailRuleTree",
+    "EmailRuleTreeWhen",
+    "EmailRuleVersion",
     "EmailSearchFacetBucket",
     "EmailSearchFacets",
     "EmailSearchFacetsHasAttachment",
@@ -991,6 +1030,8 @@ __all__ = (
     "GetCreditBalanceResponse200",
     "GetDefaultNetworkAgentResponse200",
     "GetEmailResponse200",
+    "GetEmailRuleIncludeSql",
+    "GetEmailRuleResponse200",
     "GetFunctionResponse200",
     "GetFunctionRoutingResponse200",
     "GetFunctionTestRunTraceResponse200",
@@ -1053,6 +1094,8 @@ __all__ = (
     "ListDeliveriesStatus",
     "ListDomainsResponse200",
     "ListEmailAttachmentArchiveMembersResponse200",
+    "ListEmailRuleDecisionsResponse200",
+    "ListEmailRulesResponse200",
     "ListEmailsAutomated",
     "ListEmailsAwaiting",
     "ListEmailsExcludeFyi",
@@ -1324,6 +1367,9 @@ __all__ = (
     "UpdateDefaultNetworkMemberResponse200",
     "UpdateDomainInput",
     "UpdateDomainResponse200",
+    "UpdateEmailRuleInput",
+    "UpdateEmailRuleInputState",
+    "UpdateEmailRuleResponse200",
     "UpdateEndpointInput",
     "UpdateEndpointInputRules",
     "UpdateEndpointResponse200",

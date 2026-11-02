@@ -1,6 +1,6 @@
 {
   "name": "primitive",
-  "version": "1.74.0",
+  "version": "1.75.0",
   "description": "Official Primitive CLI: deploy Primitive Functions, send and inspect mail, manage endpoints, all from the terminal. Wraps the @primitivedotdev/sdk runtime client with one-shot commands.",
   "type": "module",
   "sideEffects": false,
@@ -106,6 +106,9 @@
       },
       "filters": {
         "description": "Manage whitelist and blocklist filter rules"
+      },
+      "email-rules": {
+        "description": "Manage plain-English rules that pick out received mail. Needs your own `primitive login`, not narrowed; API keys and connected agents are refused."
       },
       "webhook-deliveries": {
         "description": "View and replay webhook delivery attempts. Prefer `primitive webhook-deliveries list` and `primitive webhook-deliveries replay`."
