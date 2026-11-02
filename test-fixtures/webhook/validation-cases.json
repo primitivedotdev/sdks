@@ -1833,7 +1833,7 @@
         "event": "email.received",
         "version": "2025-12-14",
         "delivery": {
-          "endpoint_id": "00000000-0000-4000-8000-000000000103",
+          "endpoint_id": "00000000-0000-4000-8000-000000000105",
           "attempt": 1,
           "attempted_at": "2026-11-02T20:21:59.000Z"
         },
@@ -1999,9 +1999,9 @@
               "included": true,
               "encoding": "base64",
               "max_inline_bytes": 262144,
-              "size_bytes": 336,
-              "sha256": "d564cd6fe2029c33ffa78f51674e7fa3f460428197b41f4613de0aac73a49d75",
-              "data": "RnJvbTogc2VuZGVyQGV4YW1wbGUuY29tDQpUbzogc3VwcG9ydEBleGFtcGxlLmNvbQ0KU3ViamVjdDogUmVmdW5kIHJlcXVlc3QgZm9yIG9yZGVyIDU1MjENCk1lc3NhZ2UtSUQ6IDxtc2ctMDEwMUBleGFtcGxlLmNvbT4NCkRhdGU6IE1vbiwgMDIgTm92IDIwMjYgMjA6MjE6NTYgKzAwMDANCk1JTUUtVmVyc2lvbjogMS4wDQpDb250ZW50LVR5cGU6IHRleHQvcGxhaW47IGNoYXJzZXQ9dXRmLTgNCg0KSGksIEkgd2FzIGNoYXJnZWQgdHdpY2UgZm9yIG9yZGVyIDU1MjEgbGFzdCB3ZWVrLiBDb3VsZCB5b3UgcmVmdW5kIHRoZSBkdXBsaWNhdGUgY2hhcmdlIHRvIG15IGNhcmQ/IFRoYW5rcy4K"
+              "size_bytes": 337,
+              "sha256": "d6816abb88fd248681d834e038a50e9f0ec443365fdd62d93072dfa77a7feee3",
+              "data": "RnJvbTogc2VuZGVyQGV4YW1wbGUuY29tDQpUbzogc3VwcG9ydEBleGFtcGxlLmNvbQ0KU3ViamVjdDogUmVmdW5kIHJlcXVlc3QgZm9yIG9yZGVyIDU1MjENCk1lc3NhZ2UtSUQ6IDxtc2ctMDEwMUBleGFtcGxlLmNvbT4NCkRhdGU6IE1vbiwgMDIgTm92IDIwMjYgMjA6MjE6NTYgKzAwMDANCk1JTUUtVmVyc2lvbjogMS4wDQpDb250ZW50LVR5cGU6IHRleHQvcGxhaW47IGNoYXJzZXQ9dXRmLTgNCg0KSGksIEkgd2FzIGNoYXJnZWQgdHdpY2UgZm9yIG9yZGVyIDU1MjEgbGFzdCB3ZWVrLiBDb3VsZCB5b3UgcmVmdW5kIHRoZSBkdXBsaWNhdGUgY2hhcmdlIHRvIG15IGNhcmQ/IFRoYW5rcy4NCg=="
             },
             "download": {
               "url": "https://api.primitive.dev/v1/downloads/raw/token123",
