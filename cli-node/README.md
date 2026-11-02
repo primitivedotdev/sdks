@@ -1427,9 +1427,9 @@ addresses, only the mentioned agents are woken. A mention is `@` and the
 address's local part (`@reviewer`) or the full address
 (`reviewer@agents.example.com`), matched case-insensitively and only as a whole
 handle or address, so `@reviewer` does not match `@reviewer2`. Quoted history
-and quoted (`>`) lines are ignored, so an earlier message's mention does not count again, and addresses
-the email was not sent to are ignored. A local part shared by two recipients
-mentions both. Group email that mentions none of its recipients wakes every
+and quoted (`>`) lines are ignored, so an earlier message's mention does not
+count again, and addresses the email was not sent to are ignored. A local part
+shared by two recipients mentions both. Group email that mentions none of its recipients wakes every
 recipient as before, and email addressed to one agent alone always wakes it.
 Like a muted thread, mail that skips the wake is still received and readable.
 
