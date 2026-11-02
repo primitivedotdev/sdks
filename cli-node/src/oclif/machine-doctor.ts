@@ -378,6 +378,21 @@ const HARNESS_SETUP: Record<MachineRuntime, DoctorCheckId[]> = {
   omp: ["omp.instructions"],
 };
 
+/**
+ * The setup checks that skip when no machine-wide setup is in use. The rest
+ * (a valid settings file, no stale Stop hook) pass on a machine with no setup.
+ */
+const HARNESS_SETUP_IN_USE: Record<MachineRuntime, DoctorCheckId[]> = {
+  claude: [
+    "claude.hook.session_start",
+    "claude.hook.session_end",
+    "claude.instructions",
+    "skill.claude",
+  ],
+  codex: HARNESS_SETUP.codex,
+  omp: HARNESS_SETUP.omp,
+};
+
 type HarnessDetection = {
   directory: string;
   directoryFound: boolean;
@@ -1197,7 +1212,11 @@ export async function runMachineDoctor(
           { ...extra, setup: "incomplete" },
         );
       }
-      if (setup.every((item) => item.status === "skip"))
+      if (
+        HARNESS_SETUP_IN_USE[runtime].every(
+          (setupId) => results.get(setupId)?.status === "skip",
+        )
+      )
         return check(
           id,
           "ok",

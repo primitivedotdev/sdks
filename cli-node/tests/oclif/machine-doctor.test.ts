@@ -2357,4 +2357,23 @@ describe("harness detection", () => {
       setup: "not_used",
     });
   });
+
+  it("reports no Claude setup in use when its settings are valid but hold no Primitive hooks", async () => {
+    const { configDir, options } = machine({ runtimes: ["claude"] });
+    saveConnectedAgentProfile(configDir, "my-agent", profile("a@example.test"));
+    const report = byId(await runMachineDoctor(options));
+    for (const id of [
+      "claude.hook.session_start",
+      "claude.hook.session_end",
+      "claude.instructions",
+      "skill.claude",
+    ] as const)
+      expect(report[id].status, id).toBe("skip");
+    expect(report["claude.settings_valid"].status).toBe("ok");
+    expect(report["claude.hook.stop"].status).toBe("ok");
+    expect(report["claude.installed"]).toMatchObject({
+      status: "ok",
+      setup: "not_used",
+    });
+  });
 });
