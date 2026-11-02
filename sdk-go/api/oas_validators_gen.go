@@ -5161,6 +5161,24 @@ func (s *CreateAgentConnectionReq) Validate() error {
 			Error: err,
 		})
 	}
+	if err := func() error {
+		if value, ok := s.SessionGrant.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "session_grant",
+			Error: err,
+		})
+	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
 	}
@@ -5176,6 +5194,41 @@ func (s CreateAgentConnectionReqOwnershipKind) Validate() error {
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}
+}
+
+func (s *CreateAgentConnectionReqSessionGrant) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := (validate.String{
+			MinLength:     0,
+			MinLengthSet:  false,
+			MaxLength:     0,
+			MaxLengthSet:  false,
+			Email:         false,
+			Hostname:      false,
+			Regex:         regexMap["^[A-Za-z0-9._-]{8,128}$"],
+			MinNumeric:    0,
+			MinNumericSet: false,
+			MaxNumeric:    0,
+			MaxNumericSet: false,
+		}).Validate(string(s.MachineID)); err != nil {
+			return errors.Wrap(err, "string")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "machine_id",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
 }
 
 func (s *CreateAgentConnectionTooManyRequests) Validate() error {
@@ -10813,6 +10866,16 @@ func (s ErrorResponseErrorCode) Validate() error {
 	case "connection_removed":
 		return nil
 	case "connection_create_request_conflict":
+		return nil
+	case "session_grant_not_found":
+		return nil
+	case "session_grant_mismatch":
+		return nil
+	case "session_grant_expired":
+		return nil
+	case "session_grant_redeemed":
+		return nil
+	case "session_grant_cancelled":
 		return nil
 	case "connection_already_claimed":
 		return nil

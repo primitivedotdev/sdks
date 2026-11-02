@@ -105,6 +105,7 @@ from .create_agent_claim_link_input import CreateAgentClaimLinkInput
 from .create_agent_claim_link_response_200 import CreateAgentClaimLinkResponse200
 from .create_agent_connection_body import CreateAgentConnectionBody
 from .create_agent_connection_body_ownership_kind import CreateAgentConnectionBodyOwnershipKind
+from .create_agent_connection_body_session_grant import CreateAgentConnectionBodySessionGrant
 from .create_agent_connection_response_200 import CreateAgentConnectionResponse200
 from .create_agent_connection_response_200_data_type_0 import CreateAgentConnectionResponse200DataType0
 from .create_agent_connection_response_200_data_type_0_connection import CreateAgentConnectionResponse200DataType0Connection
@@ -797,6 +798,7 @@ __all__ = (
     "CreateAgentClaimLinkResponse200",
     "CreateAgentConnectionBody",
     "CreateAgentConnectionBodyOwnershipKind",
+    "CreateAgentConnectionBodySessionGrant",
     "CreateAgentConnectionResponse200",
     "CreateAgentConnectionResponse200DataType0",
     "CreateAgentConnectionResponse200DataType0Connection",

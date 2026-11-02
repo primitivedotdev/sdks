@@ -19887,14 +19887,21 @@ func (s *CreateAgentConnectionReq) encodeFields(e *jx.Encoder) {
 			s.CreateRequestID.Encode(e)
 		}
 	}
+	{
+		if s.SessionGrant.Set {
+			e.FieldStart("session_grant")
+			s.SessionGrant.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfCreateAgentConnectionReq = [5]string{
+var jsonFieldsNameOfCreateAgentConnectionReq = [6]string{
 	0: "name",
 	1: "address",
 	2: "owner_address",
 	3: "ownership_kind",
 	4: "create_request_id",
+	5: "session_grant",
 }
 
 // Decode decodes CreateAgentConnectionReq from json.
@@ -19957,6 +19964,16 @@ func (s *CreateAgentConnectionReq) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"create_request_id\"")
+			}
+		case "session_grant":
+			if err := func() error {
+				s.SessionGrant.Reset()
+				if err := s.SessionGrant.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"session_grant\"")
 			}
 		default:
 			return errors.Errorf("unexpected field %q", k)
@@ -20050,6 +20067,136 @@ func (s CreateAgentConnectionReqOwnershipKind) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *CreateAgentConnectionReqOwnershipKind) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *CreateAgentConnectionReqSessionGrant) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *CreateAgentConnectionReqSessionGrant) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("id")
+		json.EncodeUUID(e, s.ID)
+	}
+	{
+		e.FieldStart("session_id")
+		json.EncodeUUID(e, s.SessionID)
+	}
+	{
+		e.FieldStart("machine_id")
+		e.Str(s.MachineID)
+	}
+}
+
+var jsonFieldsNameOfCreateAgentConnectionReqSessionGrant = [3]string{
+	0: "id",
+	1: "session_id",
+	2: "machine_id",
+}
+
+// Decode decodes CreateAgentConnectionReqSessionGrant from json.
+func (s *CreateAgentConnectionReqSessionGrant) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CreateAgentConnectionReqSessionGrant to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.ID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"id\"")
+			}
+		case "session_id":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.SessionID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"session_id\"")
+			}
+		case "machine_id":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.MachineID = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"machine_id\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode CreateAgentConnectionReqSessionGrant")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfCreateAgentConnectionReqSessionGrant) {
+					name = jsonFieldsNameOfCreateAgentConnectionReqSessionGrant[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *CreateAgentConnectionReqSessionGrant) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CreateAgentConnectionReqSessionGrant) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -43923,6 +44070,16 @@ func (s *ErrorResponseErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorResponseErrorCodeConnectionRemoved
 	case ErrorResponseErrorCodeConnectionCreateRequestConflict:
 		*s = ErrorResponseErrorCodeConnectionCreateRequestConflict
+	case ErrorResponseErrorCodeSessionGrantNotFound:
+		*s = ErrorResponseErrorCodeSessionGrantNotFound
+	case ErrorResponseErrorCodeSessionGrantMismatch:
+		*s = ErrorResponseErrorCodeSessionGrantMismatch
+	case ErrorResponseErrorCodeSessionGrantExpired:
+		*s = ErrorResponseErrorCodeSessionGrantExpired
+	case ErrorResponseErrorCodeSessionGrantRedeemed:
+		*s = ErrorResponseErrorCodeSessionGrantRedeemed
+	case ErrorResponseErrorCodeSessionGrantCancelled:
+		*s = ErrorResponseErrorCodeSessionGrantCancelled
 	case ErrorResponseErrorCodeConnectionAlreadyClaimed:
 		*s = ErrorResponseErrorCodeConnectionAlreadyClaimed
 	case ErrorResponseErrorCodeConnectionRevoked:
@@ -69079,6 +69236,39 @@ func (s OptCreateAgentConnectionReqOwnershipKind) MarshalJSON() ([]byte, error) 
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptCreateAgentConnectionReqOwnershipKind) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes CreateAgentConnectionReqSessionGrant as json.
+func (o OptCreateAgentConnectionReqSessionGrant) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes CreateAgentConnectionReqSessionGrant from json.
+func (o *OptCreateAgentConnectionReqSessionGrant) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptCreateAgentConnectionReqSessionGrant to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptCreateAgentConnectionReqSessionGrant) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptCreateAgentConnectionReqSessionGrant) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
