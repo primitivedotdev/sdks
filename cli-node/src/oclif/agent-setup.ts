@@ -22,6 +22,7 @@ import {
   type ClaimedChallenge,
   ClaimNotSubmittedError,
   CONNECTION_ID,
+  claimedChallenge,
   connectAgent,
   parseAgentInvitation,
   removeEmptyDirectory,
@@ -140,6 +141,12 @@ export type AgentSetupDependencies = {
     since: string,
     expected?: ExpectedChallenge,
   ): Promise<Challenge | null>;
+  /**
+   * The claimed connection's id and claim time, read from the server. Used
+   * when this run did not claim and the setup saved no challenge choice.
+   * Never throws; an empty result keeps the earlier rule.
+   */
+  readClaim(context: Context): Promise<ClaimedChallenge>;
   sendVerification(
     context: Context,
     challenge: Challenge,
@@ -278,6 +285,45 @@ async function checkVerification(
   }
 }
 
+async function readClaim(context: Context): Promise<ClaimedChallenge> {
+  try {
+    const response = await context.fetch(
+      `${context.profile.api_base_url}/agent-connections/me`,
+      {
+        method: "GET",
+        redirect: "error",
+        signal: AbortSignal.timeout(5_000),
+        headers: {
+          authorization: `Bearer ${context.profile.api_key}`,
+          accept: "application/json",
+        },
+      },
+    );
+    if (response.status !== 200) {
+      await response.body?.cancel();
+      return {};
+    }
+    const text = await response.text();
+    if (text.length > 65_536) return {};
+    const body = JSON.parse(text) as {
+      success?: unknown;
+      data?: { connection?: { address?: unknown } };
+    } | null;
+    const address = body?.data?.connection?.address;
+    if (
+      body?.success !== true ||
+      typeof address !== "string" ||
+      address.toLowerCase() !== context.identity.agentAddress.toLowerCase()
+    )
+      return {};
+    // The connection's own record names no marker; only its id and claim time.
+    const { marker: _marker, ...hint } = claimedChallenge(body);
+    return hint;
+  } catch {
+    return {};
+  }
+}
+
 /**
  * Poll until the server reports the connection verified, the budget runs out,
  * or the status read is unavailable. Elapsed time is the larger of the clock
@@ -320,10 +366,10 @@ const OPTIONAL_STATE_KEYS = [
  * How far before the claim's server time the search starts. With the exact
  * marker the window only bounds the search, so it allows generous skew
  * between the database and the mail pipeline clocks. Without it the window
- * is what excludes an earlier challenge, so it stays close to the claim.
+ * is what excludes an earlier challenge, so it starts at the claim itself:
+ * the server sends the challenge only after the claim commits.
  */
 const MARKER_WINDOW_MS = 60_000;
-const CLAIM_WINDOW_MS = 5_000;
 
 /**
  * Points this setup at the challenge its claim started. Leaves the state
@@ -344,7 +390,7 @@ export function narrowToClaim(
       state.since = new Date(claimedAt - MARKER_WINDOW_MS).toISOString();
   } else if (claim?.connectionId && Number.isFinite(claimedAt)) {
     state.challengeConnectionId = claim.connectionId;
-    state.since = new Date(claimedAt - CLAIM_WINDOW_MS).toISOString();
+    state.since = new Date(claimedAt).toISOString();
   }
 }
 
@@ -535,6 +581,17 @@ async function findChallenge(
     )
       matches.push(match);
   }
+  // Without the exact marker, one connection's challenges after the claim
+  // can still differ by generation (an earlier one delivered late). The
+  // highest present is the newest. An earlier one that arrives alone, before
+  // the current one, cannot be told apart this way; the exact marker can.
+  if (expected.connectionId && !expected.marker && matches.length > 1) {
+    const generation = (row: Challenge) =>
+      Number(row.marker.slice(row.marker.lastIndexOf(":") + 1));
+    const top = Math.max(...matches.map(generation));
+    const current = matches.filter((row) => generation(row) === top);
+    if (current.length === 1) return current[0] ?? null;
+  }
   if (matches.length > 1)
     throw fail(
       "Several recent setup challenges match. No challenge was guessed or answered. Ask the owner to confirm the current challenge.",
@@ -655,6 +712,7 @@ export async function nativeSessionPreflight(session: string): Promise<void> {
 function defaults(): AgentSetupDependencies {
   return {
     checkVerification,
+    readClaim,
     now: Date.now,
     sleep: async (ms) => {
       await delay(ms);
@@ -975,6 +1033,7 @@ export async function setupAgent(params: {
   let claimedName: string | undefined;
   // Which challenge this run's claim started, known only when it claimed.
   let claimedChallengeHint: ClaimedChallenge | undefined;
+  let claimedThisRun = false;
   const takeEnrollment = () => {
     try {
       releaseEnrollment = acquireListenLock(
@@ -1100,6 +1159,7 @@ export async function setupAgent(params: {
         });
         claimedName = claim.name;
         claimedChallengeHint = claim.challenge;
+        claimedThisRun = claim.status === "claimed";
         if (retireEnrollment)
           moveAside(
             join(directory, "enrollment", "state.json"),
@@ -1238,6 +1298,18 @@ export async function setupAgent(params: {
       state.phase = "sent";
       writeMailJson(path, state);
     }
+    // A resume, or a claim this run did not make: if the setup saved no
+    // challenge choice (its write after the claim failed, the process stopped
+    // there, or an earlier version wrote it), read the claim from the server.
+    // Kept in memory only, so the saved setup stays readable by the version
+    // that wrote it; the next resume reads it again.
+    if (
+      state.phase === "waiting" &&
+      !claimedThisRun &&
+      !state.challengeMarker &&
+      !state.challengeConnectionId
+    )
+      narrowToClaim(state, await dependencies.readClaim(context));
     if (state.phase === "waiting") {
       const deadline = dependencies.now() + timeoutMs;
       do {

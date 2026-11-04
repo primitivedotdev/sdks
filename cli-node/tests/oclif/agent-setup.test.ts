@@ -91,6 +91,7 @@ function fixture() {
       async () => receipt,
     ),
     reconcile: vi.fn<AgentSetupDependencies["reconcile"]>(async () => null),
+    readClaim: vi.fn<AgentSetupDependencies["readClaim"]>(async () => ({})),
     checkVerification: vi.fn<AgentSetupDependencies["checkVerification"]>(
       async () => ({ state: "unavailable" as const }),
     ),
@@ -1730,8 +1731,10 @@ describe("answering the challenge this claim started", () => {
     f: ReturnType<typeof fixture>,
     claim: Response,
     visible: EmailDetail[][],
+    me?: { claimedAt: string },
   ) {
     let reads = 0;
+    let meReads = 0;
     const searches: URL[] = [];
     const sends: Array<Record<string, unknown>> = [];
     const all = new Map(visible.flat().map((row) => [row.id, row]));
@@ -1739,6 +1742,21 @@ describe("answering the challenge this claim started", () => {
       const request = new Request(input, init);
       const url = new URL(request.url);
       if (url.pathname === "/v1/agent-connections/claim") return claim;
+      if (url.pathname === "/v1/agent-connections/me") {
+        meReads++;
+        return Response.json({
+          success: true,
+          data: {
+            connection: {
+              id: connectionId,
+              address: f.identity.agentAddress,
+              status: sends.length ? "connected" : "claimed",
+              claimed_at: me?.claimedAt ?? null,
+              verified_at: null,
+            },
+          },
+        });
+      }
       if (url.pathname === "/v1/emails/search") {
         searches.push(url);
         const rows = visible[Math.min(reads++, visible.length - 1)] ?? [];
@@ -1763,9 +1781,10 @@ describe("answering the challenge this claim started", () => {
     const {
       findChallenge: _find,
       sendVerification: _send,
+      readClaim: _read,
       ...dependencies
     } = f.dependencies;
-    return { searches, sends, dependencies };
+    return { searches, sends, dependencies, meReads: () => meReads };
   }
 
   it("waits for the reconnect's own challenge instead of answering the previous one", async () => {
@@ -1853,7 +1872,7 @@ describe("answering the challenge this claim started", () => {
   it("against a server without the marker, answers only this connection's challenge sent after the claim", async () => {
     const f = fixture();
     const claimedAt = f.now - 1_000;
-    const previous = challengeEmail(f, marker(1), claimedAt - 30_000);
+    const previous = challengeEmail(f, marker(1), claimedAt - 1_000);
     const other = challengeEmail(
       f,
       marker(1, "11111111-2222-4333-8444-555555555555"),
@@ -1871,8 +1890,142 @@ describe("answering the challenge this claim started", () => {
     expect(t.sends).toEqual([
       expect.objectContaining({ in_reply_to: current.message_id }),
     ]);
-    expect(f.state().since).toBe(new Date(claimedAt - 5_000).toISOString());
+    expect(f.state().since).toBe(new Date(claimedAt).toISOString());
     expect(f.state()).not.toHaveProperty("challengeConnectionId");
+  });
+
+  it("without the marker, prefers the newest generation over an earlier one delivered late", async () => {
+    const f = fixture();
+    const claimedAt = f.now - 1_000;
+    const late = challengeEmail(f, marker(1), claimedAt + 300);
+    const current = challengeEmail(f, marker(2), claimedAt + 400);
+    const claim = claimResponse(f, {
+      id: connectionId,
+      claimed_at: new Date(claimedAt).toISOString(),
+    });
+    const t = transport(f, claim, [[late, current]]);
+    expect(
+      await setupAgent({ ...f.params, dependencies: t.dependencies }),
+    ).toMatchObject({ verification: { state: "reply_submitted" } });
+    expect(t.sends).toEqual([
+      expect.objectContaining({ in_reply_to: current.message_id }),
+    ]);
+  });
+
+  it("a resume with no saved challenge choice reads the claim from the server", async () => {
+    // As if the write after the claim failed, or an earlier version saved the setup.
+    const f = fixture();
+    f.dependencies.findChallenge.mockResolvedValueOnce(null);
+    await setupAgent(f.params);
+    expect(f.state()).not.toHaveProperty("challengeConnectionId");
+    const claimedAt = f.now - 1_000;
+    const previous = challengeEmail(f, marker(1), claimedAt - 2_000);
+    const current = challengeEmail(f, marker(2), claimedAt + 400);
+    const t = transport(f, claimResponse(f, {}), [[previous, current]], {
+      claimedAt: new Date(claimedAt).toISOString(),
+    });
+    expect(
+      await setupAgent({
+        ...f.params,
+        invitation: undefined,
+        resume: true,
+        dependencies: t.dependencies,
+      }),
+    ).toMatchObject({ verification: { state: "reply_submitted" } });
+    expect(t.sends).toEqual([
+      expect.objectContaining({ in_reply_to: current.message_id }),
+    ]);
+    expect(t.searches[0]?.searchParams.get("date_from")).toBe(
+      new Date(claimedAt).toISOString(),
+    );
+  });
+
+  it("a resume ignores a claim record for another address", async () => {
+    const f = fixture();
+    f.dependencies.findChallenge.mockResolvedValueOnce(null);
+    await setupAgent(f.params);
+    const before = f.state().since;
+    const { readClaim: _read, ...dependencies } = f.dependencies;
+    f.fetch.mockImplementation(async () =>
+      Response.json({
+        success: true,
+        data: {
+          connection: {
+            id: connectionId,
+            address: "someone-else@example.com",
+            claimed_at: new Date(f.now).toISOString(),
+          },
+        },
+      }),
+    );
+    await setupAgent({
+      ...f.params,
+      invitation: undefined,
+      resume: true,
+      dependencies,
+    });
+    expect(f.dependencies.findChallenge).toHaveBeenLastCalledWith(
+      expect.anything(),
+      before,
+      {},
+    );
+  });
+
+  it("a resume with a saved challenge choice does not read the claim again", async () => {
+    const f = fixture();
+    f.fetch.mockImplementationOnce(async () =>
+      claimResponse(f, {
+        id: connectionId,
+        claimed_at: new Date(f.now).toISOString(),
+        challenge_marker: marker(2),
+      }),
+    );
+    f.dependencies.findChallenge.mockResolvedValueOnce(null);
+    await setupAgent(f.params);
+    await f.resume();
+    expect(f.dependencies.readClaim).not.toHaveBeenCalled();
+    expect(f.dependencies.findChallenge).toHaveBeenLastCalledWith(
+      expect.anything(),
+      new Date(f.now - 60_000).toISOString(),
+      { marker: marker(2) },
+    );
+  });
+
+  it("without the marker, still refuses two different challenges of the same generation", async () => {
+    const f = fixture();
+    const claimedAt = f.now - 1_000;
+    const first = challengeEmail(f, marker(2), claimedAt + 300);
+    const second = challengeEmail(f, marker(2), claimedAt + 400);
+    const claim = claimResponse(f, {
+      id: connectionId,
+      claimed_at: new Date(claimedAt).toISOString(),
+    });
+    const t = transport(f, claim, [[first, second]]);
+    await expect(
+      setupAgent({ ...f.params, dependencies: t.dependencies }),
+    ).rejects.toThrow("Several recent setup challenges match");
+    expect(t.sends).toEqual([]);
+  });
+
+  it("a run that claimed does not read the claim back from the server", async () => {
+    const f = fixture();
+    const claimedAt = f.now - 1_000;
+    const current = challengeEmail(f, marker(2), claimedAt + 400);
+    const t = transport(
+      f,
+      claimResponse(f, {
+        id: connectionId,
+        claimed_at: new Date(claimedAt).toISOString(),
+        challenge_marker: marker(2),
+      }),
+      [[current]],
+    );
+    await setupAgent({
+      ...f.params,
+      verificationTimeoutMs: 0,
+      dependencies: t.dependencies,
+    });
+    expect(t.meReads()).toBe(0);
   });
 
   it("waits for the claim's own challenge even when no claim time was reported", async () => {
