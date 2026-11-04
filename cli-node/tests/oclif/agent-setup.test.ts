@@ -12,7 +12,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { EmailDetail } from "@primitivedotdev/api-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AgentInvitationRejectedError } from "../../src/oclif/agent-connect.js";
+import {
+  AgentInvitationRejectedError,
+  claimedChallenge,
+} from "../../src/oclif/agent-connect.js";
 import { runAgentConnect } from "../../src/oclif/agent-connect-flow.js";
 import { disconnectAgent } from "../../src/oclif/agent-disconnect.js";
 import {
@@ -831,10 +834,21 @@ describe("one-command connected agent setup", () => {
             ],
             meta: { cursor: kind === "incomplete" ? "more" : null },
           });
-        if (path.includes("/emails/"))
+        if (path.includes("/emails/")) {
+          const id = path.split("/").at(-1) ?? "";
+          // A second, different challenge: its own Message-ID and marker.
           return Response.json({
-            data: { ...f.detail, id: path.split("/").at(-1) },
+            data:
+              id === f.challenge.id
+                ? f.detail
+                : {
+                    ...f.detail,
+                    id,
+                    message_id: `<${id}@example.com>`,
+                    body_text: `Reply once with primitive-connection:${randomUUID()}:1`,
+                  },
           });
+        }
         throw new Error("Unexpected request");
       });
       const { findChallenge: _find, ...dependencies } = f.dependencies;
@@ -1664,5 +1678,297 @@ describe("finishing a session whose setup never got a credential", () => {
     await expect(f.resume()).rejects.toThrow(
       "This session's agent agent@example.com is created but not connected: in the Primitive app open it and choose Copy again, then paste that setup instruction here; `agent connect` finishes the same address.",
     );
+  });
+});
+
+describe("answering the challenge this claim started", () => {
+  const connectionId = "0d5f6c1e-6b2a-4c43-9a51-3f1f0f2b7c10";
+  const marker = (generation: number, id = connectionId) =>
+    `primitive-connection:${id}:${generation}`;
+  function claimResponse(
+    f: ReturnType<typeof fixture>,
+    extra: { challenge_marker?: string; claimed_at?: string; id?: string },
+  ) {
+    const { challenge_marker, ...connection } = extra;
+    return Response.json({
+      success: true,
+      data: {
+        api_key: f.credential,
+        api_base_url: f.identity.apiBaseUrl,
+        org_id: f.identity.orgId,
+        owner_address: f.identity.ownerAddress,
+        ...(challenge_marker ? { challenge_marker } : {}),
+        connection: {
+          address: f.identity.agentAddress,
+          owner_address: f.identity.ownerAddress,
+          status: "claimed",
+          ...connection,
+        },
+      },
+    });
+  }
+  function challengeEmail(
+    f: ReturnType<typeof fixture>,
+    value: string,
+    receivedAt: number,
+  ) {
+    const id = randomUUID();
+    return {
+      ...f.detail,
+      id,
+      message_id: `<${id}@example.com>`,
+      body_text: `Reply once with ${value}`,
+      created_at: new Date(receivedAt).toISOString(),
+      received_at: new Date(receivedAt).toISOString(),
+    };
+  }
+  /**
+   * The real search and send transport. `visible` lists the challenges the
+   * search returns on each read; the last entry repeats.
+   */
+  function transport(
+    f: ReturnType<typeof fixture>,
+    claim: Response,
+    visible: EmailDetail[][],
+  ) {
+    let reads = 0;
+    const searches: URL[] = [];
+    const sends: Array<Record<string, unknown>> = [];
+    const all = new Map(visible.flat().map((row) => [row.id, row]));
+    f.fetch.mockImplementation(async (input, init) => {
+      const request = new Request(input, init);
+      const url = new URL(request.url);
+      if (url.pathname === "/v1/agent-connections/claim") return claim;
+      if (url.pathname === "/v1/emails/search") {
+        searches.push(url);
+        const rows = visible[Math.min(reads++, visible.length - 1)] ?? [];
+        return Response.json({
+          data: rows.map((row) => ({ id: row.id })),
+          meta: { cursor: null },
+        });
+      }
+      const detail = all.get(url.pathname.split("/").pop() ?? "");
+      if (detail) return Response.json({ data: detail });
+      if (url.pathname === "/v1/send-mail") {
+        sends.push((await request.json()) as Record<string, unknown>);
+        return Response.json({ data: f.receipt });
+      }
+      throw new Error(`Unexpected endpoint ${url.pathname}`);
+    });
+    let clock = f.now;
+    f.dependencies.now = () => clock;
+    f.dependencies.sleep.mockImplementation(async (ms: number) => {
+      clock += ms;
+    });
+    const {
+      findChallenge: _find,
+      sendVerification: _send,
+      ...dependencies
+    } = f.dependencies;
+    return { searches, sends, dependencies };
+  }
+
+  it("waits for the reconnect's own challenge instead of answering the previous one", async () => {
+    const f = fixture();
+    const claimedAt = f.now - 1_000;
+    // The previous generation's challenge, 20 seconds before this claim, is
+    // the only one searchable at first; the new one lands a moment later.
+    const previous = challengeEmail(f, marker(1), claimedAt - 20_000);
+    const current = challengeEmail(f, marker(2), claimedAt + 400);
+    const claim = claimResponse(f, {
+      id: connectionId,
+      claimed_at: new Date(claimedAt).toISOString(),
+      challenge_marker: marker(2),
+    });
+    const t = transport(f, claim, [[previous], [current, previous]]);
+    expect(
+      await setupAgent({
+        ...f.params,
+        timeoutMs: 10_000,
+        dependencies: t.dependencies,
+      }),
+    ).toMatchObject({ verification: { state: "reply_submitted" } });
+    expect(t.sends).toEqual([
+      expect.objectContaining({
+        body_text: marker(2),
+        in_reply_to: current.message_id,
+      }),
+    ]);
+    expect(t.searches.length).toBe(2);
+    expect(t.searches[0]?.searchParams.get("date_from")).toBe(
+      new Date(claimedAt - 60_000).toISOString(),
+    );
+    // Past the search, the setup record has the shape older CLIs read.
+    expect(f.state()).toMatchObject({ phase: "sent" });
+    expect(f.state()).not.toHaveProperty("challengeMarker");
+  });
+
+  it("answers nothing while only an earlier generation's challenge is visible", async () => {
+    const f = fixture();
+    const claimedAt = f.now - 1_000;
+    const previous = challengeEmail(f, marker(1), claimedAt - 5_000);
+    const claim = claimResponse(f, {
+      id: connectionId,
+      claimed_at: new Date(claimedAt).toISOString(),
+      challenge_marker: marker(2),
+    });
+    const t = transport(f, claim, [[previous]]);
+    expect(
+      await setupAgent({ ...f.params, dependencies: t.dependencies }),
+    ).toMatchObject({ verification: { state: "challenge_pending" } });
+    expect(t.sends).toEqual([]);
+    // A resume still knows which challenge to wait for.
+    const current = challengeEmail(f, marker(2), claimedAt + 30_000);
+    const resumed = transport(f, claim, [[current, previous]]);
+    expect(
+      await setupAgent({
+        ...f.params,
+        invitation: undefined,
+        resume: true,
+        dependencies: resumed.dependencies,
+      }),
+    ).toMatchObject({ verification: { state: "reply_submitted" } });
+    expect(resumed.sends).toEqual([
+      expect.objectContaining({ in_reply_to: current.message_id }),
+    ]);
+  });
+
+  it("answers one challenge stored twice instead of refusing it as ambiguous", async () => {
+    const f = fixture();
+    const claimedAt = f.now - 1_000;
+    const current = challengeEmail(f, marker(2), claimedAt + 400);
+    const copy = { ...current, id: randomUUID() };
+    const claim = claimResponse(f, {
+      id: connectionId,
+      claimed_at: new Date(claimedAt).toISOString(),
+      challenge_marker: marker(2),
+    });
+    const t = transport(f, claim, [[current, copy]]);
+    expect(
+      await setupAgent({ ...f.params, dependencies: t.dependencies }),
+    ).toMatchObject({ verification: { state: "reply_submitted" } });
+    expect(t.sends).toHaveLength(1);
+  });
+
+  it("against a server without the marker, answers only this connection's challenge sent after the claim", async () => {
+    const f = fixture();
+    const claimedAt = f.now - 1_000;
+    const previous = challengeEmail(f, marker(1), claimedAt - 30_000);
+    const other = challengeEmail(
+      f,
+      marker(1, "11111111-2222-4333-8444-555555555555"),
+      claimedAt + 200,
+    );
+    const current = challengeEmail(f, marker(2), claimedAt + 400);
+    const claim = claimResponse(f, {
+      id: connectionId,
+      claimed_at: new Date(claimedAt).toISOString(),
+    });
+    const t = transport(f, claim, [[previous, other, current]]);
+    expect(
+      await setupAgent({ ...f.params, dependencies: t.dependencies }),
+    ).toMatchObject({ verification: { state: "reply_submitted" } });
+    expect(t.sends).toEqual([
+      expect.objectContaining({ in_reply_to: current.message_id }),
+    ]);
+    expect(f.state().since).toBe(new Date(claimedAt - 5_000).toISOString());
+    expect(f.state()).not.toHaveProperty("challengeConnectionId");
+  });
+
+  it("waits for the claim's own challenge even when no claim time was reported", async () => {
+    const f = fixture();
+    f.fetch.mockImplementationOnce(async () =>
+      claimResponse(f, { id: connectionId, challenge_marker: marker(2) }),
+    );
+    f.dependencies.findChallenge.mockResolvedValueOnce(null);
+    await setupAgent(f.params);
+    expect(f.dependencies.findChallenge).toHaveBeenCalledWith(
+      expect.anything(),
+      new Date(f.now - 15 * 60_000).toISOString(),
+      { marker: marker(2) },
+    );
+    expect(f.state()).toMatchObject({
+      phase: "waiting",
+      challengeMarker: marker(2),
+    });
+  });
+
+  it("keeps the earlier rule when the claim names neither", async () => {
+    const f = fixture();
+    await setupAgent(f.params);
+    expect(f.dependencies.findChallenge).toHaveBeenCalledWith(
+      expect.anything(),
+      new Date(f.now - 15 * 60_000).toISOString(),
+      {},
+    );
+    expect(f.state()).not.toHaveProperty("challengeMarker");
+    expect(f.state()).not.toHaveProperty("challengeConnectionId");
+  });
+
+  it("matches a marker exactly and by connection", () => {
+    const f = fixture();
+    const since = new Date(f.now - 60_000).toISOString();
+    const detail = challengeEmail(f, marker(2), f.now - 1_000);
+    expect(
+      setupChallenge(detail, f.identity, since, { marker: marker(2) })?.marker,
+    ).toBe(marker(2));
+    expect(
+      setupChallenge(detail, f.identity, since, { marker: marker(3) }),
+    ).toBeNull();
+    // Generation 1 is a prefix of generation 12; only the exact marker matches.
+    expect(
+      setupChallenge(challengeEmail(f, marker(12), f.now), f.identity, since, {
+        marker: marker(1),
+      }),
+    ).toBeNull();
+    expect(
+      setupChallenge(detail, f.identity, since, { connectionId }),
+    ).not.toBeNull();
+    expect(
+      setupChallenge(detail, f.identity, since, {
+        connectionId: "11111111-2222-4333-8444-555555555555",
+      }),
+    ).toBeNull();
+  });
+
+  it("reads only usable challenge hints from a claim response", () => {
+    const at = "2026-09-28T19:00:00.000Z";
+    expect(
+      claimedChallenge({
+        data: {
+          challenge_marker: marker(2),
+          connection: { id: connectionId, claimed_at: at },
+        },
+      }),
+    ).toEqual({ marker: marker(2), connectionId, claimedAt: at });
+    // A marker for another connection, or a malformed one, is not used.
+    expect(
+      claimedChallenge({
+        data: {
+          challenge_marker: marker(2, "11111111-2222-4333-8444-555555555555"),
+          connection: { id: connectionId, claimed_at: "not a time" },
+        },
+      }),
+    ).toEqual({ connectionId });
+    expect(
+      claimedChallenge({
+        data: { challenge_marker: `${marker(2)} extra`, connection: {} },
+      }),
+    ).toEqual({});
+    expect(claimedChallenge(null)).toEqual({});
+  });
+
+  it("refuses a saved setup whose challenge marker is invalid", async () => {
+    const f = fixture();
+    f.dependencies.findChallenge.mockResolvedValueOnce(null);
+    await setupAgent(f.params);
+    writeMailJson(
+      join(
+        agentProfileDirectory(f.configDir, f.params.profileName),
+        "setup.json",
+      ),
+      { ...f.state(), challengeMarker: "primitive-connection:bogus:1" },
+    );
+    await expect(f.resume()).rejects.toThrow("Saved setup state is invalid");
   });
 });
