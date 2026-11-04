@@ -75,6 +75,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
   delete process.env.CLAUDE_CODE_SESSION_ID;
   delete process.env.CODEX_THREAD_ID;
   delete process.env.CLAUDE_CONFIG_DIR;
@@ -335,11 +336,18 @@ it("agent connect --status reads the profile selected by PRIMITIVE_AGENT_PROFILE
   vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation((line) => {
     outputs.push(String(line));
   });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => {
+      throw new TypeError("fetch failed");
+    }),
+  );
   await AgentConnectCommand.run(["--status", "--json"], { root });
   expect(process.exitCode).toBeUndefined();
   expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
     status: "configured",
     identity: { profileName: "work", agentAddress: "env@example.com" },
+    connection: { verification: "offline", reason: "unreachable" },
   });
   // An explicit --profile still wins over the environment.
   outputs.length = 0;

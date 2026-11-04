@@ -682,7 +682,9 @@ describe("COMMANDS / manifest coverage", () => {
       flags: Record<string, unknown>;
     };
     expect(whoamiCommand.flags.json).toBeDefined();
-    expect(whoamiCommand.description).toContain("identity offline");
+    expect(whoamiCommand.description).toContain(
+      "whether the connection is still accepted",
+    );
     expect(
       (COMMANDS.chat as unknown as { description: string }).description,
     ).toContain("pinned sender address");

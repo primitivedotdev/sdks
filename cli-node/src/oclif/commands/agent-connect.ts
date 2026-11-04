@@ -16,6 +16,7 @@ import {
   claimOverRevokedSetup,
   clearRevokedAddresses,
   disconnectAgent,
+  savedRevocation,
 } from "../agent-disconnect.js";
 import {
   connectNextSteps,
@@ -30,7 +31,12 @@ import { installedConnectSkillFile } from "../connect-skill.js";
 import {
   AGENT_PROFILE_ENV,
   AgentConnectionSetupError,
+  loadConnectedAgentProfile,
 } from "../connected-agent-profile.js";
+import {
+  CONNECTION_REVOKED_GUIDANCE,
+  checkConnectionWithServer,
+} from "../connection-revocation.js";
 import { SESSION_UUID } from "../notify-session-native.js";
 import { withOwnerMemberAddress } from "../owner-member-address.js";
 import {
@@ -70,7 +76,7 @@ function withClearedNote(message: string, cleared: BoundAddress[]): string {
 
 export default class AgentConnectCommand extends Command {
   static description =
-    `Connect this coding session to Primitive in one call. With --session, the command checks this CLI's capabilities, installs or refreshes the matching primitive-connect skill for the detected runtime (Claude Code or Codex) from files bundled in this CLI, claims the owner's private setup invitation from piped stdin, answers one authenticated setup challenge, enables owner notifications, starts receiving, seeds a private AGENT_INFO note from --name and --info when absent, writes a private AGENT_RESUME note holding the command that resumes the bound session ("claude --resume <session>" or "codex resume <session>") once verified (or deletes an existing one when no resumable session is bound), and prints one JSON result. The receiver defaults to external hooks in Claude Code and the native background listener elsewhere. When the native default cannot work because this machine has no local session socket (for example Codex older than 0.158.0), the command connects with poll receiving instead and reports receiving.fallbackReason and receiving.fallbackDetail. Without a session (no --session, or an empty one) the receiver is poll: for runtimes with no local session ID or hooks, such as a cloud-hosted conversation whose commands run in a separate sandbox, the invitation is claimed and verified the same way, nothing is installed, and the result's receiving.checkCommand is the command the agent runs to check for new mail at the start of each turn and after it sends. Native receiving starts or reuses a supervised background listener and waits briefly for its first successful mail check; external receiving installs the exact Claude session's fail-open Stop hook and resume SessionStart hook after the verification reply; a real idle mail event must still verify wake. The profile defaults to session-<session>, or to connection-<invitation hash prefix> without a session. --resume continues saved progress without reading stdin or replaying a claim or uncertain verification send. After the reply is submitted it waits up to a minute for the server to confirm the connection and reports verification.state verified, or reply_submitted while confirmation is still pending. Verification is separate from receiver health. Both official production (https://api.primitive.dev/v1) and staging (https://api.primitive-staging-1.com/v1) invitations pin their API origin. Never pass an invitation as a command argument. One address per session: an address whose credential Primitive confirms was already revoked (for example, revoked in the app before the owner reconnected it) no longer counts; it is disconnected locally, reported in clearedRevoked, and its saved setup is moved aside so the new invitation can be claimed into the same profile. A profile whose earlier setup or enrollment never saved a credential is not an address: a pasted invitation is claimed into it (its unfinished state is moved aside), and the result's replacedUnfinished says whether that finished the same pending address. Otherwise, if this session already has a connected Primitive address, including one saved in the profile being connected, the command claims nothing, leaves stdin unread, and exits ${ALREADY_CONNECTED_EXIT_CODE} with status already_connected. Its detail names how to continue that profile's own connection when that is the only one: --resume for a setup with saved progress, or --keep-existing to refresh a claim-only profile from the same invitation. Otherwise ask the user whether to keep the existing address or disconnect it first, then rerun with --keep-existing or --replace-existing. Never choose for the user. Select the saved identity with PRIMITIVE_AGENT_PROFILE. Use --status --json with --profile, with PRIMITIVE_AGENT_PROFILE set, or with --session (the address connected for that session) to inspect saved identity and local receiver health offline; it exits 1 when nothing is configured, and reports the session's last registration failure as registration when one was recorded. A status check before connecting is optional: connect itself claims nothing and exits ${ALREADY_CONNECTED_EXIT_CODE} when the session already has an address. A completed connection's result carries nextSteps, in order: report to the owner in two short sentences, make one offer to rename a generated name and record where the agent runs, and load the primitive-connect skill before handling mail. When the claim reported one, the result also carries the connection's name and nameIsDefault.`;
+    `Connect this coding session to Primitive in one call. With --session, the command checks this CLI's capabilities, installs or refreshes the matching primitive-connect skill for the detected runtime (Claude Code or Codex) from files bundled in this CLI, claims the owner's private setup invitation from piped stdin, answers one authenticated setup challenge, enables owner notifications, starts receiving, seeds a private AGENT_INFO note from --name and --info when absent, writes a private AGENT_RESUME note holding the command that resumes the bound session ("claude --resume <session>" or "codex resume <session>") once verified (or deletes an existing one when no resumable session is bound), and prints one JSON result. The receiver defaults to external hooks in Claude Code and the native background listener elsewhere. When the native default cannot work because this machine has no local session socket (for example Codex older than 0.158.0), the command connects with poll receiving instead and reports receiving.fallbackReason and receiving.fallbackDetail. Without a session (no --session, or an empty one) the receiver is poll: for runtimes with no local session ID or hooks, such as a cloud-hosted conversation whose commands run in a separate sandbox, the invitation is claimed and verified the same way, nothing is installed, and the result's receiving.checkCommand is the command the agent runs to check for new mail at the start of each turn and after it sends. Native receiving starts or reuses a supervised background listener and waits briefly for its first successful mail check; external receiving installs the exact Claude session's fail-open Stop hook and resume SessionStart hook after the verification reply; a real idle mail event must still verify wake. The profile defaults to session-<session>, or to connection-<invitation hash prefix> without a session. --resume continues saved progress without reading stdin or replaying a claim or uncertain verification send. After the reply is submitted it waits up to a minute for the server to confirm the connection and reports verification.state verified, or reply_submitted while confirmation is still pending. Verification is separate from receiver health. Both official production (https://api.primitive.dev/v1) and staging (https://api.primitive-staging-1.com/v1) invitations pin their API origin. Never pass an invitation as a command argument. One address per session: an address whose credential Primitive confirms was already revoked (for example, revoked in the app before the owner reconnected it) no longer counts; it is disconnected locally, reported in clearedRevoked, and its saved setup is moved aside so the new invitation can be claimed into the same profile. A profile whose earlier setup or enrollment never saved a credential is not an address: a pasted invitation is claimed into it (its unfinished state is moved aside), and the result's replacedUnfinished says whether that finished the same pending address. Otherwise, if this session already has a connected Primitive address, including one saved in the profile being connected, the command claims nothing, leaves stdin unread, and exits ${ALREADY_CONNECTED_EXIT_CODE} with status already_connected. Its detail names how to continue that profile's own connection when that is the only one: --resume for a setup with saved progress, or --keep-existing to refresh a claim-only profile from the same invitation. Otherwise ask the user whether to keep the existing address or disconnect it first, then rerun with --keep-existing or --replace-existing. Never choose for the user. Select the saved identity with PRIMITIVE_AGENT_PROFILE. Use --status --json with --profile, with PRIMITIVE_AGENT_PROFILE set, or with --session (the address connected for that session) to inspect saved identity and local receiver health; it also asks Primitive whether the connection is still accepted and reports the answer as connection.verification (live, revoked, or offline when Primitive could not be reached, in which case the rest is from local files only). It exits 1 when nothing is configured or the connection was revoked, and reports the session's last registration failure as registration when one was recorded. A status check before connecting is optional: connect itself claims nothing and exits ${ALREADY_CONNECTED_EXIT_CODE} when the session already has an address. A completed connection's result carries nextSteps, in order: report to the owner in two short sentences, make one offer to rename a generated name and record where the agent runs, and load the primitive-connect skill before handling mail. When the claim reported one, the result also carries the connection's name and nameIsDefault.`;
   static summary = "Connect and verify an agent address";
   static examples = [
     '<%= config.bin %> agent connect --session "$CODEX_THREAD_ID" --name Research --info "Reviews pull requests" --json < private-invitation.txt',
@@ -131,7 +137,7 @@ export default class AgentConnectCommand extends Command {
     }),
     status: Flags.boolean({
       description:
-        "Read saved identity and local receiver health offline without reading stdin",
+        "Read saved identity and local receiver health, and ask Primitive whether the connection is still accepted, without reading stdin",
     }),
     "replace-existing": Flags.boolean({
       description:
@@ -221,6 +227,31 @@ export default class AgentConnectCommand extends Command {
           this.config.configDir,
           profileName,
         );
+        // A revocation this machine already confirmed is read offline.
+        const revokedLocally = savedRevocation(
+          this.config.configDir,
+          profileName,
+        );
+        if (result.status !== "configured" && revokedLocally) {
+          const detail = `Agent profile ${profileName} is not connected: ${revokedLocally.reason === "server_revoked" ? "Primitive confirmed its connection was already revoked" : "it was disconnected on this machine"} at ${revokedLocally.revokedAt}. Ask the owner to copy a fresh setup instruction from the app and run it here to connect again.`;
+          this.log(
+            flags.json
+              ? JSON.stringify({
+                  status: "revoked",
+                  profileName,
+                  connection: {
+                    verification: "revoked",
+                    source: "local",
+                    revokedAt: revokedLocally.revokedAt,
+                    reason: revokedLocally.reason,
+                  },
+                  detail,
+                })
+              : detail,
+          );
+          process.exitCode = 1;
+          return;
+        }
         if (result.status !== "configured") {
           const detail = registration
             ? `Agent profile ${profileName} is not configured. ${registrationSummaryLine(registration)}`
@@ -237,11 +268,68 @@ export default class AgentConnectCommand extends Command {
           process.exitCode = 1;
           return;
         }
+        // Local files cannot tell that the owner revoked this connection, so
+        // ask Primitive with the saved credential. Without an answer the
+        // local view stands, labelled as such.
+        const profile = loadConnectedAgentProfile(
+          this.config.configDir,
+          profileName,
+        );
+        const server = revokedLocally
+          ? ({ verification: "revoked" } as const)
+          : profile
+            ? await checkConnectionWithServer(profile)
+            : ({ verification: "offline", reason: "unreachable" } as const);
+        const connection =
+          server.verification === "revoked"
+            ? {
+                verification: "revoked" as const,
+                source: revokedLocally
+                  ? ("local" as const)
+                  : ("server" as const),
+                ...(revokedLocally
+                  ? {
+                      revokedAt: revokedLocally.revokedAt,
+                      reason: revokedLocally.reason,
+                    }
+                  : {}),
+                detail: CONNECTION_REVOKED_GUIDANCE,
+              }
+            : server.verification === "live"
+              ? { verification: "live" as const, state: server.state }
+              : {
+                  verification: "offline" as const,
+                  reason: server.reason,
+                  detail:
+                    server.reason === "unreachable"
+                      ? "Primitive could not be reached, so this status comes from local files only."
+                      : "Primitive refused this credential once but did not confirm a revocation, so this status comes from local files only. Check again shortly.",
+                };
+        const revoked = connection.verification === "revoked";
+        const shown = revoked
+          ? {
+              ...result,
+              status: "revoked" as const,
+              receiving: {
+                ...result.receiving,
+                state: "down",
+                reason: "connection_revoked",
+                detail: CONNECTION_REVOKED_GUIDANCE,
+                liveness: "unknown",
+              },
+              connection,
+            }
+          : { ...result, connection };
+        if (revoked) process.exitCode = 1;
         if (flags.json)
           this.log(
             JSON.stringify(
-              registration?.lastFailure ? { ...result, registration } : result,
+              registration?.lastFailure ? { ...shown, registration } : shown,
             ),
+          );
+        else if (revoked)
+          this.log(
+            `Agent profile ${profileName} is saved for ${result.identity.agentAddress}, but Primitive reports its connection was revoked. Local receiving: down (connection_revoked). ${CONNECTION_REVOKED_GUIDANCE}`,
           );
         else {
           const receiving: {
@@ -259,7 +347,7 @@ export default class AgentConnectCommand extends Command {
               : null,
           ].filter(Boolean);
           this.log(
-            `Agent profile ${profileName} is configured for ${result.identity.agentAddress}. Local receiving: ${receiving.state}${why.length ? ` (${why.join(", ")})` : ""}.${receiving.detail ? ` ${receiving.detail}` : ""}${receiving.lastFiredAt ? ` Receive hook last ran at ${receiving.lastFiredAt}.` : ""}${receiving.lastSuccessfulMailCheckAt ? ` Last completed mail check at ${receiving.lastSuccessfulMailCheckAt}.` : ""}${registration?.lastFailure ? ` ${registrationSummaryLine(registration)}` : ""}`,
+            `Agent profile ${profileName} is configured for ${result.identity.agentAddress}. Local receiving: ${receiving.state}${why.length ? ` (${why.join(", ")})` : ""}.${receiving.detail ? ` ${receiving.detail}` : ""}${receiving.lastFiredAt ? ` Receive hook last ran at ${receiving.lastFiredAt}.` : ""}${receiving.lastSuccessfulMailCheckAt ? ` Last completed mail check at ${receiving.lastSuccessfulMailCheckAt}.` : ""}${registration?.lastFailure ? ` ${registrationSummaryLine(registration)}` : ""}${connection.verification === "offline" ? ` ${connection.detail}` : ""}`,
           );
         }
         return;

@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import {
   announcePendingMail,
+  announceRevokedConnection,
   claudeSkillFile,
   readSessionReceivers,
 } from "./claude-pending-mail.mjs";
@@ -236,7 +237,12 @@ async function receive(input) {
     (receivers ?? [])
       .filter((receiver) => receiver !== except)
       .flatMap((receiver) => announcePendingMail(context(receiver)).lines);
-  const pending = pendingLines(null);
+  // A revoked connection is told once; its listener then exits at once.
+  const revokedLines = () =>
+    (receivers ?? []).flatMap((receiver) =>
+      announceRevokedConnection(context(receiver)),
+    );
+  const pending = [...revokedLines(), ...pendingLines(null)];
   if (pending.length) {
     process.stderr.write(pending.join(""));
     process.exitCode = 2;
@@ -246,7 +252,14 @@ async function receive(input) {
   // hooks keep announcing first; the bound keeps a failing claim from spinning.
   for (let attempt = 0; attempt < 20; attempt++) {
     const result = await firstWake(input, listenReceivers(receivers));
-    if (!result) return;
+    if (!result) {
+      const revoked = revokedLines();
+      if (revoked.length) {
+        process.stderr.write(revoked.join(""));
+        process.exitCode = 2;
+      }
+      return;
+    }
     const { wake, receiver } = result;
     if (!receiver || !receivers) {
       process.stderr.write(wake.output);

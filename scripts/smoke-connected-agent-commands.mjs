@@ -66,7 +66,7 @@ try {
   assert.match(setupHelp.stdout,/api\.primitive-staging-1\.com/);
   assert.match(setupHelp.stdout,/piped stdin/);
   assert.match(setupHelp.stdout,/fail-open Stop hook/);
-  assert.match((await run(['whoami','--help'])).stdout,/identity offline/);
+  assert.match((await run(['whoami','--help'])).stdout,/whether\s+the\s+connection\s+is\s+still\s+accepted/);
   await api(['contacts','add',peer,'--name','Peer','--json']);
   await api(['contacts','list','--json']);
   assert.equal(JSON.parse((await api(['contacts','get',peer,'--json'])).stdout).address,peer);
@@ -91,6 +91,14 @@ try {
   const deny=join(directory,'deny-network.mjs');
   await writeFile(deny,`globalThis.fetch=async()=>{throw new Error('Unexpected network');};`,{mode:0o600});
   const status=await run(['agent','connect','--profile','work','--status','--json'],{preload:deny});assert.equal(JSON.parse(status.stdout).status,'configured');
+  assert.equal(JSON.parse(status.stdout).connection.verification,'offline');
+  // A credential Primitive refuses and then confirms revoked is reported as revoked, exit 1.
+  const revokedFixture=join(directory,'revoked-network.mjs');
+  await writeFile(revokedFixture,`globalThis.fetch=async(input)=>{if(String(input)!=='https://api.primitive.dev/v1/agent-connections/me')throw new Error('Unexpected network');return new Response('{}',{status:401});};`,{mode:0o600});
+  const revokedStatus=JSON.parse((await run(['agent','connect','--profile','work','--status','--json'],{preload:revokedFixture,exit:1})).stdout);
+  assert.equal(revokedStatus.status,'revoked');assert.equal(revokedStatus.receiving.state,'down');
+  const revokedIdentity=await run(['whoami'],{preload:revokedFixture,env:{PRIMITIVE_AGENT_PROFILE:'work'},exit:1});
+  assert.match(revokedIdentity.stdout,/connection was revoked/);assert.ok(!(revokedIdentity.stdout+revokedIdentity.stderr).includes(credential));
   const identity=await run(['whoami','--json'],{preload:deny,env:{PRIMITIVE_AGENT_PROFILE:'work'}});
   assert.equal(JSON.parse(identity.stdout).verification,'offline');
   assert.equal(JSON.parse(identity.stdout).identity.agentAddress,agent);

@@ -27,6 +27,7 @@ import {
   HOOK_RECENT_MS,
   installClaudeWakeHook,
   recordHookMailCheck,
+  recordHookMailCheckFailure,
   uninstallClaudeWakeHook,
 } from "../../src/oclif/claude-wake-install.js";
 import {
@@ -197,6 +198,7 @@ test("external hook installer preserves other settings and replaces only its own
     installed: true,
     lastFiredAt: null,
     lastMailCheckAt: null,
+    lastMailCheckFailure: null,
     firedRecently: false,
     liveness: "unknown",
   });
@@ -215,6 +217,7 @@ test("external hook installer preserves other settings and replaces only its own
       installed: true,
       lastFiredAt: firedAt,
       lastMailCheckAt: null,
+      lastMailCheckFailure: null,
       firedRecently: false,
       liveness: "unknown",
     },
@@ -224,6 +227,7 @@ test("external hook installer preserves other settings and replaces only its own
     installed: true,
     lastFiredAt: firedAt,
     lastMailCheckAt: null,
+    lastMailCheckFailure: null,
     firedRecently: true,
     liveness: "unknown",
   });
@@ -239,6 +243,7 @@ test("external hook installer preserves other settings and replaces only its own
     installed: true,
     lastFiredAt: firedAt,
     lastMailCheckAt: checkedAt,
+    lastMailCheckFailure: null,
     firedRecently: true,
     liveness: "checked_recently",
   });
@@ -259,6 +264,36 @@ test("external hook installer preserves other settings and replaces only its own
     claudeWakeHookStatus({ ...options, now: fired - 5 * 60_000 }).liveness,
     "unknown",
   );
+  // A refused check newer than the last good one wins at once, without
+  // waiting for the good one to age out.
+  recordHookMailCheckFailure({
+    configDir,
+    profileName: "session-a",
+    sessionId: sessionA,
+    reason: "connection_revoked",
+    at: fired + 3_000,
+  });
+  assert.deepEqual(claudeWakeHookStatus({ ...options, now: fired + 60_000 }), {
+    installed: true,
+    lastFiredAt: firedAt,
+    lastMailCheckAt: checkedAt,
+    lastMailCheckFailure: {
+      at: new Date(fired + 3_000).toISOString(),
+      reason: "connection_revoked",
+    },
+    firedRecently: true,
+    liveness: "check_failed",
+  });
+  // A later successful check supersedes it.
+  recordHookMailCheck({
+    configDir,
+    profileName: "session-a",
+    sessionId: sessionA,
+    at: fired + 4_000,
+  });
+  const recovered = claudeWakeHookStatus({ ...options, now: fired + 60_000 });
+  assert.equal(recovered.liveness, "checked_recently");
+  assert.equal(recovered.lastMailCheckFailure, null);
 });
 
 test("on Windows hooks run Node through a stable PATH link, not the versioned binary", () => {

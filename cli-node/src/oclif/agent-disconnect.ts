@@ -184,7 +184,10 @@ function errorCode(error: unknown): string | undefined {
  * network failure or any other answer is not a confirmation.
  */
 export async function credentialRevokedByServer(
-  profile: ConnectedAgentProfile,
+  profile: Pick<
+    ConnectedAgentProfile,
+    "api_base_url" | "api_key" | "agent_address"
+  >,
   fetcher: typeof fetch = fetch,
 ): Promise<boolean> {
   try {
@@ -439,6 +442,41 @@ export function savedSetupRevoked(
     );
   } catch {
     return false;
+  }
+}
+
+/**
+ * The local revocation record for a profile's saved setup: present when this
+ * machine confirmed the credential revoked (by `agent disconnect`, or after
+ * Primitive reported it already revoked, `server_revoked`). Offline; null
+ * when there is no setup, no record, or the record belongs to a different
+ * credential.
+ */
+export function savedRevocation(
+  configDir: string,
+  profileName: string,
+): { revokedAt: string; reason: "server_revoked" | "disconnected" } | null {
+  try {
+    const directory = agentProfileDirectory(configDir, profileName);
+    const setup = readMailJson(join(directory, "setup.json"));
+    const invitationHash =
+      setup && typeof setup === "object" && !Array.isArray(setup)
+        ? (setup as Record<string, unknown>).invitationHash
+        : undefined;
+    if (
+      typeof invitationHash !== "string" ||
+      !savedSetupRevoked(configDir, profileName, invitationHash)
+    )
+      return null;
+    const marker = markerRecord(directory, invitationHash);
+    if (!marker) return null;
+    return {
+      revokedAt: marker.revoked_at as string,
+      reason:
+        marker.reason === "server_revoked" ? "server_revoked" : "disconnected",
+    };
+  } catch {
+    return null;
   }
 }
 

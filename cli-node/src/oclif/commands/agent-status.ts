@@ -14,7 +14,7 @@ export default class AgentStatusCommand extends Command {
   static summary =
     "Show this agent's saved connection (agent connect --status)";
   static description =
-    `Same as \`agent connect --status\`: read the saved identity and local receiver health offline. The profile is --profile, else ${AGENT_PROFILE_ENV}, else the one address connected for this runtime session.`;
+    `Same as \`agent connect --status\`: read the saved identity and local receiver health, and ask Primitive whether the connection is still accepted. The profile is --profile, else ${AGENT_PROFILE_ENV}, else the one address connected for this runtime session.`;
   static flags = {
     profile: Flags.string({ description: "Local agent profile name" }),
     json: Flags.boolean({ description: "Print the status as JSON" }),

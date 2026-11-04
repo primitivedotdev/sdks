@@ -48,6 +48,7 @@ const failureCodes = [
   "native-session-unavailable",
   "notification-outcome-unknown",
   "connection-changed",
+  "connection-revoked",
   "receiving-failed",
   "restart-budget-exhausted",
   "disk-full",
@@ -57,12 +58,14 @@ const failureCodes = [
 ] as const;
 export type BackgroundListenFailureCode = (typeof failureCodes)[number];
 // These hold the receiver on purpose: restarting could repeat a notification
-// whose outcome is unknown, or adopt a connection the owner did not choose.
+// whose outcome is unknown, adopt a connection the owner did not choose, or
+// retry forever with a credential Primitive confirmed revoked.
 // "unrecognized" is a code from a newer CLI: it may be a hold this version
 // cannot recognize, so it is never treated as safe to restart.
 const HOLDING_FAILURE_CODES: readonly BackgroundListenFailureCode[] = [
   "notification-outcome-unknown",
   "connection-changed",
+  "connection-revoked",
   "unrecognized",
 ];
 
@@ -127,6 +130,8 @@ function failureGuidance(code: BackgroundListenFailureCode): string {
       return "A notification outcome is unknown and is held. Inspect the exact session and saved receipts before any manual resend; do not delete receipts or send again automatically.";
     case "connection-changed":
       return "The selected connection changed. Check the intended profile and API origin before starting the listener again.";
+    case "connection-revoked":
+      return "Primitive confirmed that this agent's connection was revoked, so the receiver was not restarted. Ask the owner to copy a fresh setup instruction from the app and run it here to connect again.";
     case "receiving-failed":
       return "Inspect listener status and run the same command without --background for details.";
     case "restart-budget-exhausted":

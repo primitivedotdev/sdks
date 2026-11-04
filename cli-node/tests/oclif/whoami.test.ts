@@ -25,7 +25,67 @@ import { COMMANDS } from "../../src/oclif/index.js";
 afterEach(() => {
   vi.restoreAllMocks();
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
+  process.exitCode = undefined;
 });
+
+const offline = () => {
+  const fetchMock = vi.fn(async () => {
+    throw new TypeError("fetch failed");
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+};
+
+function connectionRecord(status: string, address = "agent@example.test") {
+  return new Response(
+    JSON.stringify({
+      success: true,
+      data: { connection: { address, status } },
+    }),
+    { status: 200 },
+  );
+}
+
+/** Answer /agent-connections/me with each response in turn. */
+function serverAnswers(...responses: Array<() => Response>) {
+  const fetchMock = vi.fn(async (input: unknown) => {
+    expect(String(input)).toMatch(/\/agent-connections\/me$/);
+    const next = responses.shift();
+    if (!next) throw new Error("unexpected extra request");
+    return next();
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+function connectedAuth(credential = ["pconn", "test"].join("_")) {
+  return {
+    apiClient: { client: {} },
+    auth: {
+      apiKey: credential,
+      connectedAgent: {
+        profileName: "work",
+        agentAddress: "agent@example.test",
+        ownerAddress: "owner@example.test",
+        ownerMemberAddress: null,
+        apiBaseUrl: "https://api.primitive.dev/v1",
+        orgId: "org-1",
+      },
+    },
+  };
+}
+
+async function runWhoami(argv: string[]): Promise<string> {
+  const output: string[] = [];
+  vi.spyOn(console, "log").mockImplementation((value: unknown) => {
+    output.push(String(value));
+  });
+  await WhoamiCommand.run(argv, {
+    root: resolve(import.meta.dirname, "../.."),
+  });
+  return output.join("\n");
+}
 
 function makeAccount(overrides: Record<string, unknown> = {}) {
   return {
@@ -133,8 +193,9 @@ describe("whoami command", () => {
   });
 
   it.each([true, false])(
-    "reports saved identity offline without calling the account API (json %s)",
+    "keeps the saved identity, labelled offline, when Primitive cannot be reached (json %s)",
     async (json) => {
+      const fetchMock = offline();
       const credential = ["pconn", "test"].join("_");
       mocks.auth.mockResolvedValue({
         apiClient: { client: {} },
@@ -159,6 +220,9 @@ describe("whoami command", () => {
       });
       const text = output.join("\n");
       expect(mocks.account).not.toHaveBeenCalled();
+      expect(fetchMock).toHaveBeenCalled();
+      expect(process.exitCode).toBeUndefined();
+      expect(text).toContain("Primitive could not be reached");
       expect(text).toContain("agent@example.test");
       expect(text).toContain(
         "primitive agent connect --profile work --status --json",
@@ -173,10 +237,73 @@ describe("whoami command", () => {
       if (json)
         expect(JSON.parse(text)).toMatchObject({
           verification: "offline",
+          offline_reason: "unreachable",
           auth_method: "agent_connection",
         });
     },
   );
+
+  it.each([true, false])(
+    "reports a connection Primitive accepts as live (json %s)",
+    async (json) => {
+      serverAnswers(() => connectionRecord("connected"));
+      mocks.auth.mockResolvedValue(connectedAuth());
+      const text = await runWhoami(json ? ["--json"] : []);
+      expect(process.exitCode).toBeUndefined();
+      expect(text.split("\n")[0]).toBe(json ? "{" : "agent@example.test");
+      expect(text).toContain("Primitive accepted this connection.");
+      if (json)
+        expect(JSON.parse(text)).toMatchObject({
+          address: "agent@example.test",
+          verification: "live",
+          connection_state: "connected",
+        });
+      expect(mocks.account).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["a confirmed 401", () => new Response("{}", { status: 401 })],
+    ["a revoked record", () => connectionRecord("revoked")],
+  ] as const)(
+    "says the connection was revoked and exits 1 on %s",
+    async (_label, confirm) => {
+      const credential = ["pconn", "revoked"].join("_");
+      for (const json of [false, true]) {
+        serverAnswers(() => new Response("{}", { status: 401 }), confirm);
+        mocks.auth.mockResolvedValue(connectedAuth(credential));
+        const text = await runWhoami(json ? ["--json"] : []);
+        expect(process.exitCode).toBe(1);
+        expect(text).not.toContain(credential);
+        expect(text).toContain("connection was revoked");
+        if (json)
+          expect(JSON.parse(text)).toMatchObject({
+            address: "agent@example.test",
+            profile: "work",
+            verification: "revoked",
+          });
+        else
+          expect(text).toContain(
+            "Primitive no longer accepts the connection for agent@example.test.",
+          );
+        process.exitCode = undefined;
+      }
+    },
+  );
+
+  it("does not call a single refused request a revocation", async () => {
+    serverAnswers(
+      () => new Response("{}", { status: 401 }),
+      () => connectionRecord("connected"),
+    );
+    mocks.auth.mockResolvedValue(connectedAuth());
+    const text = await runWhoami(["--json"]);
+    expect(process.exitCode).toBeUndefined();
+    expect(JSON.parse(text)).toMatchObject({
+      verification: "offline",
+      offline_reason: "unconfirmed",
+    });
+  });
 
   it.each([
     [
@@ -190,6 +317,7 @@ describe("whoami command", () => {
   ])(
     "points a %s receiver at the status command for its mode",
     async (receiverMode, hint) => {
+      offline();
       const directory = mkdtempSync(join(tmpdir(), "primitive-whoami-"));
       try {
         vi.stubEnv("PRIMITIVE_CONFIG_DIR", directory);
@@ -241,6 +369,7 @@ describe("whoami command", () => {
   ] as const)(
     "prints the agent address first and names where the identity came from (%j)",
     async (env, source) => {
+      offline();
       for (const [key, value] of Object.entries(env)) vi.stubEnv(key, value);
       try {
         mocks.auth.mockResolvedValue({

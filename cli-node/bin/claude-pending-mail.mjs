@@ -487,6 +487,64 @@ export function announcePendingMail(
   return { lines, claimed };
 }
 
+/**
+ * A one-line notice when a hook-run listener recorded that Primitive
+ * confirmed this profile's connection revoked, announced to the session
+ * once until a later mail check succeeds. The text is fixed here, never
+ * copied from listener output. Empty otherwise.
+ */
+export function announceRevokedConnection({
+  configDir,
+  profile,
+  address,
+  sessionId,
+}) {
+  try {
+    const directory = profileDirectory(configDir, profile);
+    if (
+      !directory ||
+      !uuid.test(sessionId ?? "") ||
+      !addressPattern.test(address ?? "")
+    )
+      return [];
+    const session = sessionId.toLowerCase();
+    const failure = readJson(
+      join(directory, `pending-mail-${session}.mail-check-failed.json`),
+    );
+    if (
+      failure?.version !== 1 ||
+      failure.reason !== "connection_revoked" ||
+      typeof failure.at !== "string" ||
+      !Number.isFinite(Date.parse(failure.at))
+    )
+      return [];
+    const checked = readJson(
+      join(directory, `pending-mail-${session}.mail-check.json`),
+    );
+    const checkedAt =
+      checked?.version === 1 &&
+      typeof checked.at === "string" &&
+      Number.isFinite(Date.parse(checked.at))
+        ? checked.at
+        : null;
+    if (checkedAt !== null && Date.parse(checkedAt) > Date.parse(failure.at))
+      return [];
+    // One announcement per revocation: the marker is named for the last
+    // successful check it follows, and only the hook that creates it speaks.
+    const epoch = checkedAt === null ? "none" : String(Date.parse(checkedAt));
+    writeFileSync(
+      join(directory, `pending-mail-${session}.revoked-announced-${epoch}`),
+      "",
+      { flag: "wx", mode: 0o600 },
+    );
+    return [
+      `Primitive connection revoked: ${address.toLowerCase()} no longer receives mail and its API calls are refused. Tell the owner, and ask them to copy a fresh setup instruction from the app and run it here to connect again.\n`,
+    ];
+  } catch {
+    return [];
+  }
+}
+
 function pollDue(configDir, profile, sessionId) {
   const directory = profileDirectory(configDir, profile);
   const path = join(directory, `pending-mail-${sessionId}.checked.json`);
@@ -694,6 +752,7 @@ async function main() {
     receivers.forEach((receiver, index) => {
       if (!checks[index] || Date.now() - started > CLAIM_CUTOFF_MS) return;
       lines.push(
+        ...announceRevokedConnection({ configDir, ...receiver, sessionId }),
         ...announcePendingMail({
           cli,
           configDir,

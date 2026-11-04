@@ -407,29 +407,41 @@ export function agentConnectionStatus(
               // completed a mail check recently. Even then only arriving
               // mail proves a wake from idle.
               const checked = hook.liveness === "checked_recently";
-              const unconfirmed = !checked && hook.firedRecently;
+              const refused = hook.liveness === "check_failed";
+              const revoked =
+                hook.lastMailCheckFailure?.reason === "connection_revoked";
+              const unconfirmed = !checked && !refused && hook.firedRecently;
               return {
                 mode,
                 sessionId: session,
-                state: !hook.installed
-                  ? "down"
-                  : checked
-                    ? "running"
-                    : "unknown",
+                state:
+                  !hook.installed || refused
+                    ? "down"
+                    : checked
+                      ? "running"
+                      : "unknown",
                 reason: !hook.installed
                   ? "hook_missing"
-                  : checked
-                    ? "hook_mail_check_recent"
-                    : unconfirmed
-                      ? "hook_mail_check_unconfirmed"
-                      : "hook_liveness_unverified",
+                  : refused
+                    ? revoked
+                      ? "connection_revoked"
+                      : "hook_mail_check_unauthorized"
+                    : checked
+                      ? "hook_mail_check_recent"
+                      : unconfirmed
+                        ? "hook_mail_check_unconfirmed"
+                        : "hook_liveness_unverified",
                 detail: !hook.installed
                   ? "The receive hook for this session is missing, so mail will not wake this session. Run `primitive machine doctor --fix` to reinstall it."
-                  : checked
-                    ? "A listener run by this session's receive hook completed a mail check recently. A wake from idle is confirmed only when new mail arrives."
-                    : unconfirmed
-                      ? "The receive hook ran recently, but no completed mail check has been recorded in that time. Mail may not be arriving; check this session's Primitive connection."
-                      : null,
+                  : refused
+                    ? revoked
+                      ? "The last mail check by this session's receive hook found that this agent's connection was revoked, so no mail reaches it. Ask the owner to copy a fresh setup instruction from the app and run it here to connect again."
+                      : "Primitive refused the last mail check by this session's receive hook, so mail may not be arriving. Check this session's Primitive connection."
+                    : checked
+                      ? "A listener run by this session's receive hook completed a mail check recently. A wake from idle is confirmed only when new mail arrives."
+                      : unconfirmed
+                        ? "The receive hook ran recently, but no completed mail check has been recorded in that time. Mail may not be arriving; check this session's Primitive connection."
+                        : null,
                 lastSuccessfulMailCheckAt: hook.lastMailCheckAt,
                 lastFiredAt: hook.lastFiredAt,
                 liveness: hook.liveness,

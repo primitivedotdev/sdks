@@ -19,6 +19,22 @@ import { join, win32 } from "node:path";
 
 export class ListenStateError extends Error {}
 
+/** Primitive refused the listener's connected credential (HTTP 401 or 403). */
+export class ListenUnauthorizedError extends ListenStateError {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * Primitive confirmed, with the same credential, that this connection was
+ * revoked. Restarting cannot help, so a receiver holds on it.
+ */
+export class ConnectionRevokedError extends ListenStateError {}
+
 export function normalizeListenOrigin(value: string): string {
   const url = new URL(value);
   if (
