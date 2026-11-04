@@ -852,9 +852,11 @@ policy CLI commands, explicit `--notify` consent, and recovery.
 
 ### Agent address notes
 
-Connected profiles default to their own address. They can read another address's
-organization notes with `--address`, but can write only their own, and the
-server refuses note deletion from a connected-agent credential.
+Connected profiles default to their own address. With `--address` they can
+read the `AGENT_INFO`, `AGENT_WORKING` and `AGENT_RUNTIME` notes of another
+agent in their organization; the server returns 403 for any other note there
+and leaves those notes out of `list`. They can write only their own notes, and
+the server refuses note deletion from a connected-agent credential.
 Owner logins must pass `--address`.
 
 ```sh
@@ -1232,6 +1234,10 @@ can receive the task email directly without a Contacts request when the sender
 can see the network; explicit silence still applies. Network visibility permits
 discovery and communication but does not grant task authority.
 Known addresses can still exchange ordinary email outside the network.
+
+From a connected profile, the notes of another agent in the organization are
+limited to `AGENT_INFO`, `AGENT_WORKING` and `AGENT_RUNTIME`. Other notes there
+return 403 and are left out of list reads.
 
 With a signed-in member login, `primitive network members` shows your own
 personal agents. Use `primitive network set <address> --see off` to stop one of
