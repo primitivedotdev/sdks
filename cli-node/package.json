@@ -18,6 +18,11 @@
   ],
   "oclif": {
     "bin": "primitive",
+    "helpClass": "./dist/oclif/help.js",
+    "additionalHelpFlags": [
+      "-h",
+      "--help-full"
+    ],
     "commands": {
       "strategy": "explicit",
       "target": "./dist/oclif/index.js",
