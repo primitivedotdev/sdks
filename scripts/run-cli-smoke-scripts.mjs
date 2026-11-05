@@ -45,6 +45,7 @@ const SMOKES = [
   ["smoke-agent-enroll.mjs"],
   ["smoke-agent-connect.mjs"],
   ["smoke-claude-wake.mjs"],
+  ["smoke-receiver-api.mjs"],
   ["smoke-presence-controls.mjs"],
   ["smoke-agent-notes.mjs"],
   ["smoke-agent-network.mjs"],

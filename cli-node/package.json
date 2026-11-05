@@ -4,6 +4,16 @@
   "description": "Official Primitive CLI: deploy Primitive Functions, send and inspect mail, manage endpoints, all from the terminal. Wraps the @primitivedotdev/sdk runtime client with one-shot commands.",
   "type": "module",
   "sideEffects": false,
+  "exports": {
+    "./receiver": {
+      "types": "./dist/receiver.d.ts",
+      "default": "./dist/receiver.js"
+    },
+    "./package.json": "./package.json",
+    "./bin/*": "./bin/*",
+    "./dist/*": "./dist/*",
+    "./man/*": "./man/*"
+  },
   "files": [
     "bin",
     "dist",
