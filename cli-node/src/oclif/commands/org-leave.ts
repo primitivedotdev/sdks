@@ -9,12 +9,27 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import type { ResolvedCliAuth } from "../auth.js";
 import { orgSecretsErrorPayload } from "./org-secrets-shared.js";
 
 export const STEP_UP_HEADER = "primitive-step-up";
 
 export function organizationLeaveUrl(baseUrl: string): string {
   return `${baseUrl.replace(/\/$/, "")}/organization/leave`;
+}
+
+export function orgLeaveRequestTarget(
+  auth: Pick<ResolvedCliAuth, "apiKey" | "apiBaseUrl" | "connectedAgent">,
+  configHeaders: Record<string, string> | undefined,
+): { baseUrl: string; headers: Record<string, string> } {
+  // The token is sent only to the origin it was issued for.
+  return {
+    baseUrl: auth.apiBaseUrl,
+    headers: {
+      ...(auth.connectedAgent ? {} : (configHeaders ?? {})),
+      ...(auth.apiKey ? { authorization: `Bearer ${auth.apiKey}` } : {}),
+    },
+  };
 }
 
 export type OrgLeaveInput = {
@@ -180,11 +195,7 @@ class OrgLeaveCommand extends Command {
 
       const outcome = await runOrgLeave({
         fetchImpl: fetch,
-        baseUrl: requestConfig.resolvedApiBaseUrl,
-        headers: {
-          ...(requestConfig.headers ?? {}),
-          ...(auth.apiKey ? { authorization: `Bearer ${auth.apiKey}` } : {}),
-        },
+        ...orgLeaveRequestTarget(auth, requestConfig.headers),
         orgLabel,
         yes: flags.yes,
         stepUpToken: flags["step-up-token"],

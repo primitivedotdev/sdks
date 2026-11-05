@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   type OrgLeaveInput,
   organizationLeaveUrl,
+  orgLeaveRequestTarget,
   runOrgLeave,
   STEP_UP_HEADER,
 } from "../../src/oclif/commands/org-leave.js";
@@ -240,5 +241,40 @@ describe("org leave command", () => {
       .flags;
     expect(flags).toHaveProperty("yes");
     expect(flags).toHaveProperty("step-up-token");
+  });
+});
+
+describe("orgLeaveRequestTarget", () => {
+  it("sends the token to the origin it was issued for, not the overridden base URL", () => {
+    const target = orgLeaveRequestTarget(
+      { apiKey: "oauth_tok", apiBaseUrl: "https://api.primitive.dev/v1" },
+      { "x-extra": "1" },
+    );
+    expect(target.baseUrl).toBe("https://api.primitive.dev/v1");
+    expect(target.headers).toEqual({
+      "x-extra": "1",
+      authorization: "Bearer oauth_tok",
+    });
+  });
+
+  it("omits configured headers for a connected agent profile", () => {
+    const target = orgLeaveRequestTarget(
+      {
+        apiKey: "pconn_x",
+        apiBaseUrl: "https://api.primitive.dev/v1",
+        connectedAgent: {} as never,
+      },
+      { "x-extra": "1" },
+    );
+    expect(target.headers).toEqual({ authorization: "Bearer pconn_x" });
+  });
+
+  it("sends no authorization header without a credential", () => {
+    expect(
+      orgLeaveRequestTarget(
+        { apiKey: undefined, apiBaseUrl: "https://api.primitive.dev/v1" },
+        undefined,
+      ).headers,
+    ).toEqual({});
   });
 });
