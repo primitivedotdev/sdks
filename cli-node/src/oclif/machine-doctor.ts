@@ -39,7 +39,6 @@ import {
   writeCodexHooks,
 } from "./codex-machine-hooks.js";
 import {
-  type AgentRuntime,
   type BundledConnectSkill,
   connectSkillTarget,
   installConnectSkill,
@@ -79,6 +78,7 @@ import {
 } from "./machine-session.js";
 import { notificationScope } from "./notify-session.js";
 import { SESSION_UUID } from "./notify-session-native.js";
+import type { AgentRuntime } from "./runtime-session.js";
 import { readMailJson } from "./shared-mail-files.js";
 
 export const DOCTOR_REPORT_VERSION = 1;
@@ -88,13 +88,16 @@ export const DOCTOR_CHECK_IDS = [
   "cli.version",
   "cli.path_stable",
   "auth.member_login",
+  "claude.installed",
   "claude.settings_valid",
   "claude.hook.session_start",
   "claude.hook.session_end",
   "claude.hook.stop",
   "claude.instructions",
+  "codex.installed",
   "codex.hook.session_start",
   "codex.instructions",
+  "omp.installed",
   "omp.instructions",
   "skill.claude",
   "skill.codex",
@@ -103,6 +106,14 @@ export const DOCTOR_CHECK_IDS = [
 export type DoctorCheckId = (typeof DOCTOR_CHECK_IDS)[number];
 
 export type DoctorStatus = "ok" | "warn" | "fail" | "skip";
+
+/**
+ * For a `<runtime>.installed` check on a detected harness: whether
+ * Primitive's machine-wide setup for it is in place. `not_used` means every
+ * setup check for it was skipped, as on a machine whose agents all connect
+ * per session.
+ */
+export type HarnessSetup = "present" | "incomplete" | "not_used";
 
 /** Something only the person (or the app on their behalf) can do. */
 export type DoctorAction = "login" | "install_cli" | "update_cli" | "edit_file";
@@ -120,6 +131,10 @@ export type DoctorCheck = {
   items?: SessionHookItem[];
   /** claude.hook.stop after --fix: each per-session receive hook it changed. */
   changes?: SessionHookChange[];
+  /** <runtime>.installed: whether the harness was found on this machine. */
+  installed?: boolean;
+  /** <runtime>.installed on a found harness: the state of Primitive's setup. */
+  setup?: HarnessSetup;
 };
 
 export type DoctorReport = {
@@ -137,13 +152,16 @@ const TITLES: Record<DoctorCheckId, string> = {
   "cli.version": "Primitive CLI version",
   "cli.path_stable": "CLI location is stable",
   "auth.member_login": "Member login",
+  "claude.installed": "Claude Code installed",
   "claude.settings_valid": "Claude Code settings file",
   "claude.hook.session_start": "Claude SessionStart hook",
   "claude.hook.session_end": "Claude SessionEnd hook",
   "claude.hook.stop": "Claude receive hooks",
   "claude.instructions": "Claude Code instructions",
+  "codex.installed": "Codex installed",
   "codex.hook.session_start": "Codex SessionStart hook",
   "codex.instructions": "Codex instructions",
+  "omp.installed": "omp installed",
   "omp.instructions": "omp instructions",
   "skill.claude": "primitive-connect skill for Claude Code",
   "skill.codex": "primitive-connect skill for Codex",
@@ -334,18 +352,80 @@ function backupStamp(now: Date): string {
     .replace(/\.\d+Z$/, "Z");
 }
 
-function runtimePresent(
+const HARNESS_NAMES: Record<MachineRuntime, string> = {
+  claude: "Claude Code",
+  codex: "Codex",
+  omp: "omp",
+};
+
+const HARNESS_CHECKS = {
+  claude: "claude.installed",
+  codex: "codex.installed",
+  omp: "omp.installed",
+} as const satisfies Record<MachineRuntime, DoctorCheckId>;
+
+/** The checks of Primitive's setup for each harness. */
+const HARNESS_SETUP: Record<MachineRuntime, DoctorCheckId[]> = {
+  claude: [
+    "claude.settings_valid",
+    "claude.hook.session_start",
+    "claude.hook.session_end",
+    "claude.hook.stop",
+    "claude.instructions",
+    "skill.claude",
+  ],
+  codex: ["codex.hook.session_start", "codex.instructions", "skill.codex"],
+  omp: ["omp.instructions"],
+};
+
+/**
+ * The setup checks that skip when no machine-wide setup is in use. The rest
+ * (a valid settings file, no stale Stop hook) pass on a machine with no setup.
+ */
+const HARNESS_SETUP_IN_USE: Record<MachineRuntime, DoctorCheckId[]> = {
+  claude: [
+    "claude.hook.session_start",
+    "claude.hook.session_end",
+    "claude.instructions",
+    "skill.claude",
+  ],
+  codex: HARNESS_SETUP.codex,
+  omp: HARNESS_SETUP.omp,
+};
+
+type HarnessDetection = {
+  directory: string;
+  directoryFound: boolean;
+  binary: string | null;
+};
+
+function runtimeDirectory(runtime: MachineRuntime, paths: RuntimePaths) {
+  return runtime === "claude"
+    ? paths.claudeDir
+    : runtime === "codex"
+      ? paths.codexHome
+      : paths.ompRoot;
+}
+
+/**
+ * A harness is installed when its config directory exists or its binary is
+ * on PATH. Reading both never changes anything.
+ */
+function detectHarness(
   runtime: MachineRuntime,
   paths: RuntimePaths,
   env: Env,
-): boolean {
-  const directory =
-    runtime === "claude"
-      ? paths.claudeDir
-      : runtime === "codex"
-        ? paths.codexHome
-        : paths.ompRoot;
-  return existsSync(directory) || findOnPath(runtime, env) !== null;
+): HarnessDetection {
+  const directory = runtimeDirectory(runtime, paths);
+  return {
+    directory,
+    directoryFound: existsSync(directory),
+    binary: findOnPath(runtime, env),
+  };
+}
+
+function harnessFound(detection: HarnessDetection): boolean {
+  return detection.directoryFound || detection.binary !== null;
 }
 
 type RuntimePaths = {
@@ -390,20 +470,64 @@ async function memberCredentialsFor(
   }
 }
 
+/**
+ * How far the server's claim time may run ahead of the time the CLI saved
+ * the key it returned, before the claim is taken to be a later one. It
+ * absorbs clock skew between this machine and Primitive.
+ */
+const CLAIM_SKEW_MS = 5 * 60_000;
+
+/**
+ * Whether the list shows a saved profile's key is still the connection's
+ * current one, without reading the profile's own record. A connection gets a
+ * new key only by being claimed again, which moves `claimed_at` past the
+ * moment this profile saved its key; a reconnect in progress shows as
+ * pending, and its old key is already revoked. Either way the profile reads
+ * its own record, which tells a rejected key from a live one.
+ */
+function keyStillCurrent(
+  listed: ListedConnection,
+  profile: ConnectedAgentProfile,
+): boolean {
+  if (listed.status !== "connected" && listed.status !== "claimed")
+    return false;
+  const saved = Date.parse(profile.created_at);
+  return (
+    listed.claimedAt !== null &&
+    Number.isFinite(saved) &&
+    listed.claimedAt <= saved + CLAIM_SKEW_MS
+  );
+}
+
 /** Pages to read before giving up on confirming absence (10,000 agents). */
 const OWNER_LIST_MAX_PAGES = 200;
 
+/** One connection as the owner's list reports it. */
+interface ListedConnection {
+  status: string;
+  /** When its current credential was issued (the last claim); null if none. */
+  claimedAt: number | null;
+}
+
+interface OwnerConnectionList {
+  statuses: Map<string, ListedConnection>;
+  complete: boolean;
+}
+
 /**
- * The member's connection list, hidden agents included, as address to status.
- * Read once per run. `complete` is true only when every page was read and the
+ * The member's connection list, hidden agents included, by address. Read
+ * once per run. `complete` is true only when every page was read and the
  * last one explicitly ended the list (`meta.cursor: null`): a status found on
- * any page stands, but absence is proof only from a complete list.
+ * any page stands, but absence is proof only from a complete list. Paging
+ * stops early, with `complete` false, once every address in `wanted` has
+ * been found, so a large organization does not cost a long read.
  */
 async function ownerConnectionStatuses(
   credentials: StoredCliCredentials,
   fetchImpl: typeof fetch,
-): Promise<{ statuses: Map<string, string>; complete: boolean }> {
-  const statuses = new Map<string, string>();
+  wanted?: ReadonlySet<string>,
+): Promise<OwnerConnectionList> {
+  const statuses = new Map<string, ListedConnection>();
   const partial = () => ({ statuses, complete: false });
   let cursor: string | undefined;
   for (let page = 0; page < OWNER_LIST_MAX_PAGES; page++) {
@@ -434,10 +558,23 @@ async function ownerConnectionStatuses(
       };
       if (body.success !== true || !Array.isArray(body.data)) return partial();
       for (const row of body.data as Array<Record<string, unknown>>)
-        if (typeof row?.address === "string" && typeof row.status === "string")
-          statuses.set(row.address, row.status);
+        if (
+          typeof row?.address === "string" &&
+          typeof row.status === "string"
+        ) {
+          const claimedAt =
+            typeof row.claimed_at === "string"
+              ? Date.parse(row.claimed_at)
+              : Number.NaN;
+          statuses.set(row.address, {
+            status: row.status,
+            claimedAt: Number.isFinite(claimedAt) ? claimedAt : null,
+          });
+        }
       const next = body.meta?.cursor;
       if (next === null) return { statuses, complete: true };
+      if (wanted && [...wanted].every((address) => statuses.has(address)))
+        return partial();
       if (typeof next !== "string" || !next || next === cursor)
         return partial();
       cursor = next;
@@ -503,17 +640,23 @@ export async function runMachineDoctor(
   const paths = runtimePaths(env, options.home);
   const selected = (runtime: MachineRuntime) =>
     !options.runtimes || options.runtimes.has(runtime);
+  const detected = Object.fromEntries(
+    MACHINE_RUNTIMES.map((runtime) => [
+      runtime,
+      detectHarness(runtime, paths, env),
+    ]),
+  ) as Record<MachineRuntime, HarnessDetection>;
   const present = Object.fromEntries(
     MACHINE_RUNTIMES.map((runtime) => [
       runtime,
-      runtimePresent(runtime, paths, env),
+      harnessFound(detected[runtime]),
     ]),
   ) as Record<MachineRuntime, boolean>;
   const skipRuntime = (runtime: MachineRuntime): string | null =>
     !selected(runtime)
       ? "Not selected with --runtime."
       : !present[runtime]
-        ? `${runtime === "claude" ? "Claude Code" : runtime === "codex" ? "Codex" : "omp"} was not found on this machine.`
+        ? `${HARNESS_NAMES[runtime]} was not found on this machine.`
         : null;
   const cli = currentCliLocation(options.cliEntry, env, options.execPath, {
     configDir: options.configDir,
@@ -950,46 +1093,102 @@ export async function runMachineDoctor(
             `${unreadable} saved profiles could not be read; they were left unchanged.`,
           )
         : check("profiles.orphaned", "ok", "No saved agent profiles.");
-    let member: StoredCliCredentials | null | undefined;
+    let member: StoredCliCredentials | null;
     const unconfirmed: string[] = [];
     // Rejected profiles the saved sign-in cannot check at all: another
     // organization or another Primitive API (such as staging).
     let elsewhere = 0;
-    let ownerList:
-      | { statuses: Map<string, string>; complete: boolean }
-      | undefined;
+    let ownerList: OwnerConnectionList | undefined;
     let unknown = 0;
     let connected = 0;
-    // A few requests at a time: this runs on a timer and a machine can
-    // hold many old session profiles.
+    // Profiles Primitive refused to check because the organization's request
+    // budget was spent. They are reported, never guessed at.
+    let limited = 0;
+    member = await memberCredentialsFor(options);
+    const checkableBy = (
+      credentials: StoredCliCredentials | null | undefined,
+      profile: ConnectedAgentProfile,
+    ): credentials is StoredCliCredentials =>
+      !!credentials &&
+      credentials.org_id === profile.org_id &&
+      credentials.api_base_url === profile.api_base_url;
+    // A 429 means the organization's request budget is spent: stop asking
+    // rather than spend more of it on requests that will be refused too.
+    let rateLimited = false;
+    const observedFetch = (async (input, init) => {
+      const response = await fetchImpl(input, init);
+      if (response.status === 429) rateLimited = true;
+      return response;
+    }) as typeof fetch;
+    // One read of the owner's connection list answers for every profile of
+    // the signed-in organization, so a check costs a handful of requests
+    // however many old session profiles the machine holds. Reading each
+    // profile's own record instead costs one request per profile, and a
+    // machine with a few hundred of them spends the organization's whole
+    // rate limit on every run, refusing its other agents and sign-ins too.
+    const listable = profiles.filter((entry) =>
+      checkableBy(member, entry.profile),
+    );
+    if (listable.length && member)
+      ownerList = await ownerConnectionStatuses(
+        member,
+        observedFetch,
+        new Set(listable.map((entry) => entry.profile.agent_address)),
+      );
+    const sharedAddresses = new Set<string>();
+    {
+      const seen = new Set<string>();
+      for (const entry of profiles) {
+        const address = entry.profile.agent_address.toLowerCase();
+        if (seen.has(address)) sharedAddresses.add(address);
+        seen.add(address);
+      }
+    }
+    const unresolved: typeof profiles = [];
+    for (const entry of profiles) {
+      const listed =
+        ownerList &&
+        checkableBy(member, entry.profile) &&
+        !sharedAddresses.has(entry.profile.agent_address.toLowerCase())
+          ? ownerList.statuses.get(entry.profile.agent_address)
+          : undefined;
+      if (listed?.status === "revoked") orphans.push(entry);
+      else if (listed && keyStillCurrent(listed, entry.profile)) connected++;
+      // Everything else reads its own record: an address the list does not
+      // name (absence alone never orphans a profile; its key has to be
+      // rejected first), two profiles holding one address (only one can hold
+      // its current key), and a connection reclaimed or being reconnected
+      // since this profile saved its key.
+      else unresolved.push(entry);
+    }
     const states: Array<
       (typeof profiles)[number] & {
         state: Awaited<ReturnType<typeof agentConnectionState>>;
       }
     > = [];
-    for (let start = 0; start < profiles.length; start += 8)
+    for (let start = 0; start < unresolved.length; start += 8) {
+      if (rateLimited) {
+        limited = unresolved.length - start;
+        unknown += limited;
+        break;
+      }
       states.push(
         ...(await Promise.all(
-          profiles.slice(start, start + 8).map(async (entry) => ({
+          unresolved.slice(start, start + 8).map(async (entry) => ({
             ...entry,
-            state: await agentConnectionState(entry.profile, fetchImpl),
+            state: await agentConnectionState(entry.profile, observedFetch),
           })),
         )),
       );
+    }
     for (const entry of states) {
       if (entry.state === "revoked") orphans.push(entry);
       else if (entry.state === "rejected") {
-        member ??= await memberCredentialsFor(options);
-        const checkable =
-          !!member &&
-          member.org_id === entry.profile.org_id &&
-          member.api_base_url === entry.profile.api_base_url;
+        const checkable = checkableBy(member, entry.profile);
         if (member && !checkable) elsewhere++;
-        if (checkable && member && ownerList === undefined)
-          ownerList = await ownerConnectionStatuses(member, fetchImpl);
         const listed =
           checkable && ownerList
-            ? (ownerList.statuses.get(entry.profile.agent_address) ??
+            ? (ownerList.statuses.get(entry.profile.agent_address)?.status ??
               (ownerList.complete ? "absent" : null))
             : null;
         // A rejected key whose agent is revoked, or gone from the complete
@@ -1024,16 +1223,19 @@ export async function runMachineDoctor(
           .join("; ")
           .concat("; they were left unchanged."),
       );
+    const limitedNote = limited
+      ? ` Primitive rate limited this check, so ${limited} saved profiles were not asked about; the next run checks them.`
+      : "";
     if (unknown && !connected)
       return check(
         "profiles.orphaned",
         "skip",
-        "Primitive could not be reached to check saved profiles.",
+        `Primitive could not be reached to check saved profiles.${limitedNote}`,
       );
     return check(
       "profiles.orphaned",
       "ok",
-      `${connected} saved profiles are connected${unknown ? `; ${unknown} could not be checked` : ""}.`,
+      `${connected} saved profiles are connected${unknown ? `; ${unknown} could not be checked` : ""}.${limitedNote}`,
     );
   };
   const moveOrphans = async (): Promise<boolean> => {
@@ -1080,7 +1282,75 @@ export async function runMachineDoctor(
     }
     return moved > 0;
   };
+  const results = new Map<DoctorCheckId, DoctorCheck>();
+  // Runs after the harness's setup checks (see `order` below), so it reports
+  // their state after any repair in the same run.
+  const harness = (runtime: MachineRuntime): CheckRunner => ({
+    inspect: () => {
+      const id = HARNESS_CHECKS[runtime];
+      const name = HARNESS_NAMES[runtime];
+      const found = detected[runtime];
+      if (!selected(runtime))
+        return check(id, "skip", "Not selected with --runtime.");
+      if (!harnessFound(found))
+        return check(
+          id,
+          "skip",
+          `${name} was not found on this machine: no ${found.directory} and no \`${runtime}\` on PATH. Its setup is not checked or repaired.`,
+          { installed: false },
+        );
+      const where = [
+        ...(found.binary ? [`\`${runtime}\` at ${found.binary}`] : []),
+        ...(found.directoryFound ? [found.directory] : []),
+      ].join(" and ");
+      const setup = HARNESS_SETUP[runtime].map(
+        (setupId) => results.get(setupId) ?? check(setupId, "fail", ""),
+      );
+      const incomplete = setup.filter(
+        (item) => item.status === "fail" || item.status === "warn",
+      );
+      const extra = {
+        installed: true,
+        path: found.binary ?? found.directory,
+      };
+      if (incomplete.length) {
+        const repairable = incomplete.some((item) => item.fixable);
+        return check(
+          id,
+          "ok",
+          `Found ${where}. Primitive's setup for it is incomplete: ${incomplete
+            .map((item) => item.id)
+            .join(", ")}.${
+            repairable && !options.fix
+              ? " Run `primitive machine doctor --fix` to repair it."
+              : ""
+          }`,
+          { ...extra, setup: "incomplete" },
+        );
+      }
+      if (
+        HARNESS_SETUP_IN_USE[runtime].every(
+          (setupId) => results.get(setupId)?.status === "skip",
+        )
+      )
+        return check(
+          id,
+          "ok",
+          `Found ${where}. No machine-wide Primitive setup is in use for it.`,
+          { ...extra, setup: "not_used" },
+        );
+      return check(
+        id,
+        "ok",
+        `Found ${where}. Primitive's setup for it is present.`,
+        { ...extra, setup: "present" },
+      );
+    },
+  });
   const runners: Record<DoctorCheckId, CheckRunner> = {
+    "claude.installed": harness("claude"),
+    "codex.installed": harness("codex"),
+    "omp.installed": harness("omp"),
     "cli.installed": {
       inspect: () =>
         cli
@@ -1387,13 +1657,17 @@ export async function runMachineDoctor(
     }
     busy = !release;
   }
-  const results = new Map<DoctorCheckId, DoctorCheck>();
   try {
     // Profiles go first so hooks for profiles moved aside are cleaned up in
-    // the same run.
+    // the same run. Harness checks go last because they summarize their
+    // setup checks.
+    const last: DoctorCheckId[] = Object.values(HARNESS_CHECKS);
     const order: DoctorCheckId[] = [
       "profiles.orphaned",
-      ...DOCTOR_CHECK_IDS.filter((id) => id !== "profiles.orphaned"),
+      ...DOCTOR_CHECK_IDS.filter(
+        (id) => id !== "profiles.orphaned" && !last.includes(id),
+      ),
+      ...last,
     ];
     for (const id of order) {
       const runner = runners[id];

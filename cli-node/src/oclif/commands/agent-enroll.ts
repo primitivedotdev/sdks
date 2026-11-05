@@ -13,12 +13,10 @@ import {
   verificationReplySubmitted,
 } from "../agent-setup.js";
 import { installClaudeWakeHook } from "../claude-wake-install.js";
-import {
-  detectAgentRuntime,
-  installedConnectSkillFile,
-} from "../connect-skill.js";
+import { installedConnectSkillFile } from "../connect-skill.js";
 import { AgentConnectionSetupError } from "../connected-agent-profile.js";
 import { SESSION_UUID } from "../notify-session-native.js";
+import { detectAgentRuntime } from "../runtime-session.js";
 import {
   ALREADY_CONNECTED_EXIT_CODE,
   alreadyConnected,

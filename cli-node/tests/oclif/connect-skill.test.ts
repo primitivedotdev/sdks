@@ -20,15 +20,12 @@ import {
   CONNECT_SKILL_NAME,
   connectSkillTarget,
   connectSkillVersion,
-  detectAgentRuntime,
   installConnectSkill,
   installedConnectSkillFile,
   readBundledConnectSkill,
 } from "../../src/oclif/connect-skill.js";
 
 const cliRoot = resolve(import.meta.dirname, "../..");
-const session = "11111111-1111-4111-8111-111111111111";
-const other = "22222222-2222-4222-8222-222222222222";
 const directories: string[] = [];
 function temp(prefix: string) {
   const directory = mkdtempSync(join(tmpdir(), prefix));
@@ -71,56 +68,6 @@ function files(root: string): string[] {
   walk(root, "");
   return out.sort();
 }
-
-describe("runtime detection", () => {
-  it("names the runtime whose environment holds this exact session", () => {
-    expect(
-      detectAgentRuntime(session, { CLAUDE_CODE_SESSION_ID: session }),
-    ).toBe("claude");
-    expect(
-      detectAgentRuntime(session.toUpperCase(), {
-        CLAUDE_CODE_SESSION_ID: session,
-      }),
-    ).toBe("claude");
-    expect(detectAgentRuntime(session, { CODEX_THREAD_ID: session })).toBe(
-      "codex",
-    );
-    expect(detectAgentRuntime(session, { CODEX_SESSION_ID: session })).toBe(
-      "codex",
-    );
-  });
-  it("prefers the loaded Codex thread over its process session", () => {
-    expect(
-      detectAgentRuntime(session, {
-        CODEX_THREAD_ID: other,
-        CODEX_SESSION_ID: session,
-      }),
-    ).toBeNull();
-    expect(
-      detectAgentRuntime(other, {
-        CODEX_THREAD_ID: other,
-        CODEX_SESSION_ID: session,
-      }),
-    ).toBe("codex");
-  });
-  it("refuses to guess for a different, ambiguous or malformed session", () => {
-    expect(detectAgentRuntime(session, {})).toBeNull();
-    expect(
-      detectAgentRuntime(session, { CLAUDE_CODE_SESSION_ID: other }),
-    ).toBeNull();
-    expect(
-      detectAgentRuntime(session, {
-        CLAUDE_CODE_SESSION_ID: session,
-        CODEX_THREAD_ID: session,
-      }),
-    ).toBeNull();
-    expect(
-      detectAgentRuntime("not-a-session", {
-        CLAUDE_CODE_SESSION_ID: "not-a-session",
-      }),
-    ).toBeNull();
-  });
-});
 
 describe("skill target", () => {
   it("uses each runtime's user skills folder and honors its config override", () => {

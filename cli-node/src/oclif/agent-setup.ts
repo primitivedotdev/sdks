@@ -18,7 +18,11 @@ import {
 import {
   AgentInvitationRejectedError,
   agentInvitationHash,
+  CHALLENGE_MARKER,
+  type ClaimedChallenge,
   ClaimNotSubmittedError,
+  CONNECTION_ID,
+  claimedChallenge,
   connectAgent,
   parseAgentInvitation,
   removeEmptyDirectory,
@@ -78,6 +82,12 @@ export const RECEIVER_MODES: readonly ReceiverMode[] = [
   "poll",
 ];
 type Challenge = { id: string; messageId: string; marker: string };
+/**
+ * Which challenge this setup may answer. `marker` is exact; `connectionId`
+ * only excludes another connection's challenges, so it is paired with a
+ * `since` taken from the claim's own server time.
+ */
+export type ExpectedChallenge = { marker?: string; connectionId?: string };
 type SendReceipt = { id: string; status: string };
 const RECEIPT_STATUSES = new Set<unknown>([
   "queued",
@@ -111,6 +121,10 @@ type SetupState = {
   challenge: Challenge | null;
   phase: "waiting" | "sending" | "sent";
   receipt: SendReceipt | null;
+  /** The marker of the challenge this setup's claim started, when known. */
+  challengeMarker?: string;
+  /** The claimed connection's id, kept when the claim named no marker. */
+  challengeConnectionId?: string;
 };
 type Context = {
   identity: ConnectedAgentIdentity;
@@ -122,7 +136,17 @@ type Context = {
 };
 export type AgentSetupDependencies = {
   preflight(session: string): Promise<void>;
-  findChallenge(context: Context, since: string): Promise<Challenge | null>;
+  findChallenge(
+    context: Context,
+    since: string,
+    expected?: ExpectedChallenge,
+  ): Promise<Challenge | null>;
+  /**
+   * The claimed connection's id and claim time, read from the server. Used
+   * when this run did not claim and the setup saved no challenge choice.
+   * Never throws; an empty result keeps the earlier rule.
+   */
+  readClaim(context: Context): Promise<ClaimedChallenge>;
   sendVerification(
     context: Context,
     challenge: Challenge,
@@ -261,6 +285,45 @@ async function checkVerification(
   }
 }
 
+async function readClaim(context: Context): Promise<ClaimedChallenge> {
+  try {
+    const response = await context.fetch(
+      `${context.profile.api_base_url}/agent-connections/me`,
+      {
+        method: "GET",
+        redirect: "error",
+        signal: AbortSignal.timeout(5_000),
+        headers: {
+          authorization: `Bearer ${context.profile.api_key}`,
+          accept: "application/json",
+        },
+      },
+    );
+    if (response.status !== 200) {
+      await response.body?.cancel();
+      return {};
+    }
+    const text = await response.text();
+    if (text.length > 65_536) return {};
+    const body = JSON.parse(text) as {
+      success?: unknown;
+      data?: { connection?: { address?: unknown } };
+    } | null;
+    const address = body?.data?.connection?.address;
+    if (
+      body?.success !== true ||
+      typeof address !== "string" ||
+      address.toLowerCase() !== context.identity.agentAddress.toLowerCase()
+    )
+      return {};
+    // The connection's own record names no marker; only its id and claim time.
+    const { marker: _marker, ...hint } = claimedChallenge(body);
+    return hint;
+  } catch {
+    return {};
+  }
+}
+
 /**
  * Poll until the server reports the connection verified, the budget runs out,
  * or the status read is unavailable. Elapsed time is the larger of the clock
@@ -293,6 +356,53 @@ async function awaitVerification(
   }
 }
 
+const OPTIONAL_STATE_KEYS = [
+  "receiverMode",
+  "challengeMarker",
+  "challengeConnectionId",
+] as const;
+
+/**
+ * How far before the claim's server time the search starts. With the exact
+ * marker the window only bounds the search, so it allows generous skew
+ * between the database and the mail pipeline clocks. Without it the window
+ * is what excludes an earlier challenge, so it starts at the claim itself:
+ * the server sends the challenge only after the claim commits.
+ */
+const MARKER_WINDOW_MS = 60_000;
+
+/**
+ * Points this setup at the challenge its claim started. Leaves the state
+ * unchanged when the claim said too little, which keeps the earlier rule.
+ */
+export function narrowToClaim(
+  state: {
+    since: string;
+    challengeMarker?: string;
+    challengeConnectionId?: string;
+  },
+  claim: ClaimedChallenge | undefined,
+): void {
+  const claimedAt = claim?.claimedAt ? Date.parse(claim.claimedAt) : Number.NaN;
+  if (claim?.marker) {
+    state.challengeMarker = claim.marker;
+    if (Number.isFinite(claimedAt))
+      state.since = new Date(claimedAt - MARKER_WINDOW_MS).toISOString();
+  } else if (claim?.connectionId && Number.isFinite(claimedAt)) {
+    state.challengeConnectionId = claim.connectionId;
+    state.since = new Date(claimedAt).toISOString();
+  }
+}
+
+function expectedChallenge(state: SetupState): ExpectedChallenge {
+  return {
+    ...(state.challengeMarker ? { marker: state.challengeMarker } : {}),
+    ...(state.challengeConnectionId
+      ? { connectionId: state.challengeConnectionId }
+      : {}),
+  };
+}
+
 function parseState(value: unknown): SetupState {
   const keys = [
     "version",
@@ -304,14 +414,20 @@ function parseState(value: unknown): SetupState {
     "phase",
     "receipt",
   ];
-  const row = mailObject(
-    value,
-    value && typeof value === "object" && Object.hasOwn(value, "receiverMode")
-      ? [...keys, "receiverMode"]
-      : keys,
-  );
+  const row = mailObject(value, [
+    ...keys,
+    ...OPTIONAL_STATE_KEYS.filter(
+      (key) => value && typeof value === "object" && Object.hasOwn(value, key),
+    ),
+  ]);
   if (
     row.version !== 1 ||
+    (row.challengeMarker !== undefined &&
+      (typeof row.challengeMarker !== "string" ||
+        !CHALLENGE_MARKER.test(row.challengeMarker))) ||
+    (row.challengeConnectionId !== undefined &&
+      (typeof row.challengeConnectionId !== "string" ||
+        !CONNECTION_ID.test(row.challengeConnectionId))) ||
     (row.receiverMode !== undefined &&
       !RECEIVER_MODES.includes(row.receiverMode as ReceiverMode)) ||
     typeof row.contactRequests !== "boolean" ||
@@ -345,6 +461,12 @@ function parseState(value: unknown): SetupState {
         }
       : null,
     receipt,
+    ...(typeof row.challengeMarker === "string"
+      ? { challengeMarker: row.challengeMarker }
+      : {}),
+    ...(typeof row.challengeConnectionId === "string"
+      ? { challengeConnectionId: row.challengeConnectionId }
+      : {}),
   };
   if (
     (state.phase !== "waiting" && !state.challenge) ||
@@ -361,6 +483,7 @@ export function setupChallenge(
   detail: EmailDetail,
   identity: ConnectedAgentIdentity,
   since: string,
+  expected: ExpectedChallenge = {},
 ): Challenge | null {
   if (
     detail.subject !== SUBJECT ||
@@ -377,6 +500,15 @@ export function setupChallenge(
     return null;
   const markers = [...new Set((detail.body_text ?? "").match(MARKER) ?? [])];
   if (markers.length !== 1) return null;
+  const marker = markers[0] ?? "";
+  // Another connection's or an earlier generation's challenge: a reply to it
+  // cannot verify the connection this setup claimed.
+  if (expected.marker && marker !== expected.marker) return null;
+  if (
+    expected.connectionId &&
+    !marker.startsWith(`primitive-connection:${expected.connectionId}:`)
+  )
+    return null;
   return {
     id: mailId(detail.id),
     messageId: detail.message_id,
@@ -387,6 +519,7 @@ export function setupChallenge(
 async function findChallenge(
   context: Context,
   since: string,
+  expected: ExpectedChallenge = {},
 ): Promise<Challenge | null> {
   const page = await readSetupApi(
     context.readBudget,
@@ -432,8 +565,32 @@ async function findChallenge(
       throw fail(
         "The setup challenge could not be read. Resume this profile; do not claim again.",
       );
-    const match = setupChallenge(response.data.data, context.identity, since);
-    if (match) matches.push(match);
+    const match = setupChallenge(
+      response.data.data,
+      context.identity,
+      since,
+      expected,
+    );
+    // The same challenge stored twice is still one challenge.
+    if (
+      match &&
+      !matches.some(
+        (seen) =>
+          seen.messageId === match.messageId && seen.marker === match.marker,
+      )
+    )
+      matches.push(match);
+  }
+  // Without the exact marker, one connection's challenges after the claim
+  // can still differ by generation (an earlier one delivered late). The
+  // highest present is the newest. An earlier one that arrives alone, before
+  // the current one, cannot be told apart this way; the exact marker can.
+  if (expected.connectionId && !expected.marker && matches.length > 1) {
+    const generation = (row: Challenge) =>
+      Number(row.marker.slice(row.marker.lastIndexOf(":") + 1));
+    const top = Math.max(...matches.map(generation));
+    const current = matches.filter((row) => generation(row) === top);
+    if (current.length === 1) return current[0] ?? null;
   }
   if (matches.length > 1)
     throw fail(
@@ -555,6 +712,7 @@ export async function nativeSessionPreflight(session: string): Promise<void> {
 function defaults(): AgentSetupDependencies {
   return {
     checkVerification,
+    readClaim,
     now: Date.now,
     sleep: async (ms) => {
       await delay(ms);
@@ -873,6 +1031,9 @@ export async function setupAgent(params: {
   let discardStub = false;
   // The connection's display name, known only when this run claimed it.
   let claimedName: string | undefined;
+  // Which challenge this run's claim started, known only when it claimed.
+  let claimedChallengeHint: ClaimedChallenge | undefined;
+  let claimedThisRun = false;
   const takeEnrollment = () => {
     try {
       releaseEnrollment = acquireListenLock(
@@ -969,8 +1130,10 @@ export async function setupAgent(params: {
         );
       const created = !state;
       if (!state) {
-        // Challenges precede claiming. A single recent authenticated challenge is
-        // required; public claims do not expose a challenge ID or generation.
+        // Written before the claim, so a lost claim response still resumes.
+        // The claim then narrows the search to the challenge it started
+        // (narrowToClaim); without that, a single recent authenticated
+        // challenge is required.
         state = {
           version: 1,
           session: params.session ?? null,
@@ -985,17 +1148,18 @@ export async function setupAgent(params: {
         writeMailJson(path, state);
       }
       try {
-        claimedName = (
-          await connectAgent({
-            configDir: params.configDir,
-            profileName,
-            invitation: params.invitation ?? "",
-            fetch: params.fetch,
-            presence: true,
-            claimLockHeld: releaseClaim !== undefined,
-            claimLockWaitMs: params.claimLockWaitMs ?? CLAIM_LOCK_WAIT_MS,
-          })
-        ).name;
+        const claim = await connectAgent({
+          configDir: params.configDir,
+          profileName,
+          invitation: params.invitation ?? "",
+          fetch: params.fetch,
+          presence: true,
+          claimLockHeld: releaseClaim !== undefined,
+          claimLockWaitMs: params.claimLockWaitMs ?? CLAIM_LOCK_WAIT_MS,
+        });
+        claimedName = claim.name;
+        claimedChallengeHint = claim.challenge;
+        claimedThisRun = claim.status === "claimed";
         if (retireEnrollment)
           moveAside(
             join(directory, "enrollment", "state.json"),
@@ -1038,6 +1202,14 @@ export async function setupAgent(params: {
         // Only the claim needs it; verification can take minutes.
         releaseClaim?.();
         releaseClaim = undefined;
+      }
+    }
+    if (state && claimedChallengeHint) {
+      narrowToClaim(state, claimedChallengeHint);
+      try {
+        writeMailJson(join(directory, "setup.json"), state);
+      } catch {
+        /* Used from memory now; the next phase write saves it. */
       }
     }
     const profile = loadConnectedAgentProfile(params.configDir, profileName);
@@ -1126,18 +1298,35 @@ export async function setupAgent(params: {
       state.phase = "sent";
       writeMailJson(path, state);
     }
+    // A resume, or a claim this run did not make: if the setup saved no
+    // challenge choice (its write after the claim failed, the process stopped
+    // there, or an earlier version wrote it), read the claim from the server.
+    // Kept in memory only, so the saved setup stays readable by the version
+    // that wrote it; the next resume reads it again.
+    if (
+      state.phase === "waiting" &&
+      !claimedThisRun &&
+      !state.challengeMarker &&
+      !state.challengeConnectionId
+    )
+      narrowToClaim(state, await dependencies.readClaim(context));
     if (state.phase === "waiting") {
       const deadline = dependencies.now() + timeoutMs;
       do {
         state.challenge = await dependencies.findChallenge(
           context,
           state.since,
+          expectedChallenge(state),
         );
         if (state.challenge || dependencies.now() >= deadline) break;
         await dependencies.sleep(Math.min(1500, deadline - dependencies.now()));
       } while (dependencies.now() <= deadline);
       if (!state.challenge) return result("not_started");
       state.phase = "sending";
+      // Only the challenge search reads these. Dropping them once it is done
+      // keeps a finished setup readable by CLIs that predate them.
+      delete state.challengeMarker;
+      delete state.challengeConnectionId;
       writeMailJson(path, state);
       try {
         state.receipt = parseReceipt(

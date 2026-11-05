@@ -103,11 +103,11 @@ the readiness message: `primitive endpoints delete --id DESTINATION_ID`.
 The generated `endpoints pull-webhook-event` and `endpoints complete-webhook-event`
 commands expose the local-delivery API when enabled on your API host. These are
 single API calls; a receive loop must retain the destination identity and report
-each attempt's outcome. Use `--help` to inspect the request fields:
+each attempt's outcome. Use `--help-full` to inspect the request fields:
 
 ```sh
-primitive endpoints pull-webhook-event --help
-primitive endpoints complete-webhook-event --help
+primitive endpoints pull-webhook-event --help-full
+primitive endpoints complete-webhook-event --help-full
 ```
 
 Completion uses a mode-specific JSON body. For a successful process handler:
@@ -140,7 +140,7 @@ primitive emails latest --limit 5
 primitive inbox next
 ```
 
-Run `primitive --help` for the full command list. Per-command help (`primitive functions deploy --help`) carries enough detail that an agent can compose any operation without leaving the terminal.
+Run `primitive --help` for the full command list. Per-command help (`primitive functions deploy --help`, or `-h`) is one screen: a summary, usage, one line per flag, and two examples. `primitive functions deploy --help-full` prints the complete text, with every flag's full description, behavior notes, and all examples, so an agent can compose any operation without leaving the terminal.
 
 ## Verification codes and sign-in links
 
@@ -926,9 +926,11 @@ policy CLI commands, explicit `--notify` consent, and recovery.
 
 ### Agent address notes
 
-Connected profiles default to their own address. They can read another address's
-organization notes with `--address`, but can write only their own, and the
-server refuses note deletion from a connected-agent credential.
+Connected profiles default to their own address. With `--address` they can
+read the `AGENT_INFO`, `AGENT_WORKING` and `AGENT_RUNTIME` notes of another
+agent in their organization; the server returns 403 for any other note there
+and leaves those notes out of `list`. They can write only their own notes, and
+the server refuses note deletion from a connected-agent credential.
 Owner logins must pass `--address`.
 
 ```sh
@@ -1085,6 +1087,14 @@ one JSON result:
 npx -y primitive@latest agent connect --session "$CODEX_THREAD_ID" --name Research --info "Reviews pull requests" --contact-requests --json < private-invitation.txt
 ```
 
+`--session auto` reads the session from the runtime instead, so one command
+works in any harness: `CLAUDE_CODE_SESSION_ID` in Claude Code, or
+`CODEX_THREAD_ID` then `CODEX_SESSION_ID` in Codex. The result's
+`sessionDetection` names what it found. With no session in the environment it
+connects with poll receiving and reports `sessionDetection.state`
+`not_detected`; when both runtimes name a session it fails before reading
+stdin, and the session must be passed explicitly.
+
 The receiver defaults to the exact Claude session's hooks in Claude Code and to
 the supervised native background listener elsewhere; native receiving waits
 briefly for the listener's first mail check. The profile defaults to
@@ -1163,8 +1173,9 @@ with status `ok`, `warn`, `fail` or `skip`; `action` (`login`, `install_cli`,
 `{version: 1, cliVersion, checks, summary: {ok, warn, fail, skip}, fixedCount}`
 and the command exits 0 only when every check is ok or skipped. Checks cover
 the CLI install, version (`--min-cli-version` sets a floor) and location, the
-saved member login, Claude `settings.json`, Primitive's Claude SessionStart,
-SessionEnd and receive hooks (each present once, pointing at this CLI, with
+saved member login, which coding agent harnesses are installed, Claude
+`settings.json`, Primitive's Claude SessionStart, SessionEnd and receive hooks
+(each present once, pointing at this CLI, with
 stale copies from older installs removed), the Codex SessionStart hook
 in `$CODEX_HOME/hooks.json` (repaired in place without moving any other hook,
 since Codex keys approvals by hook position, and reported as `warn` until the
@@ -1173,6 +1184,19 @@ approval Codex recorded matches the hook's current hash), a managed block in
 content) and `~/.omp/agent/AGENTS.md`, the bundled primitive-connect skill, and
 saved agent profiles that were disconnected in Primitive (moved aside locally;
 nothing changes server side).
+
+`claude.installed`, `codex.installed` and `omp.installed` report each supported
+harness. A harness counts as installed when its config directory exists
+(`$CLAUDE_CONFIG_DIR` or `~/.claude`, `$CODEX_HOME` or `~/.codex`,
+`$PI_CONFIG_DIR` or `~/.omp`) or its binary (`claude`, `codex`, `omp`) is on
+PATH. One that is not installed is reported as `skip` with `installed: false`,
+its setup checks are skipped too, and `--fix` writes nothing for it. One that
+is installed is reported as `ok` with `installed: true` and `setup`:
+`present` when its setup checks pass, `incomplete` when any of them warns or
+fails (the detail names them; those checks carry the failure, so this one does
+not change the exit code), or `not_used` when all of them are skipped, as on a
+machine whose agents connect per session. These checks read only and are never
+fixable.
 
 Claude receives mail through one shared set of receive hooks per config
 directory (`Stop`, `SessionStart` on resume, and `PostToolUse`). Each run reads
@@ -1306,6 +1330,10 @@ can receive the task email directly without a Contacts request when the sender
 can see the network; explicit silence still applies. Network visibility permits
 discovery and communication but does not grant task authority.
 Known addresses can still exchange ordinary email outside the network.
+
+From a connected profile, the notes of another agent in the organization are
+limited to `AGENT_INFO`, `AGENT_WORKING` and `AGENT_RUNTIME`. Other notes there
+return 403 and are left out of list reads.
 
 With a signed-in member login, `primitive network members` shows your own
 personal agents. Use `primitive network set <address> --see off` to stop one of
@@ -1494,6 +1522,18 @@ profile. `unmute` removes the server mute and the matching local one, and
 `muted` lists both, each marked `stored: "server"` or `"local"`. Mail in a muted
 thread is still received and readable; its delivery event is completed without
 a wake.
+
+Group email follows a mention rule. When an email names this agent and at
+least one other address in To or Cc, and its new text mentions any of those
+addresses, only the mentioned agents are woken. A mention is `@` and the
+address's local part (`@reviewer`) or the full address
+(`reviewer@agents.example.com`), matched case-insensitively and only as a whole
+handle or address, so `@reviewer` does not match `@reviewer2`. Quoted history
+and quoted (`>`) lines are ignored, so an earlier message's mention does not
+count again, and addresses the email was not sent to are ignored. A local part
+shared by two recipients mentions both. Group email that mentions none of its recipients wakes every
+recipient as before, and email addressed to one agent alone always wakes it.
+Like a muted thread, mail that skips the wake is still received and readable.
 
 When an email read carries the server's `collaboration.sender_relationship`,
 the wake line and `--context` use it for an authenticated sender, `other`

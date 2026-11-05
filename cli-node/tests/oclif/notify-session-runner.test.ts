@@ -15,6 +15,7 @@ import {
 import { openContactRequestNotices } from "../../src/oclif/contact-request-state.js";
 import { followEmailConversation } from "../../src/oclif/conversation-follow.js";
 import type { ConversationStatus } from "../../src/oclif/conversation-status.js";
+import { buildFyiMessageContent } from "../../src/oclif/fyi-message.js";
 import { muteThread } from "../../src/oclif/thread-mutes.js";
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
@@ -585,6 +586,34 @@ describe("shared notification listener integration", () => {
     expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
       kind: "notification",
       state: "accepted",
+    });
+  });
+  it("completes an acknowledgement of an exact bound send without notifying the session", async () => {
+    const f = setup();
+    const sentEmailId = randomUUID();
+    await f.bindStatusWait(sentEmailId);
+    // Exactly what `primitive reply --fyi` sends back to this session's send.
+    const fyi = buildFyiMessageContent({
+      parentMessageId: "<parent@example.test>",
+      senderAddress: f.detail.from_email,
+      recipientAddress: f.detail.recipient,
+      note: "Received, no action needed.",
+    });
+    f.detail.body_text = fyi.body_text;
+    f.detail.parsed.body_text = fyi.body_text;
+    f.interaction(
+      JSON.parse(
+        Buffer.from(
+          fyi.attachments[0]?.content_base64 ?? "",
+          "base64",
+        ).toString("utf8"),
+      ),
+    );
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).not.toHaveBeenCalled();
+    expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+      kind: "notification",
+      state: "skipped",
     });
   });
   it("retries exact conversation activity after a proven pre-dispatch native failure", async () => {
@@ -1600,6 +1629,43 @@ describe("thread mutes in session notifications", () => {
       route: { kind: "notification", state: "skipped" },
     });
   });
+
+  it.each([
+    {
+      label: "mentions only another recipient",
+      body: "@reviewer please take this.",
+      notified: false,
+    },
+    {
+      label: "mentions this agent",
+      body: "@{self} please take this.",
+      notified: true,
+    },
+    { label: "mentions nobody", body: "Anyone free?", notified: true },
+  ])(
+    "handles group mail that $label (notified: $notified)",
+    async ({ body, notified }) => {
+      const f = setup();
+      const self = f.detail.recipient;
+      f.detail.body_text = body.replace(
+        "{self}",
+        self.slice(0, self.indexOf("@")),
+      );
+      f.detail.parsed = {
+        ...f.detail.parsed,
+        to_addresses: [{ address: self }, { address: "reviewer@example.test" }],
+      } as typeof f.detail.parsed;
+      expect(await runListen(f.options)).toBe(1);
+      if (notified) {
+        expect(f.handleDetail).toHaveBeenCalledOnce();
+        return;
+      }
+      expect(f.handleDetail).not.toHaveBeenCalled();
+      expect(await f.store()?.readEmail(f.detail.id)).toMatchObject({
+        route: { kind: "notification", state: "skipped" },
+      });
+    },
+  );
 
   it("still notifies when only another session muted the thread", async () => {
     const f = setup();

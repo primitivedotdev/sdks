@@ -21,12 +21,14 @@ import {
 import {
   boundConversationStatus,
   conversationStatusDue,
+  isQuietConversationStatus,
   readBoundSentMessageId,
   reserveConversationStatus,
 } from "./conversation-status.js";
 import { AGENT_CONNECTION_REQUIRED_MESSAGE } from "./listen-credential.js";
 import type { ListenOptions } from "./listen-runner.js";
 import { ListenStateError } from "./listen-state.js";
+import { mentionsOnlyOthers } from "./mention-wake.js";
 import {
   type ContactNotificationAdmission,
   NETWORK_ADMISSION_PENDING_RETRY_MS,
@@ -535,17 +537,24 @@ export async function runSharedNotificationListen(
         await store.skipNotification(row.emailId, sessionKey);
         return true;
       }
+      // Group mail that mentions only other agents notifies only them.
+      if (mentionsOnlyOthers(detail, recipient)) {
+        await store.skipNotification(row.emailId, sessionKey);
+        return true;
+      }
+      // An acknowledgement of this session's send never notifies it.
       if (
         status &&
-        !(await conversationStatusDue(
-          {
-            configDir: options.configDir,
-            scope,
-            recipient,
-            sessionKey,
-          },
-          status,
-        ))
+        (isQuietConversationStatus(status) ||
+          !(await conversationStatusDue(
+            {
+              configDir: options.configDir,
+              scope,
+              recipient,
+              sessionKey,
+            },
+            status,
+          )))
       ) {
         await store.skipNotification(row.emailId, sessionKey);
         return true;
