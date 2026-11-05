@@ -88,13 +88,16 @@ export const DOCTOR_CHECK_IDS = [
   "cli.version",
   "cli.path_stable",
   "auth.member_login",
+  "claude.installed",
   "claude.settings_valid",
   "claude.hook.session_start",
   "claude.hook.session_end",
   "claude.hook.stop",
   "claude.instructions",
+  "codex.installed",
   "codex.hook.session_start",
   "codex.instructions",
+  "omp.installed",
   "omp.instructions",
   "skill.claude",
   "skill.codex",
@@ -103,6 +106,14 @@ export const DOCTOR_CHECK_IDS = [
 export type DoctorCheckId = (typeof DOCTOR_CHECK_IDS)[number];
 
 export type DoctorStatus = "ok" | "warn" | "fail" | "skip";
+
+/**
+ * For a `<runtime>.installed` check on a detected harness: whether
+ * Primitive's machine-wide setup for it is in place. `not_used` means every
+ * setup check for it was skipped, as on a machine whose agents all connect
+ * per session.
+ */
+export type HarnessSetup = "present" | "incomplete" | "not_used";
 
 /** Something only the person (or the app on their behalf) can do. */
 export type DoctorAction = "login" | "install_cli" | "update_cli" | "edit_file";
@@ -120,6 +131,10 @@ export type DoctorCheck = {
   items?: SessionHookItem[];
   /** claude.hook.stop after --fix: each per-session receive hook it changed. */
   changes?: SessionHookChange[];
+  /** <runtime>.installed: whether the harness was found on this machine. */
+  installed?: boolean;
+  /** <runtime>.installed on a found harness: the state of Primitive's setup. */
+  setup?: HarnessSetup;
 };
 
 export type DoctorReport = {
@@ -137,13 +152,16 @@ const TITLES: Record<DoctorCheckId, string> = {
   "cli.version": "Primitive CLI version",
   "cli.path_stable": "CLI location is stable",
   "auth.member_login": "Member login",
+  "claude.installed": "Claude Code installed",
   "claude.settings_valid": "Claude Code settings file",
   "claude.hook.session_start": "Claude SessionStart hook",
   "claude.hook.session_end": "Claude SessionEnd hook",
   "claude.hook.stop": "Claude receive hooks",
   "claude.instructions": "Claude Code instructions",
+  "codex.installed": "Codex installed",
   "codex.hook.session_start": "Codex SessionStart hook",
   "codex.instructions": "Codex instructions",
+  "omp.installed": "omp installed",
   "omp.instructions": "omp instructions",
   "skill.claude": "primitive-connect skill for Claude Code",
   "skill.codex": "primitive-connect skill for Codex",
@@ -334,18 +352,80 @@ function backupStamp(now: Date): string {
     .replace(/\.\d+Z$/, "Z");
 }
 
-function runtimePresent(
+const HARNESS_NAMES: Record<MachineRuntime, string> = {
+  claude: "Claude Code",
+  codex: "Codex",
+  omp: "omp",
+};
+
+const HARNESS_CHECKS = {
+  claude: "claude.installed",
+  codex: "codex.installed",
+  omp: "omp.installed",
+} as const satisfies Record<MachineRuntime, DoctorCheckId>;
+
+/** The checks of Primitive's setup for each harness. */
+const HARNESS_SETUP: Record<MachineRuntime, DoctorCheckId[]> = {
+  claude: [
+    "claude.settings_valid",
+    "claude.hook.session_start",
+    "claude.hook.session_end",
+    "claude.hook.stop",
+    "claude.instructions",
+    "skill.claude",
+  ],
+  codex: ["codex.hook.session_start", "codex.instructions", "skill.codex"],
+  omp: ["omp.instructions"],
+};
+
+/**
+ * The setup checks that skip when no machine-wide setup is in use. The rest
+ * (a valid settings file, no stale Stop hook) pass on a machine with no setup.
+ */
+const HARNESS_SETUP_IN_USE: Record<MachineRuntime, DoctorCheckId[]> = {
+  claude: [
+    "claude.hook.session_start",
+    "claude.hook.session_end",
+    "claude.instructions",
+    "skill.claude",
+  ],
+  codex: HARNESS_SETUP.codex,
+  omp: HARNESS_SETUP.omp,
+};
+
+type HarnessDetection = {
+  directory: string;
+  directoryFound: boolean;
+  binary: string | null;
+};
+
+function runtimeDirectory(runtime: MachineRuntime, paths: RuntimePaths) {
+  return runtime === "claude"
+    ? paths.claudeDir
+    : runtime === "codex"
+      ? paths.codexHome
+      : paths.ompRoot;
+}
+
+/**
+ * A harness is installed when its config directory exists or its binary is
+ * on PATH. Reading both never changes anything.
+ */
+function detectHarness(
   runtime: MachineRuntime,
   paths: RuntimePaths,
   env: Env,
-): boolean {
-  const directory =
-    runtime === "claude"
-      ? paths.claudeDir
-      : runtime === "codex"
-        ? paths.codexHome
-        : paths.ompRoot;
-  return existsSync(directory) || findOnPath(runtime, env) !== null;
+): HarnessDetection {
+  const directory = runtimeDirectory(runtime, paths);
+  return {
+    directory,
+    directoryFound: existsSync(directory),
+    binary: findOnPath(runtime, env),
+  };
+}
+
+function harnessFound(detection: HarnessDetection): boolean {
+  return detection.directoryFound || detection.binary !== null;
 }
 
 type RuntimePaths = {
@@ -560,17 +640,23 @@ export async function runMachineDoctor(
   const paths = runtimePaths(env, options.home);
   const selected = (runtime: MachineRuntime) =>
     !options.runtimes || options.runtimes.has(runtime);
+  const detected = Object.fromEntries(
+    MACHINE_RUNTIMES.map((runtime) => [
+      runtime,
+      detectHarness(runtime, paths, env),
+    ]),
+  ) as Record<MachineRuntime, HarnessDetection>;
   const present = Object.fromEntries(
     MACHINE_RUNTIMES.map((runtime) => [
       runtime,
-      runtimePresent(runtime, paths, env),
+      harnessFound(detected[runtime]),
     ]),
   ) as Record<MachineRuntime, boolean>;
   const skipRuntime = (runtime: MachineRuntime): string | null =>
     !selected(runtime)
       ? "Not selected with --runtime."
       : !present[runtime]
-        ? `${runtime === "claude" ? "Claude Code" : runtime === "codex" ? "Codex" : "omp"} was not found on this machine.`
+        ? `${HARNESS_NAMES[runtime]} was not found on this machine.`
         : null;
   const cli = currentCliLocation(options.cliEntry, env, options.execPath, {
     configDir: options.configDir,
@@ -1196,7 +1282,75 @@ export async function runMachineDoctor(
     }
     return moved > 0;
   };
+  const results = new Map<DoctorCheckId, DoctorCheck>();
+  // Runs after the harness's setup checks (see `order` below), so it reports
+  // their state after any repair in the same run.
+  const harness = (runtime: MachineRuntime): CheckRunner => ({
+    inspect: () => {
+      const id = HARNESS_CHECKS[runtime];
+      const name = HARNESS_NAMES[runtime];
+      const found = detected[runtime];
+      if (!selected(runtime))
+        return check(id, "skip", "Not selected with --runtime.");
+      if (!harnessFound(found))
+        return check(
+          id,
+          "skip",
+          `${name} was not found on this machine: no ${found.directory} and no \`${runtime}\` on PATH. Its setup is not checked or repaired.`,
+          { installed: false },
+        );
+      const where = [
+        ...(found.binary ? [`\`${runtime}\` at ${found.binary}`] : []),
+        ...(found.directoryFound ? [found.directory] : []),
+      ].join(" and ");
+      const setup = HARNESS_SETUP[runtime].map(
+        (setupId) => results.get(setupId) ?? check(setupId, "fail", ""),
+      );
+      const incomplete = setup.filter(
+        (item) => item.status === "fail" || item.status === "warn",
+      );
+      const extra = {
+        installed: true,
+        path: found.binary ?? found.directory,
+      };
+      if (incomplete.length) {
+        const repairable = incomplete.some((item) => item.fixable);
+        return check(
+          id,
+          "ok",
+          `Found ${where}. Primitive's setup for it is incomplete: ${incomplete
+            .map((item) => item.id)
+            .join(", ")}.${
+            repairable && !options.fix
+              ? " Run `primitive machine doctor --fix` to repair it."
+              : ""
+          }`,
+          { ...extra, setup: "incomplete" },
+        );
+      }
+      if (
+        HARNESS_SETUP_IN_USE[runtime].every(
+          (setupId) => results.get(setupId)?.status === "skip",
+        )
+      )
+        return check(
+          id,
+          "ok",
+          `Found ${where}. No machine-wide Primitive setup is in use for it.`,
+          { ...extra, setup: "not_used" },
+        );
+      return check(
+        id,
+        "ok",
+        `Found ${where}. Primitive's setup for it is present.`,
+        { ...extra, setup: "present" },
+      );
+    },
+  });
   const runners: Record<DoctorCheckId, CheckRunner> = {
+    "claude.installed": harness("claude"),
+    "codex.installed": harness("codex"),
+    "omp.installed": harness("omp"),
     "cli.installed": {
       inspect: () =>
         cli
@@ -1503,13 +1657,17 @@ export async function runMachineDoctor(
     }
     busy = !release;
   }
-  const results = new Map<DoctorCheckId, DoctorCheck>();
   try {
     // Profiles go first so hooks for profiles moved aside are cleaned up in
-    // the same run.
+    // the same run. Harness checks go last because they summarize their
+    // setup checks.
+    const last: DoctorCheckId[] = Object.values(HARNESS_CHECKS);
     const order: DoctorCheckId[] = [
       "profiles.orphaned",
-      ...DOCTOR_CHECK_IDS.filter((id) => id !== "profiles.orphaned"),
+      ...DOCTOR_CHECK_IDS.filter(
+        (id) => id !== "profiles.orphaned" && !last.includes(id),
+      ),
+      ...last,
     ];
     for (const id of order) {
       const runner = runners[id];

@@ -1099,8 +1099,9 @@ with status `ok`, `warn`, `fail` or `skip`; `action` (`login`, `install_cli`,
 `{version: 1, cliVersion, checks, summary: {ok, warn, fail, skip}, fixedCount}`
 and the command exits 0 only when every check is ok or skipped. Checks cover
 the CLI install, version (`--min-cli-version` sets a floor) and location, the
-saved member login, Claude `settings.json`, Primitive's Claude SessionStart,
-SessionEnd and receive hooks (each present once, pointing at this CLI, with
+saved member login, which coding agent harnesses are installed, Claude
+`settings.json`, Primitive's Claude SessionStart, SessionEnd and receive hooks
+(each present once, pointing at this CLI, with
 stale copies from older installs removed), the Codex SessionStart hook
 in `$CODEX_HOME/hooks.json` (repaired in place without moving any other hook,
 since Codex keys approvals by hook position, and reported as `warn` until the
@@ -1109,6 +1110,19 @@ approval Codex recorded matches the hook's current hash), a managed block in
 content) and `~/.omp/agent/AGENTS.md`, the bundled primitive-connect skill, and
 saved agent profiles that were disconnected in Primitive (moved aside locally;
 nothing changes server side).
+
+`claude.installed`, `codex.installed` and `omp.installed` report each supported
+harness. A harness counts as installed when its config directory exists
+(`$CLAUDE_CONFIG_DIR` or `~/.claude`, `$CODEX_HOME` or `~/.codex`,
+`$PI_CONFIG_DIR` or `~/.omp`) or its binary (`claude`, `codex`, `omp`) is on
+PATH. One that is not installed is reported as `skip` with `installed: false`,
+its setup checks are skipped too, and `--fix` writes nothing for it. One that
+is installed is reported as `ok` with `installed: true` and `setup`:
+`present` when its setup checks pass, `incomplete` when any of them warns or
+fails (the detail names them; those checks carry the failure, so this one does
+not change the exit code), or `not_used` when all of them are skipped, as on a
+machine whose agents connect per session. These checks read only and are never
+fixable.
 
 Claude receives mail through one shared set of receive hooks per config
 directory (`Stop`, `SessionStart` on resume, and `PostToolUse`). Each run reads

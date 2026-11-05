@@ -236,7 +236,7 @@ describe("primitive machine doctor", () => {
     });
     expect(fixed.fixedCount).toBe(7);
     expect(fixed.version).toBe(1);
-    expect(fixed.summary).toEqual({ ok: 12, warn: 1, fail: 1, skip: 1 });
+    expect(fixed.summary).toEqual({ ok: 14, warn: 1, fail: 1, skip: 2 });
 
     const settings = JSON.parse(
       readFileSync(join(home, ".claude", "settings.json"), "utf8"),
@@ -693,7 +693,7 @@ describe("primitive machine doctor", () => {
       only: new Set(["claude.instructions"]),
     });
     const checks = byId(report);
-    expect(report.checks).toHaveLength(15);
+    expect(report.checks).toHaveLength(18);
     expect(checks["claude.instructions"]).toMatchObject({ fixed: true });
     expect(checks["codex.instructions"].status).toBe("fail");
     expect(checks["claude.hook.session_start"].status).toBe("fail");
@@ -2549,3 +2549,126 @@ describe.runIf(process.platform !== "win32")(
     });
   },
 );
+
+describe("harness detection", () => {
+  it("reports each harness as installed or not without changing anything", async () => {
+    const { root, home, options } = machine({ runtimes: ["claude"] });
+    const path = join(root, "path-bin");
+    mkdirSync(path);
+    writeFileSync(join(path, "codex"), "#!/bin/sh\n", { mode: 0o755 });
+    const before = snapshot(home);
+    const report = await runMachineDoctor({ ...options, env: { PATH: path } });
+    const checks = byId(report);
+    expect(checks["claude.installed"]).toMatchObject({
+      status: "ok",
+      installed: true,
+      setup: "incomplete",
+      fixable: false,
+      path: join(home, ".claude"),
+    });
+    expect(checks["claude.installed"].detail).toContain(
+      "Run `primitive machine doctor --fix` to repair it.",
+    );
+    // Found by its binary alone.
+    expect(checks["codex.installed"]).toMatchObject({
+      status: "ok",
+      installed: true,
+      path: join(path, "codex"),
+    });
+    expect(checks["codex.installed"].detail).toContain(
+      `\`codex\` at ${join(path, "codex")}`,
+    );
+    expect(checks["omp.installed"]).toMatchObject({
+      status: "skip",
+      installed: false,
+    });
+    expect(checks["omp.installed"].detail).toContain(join(home, ".omp"));
+    expect(checks["omp.instructions"].status).toBe("skip");
+    expect(snapshot(home)).toEqual(before);
+    expect(existsSync(join(home, ".codex"))).toBe(false);
+  });
+
+  it("lists the incomplete setup checks, and reports setup present once --fix repairs them", async () => {
+    const { options } = machine({ runtimes: ["claude"] });
+    const before = byId(await runMachineDoctor(options));
+    expect(before["claude.installed"].setup).toBe("incomplete");
+    for (const id of [
+      "claude.hook.session_start",
+      "claude.instructions",
+      "skill.claude",
+    ])
+      expect(before["claude.installed"].detail).toContain(id);
+
+    const fixed = byId(await runMachineDoctor({ ...options, fix: true }));
+    expect(fixed["claude.installed"]).toMatchObject({
+      status: "ok",
+      setup: "present",
+    });
+    expect(fixed["claude.installed"].fixed).toBeUndefined();
+    expect(fixed["claude.installed"].detail).toContain(
+      "Primitive's setup for it is present.",
+    );
+  });
+
+  it("--fix writes nothing for a harness that is not installed", async () => {
+    const { home, options } = machine({ runtimes: ["claude"] });
+    const report = byId(await runMachineDoctor({ ...options, fix: true }));
+    for (const id of ["codex.installed", "omp.installed"] as const)
+      expect(report[id], id).toMatchObject({
+        status: "skip",
+        installed: false,
+      });
+    for (const id of [
+      "codex.hook.session_start",
+      "codex.instructions",
+      "skill.codex",
+      "omp.instructions",
+    ] as const)
+      expect(report[id], id).toMatchObject({ status: "skip" });
+    expect(existsSync(join(home, ".codex"))).toBe(false);
+    expect(existsSync(join(home, ".omp"))).toBe(false);
+  });
+
+  it("skips a harness left out with --runtime", async () => {
+    const { options } = machine();
+    const report = byId(
+      await runMachineDoctor({ ...options, runtimes: new Set(["claude"]) }),
+    );
+    expect(report["claude.installed"].status).toBe("ok");
+    expect(report["codex.installed"]).toMatchObject({
+      status: "skip",
+      detail: "Not selected with --runtime.",
+    });
+    expect(report["codex.installed"].installed).toBeUndefined();
+  });
+
+  it("reports no machine-wide setup in use when its agents connect per session", async () => {
+    const { configDir, options } = machine({ runtimes: ["omp"] });
+    saveConnectedAgentProfile(configDir, "my-agent", profile("a@example.test"));
+    const report = byId(await runMachineDoctor(options));
+    expect(report["omp.instructions"].status).toBe("skip");
+    expect(report["omp.installed"]).toMatchObject({
+      status: "ok",
+      setup: "not_used",
+    });
+  });
+
+  it("reports no Claude setup in use when its settings are valid but hold no Primitive hooks", async () => {
+    const { configDir, options } = machine({ runtimes: ["claude"] });
+    saveConnectedAgentProfile(configDir, "my-agent", profile("a@example.test"));
+    const report = byId(await runMachineDoctor(options));
+    for (const id of [
+      "claude.hook.session_start",
+      "claude.hook.session_end",
+      "claude.instructions",
+      "skill.claude",
+    ] as const)
+      expect(report[id].status, id).toBe("skip");
+    expect(report["claude.settings_valid"].status).toBe("ok");
+    expect(report["claude.hook.stop"].status).toBe("ok");
+    expect(report["claude.installed"]).toMatchObject({
+      status: "ok",
+      setup: "not_used",
+    });
+  });
+});
