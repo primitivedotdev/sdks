@@ -21,6 +21,7 @@ import {
 import {
   boundConversationStatus,
   conversationStatusDue,
+  isQuietConversationStatus,
   readBoundSentMessageId,
   reserveConversationStatus,
 } from "./conversation-status.js";
@@ -535,17 +536,19 @@ export async function runSharedNotificationListen(
         await store.skipNotification(row.emailId, sessionKey);
         return true;
       }
+      // An acknowledgement of this session's send never notifies it.
       if (
         status &&
-        !(await conversationStatusDue(
-          {
-            configDir: options.configDir,
-            scope,
-            recipient,
-            sessionKey,
-          },
-          status,
-        ))
+        (isQuietConversationStatus(status) ||
+          !(await conversationStatusDue(
+            {
+              configDir: options.configDir,
+              scope,
+              recipient,
+              sessionKey,
+            },
+            status,
+          )))
       ) {
         await store.skipNotification(row.emailId, sessionKey);
         return true;

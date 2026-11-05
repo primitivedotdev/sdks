@@ -1142,4 +1142,39 @@ describe("Claude wake metadata, mutes and pending notices", () => {
     ]);
     await wake.close();
   });
+
+  it("completes an acknowledgement of this session's send without waking or journaling it", async () => {
+    const f = fixture(true, true, "chat");
+    configDir = mkdtempSync(join(tmpdir(), "primitive-wake-ack-"));
+    mkdirSync(join(configDir, "agent-connections", "profiles", "work"), {
+      recursive: true,
+      mode: 0o700,
+    });
+    mocks.profileName = "work";
+    mocks.plain.mockReturnValue(false);
+    // `primitive reply --fyi` sends exactly this: an ack signal naming the
+    // session's own send. It exists so the receiver need not act on it.
+    mocks.statusContent.mockResolvedValue({
+      kind: "ack",
+      subjectMessageId: "<sent@example.test>",
+      interactionDomain: "example.test",
+      expiresAt: null,
+    });
+    const wake = await createWakeMail({
+      configDir,
+      sessionKey: `claude:${f.sessionId}`,
+      sessionId: f.sessionId,
+      contactRequests: false,
+    });
+    expect(
+      await wake.handler(f.delivery as never, new AbortController().signal),
+    ).toMatchObject({ succeeded: true });
+    wake.completed();
+    expect(wake.status()).toBeUndefined();
+    expect(wake.wakeId()).toBeUndefined();
+    expect(wake.held()).toBeUndefined();
+    expect(mocks.reserveStatus).not.toHaveBeenCalled();
+    expect(readPendingMail(configDir, "work", f.sessionId)).toEqual([]);
+    await wake.close();
+  });
 });
