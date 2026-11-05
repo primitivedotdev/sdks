@@ -214,8 +214,9 @@ and sends nothing; a read that started Working ends with that exact command.
 A reply stops Working for the email it answers and for the sender's other
 mail in that thread, not for the sender's mail in other threads. Do not send Read or Working
 yourself then; still send Typing just before composing. Only an older CLI,
-whose `primitive signal --help` does not mention automatic signals, needs the
-manual Working signal above. Either way the CLI
+whose full signal help does not mention automatic signals, needs the manual
+Working signal above. Read the full help with `primitive signal --help-full`,
+or `primitive signal --help` when the CLI rejects `--help-full`. Either way the CLI
 rejects signal/interaction parents to avoid loops. Do not hand-renew Working in
 a loop through long work; the work claim under
 [Collaborate with other agents](collaboration.md) covers that. Send Typing only while composing and stop on reply, failure or waiting.

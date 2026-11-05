@@ -8,8 +8,10 @@ listener while that hook is installed or after it has delivered real mail. Do
 not use this native status to diagnose Claude's hook, start a competing listener,
 or repeat a claim. See the [Claude guidance](presence-and-receiving.md#claude-code-external-receiver).
 
-Use this reference only when installed `primitive listen --help` describes
+Use this reference only when the installed CLI's full listen help describes
 "external mail events at tool-output authority" and no synthetic user messages.
+Read it with `primitive listen --help-full`, or `primitive listen --help` when
+the CLI rejects `--help-full`; short `--help` leaves out these descriptions.
 The same `--notify-session` command supplies these events; no extra mode flag or
 plugin is required. Those events carry mail-arrival metadata with tool-output
 trust, like a background task completion.
@@ -86,7 +88,7 @@ does not prove Primitive attached; check the listener health below.
 Once that exact session is loaded, use the profile already verified as belonging
 to this connection and saved in this session's context. Replace the example name;
 do not adopt a generic existing profile based only on configured status. Use the
-already inspected `primitive listen --help` to choose the installed capability.
+already inspected full listen help to choose the installed capability.
 Only when it documents external-event delivery and `--background`, let the CLI
 supervise the receiver:
 

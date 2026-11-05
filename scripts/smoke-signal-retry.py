@@ -31,13 +31,20 @@ def command(args, cwd, timeout=600):
     return completed.stdout
 
 
-def artifacts(output):
+def artifacts(output, reuse_node_build=False):
     """Install deployable artifacts outside the workspace and compile a Go consumer."""
+    # The Make target builds both SDKs before calling this proof. Reuse that
+    # Node build just as we reuse the Python wheel below.
+    if reuse_node_build:
+        assert (ROOT / "sdk-node/dist/index.js").is_file(), (
+            "build the Node SDK first with make signal-retry-smoke"
+        )
     packs = output / "artifacts"
     packs.mkdir()
-    command(
-        ["npm", "pack", "--silent", "--pack-destination", str(packs)], ROOT / "sdk-node"
-    )
+    pack_args = ["npm", "pack", "--silent", "--pack-destination", str(packs)]
+    if reuse_node_build:
+        pack_args.insert(2, "--ignore-scripts")
+    command(pack_args, ROOT / "sdk-node")
     wheels = list((ROOT / "sdk-python/dist").glob("*.whl"))
     assert len(wheels) == 1, "build exactly one current Python wheel first"
     wheel = Path(shutil.copy(wheels[0], packs))
@@ -348,6 +355,11 @@ def main():
         type=Path,
         help="new directory for artifacts, SQLite evidence and summary",
     )
+    parser.add_argument(
+        "--reuse-node-build",
+        action="store_true",
+        help="reuse the preceding Node SDK build instead of running prepack",
+    )
     options = parser.parse_args()
     output = (
         options.output.resolve()
@@ -357,7 +369,7 @@ def main():
     if options.output:
         output.mkdir()
     print(f"Local evidence: {output}", flush=True)
-    callers = artifacts(output)
+    callers = artifacts(output, options.reuse_node_build)
     results = []
     for language, caller in callers.items():
         for kind, expiration in [

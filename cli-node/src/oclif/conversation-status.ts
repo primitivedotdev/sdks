@@ -23,6 +23,18 @@ export type ConversationStatus = {
   peer: string;
 };
 
+/**
+ * An acknowledgement (an `ack` signal, which `primitive reply --fyi` sends)
+ * exists so its receiver does not have to act. It never wakes or notifies a
+ * session: the event is completed and the message stays readable in its
+ * thread. Read, working and typing still reach the session as status.
+ */
+export function isQuietConversationStatus(
+  status: Pick<ConversationStatus, "kind">,
+): boolean {
+  return status.kind === "ack";
+}
+
 /** A References-derived parent ID cannot prove which Message-ID a signal names. */
 export async function readBoundSentMessageId(
   apiClient: PrimitiveApiClient,

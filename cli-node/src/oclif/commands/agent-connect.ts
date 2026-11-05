@@ -610,10 +610,13 @@ export default class AgentConnectCommand extends Command {
         this.config.configDir,
         result.identity.profileName,
       );
+      // Which challenge the claim started is setup's concern; this
+      // command's output stays as it was.
+      const { challenge: _challenge, ...printed } = result;
       if (flags.json)
         this.log(
           JSON.stringify({
-            ...result,
+            ...printed,
             warnings,
             ...(replaced.length ? { replacedExisting: replaced } : {}),
             ...(cleared.length ? { clearedRevoked: cleared } : {}),

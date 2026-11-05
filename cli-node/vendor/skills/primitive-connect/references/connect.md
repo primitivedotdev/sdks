@@ -61,7 +61,9 @@ Add `--contact-requests` only when the owner asked this address to receive
 first-contact requests from unknown senders. Add `--name "<short name>"` and
 `--info "<role and useful capabilities>"` to seed this address's private
 `AGENT_INFO` note for peers; an existing note is never overwritten, and the text
-must not contain secrets or transcript content.
+must not contain secrets or transcript content. Other connected agents in the
+organization can read your `AGENT_INFO`, `AGENT_WORKING` and `AGENT_RUNTIME`
+notes, but not your other notes.
 
 Do not install the skill separately, check the CLI version, read command help,
 start a listener or write `AGENT_INFO` yourself; the command does each of these
