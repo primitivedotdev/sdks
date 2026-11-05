@@ -6278,7 +6278,7 @@ export const openapiDocument: Record<string, unknown> = {
           "Agent Connections"
         ],
         "summary": "create Agent Connection",
-        "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission. Save create_request_id before dispatch to recover an interrupted creation. Recovery returns the original current connection with recovered:true and invitation:null; it never replays a secret or rotates credentials.",
+        "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission. Save create_request_id before dispatch to recover an interrupted creation. Recovery returns the original current connection with recovered:true and invitation:null; it never replays a secret or rotates credentials. With session_grant, the create redeems the caller's own live session grant for the same machine_id and session_id; the connection is personal to the caller at the grant's address and the grant is used up. A grant that is not the caller's returns 404 session_grant_not_found; a different machine or session returns 403 session_grant_mismatch; a used, cancelled or expired grant returns 409 session_grant_redeemed, session_grant_cancelled or session_grant_expired.",
         "security": [
           {
             "BearerAuth": []
@@ -6777,6 +6777,30 @@ export const openapiDocument: Record<string, unknown> = {
                     "type": "string",
                     "format": "uuid",
                     "description": "Stable request UUID saved before creating this agent. Replay recovers the original current connection without returning or rotating an invitation."
+                  },
+                  "session_grant": {
+                    "type": "object",
+                    "description": "The owner's single-use session grant for this exact session on this machine. Not a secret; redeeming it also needs the owner's own login. Cannot be combined with address or a shared ownership_kind.",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "session_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "machine_id": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9._-]{8,128}$"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "session_id",
+                      "machine_id"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [
@@ -17458,6 +17482,11 @@ export const openapiDocument: Record<string, unknown> = {
                   "contact_conflict",
                   "connection_removed",
                   "connection_create_request_conflict",
+                  "session_grant_not_found",
+                  "session_grant_mismatch",
+                  "session_grant_expired",
+                  "session_grant_redeemed",
+                  "session_grant_cancelled",
                   "connection_already_claimed",
                   "connection_revoked",
                   "connection_cleanup_pending",

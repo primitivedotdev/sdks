@@ -209,7 +209,12 @@ type Invoker interface {
 	// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
 	//  and recipient-bound network contact admission. Save create_request_id before dispatch to recover
 	// an interrupted creation. Recovery returns the original current connection with recovered:true and
-	// invitation:null; it never replays a secret or rotates credentials.
+	// invitation:null; it never replays a secret or rotates credentials. With session_grant, the create
+	// redeems the caller's own live session grant for the same machine_id and session_id; the connection
+	// is personal to the caller at the grant's address and the grant is used up. A grant that is not the
+	// caller's returns 404 session_grant_not_found; a different machine or session returns 403
+	// session_grant_mismatch; a used, cancelled or expired grant returns 409 session_grant_redeemed,
+	// session_grant_cancelled or session_grant_expired.
 	//
 	// POST /agent-connections
 	CreateAgentConnection(ctx context.Context, request *CreateAgentConnectionReq, params CreateAgentConnectionParams) (CreateAgentConnectionRes, error)
@@ -3710,7 +3715,12 @@ func (c *Client) sendCreateAgentClaimLink(ctx context.Context, request *CreateAg
 //	and recipient-bound network contact admission. Save create_request_id before dispatch to recover
 //
 // an interrupted creation. Recovery returns the original current connection with recovered:true and
-// invitation:null; it never replays a secret or rotates credentials.
+// invitation:null; it never replays a secret or rotates credentials. With session_grant, the create
+// redeems the caller's own live session grant for the same machine_id and session_id; the connection
+// is personal to the caller at the grant's address and the grant is used up. A grant that is not the
+// caller's returns 404 session_grant_not_found; a different machine or session returns 403
+// session_grant_mismatch; a used, cancelled or expired grant returns 409 session_grant_redeemed,
+// session_grant_cancelled or session_grant_expired.
 //
 // POST /agent-connections
 func (c *Client) CreateAgentConnection(ctx context.Context, request *CreateAgentConnectionReq, params CreateAgentConnectionParams) (CreateAgentConnectionRes, error) {

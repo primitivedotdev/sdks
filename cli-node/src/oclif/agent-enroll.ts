@@ -30,6 +30,7 @@ import {
 } from "./connected-agent-profile.js";
 import { parseAgentContactPolicy } from "./contact-policy.js";
 import { acquireListenLock } from "./listen-state.js";
+import { machineId } from "./machine-id.js";
 import { connectNativeSession, SESSION_UUID } from "./notify-session-native.js";
 import {
   ownerReportGuidance,
@@ -40,6 +41,7 @@ import {
   ENROLLMENT_LOCK_SCOPE,
   type RegistrationEvent,
 } from "./registration-log.js";
+import { detectRuntimeSession } from "./runtime-session.js";
 import {
   mailAddress,
   privateMailDirectory,
@@ -75,13 +77,15 @@ function reconnectStep(address: string, why: string): string {
 }
 
 type Enrollment = {
-  version: 1 | 2;
+  version: 1 | 2 | 3;
   session: string;
   profile: string;
   name: string;
   address: string | null;
   createRequestId?: string;
   continueAttempted?: boolean;
+  /** Version 3: the owner's session grant this enrollment redeems. */
+  sessionGrantId?: string;
   orgId: string;
   grantId: string;
   apiBaseUrl: string;
@@ -108,6 +112,11 @@ export type AgentEnrollOptions = {
   receiverMode?: ReceiverMode;
   contactRequests?: boolean;
   continueSetup?: boolean;
+  /**
+   * The owner's session grant for this exact session on this machine. The
+   * server creates the address the grant names and uses the grant up.
+   */
+  sessionGrant?: string;
   /** Runs once the saved login and session preflight pass, before any request. */
   beforeCreate?: () => Promise<void>;
   confirmationSleep?: (milliseconds: number) => Promise<void>;
@@ -139,13 +148,18 @@ function savedEnrollment(value: unknown): Enrollment {
     "invitationHash",
     "ownerAddress",
   ];
-  if (row?.version === 2) keys.push("createRequestId", "continueAttempted");
+  if (row?.version === 2 || row?.version === 3)
+    keys.push("createRequestId", "continueAttempted");
+  if (row?.version === 3) keys.push("sessionGrantId");
   if (
     !row ||
     Object.keys(row).length !== keys.length ||
     keys.some((key) => !Object.hasOwn(row, key)) ||
-    (row.version !== 1 && row.version !== 2) ||
-    (row.version === 2 &&
+    (row.version !== 1 && row.version !== 2 && row.version !== 3) ||
+    (row.version === 3 &&
+      (typeof row.sessionGrantId !== "string" ||
+        !SESSION_UUID.test(row.sessionGrantId))) ||
+    ((row.version === 2 || row.version === 3) &&
       (typeof row.createRequestId !== "string" ||
         !SESSION_UUID.test(row.createRequestId) ||
         typeof row.continueAttempted !== "boolean")) ||
@@ -156,7 +170,7 @@ function savedEnrollment(value: unknown): Enrollment {
     !validName(row.name) ||
     !(
       (typeof row.address === "string" && validAddress(row.address)) ||
-      (row.version === 2 &&
+      ((row.version === 2 || row.version === 3) &&
         row.address === null &&
         row.phase === "create_attempted")
     ) ||
@@ -329,19 +343,64 @@ async function boundedJson(
   }
 }
 
-async function rejectedUnsuitableDomain(response: Response): Promise<boolean> {
-  if (response.status !== 400) return false;
+/** The error code of a refused request, read once; null when there is none. */
+async function rejectionCode(response: Response): Promise<string | null> {
   try {
     const envelope = plainRecord(
       await boundedJson(response, "connection rejection"),
     );
-    return (
-      envelope?.success === false &&
-      plainRecord(envelope.error)?.code === "connection_domain_unavailable"
-    );
+    const code = plainRecord(envelope?.error)?.code;
+    return envelope?.success === false && typeof code === "string"
+      ? code
+      : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+/**
+ * Grant refusals that prove this saved request created nothing: the server
+ * recovers a request's own connection before it judges the grant, and a
+ * grant is used up in the same transaction that creates the connection.
+ */
+const SPENT_GRANT_CODES = new Set([
+  "session_grant_expired",
+  "session_grant_cancelled",
+  "session_grant_redeemed",
+]);
+
+function sessionGrantRefusal(code: string): string {
+  const again =
+    "Connect this session again from the Primitive app to get a fresh grant.";
+  switch (code) {
+    case "session_grant_expired":
+      return `The session grant expired before this session used it. ${again} No address was created by this request.`;
+    case "session_grant_cancelled":
+      return `The session grant was cancelled in the Primitive app. ${again} No address was created by this request.`;
+    case "session_grant_redeemed":
+      return `The session grant was already used. ${again} No address was created by this request.`;
+    case "session_grant_mismatch":
+      return "The session grant was made for a different machine or session. Run the app's command in the session it names, on the machine it was made for. No address was created by this request.";
+    case "session_grant_not_found":
+      return "The signed-in member has no session grant with this id. Sign in as the member who connected this session, then retry. No address was created by this request.";
+    default:
+      return `The session grant was refused (${code}). No address was created by this request.`;
+  }
+}
+
+/**
+ * A grant is bound to one runtime session, so it is redeemed only from the
+ * process that session runs in, never from a shell that merely names it.
+ */
+function assertGrantSession(session: string, env: NodeJS.ProcessEnv): void {
+  const detected = detectRuntimeSession(env);
+  if (
+    detected.kind !== "detected" ||
+    detected.session !== session.toLowerCase()
+  )
+    throw refuse(
+      "A session grant is redeemed only from inside the session it names, and this process is not running in that session. Run the app's command in that session. Nothing was changed.",
+    );
 }
 
 function invitationFrom(
@@ -948,6 +1007,12 @@ export async function enrollAgent(params: AgentEnrollOptions) {
     throw refuse(
       "Enrollment uses only the saved member login; rerun it under `env -u PRIMITIVE_AGENT_PROFILE -u PRIMITIVE_API_KEY -u PRIMITIVE_KEY` so no agent profile or API key override applies.",
     );
+  const requestedGrant = params.sessionGrant?.trim().toLowerCase();
+  if (requestedGrant !== undefined) {
+    if (!SESSION_UUID.test(requestedGrant))
+      throw refuse("A session grant id is a UUID. Nothing was changed.");
+    assertGrantSession(params.session, env);
+  }
   const saved = loadCliCredentials(params.configDir);
   if (!saved) {
     const pending = unfinishedEnrollmentAddress(
@@ -1017,6 +1082,13 @@ export async function enrollAgent(params: AgentEnrollOptions) {
       throw refuse(
         "This session's enrollment was started with different setup choices (name, receiver or contact requests); rerun it with the original options. Nothing was changed.",
       );
+    const savedGrant = state?.version === 3 ? state.sessionGrantId : undefined;
+    if (state && requestedGrant !== undefined && requestedGrant !== savedGrant)
+      throw refuse(
+        `This session's enrollment was started ${savedGrant ? "with a different session grant" : "without a session grant"}; rerun it with the original options. Nothing was changed.`,
+      );
+    // A rerun without the flag resumes with the grant it saved.
+    const sessionGrantId = requestedGrant ?? savedGrant;
     const existing = loadConnectedAgentProfile(params.configDir, profile);
     // A claimed profile resumes with its own credential; the member login
     // only adds optional owner-side checks, so another login does not block it.
@@ -1210,7 +1282,8 @@ export async function enrollAgent(params: AgentEnrollOptions) {
       if (!domains.length)
         throw refuse("No managed domain is available for enrollment.");
       state = {
-        version: 2,
+        version: sessionGrantId ? 3 : 2,
+        ...(sessionGrantId ? { sessionGrantId } : {}),
         session: params.session,
         profile,
         name,
@@ -1231,6 +1304,17 @@ export async function enrollAgent(params: AgentEnrollOptions) {
       // friendly address allocation; an uncertain response cannot pick another.
       writeMailJson(path, state);
     }
+    let sessionGrant:
+      | { id: string; session_id: string; machine_id: string }
+      | undefined;
+    if (state.sessionGrantId) {
+      assertGrantSession(params.session, env);
+      sessionGrant = {
+        id: state.sessionGrantId,
+        session_id: params.session.toLowerCase(),
+        machine_id: machineId(params.configDir),
+      };
+    }
     let payload: unknown;
     try {
       const response = await fetchImpl(`${apiBaseUrl}/agent-connections`, {
@@ -1245,26 +1329,28 @@ export async function enrollAgent(params: AgentEnrollOptions) {
         body: JSON.stringify({
           name: state.name,
           create_request_id: state.createRequestId,
+          ...(sessionGrant ? { session_grant: sessionGrant } : {}),
         }),
       });
-      if (await rejectedUnsuitableDomain(response)) {
+      const code =
+        response.status === 200 ? null : await rejectionCode(response);
+      if (response.status === 400 && code === "connection_domain_unavailable") {
         if (firstAttempt) unlinkSync(path);
         throw refuse(
           "No verified managed domain is currently sendable for agent enrollment. No address was created by this request.",
         );
       }
+      if (sessionGrant && code?.startsWith("session_grant_")) {
+        if (firstAttempt || SPENT_GRANT_CODES.has(code)) unlinkSync(path);
+        throw refuse(sessionGrantRefusal(code));
+      }
       if ([400, 401, 403].includes(response.status)) {
-        await response.body?.cancel().catch(() => undefined);
         if (firstAttempt) unlinkSync(path);
         throw refuse(
           "Connection creation was rejected before an address was created. Check the selected organization, managed domain, and member access, then retry this exact session.",
         );
       }
       if (response.status !== 200) {
-        const failed = plainRecord(
-          await boundedJson(response, "connection recovery"),
-        );
-        const code = plainRecord(failed?.error)?.code;
         if (code === "connection_removed")
           throw refuse(
             "This saved setup belongs to a removed agent. It cannot create another identity. Review the removed agent in the app.",

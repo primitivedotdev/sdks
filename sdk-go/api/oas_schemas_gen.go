@@ -8752,6 +8752,10 @@ type CreateAgentConnectionReq struct {
 	// Stable request UUID saved before creating this agent. Replay recovers the original current
 	// connection without returning or rotating an invitation.
 	CreateRequestID OptUUID `json:"create_request_id"`
+	// The owner's single-use session grant for this exact session on this machine. Not a secret;
+	// redeeming it also needs the owner's own login. Cannot be combined with address or a shared
+	// ownership_kind.
+	SessionGrant OptCreateAgentConnectionReqSessionGrant `json:"session_grant"`
 }
 
 // GetName returns the value of Name.
@@ -8779,6 +8783,11 @@ func (s *CreateAgentConnectionReq) GetCreateRequestID() OptUUID {
 	return s.CreateRequestID
 }
 
+// GetSessionGrant returns the value of SessionGrant.
+func (s *CreateAgentConnectionReq) GetSessionGrant() OptCreateAgentConnectionReqSessionGrant {
+	return s.SessionGrant
+}
+
 // SetName sets the value of Name.
 func (s *CreateAgentConnectionReq) SetName(val string) {
 	s.Name = val
@@ -8802,6 +8811,11 @@ func (s *CreateAgentConnectionReq) SetOwnershipKind(val OptCreateAgentConnection
 // SetCreateRequestID sets the value of CreateRequestID.
 func (s *CreateAgentConnectionReq) SetCreateRequestID(val OptUUID) {
 	s.CreateRequestID = val
+}
+
+// SetSessionGrant sets the value of SessionGrant.
+func (s *CreateAgentConnectionReq) SetSessionGrant(val OptCreateAgentConnectionReqSessionGrant) {
+	s.SessionGrant = val
 }
 
 type CreateAgentConnectionReqOwnershipKind string
@@ -8843,6 +8857,45 @@ func (s *CreateAgentConnectionReqOwnershipKind) UnmarshalText(data []byte) error
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// The owner's single-use session grant for this exact session on this machine. Not a secret;
+// redeeming it also needs the owner's own login. Cannot be combined with address or a shared
+// ownership_kind.
+type CreateAgentConnectionReqSessionGrant struct {
+	ID        uuid.UUID `json:"id"`
+	SessionID uuid.UUID `json:"session_id"`
+	MachineID string    `json:"machine_id"`
+}
+
+// GetID returns the value of ID.
+func (s *CreateAgentConnectionReqSessionGrant) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetSessionID returns the value of SessionID.
+func (s *CreateAgentConnectionReqSessionGrant) GetSessionID() uuid.UUID {
+	return s.SessionID
+}
+
+// GetMachineID returns the value of MachineID.
+func (s *CreateAgentConnectionReqSessionGrant) GetMachineID() string {
+	return s.MachineID
+}
+
+// SetID sets the value of ID.
+func (s *CreateAgentConnectionReqSessionGrant) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetSessionID sets the value of SessionID.
+func (s *CreateAgentConnectionReqSessionGrant) SetSessionID(val uuid.UUID) {
+	s.SessionID = val
+}
+
+// SetMachineID sets the value of MachineID.
+func (s *CreateAgentConnectionReqSessionGrant) SetMachineID(val string) {
+	s.MachineID = val
 }
 
 type CreateAgentConnectionTooManyRequests ErrorResponseHeaders
@@ -18076,6 +18129,11 @@ const (
 	ErrorResponseErrorCodeContactConflict                          ErrorResponseErrorCode = "contact_conflict"
 	ErrorResponseErrorCodeConnectionRemoved                        ErrorResponseErrorCode = "connection_removed"
 	ErrorResponseErrorCodeConnectionCreateRequestConflict          ErrorResponseErrorCode = "connection_create_request_conflict"
+	ErrorResponseErrorCodeSessionGrantNotFound                     ErrorResponseErrorCode = "session_grant_not_found"
+	ErrorResponseErrorCodeSessionGrantMismatch                     ErrorResponseErrorCode = "session_grant_mismatch"
+	ErrorResponseErrorCodeSessionGrantExpired                      ErrorResponseErrorCode = "session_grant_expired"
+	ErrorResponseErrorCodeSessionGrantRedeemed                     ErrorResponseErrorCode = "session_grant_redeemed"
+	ErrorResponseErrorCodeSessionGrantCancelled                    ErrorResponseErrorCode = "session_grant_cancelled"
 	ErrorResponseErrorCodeConnectionAlreadyClaimed                 ErrorResponseErrorCode = "connection_already_claimed"
 	ErrorResponseErrorCodeConnectionRevoked                        ErrorResponseErrorCode = "connection_revoked"
 	ErrorResponseErrorCodeConnectionCleanupPending                 ErrorResponseErrorCode = "connection_cleanup_pending"
@@ -18349,6 +18407,11 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeContactConflict,
 		ErrorResponseErrorCodeConnectionRemoved,
 		ErrorResponseErrorCodeConnectionCreateRequestConflict,
+		ErrorResponseErrorCodeSessionGrantNotFound,
+		ErrorResponseErrorCodeSessionGrantMismatch,
+		ErrorResponseErrorCodeSessionGrantExpired,
+		ErrorResponseErrorCodeSessionGrantRedeemed,
+		ErrorResponseErrorCodeSessionGrantCancelled,
 		ErrorResponseErrorCodeConnectionAlreadyClaimed,
 		ErrorResponseErrorCodeConnectionRevoked,
 		ErrorResponseErrorCodeConnectionCleanupPending,
@@ -18716,6 +18779,16 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeConnectionRemoved:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeConnectionCreateRequestConflict:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSessionGrantNotFound:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSessionGrantMismatch:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSessionGrantExpired:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSessionGrantRedeemed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSessionGrantCancelled:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeConnectionAlreadyClaimed:
 		return []byte(s), nil
@@ -19354,6 +19427,21 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeConnectionCreateRequestConflict:
 		*s = ErrorResponseErrorCodeConnectionCreateRequestConflict
+		return nil
+	case ErrorResponseErrorCodeSessionGrantNotFound:
+		*s = ErrorResponseErrorCodeSessionGrantNotFound
+		return nil
+	case ErrorResponseErrorCodeSessionGrantMismatch:
+		*s = ErrorResponseErrorCodeSessionGrantMismatch
+		return nil
+	case ErrorResponseErrorCodeSessionGrantExpired:
+		*s = ErrorResponseErrorCodeSessionGrantExpired
+		return nil
+	case ErrorResponseErrorCodeSessionGrantRedeemed:
+		*s = ErrorResponseErrorCodeSessionGrantRedeemed
+		return nil
+	case ErrorResponseErrorCodeSessionGrantCancelled:
+		*s = ErrorResponseErrorCodeSessionGrantCancelled
 		return nil
 	case ErrorResponseErrorCodeConnectionAlreadyClaimed:
 		*s = ErrorResponseErrorCodeConnectionAlreadyClaimed
@@ -29579,6 +29667,52 @@ func (o OptCreateAgentConnectionReqOwnershipKind) Get() (v CreateAgentConnection
 
 // Or returns value if set, or given parameter if does not.
 func (o OptCreateAgentConnectionReqOwnershipKind) Or(d CreateAgentConnectionReqOwnershipKind) CreateAgentConnectionReqOwnershipKind {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptCreateAgentConnectionReqSessionGrant returns new OptCreateAgentConnectionReqSessionGrant with value set to v.
+func NewOptCreateAgentConnectionReqSessionGrant(v CreateAgentConnectionReqSessionGrant) OptCreateAgentConnectionReqSessionGrant {
+	return OptCreateAgentConnectionReqSessionGrant{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCreateAgentConnectionReqSessionGrant is optional CreateAgentConnectionReqSessionGrant.
+type OptCreateAgentConnectionReqSessionGrant struct {
+	Value CreateAgentConnectionReqSessionGrant
+	Set   bool
+}
+
+// IsSet returns true if OptCreateAgentConnectionReqSessionGrant was set.
+func (o OptCreateAgentConnectionReqSessionGrant) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCreateAgentConnectionReqSessionGrant) Reset() {
+	var v CreateAgentConnectionReqSessionGrant
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCreateAgentConnectionReqSessionGrant) SetTo(v CreateAgentConnectionReqSessionGrant) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCreateAgentConnectionReqSessionGrant) Get() (v CreateAgentConnectionReqSessionGrant, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCreateAgentConnectionReqSessionGrant) Or(d CreateAgentConnectionReqSessionGrant) CreateAgentConnectionReqSessionGrant {
 	if v, ok := o.Get(); ok {
 		return v
 	}

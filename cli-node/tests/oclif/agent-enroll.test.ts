@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, it as test } from "vitest";
@@ -124,6 +130,7 @@ function server(
     requestId: string;
     auth: string;
     url: string;
+    sessionGrant?: unknown;
   }> = [];
   let first = true;
   let policyReads = 0;
@@ -283,7 +290,12 @@ function server(
         String(
           init?.body ?? (input instanceof Request ? await input.text() : ""),
         ),
-      ) as { name: string; address?: string; create_request_id: string };
+      ) as {
+        name: string;
+        address?: string;
+        create_request_id: string;
+        session_grant?: unknown;
+      };
       const headers = new Headers(
         init?.headers ?? (input instanceof Request ? input.headers : undefined),
       );
@@ -295,6 +307,9 @@ function server(
         requestId: body.create_request_id,
         auth: headers.get("authorization") ?? "",
         url,
+        ...(Object.hasOwn(body, "session_grant")
+          ? { sessionGrant: body.session_grant }
+          : {}),
       });
       options.onCreate?.(address, creates.length);
       assert.equal(body.name, options.expectedName ?? "Research");
@@ -1611,4 +1626,244 @@ test("the registration log explains a stuck session and holds no secrets", async
     "token=",
   ])
     assert.equal(text.includes(secret), false, secret);
+});
+
+const sessionGrantId = "33333333-3333-4333-8333-333333333333";
+const enrollmentState = (configDir: string) =>
+  join(
+    agentProfileDirectory(configDir, `session-${session}`),
+    "enrollment",
+    "state.json",
+  );
+
+test("a session grant is sent bound to this session and machine, and saved for resume", async () => {
+  const configDir = owner();
+  const { fetcher, creates } = server({ failFirstCreate: true });
+  const params = {
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external" as const,
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async () => result) as typeof setupAgent,
+  };
+  await assert.rejects(
+    enrollAgent({ ...params, sessionGrant: sessionGrantId.toUpperCase() }),
+    /unknown outcome/,
+  );
+  const saved = JSON.parse(readFileSync(enrollmentState(configDir), "utf8"));
+  assert.equal(saved.version, 3);
+  assert.equal(saved.sessionGrantId, sessionGrantId);
+  const machine = readFileSync(join(configDir, "machine-id"), "utf8").trim();
+  assert.match(machine, /^[A-Za-z0-9._-]{8,128}$/);
+  if (process.platform !== "win32")
+    assert.equal(statSync(join(configDir, "machine-id")).mode & 0o777, 0o600);
+  // The rerun names no grant and resumes the saved one with the same request.
+  await enrollAgent(params);
+  assert.equal(creates.length, 2);
+  assert.equal(creates[0]?.requestId, creates[1]?.requestId);
+  for (const row of creates)
+    assert.deepEqual(row.sessionGrant, {
+      id: sessionGrantId,
+      session_id: session,
+      machine_id: machine,
+    });
+});
+
+test("enrollment without a grant sends no session grant", async () => {
+  const configDir = owner();
+  const { fetcher, creates } = server();
+  await enrollAgent({
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external",
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async () => result) as typeof setupAgent,
+  });
+  assert.equal(creates.length, 1);
+  assert.equal(Object.hasOwn(creates[0] ?? {}, "sessionGrant"), false);
+  assert.equal(
+    JSON.parse(readFileSync(enrollmentState(configDir), "utf8")).version,
+    2,
+  );
+  assert.equal(existsSync(join(configDir, "machine-id")), false);
+});
+
+test("a session grant is refused outside the session it names, before any request", async () => {
+  for (const env of [
+    {},
+    { CLAUDE_CODE_SESSION_ID: orgId },
+    { CLAUDE_CODE_SESSION_ID: session, CODEX_THREAD_ID: orgId },
+  ]) {
+    const configDir = owner();
+    const { fetcher, creates } = server();
+    await assert.rejects(
+      enrollAgent({
+        configDir,
+        session,
+        name: "Research",
+        receiverMode: "poll",
+        env,
+        fetch: fetcher,
+        now: () => clock,
+        sessionGrant: sessionGrantId,
+      }),
+      /redeemed only from inside the session it names/,
+    );
+    assert.equal(creates.length, 0);
+    assert.equal(existsSync(enrollmentState(configDir)), false);
+  }
+});
+
+test("a malformed session grant id is refused", async () => {
+  const configDir = owner();
+  const { fetcher, creates } = server();
+  await assert.rejects(
+    enrollAgent({
+      configDir,
+      session,
+      name: "Research",
+      receiverMode: "external",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      fetch: fetcher,
+      now: () => clock,
+      sessionGrant: "not-a-grant",
+    }),
+    /session grant id is a UUID/,
+  );
+  assert.equal(creates.length, 0);
+});
+
+test("a saved enrollment refuses a different or newly added grant", async () => {
+  for (const firstGrant of [sessionGrantId, undefined]) {
+    const configDir = owner();
+    const { fetcher, creates } = server({ failFirstCreate: true });
+    const params = {
+      configDir,
+      session,
+      name: "Research",
+      receiverMode: "external" as const,
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      fetch: fetcher,
+      now: () => clock,
+    };
+    await assert.rejects(
+      enrollAgent({
+        ...params,
+        ...(firstGrant ? { sessionGrant: firstGrant } : {}),
+      }),
+      /unknown outcome/,
+    );
+    await assert.rejects(
+      enrollAgent({
+        ...params,
+        sessionGrant: "44444444-4444-4444-8444-444444444444",
+      }),
+      firstGrant
+        ? /started with a different session grant/
+        : /started without a session grant/,
+    );
+    assert.equal(creates.length, 1);
+    assert.equal(existsSync(enrollmentState(configDir)), true);
+  }
+});
+
+test("grant refusals name the next step and forget only a request that created nothing", async () => {
+  const cases: Array<{
+    code: string;
+    status: number;
+    message: RegExp;
+    retried: boolean;
+    kept: boolean;
+  }> = [
+    {
+      code: "session_grant_expired",
+      status: 409,
+      message: /expired/,
+      retried: false,
+      kept: false,
+    },
+    {
+      code: "session_grant_cancelled",
+      status: 409,
+      message: /cancelled/,
+      retried: false,
+      kept: false,
+    },
+    {
+      code: "session_grant_redeemed",
+      status: 409,
+      message: /already used/,
+      retried: false,
+      kept: false,
+    },
+    {
+      code: "session_grant_mismatch",
+      status: 403,
+      message: /different machine or session/,
+      retried: false,
+      kept: false,
+    },
+    {
+      code: "session_grant_not_found",
+      status: 404,
+      message: /no session grant with this id/,
+      retried: false,
+      kept: false,
+    },
+    // After an uncertain first attempt, spent grants prove nothing was made;
+    // a binding refusal does not, so the saved request is kept.
+    {
+      code: "session_grant_expired",
+      status: 409,
+      message: /expired/,
+      retried: true,
+      kept: false,
+    },
+    {
+      code: "session_grant_mismatch",
+      status: 403,
+      message: /different machine or session/,
+      retried: true,
+      kept: true,
+    },
+    {
+      code: "session_grant_not_found",
+      status: 404,
+      message: /no session grant/,
+      retried: true,
+      kept: true,
+    },
+  ];
+  for (const row of cases) {
+    const configDir = owner();
+    const denial = { status: row.status, code: row.code };
+    const { fetcher } = server({
+      failFirstCreate: row.retried,
+      createDenials: row.retried ? [null, denial] : [denial],
+    });
+    const params = {
+      configDir,
+      session,
+      name: "Research",
+      receiverMode: "external" as const,
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      fetch: fetcher,
+      now: () => clock,
+      sessionGrant: sessionGrantId,
+    };
+    if (row.retried)
+      await assert.rejects(enrollAgent(params), /unknown outcome/);
+    await assert.rejects(enrollAgent(params), (error: unknown) => {
+      assert.ok(error instanceof AgentConnectionSetupError);
+      assert.match(error.message, row.message);
+      return true;
+    });
+    assert.equal(existsSync(enrollmentState(configDir)), row.kept, row.code);
+  }
 });

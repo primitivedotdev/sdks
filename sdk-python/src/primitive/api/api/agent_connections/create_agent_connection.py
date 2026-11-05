@@ -132,7 +132,12 @@ def sync_detailed(
     writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
     bound network contact admission. Save create_request_id before dispatch to recover an interrupted
     creation. Recovery returns the original current connection with recovered:true and invitation:null;
-    it never replays a secret or rotates credentials.
+    it never replays a secret or rotates credentials. With session_grant, the create redeems the
+    caller's own live session grant for the same machine_id and session_id; the connection is personal
+    to the caller at the grant's address and the grant is used up. A grant that is not the caller's
+    returns 404 session_grant_not_found; a different machine or session returns 403
+    session_grant_mismatch; a used, cancelled or expired grant returns 409 session_grant_redeemed,
+    session_grant_cancelled or session_grant_expired.
 
     Args:
         idempotency_key (str | Unset):
@@ -180,7 +185,12 @@ def sync(
     writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
     bound network contact admission. Save create_request_id before dispatch to recover an interrupted
     creation. Recovery returns the original current connection with recovered:true and invitation:null;
-    it never replays a secret or rotates credentials.
+    it never replays a secret or rotates credentials. With session_grant, the create redeems the
+    caller's own live session grant for the same machine_id and session_id; the connection is personal
+    to the caller at the grant's address and the grant is used up. A grant that is not the caller's
+    returns 404 session_grant_not_found; a different machine or session returns 403
+    session_grant_mismatch; a used, cancelled or expired grant returns 409 session_grant_redeemed,
+    session_grant_cancelled or session_grant_expired.
 
     Args:
         idempotency_key (str | Unset):
@@ -223,7 +233,12 @@ async def asyncio_detailed(
     writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
     bound network contact admission. Save create_request_id before dispatch to recover an interrupted
     creation. Recovery returns the original current connection with recovered:true and invitation:null;
-    it never replays a secret or rotates credentials.
+    it never replays a secret or rotates credentials. With session_grant, the create redeems the
+    caller's own live session grant for the same machine_id and session_id; the connection is personal
+    to the caller at the grant's address and the grant is used up. A grant that is not the caller's
+    returns 404 session_grant_not_found; a different machine or session returns 403
+    session_grant_mismatch; a used, cancelled or expired grant returns 409 session_grant_redeemed,
+    session_grant_cancelled or session_grant_expired.
 
     Args:
         idempotency_key (str | Unset):
@@ -271,7 +286,12 @@ async def asyncio(
     writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
     bound network contact admission. Save create_request_id before dispatch to recover an interrupted
     creation. Recovery returns the original current connection with recovered:true and invitation:null;
-    it never replays a secret or rotates credentials.
+    it never replays a secret or rotates credentials. With session_grant, the create redeems the
+    caller's own live session grant for the same machine_id and session_id; the connection is personal
+    to the caller at the grant's address and the grant is used up. A grant that is not the caller's
+    returns 404 session_grant_not_found; a different machine or session returns 403
+    session_grant_mismatch; a used, cancelled or expired grant returns 409 session_grant_redeemed,
+    session_grant_cancelled or session_grant_expired.
 
     Args:
         idempotency_key (str | Unset):
