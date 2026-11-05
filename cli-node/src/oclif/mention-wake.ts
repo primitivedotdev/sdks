@@ -32,25 +32,35 @@ export function mentionsAddress(text: string, address: string): boolean {
   return full.test(text) || handle.test(text);
 }
 
-// The innermost blockquote: no other blockquote opens inside it.
-const INNER_BLOCKQUOTE =
-  /<blockquote\b[^>]*>(?:(?!<blockquote\b)[\s\S])*?<\/blockquote\s*>/gi;
+// An opening or closing blockquote tag. Excluding "<" as well as ">" from
+// the attributes keeps a scan linear even when a tag is never closed.
+const BLOCKQUOTE_TAG = /<(\/?)blockquote\b[^<>]*>/gi;
 
 /**
  * An HTML-only email with its blockquotes removed. HTML mail marks quoted
  * history with blockquote rather than ">", and the text conversion keeps
  * quoted lines as plain text, so an earlier message's mention would count
- * again. A message with a text part is returned unchanged.
+ * again. One pass tracks the nesting depth and keeps only text outside every
+ * blockquote; an unclosed blockquote drops the rest of the body. A message
+ * with a text part is returned unchanged.
  */
 function withoutHtmlQuotes(detail: EmailDetail): EmailDetail {
   if (detail.body_text?.trim() || !detail.body_html) return detail;
-  let html = detail.body_html;
-  for (;;) {
-    const next = html.replace(INNER_BLOCKQUOTE, "\n");
-    if (next === html) break;
-    html = next;
+  const html = detail.body_html;
+  let kept = "";
+  let depth = 0;
+  let last = 0;
+  for (const tag of html.matchAll(BLOCKQUOTE_TAG)) {
+    if (depth === 0) kept += html.slice(last, tag.index);
+    if (tag[1]) depth = Math.max(0, depth - 1);
+    else {
+      if (depth === 0) kept += "\n";
+      depth += 1;
+    }
+    last = tag.index + tag[0].length;
   }
-  return { ...detail, body_html: html };
+  if (depth === 0) kept += html.slice(last);
+  return { ...detail, body_html: kept };
 }
 
 /**

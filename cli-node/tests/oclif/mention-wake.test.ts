@@ -160,6 +160,20 @@ describe("mentionsOnlyOthers", () => {
     expect(
       mentionsOnlyOthers(html(`${quoted}<p>@reviewer please merge</p>`), SELF),
     ).toBe(true);
+    const deep = `<p>Both of you continue.</p>${"<blockquote>".repeat(20_000)}@reviewer${"</blockquote>".repeat(20_000)}`;
+    expect(mentionsOnlyOthers(html(deep), SELF)).toBe(false);
+    expect(
+      mentionsOnlyOthers(
+        html(`${deep}<blockquote class="x"><p>@reviewer old</p>`),
+        SELF,
+      ),
+    ).toBe(false);
+    expect(
+      mentionsOnlyOthers(
+        html("</blockquote><p>@reviewer please merge</p>"),
+        SELF,
+      ),
+    ).toBe(true);
   });
 
   it("never skips when this agent's address is unusable", () => {
