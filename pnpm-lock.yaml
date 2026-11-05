@@ -36,8 +36,8 @@ importers:
         specifier: ^5.1.11
         version: 5.1.11
       '@oclif/plugin-autocomplete':
-        specifier: ^4.0.4
-        version: 4.0.4(supports-color@8.1.1)
+        specifier: ^4.0.6
+        version: 4.0.6(supports-color@8.1.1)
       '@oclif/plugin-help':
         specifier: ^7.0.4
         version: 7.0.4
@@ -949,8 +949,8 @@ packages:
     resolution: {integrity: sha512-SIB9o3zofFA8CzjnCWbBWjdDNOKV7zYlKnDeE0V7+kHl89qzMPRNhrbAAh0+0HkUiVpiR6wIoL8yJI6QtoWsqg==}
     engines: {node: '>=22.0.0'}
 
-  '@oclif/plugin-autocomplete@4.0.4':
-    resolution: {integrity: sha512-EBdHkB+UE2E7YEM60LiVAK+ZVNRT+1epCkez1LIAJIfCMazhGJCzTNt75hOZHLfH0cZP48zs6FrZ45yzwfZbFw==}
+  '@oclif/plugin-autocomplete@4.0.6':
+    resolution: {integrity: sha512-TCdtU3jMG2OJPTIUu9a4qpG/CW6t0ymbk4/GdLfc/o2455AhdYJphIaIpNe772xFhcqceVDg1kWUB5lacDaw2w==}
     engines: {node: '>=22.0.0'}
 
   '@oclif/plugin-help@7.0.4':
@@ -3432,7 +3432,7 @@ snapshots:
       wrap-ansi: 7.0.0
       wsl-utils: 0.4.0
 
-  '@oclif/plugin-autocomplete@4.0.4(supports-color@8.1.1)':
+  '@oclif/plugin-autocomplete@4.0.6(supports-color@8.1.1)':
     dependencies:
       '@oclif/core': 5.1.11
       ansis: 3.17.0
