@@ -145,6 +145,23 @@ describe("mentionsOnlyOthers", () => {
     expect(mentionsOnlyOthers(detail, SELF)).toBe(true);
   });
 
+  it("ignores mentions in blockquotes of an HTML-only message", () => {
+    const html = (body: string) =>
+      email("", [SELF, OTHER], {
+        body_text: null,
+        body_html: body,
+      } as Partial<EmailDetail>);
+    const quoted =
+      "<p>Both of you continue.</p><blockquote>@reviewer check this</blockquote>";
+    expect(mentionsOnlyOthers(html(quoted), SELF)).toBe(false);
+    const nested =
+      "<p>Both of you continue.</p><blockquote><p>ok</p><blockquote>@reviewer check this</blockquote><p>@reviewer again</p></blockquote>";
+    expect(mentionsOnlyOthers(html(nested), SELF)).toBe(false);
+    expect(
+      mentionsOnlyOthers(html(`${quoted}<p>@reviewer please merge</p>`), SELF),
+    ).toBe(true);
+  });
+
   it("never skips when this agent's address is unusable", () => {
     expect(mentionsOnlyOthers(email("@reviewer take a look"), "")).toBe(false);
   });

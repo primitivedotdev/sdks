@@ -32,6 +32,27 @@ export function mentionsAddress(text: string, address: string): boolean {
   return full.test(text) || handle.test(text);
 }
 
+// The innermost blockquote: no other blockquote opens inside it.
+const INNER_BLOCKQUOTE =
+  /<blockquote\b[^>]*>(?:(?!<blockquote\b)[\s\S])*?<\/blockquote\s*>/gi;
+
+/**
+ * An HTML-only email with its blockquotes removed. HTML mail marks quoted
+ * history with blockquote rather than ">", and the text conversion keeps
+ * quoted lines as plain text, so an earlier message's mention would count
+ * again. A message with a text part is returned unchanged.
+ */
+function withoutHtmlQuotes(detail: EmailDetail): EmailDetail {
+  if (detail.body_text?.trim() || !detail.body_html) return detail;
+  let html = detail.body_html;
+  for (;;) {
+    const next = html.replace(INNER_BLOCKQUOTE, "\n");
+    if (next === html) break;
+    html = next;
+  }
+  return { ...detail, body_html: html };
+}
+
 /**
  * The mention rule for group email. In an email that names this agent and at
  * least one other address in To or Cc (see otherParticipants), a body that
@@ -42,8 +63,8 @@ export function mentionsAddress(text: string, address: string): boolean {
  * A mention is the full address or `@local-part` in the new text of the
  * message: quoted history and quoted (`>`) lines are removed first, so an
  * earlier message's mention does not count again, and an HTML-only message
- * is read as text. Mentions of addresses the email was not sent to are
- * ignored.
+ * is read as text without its blockquotes. Mentions of addresses the email
+ * was not sent to are ignored.
  *
  * Returns true when this agent should not be woken. Like a muted thread, the
  * email is still received and readable; only the wake is skipped.
@@ -55,7 +76,7 @@ export function mentionsOnlyOthers(detail: EmailDetail, self: string): boolean {
   if (!others.length) return false;
   // The compact body drops trailing quoted history but keeps inline replies
   // whole; drop their quoted lines so only the sender's own words count.
-  const text = buildEmailCompact(detail)
+  const text = buildEmailCompact(withoutHtmlQuotes(detail))
     .body_text.split("\n")
     .filter((line) => !/^\s*>/.test(line))
     .join("\n");
