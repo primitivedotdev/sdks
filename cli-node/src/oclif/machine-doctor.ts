@@ -39,7 +39,6 @@ import {
   writeCodexHooks,
 } from "./codex-machine-hooks.js";
 import {
-  type AgentRuntime,
   type BundledConnectSkill,
   connectSkillTarget,
   installConnectSkill,
@@ -79,6 +78,7 @@ import {
 } from "./machine-session.js";
 import { notificationScope } from "./notify-session.js";
 import { SESSION_UUID } from "./notify-session-native.js";
+import type { AgentRuntime } from "./runtime-session.js";
 import { readMailJson } from "./shared-mail-files.js";
 
 export const DOCTOR_REPORT_VERSION = 1;
