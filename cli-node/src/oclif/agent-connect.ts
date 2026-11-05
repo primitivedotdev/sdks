@@ -199,7 +199,61 @@ export type AgentConnectResult = {
   identity: ConnectedAgentIdentity;
   /** The connection's display name, when this run's claim reported one. */
   name?: string;
+  /** Which setup challenge this run's claim started, as far as it said. */
+  challenge?: ClaimedChallenge;
 };
+
+/**
+ * Which setup challenge a claim started. A reconnect leaves the previous
+ * connection's challenge in the agent's mailbox, and a reply to it cannot
+ * verify the new one. `marker` names the current challenge exactly; a
+ * server that does not report it still gives the connection's id and the
+ * server time of the claim, which exclude challenges sent before it.
+ */
+export type ClaimedChallenge = {
+  marker?: string;
+  connectionId?: string;
+  claimedAt?: string;
+};
+
+export const CONNECTION_ID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
+/** The whole of one setup challenge marker; its first group is the connection id. */
+export const CHALLENGE_MARKER =
+  /^primitive-connection:([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}):[1-9]\d*$/;
+
+/** The challenge hints a claim response carries. Unusable values are dropped. */
+export function claimedChallenge(value: unknown): ClaimedChallenge {
+  const data = (
+    value as {
+      data?: {
+        challenge_marker?: unknown;
+        connection?: Record<string, unknown>;
+      };
+    } | null
+  )?.data;
+  const connection = data?.connection;
+  const connectionId =
+    typeof connection?.id === "string" && CONNECTION_ID.test(connection.id)
+      ? connection.id
+      : undefined;
+  const claimedAt =
+    typeof connection?.claimed_at === "string"
+      ? Date.parse(connection.claimed_at)
+      : Number.NaN;
+  const marker =
+    typeof data?.challenge_marker === "string"
+      ? CHALLENGE_MARKER.exec(data.challenge_marker)
+      : null;
+  return {
+    ...(marker && (!connectionId || marker[1] === connectionId)
+      ? { marker: marker[0] }
+      : {}),
+    ...(connectionId ? { connectionId } : {}),
+    ...(Number.isFinite(claimedAt)
+      ? { claimedAt: new Date(claimedAt).toISOString() }
+      : {}),
+  };
+}
 
 const CONNECTION_NAME_FILE = "connection-name.json";
 
@@ -735,6 +789,7 @@ export async function connectAgent(params: {
         params.now ?? Date.now,
       );
       const name = claimedConnectionName(body);
+      const challenge = claimedChallenge(body);
       saveConnectedAgentProfile(params.configDir, profileName, profile);
       // A session record that says `session-register` created this
       // profile's agent no longer describes it, so a session end must not
@@ -767,6 +822,7 @@ export async function connectAgent(params: {
         status: "claimed",
         identity: connectedAgentIdentity(profileName, profile),
         ...(name === undefined ? {} : { name }),
+        ...(Object.keys(challenge).length ? { challenge } : {}),
       };
     } catch (error) {
       if (error instanceof AgentInvitationRejectedError) throw error;
