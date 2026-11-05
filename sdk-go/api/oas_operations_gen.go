@@ -89,6 +89,7 @@ const (
 	GetWebhookSecretOperation                     OperationName = "GetWebhookSecret"
 	InstallTemplateOperation                      OperationName = "InstallTemplate"
 	InviteAgentConnectionOperation                OperationName = "InviteAgentConnection"
+	LeaveOrganizationOperation                    OperationName = "LeaveOrganization"
 	ListAgentConnectionsOperation                 OperationName = "ListAgentConnections"
 	ListAgentContactsOperation                    OperationName = "ListAgentContacts"
 	ListAgentNetworksOperation                    OperationName = "ListAgentNetworks"

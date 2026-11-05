@@ -5810,6 +5810,70 @@ func decodeInviteAgentConnectionParams(args [1]string, argsEscaped bool, r *http
 	return params, nil
 }
 
+// LeaveOrganizationParams is parameters of leaveOrganization operation.
+type LeaveOrganizationParams struct {
+	// Confirmation token from the dashboard confirmation page, for a request made with a CLI or app
+	// sign-in.
+	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
+}
+
+func unpackLeaveOrganizationParams(packed middleware.Parameters) (params LeaveOrganizationParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "Primitive-Step-Up",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.PrimitiveStepUp = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeLeaveOrganizationParams(args [0]string, argsEscaped bool, r *http.Request) (params LeaveOrganizationParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: Primitive-Step-Up.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Primitive-Step-Up",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotPrimitiveStepUpVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPrimitiveStepUpVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.PrimitiveStepUp.SetTo(paramsDotPrimitiveStepUpVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Primitive-Step-Up",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // ListAgentConnectionsParams is parameters of listAgentConnections operation.
 type ListAgentConnectionsParams struct {
 	// Limit for agent connections.

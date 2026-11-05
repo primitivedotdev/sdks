@@ -24931,6 +24931,58 @@ type InviteAgentConnectionUnauthorized ErrorResponseHeaders
 
 func (*InviteAgentConnectionUnauthorized) inviteAgentConnectionRes() {}
 
+type LeaveOrganizationConflict ErrorResponse
+
+func (*LeaveOrganizationConflict) leaveOrganizationRes() {}
+
+type LeaveOrganizationForbidden ErrorResponse
+
+func (*LeaveOrganizationForbidden) leaveOrganizationRes() {}
+
+type LeaveOrganizationInternalServerError ErrorResponse
+
+func (*LeaveOrganizationInternalServerError) leaveOrganizationRes() {}
+
+type LeaveOrganizationNotFound ErrorResponse
+
+func (*LeaveOrganizationNotFound) leaveOrganizationRes() {}
+
+// Merged schema.
+type LeaveOrganizationOK struct {
+	Success bool             `json:"success"`
+	Data    OrganizationLeft `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *LeaveOrganizationOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *LeaveOrganizationOK) GetData() OrganizationLeft {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *LeaveOrganizationOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *LeaveOrganizationOK) SetData(val OrganizationLeft) {
+	s.Data = val
+}
+
+func (*LeaveOrganizationOK) leaveOrganizationRes() {}
+
+type LeaveOrganizationServiceUnavailable ErrorResponse
+
+func (*LeaveOrganizationServiceUnavailable) leaveOrganizationRes() {}
+
+type LeaveOrganizationUnauthorized ErrorResponse
+
+func (*LeaveOrganizationUnauthorized) leaveOrganizationRes() {}
+
 type ListAgentConnectionsBadRequest ErrorResponse
 
 func (*ListAgentConnectionsBadRequest) listAgentConnectionsRes() {}
@@ -36920,6 +36972,33 @@ func (s *OrgSecretWriteResult) SetUpdatedAt(val time.Time) {
 // SetCreated sets the value of Created.
 func (s *OrgSecretWriteResult) SetCreated(val bool) {
 	s.Created = val
+}
+
+// Ref: #/components/schemas/OrganizationLeft
+type OrganizationLeft struct {
+	Left bool `json:"left"`
+	// The user id of the person who left.
+	ID string `json:"id"`
+}
+
+// GetLeft returns the value of Left.
+func (s *OrganizationLeft) GetLeft() bool {
+	return s.Left
+}
+
+// GetID returns the value of ID.
+func (s *OrganizationLeft) GetID() string {
+	return s.ID
+}
+
+// SetLeft sets the value of Left.
+func (s *OrganizationLeft) SetLeft(val bool) {
+	s.Left = val
+}
+
+// SetID sets the value of ID.
+func (s *OrganizationLeft) SetID(val string) {
+	s.ID = val
 }
 
 // Outbound sending readiness for the caller's org, the outbound

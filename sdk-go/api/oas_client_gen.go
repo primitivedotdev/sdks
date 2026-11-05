@@ -1061,6 +1061,19 @@ type Invoker interface {
 	//
 	// POST /agent-connections/{address}/invitation
 	InviteAgentConnection(ctx context.Context, request *InviteAgentConnectionReq, params InviteAgentConnectionParams) (InviteAgentConnectionRes, error)
+	// LeaveOrganization invokes leaveOrganization operation.
+	//
+	// Removes the calling person from the organization. Leaving is final.
+	// Only a person can leave. API keys are refused. A request made with
+	// the person's CLI or app sign-in must carry a confirmation token in
+	// the `Primitive-Step-Up` header; without one the response is a 403
+	// with code `step_up_required` and `details.step_up_url`, the
+	// dashboard page where the person confirms and gets the token.
+	// The only owner of an organization cannot leave it (409,
+	// `last_owner`); make someone else an owner first.
+	//
+	// POST /organization/leave
+	LeaveOrganization(ctx context.Context, params LeaveOrganizationParams) (LeaveOrganizationRes, error)
 	// ListAgentConnections invokes listAgentConnections operation.
 	//
 	// Address-bound external runtime pairing. Any current human organization member may create and
@@ -13008,6 +13021,137 @@ func (c *Client) sendInviteAgentConnection(ctx context.Context, request *InviteA
 
 	stage = "DecodeResponse"
 	result, err := decodeInviteAgentConnectionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// LeaveOrganization invokes leaveOrganization operation.
+//
+// Removes the calling person from the organization. Leaving is final.
+// Only a person can leave. API keys are refused. A request made with
+// the person's CLI or app sign-in must carry a confirmation token in
+// the `Primitive-Step-Up` header; without one the response is a 403
+// with code `step_up_required` and `details.step_up_url`, the
+// dashboard page where the person confirms and gets the token.
+// The only owner of an organization cannot leave it (409,
+// `last_owner`); make someone else an owner first.
+//
+// POST /organization/leave
+func (c *Client) LeaveOrganization(ctx context.Context, params LeaveOrganizationParams) (LeaveOrganizationRes, error) {
+	res, err := c.sendLeaveOrganization(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendLeaveOrganization(ctx context.Context, params LeaveOrganizationParams) (res LeaveOrganizationRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("leaveOrganization"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/organization/leave"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, LeaveOrganizationOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/organization/leave"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Primitive-Step-Up",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.PrimitiveStepUp.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, LeaveOrganizationOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeLeaveOrganizationResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

@@ -1220,6 +1220,14 @@ export type CliLogoutResult = {
     oauth_grant_id?: string;
 };
 
+export type OrganizationLeft = {
+    left: boolean;
+    /**
+     * The user id of the person who left.
+     */
+    id: string;
+};
+
 export type Account = {
     id: string;
     email: string;
@@ -6465,6 +6473,59 @@ export type RotateWebhookSecretResponses = {
 };
 
 export type RotateWebhookSecretResponse = RotateWebhookSecretResponses[keyof RotateWebhookSecretResponses];
+
+export type LeaveOrganizationData = {
+    body?: never;
+    headers?: {
+        /**
+         * Confirmation token from the dashboard confirmation page, for a request made with a CLI or app sign-in.
+         */
+        'Primitive-Step-Up'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/organization/leave';
+};
+
+export type LeaveOrganizationErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Primitive encountered an internal error
+     */
+    500: ErrorResponse;
+    /**
+     * Primitive is temporarily unable to process the request
+     */
+    503: ErrorResponse;
+};
+
+export type LeaveOrganizationError = LeaveOrganizationErrors[keyof LeaveOrganizationErrors];
+
+export type LeaveOrganizationResponses = {
+    /**
+     * The person left the organization
+     */
+    200: SuccessEnvelope & {
+        data?: OrganizationLeft;
+    };
+};
+
+export type LeaveOrganizationResponse = LeaveOrganizationResponses[keyof LeaveOrganizationResponses];
 
 export type RedeemCreditCodeData = {
     body: RedeemCreditCodeInput;
