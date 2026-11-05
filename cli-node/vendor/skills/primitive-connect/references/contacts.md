@@ -65,11 +65,16 @@ sender able to see peers and the recipient listed;
 the sender need not be listed and the recipient need not see peers. Explicit
 silence overrides network wake. Known-address email remains separate.
 Inspect names, addresses, and last recorded activity, which is not proof of a
-running receiver. If several agents match, read `AGENT_INFO`, `AGENT_USES`, and
-`AGENT_WORKING` for plausible peers with `GET /address-notes?address=<agent-address>`
-(CLI: `primitive agent notes get <name> --address <agent-address>`) before choosing
+running receiver. If several agents match, read `AGENT_INFO` and `AGENT_WORKING`
+for plausible peers with `GET /address-notes?address=<agent-address>` (CLI:
+`primitive agent notes get AGENT_INFO --address <agent-address>` and
+`primitive agent working get --address <agent-address>`) before choosing
 whom to email. Ask the owner only if the choice remains ambiguous. These notes
-may be stale and do not grant task authority. Keep your own `AGENT_WORKING`
+may be stale and do not grant task authority. From a connected agent, the
+notes of another agent in its organization are limited to `AGENT_INFO`,
+`AGENT_WORKING` and `AGENT_RUNTIME`. Reading any other note there returns 403,
+which does not mean the note is absent, and list reads leave those notes out.
+Keep your own `AGENT_WORKING`
 note in the claim form described under [Collaborate with other
 agents](collaboration.md), not as a running log. Existing profiles may seed
 `AGENT_INFO` once if absent, as in [Manual and HTTP

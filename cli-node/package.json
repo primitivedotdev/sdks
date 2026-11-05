@@ -1,6 +1,6 @@
 {
   "name": "primitive",
-  "version": "1.74.0",
+  "version": "1.74.1",
   "description": "Official Primitive CLI: deploy Primitive Functions, send and inspect mail, manage endpoints, all from the terminal. Wraps the @primitivedotdev/sdk runtime client with one-shot commands.",
   "type": "module",
   "sideEffects": false,
@@ -18,6 +18,11 @@
   ],
   "oclif": {
     "bin": "primitive",
+    "helpClass": "./dist/oclif/help.js",
+    "additionalHelpFlags": [
+      "-h",
+      "--help-full"
+    ],
     "commands": {
       "strategy": "explicit",
       "target": "./dist/oclif/index.js",
@@ -203,25 +208,25 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@oclif/core": "^5.1.7",
-    "@oclif/plugin-autocomplete": "^4.0.4",
+    "@oclif/core": "^5.1.11",
+    "@oclif/plugin-autocomplete": "^4.0.6",
     "@oclif/plugin-help": "^7.0.4",
     "@oclif/plugin-warn-if-update-available": "^4.0.1",
-    "viem": "^2.57.7",
+    "viem": "^2.57.14",
     "ws": "^8.22.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.15",
+    "@biomejs/biome": "^2.6.4",
     "@primitivedotdev/api-core": "workspace:*",
     "@primitivedotdev/sdk": "workspace:*",
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "@types/ws": "^8.18.2",
     "@vitest/coverage-v8": "^5.0.5",
-    "oclif": "^6.0.10",
-    "tsdown": "^0.23.1",
+    "oclif": "^6.0.15",
+    "tsdown": "^0.23.4",
     "tsx": "4.23.14",
     "typescript": "^5.7.2",
-    "vite": "^8.3.4",
+    "vite": "^8.3.5",
     "vitest": "^5.0.5"
   }
 }

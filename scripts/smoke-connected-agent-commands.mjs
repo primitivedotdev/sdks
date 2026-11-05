@@ -66,7 +66,7 @@ try {
   assert.match(setupHelp.stdout,/api\.primitive-staging-1\.com/);
   assert.match(setupHelp.stdout,/piped stdin/);
   assert.match(setupHelp.stdout,/fail-open Stop hook/);
-  assert.match((await run(['whoami','--help'])).stdout,/identity offline/);
+  assert.match((await run(['whoami','--help-full'])).stdout,/identity offline/);
   await api(['contacts','add',peer,'--name','Peer','--json']);
   await api(['contacts','list','--json']);
   assert.equal(JSON.parse((await api(['contacts','get',peer,'--json'])).stdout).address,peer);
