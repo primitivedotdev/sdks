@@ -1630,6 +1630,43 @@ describe("thread mutes in session notifications", () => {
     });
   });
 
+  it.each([
+    {
+      label: "mentions only another recipient",
+      body: "@reviewer please take this.",
+      notified: false,
+    },
+    {
+      label: "mentions this agent",
+      body: "@{self} please take this.",
+      notified: true,
+    },
+    { label: "mentions nobody", body: "Anyone free?", notified: true },
+  ])(
+    "handles group mail that $label (notified: $notified)",
+    async ({ body, notified }) => {
+      const f = setup();
+      const self = f.detail.recipient;
+      f.detail.body_text = body.replace(
+        "{self}",
+        self.slice(0, self.indexOf("@")),
+      );
+      f.detail.parsed = {
+        ...f.detail.parsed,
+        to_addresses: [{ address: self }, { address: "reviewer@example.test" }],
+      } as typeof f.detail.parsed;
+      expect(await runListen(f.options)).toBe(1);
+      if (notified) {
+        expect(f.handleDetail).toHaveBeenCalledOnce();
+        return;
+      }
+      expect(f.handleDetail).not.toHaveBeenCalled();
+      expect(await f.store()?.readEmail(f.detail.id)).toMatchObject({
+        route: { kind: "notification", state: "skipped" },
+      });
+    },
+  );
+
   it("still notifies when only another session muted the thread", async () => {
     const f = setup();
     const thread = randomUUID();

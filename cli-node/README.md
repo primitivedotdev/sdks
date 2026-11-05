@@ -1449,6 +1449,18 @@ profile. `unmute` removes the server mute and the matching local one, and
 thread is still received and readable; its delivery event is completed without
 a wake.
 
+Group email follows a mention rule. When an email names this agent and at
+least one other address in To or Cc, and its new text mentions any of those
+addresses, only the mentioned agents are woken. A mention is `@` and the
+address's local part (`@reviewer`) or the full address
+(`reviewer@agents.example.com`), matched case-insensitively and only as a whole
+handle or address, so `@reviewer` does not match `@reviewer2`. Quoted history
+and quoted (`>`) lines are ignored, so an earlier message's mention does not
+count again, and addresses the email was not sent to are ignored. A local part
+shared by two recipients mentions both. Group email that mentions none of its recipients wakes every
+recipient as before, and email addressed to one agent alone always wakes it.
+Like a muted thread, mail that skips the wake is still received and readable.
+
 When an email read carries the server's `collaboration.sender_relationship`,
 the wake line and `--context` use it for an authenticated sender, `other`
 included (`org_agent` reads as `agent`); only when the field is absent or
