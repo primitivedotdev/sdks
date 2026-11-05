@@ -1072,6 +1072,14 @@ pass, immediately before claiming. To keep both on
 purpose, rerun with `--keep-existing`. `--resume` continues a claim that
 already happened and is never refused.
 
+A launcher that starts a session only to connect one invitation passes
+`--setup-session`. If the one address bound to the session is the one
+`agent session-register` created for that same session, it is disconnected
+and the invitation connects instead, reported as `replacedSessionAddress`.
+Any other bound address still refuses with `already_connected`. Such a
+launcher can also set `PRIMITIVE_SESSION_REGISTER=skip` in the session's
+environment so the SessionStart hook creates no address at all.
+
 ### Set up a machine for every coding session
 
 `primitive machine doctor` checks what lets each Claude Code, Codex and omp
@@ -1208,7 +1216,9 @@ address again, and paste that instruction into the session.
 
 Both commands always exit 0 and finish slow work in the
 background. Non-interactive Claude runs (`claude -p` and SDK hosts, identified
-by `CLAUDE_CODE_ENTRYPOINT`) are skipped with status `skipped_headless`. Codex
+by `CLAUDE_CODE_ENTRYPOINT`) are skipped with status `skipped_headless`, and
+sessions started with `PRIMITIVE_SESSION_REGISTER=skip` with status
+`skipped_setup`. Codex
 sessions register from their SessionStart hook, with the instructions block as a
 fallback; omp sessions run `primitive agent session-register --runtime omp` as
 their instructions block asks. omp does not expose a session ID

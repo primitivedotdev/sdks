@@ -9,7 +9,12 @@ import {
 } from "./connected-agent-profile.js";
 import { connectedProfilesForSession } from "./machine-session.js";
 import { SESSION_UUID } from "./notify-session-native.js";
-import { releaseRegistrationsForProfile } from "./session-records.js";
+import {
+  readSessionRecord,
+  releasedRecord,
+  releaseRegistrationsForProfile,
+  updateSessionRecord,
+} from "./session-records.js";
 
 /** Exit code for a connect or enroll refused because the session already has an address. */
 export const ALREADY_CONNECTED_EXIT_CODE = 3;
@@ -192,6 +197,67 @@ export async function replaceSessionAddresses(params: {
     replaced.push({ profile, address });
   }
   return replaced;
+}
+
+/**
+ * With --setup-session: the one address bound to this session when
+ * `agent session-register` created it for this same session, for example a
+ * session start hook from a CLI older than PRIMITIVE_SESSION_REGISTER=skip
+ * enrolling a session a launcher started only to connect it. Null when any
+ * other address is bound, so every other case still refuses.
+ */
+export function setupSessionAddress(params: {
+  configDir: string;
+  session: string;
+  bound: BoundAddress[];
+}): BoundAddress | null {
+  if (params.bound.length !== 1) return null;
+  const row = params.bound[0];
+  if (!row) return null;
+  const session = params.session.trim().toLowerCase();
+  let record: ReturnType<typeof readSessionRecord>;
+  try {
+    record = readSessionRecord(params.configDir, session);
+  } catch {
+    return null;
+  }
+  if (
+    record?.createdBy !== "session-register" ||
+    record.session !== session ||
+    record.profile !== row.profile ||
+    (record.address !== null &&
+      record.address.toLowerCase() !== row.address.toLowerCase())
+  )
+    return null;
+  return row;
+}
+
+/**
+ * After --setup-session disconnected the address session-register created,
+ * the session record names the profile being connected instead, so a later
+ * resume of the session reuses that profile rather than reporting the
+ * disconnected one. The claim fills in the new address.
+ */
+export async function releaseSetupSessionRecord(params: {
+  configDir: string;
+  session: string;
+  replaced: BoundAddress;
+  targetProfile?: string;
+  now?: () => Date;
+}): Promise<void> {
+  const session = params.session.trim().toLowerCase();
+  const at = (params.now ?? (() => new Date()))();
+  await updateSessionRecord(params.configDir, session, (current) =>
+    current &&
+    current.createdBy === "session-register" &&
+    current.profile === params.replaced.profile
+      ? {
+          ...releasedRecord(current, "replaced_by_connect", at),
+          profile: params.targetProfile ?? current.profile,
+          address: null,
+        }
+      : current,
+  );
 }
 
 /**
