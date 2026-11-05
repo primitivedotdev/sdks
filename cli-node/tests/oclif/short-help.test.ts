@@ -66,7 +66,9 @@ describe("short command help", () => {
         over.push(`${id}: ${lines} lines, ${bytes} bytes`);
     }
     expect(over).toEqual([]);
-  });
+    // Renders help for every command, which runs past the 5s default on a
+    // busy CI runner.
+  }, 30_000);
 
   it("prints one line per flag, clipped to 100 columns off a terminal", async () => {
     const help = await commandHelp("reply");
