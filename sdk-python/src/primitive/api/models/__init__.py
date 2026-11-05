@@ -339,6 +339,7 @@ from .invite_agent_connection_response_200_data_connection import InviteAgentCon
 from .invite_agent_connection_response_200_data_connection_ownership_kind import InviteAgentConnectionResponse200DataConnectionOwnershipKind
 from .invite_agent_connection_response_200_data_connection_status import InviteAgentConnectionResponse200DataConnectionStatus
 from .invite_agent_connection_response_200_data_invitation import InviteAgentConnectionResponse200DataInvitation
+from .leave_organization_response_200 import LeaveOrganizationResponse200
 from .list_agent_connections_owner import ListAgentConnectionsOwner
 from .list_agent_connections_response_200 import ListAgentConnectionsResponse200
 from .list_agent_connections_response_200_data_item import ListAgentConnectionsResponse200DataItem
@@ -401,6 +402,7 @@ from .memory_scope_type_1 import MemoryScopeType1
 from .memory_scope_type_1_type import MemoryScopeType1Type
 from .org_secret_list_item import OrgSecretListItem
 from .org_secret_write_result import OrgSecretWriteResult
+from .organization_left import OrganizationLeft
 from .outbound_status import OutboundStatus
 from .outbound_status_domain import OutboundStatusDomain
 from .outbound_status_domain_status import OutboundStatusDomainStatus
@@ -1031,6 +1033,7 @@ __all__ = (
     "InviteAgentConnectionResponse200DataConnectionOwnershipKind",
     "InviteAgentConnectionResponse200DataConnectionStatus",
     "InviteAgentConnectionResponse200DataInvitation",
+    "LeaveOrganizationResponse200",
     "ListAgentConnectionsOwner",
     "ListAgentConnectionsResponse200",
     "ListAgentConnectionsResponse200DataItem",
@@ -1091,6 +1094,7 @@ __all__ = (
     "MemoryScopeType0Type",
     "MemoryScopeType1",
     "MemoryScopeType1Type",
+    "OrganizationLeft",
     "OrgSecretListItem",
     "OrgSecretWriteResult",
     "OutboundStatus",

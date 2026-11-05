@@ -1041,6 +1041,19 @@ type Handler interface {
 	//
 	// POST /agent-connections/{address}/invitation
 	InviteAgentConnection(ctx context.Context, req *InviteAgentConnectionReq, params InviteAgentConnectionParams) (InviteAgentConnectionRes, error)
+	// LeaveOrganization implements leaveOrganization operation.
+	//
+	// Removes the calling person from the organization. Leaving is final.
+	// Only a person can leave. API keys are refused. A request made with
+	// the person's CLI or app sign-in must carry a confirmation token in
+	// the `Primitive-Step-Up` header; without one the response is a 403
+	// with code `step_up_required` and `details.step_up_url`, the
+	// dashboard page where the person confirms and gets the token.
+	// The only owner of an organization cannot leave it (409,
+	// `last_owner`); make someone else an owner first.
+	//
+	// POST /organization/leave
+	LeaveOrganization(ctx context.Context, params LeaveOrganizationParams) (LeaveOrganizationRes, error)
 	// ListAgentConnections implements listAgentConnections operation.
 	//
 	// Address-bound external runtime pairing. Any current human organization member may create and

@@ -1310,6 +1310,69 @@ export const openapiDocument: Record<string, unknown> = {
         }
       }
     },
+    "/organization/leave": {
+      "post": {
+        "operationId": "leaveOrganization",
+        "summary": "Leave the organization",
+        "description": "Removes the calling person from the organization. Leaving is final.\n\nOnly a person can leave. API keys are refused. A request made with\nthe person's CLI or app sign-in must carry a confirmation token in\nthe `Primitive-Step-Up` header; without one the response is a 403\nwith code `step_up_required` and `details.step_up_url`, the\ndashboard page where the person confirms and gets the token.\n\nThe only owner of an organization cannot leave it (409,\n`last_owner`); make someone else an owner first.\n",
+        "tags": [
+          "Account"
+        ],
+        "parameters": [
+          {
+            "name": "Primitive-Step-Up",
+            "in": "header",
+            "required": false,
+            "description": "Confirmation token from the dashboard confirmation page, for a request made with a CLI or app sign-in.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The person left the organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/OrganizationLeft"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
     "/credits/redeem": {
       "post": {
         "operationId": "redeemCreditCode",
@@ -18604,6 +18667,23 @@ export const openapiDocument: Record<string, unknown> = {
         "required": [
           "revoked"
         ]
+      },
+      "OrganizationLeft": {
+        "type": "object",
+        "required": [
+          "left",
+          "id"
+        ],
+        "properties": {
+          "left": {
+            "type": "boolean",
+            "const": true
+          },
+          "id": {
+            "type": "string",
+            "description": "The user id of the person who left."
+          }
+        }
       },
       "Account": {
         "type": "object",

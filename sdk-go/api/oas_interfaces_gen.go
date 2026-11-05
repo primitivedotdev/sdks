@@ -333,6 +333,10 @@ type InviteAgentConnectionRes interface {
 	inviteAgentConnectionRes()
 }
 
+type LeaveOrganizationRes interface {
+	leaveOrganizationRes()
+}
+
 type ListAgentConnectionsRes interface {
 	listAgentConnectionsRes()
 }

@@ -115,6 +115,7 @@ var operationRolesBearerAuth = map[string][]string{
 	GetWebhookSecretOperation:                     []string{},
 	InstallTemplateOperation:                      []string{},
 	InviteAgentConnectionOperation:                []string{},
+	LeaveOrganizationOperation:                    []string{},
 	ListAgentConnectionsOperation:                 []string{},
 	ListAgentContactsOperation:                    []string{},
 	ListAgentNetworksOperation:                    []string{},

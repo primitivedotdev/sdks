@@ -138,7 +138,7 @@
         "description": "Browse and install Function templates. Use `primitive templates list-templates`, `primitive templates get-template`, `primitive templates install-template`, and `primitive templates get-template-install`."
       },
       "org": {
-        "description": "Manage org-level (global) resources shared across functions"
+        "description": "Manage org-level (global) resources shared across functions, or leave the organization"
       },
       "org:secrets": {
         "description": "Global secrets shared across every function. Use `primitive org secrets list|set|remove`. Changes land in a function on its next redeploy; a function secret of the same name overrides the global."

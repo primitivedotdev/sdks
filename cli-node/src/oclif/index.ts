@@ -97,6 +97,7 @@ import {
   NetworkRemoveCommand,
   NetworkSetCommand,
 } from "./commands/network.js";
+import OrgLeaveCommand from "./commands/org-leave.js";
 import OrgSecretsListCommand from "./commands/org-secrets-list.js";
 import OrgSecretsRemoveCommand from "./commands/org-secrets-remove.js";
 import OrgSecretsSetCommand from "./commands/org-secrets-set.js";
@@ -775,6 +776,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   // visible to the running handler requires a separate redeploy,
   // which this shortcut folds in via --redeploy.
   "functions:set-secret": FunctionsSetSecretCommand,
+  "org:leave": OrgLeaveCommand,
   // Org-level ("global") secrets, shared across every function. Hand-rolled
   // with raw fetch because /v1/org/secrets is not on the generated client yet.
   "org:secrets:list": OrgSecretsListCommand,

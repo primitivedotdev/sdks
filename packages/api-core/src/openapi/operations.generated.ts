@@ -306,6 +306,49 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "leave-organization",
+    "description": "Removes the calling person from the organization. Leaving is final.\n\nOnly a person can leave. API keys are refused. A request made with\nthe person's CLI or app sign-in must carry a confirmation token in\nthe `Primitive-Step-Up` header; without one the response is a 403\nwith code `step_up_required` and `details.step_up_url`, the\ndashboard page where the person confirms and gets the token.\n\nThe only owner of an organization cannot leave it (409,\n`last_owner`); make someone else an owner first.\n",
+    "hasJsonBody": false,
+    "method": "POST",
+    "operationId": "leaveOrganization",
+    "path": "/organization/leave",
+    "pathParams": [],
+    "queryParams": [],
+    "headerParams": [
+      {
+        "description": "Confirmation token from the dashboard confirmation page, for a request made with a CLI or app sign-in.",
+        "enum": null,
+        "name": "Primitive-Step-Up",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "required": [
+        "left",
+        "id"
+      ],
+      "properties": {
+        "left": {
+          "type": "boolean",
+          "const": true
+        },
+        "id": {
+          "type": "string",
+          "description": "The user id of the person who left."
+        }
+      }
+    },
+    "sdkName": "leaveOrganization",
+    "summary": "Leave the organization",
+    "tag": "Account",
+    "tagCommand": "account"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": true,
     "command": "provision-member-address",
     "description": "Provision or return this authenticated human member's stable managed address in this organization. API keys, connected agents and Functions cannot provision or impersonate humans. The owner explicitly chooses the address. Existing retained mail requires confirmation; reserved identities cannot be overridden. There is no target user input. An unavailable domain never silently changes the address.",
