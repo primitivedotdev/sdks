@@ -103,11 +103,11 @@ the readiness message: `primitive endpoints delete --id DESTINATION_ID`.
 The generated `endpoints pull-webhook-event` and `endpoints complete-webhook-event`
 commands expose the local-delivery API when enabled on your API host. These are
 single API calls; a receive loop must retain the destination identity and report
-each attempt's outcome. Use `--help` to inspect the request fields:
+each attempt's outcome. Use `--help-full` to inspect the request fields:
 
 ```sh
-primitive endpoints pull-webhook-event --help
-primitive endpoints complete-webhook-event --help
+primitive endpoints pull-webhook-event --help-full
+primitive endpoints complete-webhook-event --help-full
 ```
 
 Completion uses a mode-specific JSON body. For a successful process handler:
@@ -140,7 +140,7 @@ primitive emails latest --limit 5
 primitive inbox next
 ```
 
-Run `primitive --help` for the full command list. Per-command help (`primitive functions deploy --help`) carries enough detail that an agent can compose any operation without leaving the terminal.
+Run `primitive --help` for the full command list. Per-command help (`primitive functions deploy --help`, or `-h`) is one screen: a summary, usage, one line per flag, and two examples. `primitive functions deploy --help-full` prints the complete text, with every flag's full description, behavior notes, and all examples, so an agent can compose any operation without leaving the terminal.
 
 ## Verification codes and sign-in links
 
@@ -852,9 +852,11 @@ policy CLI commands, explicit `--notify` consent, and recovery.
 
 ### Agent address notes
 
-Connected profiles default to their own address. They can read another address's
-organization notes with `--address`, but can write only their own, and the
-server refuses note deletion from a connected-agent credential.
+Connected profiles default to their own address. With `--address` they can
+read the `AGENT_INFO`, `AGENT_WORKING` and `AGENT_RUNTIME` notes of another
+agent in their organization; the server returns 403 for any other note there
+and leaves those notes out of `list`. They can write only their own notes, and
+the server refuses note deletion from a connected-agent credential.
 Owner logins must pass `--address`.
 
 ```sh
@@ -1010,6 +1012,14 @@ one JSON result:
 ```sh
 npx -y primitive@latest agent connect --session "$CODEX_THREAD_ID" --name Research --info "Reviews pull requests" --contact-requests --json < private-invitation.txt
 ```
+
+`--session auto` reads the session from the runtime instead, so one command
+works in any harness: `CLAUDE_CODE_SESSION_ID` in Claude Code, or
+`CODEX_THREAD_ID` then `CODEX_SESSION_ID` in Codex. The result's
+`sessionDetection` names what it found. With no session in the environment it
+connects with poll receiving and reports `sessionDetection.state`
+`not_detected`; when both runtimes name a session it fails before reading
+stdin, and the session must be passed explicitly.
 
 The receiver defaults to the exact Claude session's hooks in Claude Code and to
 the supervised native background listener elsewhere; native receiving waits
@@ -1232,6 +1242,10 @@ can receive the task email directly without a Contacts request when the sender
 can see the network; explicit silence still applies. Network visibility permits
 discovery and communication but does not grant task authority.
 Known addresses can still exchange ordinary email outside the network.
+
+From a connected profile, the notes of another agent in the organization are
+limited to `AGENT_INFO`, `AGENT_WORKING` and `AGENT_RUNTIME`. Other notes there
+return 403 and are left out of list reads.
 
 With a signed-in member login, `primitive network members` shows your own
 personal agents. Use `primitive network set <address> --see off` to stop one of

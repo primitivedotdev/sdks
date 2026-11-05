@@ -89,7 +89,7 @@ async function run(
 
 export class AgentNotesListCommand extends Command {
   static description =
-    "List organization notes for an address. A connected profile defaults to its own address and can read notes for other organization addresses with --address.";
+    "List organization notes for an address. A connected profile defaults to its own address. With --address it lists only the AGENT_INFO, AGENT_WORKING and AGENT_RUNTIME notes of another agent in its organization.";
   static summary = "List address notes";
   static flags = {
     ...commonFlags,
@@ -123,7 +123,7 @@ export class AgentNotesListCommand extends Command {
 
 export class AgentNotesGetCommand extends Command {
   static description =
-    "Read one organization address note. A connected profile defaults to its own address.";
+    "Read one organization address note. A connected profile defaults to its own address. On the address of another agent in its organization it can read only AGENT_INFO, AGENT_WORKING and AGENT_RUNTIME; other notes there return 403.";
   static summary = "Get an address note";
   static args = nameArg;
   static flags = commonFlags;

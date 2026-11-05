@@ -1,7 +1,6 @@
 import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { detectAgentRuntime } from "./connect-skill.js";
 import {
   AGENT_PROFILE_ENV,
   agentProfileDirectory,
@@ -16,6 +15,7 @@ import {
 } from "./listen-background.js";
 import { notificationScope } from "./notify-session.js";
 import { SESSION_UUID } from "./notify-session-native.js";
+import { detectAgentRuntime } from "./runtime-session.js";
 import { readMailJson } from "./shared-mail-files.js";
 
 /** Set to 0 to turn off restarting a stopped receiver from ordinary commands. */

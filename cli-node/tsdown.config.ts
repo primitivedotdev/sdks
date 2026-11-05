@@ -21,6 +21,7 @@ import { defineConfig } from "tsdown";
 export default defineConfig({
   entry: {
     "oclif/index": "src/oclif/index.ts",
+    "oclif/help": "src/oclif/help.ts",
     "oclif/proxy-auto-detect": "src/oclif/proxy-auto-detect.ts",
     "oclif/root-signup-hint": "src/oclif/root-signup-hint.ts",
     "oclif/listen-supervisor": "src/oclif/listen-supervisor.ts",
