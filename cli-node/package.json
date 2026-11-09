@@ -222,7 +222,7 @@
     "@oclif/plugin-autocomplete": "^4.0.6",
     "@oclif/plugin-help": "^7.0.4",
     "@oclif/plugin-warn-if-update-available": "^4.0.5",
-    "viem": "^2.57.14",
+    "viem": "^2.57.16",
     "ws": "^8.22.1"
   },
   "devDependencies": {
