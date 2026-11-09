@@ -39,8 +39,8 @@ importers:
         specifier: ^4.0.6
         version: 4.0.6(supports-color@8.1.1)
       '@oclif/plugin-help':
-        specifier: ^7.0.4
-        version: 7.0.4
+        specifier: ^7.0.6
+        version: 7.0.6
       '@oclif/plugin-warn-if-update-available':
         specifier: ^4.0.5
         version: 4.0.5(supports-color@8.1.1)
@@ -953,8 +953,8 @@ packages:
     resolution: {integrity: sha512-TCdtU3jMG2OJPTIUu9a4qpG/CW6t0ymbk4/GdLfc/o2455AhdYJphIaIpNe772xFhcqceVDg1kWUB5lacDaw2w==}
     engines: {node: '>=22.0.0'}
 
-  '@oclif/plugin-help@7.0.4':
-    resolution: {integrity: sha512-i3AKiJrHF8y/Hj/1QfNBVaE4N9sOlodA/CFq8Lv998BZAHe/uBwgqL94FvaZenj/3REyl01stptAUp/AQjpfOw==}
+  '@oclif/plugin-help@7.0.6':
+    resolution: {integrity: sha512-0p9fM8OtQAZi68arvkfvUzbgiVpXGu6fIgkcvTc2wbuIHfDCs6benPU2uxXxfU2yJ0BWJw6cJbCZQN9cK4H6HA==}
     engines: {node: '>=22.0.0'}
 
   '@oclif/plugin-not-found@4.0.7':
@@ -3356,7 +3356,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@oclif/plugin-help@7.0.4':
+  '@oclif/plugin-help@7.0.6':
     dependencies:
       '@oclif/core': 5.1.11
 
@@ -4405,7 +4405,7 @@ snapshots:
       '@inquirer/input': 2.3.0
       '@inquirer/select': 2.5.0
       '@oclif/core': 5.1.11
-      '@oclif/plugin-help': 7.0.4
+      '@oclif/plugin-help': 7.0.6
       '@oclif/plugin-not-found': 4.0.7(@types/node@26.6.6)
       '@oclif/plugin-warn-if-update-available': 4.0.5(supports-color@8.1.1)
       ansis: 3.17.0
