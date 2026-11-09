@@ -113,7 +113,7 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
 def sync_detailed(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
 
@@ -121,7 +121,10 @@ def sync_detailed(
     """ list Contacts
 
      Organization directory and agent preferences; no profiles, message history or runtime presence.
-    Existing organization credentials use tenant permissions. Connected keys may read the directory,
+    Organization credentials retain tenant directory permissions. Human organization members may read
+    and change agent notification contacts only for personal connections bound to their current
+    membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+    their own agent contact list (another contact reads as 404) and always see display_name as null,
     create address-only missing contacts using if_absent:true, and access only their own agent
     memberships; they cannot edit shared labels or delete directory entries. Function credentials are
     not granted access. Memberships require an existing local agent connection (including revoked
@@ -162,7 +165,7 @@ limit=limit,
 
 def sync(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
 
@@ -170,7 +173,10 @@ def sync(
     """ list Contacts
 
      Organization directory and agent preferences; no profiles, message history or runtime presence.
-    Existing organization credentials use tenant permissions. Connected keys may read the directory,
+    Organization credentials retain tenant directory permissions. Human organization members may read
+    and change agent notification contacts only for personal connections bound to their current
+    membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+    their own agent contact list (another contact reads as 404) and always see display_name as null,
     create address-only missing contacts using if_absent:true, and access only their own agent
     memberships; they cannot edit shared labels or delete directory entries. Function credentials are
     not granted access. Memberships require an existing local agent connection (including revoked
@@ -206,7 +212,7 @@ limit=limit,
 
 async def asyncio_detailed(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
 
@@ -214,7 +220,10 @@ async def asyncio_detailed(
     """ list Contacts
 
      Organization directory and agent preferences; no profiles, message history or runtime presence.
-    Existing organization credentials use tenant permissions. Connected keys may read the directory,
+    Organization credentials retain tenant directory permissions. Human organization members may read
+    and change agent notification contacts only for personal connections bound to their current
+    membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+    their own agent contact list (another contact reads as 404) and always see display_name as null,
     create address-only missing contacts using if_absent:true, and access only their own agent
     memberships; they cannot edit shared labels or delete directory entries. Function credentials are
     not granted access. Memberships require an existing local agent connection (including revoked
@@ -255,7 +264,7 @@ limit=limit,
 
 async def asyncio(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
 
@@ -263,7 +272,10 @@ async def asyncio(
     """ list Contacts
 
      Organization directory and agent preferences; no profiles, message history or runtime presence.
-    Existing organization credentials use tenant permissions. Connected keys may read the directory,
+    Organization credentials retain tenant directory permissions. Human organization members may read
+    and change agent notification contacts only for personal connections bound to their current
+    membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+    their own agent contact list (another contact reads as 404) and always see display_name as null,
     create address-only missing contacts using if_absent:true, and access only their own agent
     memberships; they cannot edit shared labels or delete directory entries. Function credentials are
     not granted access. Memberships require an existing local agent connection (including revoked

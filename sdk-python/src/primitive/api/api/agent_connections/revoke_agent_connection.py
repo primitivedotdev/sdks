@@ -102,7 +102,7 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 def sync_detailed(
     address: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | RevokeAgentConnectionResponse200]:
     """ revoke Agent Connection
@@ -139,7 +139,7 @@ def sync_detailed(
 def sync(
     address: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | RevokeAgentConnectionResponse200 | None:
     """ revoke Agent Connection
@@ -171,7 +171,7 @@ client=client,
 async def asyncio_detailed(
     address: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | RevokeAgentConnectionResponse200]:
     """ revoke Agent Connection
@@ -208,7 +208,7 @@ async def asyncio_detailed(
 async def asyncio(
     address: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | RevokeAgentConnectionResponse200 | None:
     """ revoke Agent Connection

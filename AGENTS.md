@@ -10,7 +10,7 @@ The Primitive SDKs monorepo. Four published artifacts, all generated from the sa
 |---|---|---|
 | `sdk-node/` | `@primitivedotdev/sdk` | `npm install @primitivedotdev/sdk` |
 | `sdk-python/` | `primitivedotdev` (PyPI) | `pip install primitivedotdev` |
-| `sdk-go/` | `github.com/primitivedotdev/sdks/sdk-go/v2` | `go get github.com/primitivedotdev/sdks/sdk-go/v2@latest` |
+| `sdk-go/` | `github.com/primitivedotdev/sdks/sdk-go/v3` | `go get github.com/primitivedotdev/sdks/sdk-go/v3@latest` |
 | `cli-node/` | `primitive` | `npm install -g primitive` |
 
 Plus one workspace-internal package at `packages/api-core/` that ships the generated TypeScript API client and is bundled inline into the Node SDK + CLI.
@@ -19,7 +19,7 @@ The CLI consumes the Node SDK and exposes `primitive <verb>` commands. The SDKs 
 
 ## Source of truth
 
-`openapi/primitive-api.yaml` is the single source for the API surface. Everything else regenerates from it:
+`openapi/primitive-api.yaml` is the single source for the API surface in this repo. It is itself generated: `make openapi-sync SERVED=<path>` rewrites it from the OpenAPI document the API serves (see `RELEASE.md`), so do not edit it by hand. Everything else regenerates from it:
 
 - `openapi/primitive-api.codegen.json` (normalized JSON form for codegen tools)
 - `packages/api-core/src/api/` (Node fetch client + types via `@hey-api/openapi-ts`)
@@ -42,7 +42,7 @@ The two sources do not overlap: an edit to `primitive-api.yaml` will not refresh
 The Makefile orchestrates per-language targets. The common ones an agent will reach for:
 
 ```bash
-# Regenerate everything from the spec (run after editing primitive-api.yaml)
+# Regenerate everything from the spec (run after make openapi-sync)
 make node-generate python-generate go-generate
 
 # Run the per-language full check (includes generated-file-sync gate)
@@ -99,7 +99,7 @@ This repo is **public**. Anything that lands in `git log`, PR descriptions, issu
 
 ## Adding a new API verb
 
-1. Add the operation to `openapi/primitive-api.yaml` with operationId, summary, full request/response schemas.
+1. The operation must be in the OpenAPI document the API serves, with operationId, summary, full request/response schemas. Run `make openapi-sync SERVED=<path>` to bring it into `openapi/primitive-api.yaml`.
 2. `make node-generate python-generate go-generate` to regenerate clients in all three languages.
 3. If the verb deserves a CLI shortcut, add a command under `cli-node/src/oclif/commands/` and a test under `cli-node/tests/oclif/`.
 4. Add or update test fixtures in `test-fixtures/` if cross-SDK behavior parity matters for this verb.

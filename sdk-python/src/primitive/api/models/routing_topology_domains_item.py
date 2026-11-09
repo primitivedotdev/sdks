@@ -12,6 +12,7 @@ from typing import cast
 from uuid import UUID
 
 if TYPE_CHECKING:
+  from ..models.function_routing_destination import FunctionRoutingDestination
   from ..models.routing_topology_domains_item_routed_function_type_0 import RoutingTopologyDomainsItemRoutedFunctionType0
 
 
@@ -30,12 +31,15 @@ class RoutingTopologyDomainsItem:
             domain (str):
             routed_function (None | RoutingTopologyDomainsItemRoutedFunctionType0):
             endpoint_enabled (bool | None):
+            default_destination (FunctionRoutingDestination | None | Unset): Where this domain's mail that no route matches
+                goes, or null.
      """
 
     domain_id: UUID
     domain: str
     routed_function: None | RoutingTopologyDomainsItemRoutedFunctionType0
     endpoint_enabled: bool | None
+    default_destination: FunctionRoutingDestination | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -43,6 +47,7 @@ class RoutingTopologyDomainsItem:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.function_routing_destination import FunctionRoutingDestination # noqa: PLC0415
         from ..models.routing_topology_domains_item_routed_function_type_0 import RoutingTopologyDomainsItemRoutedFunctionType0 # noqa: PLC0415
         domain_id = str(self.domain_id)
 
@@ -57,6 +62,14 @@ class RoutingTopologyDomainsItem:
         endpoint_enabled: bool | None
         endpoint_enabled = self.endpoint_enabled
 
+        default_destination: dict[str, Any] | None | Unset
+        if isinstance(self.default_destination, Unset):
+            default_destination = UNSET
+        elif isinstance(self.default_destination, FunctionRoutingDestination):
+            default_destination = self.default_destination.to_dict()
+        else:
+            default_destination = self.default_destination
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -66,6 +79,8 @@ class RoutingTopologyDomainsItem:
             "routed_function": routed_function,
             "endpoint_enabled": endpoint_enabled,
         })
+        if default_destination is not UNSET:
+            field_dict["default_destination"] = default_destination
 
         return field_dict
 
@@ -73,6 +88,7 @@ class RoutingTopologyDomainsItem:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.function_routing_destination import FunctionRoutingDestination # noqa: PLC0415
         from ..models.routing_topology_domains_item_routed_function_type_0 import RoutingTopologyDomainsItemRoutedFunctionType0 # noqa: PLC0415
         d = dict(src_dict)
         domain_id = UUID(d.pop("domain_id"))
@@ -108,11 +124,32 @@ class RoutingTopologyDomainsItem:
         endpoint_enabled = _parse_endpoint_enabled(d.pop("endpoint_enabled"))
 
 
+        def _parse_default_destination(data: object) -> FunctionRoutingDestination | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                default_destination_type_1 = FunctionRoutingDestination.from_dict(data)
+
+
+
+                return default_destination_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(FunctionRoutingDestination | None | Unset, data)
+
+        default_destination = _parse_default_destination(d.pop("default_destination", UNSET))
+
+
         routing_topology_domains_item = cls(
             domain_id=domain_id,
             domain=domain,
             routed_function=routed_function,
             endpoint_enabled=endpoint_enabled,
+            default_destination=default_destination,
         )
 
 

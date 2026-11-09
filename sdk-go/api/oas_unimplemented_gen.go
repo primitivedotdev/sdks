@@ -13,9 +13,26 @@ type UnimplementedHandler struct{}
 
 var _ Handler = UnimplementedHandler{}
 
+// AcceptEmailRuleRequest implements acceptEmailRuleRequest operation.
+//
+// Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches
+// from now on with the member who asked. Send no body to accept it as asked, or change it first with
+// english, tree and explanation together. Because this gives your mail to someone else, it is
+// limited to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused.
+// Also needs mail:send_as_member: a role that can only read this mailbox is refused. Needs mail:read,
+//
+//	a credential acting as a member with their full access (API keys, agent keys and narrowed tokens
+//
+// are refused), and the email rules feature on the organization.
+//
+// POST /email-rule-requests/{id}/accept
+func (UnimplementedHandler) AcceptEmailRuleRequest(ctx context.Context, req OptAcceptEmailRuleRequestRequest, params AcceptEmailRuleRequestParams) (r AcceptEmailRuleRequestRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // AddDefaultNetworkMember implements addDefaultNetworkMember operation.
 //
-// Owner or admin login required. Restores an explicitly excluded member.
+// Owner or admin restoration of a durably excluded connected address.
 //
 // POST /agent-networks/default/members/{address}
 func (UnimplementedHandler) AddDefaultNetworkMember(ctx context.Context, params AddDefaultNetworkMemberParams) (r AddDefaultNetworkMemberRes, _ error) {
@@ -31,7 +48,7 @@ func (UnimplementedHandler) AddDefaultNetworkMember(ctx context.Context, params 
 // `primitive domains zone-file --id <domain-id>`.
 //
 // POST /domains
-func (UnimplementedHandler) AddDomain(ctx context.Context, req *AddDomainInput) (r AddDomainRes, _ error) {
+func (UnimplementedHandler) AddDomain(ctx context.Context, req *AddDomainInput, params AddDomainParams) (r AddDomainRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -42,6 +59,102 @@ func (UnimplementedHandler) AddDomain(ctx context.Context, req *AddDomainInput) 
 //
 // GET /agent-connections/setup
 func (UnimplementedHandler) AgentConnectionSetup(ctx context.Context) (r AgentConnectionSetupRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// AgentConnectionTrustedOrigins implements agentConnectionTrustedOrigins operation.
+//
+// The API origins this deployment vouches for: an agent may accept a connection invitation whose URL
+// origin is listed here. Set by deployment configuration. Public, no authentication, cacheable for
+// five minutes.
+//
+// GET /agent-connections/trusted-origins
+func (UnimplementedHandler) AgentConnectionTrustedOrigins(ctx context.Context) (r *AgentConnectionTrustedOriginsOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// AgentWorkAgreeDeadline implements agentWorkAgreeDeadline operation.
+//
+// The current human owner explicitly agrees to an exact future date for the reviewed work version.
+// Creates append-only agreement facts with a new agreement UUID. Replacing a date needs a new
+// agreement ID. Agent-delegate and primitive-agent OAuth credentials cannot agree.
+//
+// POST /agent-work/agents/{agentId}/records/{workId}/deadline-agreements
+func (UnimplementedHandler) AgentWorkAgreeDeadline(ctx context.Context, req *AgentWorkAgreeDeadlineReq, params AgentWorkAgreeDeadlineParams) (r AgentWorkAgreeDeadlineRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// AgentWorkCreate implements agentWorkCreate operation.
+//
+// Create immutable work scope for a current personal agent using a stable work UUID. An identical
+// retry returns the current record; a different scope conflicts. Only its current human owner or
+// bound connected key may create work. A proposed date is not owner agreement.
+//
+// PUT /agent-work/agents/{agentId}/records/{workId}
+func (UnimplementedHandler) AgentWorkCreate(ctx context.Context, req *AgentWorkCreateReq, params AgentWorkCreateParams) (r AgentWorkCreateRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// AgentWorkGet implements agentWorkGet operation.
+//
+// Read work for a current personal agent. Only its current human owner or bound connected key may
+// read it. Work from another connection generation or owner membership is unavailable. Text requires
+// content depth at the agent address.
+//
+// GET /agent-work/agents/{agentId}/records/{workId}
+func (UnimplementedHandler) AgentWorkGet(ctx context.Context, params AgentWorkGetParams) (r AgentWorkGetRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// AgentWorkList implements agentWorkList operation.
+//
+// List current owned work in work UUID order. The current human owner or bound connected key may
+// read it. nextCursor is null at the end; text requires content depth at the agent address.
+//
+// GET /agent-work/agents/{agentId}/records
+func (UnimplementedHandler) AgentWorkList(ctx context.Context, params AgentWorkListParams) (r AgentWorkListRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// AgentWorkManageState implements agentWorkManageState operation.
+//
+// The current human owner may cancel or reopen work with its expected version. Reopening never
+// restores a previous agreement. Agent-delegate and primitive-agent OAuth credentials cannot perform
+// this action.
+//
+// POST /agent-work/agents/{agentId}/records/{workId}/owner-status
+func (UnimplementedHandler) AgentWorkManageState(ctx context.Context, req *AgentWorkManageStateReq, params AgentWorkManageStateParams) (r AgentWorkManageStateRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// AgentWorkProposeDeadline implements agentWorkProposeDeadline operation.
+//
+// Propose or clear a date without changing the current owner agreement. Requires active work and its
+// expected version. The current human owner or bound connected key may propose.
+//
+// POST /agent-work/agents/{agentId}/records/{workId}/deadline-proposal
+func (UnimplementedHandler) AgentWorkProposeDeadline(ctx context.Context, req *AgentWorkProposeDeadlineReq, params AgentWorkProposeDeadlineParams) (r AgentWorkProposeDeadlineRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// AgentWorkReportStatus implements agentWorkReportStatus operation.
+//
+// Report completion with attribution and clear the current agreement. Only the current human owner
+// or bound connected key may report completion. Requires the expected version.
+//
+// POST /agent-work/agents/{agentId}/records/{workId}/status
+func (UnimplementedHandler) AgentWorkReportStatus(ctx context.Context, req *AgentWorkReportStatusReq, params AgentWorkReportStatusParams) (r AgentWorkReportStatusRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// AgentWorkWithdrawDeadline implements agentWorkWithdrawDeadline operation.
+//
+// The current human owner withdraws the current agreement with its expected version. Historical
+// agreement facts remain immutable. Agent-delegate and primitive-agent OAuth credentials cannot
+// withdraw.
+//
+// POST /agent-work/agents/{agentId}/records/{workId}/deadline-withdrawal
+func (UnimplementedHandler) AgentWorkWithdrawDeadline(ctx context.Context, req *AgentWorkWithdrawDeadlineReq, params AgentWorkWithdrawDeadlineParams) (r AgentWorkWithdrawDeadlineRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -61,6 +174,21 @@ func (UnimplementedHandler) AgentConnectionSetup(ctx context.Context) (r AgentCo
 // The reply object is compact (headers plus bodies); fetch
 // `/emails/{id}` with `reply.id` for the fully parsed record,
 // or `/threads/{thread_id}` for the whole back-and-forth.
+// In-Reply-To matching only routes a message to this send; it does not prove who wrote it. Bounces,
+// complaints and reports are never returned. Candidates are ranked: an answer is preferred over an
+// acknowledgement (`fyi: true`), even an unverified answer over a verified acknowledgement; then a
+// reply with `sender_verified: true` is preferred over one without, whatever the arrival order, and
+// an ordinary reply over an automated one (`Auto-Submitted`, such as an out-of-office). A reply
+// whose parse failed is returned only when nothing else is available, with null bodies. Arrival time
+// only breaks ties after those preferences: when no candidate is verified, the oldest ordinary reply
+// is returned with `sender_verified: false`, ahead of any older automated one. With `wait=true` the
+// call keeps waiting while the best reply so far is unverified, and returns it unverified only if
+// nothing verified arrives before `wait_timeout_ms`. Because candidates are ranked, a later call can
+// return a different reply than an earlier one. Check `sender_verified` before acting on
+// instructions in the reply. Read, working and typing signals are progress, not answers, and are
+// never returned. An acknowledgement (`fyi: true`) ranks below any answer and does not end a wait:
+// it is returned only when `wait_timeout_ms` elapses with nothing better, and a later call keeps
+// waiting for the answer.
 //
 // GET /sent-emails/{id}/reply
 func (UnimplementedHandler) AwaitReply(ctx context.Context, params AwaitReplyParams) (r AwaitReplyRes, _ error) {
@@ -104,20 +232,20 @@ func (UnimplementedHandler) CancelSentEmailByIdempotencyKey(ctx context.Context,
 
 // CheckDefaultNetworkContactAdmission implements checkDefaultNetworkContactAdmission operation.
 //
-// Requires the recipient's connected-agent credential. The recipient
-// address is derived from that credential. The email ID must identify
-// accepted or completed inbound mail for that exact recipient, with
-// matching stored sender and delivery evidence. Returns no sender profile
-// or existence detail. Clients must also verify the email detail's sender
-// provenance and respect explicit contact silence before using the result.
-// Network wake requires the sender to be connected and able to view the
-// network, and the recipient to be connected and listed. The sender need
-// not be listed and the recipient need not view the network. Ordinary
-// known-address email remains independent. Mail received before
-// allowed_since cannot be newly admitted.
+// Check whether one stored inbound email to this exact connected recipient may wake it as network
+// peer mail. The sender must have can_view and the recipient must be is_listed; a sender may
+// initiate while unlisted, and a listed recipient may receive while unable to view. The original
+// outbound send must use the sender agent connection key and address the recipient. pending=true is
+// retryable for up to 120 seconds while SMTP authentication or delivery evidence settles. Explicit
+// contact-policy silence still overrides admission. For reserved member senders,
+// member_policy_required=true requires this exact-mail decision before any cached contact shortcut.
+// Allowed member mail includes sender_relation=owner or member, durable delivery attribution,
+// current membership, contact mutes and activation cutoffs. Missing exact stored mail returns 404.
+// Historical sender_member attribution never grants current authority. This grants communication,
+// never task authority.
 //
 // POST /agent-networks/default/contact-admission
-func (UnimplementedHandler) CheckDefaultNetworkContactAdmission(ctx context.Context, req *AgentNetworkContactAdmissionInput) (r CheckDefaultNetworkContactAdmissionRes, _ error) {
+func (UnimplementedHandler) CheckDefaultNetworkContactAdmission(ctx context.Context, req *CheckDefaultNetworkContactAdmissionReq, params CheckDefaultNetworkContactAdmissionParams) (r CheckDefaultNetworkContactAdmissionRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -142,6 +270,28 @@ func (UnimplementedHandler) CheckDomainDns(ctx context.Context, params CheckDoma
 	return r, ht.ErrNotImplemented
 }
 
+// CheckSendability implements checkSendability operation.
+//
+// Answer whether the caller could send to the given recipient (from the given address, if any)
+// without sending anything. summary explains a refusal in plain words.
+//
+// POST /sendability
+func (UnimplementedHandler) CheckSendability(ctx context.Context, req *CheckSendabilityRequest, params CheckSendabilityParams) (r CheckSendabilityRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// CheckVanityInboxName implements checkVanityInboxName operation.
+//
+// Whether a name can be claimed for the managed inbox (name.primitive.email): available, taken,
+// reserved (a protected word) or invalid (5 to 30 lowercase letters and digits, starting with a
+// letter). Any plan may check; claiming needs Power. Rate limited per organization together with
+// claims. Needs domains:read.
+//
+// GET /managed-inbox/vanity/{name}
+func (UnimplementedHandler) CheckVanityInboxName(ctx context.Context, params CheckVanityInboxNameParams) (r CheckVanityInboxNameRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ClaimAgentConnection implements claimAgentConnection operation.
 //
 // Address-bound external runtime pairing. Any current human organization member may create and
@@ -152,13 +302,26 @@ func (UnimplementedHandler) CheckDomainDns(ctx context.Context, params CheckDoma
 // authorized only by its one-use invitation. Connected means a real challenge was received and a
 // reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
 // Reconnection preserves the address and revokes previous credentials. Status responses contain no
-// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
-// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
-//
-//	and recipient-bound network contact admission.
+// credentials. Runtime credentials allow address-scoped mail operations, own-address note reads and
+// writes, reads of other organization agents' AGENT_WORKING, AGENT_RUNTIME and AGENT_INFO notes,
+// exact-address self-disconnect and self-rename, network discovery when can_view is enabled, and
+// recipient-bound network contact admission.
 //
 // POST /agent-connections/claim
 func (UnimplementedHandler) ClaimAgentConnection(ctx context.Context, req *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (r ClaimAgentConnectionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ClaimVanityInboxName implements claimVanityInboxName operation.
+//
+// Make the name the organization's current managed inbox. The previous inbox stops being current but
+// keeps receiving mail. Needs the Power plan and domains:manage, which a credential confined to some
+// mailboxes never holds. Sending records are published in the same request when they can be.
+// outbound_ready false means they could not be yet: mail to the new name still arrives, but sending
+// from it is refused until they are published.
+//
+// POST /managed-inbox/vanity
+func (UnimplementedHandler) ClaimVanityInboxName(ctx context.Context, req *ClaimVanityInboxNameRequest, params ClaimVanityInboxNameParams) (r ClaimVanityInboxNameRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -169,7 +332,22 @@ func (UnimplementedHandler) ClaimAgentConnection(ctx context.Context, req *Claim
 // keys so old local CLI state can be cleared safely.
 //
 // POST /cli/logout
-func (UnimplementedHandler) CliLogout(ctx context.Context, req OptCliLogoutInput) (r CliLogoutRes, _ error) {
+func (UnimplementedHandler) CliLogout(ctx context.Context, req OptCliLogoutInput, params CliLogoutParams) (r CliLogoutRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// CompileEmailRule implements compileEmailRule operation.
+//
+// Turns a plain-English description of which received emails to match into a rule tree over the
+// published column contract, with a plain-English explanation of what it matches, the assumptions
+// made, and warnings for anything the columns cannot express. Where the columns fall short the rule
+// may carry up to three yes/no questions, asked about an email only after its conditions match.
+// Nothing is saved. The SQL the rule renders to is returned only when include_sql is true. Needs
+// mail:read, a credential acting as a member with their full access (API keys, agent keys and
+// narrowed tokens are refused), and the email rules feature on the organization.
+//
+// POST /email-rules/compile
+func (UnimplementedHandler) CompileEmailRule(ctx context.Context, req *CompileEmailRuleRequest, params CompileEmailRuleParams) (r CompileEmailRuleRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -177,12 +355,13 @@ func (UnimplementedHandler) CliLogout(ctx context.Context, req OptCliLogoutInput
 //
 // Report normalized handling evidence for the queue, attempt and lease. Required JSON fields:
 // queue_id, delivery_id, lease_token, mode, duration_ms. For mode=exec include exit_code; stdout
-// includes write_succeeded; http includes status_code and optional transport_error, error_code,
-// confirmed. Supply this discriminated request with --raw-body in the generated CLI. The server
-// classifies success and retry. Duplicate identical completion is idempotent; a stale lease cannot
-// finish a newer attempt. Exec success means durable input acceptance, not completion of agent
-// reasoning. Only successful HTTP handling with recognized confirmation evidence can confirm content
-// discard. Never send arbitrary handler output or HTTP response bodies.
+// includes write_succeeded; sdk includes accepted (and optional timeout/io transport_error); http
+// includes status_code and optional transport_error, error_code, confirmed. Supply this
+// discriminated request with --raw-body in the generated CLI. The server classifies success and
+// retry. Duplicate identical completion is idempotent; a stale lease cannot finish a newer attempt.
+// Exec success means durable input acceptance, not completion of agent reasoning. Only successful
+// HTTP handling with recognized confirmation evidence can confirm content discard. Never send
+// arbitrary handler output or HTTP response bodies.
 //
 // POST /endpoints/{id}/complete
 func (UnimplementedHandler) CompleteWebhookEvent(ctx context.Context, req CompleteWebhookInput, params CompleteWebhookEventParams) (r CompleteWebhookEventRes, _ error) {
@@ -206,7 +385,7 @@ func (UnimplementedHandler) CompleteWebhookEvent(ctx context.Context, req Comple
 // does not require an API key.
 //
 // POST /agent/accounts
-func (UnimplementedHandler) CreateAgentAccount(ctx context.Context, req *CreateAgentAccountInput) (r CreateAgentAccountRes, _ error) {
+func (UnimplementedHandler) CreateAgentAccount(ctx context.Context, req *CreateAgentAccountInput, params CreateAgentAccountParams) (r CreateAgentAccountRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -218,64 +397,53 @@ func (UnimplementedHandler) CreateAgentAccount(ctx context.Context, req *CreateA
 // resolve a web origin to build the link.
 //
 // POST /agent/claim/link
-func (UnimplementedHandler) CreateAgentClaimLink(ctx context.Context, req *CreateAgentClaimLinkInput) (r CreateAgentClaimLinkRes, _ error) {
+func (UnimplementedHandler) CreateAgentClaimLink(ctx context.Context, req *CreateAgentClaimLinkInput, params CreateAgentClaimLinkParams) (r CreateAgentClaimLinkRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
 // CreateAgentConnection implements createAgentConnection operation.
 //
-// Address-bound external runtime pairing. Any current human organization member may create and
-// manage their personal agent connections. Organization owners and admins may manage all connections
-// and explicitly create shared ones. An owner removed from the organization loses personal agent
-// access, and rejoining does not revive the old connection. Organization API keys cannot manage
-// connections. A current connected credential may disconnect only its own exact address. Claim is
-// authorized only by its one-use invitation. Connected means a real challenge was received and a
-// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
-// Reconnection preserves the address and revokes previous credentials. Status responses contain no
-// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
-// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
-//
-//	and recipient-bound network contact admission. Save create_request_id before dispatch to recover
-//
-// an interrupted creation. Recovery returns the original current connection with recovered:true and
-// invitation:null; it never replays a secret or rotates credentials.
+// Create an address-bound agent. An explicit address may be on a Primitive-managed domain or on one
+// of the organization's own verified custom domains that receives and sends through Primitive; a
+// narrower-than-organization creator needs agent_connections:custom_domains for a custom domain and
+// a fresh address. Without an explicit address, allocate a readable name on a managed domain with a
+// bounded collision suffix. Persist create_request_id before dispatch to recover the same current
+// connection on retry; recovered responses have invitation:null and never rotate a key. Changed
+// choices or membership return 409 connection_create_request_conflict; a removed identity returns
+// 409 connection_removed. A pending recovered connection can use inviteAgentConnection with
+// pending_only:true once to obtain a fresh invitation.
 //
 // POST /agent-connections
 func (UnimplementedHandler) CreateAgentConnection(ctx context.Context, req *CreateAgentConnectionReq, params CreateAgentConnectionParams) (r CreateAgentConnectionRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
-// CreateChallenge implements createChallenge operation.
+// CreateEmailRule implements createEmailRule operation.
 //
-// Create an x402 payment challenge (the payee side of a payment). The
-// `pay_to` address is resolved server-side from your registered default
-// payout address for the network, never from the request. The response
-// carries the `nonce_binding` and `payment_requirements` the payer needs to
-// sign; hand the whole challenge object to the payer (for example in an
-// email reply). Amounts are in token base units (USDC has 6 decimals, so
-// `"10000"` is 0.01 USDC).
+// Saves a rule as version 1, from a compile response or a tree you wrote. The tree is checked
+// against the column contract. New rules start in observe, where what the rule matches is recorded
+// and nothing is granted; draft is not evaluated. The caller is the rule's author, and the rule
+// never reaches mail the author cannot read. Needs mail:read, a credential acting as a member with
+// their full access (API keys, agent keys and narrowed tokens are refused), and the email rules
+// feature on the organization.
 //
-// POST /x402/challenges
-func (UnimplementedHandler) CreateChallenge(ctx context.Context, req *CreateChallengeInput) (r CreateChallengeRes, _ error) {
+// POST /email-rules
+func (UnimplementedHandler) CreateEmailRule(ctx context.Context, req *CreateEmailRuleRequest, params CreateEmailRuleParams) (r CreateEmailRuleRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
-// CreateEmailChallenge implements createEmailChallenge operation.
+// CreateEmailRuleRequest implements createEmailRuleRequest operation.
 //
-// Issue an x402 payment challenge over a real email thread (the payee
-// side). Unlike `createChallenge` (which mints a synthetic challenge id),
-// this sends the challenge as an email from `from` to `to` and binds the
-// payment to that DKIM-authenticated thread. The `pay_to` address and the
-// token asset are resolved server-side from your registered default payout
-// address for the network, never from the request. The response carries
-// the thread's `interaction_id` plus the `challenge` (the
-// `payment_requirements`, the `nonce_binding`, and `expires_at`) the payer
-// needs to sign; the payer replies with a signed `payment` interaction
-// step. Amounts are in token base units (USDC has 6 decimals, so `"10000"`
-// is 0.01 USDC).
+// Asks another member of the organization for a rule over their own mail, from a compile response or
+// a tree you wrote. Name them by user id, or by their member mailbox address (at most 30 lookups by
+// address an hour). Nothing is evaluated and nothing is shared until they accept, and they may
+// change the rule first; they see the request and can preview what it matches in their own mail. You
+// may have at most 5 pending requests to one member and 50 in all. Needs mail:read, a credential
+// acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
+// and the email rules feature on the organization.
 //
-// POST /x402/email-challenges
-func (UnimplementedHandler) CreateEmailChallenge(ctx context.Context, req *CreateEmailChallengeInput, params CreateEmailChallengeParams) (r CreateEmailChallengeRes, _ error) {
+// POST /email-rule-requests
+func (UnimplementedHandler) CreateEmailRuleRequest(ctx context.Context, req *CreateEmailRuleRequestRequest, params CreateEmailRuleRequestParams) (r CreateEmailRuleRequestRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -304,9 +472,23 @@ func (UnimplementedHandler) CreateEmailChallenge(ctx context.Context, req *Creat
 // Address-scoped events contain parsed mail without raw MIME, signed download links, routing
 // metadata, or sibling envelope recipients. Pull destinations do not occupy HTTP routing slots.
 // Signing-secret setup and a test HTTP delivery are not required for pull receiving.
+// For local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named
+// creation resumes the same active destination; omitted filters preserve its selection, while
+// conflicting supplied configuration returns 409. Creating a pull destination requires a
+// connected-agent credential; it creates a private subscription restricted to inbound email for the
+// assigned address of that credential. Account API keys receive 403
+// pull_subscription_requires_agent_connection and can instead receive mail with GET
+// /emails?since=<cursor>&wait=30 or an HTTP endpoint. Pulling or completing an account destination
+// created earlier returns the same 403. Names are isolated per credential; revocation or replacement
+// deletes its subscriptions. Address-scoped events contain parsed mail without raw MIME, signed
+// download links, routing metadata, or sibling envelope recipients. Pull destinations do not occupy
+// HTTP routing slots. Signing-secret setup and a test HTTP delivery are not required for pull
+// receiving.
+// Agent connection keys (pconn_) may use endpoints.pull:manage instead of endpoints:manage here, for
+// their own pull subscriptions only.
 //
 // POST /endpoints
-func (UnimplementedHandler) CreateEndpoint(ctx context.Context, req *CreateEndpointInput) (r CreateEndpointRes, _ error) {
+func (UnimplementedHandler) CreateEndpoint(ctx context.Context, req *CreateEndpointInput, params CreateEndpointParams) (r CreateEndpointRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -316,7 +498,7 @@ func (UnimplementedHandler) CreateEndpoint(ctx context.Context, req *CreateEndpo
 // require a Pro plan. Patterns are stored as lowercase.
 //
 // POST /filters
-func (UnimplementedHandler) CreateFilter(ctx context.Context, req *CreateFilterInput) (r CreateFilterRes, _ error) {
+func (UnimplementedHandler) CreateFilter(ctx context.Context, req *CreateFilterInput, params CreateFilterParams) (r CreateFilterRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -324,7 +506,7 @@ func (UnimplementedHandler) CreateFilter(ctx context.Context, req *CreateFilterI
 //
 // Creates and deploys a new function. The handler must be a single
 // ESM module whose default export is an object with an async
-// `fetch(request, env)` method (Workers-style). Primitive signs
+// `fetch(request, env)` method. Primitive signs
 // each delivery and forwards the `Primitive-Signature` header to
 // the handler. Verify the raw request body with
 // `PRIMITIVE_WEBHOOK_SECRET` before parsing JSON; after verification
@@ -352,7 +534,7 @@ func (UnimplementedHandler) CreateFilter(ctx context.Context, req *CreateFilterI
 // running handler on the next redeploy.
 //
 // POST /functions
-func (UnimplementedHandler) CreateFunction(ctx context.Context, req *CreateFunctionInput) (r CreateFunctionRes, _ error) {
+func (UnimplementedHandler) CreateFunction(ctx context.Context, req *CreateFunctionInput, params CreateFunctionParams) (r CreateFunctionRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -373,6 +555,54 @@ func (UnimplementedHandler) CreateFunctionSecret(ctx context.Context, req *Creat
 	return r, ht.ErrNotImplemented
 }
 
+// CreateGroup implements createGroup operation.
+//
+// Creates a group. Needs roles:assign. With an org-wide API key (acting for its person) or the
+// person's own Primitive CLI the group must have no role: a group with a role is role assignment,
+// done in a dashboard session or with a session step-up. Adding members to a group that holds
+// mailbox access gives them that access, so each of its entries is checked as for a mailbox edit. A
+// group whose role names a member's personal mailbox holds only that member: giving the role to, or
+// adding, anyone else is refused with 403 `grant_forbidden` and `details.reason`
+// `personal_mailbox_member_only`.
+//
+// POST /groups
+func (UnimplementedHandler) CreateGroup(ctx context.Context, req *CreateGroupRequest, params CreateGroupParams) (r CreateGroupRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// CreateKey implements createKey operation.
+//
+// Create an API key, super admin or narrowed to a preset or a custom permission set, optionally with
+// an expiry and conditions. The secret is returned once. A key never holds more than the person
+// creating it; the credential policy decides who may create which keys. grant is required: a request
+// without it is refused (400 validation_error, details.reason grant_required), never treated as
+// super admin. A custom key must say which mail it reaches: the addresses and domains it lists
+// (grant.addresses, grant.domains), or every mailbox in the organization with grant.mail_scope "org",
+//
+//	which cannot be combined with them; one that says neither is refused (400 validation_error,
+//
+// details.reason mail_scope_required). Super admin, Send only and Read only reach every mailbox by
+// definition. members:read is only for an org-wide custom key: naming it with grant.addresses or
+// grant.domains is refused (400). Owners and admins are emailed about every super admin key. Send an
+// Idempotency-Key to retry safely: a second create by the same person under the same key makes no
+// second key and is refused (409 idempotency_key_reused) with the first key's id in error.details.
+// key_id, so a caller whose first answer was lost can revoke that key. The onboarding field is for
+// the dashboard only. The Primitive CLI's token is refused, even with a step-up: keys are created in
+// the dashboard or by an app the person connected. While the organization's keys API is not enabled,
+// this answers 404 feature_disabled, except that a dashboard session may still create a super admin
+// key (the dashboard's own create).
+// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+// `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+// when the person's role could not do it anyway). The person's role must hold keys:manage. API keys
+// and agent connection keys are refused. An agent acting for the person is refused unless it carries
+// a step-up token the person issued in the dashboard.
+//
+// POST /keys
+func (UnimplementedHandler) CreateKey(ctx context.Context, req *CredentialsCreateKeyInput, params CreateKeyParams) (r CreateKeyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // CreateOrgSecret implements createOrgSecret operation.
 //
 // Idempotent insert-or-update keyed on `(org_id, key)`. Returns
@@ -385,16 +615,35 @@ func (UnimplementedHandler) CreateFunctionSecret(ctx context.Context, req *Creat
 // managed keys are reserved and rejected.
 //
 // POST /org/secrets
-func (UnimplementedHandler) CreateOrgSecret(ctx context.Context, req *CreateOrgSecretInput) (r CreateOrgSecretRes, _ error) {
+func (UnimplementedHandler) CreateOrgSecret(ctx context.Context, req *CreateOrgSecretInput, params CreateOrgSecretParams) (r CreateOrgSecretRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
-// CreateRegistry implements createRegistry operation.
+// CreateProject implements createProject operation.
 //
-// Create a registry.
+// Requires a current human organization membership. Machine credentials are refused. Results are
+// scoped to current project access. No local paths or existing conversation history are shared.
 //
-// POST /registries
-func (UnimplementedHandler) CreateRegistry(ctx context.Context, req *CreateRegistryInput) (r CreateRegistryRes, _ error) {
+// POST /projects
+func (UnimplementedHandler) CreateProject(ctx context.Context, req *ProjectsCreateProjectInput, params CreateProjectParams) (r CreateProjectRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// CreateRole implements createRole operation.
+//
+// A role nobody can use to gain access they do not hold: its permissions and mail scope must be
+// within the author's own. mail_scope is "org" (the default) or { addresses, domains }; any other
+// value is refused with 400 `validation_error`. Every role that reaches mail reads it in full, and
+// raw MIME follows the role's mail.raw:read; `depth` is deprecated and ignored. Its mail scope names
+// no other member's personal mailbox: otherwise 403 `grant_forbidden` with `details.reason`
+// `personal_mailbox_member_only`. Person only: a dashboard session, or the person's own OAuth or CLI
+// token with a session step-up of purpose `roles.write` (the person confirms at the step_up_url a
+// 403 step_up_required answer carries, which names this client, then send the token in the
+// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+// roles:assign. API keys are refused.
+//
+// POST /roles
+func (UnimplementedHandler) CreateRole(ctx context.Context, req *CreateRoleRequest, params CreateRoleParams) (r CreateRoleRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -407,7 +656,7 @@ func (UnimplementedHandler) CreateRegistry(ctx context.Context, req *CreateRegis
 // `alice@acme.com -> functionA`).
 //
 // POST /routes
-func (UnimplementedHandler) CreateRoute(ctx context.Context, req *CreateRouteInput) (r CreateRouteRes, _ error) {
+func (UnimplementedHandler) CreateRoute(ctx context.Context, req *CreateRouteInput, params CreateRouteParams) (r CreateRouteRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -417,7 +666,7 @@ func (UnimplementedHandler) CreateRoute(ctx context.Context, req *CreateRouteInp
 // permission to wake a target function. The domain must be fully-qualified.
 //
 // POST /wake/authorizations
-func (UnimplementedHandler) CreateWakeAuthorization(ctx context.Context, req *CreateWakeAuthorizationInput) (r CreateWakeAuthorizationRes, _ error) {
+func (UnimplementedHandler) CreateWakeAuthorization(ctx context.Context, req *CreateWakeAuthorizationInput, params CreateWakeAuthorizationParams) (r CreateWakeAuthorizationRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -429,32 +678,84 @@ func (UnimplementedHandler) CreateWakeAuthorization(ctx context.Context, req *Cr
 // time is computed without firing immediately.
 //
 // POST /wake/schedules
-func (UnimplementedHandler) CreateWakeSchedule(ctx context.Context, req *CreateWakeScheduleInput) (r CreateWakeScheduleRes, _ error) {
+func (UnimplementedHandler) CreateWakeSchedule(ctx context.Context, req *CreateWakeScheduleInput, params CreateWakeScheduleParams) (r CreateWakeScheduleRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
-// DecideRegistryRequest implements decideRegistryRequest operation.
+// DecideAccessMode implements decideAccessMode operation.
 //
-// Approve or reject a publication request.
+// Decide items the switch to delegated mode would change. Keep exempts an item; revoke revokes,
+// deletes or stops it; narrow holds an item listed for a person (suspended or flagged) to be decided
+// on the waiting list, where a key or Function can be narrowed; on an unattributed object, which no
+// reduction holds, narrow leaves it as keep does, and the preview does not offer it. A mailbox loss
+// or a connected app is only acknowledged (keep); a controlled key or Function and a self-given
+// access entry take keep or revoke; another decision is refused with 400. Revoking a filter needs
+// confirm: true. Person only: a dashboard session, or the person's own OAuth or CLI token with a
+// session step-up of purpose `access_mode.write` (the person confirms at the step_up_url a 403
+// step_up_required answer carries, which names this client, then send the token in the
+// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+// access_mode:manage (owners). API keys are refused.
 //
-// POST /registries/{slug}/requests/{id}
-func (UnimplementedHandler) DecideRegistryRequest(ctx context.Context, req *DecideRegistryRequestInput, params DecideRegistryRequestParams) (r DecideRegistryRequestRes, _ error) {
+// POST /access-mode/decisions
+func (UnimplementedHandler) DecideAccessMode(ctx context.Context, req *DecideAccessModeRequest, params DecideAccessModeParams) (r DecideAccessModeRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
-// DefineAgent implements defineAgent operation.
+// DecideSuspension implements decideSuspension operation.
 //
-// Define an agent identity.
+// Keep, narrow or revoke one suspended or flagged item. Keeping it, and revoking an API key, needs
+// the decider to cover it (revoking an uncovered key is refused with `grant_forbidden`,
+// `target_not_covered`). Keeping an API key rotated (`rotate: true`, other than the shared Function
+// key) also revokes its older secrets still in a rotation overlap, and needs keys:manage on both the
+// credential and the person: without it, or if the decider lost members:manage meanwhile, it is
+// refused with `grant_forbidden` (`keys_manage_required` or `actor_access_changed`) and nothing is
+// rotated. Person only: a dashboard session, or the person's own OAuth or CLI token with a session
+// step-up of purpose `suspensions.decide` (the person confirms at the step_up_url a 403
+// step_up_required answer carries, which names this client, then send the token in the
+// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+// members:manage. API keys are refused.
 //
-// POST /agents
-func (UnimplementedHandler) DefineAgent(ctx context.Context, req *DefineAgentInput) (r DefineAgentRes, _ error) {
+// POST /access-suspensions/{id}/decision
+func (UnimplementedHandler) DecideSuspension(ctx context.Context, req *DecideSuspensionRequest, params DecideSuspensionParams) (r DecideSuspensionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DeclineEmailRuleRequest implements declineEmailRuleRequest operation.
+//
+// Declines a pending request made to you. Nothing is written but the decision. Needs mail:read, a
+// credential acting as a member with their full access (API keys, agent keys and narrowed tokens are
+// refused), and the email rules feature on the organization.
+//
+// POST /email-rule-requests/{id}/decline
+func (UnimplementedHandler) DeclineEmailRuleRequest(ctx context.Context, params DeclineEmailRuleRequestParams) (r DeclineEmailRuleRequestRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DeleteAddressNote implements deleteAddressNote operation.
+//
+// Organization-scoped address annotations, independent of agents, routes and endpoints. Any bare
+// address can have private notes. Function credentials may read org notes but cannot write or delete.
+//
+//	A connected agent credential writes only its own address's notes and reads all of them; of
+//
+// another live agent's address in its organization it reads only the AGENT_WORKING, AGENT_RUNTIME
+// and AGENT_INFO notes, and nothing of any other address. List and batch reads return only those
+// notes; reading any other note name on another address returns 403, and one of those three names on
+// an address that is not a live agent reads as not found. Use if_absent or if_version to avoid
+// overwriting another writer.
+//
+// DELETE /address-notes/{address}/{name}
+func (UnimplementedHandler) DeleteAddressNote(ctx context.Context, params DeleteAddressNoteParams) (r DeleteAddressNoteRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
 // DeleteAgentContact implements deleteAgentContact operation.
 //
 // Organization directory and agent preferences; no profiles, message history or runtime presence.
-// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// Organization credentials retain tenant directory permissions. Human organization members may read
+// and change agent notification contacts only for personal connections bound to their current
+// membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+// their own agent contact list (another contact reads as 404) and always see display_name as null,
 // create address-only missing contacts using if_absent:true, and access only their own agent
 // memberships; they cannot edit shared labels or delete directory entries. Function credentials are
 // not granted access. Memberships require an existing local agent connection (including revoked
@@ -475,7 +776,10 @@ func (UnimplementedHandler) DeleteAgentContact(ctx context.Context, params Delet
 // DeleteContact implements deleteContact operation.
 //
 // Organization directory and agent preferences; no profiles, message history or runtime presence.
-// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// Organization credentials retain tenant directory permissions. Human organization members may read
+// and change agent notification contacts only for personal connections bound to their current
+// membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+// their own agent contact list (another contact reads as 404) and always see display_name as null,
 // create address-only missing contacts using if_absent:true, and access only their own agent
 // memberships; they cannot edit shared labels or delete directory entries. Function credentials are
 // not granted access. Memberships require an existing local agent connection (including revoked
@@ -495,7 +799,7 @@ func (UnimplementedHandler) DeleteContact(ctx context.Context, params DeleteCont
 
 // DeleteDomain implements deleteDomain operation.
 //
-// Deletes a verified or unverified domain claim.
+// Remove a domain from the organization. Inbound mail for its addresses stops being accepted.
 //
 // DELETE /domains/{id}
 func (UnimplementedHandler) DeleteDomain(ctx context.Context, params DeleteDomainParams) (r DeleteDomainRes, _ error) {
@@ -504,17 +808,31 @@ func (UnimplementedHandler) DeleteDomain(ctx context.Context, params DeleteDomai
 
 // DeleteEmail implements deleteEmail operation.
 //
-// Delete an email.
+// Permanently delete a received email and its stored content. This cannot be undone.
 //
 // DELETE /emails/{id}
 func (UnimplementedHandler) DeleteEmail(ctx context.Context, params DeleteEmailParams) (r DeleteEmailRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
+// DeleteEmailRule implements deleteEmailRule operation.
+//
+// Deletes a rule with its versions, its decisions and the access it granted. The author, or a caller
+// who reads the whole organization's mail, may delete it; while it is shared with another member,
+// only the author or someone who manages members from the dashboard. Needs mail:read, a credential
+// acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
+// and the email rules feature on the organization.
+//
+// DELETE /email-rules/{id}
+func (UnimplementedHandler) DeleteEmailRule(ctx context.Context, params DeleteEmailRuleParams) (r DeleteEmailRuleRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // DeleteEndpoint implements deleteEndpoint operation.
 //
-// Soft-deletes a webhook endpoint. The endpoint will no longer
-// receive webhook deliveries.
+// Delete a webhook endpoint. Inbound messages are no longer delivered to it.
+// Agent connection keys (pconn_) may use endpoints.pull:manage instead of endpoints:manage here, for
+// their own pull subscriptions only.
 //
 // DELETE /endpoints/{id}
 func (UnimplementedHandler) DeleteEndpoint(ctx context.Context, params DeleteEndpointParams) (r DeleteEndpointRes, _ error) {
@@ -523,7 +841,7 @@ func (UnimplementedHandler) DeleteEndpoint(ctx context.Context, params DeleteEnd
 
 // DeleteFilter implements deleteFilter operation.
 //
-// Delete a filter rule.
+// Delete an inbound routing filter rule. Messages already processed by the rule are unaffected.
 //
 // DELETE /filters/{id}
 func (UnimplementedHandler) DeleteFilter(ctx context.Context, params DeleteFilterParams) (r DeleteFilterRes, _ error) {
@@ -532,13 +850,7 @@ func (UnimplementedHandler) DeleteFilter(ctx context.Context, params DeleteFilte
 
 // DeleteFunction implements deleteFunction operation.
 //
-// Soft-deletes the function row, removes the script from the edge
-// runtime, and deactivates any route bound to this function so no
-// further inbound mail is delivered. Past deploy history,
-// invocations, and logs are retained.
-// Returns 502 if the runtime delete fails partway; the function
-// row stays in place and the call is safe to retry until it
-// succeeds.
+// Delete a hosted inbound function. It stops running on future inbound messages.
 //
 // DELETE /functions/{id}
 func (UnimplementedHandler) DeleteFunction(ctx context.Context, params DeleteFunctionParams) (r DeleteFunctionRes, _ error) {
@@ -558,13 +870,21 @@ func (UnimplementedHandler) DeleteFunctionSecret(ctx context.Context, params Del
 	return r, ht.ErrNotImplemented
 }
 
+// DeleteGroup implements deleteGroup operation.
+//
+// Deletes a group; its mailbox access entries go with it. With an org-wide API key or the person's
+// own Primitive CLI only role-free groups are deleted.
+//
+// DELETE /groups/{id}
+func (UnimplementedHandler) DeleteGroup(ctx context.Context, params DeleteGroupParams) (r DeleteGroupRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // DeleteMemory implements deleteMemory operation.
 //
-// Delete one active memory by key and scope. Deletes are idempotent when
-// `if_version` is omitted: deleting a missing key returns `deleted:
-// false`. With `if_version`, a missing key still returns `deleted: false`,
-// but a stale version returns `memory_conflict`.
-// A successful delete records memory write usage.
+// Delete one active memory by key and scope. Function-authenticated requests use their own Function
+// id and cannot override it. Deletes are idempotent without `if_version`; a stale `if_version`
+// returns `memory_conflict`.
 //
 // DELETE /memories
 func (UnimplementedHandler) DeleteMemory(ctx context.Context, params DeleteMemoryParams) (r DeleteMemoryRes, _ error) {
@@ -581,12 +901,13 @@ func (UnimplementedHandler) DeleteOrgSecret(ctx context.Context, params DeleteOr
 	return r, ht.ErrNotImplemented
 }
 
-// DeleteRegistry implements deleteRegistry operation.
+// DeleteProject implements deleteProject operation.
 //
-// Removes the registry from discovery and frees its slug for re-creation.
+// Requires a current human organization membership. Machine credentials are refused. Results are
+// scoped to current project access. No local paths or existing conversation history are shared.
 //
-// DELETE /registries/{slug}
-func (UnimplementedHandler) DeleteRegistry(ctx context.Context, params DeleteRegistryParams) (r DeleteRegistryRes, _ error) {
+// DELETE /projects/{project_id}
+func (UnimplementedHandler) DeleteProject(ctx context.Context, params DeleteProjectParams) (r DeleteProjectRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -596,6 +917,19 @@ func (UnimplementedHandler) DeleteRegistry(ctx context.Context, params DeleteReg
 //
 // DELETE /repeating-sends/{id}
 func (UnimplementedHandler) DeleteRepeatingSend(ctx context.Context, params DeleteRepeatingSendParams) (r DeleteRepeatingSendRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DeleteRole implements deleteRole operation.
+//
+// Only a role nobody holds. Person only: a dashboard session, or the person's own OAuth or CLI token
+// with a session step-up of purpose `roles.write` (the person confirms at the step_up_url a 403
+// step_up_required answer carries, which names this client, then send the token in the
+// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+// roles:assign. API keys are refused.
+//
+// DELETE /roles/{id}
+func (UnimplementedHandler) DeleteRole(ctx context.Context, params DeleteRoleParams) (r DeleteRoleRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -610,16 +944,18 @@ func (UnimplementedHandler) DeleteRoute(ctx context.Context, params DeleteRouteP
 
 // DeleteSentEmail implements deleteSentEmail operation.
 //
-// Permanently deletes sender mailbox history and its owned attachment archive
-// and transient payload. Allows delivered, bounced, agent_failed, gate_denied,
-// canceled, deferred and wait_timeout; other states return 409. Cancel scheduled
-// sends first. This does not recall or cancel delivery already admitted.
-// Recipient copies, received replies and independent audit records are preserved.
-// Occupied idempotency keys and delivered-reply deduplication remain reserved.
-// Keys already released by cancellation, gate denial or a never-attempted failure
-// remain reusable. Repeating a completed deletion succeeds; unknown or foreign
-// IDs return 404. Organization API keys, sessions and OAuth are supported;
-// Function and connected-agent credentials are denied.
+// Permanently deletes eligible sender mailbox history and its owned attachment archive and transient
+// payload. Allows delivered, bounced, agent_failed, gate_denied, canceled, deferred and wait_timeout;
+//
+//	other states return 409 (cancel scheduled sends first). Preserves recipient copies, received
+//
+// replies and independent interaction/delivery audit. This does not recall or cancel delivery
+// already admitted. A minimal non-content record preserves occupied idempotency keys and
+// delivered-reply deduplication. Keys already released by cancellation, gate denial or a
+// never-attempted failure remain reusable; deleting those records does not revoke their existing
+// retry permission. Repeating a completed deletion returns success; unknown or foreign IDs return
+// 404. Organization API keys, sessions and OAuth are supported; Function and connected-agent
+// credentials are denied.
 //
 // DELETE /sent-emails/{id}
 func (UnimplementedHandler) DeleteSentEmail(ctx context.Context, params DeleteSentEmailParams) (r DeleteSentEmailRes, _ error) {
@@ -666,9 +1002,13 @@ func (UnimplementedHandler) DiscardEmailContent(ctx context.Context, params Disc
 
 // DownloadAttachments implements downloadAttachments operation.
 //
-// Downloads all attachments as a gzip-compressed tar archive.
-// Authenticates via a signed download token (provided in webhook
-// payloads) or a valid session.
+// Downloads all attachments of a received email as a gzip-compressed tar archive. Authenticate with
+// a dashboard session, an organization API key, an authorized organization OAuth token, an
+// address-bound agent connection key (only for mail received at its own address), or the signed
+// download token a webhook payload carries (the `token` query parameter). A signed token that names
+// who it was issued for works only while that access still reaches the email. Function credentials
+// are refused, and so is access that reaches the mailbox only below content depth (403). Content the
+// organization's sender filter withheld is not served.
 //
 // GET /emails/{id}/attachments.tar.gz
 func (UnimplementedHandler) DownloadAttachments(ctx context.Context, params DownloadAttachmentsParams) (r DownloadAttachmentsRes, _ error) {
@@ -677,9 +1017,8 @@ func (UnimplementedHandler) DownloadAttachments(ctx context.Context, params Down
 
 // DownloadDomainZoneFile implements downloadDomainZoneFile operation.
 //
-// Downloads a BIND-format DNS zone file containing the DNS records
-// required for a domain claim. Agents should offer this after
-// `addDomain` when users want to import DNS records instead of
+// Downloads a BIND-format DNS zone file containing the DNS records required for a domain claim.
+// Agents should offer this after `addDomain` when users want to import DNS records instead of
 // copying each record manually.
 //
 // GET /domains/{id}/zone-file
@@ -719,14 +1058,15 @@ func (UnimplementedHandler) DownloadEmailAttachmentByFilename(ctx context.Contex
 
 // DownloadEmailAttachmentPart implements downloadEmailAttachmentPart operation.
 //
-// Pending service release. This contract does not establish live availability.
-// Downloads the original bytes of one ordinary email attachment, selected by
-// its metadata `part_index`, not its position in an attachments array. Refresh
-// the email detail after `attachment_changed` before choosing an index again.
-// Uses bearer authentication only; signed raw-email download tokens are not accepted.
-// A paired-agent credential may read only a message addressed to its claimed address.
-// Function credentials are denied. Other bearer credentials retain their
-// existing email access boundaries. This endpoint serves email bytes only.
+// Returns the original decoded bytes of one retained attachment. Authenticate with an organization
+// API key, an authorized organization OAuth token, or an address-bound agent connection key.
+// Connected agents can read only their own inbound recipient attachments. Function credentials and
+// download query tokens are not supported. Duplicate filenames are distinguished by part_index. The
+// part limit is 31457280 bytes; the complete archive must fit 67108864 compressed and decoded bytes
+// and 1024 entries including metadata. Metadata headers are limited to 16384 bytes each and 262144
+// bytes total; resolved archive paths are limited to 4096 UTF-8 bytes. Preparation has a 15-second
+// deadline. A small part in an oversized archive can exceed these limits. This does not parse
+// interactions or certify sender identity. Discarded content is unavailable.
 //
 // GET /emails/{id}/attachments/{part_index}
 func (UnimplementedHandler) DownloadEmailAttachmentPart(ctx context.Context, params DownloadEmailAttachmentPartParams) (r DownloadEmailAttachmentPartRes, _ error) {
@@ -777,36 +1117,118 @@ func (UnimplementedHandler) DownloadSentAttachmentByFilename(ctx context.Context
 
 // DownloadSentAttachmentPart implements downloadSentAttachmentPart operation.
 //
-// Pending service release. This contract does not establish live availability.
-// Downloads the original bytes of one ordinary email attachment, selected by
-// its metadata `part_index`, not its position in an attachments array. Refresh
-// the email detail after `attachment_changed` before choosing an index again.
-// Uses bearer authentication only; signed raw-email download tokens are not accepted.
-// A paired-agent credential may read only mail sent from its claimed address.
-// Receiving a copy does not authorize downloading another sender's sent content.
-// Function credentials are denied. Other bearer credentials retain their
-// existing email access boundaries. This endpoint serves email bytes only.
+// Returns the original decoded bytes of one retained attachment. Authenticate with an organization
+// API key, an authorized organization OAuth token, or an address-bound agent connection key.
+// Connected agents can read only their own outgoing sender attachments. Function credentials and
+// download query tokens are not supported. Duplicate filenames are distinguished by part_index. The
+// part limit is 31457280 bytes; the complete archive must fit 67108864 compressed and decoded bytes
+// and 1024 entries including metadata. Metadata headers are limited to 16384 bytes each and 262144
+// bytes total; resolved archive paths are limited to 4096 UTF-8 bytes. Preparation has a 15-second
+// deadline. A small part in an oversized archive can exceed these limits. This does not parse
+// interactions or certify sender identity. Discarded content is unavailable.
 //
 // GET /sent-emails/{id}/attachments/{part_index}
 func (UnimplementedHandler) DownloadSentAttachmentPart(ctx context.Context, params DownloadSentAttachmentPartParams) (r DownloadSentAttachmentPartRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
+// DownloadSentAttachments implements downloadSentAttachments operation.
+//
+// Downloads retained inline attachments as a gzip-compressed tar archive. Authenticate with an
+// organization API key, an authorized organization OAuth token, or a signed sent-attachment download
+// token. An address-bound agent connection key reads only the archives of mail sent from its own
+// address. Function credentials are not permitted. Archive member names match attachments[].tar_path
+// in sent-email detail. Legacy sends may have no archive; offloaded payload files are not included.
+// Discarded content cannot be downloaded.
+//
+// GET /sent-emails/{id}/attachments.tar.gz
+func (UnimplementedHandler) DownloadSentAttachments(ctx context.Context, params DownloadSentAttachmentsParams) (r DownloadSentAttachmentsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// EndBreakGlass implements endBreakGlass operation.
+//
+// Ends a grant early. Person only: a dashboard session, or the person's own OAuth or CLI token with
+// a session step-up of purpose `break_glass.write` (the person confirms at the step_up_url a 403
+// step_up_required answer carries, which names this client, then send the token in the
+// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+// access_mode:manage (owners). API keys are refused.
+//
+// POST /break-glass/{id}/end
+func (UnimplementedHandler) EndBreakGlass(ctx context.Context, params EndBreakGlassParams) (r EndBreakGlassRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// EndEmailRuleShare implements endEmailRuleShare operation.
+//
+// Stops sharing. Either person on the share can do this, or an owner or admin who manages members.
+// The share is kept, marked as ended. This needs no mail access and does not depend on the email
+// rules feature. An owner or admin not on the share must use a dashboard session. Otherwise use your
+// own session, or an OAuth or CLI token that acts with your full access: API keys and agent keys are
+// refused.
+//
+// DELETE /email-rule-shares/{id}
+func (UnimplementedHandler) EndEmailRuleShare(ctx context.Context, params EndEmailRuleShareParams) (r EndEmailRuleShareRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetAccessMode implements getAccessMode operation.
+//
+// Whole-org or delegated mailbox access. Holders of roles:assign also get the preview of a switch
+// (every item that needs a decision, each with the decision_options it takes, worded for what the
+// switch does) and the decisions made, plus notices: member and group domain entries that delegated
+// mode keeps off personal mailboxes, each with how many it leaves out. Notices are informational,
+// never decided, and never hold the switch (notices_truncated past 500, notices_unavailable when
+// they could not be read). In whole-org mode it also lists narrowed_agents: every live agent
+// connection the switch narrows to an own-address key (personal agents of members, and shared
+// agents), informational in the same way (narrowed_agents_truncated past 500,
+// narrowed_agents_unavailable when they could not be read). Any person; API keys are refused.
+//
+// GET /access-mode
+func (UnimplementedHandler) GetAccessMode(ctx context.Context) (r GetAccessModeRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetAccount implements getAccount operation.
 //
-// Get account info.
+// Retrieve the authenticated organization's account: organization identity, current plan, usage, and
+// onboarding state. Fields the credential has no permission to read are null: plan, limits,
+// entitlements, settings and the managed inbox need org:read, the subscription dates billing:read,
+// the signup email the access that shows members' emails, and the webhook secret rotation date
+// webhook_secret:read.
 //
 // GET /account
 func (UnimplementedHandler) GetAccount(ctx context.Context) (r GetAccountRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
-// GetAgent implements getAgent operation.
+// GetAddressNote implements getAddressNote operation.
 //
-// Get an agent's public profile by address.
+// Organization-scoped address annotations, independent of agents, routes and endpoints. Any bare
+// address can have private notes. Function credentials may read org notes but cannot write or delete.
 //
-// GET /agents/{address}
-func (UnimplementedHandler) GetAgent(ctx context.Context, params GetAgentParams) (r GetAgentRes, _ error) {
+//	A connected agent credential writes only its own address's notes and reads all of them; of
+//
+// another live agent's address in its organization it reads only the AGENT_WORKING, AGENT_RUNTIME
+// and AGENT_INFO notes, and nothing of any other address. List and batch reads return only those
+// notes; reading any other note name on another address returns 403, and one of those three names on
+// an address that is not a live agent reads as not found. Use if_absent or if_version to avoid
+// overwriting another writer.
+//
+// GET /address-notes/{address}/{name}
+func (UnimplementedHandler) GetAddressNote(ctx context.Context, params GetAddressNoteParams) (r GetAddressNoteRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetAgentConnectionSettings implements getAgentConnectionSettings operation.
+//
+// Read the organization agent settings. idle_hide_after_days is how many days a connected agent may
+// go without activity (an authenticated call by its credential, a mail read, or its creation or
+// verification) before it is hidden. Default 14; null means auto-hide is off. Any current
+// organization member may read it.
+//
+// GET /agent-connections/settings
+func (UnimplementedHandler) GetAgentConnectionSettings(ctx context.Context) (r GetAgentConnectionSettingsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -817,61 +1239,51 @@ func (UnimplementedHandler) GetAgent(ctx context.Context, params GetAgentParams)
 // contract. Older receivers may continue their previous exact-contact notifications until updated.
 // Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
 // preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
-// read/write policies. Connected credentials may only GET their own agent composite; they cannot
-// write either policy. Function and signed capability credentials are not granted access. Rules are
-// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
-// matching organization rules; silence wins ties within that scope. If neither scope matches,
-// existing exact membership notify:true allows using its own activation metadata; otherwise only
-// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
-// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
-// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
-// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
-// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
-// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
-// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
-// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
-// reads as empty rules, null version/timestamps, false request intake for the organization and null
-// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
-// preserve server activation metadata while retained unchanged; removing/recreating or changing a
-// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
-// writes preserve versions. Agent composite effective_version changes with either policy document,
-// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+// read/write all policies. Current human members may read/write only their own personal agent policy,
 //
-//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//	bound to their membership incarnation. Connected credentials may only GET their own agent
 //
-// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
-// admissions require received_at >= both the selected activation time and effective_since.
-// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
-// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
-// own notify_since and generation but must still recheck current policy denies and effective_version.
-//
-//	Before dispatch, receivers must recheck the current composite version and applicable activation
-//
-// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
-//
-//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
-//
-// dispatch notifications.
+// composite; they cannot write either policy. Function and signed capability credentials are not
+// granted access. Rules are unordered. Exact membership notify:false always silences. Next use
+// matching agent rules, otherwise matching organization rules; silence wins ties within that scope.
+// If neither scope matches, existing exact membership notify:true allows using its own activation
+// metadata; otherwise only enabled contact-request intake is allowed. Owner policy silence therefore
+// cannot be bypassed by a connected agent adding a notify:true membership. Patterns are canonical
+// lowercase bare mailboxes, *@example.com, research-*@example.com or *@*.example.com. Only a
+// terminal local-part * and a leading whole domain-label *. are supported; subdomain patterns
+// exclude the apex and require a literal multi-label suffix. No regular expressions, question marks,
+// universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain. PUT fully
+// replaces up to 100 rules and the request-intake option using exactly one CAS precondition.
+// Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document,
+// otherwise 409. A missing document reads as empty rules, null version/timestamps, false request
+// intake for the organization and null (inherit) for the agent. Reset overrides with empty rules and
+// null request intake. Allow rules preserve server activation metadata while retained unchanged;
+// removing/recreating or changing a rule to allow resets it. Request intake defaults off; agent null
+// inherits the organization. No-op writes preserve versions. Agent composite effective_version
+// changes with either policy document, connection identity, generation or successful claim;
+// effective_since is the latest policy mutation, connection creation or successful claim. Reclaiming
+// a connection invalidates prior admission snapshots and starts a fresh rule/request cutoff; routine
+// heartbeats do not. Rule/request admissions require received_at >= both the selected activation
+// time and effective_since. Consequently even unrelated policy edits suppress queued older
+// rule/request admissions, without deleting email history or affecting explicit reply waits. Exact
+// membership fallback retains its own notify_since and generation but must still recheck current
+// policy denies and effective_version. Before dispatch, receivers must recheck the current composite
+// version and applicable activation generation and membership; stop new admissions when policy is
+// unavailable or older than 30 seconds. Snapshot fields explain scope and matched rules locally; the
+// API does not execute tasks or dispatch notifications.
 //
 // GET /agent-contact-policy/{agent_address}
 func (UnimplementedHandler) GetAgentContactPolicy(ctx context.Context, params GetAgentContactPolicyParams) (r GetAgentContactPolicyRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
-// GetChallenge implements getChallenge operation.
-//
-// Fetch a challenge you created, to poll its `status` and settlement
-// receipt (`settle_tx`). Scoped to the challenger org that created it.
-//
-// GET /x402/challenges/{id}
-func (UnimplementedHandler) GetChallenge(ctx context.Context, params GetChallengeParams) (r GetChallengeRes, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
 // GetContact implements getContact operation.
 //
 // Organization directory and agent preferences; no profiles, message history or runtime presence.
-// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// Organization credentials retain tenant directory permissions. Human organization members may read
+// and change agent notification contacts only for personal connections bound to their current
+// membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+// their own agent contact list (another contact reads as 404) and always see display_name as null,
 // create address-only missing contacts using if_absent:true, and access only their own agent
 // memberships; they cannot edit shared labels or delete directory entries. Function credentials are
 // not granted access. Memberships require an existing local agent connection (including revoked
@@ -896,41 +1308,38 @@ func (UnimplementedHandler) GetContact(ctx context.Context, params GetContactPar
 // contract. Older receivers may continue their previous exact-contact notifications until updated.
 // Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
 // preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
-// read/write policies. Connected credentials may only GET their own agent composite; they cannot
-// write either policy. Function and signed capability credentials are not granted access. Rules are
-// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
-// matching organization rules; silence wins ties within that scope. If neither scope matches,
-// existing exact membership notify:true allows using its own activation metadata; otherwise only
-// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
-// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
-// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
-// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
-// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
-// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
-// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
-// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
-// reads as empty rules, null version/timestamps, false request intake for the organization and null
-// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
-// preserve server activation metadata while retained unchanged; removing/recreating or changing a
-// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
-// writes preserve versions. Agent composite effective_version changes with either policy document,
-// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+// read/write all policies. Current human members may read/write only their own personal agent policy,
 //
-//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//	bound to their membership incarnation. Connected credentials may only GET their own agent
 //
-// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
-// admissions require received_at >= both the selected activation time and effective_since.
-// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
-// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
-// own notify_since and generation but must still recheck current policy denies and effective_version.
-//
-//	Before dispatch, receivers must recheck the current composite version and applicable activation
-//
-// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
-//
-//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
-//
-// dispatch notifications.
+// composite; they cannot write either policy. Function and signed capability credentials are not
+// granted access. Rules are unordered. Exact membership notify:false always silences. Next use
+// matching agent rules, otherwise matching organization rules; silence wins ties within that scope.
+// If neither scope matches, existing exact membership notify:true allows using its own activation
+// metadata; otherwise only enabled contact-request intake is allowed. Owner policy silence therefore
+// cannot be bypassed by a connected agent adding a notify:true membership. Patterns are canonical
+// lowercase bare mailboxes, *@example.com, research-*@example.com or *@*.example.com. Only a
+// terminal local-part * and a leading whole domain-label *. are supported; subdomain patterns
+// exclude the apex and require a literal multi-label suffix. No regular expressions, question marks,
+// universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain. PUT fully
+// replaces up to 100 rules and the request-intake option using exactly one CAS precondition.
+// Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document,
+// otherwise 409. A missing document reads as empty rules, null version/timestamps, false request
+// intake for the organization and null (inherit) for the agent. Reset overrides with empty rules and
+// null request intake. Allow rules preserve server activation metadata while retained unchanged;
+// removing/recreating or changing a rule to allow resets it. Request intake defaults off; agent null
+// inherits the organization. No-op writes preserve versions. Agent composite effective_version
+// changes with either policy document, connection identity, generation or successful claim;
+// effective_since is the latest policy mutation, connection creation or successful claim. Reclaiming
+// a connection invalidates prior admission snapshots and starts a fresh rule/request cutoff; routine
+// heartbeats do not. Rule/request admissions require received_at >= both the selected activation
+// time and effective_since. Consequently even unrelated policy edits suppress queued older
+// rule/request admissions, without deleting email history or affecting explicit reply waits. Exact
+// membership fallback retains its own notify_since and generation but must still recheck current
+// policy denies and effective_version. Before dispatch, receivers must recheck the current composite
+// version and applicable activation generation and membership; stop new admissions when policy is
+// unavailable or older than 30 seconds. Snapshot fields explain scope and matched rules locally; the
+// API does not execute tasks or dispatch notifications.
 //
 // GET /contact-policy
 func (UnimplementedHandler) GetContactPolicy(ctx context.Context) (r GetContactPolicyRes, _ error) {
@@ -961,19 +1370,38 @@ func (UnimplementedHandler) GetContactPolicy(ctx context.Context) (r GetContactP
 // oldest first, with the same per-message shape, and a new
 // `cursor`. Without `since` the response carries no `cursor` and
 // no per-message `status`.
+// To read an older part of a long conversation, such as the message a search result names, pass
+// `around` with that message's id: the response is a window of messages around it with
+// `before_cursor` and `after_cursor` to page older and newer. On these window reads `{id}` may be a
+// sent email id as well as an inbound email id.
 //
 // GET /emails/{id}/conversation
 func (UnimplementedHandler) GetConversation(ctx context.Context, params GetConversationParams) (r GetConversationRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
+// GetCredentialPolicy implements getCredentialPolicy operation.
+//
+// The organization credential policy: key lifetime and expiry rules, who may create super admin keys,
+//
+//	whether members may create keys and the other rules every new key is held to. Needs the
+//
+// organization's credential features to be enabled; while they are not, this answers 404
+// feature_disabled.
+// Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
+// connection keys and agents are refused.
+//
+// GET /credential-policy
+func (UnimplementedHandler) GetCredentialPolicy(ctx context.Context) (r GetCredentialPolicyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetCreditBalance implements getCreditBalance operation.
 //
-// Read the organization credit position. `prepaid_credit` is the prepaid
-// usage credit (paid top-ups, redeemed credit codes and granted credit)
-// that can still pay for usage. `budget` is the active agent spending
-// budget an operator funded for top-ups, or null when there is none.
-// Amounts are strings of integer micros (1 USD = 1000000 micros).
+// Read the organization credit position. `prepaid_credit` is the prepaid usage credit (redeemed
+// credit codes and granted credit) that can still pay for usage. `budget` is always null: agent
+// spending budgets were retired, and the field is kept for existing clients. Amounts are strings of
+// integer micros (1 USD = 1000000 micros).
 //
 // GET /credits/balance
 func (UnimplementedHandler) GetCreditBalance(ctx context.Context) (r GetCreditBalanceRes, _ error) {
@@ -982,11 +1410,34 @@ func (UnimplementedHandler) GetCreditBalance(ctx context.Context) (r GetCreditBa
 
 // GetDefaultNetworkAgent implements getDefaultNetworkAgent operation.
 //
-// Requires a connected-agent credential allowed to see the network, or an organization member login.
-// Unlisted agents look absent.
+// Read one listed peer in the same organization. An unlisted or excluded address returns 404 in this
+// network lookup.
 //
 // GET /agent-networks/default/agents/{address}
 func (UnimplementedHandler) GetDefaultNetworkAgent(ctx context.Context, params GetDefaultNetworkAgentParams) (r GetDefaultNetworkAgentRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetDelivery implements getDelivery operation.
+//
+// One webhook delivery attempt record, by the id listDeliveries returns.
+//
+// GET /webhooks/deliveries/{id}
+func (UnimplementedHandler) GetDelivery(ctx context.Context, params GetDeliveryParams) (r GetDeliveryRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetDomainAgentAuthorization implements getDomainAgentAuthorization operation.
+//
+// Whether the domain publishes an Agent Authorization (`_agents`) TXT record that lets agents on
+// Primitive email it, read from DNS with the same engine the send path uses (an answer may be up to
+// five minutes old): published (a record authorizes them), published_unauthorized (a record exists
+// but does not), not_set_up (no record, the default) or inconclusive (the lookup could not tell;
+// retry). The domain is one of the organization's, verified or pending; a credential confined to
+// some mailboxes sees only the domains its scope covers. Needs domains:read.
+//
+// GET /domains/{id}/agent-authorization
+func (UnimplementedHandler) GetDomainAgentAuthorization(ctx context.Context, params GetDomainAgentAuthorizationParams) (r GetDomainAgentAuthorizationRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1017,6 +1468,59 @@ func (UnimplementedHandler) GetEmail(ctx context.Context, params GetEmailParams)
 	return r, ht.ErrNotImplemented
 }
 
+// GetEmailReadable implements getEmailReadable operation.
+//
+// Returns an inbound email as text a person or a model can read: the words of the message in reading
+// order, without markup, hidden content, link targets or the quoted history below a reply. For a
+// marketing email this can be a hundred times smaller than the record from `GET /emails/{id}`, which
+// you still need for the stored bodies, headers, authentication results or delivery state.
+// Each link is a `[n]` marker beside its label. `link_count` says how many there are; ask for
+// targets with `links`.
+// A long body comes in pages of at most `max_chars` characters, ending on a line break where one is
+// in reach. When `body_next_offset` is not null, send it as `offset` to read on.
+// The access rules of `GET /emails/{id}` apply. When content is withheld (for example a sender your
+// filter blocked), the identifying fields are returned with an empty `body_text` and a `body_source`
+// of `none`.
+//
+// GET /emails/{id}/readable
+func (UnimplementedHandler) GetEmailReadable(ctx context.Context, params GetEmailReadableParams) (r GetEmailReadableRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetEmailRule implements getEmailRule operation.
+//
+// A rule and its current version. The SQL the version renders to is included only when include_sql
+// is true. Needs mail:read, a credential acting as a member with their full access (API keys, agent
+// keys and narrowed tokens are refused), and the email rules feature on the organization.
+//
+// GET /email-rules/{id}
+func (UnimplementedHandler) GetEmailRule(ctx context.Context, params GetEmailRuleParams) (r GetEmailRuleRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetEmailRuleRequest implements getEmailRuleRequest operation.
+//
+// A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a
+// member. A request is visible to the member who made it, the member it was made to, and the
+// organization's owners and admins. Needs mail:read, a credential acting as a member with their full
+// access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
+// organization.
+//
+// GET /email-rule-requests/{id}
+func (UnimplementedHandler) GetEmailRuleRequest(ctx context.Context, params GetEmailRuleRequestParams) (r GetEmailRuleRequestRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetEmailRuleShare implements getEmailRuleShare operation.
+//
+// One share. Needs mail:read, a credential acting as a member with their full access (API keys,
+// agent keys and narrowed tokens are refused), and the email rules feature on the organization.
+//
+// GET /email-rule-shares/{id}
+func (UnimplementedHandler) GetEmailRuleShare(ctx context.Context, params GetEmailRuleShareParams) (r GetEmailRuleShareRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetFunction implements getFunction operation.
 //
 // Returns the full record for a function, including its current
@@ -1025,6 +1529,25 @@ func (UnimplementedHandler) GetEmail(ctx context.Context, params GetEmailParams)
 //
 // GET /functions/{id}
 func (UnimplementedHandler) GetFunction(ctx context.Context, params GetFunctionParams) (r GetFunctionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetFunctionDeployment implements getFunctionDeployment operation.
+//
+// One deployment of the function, with its status, error, timings and bundle fingerprints.
+//
+// GET /functions/{id}/deployments/{deploymentId}
+func (UnimplementedHandler) GetFunctionDeployment(ctx context.Context, params GetFunctionDeploymentParams) (r GetFunctionDeploymentRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetFunctionInvocation implements getFunctionInvocation operation.
+//
+// One run of the function with its exception stack and the log lines it wrote, oldest first.
+// logs_truncated is true when the run wrote more lines than one response carries.
+//
+// GET /functions/{id}/invocations/{invocationId}
+func (UnimplementedHandler) GetFunctionInvocation(ctx context.Context, params GetFunctionInvocationParams) (r GetFunctionInvocationRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1037,6 +1560,30 @@ func (UnimplementedHandler) GetFunction(ctx context.Context, params GetFunctionP
 //
 // GET /functions/{id}/routing
 func (UnimplementedHandler) GetFunctionRouting(ctx context.Context, params GetFunctionRoutingParams) (r GetFunctionRoutingRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetFunctionRuntimeKey implements getFunctionRuntimeKey operation.
+//
+// Which key the function runs with (the organization's shared key or its own), the preset and
+// permissions it is narrowed to, the secrets attached to it, and whether it is suspended and why.
+// Never returns the key itself.
+//
+// GET /functions/{id}/runtime-key
+func (UnimplementedHandler) GetFunctionRuntimeKey(ctx context.Context, params GetFunctionRuntimeKeyParams) (r GetFunctionRuntimeKeyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetFunctionSource implements getFunctionSource operation.
+//
+// The source files of a managed-build deployment: the current one, or the one named by deployment_id.
+//
+//	A function deployed as a single bundled module returns its deploymentId with an empty files list.
+//
+// deploymentId is null only when the function has no deployment.
+//
+// GET /functions/{id}/source
+func (UnimplementedHandler) GetFunctionSource(ctx context.Context, params GetFunctionSourceParams) (r GetFunctionSourceRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1053,33 +1600,152 @@ func (UnimplementedHandler) GetFunctionTestRunTrace(ctx context.Context, params 
 	return r, ht.ErrNotImplemented
 }
 
+// GetFunctionUsage implements getFunctionUsage operation.
+//
+// Invocations, runtime and webhook delivery outcomes for this function, for the current month and
+// its lifetime.
+//
+// GET /functions/{id}/usage
+func (UnimplementedHandler) GetFunctionUsage(ctx context.Context, params GetFunctionUsageParams) (r GetFunctionUsageRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetFunctionUsers implements getFunctionUsers operation.
+//
+// Each address that sent mail the function handled or received a reply from it, with inbound and
+// outbound counts and first and last seen times, up to cap entries; truncated is true when there
+// were more.
+//
+// GET /functions/{id}/users
+func (UnimplementedHandler) GetFunctionUsers(ctx context.Context, params GetFunctionUsersParams) (r GetFunctionUsersRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetInboundHourlyStats implements getInboundHourlyStats operation.
+//
+// Received mail per UTC hour over the last `days` days, by outcome: accepted, failing (every webhook
+// delivery so far failed) and rejected. Hours with no mail are left out. Needs mail:read. Counts
+// only the mail the credential may read: a credential narrowed to some addresses counts the mail its
+// scope admits.
+//
+// GET /stats/emails/hourly
+func (UnimplementedHandler) GetInboundHourlyStats(ctx context.Context, params GetInboundHourlyStatsParams) (r GetInboundHourlyStatsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetInboxStatus implements getInboxStatus operation.
 //
-// Returns one consolidated view of inbound domain readiness,
-// webhook/function processing routes, deployed Functions, and
-// recent inbound email activity.
-// Agents should call this before guiding a user through inbound
-// setup. It answers the practical questions "can I receive mail",
-// "will anything process that mail", and "what should I do next"
-// without forcing clients to stitch together domains, endpoints,
-// functions, and emails manually.
+// Returns one consolidated view of domain verification, webhook/function processing routes, deployed
+// functions, and recent inbound mail. Agents should use this before guiding users through inbound
+// email setup.
 //
 // GET /inbox/status
 func (UnimplementedHandler) GetInboxStatus(ctx context.Context) (r GetInboxStatusRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
+// GetInteraction implements getInteraction operation.
+//
+// One interaction with every step it has processed, oldest first, including rejected steps and their
+// reason. Each step links the inbound email (email_id) or sent email (sent_email_id) that carried it,
+//
+//	or null when that message no longer exists. Reading needs interactions:read and organization-wide
+//
+// mail scope; a credential narrowed to some mailboxes is refused.
+//
+// GET /interactions/{id}
+func (UnimplementedHandler) GetInteraction(ctx context.Context, params GetInteractionParams) (r GetInteractionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetKey implements getKey operation.
+//
+// One key's metadata, never its secret. The person needs access to the whole organization's mail.
+// Needs the organization's credential features to be enabled; while they are not, this answers 404
+// feature_disabled.
+// Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
+// person's role must hold keys:read. API keys, agent connection keys and agents are refused.
+//
+// GET /keys/{id}
+func (UnimplementedHandler) GetKey(ctx context.Context, params GetKeyParams) (r GetKeyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetKeyBuilder implements getKeyBuilder operation.
+//
+// The key presets the caller may use (each with whether it is available and why not), the permission
+// matrix for custom keys and the policy in force. An area marked org_wide_only (Members) is listed
+// only to a person who holds its permission, and only a custom key with no addresses or domains may
+// hold it. Needs the organization's credential features to be enabled; while they are not, this
+// answers 404 feature_disabled.
+// Person only: a dashboard session. The person's role must hold keys:read. API keys, agent
+// connection keys and agents are refused.
+//
+// GET /keys/builder
+func (UnimplementedHandler) GetKeyBuilder(ctx context.Context) (r GetKeyBuilderRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetKeySuggestion implements getKeySuggestion operation.
+//
+// The permissions a key used over the last 30 days, as a custom grant that would have served every
+// successful call (also as builder areas), the narrowest mail scope its calls support (depth is
+// deprecated: raw when it downloaded raw MIME, otherwise content) (the mailboxes of the messages it
+// named and sent, with notes on what the request log cannot account for), and whether it is unused.
+// Calls to routes only the super admin key can use (groups and mailbox access) derive no permission,
+// since a custom key is refused there; super_admin_only_calls counts them. usage gives the same
+// window anonymized: successful and failed requests per UTC day, the routes called by their declared
+// template (never the called path) with the permission each needed, and how many mailboxes the key
+// read and sent from (counts only, and only for a person with access to the whole organization's
+// mail). Nothing is applied: narrowing is a change to the key (PATCH /v1/keys/:id). Needs the
+// organization's credential features to be enabled; while they are not, this answers 404
+// feature_disabled.
+// Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
+// connection keys and agents are refused.
+//
+// GET /keys/{id}/suggestion
+func (UnimplementedHandler) GetKeySuggestion(ctx context.Context, params GetKeySuggestionParams) (r GetKeySuggestionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetMemory implements getMemory operation.
 //
-// Fetch one active memory by key and scope. Omit scope parameters to use
-// the automatic default: function-authenticated context, then the
-// `x-primitive-function-id` header, then org scope. Function scope uses a
-// function id UUID in `scope_id`.
-// A successful read records memory read usage and updates the memory's
-// read stats asynchronously.
+// Fetch one active memory by key and scope. Omit scope parameters to use automatic scope resolution.
+// Function-authenticated requests use their own Function id and cannot override it. Function scope
+// uses a function id UUID in `scope_id`.
 //
 // GET /memories
 func (UnimplementedHandler) GetMemory(ctx context.Context, params GetMemoryParams) (r GetMemoryRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetOrgFunctionFallback implements getOrgFunctionFallback operation.
+//
+// Where mail that no domain route claims is delivered: an HTTP endpoint or a function. Null data
+// when no fallback is set.
+//
+// GET /functions/fallback
+func (UnimplementedHandler) GetOrgFunctionFallback(ctx context.Context) (r GetOrgFunctionFallbackRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetOrgFunctionInvocationSeries implements getOrgFunctionInvocationSeries operation.
+//
+// Invocations and failures per function per day, for the dashboard's activity chart. Optionally
+// limited to one function.
+//
+// GET /functions/invocation-series
+func (UnimplementedHandler) GetOrgFunctionInvocationSeries(ctx context.Context, params GetOrgFunctionInvocationSeriesParams) (r GetOrgFunctionInvocationSeriesRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetOrgFunctionUsage implements getOrgFunctionUsage operation.
+//
+// Invocations, runtime and webhook delivery outcomes across every function in the organization, for
+// the current month and the function's lifetime, plus the number of active functions.
+//
+// GET /functions/usage
+func (UnimplementedHandler) GetOrgFunctionUsage(ctx context.Context) (r GetOrgFunctionUsageRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1093,6 +1759,17 @@ func (UnimplementedHandler) GetMemory(ctx context.Context, params GetMemoryParam
 //
 // GET /functions/routing-topology
 func (UnimplementedHandler) GetOrgRoutingTopology(ctx context.Context) (r GetOrgRoutingTopologyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetOrganization implements getOrganization operation.
+//
+// The organization's name and logo as members and invitees see them.
+// Person only: a dashboard session or the person's own OAuth token (the CLI or an app they
+// connected). API keys, agent connection keys and agents are refused.
+//
+// GET /organization
+func (UnimplementedHandler) GetOrganization(ctx context.Context) (r GetOrganizationRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1117,12 +1794,59 @@ func (UnimplementedHandler) GetOutboundStatus(ctx context.Context) (r GetOutboun
 	return r, ht.ErrNotImplemented
 }
 
-// GetRegistry implements getRegistry operation.
+// GetOwnAgentConnection implements getOwnAgentConnection operation.
 //
-// Get a public registry's metadata.
+// Read the calling connected agent's own connection with its current bound key: status (claimed
+// until the setup challenge reply verifies it, then connected), verified_at, and the receiver state
+// peers see. Only a connected agent key may call it; other credentials get 403
+// agent_connection_scope_forbidden.
 //
-// GET /registries/{slug}
-func (UnimplementedHandler) GetRegistry(ctx context.Context, params GetRegistryParams) (r GetRegistryRes, _ error) {
+// GET /agent-connections/me
+func (UnimplementedHandler) GetOwnAgentConnection(ctx context.Context) (r GetOwnAgentConnectionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetOwnGrant implements getOwnGrant operation.
+//
+// The grant of the credential that calls it: its permissions, mail scope, resources, template,
+// credential kind and expiry. A credential may call it about itself without any permission,
+// including a narrowed key without org:read, so a key can see its own permissions and mail scope. It
+// answers nothing about any other credential. grant is null when the credential carries no grant.
+//
+// GET /whoami/grant
+func (UnimplementedHandler) GetOwnGrant(ctx context.Context) (r GetOwnGrantRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetProject implements getProject operation.
+//
+// Requires a current human organization membership. Machine credentials are refused. Results are
+// scoped to current project access. No local paths or existing conversation history are shared.
+//
+// GET /projects/{project_id}
+func (UnimplementedHandler) GetProject(ctx context.Context, params GetProjectParams) (r GetProjectRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetPublicAddressNote implements getPublicAddressNote operation.
+//
+// Returns only explicitly public notes whose publisher currently owns an active verified domain for
+// this address. Private, deleted and no-longer-controlled notes are hidden. Responses are not cached.
+//
+// GET /public/address-notes/{address}/{name}
+func (UnimplementedHandler) GetPublicAddressNote(ctx context.Context, params GetPublicAddressNoteParams) (r GetPublicAddressNoteRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetRelayAutoJoin implements getRelayAutoJoin operation.
+//
+// Whether someone who proves an address on the organization's mail relay domain with Google
+// Workspace joins automatically, and with what access. `option` is null when auto-join is off and an
+// invitation is required; `options` lists the choices. Answers 404 `feature_disabled` unless the
+// organization has mail relay.
+//
+// GET /relay-auto-join
+func (UnimplementedHandler) GetRelayAutoJoin(ctx context.Context) (r GetRelayAutoJoinRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1132,6 +1856,18 @@ func (UnimplementedHandler) GetRegistry(ctx context.Context, params GetRegistryP
 //
 // GET /repeating-sends/{id}
 func (UnimplementedHandler) GetRepeatingSend(ctx context.Context, params GetRepeatingSendParams) (r GetRepeatingSendRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetSearchSettings implements getSearchSettings operation.
+//
+// Whether the organization consents to semantic search, and whether it is active: it also needs a
+// paid plan, the feature to be available to the organization, and HIPAA mode off.
+// Person only: a dashboard session or the person's own OAuth token (the CLI or an app they
+// connected). API keys, agent connection keys and agents are refused.
+//
+// GET /search-settings
+func (UnimplementedHandler) GetSearchSettings(ctx context.Context) (r GetSearchSettingsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1187,20 +1923,24 @@ func (UnimplementedHandler) GetSentEmail(ctx context.Context, params GetSentEmai
 	return r, ht.ErrNotImplemented
 }
 
-// GetSpendPolicy implements getSpendPolicy operation.
+// GetSentHourlyStats implements getSentHourlyStats operation.
 //
-// Read your org's outbound spend policy: the kill-switch, per-payment and
-// per-day caps, and the payee allowlist. Returns the defaults (no limits,
-// not paused) when no policy has been set.
+// Sent mail per UTC hour over the last `days` days, by outcome: delivered, bounced (including agent
+// failures, wait timeouts and unknown endings) and denied by a send gate. Sends still in flight are
+// not counted until they end. Hours with no mail are left out. Needs mail:read. Counts only the mail
+// the credential may read: a credential narrowed to some addresses counts the mail its scope admits.
 //
-// GET /x402/spend-policy
-func (UnimplementedHandler) GetSpendPolicy(ctx context.Context) (r GetSpendPolicyRes, _ error) {
+// GET /stats/sent-emails/hourly
+func (UnimplementedHandler) GetSentHourlyStats(ctx context.Context, params GetSentHourlyStatsParams) (r GetSentHourlyStatsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
 // GetStorageStats implements getStorageStats operation.
 //
-// Get storage usage.
+// Return stored-email storage usage for the authenticated organization: the plan's included storage,
+// the limit past which inbound mail is refused (null when it never is, as on paid plans), and the
+// storage billed as overage. `quota_mb` is the included allowance, not a limit. The search index is
+// billed as storage with mail (`search_index_bytes`) but never counts toward the limit.
 //
 // GET /account/storage
 func (UnimplementedHandler) GetStorageStats(ctx context.Context) (r GetStorageStatsRes, _ error) {
@@ -1209,9 +1949,8 @@ func (UnimplementedHandler) GetStorageStats(ctx context.Context) (r GetStorageSt
 
 // GetTemplate implements getTemplate operation.
 //
-// Fetch one approved Function template by slug, including its manifest
-// snapshot and README. The stored source files used for install are not
-// returned.
+// Fetch one approved Function template by slug, including its manifest snapshot and README. The
+// stored source files used for install are not returned.
 //
 // GET /templates/{id}
 func (UnimplementedHandler) GetTemplate(ctx context.Context, params GetTemplateParams) (r GetTemplateRes, _ error) {
@@ -1220,8 +1959,8 @@ func (UnimplementedHandler) GetTemplate(ctx context.Context, params GetTemplateP
 
 // GetTemplateInstall implements getTemplateInstall operation.
 //
-// Fetch the current state of a template install. Reads may advance the
-// self-test phase when a reply effect has been observed.
+// Fetch the current state of a template install. Reads may advance the self-test phase when a reply
+// effect has been observed.
 //
 // GET /templates/installs/{id}
 func (UnimplementedHandler) GetTemplateInstall(ctx context.Context, params GetTemplateInstallParams) (r GetTemplateInstallRes, _ error) {
@@ -1257,6 +1996,19 @@ func (UnimplementedHandler) GetWakeSchedule(ctx context.Context, params GetWakeS
 	return r, ht.ErrNotImplemented
 }
 
+// GetWebhookDeliveryStats implements getWebhookDeliveryStats operation.
+//
+// For each received email with a webhook delivery since `since`, how its latest delivery ended:
+// clean_success, recovered (delivered after a failure), failed, or regressed (failed after a
+// success). Pull deliveries are not counted, and neither are deliveries an email rule granted to a
+// key: they are extra receivers and never change how the email itself was delivered. Needs
+// webhooks:read, which a credential narrowed to some addresses never holds.
+//
+// GET /stats/webhook-deliveries
+func (UnimplementedHandler) GetWebhookDeliveryStats(ctx context.Context, params GetWebhookDeliveryStatsParams) (r GetWebhookDeliveryStatsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetWebhookSecret implements getWebhookSecret operation.
 //
 // Returns the webhook signing secret for your account. If no
@@ -1283,9 +2035,10 @@ func (UnimplementedHandler) GetWebhookSecret(ctx context.Context) (r GetWebhookS
 
 // InstallTemplate implements installTemplate operation.
 //
-// Start a one-shot deploy of an approved deploy-mode Function template.
-// The response returns an install record immediately; poll
-// `GET /templates/installs/{id}` for progress.
+// Start a one-shot deploy of an approved deploy-mode Function template. The response returns an
+// install record immediately; poll `GET /templates/installs/{id}` for progress. A custom
+// runtime_grant (sent, or recommended by the template) must list addresses or send mail_scope "org";
+// one that does neither is refused (400 validation_error, details.reason mail_scope_required).
 //
 // POST /templates/{id}/install
 func (UnimplementedHandler) InstallTemplate(ctx context.Context, req *InstallTemplateBody, params InstallTemplateParams) (r InstallTemplateRes, _ error) {
@@ -1294,40 +2047,86 @@ func (UnimplementedHandler) InstallTemplate(ctx context.Context, req *InstallTem
 
 // InviteAgentConnection implements inviteAgentConnection operation.
 //
-// Address-bound external runtime pairing. Any current human organization member may create and
-// manage their personal agent connections. Organization owners and admins may manage all connections
-// and explicitly create shared ones. An owner removed from the organization loses personal agent
-// access, and rejoining does not revive the old connection. Organization API keys cannot manage
-// connections. A current connected credential may disconnect only its own exact address. Claim is
-// authorized only by its one-use invitation. Connected means a real challenge was received and a
-// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
-// Reconnection preserves the address and revokes previous credentials. Status responses contain no
-// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
-// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
-//
-//	and recipient-bound network contact admission. pending_only protects an already claimed
-//
-// credential. An ambiguous invitation response must not be retried automatically; invitation secrets
-// are never replayed.
+// Explicitly reconnect an existing agent. Set pending_only:true for Continue setup: the locked
+// connection must still be pending or the server returns 409 connection_already_claimed without
+// deleting any credential. Generic reconnect revokes old credentials and returns a new single-use
+// invitation. An uncertain response must not be automatically retried.
 //
 // POST /agent-connections/{address}/invitation
 func (UnimplementedHandler) InviteAgentConnection(ctx context.Context, req *InviteAgentConnectionReq, params InviteAgentConnectionParams) (r InviteAgentConnectionRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
+// InviteOrganizationMember implements inviteOrganizationMember operation.
+//
+// Requires a current human organization owner or administrator. Machine credentials are refused.
+// Invitations grant the chosen role, Member by default, only after verified acceptance through the
+// sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery
+// accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
+//
+// POST /organization/invitations
+func (UnimplementedHandler) InviteOrganizationMember(ctx context.Context, req *ProjectsInviteOrganizationMemberInput, params InviteOrganizationMemberParams) (r InviteOrganizationMemberRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// InviteProjectMember implements inviteProjectMember operation.
+//
+// Requires a current human organization membership. Machine credentials are refused. Results are
+// scoped to current project access. No local paths or existing conversation history are shared.
+//
+// POST /projects/{project_id}/invitations
+func (UnimplementedHandler) InviteProjectMember(ctx context.Context, req *ProjectsInviteProjectMemberInput, params InviteProjectMemberParams) (r InviteProjectMemberRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // LeaveOrganization implements leaveOrganization operation.
 //
-// Removes the calling person from the organization. Leaving is final.
-// Only a person can leave. API keys are refused. A request made with
-// the person's CLI or app sign-in must carry a confirmation token in
-// the `Primitive-Step-Up` header; without one the response is a 403
-// with code `step_up_required` and `details.step_up_url`, the
-// dashboard page where the person confirms and gets the token.
-// The only owner of an organization cannot leave it (409,
-// `last_owner`); make someone else an owner first.
+// Removes the caller from the organization: the same removal, and the same cleanup, as an owner or
+// admin removing them, with what they still own flagged or suspended for a decision (GET
+// /access-suspensions). Any member may leave, whatever their role, and no permission is needed; the
+// organization's only owner cannot, and is refused with 409 `last_owner` (make someone else an owner
+// first). Person only: a dashboard session, or the person's own OAuth or CLI token with a session
+// step-up of purpose `members.remove` for themselves (confirm at the link a 403 `step_up_required`
+// answer carries in `details.step_up_url`, which names this client and you, then send the token in
+// the Primitive-Step-Up header; the token works only with the client it was confirmed for). API keys
+// are refused. You do not need to look up your user id: call this route once without the header, and
+// the 403 `step_up_required` refusal names it (`details.target_user_id`) and gives the confirmation
+// link (`details.step_up_url`). GET /whoami also returns it as `user_id`.
 //
 // POST /organization/leave
 func (UnimplementedHandler) LeaveOrganization(ctx context.Context, params LeaveOrganizationParams) (r LeaveOrganizationRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListAddressNotes implements listAddressNotes operation.
+//
+// Organization-scoped address annotations, independent of agents, routes and endpoints. Any bare
+// address can have private notes. Function credentials may read org notes but cannot write or delete.
+//
+//	A connected agent credential writes only its own address's notes and reads all of them; of
+//
+// another live agent's address in its organization it reads only the AGENT_WORKING, AGENT_RUNTIME
+// and AGENT_INFO notes, and nothing of any other address. List and batch reads return only those
+// notes; reading any other note name on another address returns 403, and one of those three names on
+// an address that is not a live agent reads as not found. Use if_absent or if_version to avoid
+// overwriting another writer.
+//
+// GET /address-notes
+func (UnimplementedHandler) ListAddressNotes(ctx context.Context, params ListAddressNotesParams) (r ListAddressNotesRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListAddressNotesBatch implements listAddressNotesBatch operation.
+//
+// One read of this organization's live notes for many addresses, with the same scope as
+// listAddressNotes: private and public notes the organization wrote, never another organization's.
+// Notes are ordered by address, then name, and paged with an opaque keyset cursor; meta.cursor is
+// null on the last page. Addresses with no notes are absent. Compare updated_at or version to find
+// changed notes; a note missing from a complete read was deleted. Function credentials may use
+// addresses but not network.
+//
+// GET /address-notes/batch
+func (UnimplementedHandler) ListAddressNotesBatch(ctx context.Context, params ListAddressNotesBatchParams) (r ListAddressNotesBatchRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1341,10 +2140,13 @@ func (UnimplementedHandler) LeaveOrganization(ctx context.Context, params LeaveO
 // authorized only by its one-use invitation. Connected means a real challenge was received and a
 // reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
 // Reconnection preserves the address and revokes previous credentials. Status responses contain no
-// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
-// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
-//
-//	and recipient-bound network contact admission.
+// credentials. Runtime credentials allow address-scoped mail operations, own-address note reads and
+// writes, reads of other organization agents' AGENT_WORKING, AGENT_RUNTIME and AGENT_INFO notes,
+// exact-address self-disconnect and self-rename, network discovery when can_view is enabled, and
+// recipient-bound network contact admission. Hidden connections are left out unless
+// include_hidden=true, which returns them with hidden, hidden_reason and hidden_at set. Hiding is
+// display only: a hidden agent stays connected, keeps its credential, and still receives mail and
+// wakes.
 //
 // GET /agent-connections
 func (UnimplementedHandler) ListAgentConnections(ctx context.Context, params ListAgentConnectionsParams) (r ListAgentConnectionsRes, _ error) {
@@ -1354,7 +2156,10 @@ func (UnimplementedHandler) ListAgentConnections(ctx context.Context, params Lis
 // ListAgentContacts implements listAgentContacts operation.
 //
 // Organization directory and agent preferences; no profiles, message history or runtime presence.
-// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// Organization credentials retain tenant directory permissions. Human organization members may read
+// and change agent notification contacts only for personal connections bound to their current
+// membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+// their own agent contact list (another contact reads as 404) and always see display_name as null,
 // create address-only missing contacts using if_absent:true, and access only their own agent
 // memberships; they cannot edit shared labels or delete directory entries. Function credentials are
 // not granted access. Memberships require an existing local agent connection (including revoked
@@ -1374,12 +2179,25 @@ func (UnimplementedHandler) ListAgentContacts(ctx context.Context, params ListAg
 
 // ListAgentNetworks implements listAgentNetworks operation.
 //
-// An organization member login or an active connected agent allowed to see the network can read
-// networks. The default organization network is always present. can_manage_all is true only for a
-// current owner or admin; a connected credential receives false.
+// List the private default organization network. Human organization members may read it.
+// can_manage_all is true only for a current owner or admin; connected credentials require can_view
+// for their exact address and receive false.
 //
 // GET /agent-networks
 func (UnimplementedHandler) ListAgentNetworks(ctx context.Context) (r ListAgentNetworksRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListBreakGlass implements listBreakGlass operation.
+//
+// Every break-glass grant, active or ended. Person only: a dashboard session, or the person's own
+// OAuth or CLI token with a session step-up of purpose `break_glass.read` (the person confirms at
+// the step_up_url a 403 step_up_required answer carries, which names this client, then send the
+// token in the Primitive-Step-Up header; the token works only with the client it was confirmed for).
+// Needs access_mode:manage (owners). API keys are refused.
+//
+// GET /break-glass
+func (UnimplementedHandler) ListBreakGlass(ctx context.Context, params ListBreakGlassParams) (r ListBreakGlassRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1409,10 +2227,26 @@ func (UnimplementedHandler) ListChanges(ctx context.Context, params ListChangesP
 	return r, ht.ErrNotImplemented
 }
 
+// ListCliOrgs implements listCliOrgs operation.
+//
+// Lists every organization the person behind a CLI user login belongs
+// to, with whether the CLI may be used there and, when it may not, the
+// reason. Authenticate with the identity access token (`prim_uat_`) from
+// a CLI user login; no other credential is accepted. A server without
+// CLI user logins answers `404 feature_disabled`.
+//
+// GET /cli/orgs
+func (UnimplementedHandler) ListCliOrgs(ctx context.Context) (r ListCliOrgsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListContacts implements listContacts operation.
 //
 // Organization directory and agent preferences; no profiles, message history or runtime presence.
-// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// Organization credentials retain tenant directory permissions. Human organization members may read
+// and change agent notification contacts only for personal connections bound to their current
+// membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+// their own agent contact list (another contact reads as 404) and always see display_name as null,
 // create address-only missing contacts using if_absent:true, and access only their own agent
 // memberships; they cannot edit shared labels or delete directory entries. Function credentials are
 // not granted access. Memberships require an existing local agent connection (including revoked
@@ -1430,22 +2264,43 @@ func (UnimplementedHandler) ListContacts(ctx context.Context, params ListContact
 	return r, ht.ErrNotImplemented
 }
 
-// ListDeclinedPayments implements listDeclinedPayments operation.
+// ListCredentialEvents implements listCredentialEvents operation.
 //
-// The 50 most recent payments your org's spend policy declined, newest
-// first. Use this to see why an outbound payment was refused (a cap, the
-// payee allowlist, or the kill-switch) instead of only reading the
-// dashboard.
+// Credential events (created, rotated, edited, revoked, used with a step-up, policy changes), newest
+// first, with a cursor. format=csv returns the same page as CSV. Needs the organization's credential
+// features to be enabled; while they are not, this answers 404 feature_disabled.
+// Person only: a dashboard session. The person's role must hold credential_events:read. API keys,
+// agent connection keys and agents are refused.
 //
-// GET /x402/declined-payments
-func (UnimplementedHandler) ListDeclinedPayments(ctx context.Context) (r ListDeclinedPaymentsRes, _ error) {
+// GET /credential-events
+func (UnimplementedHandler) ListCredentialEvents(ctx context.Context, params ListCredentialEventsParams) (r ListCredentialEventsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListCredentials implements listCredentials operation.
+//
+// Every credential that can act in the organization: API keys, Function keys, agent connection keys,
+// connected apps (OAuth), agent delegates and, where enabled, CLI logins. Secrets are never returned.
+//
+//	Filter with kind. Needs the organization's credential features to be enabled; while they are not,
+//
+// this answers 404 feature_disabled.
+// Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
+// connection keys and agents are refused.
+//
+// GET /credentials
+func (UnimplementedHandler) ListCredentials(ctx context.Context, params ListCredentialsParams) (r ListCredentialsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
 // ListDefaultNetworkAgents implements listDefaultNetworkAgents operation.
 //
-// Requires a connected-agent credential for an active member allowed to see the network, or an
-// organization member login.
+// List connected and listed peers in address order. Human organization members may read this list.
+// Connected credentials require can_view and do not see themselves. Personal peers expose only a
+// stable owner ID and display name to connected credentials, never human email. Optional owner
+// search matches ID or display name before pagination. last_seen_at is recorded API activity, not
+// presence. receiver reports whether the peer is reading its mail now, from its own recent
+// successful mail reads.
 //
 // GET /agent-networks/default/agents
 func (UnimplementedHandler) ListDefaultNetworkAgents(ctx context.Context, params ListDefaultNetworkAgentsParams) (r ListDefaultNetworkAgentsRes, _ error) {
@@ -1454,10 +2309,11 @@ func (UnimplementedHandler) ListDefaultNetworkAgents(ctx context.Context, params
 
 // ListDefaultNetworkMembers implements listDefaultNetworkMembers operation.
 //
-// An owner or admin sees all connected addresses, including hidden and excluded members. Other human
-// members see only personal addresses owned by their current membership. Filtering happens before
-// pagination. Connected-agent credentials cannot read this roster. Each row includes whether the
-// requester can manage it.
+// Current owner or admin sees all connected addresses. A human member sees only personal addresses
+// owned by their current membership, filtered before pagination. Rows include can_manage, current
+// human owner identity, independent can_view and is_listed controls, durable exclusions, and last
+// recorded API activity. Excluded rows are retained. Optional owner search matches user ID, display
+// name or email before pagination within the authorized scope.
 //
 // GET /agent-networks/default/members
 func (UnimplementedHandler) ListDefaultNetworkMembers(ctx context.Context, params ListDefaultNetworkMembersParams) (r ListDefaultNetworkMembersRes, _ error) {
@@ -1466,12 +2322,8 @@ func (UnimplementedHandler) ListDefaultNetworkMembers(ctx context.Context, param
 
 // ListDeliveries implements listDeliveries operation.
 //
-// Returns a paginated list of webhook delivery attempts, newest first.
-// A delivery of an inbound email includes a nested `email` object with
-// sender, recipient, and subject. A delivery of an opt-in
-// `sent_email.*` event has `email_id` and `email` set to null and
-// `sent_email_id` set to the send it is about. Filter by `event_type`
-// and `sent_email_id` to find the deliveries of one send.
+// Returns a paginated list of webhook delivery attempts. Each delivery
+// includes a nested `email` object with sender, recipient, and subject.
 //
 // GET /webhooks/deliveries
 func (UnimplementedHandler) ListDeliveries(ctx context.Context, params ListDeliveriesParams) (r ListDeliveriesRes, _ error) {
@@ -1500,6 +2352,73 @@ func (UnimplementedHandler) ListDomains(ctx context.Context) (r ListDomainsRes, 
 //
 // GET /emails/{id}/attachments/{attachment}/members
 func (UnimplementedHandler) ListEmailAttachmentArchiveMembers(ctx context.Context, params ListEmailAttachmentArchiveMembersParams) (r ListEmailAttachmentArchiveMembersRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListEmailRuleDecisions implements listEmailRuleDecisions operation.
+//
+// What the rule decided for each email it was evaluated against, newest first: whether it matched,
+// whether it nearly did, how each part decided and the answers to its questions. Only decisions on
+// emails the caller can read are listed. With matched, only matches (true) or only the rest (false).
+// Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
+// narrowed tokens are refused), and the email rules feature on the organization.
+//
+// GET /email-rules/{id}/decisions
+func (UnimplementedHandler) ListEmailRuleDecisions(ctx context.Context, params ListEmailRuleDecisionsParams) (r ListEmailRuleDecisionsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListEmailRuleRequests implements listEmailRuleRequests operation.
+//
+// Rule requests, newest first: those made to you (box incoming, the default), those you made
+// (outgoing), or every one you can see (all). Pending ones by default; status decided lists accepted,
+//
+//	declined and withdrawn ones, and any lists both. A request is visible to the member who made it,
+//
+// the member it was made to, and the organization's owners and admins. Needs mail:read, a credential
+// acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
+// and the email rules feature on the organization.
+//
+// GET /email-rule-requests
+func (UnimplementedHandler) ListEmailRuleRequests(ctx context.Context, params ListEmailRuleRequestsParams) (r ListEmailRuleRequestsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListEmailRuleShareEmails implements listEmailRuleShareEmails operation.
+//
+// The emails a rule shared with you has matched, newest first, as the email list shows them. Only
+// the person it was shared with can list them, from the dashboard or the Primitive CLI. An ended
+// share lists nothing. A page can be short or empty and still carry a cursor: keep reading until
+// meta.cursor is null.
+//
+// GET /email-rule-shares/{id}/emails
+func (UnimplementedHandler) ListEmailRuleShareEmails(ctx context.Context, params ListEmailRuleShareEmailsParams) (r ListEmailRuleShareEmailsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListEmailRuleShares implements listEmailRuleShares operation.
+//
+// Lists rules shared with you, rules you share, or every share you can see. A share is visible to
+// its two people and the organization's owners and admins. Needs mail:read, a credential acting as a
+// member with their full access (API keys, agent keys and narrowed tokens are refused), and the
+// email rules feature on the organization.
+//
+// GET /email-rule-shares
+func (UnimplementedHandler) ListEmailRuleShares(ctx context.Context, params ListEmailRuleSharesParams) (r ListEmailRuleSharesRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListEmailRules implements listEmailRules operation.
+//
+// The rules the caller can see, newest first: their own, or every member's rules for a caller who
+// reads the whole organization's mail. With matched_email_id, only the rules that matched that email.
+//
+//	Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
+//
+// narrowed tokens are refused), and the email rules feature on the organization.
+//
+// GET /email-rules
+func (UnimplementedHandler) ListEmailRules(ctx context.Context, params ListEmailRulesParams) (r ListEmailRulesRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1542,6 +2461,38 @@ func (UnimplementedHandler) ListFilters(ctx context.Context) (r ListFiltersRes, 
 	return r, ht.ErrNotImplemented
 }
 
+// ListFunctionActivity implements listFunctionActivity operation.
+//
+// The sends and replies the function made, newest first, each linked to the delivery and email that
+// triggered it. Filter by delivery, email or type.
+//
+// GET /functions/{id}/activity
+func (UnimplementedHandler) ListFunctionActivity(ctx context.Context, params ListFunctionActivityParams) (r ListFunctionActivityRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListFunctionDeployments implements listFunctionDeployments operation.
+//
+// The function's most recent deployments, newest first, with build and bundle details: limit of them
+// (default 50, at most 200). This list is not paged; read an older deployment by id with
+// getFunctionDeployment. is_current marks the one serving traffic.
+//
+// GET /functions/{id}/deployments
+func (UnimplementedHandler) ListFunctionDeployments(ctx context.Context, params ListFunctionDeploymentsParams) (r ListFunctionDeploymentsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListFunctionInvocations implements listFunctionInvocations operation.
+//
+// Each run of the function, newest first, with its outcome, timings, response status and exception.
+// Lists runs only: a webhook delivery that never reached the function (for example one refused
+// before it ran) is not an invocation; find those with listDeliveries.
+//
+// GET /functions/{id}/invocations
+func (UnimplementedHandler) ListFunctionInvocations(ctx context.Context, params ListFunctionInvocationsParams) (r ListFunctionInvocationsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListFunctionLogs implements listFunctionLogs operation.
 //
 // Returns the most recent `function_logs` rows for the function,
@@ -1555,6 +2506,17 @@ func (UnimplementedHandler) ListFilters(ctx context.Context) (r ListFiltersRes, 
 //
 // GET /functions/{id}/logs
 func (UnimplementedHandler) ListFunctionLogs(ctx context.Context, params ListFunctionLogsParams) (r ListFunctionLogsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListFunctionRuntimeKeyPresets implements listFunctionRuntimeKeyPresets operation.
+//
+// The keys a new or existing function can run with: the organization's shared function key, or a
+// per-function key narrowed by a preset. Each preset says whether it is available now and, if not,
+// why.
+//
+// GET /functions/runtime-grant-presets
+func (UnimplementedHandler) ListFunctionRuntimeKeyPresets(ctx context.Context) (r ListFunctionRuntimeKeyPresetsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1585,6 +2547,137 @@ func (UnimplementedHandler) ListFunctions(ctx context.Context) (r ListFunctionsR
 	return r, ht.ErrNotImplemented
 }
 
+// ListGivenEmailRuleShares implements listGivenEmailRuleShares operation.
+//
+// Lists the rules you share with other members, so you can find one and stop it. This needs no mail
+// access and does not depend on the feature being on for the organization, as stopping a share does
+// not. It takes the dashboard or the Primitive CLI.
+//
+// GET /email-rule-shares/given
+func (UnimplementedHandler) ListGivenEmailRuleShares(ctx context.Context, params ListGivenEmailRuleSharesParams) (r ListGivenEmailRuleSharesRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListGroups implements listGroups operation.
+//
+// Every group, with its members and role. A group can be named in a mailbox access entry. Needs
+// members:read: a person, or an org-wide API key whose person holds it.
+//
+// GET /groups
+func (UnimplementedHandler) ListGroups(ctx context.Context) (r ListGroupsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListInteractions implements listInteractions operation.
+//
+// The organization's interactions, newest first by creation, with their state, whose turn it is and
+// when the last step happened. Reading needs interactions:read and organization-wide mail scope; a
+// credential narrowed to some mailboxes is refused.
+//
+// GET /interactions
+func (UnimplementedHandler) ListInteractions(ctx context.Context, params ListInteractionsParams) (r ListInteractionsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListKeys implements listKeys operation.
+//
+// Key metadata, never a secret: name, prefix, grant, creator, last use, expiry and suspension. The
+// person needs access to the whole organization's mail. Needs the organization's credential features
+// to be enabled; while they are not, this answers 404 feature_disabled.
+// Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
+// person's role must hold keys:read. API keys, agent connection keys and agents are refused.
+//
+// GET /keys
+func (UnimplementedHandler) ListKeys(ctx context.Context, params ListKeysParams) (r ListKeysRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListMailRouting implements listMailRouting operation.
+//
+// Mailbox-scoped exact visible audiences, excluding the owner and Bcc. Direct and group audiences
+// are independent. Restores persist an explicit Conversations rule. New writes require the observed
+// version (zero creates); only an identical latest mutation with its original expected version can
+// be retried. Stale writes return mail_routing_conflict. Source messages and read state are
+// unchanged. Merge paged rules by version; responses are never cached.
+//
+// GET /mail-routing
+func (UnimplementedHandler) ListMailRouting(ctx context.Context, params ListMailRoutingParams) (r ListMailRoutingRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListMailTopicEdits implements listMailTopicEdits operation.
+//
+// Mailbox-owned human membership, summary and task edits. Each field has an independent version.
+// Sources must belong to this mailbox and exact visible audience. Automatic generation cannot write
+// these records. Identical latest mutations are retryable; stale versions return
+// mail_topic_edit_conflict. Source mail remains unchanged. Responses are never cached.
+//
+// GET /mail-topic-edits
+func (UnimplementedHandler) ListMailTopicEdits(ctx context.Context, params ListMailTopicEditsParams) (r ListMailTopicEditsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListMailTopicGenerations implements listMailTopicGenerations operation.
+//
+// Mailbox-owned automatic membership and complete generated summary/task snapshots. Each resource
+// has an independent version. Human corrections always take precedence in presentation. Sources must
+// belong to this mailbox and exact visible audience. Provider and input digest are client-reported
+// provenance, not model attestation. This endpoint never writes human corrections. Identical latest
+// mutations are retryable; stale versions return mail_topic_generation_conflict. Source mail remains
+// unchanged. Responses are never cached.
+//
+// GET /mail-topic-generations
+func (UnimplementedHandler) ListMailTopicGenerations(ctx context.Context, params ListMailTopicGenerationsParams) (r ListMailTopicGenerationsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListMailboxAccess implements listMailboxAccess operation.
+//
+// Every access entry in the organization: who (a member, group, agent or address) may read, draft or
+// send for each mailbox or domain. An entry that reads a mailbox reads the full email; raw MIME
+// follows the person's mail.raw:read. `depth` is deprecated: it is accepted and ignored, and new
+// entries record content. Needs members:read: a person, or an org-wide API key whose person holds it.
+//
+// GET /mailbox-access
+func (UnimplementedHandler) ListMailboxAccess(ctx context.Context) (r ListMailboxAccessRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListMutedThreads implements listMutedThreads operation.
+//
+// Threads muted for an address, newest first. A connected agent sees only its own mutes; other
+// credentials see every address in the organization unless `address` narrows it.
+//
+// GET /threads/muted
+func (UnimplementedHandler) ListMutedThreads(ctx context.Context, params ListMutedThreadsParams) (r ListMutedThreadsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListMyGrants implements listMyGrants operation.
+//
+// The apps the calling person connected to this organization (OAuth) and, where enabled, their CLI
+// logins. A CLI login signs the person in to every organization they belong to. A connection signed
+// out while it still owns scheduled mail or other items stays listed with logged_out true, so it can
+// still be revoked. Other apps the person connected cannot list them.
+// Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. API
+// keys, agent connection keys and agents are refused.
+//
+// GET /me/grants
+func (UnimplementedHandler) ListMyGrants(ctx context.Context, params ListMyGrantsParams) (r ListMyGrantsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListOAuthGrants implements listOAuthGrants operation.
+//
+// Every app a person connected to this organization through OAuth, with who connected it.
+// Person only: a dashboard session. The person's role must hold oauth_grants:manage. API keys, agent
+// connection keys and agents are refused.
+//
+// GET /oauth-grants
+func (UnimplementedHandler) ListOAuthGrants(ctx context.Context, params ListOAuthGrantsParams) (r ListOAuthGrantsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListOrgSecrets implements listOrgSecrets operation.
 //
 // Returns metadata for every org-level secret. Org secrets apply
@@ -1598,39 +2691,73 @@ func (UnimplementedHandler) ListOrgSecrets(ctx context.Context) (r ListOrgSecret
 	return r, ht.ErrNotImplemented
 }
 
-// ListPayoutAddresses implements listPayoutAddresses operation.
+// ListOrganizationInvitations implements listOrganizationInvitations operation.
 //
-// List your org's registered payout addresses, newest first.
+// Requires a current human organization owner or administrator. Machine credentials are refused.
+// Invitations grant the chosen role, Member by default, only after verified acceptance through the
+// sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery
+// accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
 //
-// GET /x402/payout-addresses
-func (UnimplementedHandler) ListPayoutAddresses(ctx context.Context) (r ListPayoutAddressesRes, _ error) {
+// GET /organization/invitations
+func (UnimplementedHandler) ListOrganizationInvitations(ctx context.Context, params ListOrganizationInvitationsParams) (r ListOrganizationInvitationsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
-// ListRegistries implements listRegistries operation.
+// ListOrganizationPeople implements listOrganizationPeople operation.
 //
-// List the registries you own.
+// Requires a current human organization membership, or an org-wide API key: a super admin key, or a
+// custom key with no addresses or domains whose grant holds members:read. A key lists members as the
+// person it belongs to, at that person's live grant, and only while that person still holds
+// members:read. Narrowed, Function and connected keys are refused. No local paths or existing
+// conversation history are shared.
 //
-// GET /registries
-func (UnimplementedHandler) ListRegistries(ctx context.Context) (r ListRegistriesRes, _ error) {
+// GET /organization/members
+func (UnimplementedHandler) ListOrganizationPeople(ctx context.Context, params ListOrganizationPeopleParams) (r ListOrganizationPeopleRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
-// ListRegistryAgents implements listRegistryAgents operation.
+// ListOwnedItems implements listOwnedItems operation.
 //
-// List agents in a registry.
+// Keys, Functions, endpoints and other items a member owns, with whether the chosen transferee
+// (`to`) covers each. Only an owner lists an owner's items. Person only: a dashboard session, or the
+// person's own OAuth or CLI token with a session step-up of purpose `members.items_read` (the person
+// confirms at the step_up_url a 403 step_up_required answer carries, which names this client and the
+// member, then send the token in the Primitive-Step-Up header; the token works only with the client
+// it was confirmed for and only for the member it was confirmed for). Needs members:manage. API keys
+// are refused.
 //
-// GET /registries/{slug}/agents
-func (UnimplementedHandler) ListRegistryAgents(ctx context.Context, params ListRegistryAgentsParams) (r *ListRegistryAgentsOK, _ error) {
+// GET /members/{id}/owned-items
+func (UnimplementedHandler) ListOwnedItems(ctx context.Context, params ListOwnedItemsParams) (r ListOwnedItemsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
-// ListRegistryRequests implements listRegistryRequests operation.
+// ListProjectInvitations implements listProjectInvitations operation.
 //
-// List pending publication requests.
+// Requires a current human organization membership. Machine credentials are refused. Results are
+// scoped to current project access. No local paths or existing conversation history are shared.
 //
-// GET /registries/{slug}/requests
-func (UnimplementedHandler) ListRegistryRequests(ctx context.Context, params ListRegistryRequestsParams) (r ListRegistryRequestsRes, _ error) {
+// GET /projects/{project_id}/invitations
+func (UnimplementedHandler) ListProjectInvitations(ctx context.Context, params ListProjectInvitationsParams) (r ListProjectInvitationsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListProjects implements listProjects operation.
+//
+// Requires a current human organization membership. Machine credentials are refused. Results are
+// scoped to current project access. No local paths or existing conversation history are shared.
+//
+// GET /projects
+func (UnimplementedHandler) ListProjects(ctx context.Context, params ListProjectsParams) (r ListProjectsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListPublicAddressNotes implements listPublicAddressNotes operation.
+//
+// Returns only explicitly public notes whose publisher currently owns an active verified domain for
+// this address. Private, deleted and no-longer-controlled notes are hidden. Responses are not cached.
+//
+// GET /public/address-notes/{address}
+func (UnimplementedHandler) ListPublicAddressNotes(ctx context.Context, params ListPublicAddressNotesParams) (r ListPublicAddressNotesRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1643,6 +2770,17 @@ func (UnimplementedHandler) ListRegistryRequests(ctx context.Context, params Lis
 //
 // GET /repeating-sends
 func (UnimplementedHandler) ListRepeatingSends(ctx context.Context, params ListRepeatingSendsParams) (r ListRepeatingSendsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListRoles implements listRoles operation.
+//
+// Every role in the organization (built-in, template copies and custom roles), with how many members
+// and groups hold each, the templates not yet copied, and whether roles can be assigned now. Any
+// person (a session or OAuth token); API keys are refused.
+//
+// GET /roles
+func (UnimplementedHandler) ListRoles(ctx context.Context) (r ListRolesRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1700,14 +2838,45 @@ func (UnimplementedHandler) ListSentEmails(ctx context.Context, params ListSentE
 	return r, ht.ErrNotImplemented
 }
 
+// ListSuspensions implements listSuspensions operation.
+//
+// Items a removal or a narrowed role left suspended or flagged for a decision. Person only: a
+// dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose
+// `suspensions.read` (the person confirms at the step_up_url a 403 step_up_required answer carries,
+// which names this client, then send the token in the Primitive-Step-Up header; the token works only
+// with the client it was confirmed for). Needs members:manage. API keys are refused.
+//
+// GET /access-suspensions
+func (UnimplementedHandler) ListSuspensions(ctx context.Context, params ListSuspensionsParams) (r ListSuspensionsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListTemplates implements listTemplates operation.
 //
-// List approved Function templates available for browsing and
-// installation. Results are cacheable and paginated with
-// `data.next_cursor`.
+// List approved Function templates available for browsing and installation. Results are cacheable
+// and paginated with `data.next_cursor`.
 //
 // GET /templates
 func (UnimplementedHandler) ListTemplates(ctx context.Context, params ListTemplatesParams) (r ListTemplatesRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListThreadReadStates implements listThreadReadStates operation.
+//
+// The signed-in member's read cursor and `unread_count` per thread, computed together in one query.
+// Two modes, exactly one per request. With `thread_ids`, answers those threads (ids that are not
+// threads of the organization are left out). With `updated_since`, returns the cursors that moved
+// after that instant, oldest change first, paged by `meta.cursor`: poll it from each device to learn
+// what was read elsewhere. In both modes a thread the caller can see no message in is left out,
+// exactly as an unknown thread. The feed lags real time by about 5 seconds: a cursor appears once it
+// moved at least that long ago, so a write still committing is never skipped. When `meta.cursor` is
+// null, poll again later from the newest `updated_at` you have seen, overlapping by a few seconds;
+// repeated rows are harmless. Only a signed-in organization member (a dashboard session or an OAuth
+// member grant) can use this. Organization API keys, agent connection keys and Functions are refused
+// with 403: read state is personal to a member.
+//
+// GET /threads/read-state
+func (UnimplementedHandler) ListThreadReadStates(ctx context.Context, params ListThreadReadStatesParams) (r ListThreadReadStatesRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1739,21 +2908,42 @@ func (UnimplementedHandler) ListWakeSchedules(ctx context.Context) (r ListWakeSc
 	return r, ht.ErrNotImplemented
 }
 
-// PayChallenge implements payChallenge operation.
+// LookupFunction implements lookupFunction operation.
 //
-// Settle a challenge addressed to your org as payer. The request body
-// carries a signed x402 `PaymentPayload`: an EIP-3009
-// `transferWithAuthorization` signed locally with your own key, whose nonce
-// is bound to the challenge via the SDK's `deriveEip3009Nonce`. The platform
-// verifies every signed field against its own record of the challenge,
-// applies your spend policy, and settles on-chain through a facilitator.
-// Settlement is non-custodial; Primitive never holds funds. Idempotent:
-// paying an already-settled challenge returns the original receipt. Most
-// callers use the SDK `pay()` helper rather than building the payload by
-// hand.
+// Resolve a function name to its id and deploy state. Answers null data when no function has the
+// name. Carries no invocation counts; use listFunctions or getFunctionUsage for those.
 //
-// POST /x402/challenges/{id}/pay
-func (UnimplementedHandler) PayChallenge(ctx context.Context, req *PayChallengeInput, params PayChallengeParams) (r PayChallengeRes, _ error) {
+// GET /functions/lookup
+func (UnimplementedHandler) LookupFunction(ctx context.Context, params LookupFunctionParams) (r LookupFunctionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// MarkThreadRead implements markThreadRead operation.
+//
+// Moves the signed-in member's read cursor for this thread forward to the named message or instant,
+// for every device the member uses. Monotonic and idempotent: a position at or behind the stored
+// cursor changes nothing (`advanced: false`), so devices reporting reads out of order converge on
+// the furthest one. Returns the thread's read state after the write; a retry at the same position
+// returns the current state with `advanced: false`. A thread the caller can see no message in
+// answers 404, exactly as an unknown thread. Once the write commits the answer is always 200: if the
+// unread count cannot be read afterwards, `unread_count` is null and `state_unavailable` is true,
+// and the cursor fields still hold. Only a signed-in organization member (a dashboard session or an
+// OAuth member grant) can use this. Organization API keys, agent connection keys and Functions are
+// refused with 403: read state is personal to a member.
+//
+// PUT /threads/{id}/read
+func (UnimplementedHandler) MarkThreadRead(ctx context.Context, req *MarkThreadReadInput, params MarkThreadReadParams) (r MarkThreadReadRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// MuteThread implements muteThread operation.
+//
+// Marks the thread muted for the address: its mail reads as `muted: true` and `GET
+// /emails?exclude_muted=true` leaves it out. Mail keeps arriving and stays readable. Idempotent. 404
+// when the thread does not exist or the address neither received nor sent mail in it.
+//
+// PUT /threads/{id}/mute
+func (UnimplementedHandler) MuteThread(ctx context.Context, params MuteThreadParams) (r MuteThreadRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1762,9 +2952,34 @@ func (UnimplementedHandler) PayChallenge(ctx context.Context, req *PayChallengeI
 // Polls a CLI login session until the browser approval either succeeds,
 // is denied, expires, or is polled too quickly. The OAuth token set is
 // created only after approval and is returned exactly once.
+// A login started with `login_kind: "user"` succeeds with a
+// `CliUserLoginPollResult` instead (`auth_method: "user_grant"`).
 //
 // POST /cli/login/poll
-func (UnimplementedHandler) PollCliLogin(ctx context.Context, req *PollCliLoginInput) (r PollCliLoginRes, _ error) {
+func (UnimplementedHandler) PollCliLogin(ctx context.Context, req *PollCliLoginInput, params PollCliLoginParams) (r PollCliLoginRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// PrepareContactAcceptance implements prepareContactAcceptance operation.
+//
+// Validates a received contact request (authenticated sender, valid unexpired primitive.contact/1
+// request, delivered to you) and returns the POST /send-mail call that accepts it, threaded to the
+// request and addressed to its authenticated sender (never to a Reply-To). Nothing is sent and no
+// contact preference changes. Preparing twice returns the same message and Idempotency-Key.
+//
+// POST /contact-requests/accept/prepare
+func (UnimplementedHandler) PrepareContactAcceptance(ctx context.Context, req *PrepareContactAcceptanceReq, params PrepareContactAcceptanceParams) (r PrepareContactAcceptanceRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// PrepareContactRequest implements prepareContactRequest operation.
+//
+// Builds a primitive.contact/1 request (the same email the Primitive CLI sends for `contacts
+// request`) and returns the POST /send-mail call to make. Nothing is sent and no contact preference
+// changes. A connected agent sends from its own address; other credentials name `from`.
+//
+// POST /contact-requests/prepare
+func (UnimplementedHandler) PrepareContactRequest(ctx context.Context, req *PrepareContactRequestReq, params PrepareContactRequestParams) (r PrepareContactRequestRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1772,21 +2987,13 @@ func (UnimplementedHandler) PollCliLogin(ctx context.Context, req *PollCliLoginI
 //
 // Provision or return this authenticated human member's stable managed address in this organization.
 // API keys, connected agents and Functions cannot provision or impersonate humans. The owner
-// explicitly chooses the address. Existing retained mail requires confirmation; reserved identities
-// cannot be overridden. There is no target user input. An unavailable domain never silently changes
-// the address.
+// explicitly chooses the address. An address someone else in the organization already uses (sends
+// from, or received mail at) is refused for anyone but an owner; otherwise existing retained mail
+// requires confirmation. Reserved identities cannot be overridden. There is no target user input. An
+// unavailable domain never silently changes the address.
 //
 // PUT /account/member-address
 func (UnimplementedHandler) ProvisionMemberAddress(ctx context.Context, req *ProvisionMemberAddressReq) (r ProvisionMemberAddressRes, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// PublishAgent implements publishAgent operation.
-//
-// Publish an agent into a registry.
-//
-// POST /registries/{slug}/agents
-func (UnimplementedHandler) PublishAgent(ctx context.Context, req *PublishAgentInput, params PublishAgentParams) (r PublishAgentRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1805,10 +3012,31 @@ func (UnimplementedHandler) PullWebhookEvent(ctx context.Context, req *PullWebho
 	return r, ht.ErrNotImplemented
 }
 
+// PutAddressNote implements putAddressNote operation.
+//
+// Organization-scoped address annotations, independent of agents, routes and endpoints. Any bare
+// address can have private notes. Function credentials may read org notes but cannot write or delete.
+//
+//	A connected agent credential writes only its own address's notes and reads all of them; of
+//
+// another live agent's address in its organization it reads only the AGENT_WORKING, AGENT_RUNTIME
+// and AGENT_INFO notes, and nothing of any other address. List and batch reads return only those
+// notes; reading any other note name on another address returns 403, and one of those three names on
+// an address that is not a live agent reads as not found. Use if_absent or if_version to avoid
+// overwriting another writer.
+//
+// PUT /address-notes/{address}/{name}
+func (UnimplementedHandler) PutAddressNote(ctx context.Context, req *PutAddressNoteRequest, params PutAddressNoteParams) (r PutAddressNoteRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // PutAgentContact implements putAgentContact operation.
 //
 // Organization directory and agent preferences; no profiles, message history or runtime presence.
-// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// Organization credentials retain tenant directory permissions. Human organization members may read
+// and change agent notification contacts only for personal connections bound to their current
+// membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+// their own agent contact list (another contact reads as 404) and always see display_name as null,
 // create address-only missing contacts using if_absent:true, and access only their own agent
 // memberships; they cannot edit shared labels or delete directory entries. Function credentials are
 // not granted access. Memberships require an existing local agent connection (including revoked
@@ -1822,7 +3050,7 @@ func (UnimplementedHandler) PullWebhookEvent(ctx context.Context, req *PullWebho
 // canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
 //
 // PUT /agent-contacts/{agent_address}/{contact_address}
-func (UnimplementedHandler) PutAgentContact(ctx context.Context, req PutAgentContactReq, params PutAgentContactParams) (r PutAgentContactRes, _ error) {
+func (UnimplementedHandler) PutAgentContact(ctx context.Context, req *PutAgentContactRequest, params PutAgentContactParams) (r PutAgentContactRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1833,41 +3061,38 @@ func (UnimplementedHandler) PutAgentContact(ctx context.Context, req PutAgentCon
 // contract. Older receivers may continue their previous exact-contact notifications until updated.
 // Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
 // preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
-// read/write policies. Connected credentials may only GET their own agent composite; they cannot
-// write either policy. Function and signed capability credentials are not granted access. Rules are
-// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
-// matching organization rules; silence wins ties within that scope. If neither scope matches,
-// existing exact membership notify:true allows using its own activation metadata; otherwise only
-// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
-// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
-// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
-// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
-// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
-// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
-// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
-// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
-// reads as empty rules, null version/timestamps, false request intake for the organization and null
-// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
-// preserve server activation metadata while retained unchanged; removing/recreating or changing a
-// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
-// writes preserve versions. Agent composite effective_version changes with either policy document,
-// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+// read/write all policies. Current human members may read/write only their own personal agent policy,
 //
-//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//	bound to their membership incarnation. Connected credentials may only GET their own agent
 //
-// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
-// admissions require received_at >= both the selected activation time and effective_since.
-// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
-// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
-// own notify_since and generation but must still recheck current policy denies and effective_version.
-//
-//	Before dispatch, receivers must recheck the current composite version and applicable activation
-//
-// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
-//
-//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
-//
-// dispatch notifications.
+// composite; they cannot write either policy. Function and signed capability credentials are not
+// granted access. Rules are unordered. Exact membership notify:false always silences. Next use
+// matching agent rules, otherwise matching organization rules; silence wins ties within that scope.
+// If neither scope matches, existing exact membership notify:true allows using its own activation
+// metadata; otherwise only enabled contact-request intake is allowed. Owner policy silence therefore
+// cannot be bypassed by a connected agent adding a notify:true membership. Patterns are canonical
+// lowercase bare mailboxes, *@example.com, research-*@example.com or *@*.example.com. Only a
+// terminal local-part * and a leading whole domain-label *. are supported; subdomain patterns
+// exclude the apex and require a literal multi-label suffix. No regular expressions, question marks,
+// universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain. PUT fully
+// replaces up to 100 rules and the request-intake option using exactly one CAS precondition.
+// Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document,
+// otherwise 409. A missing document reads as empty rules, null version/timestamps, false request
+// intake for the organization and null (inherit) for the agent. Reset overrides with empty rules and
+// null request intake. Allow rules preserve server activation metadata while retained unchanged;
+// removing/recreating or changing a rule to allow resets it. Request intake defaults off; agent null
+// inherits the organization. No-op writes preserve versions. Agent composite effective_version
+// changes with either policy document, connection identity, generation or successful claim;
+// effective_since is the latest policy mutation, connection creation or successful claim. Reclaiming
+// a connection invalidates prior admission snapshots and starts a fresh rule/request cutoff; routine
+// heartbeats do not. Rule/request admissions require received_at >= both the selected activation
+// time and effective_since. Consequently even unrelated policy edits suppress queued older
+// rule/request admissions, without deleting email history or affecting explicit reply waits. Exact
+// membership fallback retains its own notify_since and generation but must still recheck current
+// policy denies and effective_version. Before dispatch, receivers must recheck the current composite
+// version and applicable activation generation and membership; stop new admissions when policy is
+// unavailable or older than 30 seconds. Snapshot fields explain scope and matched rules locally; the
+// API does not execute tasks or dispatch notifications.
 //
 // PUT /agent-contact-policy/{agent_address}
 func (UnimplementedHandler) PutAgentContactPolicy(ctx context.Context, req PutAgentContactPolicyRequest, params PutAgentContactPolicyParams) (r PutAgentContactPolicyRes, _ error) {
@@ -1877,7 +3102,10 @@ func (UnimplementedHandler) PutAgentContactPolicy(ctx context.Context, req PutAg
 // PutContact implements putContact operation.
 //
 // Organization directory and agent preferences; no profiles, message history or runtime presence.
-// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// Organization credentials retain tenant directory permissions. Human organization members may read
+// and change agent notification contacts only for personal connections bound to their current
+// membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+// their own agent contact list (another contact reads as 404) and always see display_name as null,
 // create address-only missing contacts using if_absent:true, and access only their own agent
 // memberships; they cannot edit shared labels or delete directory entries. Function credentials are
 // not granted access. Memberships require an existing local agent connection (including revoked
@@ -1891,7 +3119,7 @@ func (UnimplementedHandler) PutAgentContactPolicy(ctx context.Context, req PutAg
 // canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
 //
 // PUT /contacts/{address}
-func (UnimplementedHandler) PutContact(ctx context.Context, req PutContactReq, params PutContactParams) (r PutContactRes, _ error) {
+func (UnimplementedHandler) PutContact(ctx context.Context, req *PutContactRequest, params PutContactParams) (r PutContactRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1902,81 +3130,100 @@ func (UnimplementedHandler) PutContact(ctx context.Context, req PutContactReq, p
 // contract. Older receivers may continue their previous exact-contact notifications until updated.
 // Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
 // preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
-// read/write policies. Connected credentials may only GET their own agent composite; they cannot
-// write either policy. Function and signed capability credentials are not granted access. Rules are
-// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
-// matching organization rules; silence wins ties within that scope. If neither scope matches,
-// existing exact membership notify:true allows using its own activation metadata; otherwise only
-// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
-// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
-// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
-// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
-// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
-// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
-// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
-// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
-// reads as empty rules, null version/timestamps, false request intake for the organization and null
-// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
-// preserve server activation metadata while retained unchanged; removing/recreating or changing a
-// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
-// writes preserve versions. Agent composite effective_version changes with either policy document,
-// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+// read/write all policies. Current human members may read/write only their own personal agent policy,
 //
-//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//	bound to their membership incarnation. Connected credentials may only GET their own agent
 //
-// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
-// admissions require received_at >= both the selected activation time and effective_since.
-// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
-// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
-// own notify_since and generation but must still recheck current policy denies and effective_version.
-//
-//	Before dispatch, receivers must recheck the current composite version and applicable activation
-//
-// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
-//
-//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
-//
-// dispatch notifications.
+// composite; they cannot write either policy. Function and signed capability credentials are not
+// granted access. Rules are unordered. Exact membership notify:false always silences. Next use
+// matching agent rules, otherwise matching organization rules; silence wins ties within that scope.
+// If neither scope matches, existing exact membership notify:true allows using its own activation
+// metadata; otherwise only enabled contact-request intake is allowed. Owner policy silence therefore
+// cannot be bypassed by a connected agent adding a notify:true membership. Patterns are canonical
+// lowercase bare mailboxes, *@example.com, research-*@example.com or *@*.example.com. Only a
+// terminal local-part * and a leading whole domain-label *. are supported; subdomain patterns
+// exclude the apex and require a literal multi-label suffix. No regular expressions, question marks,
+// universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain. PUT fully
+// replaces up to 100 rules and the request-intake option using exactly one CAS precondition.
+// Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document,
+// otherwise 409. A missing document reads as empty rules, null version/timestamps, false request
+// intake for the organization and null (inherit) for the agent. Reset overrides with empty rules and
+// null request intake. Allow rules preserve server activation metadata while retained unchanged;
+// removing/recreating or changing a rule to allow resets it. Request intake defaults off; agent null
+// inherits the organization. No-op writes preserve versions. Agent composite effective_version
+// changes with either policy document, connection identity, generation or successful claim;
+// effective_since is the latest policy mutation, connection creation or successful claim. Reclaiming
+// a connection invalidates prior admission snapshots and starts a fresh rule/request cutoff; routine
+// heartbeats do not. Rule/request admissions require received_at >= both the selected activation
+// time and effective_since. Consequently even unrelated policy edits suppress queued older
+// rule/request admissions, without deleting email history or affecting explicit reply waits. Exact
+// membership fallback retains its own notify_since and generation but must still recheck current
+// policy denies and effective_version. Before dispatch, receivers must recheck the current composite
+// version and applicable activation generation and membership; stop new admissions when policy is
+// unavailable or older than 30 seconds. Snapshot fields explain scope and matched rules locally; the
+// API does not execute tasks or dispatch notifications.
 //
 // PUT /contact-policy
 func (UnimplementedHandler) PutContactPolicy(ctx context.Context, req PutContactPolicyRequest) (r PutContactPolicyRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
+// ReaffirmFunctionRuntimeKey implements reaffirmFunctionRuntimeKey operation.
+//
+// Lift the suspensions the caller may decide on the function's key (for example one left by a member
+// removal or a grant reduction) and redeploy it. key_suspension_reasons lists any that remain. A
+// function transferred to a new owner while it was stopped is not redeployed: lifting that stop
+// places the transfer's own stop (transfer_stop_placed), which a redeploy lifts, or a further
+// reaffirm by someone who covers its key that names it in the body (suspended_at and suspended_by
+// 'transfer'): that reaffirm accepts the code the previous owner deployed. The body may name any
+// stop the caller saw; a stop that is not the function's stop now lifts nothing.
+//
+// POST /functions/{id}/runtime-key/reaffirm
+func (UnimplementedHandler) ReaffirmFunctionRuntimeKey(ctx context.Context, req OptReaffirmFunctionRuntimeKeyRequest, params ReaffirmFunctionRuntimeKeyParams) (r ReaffirmFunctionRuntimeKeyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // RedeemCreditCode implements redeemCreditCode operation.
 //
-// Redeem a credit code for the authenticated organization. The credit is
-// added to the organization prepaid credit and shows in
-// `GET /credits/balance` under `prepaid_credit`.
-// Redeeming requires an organization owner or admin. An API key redeems
-// with the authority of the user who created it, based on that user's
-// current role; a key without that authority gets the same
-// `credit_code_invalid` refusal as an unknown code.
-// The `Idempotency-Key` header is required. Retrying with the same key
-// and code returns the original grant with `replayed: true` and grants
-// nothing new; the same key with a different code is refused with
-// `idempotency_key_reused`. Every refusal carries a human-readable
-// `error.message` that can be shown to the user as is.
+// Redeem a credit code for the authenticated organization. The credit is added to the organization
+// prepaid credit and shows in `GET /credits/balance` under `prepaid_credit`. Redeeming requires an
+// organization owner or admin: an API key redeems with the authority of the user who created it (or
+// the member it was transferred to), based on that user's current role, and a key without that
+// authority gets the same `credit_code_invalid` refusal as an unknown code. A key transferred to
+// another member without being rotated is refused with `403` and `error.details.reason`
+// `key_transferred_unrotated`: rotate it and redeem with its successor. The `Idempotency-Key` header
+// is required. Retrying with the same key and code returns the original grant with `replayed: true`
+// and grants nothing new; the same key with a different code is refused with
+// `idempotency_key_reused`. Every refusal carries a human-readable `error.message` that can be shown
+// to the user as is.
 //
 // POST /credits/redeem
 func (UnimplementedHandler) RedeemCreditCode(ctx context.Context, req *RedeemCreditCodeInput, params RedeemCreditCodeParams) (r RedeemCreditCodeRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
-// RegisterPayoutAddress implements registerPayoutAddress operation.
+// RedeployFunction implements redeployFunction operation.
 //
-// Register (or update) the default payout address your org receives x402
-// payments at, for a given network. You prove control of the address with
-// an org-bound `personal_sign` signature over the message produced by the
-// SDK helper `buildPayoutRegistrationMessage`. The org id is taken from your
-// authenticated key, never the body, so a captured signature can't register
-// an address under another org. Exactly one default address exists per
-// (org, network); registering again replaces it. A payee MUST register a
-// payout address before calling `createChallenge`, because the challenge's
-// `pay_to` is resolved from this directory.
+// Push the function's stored source again as a new deployment, for example after changing its
+// secrets or runtime key. Takes no body: to ship new code, use updateFunction. A body carrying code
+// is refused rather than ignored.
 //
-// POST /x402/payout-addresses
-func (UnimplementedHandler) RegisterPayoutAddress(ctx context.Context, req *RegisterPayoutAddressInput) (r RegisterPayoutAddressRes, _ error) {
+// POST /functions/{id}/redeploy
+func (UnimplementedHandler) RedeployFunction(ctx context.Context, params RedeployFunctionParams) (r RedeployFunctionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ReleaseSentEmail implements releaseSentEmail operation.
+//
+// Releases a held scheduled send (it carries `hold`) back to its schedule, as the releasing person's.
+//
+//	For owners, admins and the person whose grant scheduled it; not API keys. More than an hour past
+//
+// its time it needs a new `scheduled_at` (else 409 scheduled_at_required); a send that is not held
+// gets 409 not_held.
+//
+// POST /sent-emails/{id}/release
+func (UnimplementedHandler) ReleaseSentEmail(ctx context.Context, req OptReleaseSentEmailReq, params ReleaseSentEmailParams) (r ReleaseSentEmailRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1986,7 +3233,7 @@ func (UnimplementedHandler) RegisterPayoutAddress(ctx context.Context, req *Regi
 // their own record; organization owners and admins may remove any record. Disconnect first using
 // revokeAgentConnection; an active connection returns 409 connection_not_revoked. Missing or already
 // removed records return 404. Mail, address notes, domains and external runtimes are preserved. The
-// same address can be paired again with a new invitation; old credentials and invitations remain
+// removed address stays reserved within the organization; old credentials and invitations remain
 // invalid.
 //
 // POST /agent-connections/{address}/remove
@@ -1996,10 +3243,76 @@ func (UnimplementedHandler) RemoveAgentConnection(ctx context.Context, params Re
 
 // RemoveDefaultNetworkMember implements removeDefaultNetworkMember operation.
 //
-// Owner or admin login required. The explicit exclusion persists across synchronization.
+// Owner or admin exclusion of a connected address. The exclusion survives disconnection and later
+// reconnection at the same address.
 //
 // DELETE /agent-networks/default/members/{address}
 func (UnimplementedHandler) RemoveDefaultNetworkMember(ctx context.Context, params RemoveDefaultNetworkMemberParams) (r RemoveDefaultNetworkMemberRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RemoveMember implements removeMember operation.
+//
+// Removes a member from the organization, after transferring what they own (POST
+// /members/{id}/transfer). Only an owner removes an owner; nobody removes someone whose access is
+// wider than their own, or themselves. What they still own is then flagged or suspended for a
+// decision (GET /access-suspensions). When the identity provider no longer has the membership, the
+// local membership is ended here with the same cleanup; a retry while the removal is still finishing
+// completes it. Person only: a dashboard session, or the person's own OAuth or CLI token with a
+// session step-up of purpose `members.remove` (the person confirms at the step_up_url a 403
+// step_up_required answer carries, which names this client and the member, then send the token in
+// the Primitive-Step-Up header; the token works only with the client it was confirmed for and only
+// for the member it was confirmed for). Needs members:manage. API keys are refused.
+//
+// DELETE /members/{id}
+func (UnimplementedHandler) RemoveMember(ctx context.Context, params RemoveMemberParams) (r RemoveMemberRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RemoveOrganizationLogo implements removeOrganizationLogo operation.
+//
+// Remove the organization's logo.
+// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+// `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+// when the person's role could not do it anyway). The person's role must hold org:manage (or
+// members:manage). API keys and agent connection keys are refused. An agent acting for the person is
+// refused unless it carries a step-up token the person issued in the dashboard.
+//
+// DELETE /organization/logo
+func (UnimplementedHandler) RemoveOrganizationLogo(ctx context.Context, params RemoveOrganizationLogoParams) (r RemoveOrganizationLogoRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RemoveOwnAgentAccess implements removeOwnAgentAccess operation.
+//
+// Removes an agent from the access list of the caller's member mailbox. Agent access is given when
+// they connect their own agent, and is not edited through the list while that feature is on. Person
+// only: a dashboard session, or the person's own OAuth or CLI token with a session step-up of
+// purpose `delegations.write` (the person confirms at the step_up_url a 403 step_up_required answer
+// carries, which names this client, then send the token in the Primitive-Step-Up header; the token
+// works only with the client it was confirmed for). Needs member_address:manage. API keys are
+// refused.
+//
+// DELETE /me/mailboxes/{address}/access/agents/{connection_id}
+func (UnimplementedHandler) RemoveOwnAgentAccess(ctx context.Context, params RemoveOwnAgentAccessParams) (r RemoveOwnAgentAccessRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RenameAgentConnection implements renameAgentConnection operation.
+//
+// Change an agent's display name. The address, credential, status and mail are unchanged. The name
+// is trimmed and must be 1 to 64 characters with no control characters or line breaks. A connected
+// agent may rename only its own exact address using its current bound credential; any other address
+// returns 403 agent_connection_scope_forbidden. A current personal owner may rename their own agents;
+//
+//	organization owners and admins may rename any. A disconnected (revoked) connection returns 409
+//
+// connection_revoked. The new name appears immediately in GET /agent-connections/me, the connection
+// list and the agent network directory.
+//
+// PATCH /agent-connections/{address}/name
+func (UnimplementedHandler) RenameAgentConnection(ctx context.Context, req *RenameAgentConnectionReq, params RenameAgentConnectionParams) (r RenameAgentConnectionRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2008,21 +3321,17 @@ func (UnimplementedHandler) RemoveDefaultNetworkMember(ctx context.Context, para
 // Update the priority of one or more routes in a single call.
 //
 // POST /routes/reorder
-func (UnimplementedHandler) ReorderRoutes(ctx context.Context, req *ReorderRoutesInput) (r ReorderRoutesRes, _ error) {
+func (UnimplementedHandler) ReorderRoutes(ctx context.Context, req *ReorderRoutesInput, params ReorderRoutesParams) (r ReorderRoutesRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
 // ReplayDelivery implements replayDelivery operation.
 //
-// Re-sends a previous delivery to its original endpoint. If that
-// endpoint was deleted or deactivated, the replay is rejected.
-// Supports inbound email deliveries and `sent_email.*` deliveries.
-// An inbound email delivery is replayed with its original stored
-// payload and event id. A `sent_email.*` delivery is replayed with the
-// same event id but a payload rebuilt from the send as it is now; it
-// is rejected if the send was deleted or the endpoint is no longer an
-// active http endpoint. Rate limited per-org, sharing an org-wide
-// budget with email replays.
+// Re-sends the stored webhook payload from a previous delivery attempt.
+// If the original endpoint is still active, it is targeted. If the
+// original endpoint was deleted, the oldest active endpoint is used.
+// Deactivated endpoints cannot be replayed to. Rate limited per-org,
+// sharing an org-wide budget with email replays.
 //
 // POST /webhooks/deliveries/{id}/replay
 func (UnimplementedHandler) ReplayDelivery(ctx context.Context, params ReplayDeliveryParams) (r ReplayDeliveryRes, _ error) {
@@ -2063,6 +3372,16 @@ func (UnimplementedHandler) ReplyToEmail(ctx context.Context, req *ReplyInput, p
 	return r, ht.ErrNotImplemented
 }
 
+// RequestFunctionRuntimeKeyRunner implements requestFunctionRuntimeKeyRunner operation.
+//
+// Ask for the capacity a per-function key needs before creating a function with a narrowed preset,
+// then answer the presets as they now stand. Needs the same permission as deploying a function.
+//
+// POST /functions/runtime-grant-presets/runner-request
+func (UnimplementedHandler) RequestFunctionRuntimeKeyRunner(ctx context.Context, req *RequestFunctionRuntimeKeyRunnerRequest, params RequestFunctionRuntimeKeyRunnerParams) (r RequestFunctionRuntimeKeyRunnerRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // RescheduleSentEmail implements rescheduleSentEmail operation.
 //
 // Moves a STILL-SCHEDULED send (status `scheduled`) to a new
@@ -2088,7 +3407,7 @@ func (UnimplementedHandler) RescheduleSentEmail(ctx context.Context, req *SentEm
 // This endpoint does not require an API key.
 //
 // POST /agent/signup/resend
-func (UnimplementedHandler) ResendAgentSignupVerification(ctx context.Context, req *ResendAgentSignupVerificationInput) (r ResendAgentSignupVerificationRes, _ error) {
+func (UnimplementedHandler) ResendAgentSignupVerification(ctx context.Context, req *ResendAgentSignupVerificationInput, params ResendAgentSignupVerificationParams) (r ResendAgentSignupVerificationRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2098,16 +3417,7 @@ func (UnimplementedHandler) ResendAgentSignupVerification(ctx context.Context, r
 // This endpoint does not require an API key.
 //
 // POST /cli/signup/resend
-func (UnimplementedHandler) ResendCliSignupVerification(ctx context.Context, req *ResendCliSignupVerificationInput) (r ResendCliSignupVerificationRes, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// ResolveRegistryHandle implements resolveRegistryHandle operation.
-//
-// Resolve a registry handle to its agent.
-//
-// GET /registries/{slug}/agents/{handle}
-func (UnimplementedHandler) ResolveRegistryHandle(ctx context.Context, params ResolveRegistryHandleParams) (r ResolveRegistryHandleRes, _ error) {
+func (UnimplementedHandler) ResendCliSignupVerification(ctx context.Context, req *ResendCliSignupVerificationInput, params ResendCliSignupVerificationParams) (r ResendCliSignupVerificationRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2124,13 +3434,113 @@ func (UnimplementedHandler) RevokeAgentConnection(ctx context.Context, params Re
 	return r, ht.ErrNotImplemented
 }
 
+// RevokeAllCredentials implements revokeAllCredentials operation.
+//
+// The emergency response to a leak: revokes every API key, agent connection key and connected app
+// created since a time, rotates the organization Function key and every running Function's own key,
+// and optionally suspends Functions. Owners only, from a dashboard session, and the body must
+// confirm with "revoke all". Needs the organization's credential features to be enabled; while they
+// are not, this answers 404 feature_disabled.
+// Person only: a dashboard session. The person's role must hold credentials:revoke_all. API keys,
+// agent connection keys and agents are refused.
+//
+// POST /credentials/revoke-all
+func (UnimplementedHandler) RevokeAllCredentials(ctx context.Context, req *CredentialsRevokeAllCredentialsInput, params RevokeAllCredentialsParams) (r RevokeAllCredentialsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RevokeCredential implements revokeCredential operation.
+//
+// Revoke one credential by kind and id. A Function key is rotated, never revoked (409
+// rotate_instead). An API key is revoked only by a person whose own access covers the key's access
+// (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered.
+// What the credential set up keeps working and is listed in standing_objects for review. Needs the
+// organization's credential features to be enabled; while they are not, this answers 404
+// feature_disabled.
+// Person only: a dashboard session. The person's role must hold keys:manage. API keys, agent
+// connection keys and agents are refused.
+//
+// POST /credentials/revoke
+func (UnimplementedHandler) RevokeCredential(ctx context.Context, req *CredentialsRevokeCredentialInput, params RevokeCredentialParams) (r RevokeCredentialRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RevokeMyGrant implements revokeMyGrant operation.
+//
+// Sign out one of the calling person's own connections, for example a lost laptop. Revoking a CLI
+// login ends it in every organization. Another person's connection is answered 404. Every role may
+// end its own connections. From a dashboard session or the person's Primitive CLI any of them; any
+// other app the person connected may end only its own connection (403 otherwise).
+// Person only: a dashboard session or the person's own OAuth token (the CLI or an app they
+// connected). API keys, agent connection keys and agents are refused.
+//
+// POST /me/grants/{id}/revoke
+func (UnimplementedHandler) RevokeMyGrant(ctx context.Context, req *OrgSettingsRevokeMyGrantInput, params RevokeMyGrantParams) (r RevokeMyGrantRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RevokeOAuthGrant implements revokeOAuthGrant operation.
+//
+// Revoke one connected app for the whole organization. Where the app has revocation rights on, only
+// the person who connected it, an owner or an admin may revoke it. Scheduled and repeating mail it
+// created is stopped.
+// Person only: a dashboard session. The person's role must hold oauth_grants:manage. API keys, agent
+// connection keys and agents are refused.
+//
+// POST /oauth-grants/{id}/revoke
+func (UnimplementedHandler) RevokeOAuthGrant(ctx context.Context, params RevokeOAuthGrantParams) (r RevokeOAuthGrantRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RevokeOrganizationInvitation implements revokeOrganizationInvitation operation.
+//
+// Requires a current human organization owner or administrator. Machine credentials are refused.
+// Invitations grant the chosen role, Member by default, only after verified acceptance through the
+// sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery
+// accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
+//
+// DELETE /organization/invitations/{invitation_id}
+func (UnimplementedHandler) RevokeOrganizationInvitation(ctx context.Context, params RevokeOrganizationInvitationParams) (r RevokeOrganizationInvitationRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RevokeProjectInvitation implements revokeProjectInvitation operation.
+//
+// Requires a current human organization membership. Machine credentials are refused. Results are
+// scoped to current project access. No local paths or existing conversation history are shared.
+//
+// DELETE /projects/{project_id}/invitations/{invitation_id}
+func (UnimplementedHandler) RevokeProjectInvitation(ctx context.Context, params RevokeProjectInvitationParams) (r RevokeProjectInvitationRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RotateKey implements rotateKey operation.
+//
+// Mint a successor with the same grant and return its secret once. The old key keeps working for
+// overlap_seconds, then stops. The person rotating must cover the key's access (403 grant_forbidden,
+// details.reason target_not_covered), and a key an owner created is rotated by an owner only (403
+// forbidden, details.reason owner_key_rotation), since rotating hands over the new secret. The
+// Primitive CLI's token is refused, even with a step-up. Needs the organization's credential
+// features to be enabled; while they are not, this answers 404 feature_disabled.
+// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+// `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+// when the person's role could not do it anyway). The person's role must hold keys:manage. API keys
+// and agent connection keys are refused. An agent acting for the person is refused unless it carries
+// a step-up token the person issued in the dashboard.
+//
+// POST /keys/{id}/rotate
+func (UnimplementedHandler) RotateKey(ctx context.Context, req *CredentialsRotateKeyInput, params RotateKeyParams) (r RotateKeyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // RotateWebhookSecret implements rotateWebhookSecret operation.
 //
 // Generates a new webhook signing secret, replacing the current one.
 // Rate limited to once per 60 minutes.
 //
 // POST /account/webhook-secret/rotate
-func (UnimplementedHandler) RotateWebhookSecret(ctx context.Context) (r RotateWebhookSecretRes, _ error) {
+func (UnimplementedHandler) RotateWebhookSecret(ctx context.Context, params RotateWebhookSecretParams) (r RotateWebhookSecretRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2167,6 +3577,12 @@ func (UnimplementedHandler) RunWakeSchedule(ctx context.Context, params RunWakeS
 // to the connected address in the same organization. An unavailable
 // parent returns 404. Sender filters are not authentication proof;
 // inspect the email detail's authentication evidence before trusting it.
+// Agent connection keys (pconn_) may search only mail received by their bound address. This
+// restriction applies to results, totals, facets and pagination; from/to and q filters cannot widen
+// it. When reply_to_sent_email_id is supplied, the parent must be a send from the connected address
+// in the same organization, otherwise the response is 404. The parent filter is optional. Existing
+// from/to filters are substring or domain filters, not proof of sender identity. Inspect getEmail
+// authentication details before trusting a sender.
 //
 // GET /emails/search
 func (UnimplementedHandler) SearchEmails(ctx context.Context, params SearchEmailsParams) (r SearchEmailsRes, _ error) {
@@ -2175,11 +3591,9 @@ func (UnimplementedHandler) SearchEmails(ctx context.Context, params SearchEmail
 
 // SearchMemories implements searchMemories operation.
 //
-// List active memories in a scope by lexicographic key prefix. Results
-// are ordered by key ascending. The `meta.cursor` value is the next key
-// cursor; pass it back as `cursor` to continue after that key.
-// Search records one memory read usage event for the operation. Pass
-// `include_value=false` to return metadata only.
+// List active memories in a scope by lexicographic key prefix. Results are ordered by key ascending.
+// This is prefix search, not free-text search. Function-authenticated requests use their own
+// Function id and cannot override it. Pass `include_value=false` to return metadata only.
 //
 // GET /memories/search
 func (UnimplementedHandler) SearchMemories(ctx context.Context, params SearchMemoriesParams) (r SearchMemoriesRes, _ error) {
@@ -2202,7 +3616,7 @@ func (UnimplementedHandler) SearchMemories(ctx context.Context, params SearchMem
 // entitlement; callers without them receive `403`.
 //
 // POST /semantic-search
-func (UnimplementedHandler) SemanticSearch(ctx context.Context, req *SemanticSearchInput) (r SemanticSearchRes, _ error) {
+func (UnimplementedHandler) SemanticSearch(ctx context.Context, req *SemanticSearchInput, params SemanticSearchParams) (r SemanticSearchRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2215,12 +3629,64 @@ func (UnimplementedHandler) SemanticSearch(ctx context.Context, req *SemanticSea
 // (`https://api.primitive.dev/v1`) so the request body can carry
 // inline attachments up to ~30 MiB raw. The legacy dashboard
 // compatibility host (`https://www.primitive.dev/api/v1`) also accepts
-// /send-mail, but Vercel request body limits apply before proxying.
+// /send-mail, but a lower request body limit applies there.
 // The typed SDKs route /send-mail to the canonical API host
 // automatically.
 //
 // POST /send-mail
 func (UnimplementedHandler) SendEmail(ctx context.Context, req *SendMailInput, params SendEmailParams) (r SendEmailRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// SendInteractionStep implements sendInteractionStep operation.
+//
+// Send the next step from our side of an existing interaction, validated against its current state.
+// An interaction on a mailbox the caller cannot send from is answered as not found.
+//
+// POST /interactions/{id}/steps
+func (UnimplementedHandler) SendInteractionStep(ctx context.Context, req *SendInteractionStepRequest, params SendInteractionStepParams) (r SendInteractionStepRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// SendMailBatch implements sendMailBatch operation.
+//
+// Send up to 100 independent messages in a single call. Each message uses the same body schema and
+// the same send path as `POST /send-mail`, so auth, validation, rate limiting, and idempotency apply
+// per message. Messages are processed independently: one failing does not fail the others. Every
+// message gets an entry in `results` carrying either `data` (on success) or `error` (on failure),
+// with the original `index`.
+//
+// POST /send-mail/batch
+func (UnimplementedHandler) SendMailBatch(ctx context.Context, req *SendMailBatchReq, params SendMailBatchParams) (r SendMailBatchRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// SetAccessMode implements setAccessMode operation.
+//
+// Delegated mode is refused until every preview item has a decision; switching back to whole-org is
+// always allowed. Person only: a dashboard session, or the person's own OAuth or CLI token with a
+// session step-up of purpose `access_mode.write` (the person confirms at the step_up_url a 403
+// step_up_required answer carries, which names this client, then send the token in the
+// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+// access_mode:manage (owners). API keys are refused.
+//
+// PUT /access-mode
+func (UnimplementedHandler) SetAccessMode(ctx context.Context, req *SetAccessModeRequest, params SetAccessModeParams) (r SetAccessModeRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// SetAgentConnectionVisibility implements setAgentConnectionVisibility operation.
+//
+// Hide, unhide, pin or unpin an agent. hidden:true hides it until someone unhides it and clears any
+// pin. hidden:false shows it again and restarts its idle clock, so the idle sweep does not hide it
+// again until it has been idle for the full threshold from now. keep_visible:true pins it visible:
+// it is shown and never hidden for idleness. keep_visible:false removes the pin. hidden:true
+// together with keep_visible:true is rejected. Never changes the connection status, its credential
+// or mail delivery. A current personal owner may change their own agents; organization owners and
+// admins may change any.
+//
+// PATCH /agent-connections/{address}/visibility
+func (UnimplementedHandler) SetAgentConnectionVisibility(ctx context.Context, req *SetAgentConnectionVisibilityReq, params SetAgentConnectionVisibilityParams) (r SetAgentConnectionVisibilityRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2238,6 +3704,18 @@ func (UnimplementedHandler) SetFunctionRoute(ctx context.Context, req *FunctionR
 	return r, ht.ErrNotImplemented
 }
 
+// SetFunctionRuntimeKey implements setFunctionRuntimeKey operation.
+//
+// Change the key the function runs with, or the secrets attached to it. A grant wider than the
+// caller's own is refused. A custom runtime_grant must list addresses or send mail_scope "org" for
+// every mailbox; one that does neither is refused (400 validation_error, details.reason
+// mail_scope_required). The function is redeployed with the new key.
+//
+// PUT /functions/{id}/runtime-key
+func (UnimplementedHandler) SetFunctionRuntimeKey(ctx context.Context, req *SetFunctionRuntimeKeyRequest, params SetFunctionRuntimeKeyParams) (r SetFunctionRuntimeKeyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // SetFunctionSecret implements setFunctionSecret operation.
 //
 // Path-keyed companion to `POST /functions/{id}/secrets`.
@@ -2251,22 +3729,49 @@ func (UnimplementedHandler) SetFunctionSecret(ctx context.Context, req *SetFunct
 	return r, ht.ErrNotImplemented
 }
 
+// SetMailboxAccess implements setMailboxAccess operation.
+//
+// Replaces the whole access list of one mailbox address, or of a domain (`@example.com` or the bare
+// domain). Needs delegations:manage: a dashboard session, the person's own Primitive CLI, or an
+// org-wide API key, which acts for the person it belongs to and works only while that person is
+// still an owner or admin holding the permission. Any other OAuth app answers `step_up_required`
+// until the person confirms in the dashboard and the request carries the Primitive-Step-Up header.
+// Narrowed, Function and connected keys are refused. Nobody grants access beyond their own (rule 1):
+// each added or widened entry must be within the caller's own mail access and permissions; an API
+// key never gives access to a member's personal mailbox. Every change is recorded in the credential
+// audit log.
+//
+// PUT /mailboxes/{address}/access
+func (UnimplementedHandler) SetMailboxAccess(ctx context.Context, req *SetMailboxAccessRequest, params SetMailboxAccessParams) (r SetMailboxAccessRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// SetMemberRole implements setMemberRole operation.
+//
+// A built-in role (owner, admin, member), a template key or a role id. Only an owner assigns or
+// removes owner; nobody changes someone wider than themselves. A member whose role was changed
+// several times in a row may be refused with 429 `rate_limited` for a few seconds; nothing was
+// changed, so retry after `Retry-After`. A change the identity provider refuses answers 409
+// `conflict` with `details.reason` `role_change_refused`; nothing was changed. A role naming a
+// member's personal mailbox goes to that member only: otherwise 403 `grant_forbidden` with `details.
+// reason` `personal_mailbox_member_only`. Person only: a dashboard session, or the person's own
+// OAuth or CLI token with a session step-up of purpose `roles.write` (the person confirms at the
+// step_up_url a 403 step_up_required answer carries, which names this client, then send the token in
+// the Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+// roles:assign. API keys are refused.
+//
+// PUT /members/{id}/role
+func (UnimplementedHandler) SetMemberRole(ctx context.Context, req *SetMemberRoleRequest, params SetMemberRoleParams) (r SetMemberRoleRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // SetMemory implements setMemory operation.
 //
-// Create or update a durable JSON memory under an org or function scope.
-// When no explicit scope is provided, function-authenticated requests
-// use that function's id automatically; requests with
-// `x-primitive-function-id` use that function id; all other requests
-// default to org scope.
-// `scope.type = function` requires the function id UUID in `scope.id`.
-// Function names are not accepted as scope identifiers. Values must be
-// valid JSON and serialize to at most 65536 UTF-8 bytes. Keys must be at
-// most 512 UTF-8 bytes. `version`, `read_count`, and `write_count` are
-// bigint counters serialized as strings.
-// Passing `if_absent` turns the write into create-only. Passing
-// `if_version` turns the write into compare-and-set. These options are
-// mutually exclusive and return `memory_conflict` on a stale version or
-// existing key.
+// Create or update a durable JSON memory under an org or function scope. Function-authenticated
+// requests use their own Function id and cannot override it. If no explicit scope is provided for
+// other credentials, `x-primitive-function-id` is used next, and other requests default to org scope.
+//
+//	Function scope uses the function id UUID, not the function name.
 //
 // PUT /memories
 func (UnimplementedHandler) SetMemory(ctx context.Context, req *SetMemoryInput, params SetMemoryParams) (r SetMemoryRes, _ error) {
@@ -2284,13 +3789,63 @@ func (UnimplementedHandler) SetOrgSecret(ctx context.Context, req *SetOrgSecretI
 	return r, ht.ErrNotImplemented
 }
 
+// SetOwnMailboxAccess implements setOwnMailboxAccess operation.
+//
+// Replaces the access list of the caller's own member mailbox (or their personal agent's address);
+// needs no delegations:manage. Nobody grants access beyond their own. A role that can only read this
+// mailbox is refused. Person only: a dashboard session, or the person's own OAuth or CLI token with
+// a session step-up of purpose `delegations.write` (the person confirms at the step_up_url a 403
+// step_up_required answer carries, which names this client, then send the token in the
+// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+// member_address:manage and mail:send_as_member. API keys are refused.
+//
+// PUT /me/mailboxes/{address}/access
+func (UnimplementedHandler) SetOwnMailboxAccess(ctx context.Context, req *SetOwnMailboxAccessRequest, params SetOwnMailboxAccessParams) (r SetOwnMailboxAccessRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// SetRelayAutoJoin implements setRelayAutoJoin operation.
+//
+// `option` is a choice's id from the GET, or null to require an invitation (turning it off needs
+// only members:manage). Choosing an option answers 404 `feature_disabled` unless the organization
+// has mail relay, 400 `validation_error` for an id that is not one of the choices, 403
+// `grant_forbidden` unless the caller is an owner or admin who can assign roles and send invitations
+// and covers the role the option gives, 409 `role_key_taken` when a custom role already holds that
+// role's key, and 409 `role_assignment_unavailable` when the organization cannot be given that role
+// yet. Person only: a dashboard session, or the person's own OAuth or CLI token with a session
+// step-up of purpose `relay_auto_join.write` (the person confirms at the step_up_url a 403
+// step_up_required answer carries, which names this client, then send the token in the
+// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+// members:manage, and roles:assign to turn it on. API keys are refused.
+//
+// PUT /relay-auto-join
+func (UnimplementedHandler) SetRelayAutoJoin(ctx context.Context, req *SetRelayAutoJoinRequest, params SetRelayAutoJoinParams) (r SetRelayAutoJoinRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// SignalEmail implements signalEmail operation.
+//
+// Builds and sends the standard signal email about this received email: one `interaction.json` part
+// (read/1, working/1 or typing/1 naming the email's Message-ID) plus only the fixed fallback text,
+// threaded to it. It goes only to the email's authenticated sender, never to Reply-To or other
+// recipients. Receivers see it as `fyi: true`, and the sender sees it as `peer_signal_on_my_last`
+// (typing is not reported there). Refused (422) for a signal, interaction or other structured email,
+// for an unauthenticated sender, and while the email is still being processed. Each call is a new
+// signal with fresh ids; a read retried with the same Idempotency-Key rebuilds the identical message
+// and dedupes.
+//
+// POST /emails/{id}/signal
+func (UnimplementedHandler) SignalEmail(ctx context.Context, req *EmailSignalInput, params SignalEmailParams) (r SignalEmailRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // SimulateRoute implements simulateRoute operation.
 //
 // Resolves where an inbound email to `recipient` would be delivered, with a
 // trace of every rule evaluated and why. Read-only; creates nothing.
 //
 // POST /routes/simulate
-func (UnimplementedHandler) SimulateRoute(ctx context.Context, req *SimulateRouteInput) (r SimulateRouteRes, _ error) {
+func (UnimplementedHandler) SimulateRoute(ctx context.Context, req *SimulateRouteInput, params SimulateRouteParams) (r SimulateRouteRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2305,7 +3860,7 @@ func (UnimplementedHandler) SimulateRoute(ctx context.Context, req *SimulateRout
 // is rejected.
 //
 // POST /agent/claim/start
-func (UnimplementedHandler) StartAgentClaim(ctx context.Context, req *StartAgentClaimInput) (r StartAgentClaimRes, _ error) {
+func (UnimplementedHandler) StartAgentClaim(ctx context.Context, req *StartAgentClaimInput, params StartAgentClaimParams) (r StartAgentClaimRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2317,7 +3872,21 @@ func (UnimplementedHandler) StartAgentClaim(ctx context.Context, req *StartAgent
 // does not require an API key.
 //
 // POST /agent/signup/start
-func (UnimplementedHandler) StartAgentSignup(ctx context.Context, req *StartAgentSignupInput) (r StartAgentSignupRes, _ error) {
+func (UnimplementedHandler) StartAgentSignup(ctx context.Context, req *StartAgentSignupInput, params StartAgentSignupParams) (r StartAgentSignupRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// StartBreakGlass implements startBreakGlass operation.
+//
+// Time-limited (at most 24 hours), audited access to every mailbox for the owner opening it; every
+// other owner is told. Person only: a dashboard session, or the person's own OAuth or CLI token with
+// a session step-up of purpose `break_glass.write` (the person confirms at the step_up_url a 403
+// step_up_required answer carries, which names this client, then send the token in the
+// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+// access_mode:manage (owners). API keys are refused.
+//
+// POST /break-glass
+func (UnimplementedHandler) StartBreakGlass(ctx context.Context, req *StartBreakGlassRequest, params StartBreakGlassParams) (r StartBreakGlassRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2328,7 +3897,7 @@ func (UnimplementedHandler) StartAgentSignup(ctx context.Context, req *StartAgen
 // browser. This endpoint does not require an API key.
 //
 // POST /cli/login/start
-func (UnimplementedHandler) StartCliLogin(ctx context.Context, req OptStartCliLoginInput) (r StartCliLoginRes, _ error) {
+func (UnimplementedHandler) StartCliLogin(ctx context.Context, req OptStartCliLoginInput, params StartCliLoginParams) (r StartCliLoginRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2340,7 +3909,18 @@ func (UnimplementedHandler) StartCliLogin(ctx context.Context, req OptStartCliLo
 // does not require an API key.
 //
 // POST /cli/signup/start
-func (UnimplementedHandler) StartCliSignup(ctx context.Context, req *StartCliSignupInput) (r StartCliSignupRes, _ error) {
+func (UnimplementedHandler) StartCliSignup(ctx context.Context, req *StartCliSignupInput, params StartCliSignupParams) (r StartCliSignupRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// StartInteraction implements startInteraction operation.
+//
+// Send the first step of a protocol from one of your addresses: a carrier email with the step's
+// interaction.json part. The step is validated against the protocol before anything is sent. An
+// Idempotency-Key makes a retry return the same interaction without sending again.
+//
+// POST /interactions
+func (UnimplementedHandler) StartInteraction(ctx context.Context, req *StartInteractionRequest, params StartInteractionParams) (r StartInteractionRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2358,6 +3938,60 @@ func (UnimplementedHandler) StartCliSignup(ctx context.Context, req *StartCliSig
 //
 // POST /emails/{id}/repeat-stop
 func (UnimplementedHandler) StopRepeatFromEmail(ctx context.Context, req OptRepeatStopRequest, params StopRepeatFromEmailParams) (r StopRepeatFromEmailRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// SuspendFunctionRuntimeKey implements suspendFunctionRuntimeKey operation.
+//
+// Stop the function from running by suspending its key. Its code, bindings and secrets stay stored;
+// reaffirmFunctionRuntimeKey brings it back as it was. A stop an owner or admin places (suspended_by
+// owner_or_admin) records their role, is lifted only in a dashboard session by someone whose role is
+// at least that one (an owner's stop, only an owner), and replaces any stop but an owner's or
+// admin's of at least that role, an access decision's included: keeping that decision on the waiting
+// list then leaves the function stopped.
+//
+// POST /functions/{id}/runtime-key/suspend
+func (UnimplementedHandler) SuspendFunctionRuntimeKey(ctx context.Context, req *SuspendFunctionRuntimeKeyRequest, params SuspendFunctionRuntimeKeyParams) (r SuspendFunctionRuntimeKeyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// TestEmailRule implements testEmailRule operation.
+//
+// Runs a rule over received mail and reports what it would decide for each email: matched, near_miss,
+//
+//	no_match, unclassified or not_found. Test an unsaved tree from a compile response, or a saved
+//
+// rule by rule_id (its current version, run with its author's access). Either way the rule reads
+// only mail its author can read. Without email_ids, the newest emails it can read are tested, at
+// most 200 and none older than 30 days. Emails not classified yet that arrived more than 2 hours ago
+// are classified first and their classification is saved, unless classify_missing is false; newer
+// ones are left to normal classification and reported unclassified with reason pending. The rule
+// itself records nothing and grants nothing. Classification and the rule's own questions stop at
+// about 90 seconds; run the test again to continue where it stopped. Needs mail:read, a credential
+// acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
+// and the email rules feature on the organization.
+//
+// POST /email-rules/test
+func (UnimplementedHandler) TestEmailRule(ctx context.Context, req *TestEmailRuleRequest, params TestEmailRuleParams) (r TestEmailRuleRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// TestEmailRuleOnSample implements testEmailRuleOnSample operation.
+//
+// Reports what a rule would decide for an email you describe: its sender, recipients, subject, plain
+// text and attachment types, and optionally whether it is automated or from a mailing list and its
+// spam score. The email is classified the way received mail is, and the rule's conditions and its
+// own questions are decided as they would be for received mail with that content and those signals,
+// received now. Without them it is not automated and not from a mailing list; a rule that reads a
+// spam score you gave none for is decided on no score, and spam_score is listed in unset_columns.
+// Nothing is stored: no email, classification or decision. Test an unsaved tree from a compile
+// response, or a saved rule by rule_id (its current version). The answer includes what the
+// classifier read from the email. Needs mail:read, a credential acting as a member with their full
+// access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
+// organization.
+//
+// POST /email-rules/test-sample
+func (UnimplementedHandler) TestEmailRuleOnSample(ctx context.Context, req *TestEmailRuleOnSampleRequest, params TestEmailRuleOnSampleParams) (r TestEmailRuleOnSampleRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2428,12 +4062,27 @@ func (UnimplementedHandler) TestFunction(ctx context.Context, req OptTestFunctio
 	return r, ht.ErrNotImplemented
 }
 
-// UnpublishAgent implements unpublishAgent operation.
+// TransferOwnedItems implements transferOwnedItems operation.
 //
-// Unpublish an agent from a registry.
+// Moves items to another member, who must cover each; keys can be rotated as they move. Attribution
+// of what was created is unchanged. Person only: a dashboard session, or the person's own OAuth or
+// CLI token with a session step-up of purpose `members.transfer` (the person confirms at the
+// step_up_url a 403 step_up_required answer carries, which names this client and the member, then
+// send the token in the Primitive-Step-Up header; the token works only with the client it was
+// confirmed for and only for the member it was confirmed for). Needs members:manage. API keys are
+// refused.
 //
-// DELETE /registries/{slug}/agents/{handle}
-func (UnimplementedHandler) UnpublishAgent(ctx context.Context, params UnpublishAgentParams) (r UnpublishAgentRes, _ error) {
+// POST /members/{id}/transfer
+func (UnimplementedHandler) TransferOwnedItems(ctx context.Context, req *TransferOwnedItemsRequest, params TransferOwnedItemsParams) (r TransferOwnedItemsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UnmuteThread implements unmuteThread operation.
+//
+// Removes the mute for the address. Idempotent: unmuting a thread that is not muted succeeds.
+//
+// DELETE /threads/{id}/mute
+func (UnimplementedHandler) UnmuteThread(ctx context.Context, params UnmuteThreadParams) (r UnmuteThreadRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2450,21 +4099,46 @@ func (UnimplementedHandler) UnsetFunctionRoute(ctx context.Context, params Unset
 
 // UpdateAccount implements updateAccount operation.
 //
-// Update account settings.
+// Update the mutable account settings (such as display name and notification preferences) for the
+// authenticated organization.
 //
 // PATCH /account
 func (UnimplementedHandler) UpdateAccount(ctx context.Context, req *UpdateAccountInput) (r UpdateAccountRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
+// UpdateAgentConnectionSettings implements updateAgentConnectionSettings operation.
+//
+// Update the organization agent settings. Set idle_hide_after_days to a whole number of days from 1
+// to 365, or null to turn auto-hide off. Turning it off, or raising it, shows again the agents that
+// were hidden for idleness and no longer qualify. Manual hides are unchanged. Organization owners
+// and admins only.
+//
+// PATCH /agent-connections/settings
+func (UnimplementedHandler) UpdateAgentConnectionSettings(ctx context.Context, req *UpdateAgentConnectionSettingsReq) (r UpdateAgentConnectionSettingsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateCredentialPolicy implements updateCredentialPolicy operation.
+//
+// Change one or more policy rules. Admins may only tighten the policy; loosening any rule needs an
+// owner. Owners and admins are emailed about every change. Needs the organization's credential
+// features to be enabled; while they are not, this answers 404 feature_disabled.
+// Person only: a dashboard session. The person's role must hold credential_policy:manage. API keys,
+// agent connection keys and agents are refused.
+//
+// PATCH /credential-policy
+func (UnimplementedHandler) UpdateCredentialPolicy(ctx context.Context, req *CredentialsUpdateCredentialPolicyInput) (r UpdateCredentialPolicyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // UpdateDefaultNetworkMember implements updateDefaultNetworkMember operation.
 //
-// An owner or admin may update any active address. Other human members may update only their own
-// current, non-excluded personal address. Connected-agent credentials cannot update visibility.
-// Omitted settings keep their current value.
+// Current owner or admin may update any connected address. A human member may update only their own
+// current, non-excluded personal address. Re-enabling a permission advances its activation time.
 //
 // PATCH /agent-networks/default/members/{address}
-func (UnimplementedHandler) UpdateDefaultNetworkMember(ctx context.Context, req *UpdateAgentNetworkMemberInput, params UpdateDefaultNetworkMemberParams) (r UpdateDefaultNetworkMemberRes, _ error) {
+func (UnimplementedHandler) UpdateDefaultNetworkMember(ctx context.Context, req *UpdateDefaultNetworkMemberReq, params UpdateDefaultNetworkMemberParams) (r UpdateDefaultNetworkMemberRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2475,6 +4149,21 @@ func (UnimplementedHandler) UpdateDefaultNetworkMember(ctx context.Context, req 
 //
 // PATCH /domains/{id}
 func (UnimplementedHandler) UpdateDomain(ctx context.Context, req *UpdateDomainInput, params UpdateDomainParams) (r UpdateDomainRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateEmailRule implements updateEmailRule operation.
+//
+// Renames the rule, saves a new version (english, tree and explanation together; earlier versions
+// are kept unchanged) or changes its state: draft (disabled), observe or active. Only the rule's
+// author may rename it, add a version or move it to observe or active; anyone else who can see it
+// may only disable it (state draft), and while it is shared with another member only if they manage
+// members from the dashboard. Needs mail:read, a credential acting as a member with their full
+// access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
+// organization.
+//
+// PATCH /email-rules/{id}
+func (UnimplementedHandler) UpdateEmailRule(ctx context.Context, req *UpdateEmailRuleRequest, params UpdateEmailRuleParams) (r UpdateEmailRuleRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2518,12 +4207,133 @@ func (UnimplementedHandler) UpdateFunction(ctx context.Context, req *UpdateFunct
 	return r, ht.ErrNotImplemented
 }
 
-// UpdateRegistry implements updateRegistry operation.
+// UpdateFunctionFromTemplate implements updateFunctionFromTemplate operation.
 //
-// Update a registry you own.
+// Re-pull a function installed from a template to the template's current version. Refused for a
+// function whose code was edited after install. The path id is the function id.
 //
-// PATCH /registries/{slug}
-func (UnimplementedHandler) UpdateRegistry(ctx context.Context, req *UpdateRegistryInput, params UpdateRegistryParams) (r UpdateRegistryRes, _ error) {
+// POST /functions/{id}/template-update
+func (UnimplementedHandler) UpdateFunctionFromTemplate(ctx context.Context, params UpdateFunctionFromTemplateParams) (r UpdateFunctionFromTemplateRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateFunctionTags implements updateFunctionTags operation.
+//
+// Set the function's tags to exactly the given list.
+//
+// PATCH /functions/{id}/tags
+func (UnimplementedHandler) UpdateFunctionTags(ctx context.Context, req *UpdateFunctionTagsRequest, params UpdateFunctionTagsParams) (r UpdateFunctionTagsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateGroup implements updateGroup operation.
+//
+// Renames a group or replaces its members. With an org-wide API key or the person's own Primitive
+// CLI only role-free groups are changed. As on creation, a role naming a member's personal mailbox
+// is never given through the group to anyone else (`personal_mailbox_member_only`).
+//
+// PATCH /groups/{id}
+func (UnimplementedHandler) UpdateGroup(ctx context.Context, req *UpdateGroupRequest, params UpdateGroupParams) (r UpdateGroupRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateKey implements updateKey operation.
+//
+// Rename a key, change its expiry, its grant or its conditions, or suspend it. Any change needs the
+// person's own access to cover the key's access now (an owner covers every key); otherwise 403
+// grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key and
+// is held to the same rules as creating one (a custom grant that does not say which mail it reaches
+// is refused with details.reason mail_scope_required), so it takes the same step-up. The Primitive
+// CLI's token is refused, even with a step-up. Needs the organization's credential features to be
+// enabled; while they are not, this answers 404 feature_disabled.
+// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+// `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+// when the person's role could not do it anyway). The person's role must hold keys:manage. API keys
+// and agent connection keys are refused. An agent acting for the person is refused unless it carries
+// a step-up token the person issued in the dashboard.
+//
+// PATCH /keys/{id}
+func (UnimplementedHandler) UpdateKey(ctx context.Context, req *CredentialsUpdateKeyInput, params UpdateKeyParams) (r UpdateKeyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateMailRouting implements updateMailRouting operation.
+//
+// Mailbox-scoped exact visible audiences, excluding the owner and Bcc. Direct and group audiences
+// are independent. Restores persist an explicit Conversations rule. New writes require the observed
+// version (zero creates); only an identical latest mutation with its original expected version can
+// be retried. Stale writes return mail_routing_conflict. Source messages and read state are
+// unchanged. Merge paged rules by version; responses are never cached.
+//
+// PUT /mail-routing
+func (UnimplementedHandler) UpdateMailRouting(ctx context.Context, req *PutMailRoutingRequest) (r UpdateMailRoutingRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateMailTopicEdits implements updateMailTopicEdits operation.
+//
+// Mailbox-owned human membership, summary and task edits. Each field has an independent version.
+// Sources must belong to this mailbox and exact visible audience. Automatic generation cannot write
+// these records. Identical latest mutations are retryable; stale versions return
+// mail_topic_edit_conflict. Source mail remains unchanged. Responses are never cached.
+//
+// PUT /mail-topic-edits
+func (UnimplementedHandler) UpdateMailTopicEdits(ctx context.Context, req *PutMailTopicEditsRequest) (r UpdateMailTopicEditsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateMailTopicGenerations implements updateMailTopicGenerations operation.
+//
+// Mailbox-owned automatic membership and complete generated summary/task snapshots. Each resource
+// has an independent version. Human corrections always take precedence in presentation. Sources must
+// belong to this mailbox and exact visible audience. Provider and input digest are client-reported
+// provenance, not model attestation. This endpoint never writes human corrections. Identical latest
+// mutations are retryable; stale versions return mail_topic_generation_conflict. Source mail remains
+// unchanged. Responses are never cached.
+//
+// PUT /mail-topic-generations
+func (UnimplementedHandler) UpdateMailTopicGenerations(ctx context.Context, req *PutMailTopicGenerationsRequest) (r UpdateMailTopicGenerationsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateOrganization implements updateOrganization operation.
+//
+// Change the organization's name.
+// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+// `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+// when the person's role could not do it anyway). The person's role must hold org:manage (or
+// members:manage). API keys and agent connection keys are refused. An agent acting for the person is
+// refused unless it carries a step-up token the person issued in the dashboard.
+//
+// PATCH /organization
+func (UnimplementedHandler) UpdateOrganization(ctx context.Context, req *OrgSettingsUpdateOrganizationInput, params UpdateOrganizationParams) (r UpdateOrganizationRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateOrganizationLogo implements updateOrganizationLogo operation.
+//
+// Upload a PNG, JPEG, GIF or WebP logo of at most 900 KB, base64 encoded.
+// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+// `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+// when the person's role could not do it anyway). The person's role must hold org:manage (or
+// members:manage). API keys and agent connection keys are refused. An agent acting for the person is
+// refused unless it carries a step-up token the person issued in the dashboard.
+//
+// PUT /organization/logo
+func (UnimplementedHandler) UpdateOrganizationLogo(ctx context.Context, req *OrgSettingsUpdateOrganizationLogoInput, params UpdateOrganizationLogoParams) (r UpdateOrganizationLogoRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateProject implements updateProject operation.
+//
+// Requires a current human organization membership. Machine credentials are refused. Results are
+// scoped to current project access. No local paths or existing conversation history are shared.
+//
+// PUT /projects/{project_id}
+func (UnimplementedHandler) UpdateProject(ctx context.Context, req *ProjectsUpdateProjectInput, params UpdateProjectParams) (r UpdateProjectRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2540,6 +4350,27 @@ func (UnimplementedHandler) UpdateRepeatingSend(ctx context.Context, req *Update
 	return r, ht.ErrNotImplemented
 }
 
+// UpdateRole implements updateRole operation.
+//
+// A new version of the role, with a new `id`: the version you edited is retired, the response is the
+// new one (same `key`, `version` one higher), and every member and group holding the role moves to
+// it. The old id answers 404 `not_found` from then on, so store the returned `id` (or look the role
+// up by `key` in GET /roles) before editing or assigning it again. Every holder whose access shrinks
+// goes through the reduction path. mail_scope follows the same rules as creating a role; a role
+// whose stored scope cannot be read must be sent a new mail_scope, otherwise 400 `validation_error`
+// with `details.reason` `invalid_mail_scope`.  A personal mailbox the new version adds must be the
+// author's own, and every holder must be the member of each personal mailbox it names: otherwise 403
+// `grant_forbidden` with `details.reason` `personal_mailbox_member_only`. Person only: a dashboard
+// session, or the person's own OAuth or CLI token with a session step-up of purpose `roles.write`
+// (the person confirms at the step_up_url a 403 step_up_required answer carries, which names this
+// client, then send the token in the Primitive-Step-Up header; the token works only with the client
+// it was confirmed for). Needs roles:assign. API keys are refused.
+//
+// PATCH /roles/{id}
+func (UnimplementedHandler) UpdateRole(ctx context.Context, req *UpdateRoleRequest, params UpdateRoleParams) (r UpdateRoleRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // UpdateRoute implements updateRoute operation.
 //
 // Update a recipient route.
@@ -2549,15 +4380,23 @@ func (UnimplementedHandler) UpdateRoute(ctx context.Context, req *UpdateRouteInp
 	return r, ht.ErrNotImplemented
 }
 
-// UpdateSpendPolicy implements updateSpendPolicy operation.
+// UpdateSearchSettings implements updateSearchSettings operation.
 //
-// Update your org's spend policy. Applied as a merge: only the fields you
-// include change, and omitted fields keep their current value, so a partial
-// update can't silently reset the kill-switch. Send an explicit `null` to
-// clear a cap. Caps are in token base units.
+// Consent to, or withdraw consent from, semantic search. Consenting sends the organization's mail
+// content to an embedding provider, so it is a person's decision. Turning it on is refused with 409
+// under HIPAA mode (hipaa_mode), without a paid plan (plan_required) or while it is not available to
+// the organization (not_available). Turning it off is always allowed.
+// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+// `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+// when the person's role could not do it anyway). The person's role must hold search_settings:manage.
 //
-// PUT /x402/spend-policy
-func (UnimplementedHandler) UpdateSpendPolicy(ctx context.Context, req *UpdateSpendPolicyInput) (r UpdateSpendPolicyRes, _ error) {
+//	API keys and agent connection keys are refused. An agent acting for the person is refused unless
+//
+// it carries a step-up token the person issued in the dashboard.
+//
+// PUT /search-settings
+func (UnimplementedHandler) UpdateSearchSettings(ctx context.Context, req *OrgSettingsUpdateSearchSettingsInput, params UpdateSearchSettingsParams) (r UpdateSearchSettingsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2593,7 +4432,7 @@ func (UnimplementedHandler) UpdateWakeSchedule(ctx context.Context, req *UpdateW
 // API key.
 //
 // POST /agent/claim/verify
-func (UnimplementedHandler) VerifyAgentClaim(ctx context.Context, req *VerifyAgentClaimInput) (r VerifyAgentClaimRes, _ error) {
+func (UnimplementedHandler) VerifyAgentClaim(ctx context.Context, req *VerifyAgentClaimInput, params VerifyAgentClaimParams) (r VerifyAgentClaimRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2606,7 +4445,7 @@ func (UnimplementedHandler) VerifyAgentClaim(ctx context.Context, req *VerifyAge
 // accessible workspace should receive the new session.
 //
 // POST /agent/signup/verify
-func (UnimplementedHandler) VerifyAgentSignup(ctx context.Context, req *VerifyAgentSignupInput) (r VerifyAgentSignupRes, _ error) {
+func (UnimplementedHandler) VerifyAgentSignup(ctx context.Context, req *VerifyAgentSignupInput, params VerifyAgentSignupParams) (r VerifyAgentSignupRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2618,7 +4457,7 @@ func (UnimplementedHandler) VerifyAgentSignup(ctx context.Context, req *VerifyAg
 // require an API key.
 //
 // POST /cli/signup/verify
-func (UnimplementedHandler) VerifyCliSignup(ctx context.Context, req *VerifyCliSignupInput) (r VerifyCliSignupRes, _ error) {
+func (UnimplementedHandler) VerifyCliSignup(ctx context.Context, req *VerifyCliSignupInput, params VerifyCliSignupParams) (r VerifyCliSignupRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2628,8 +4467,8 @@ func (UnimplementedHandler) VerifyCliSignup(ctx context.Context, req *VerifyCliS
 // and outbound authentication: MX, ownership TXT, SPF, DKIM,
 // DMARC, and TLS-RPT.
 // On success, the domain is promoted from unverified to verified.
-// On failure, returns which checks passed and which failed,
-// plus the exact DNS records still expected. To give users
+// On failure, responds 400 `dns_verification_failed`; `error.details.records`
+// lists the exact DNS records expected, each with its `status`. To give users
 // an importable DNS file for missing records, call
 // `downloadDomainZoneFile` or run
 // `primitive domains zone-file --id <domain-id>`.
@@ -2645,6 +4484,17 @@ func (UnimplementedHandler) VerifyDomain(ctx context.Context, params VerifyDomai
 // member address.
 //
 // GET /whoami
-func (UnimplementedHandler) Whoami(ctx context.Context) (r WhoamiRes, _ error) {
+func (UnimplementedHandler) Whoami(ctx context.Context, params WhoamiParams) (r WhoamiRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// WithdrawEmailRuleRequest implements withdrawEmailRuleRequest operation.
+//
+// Withdraws a pending request you made. Needs mail:read, a credential acting as a member with their
+// full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on
+// the organization.
+//
+// POST /email-rule-requests/{id}/withdraw
+func (UnimplementedHandler) WithdrawEmailRuleRequest(ctx context.Context, params WithdrawEmailRuleRequestParams) (r WithdrawEmailRuleRequestRes, _ error) {
 	return r, ht.ErrNotImplemented
 }

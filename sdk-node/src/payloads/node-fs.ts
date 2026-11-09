@@ -1,7 +1,7 @@
 /**
  * Lazy loaders for Node's file system modules.
  *
- * The `/api` and `/payloads` entries must bundle cleanly for Workers-style
+ * The `/api` and `/payloads` entries must bundle cleanly for edge-style
  * targets (esbuild with `platform: "browser"` and the `worker` / `browser`
  * conditions, as scaffolded by `primitive functions init`). A top-level
  * `import ... from "node:fs"` fails that bundle outright, even when the
@@ -57,7 +57,7 @@ export async function loadBuiltin<T>(
   }
 }
 
-/** `node:fs`, loaded lazily so Workers-style bundles never see the import. */
+/** `node:fs`, loaded lazily so edge-style bundles never see the import. */
 export function loadNodeFs(operation: string): Promise<NodeFsModule> {
   return loadBuiltin<NodeFsModule>("node:fs", operation);
 }

@@ -1,0 +1,959 @@
+{
+  "description": "Incremental conversation sync over GET /emails/{id}/conversation?since=. Each case starts from `state` (null means a first sync, which reads since=start), serves `pages` in order (each page asserts the `since` the client sent), and expects the merged messages in order with their copy ids and, where given, status, plus the final cursor; or an error. Merge rule: upsert by id; two entries are the same message when either one's id is in the other's copies or sent_email_id, and the newer one replaces the held one in its place; order by timestamp, then by held position. `timestamps` pins how a message timestamp is normalized (`normalized`, null when it is not a valid RFC 3339 date-time; no offset means UTC) and the epoch milliseconds it sorts by (`ms`, fraction truncated).",
+  "cases": [
+    {
+      "name": "a delta adds a copy to a held message",
+      "state": {
+        "cursor": "cursor-1",
+        "messages": [
+          {
+            "role": "user",
+            "direction": "inbound",
+            "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+            "message_id": "<a1a1a1a1@example.test>",
+            "from": "ada@example.test",
+            "to": "support@example.test",
+            "subject": "Invoice",
+            "text": "Where is my invoice?",
+            "timestamp": "2026-03-01T10:00:00.000Z",
+            "copies": [
+              {
+                "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+                "recipient": "support@example.test"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "direction": "outbound",
+            "id": "f6f6f6f6-f6f6-4f6f-8f6f-f6f6f6f6f6f6",
+            "message_id": "<f6f6f6f6@example.test>",
+            "from": "agent@example.test",
+            "to": "ada@example.test",
+            "subject": "Re: Invoice",
+            "text": "Looking into it.",
+            "timestamp": "2026-03-01T10:05:00.000Z",
+            "status": "delivered"
+          }
+        ]
+      },
+      "pages": [
+        {
+          "since": "cursor-1",
+          "response": {
+            "success": true,
+            "data": {
+              "thread_id": "0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c",
+              "subject": "Invoice",
+              "message_count": 2,
+              "truncated": false,
+              "messages": [
+                {
+                  "role": "user",
+                  "direction": "inbound",
+                  "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+                  "message_id": "<a1a1a1a1@example.test>",
+                  "from": "ada@example.test",
+                  "to": "support@example.test",
+                  "subject": "Invoice",
+                  "text": "Where is my invoice?",
+                  "timestamp": "2026-03-01T10:00:00.000Z",
+                  "copies": [
+                    {
+                      "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+                      "recipient": "support@example.test"
+                    },
+                    {
+                      "id": "b2b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2",
+                      "recipient": "billing@example.test"
+                    }
+                  ]
+                }
+              ],
+              "cursor": "cursor-2",
+              "has_more": false
+            }
+          }
+        }
+      ],
+      "expected": {
+        "cursor": "cursor-2",
+        "messages": [
+          {
+            "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+            "copy_ids": [
+              "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+              "b2b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2"
+            ]
+          },
+          {
+            "id": "f6f6f6f6-f6f6-4f6f-8f6f-f6f6f6f6f6f6",
+            "copy_ids": [],
+            "status": "delivered"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a new representative id drops the held entry whose id is in its copies",
+      "state": {
+        "cursor": "cursor-1",
+        "messages": [
+          {
+            "role": "user",
+            "direction": "inbound",
+            "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+            "message_id": "<a1a1a1a1@example.test>",
+            "from": "ada@example.test",
+            "to": "support@example.test",
+            "subject": "Invoice",
+            "text": "Where is my invoice?",
+            "timestamp": "2026-03-01T10:00:00.000Z",
+            "copies": [
+              {
+                "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+                "recipient": "support@example.test"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "direction": "outbound",
+            "id": "f6f6f6f6-f6f6-4f6f-8f6f-f6f6f6f6f6f6",
+            "message_id": "<f6f6f6f6@example.test>",
+            "from": "agent@example.test",
+            "to": "ada@example.test",
+            "subject": "Re: Invoice",
+            "text": "Looking into it.",
+            "timestamp": "2026-03-01T10:05:00.000Z",
+            "status": "delivered"
+          }
+        ]
+      },
+      "pages": [
+        {
+          "since": "cursor-1",
+          "response": {
+            "success": true,
+            "data": {
+              "thread_id": "0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c",
+              "subject": "Invoice",
+              "message_count": 2,
+              "truncated": false,
+              "messages": [
+                {
+                  "role": "user",
+                  "direction": "inbound",
+                  "id": "b2b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2",
+                  "message_id": "<b2b2b2b2@example.test>",
+                  "from": "ada@example.test",
+                  "to": "billing@example.test",
+                  "subject": "Invoice",
+                  "text": "Where is my invoice?",
+                  "timestamp": "2026-03-01T10:00:00.000Z",
+                  "copies": [
+                    {
+                      "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+                      "recipient": "support@example.test"
+                    },
+                    {
+                      "id": "b2b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2",
+                      "recipient": "billing@example.test"
+                    }
+                  ]
+                }
+              ],
+              "cursor": "cursor-2",
+              "has_more": false
+            }
+          }
+        }
+      ],
+      "expected": {
+        "cursor": "cursor-2",
+        "messages": [
+          {
+            "id": "b2b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2",
+            "copy_ids": [
+              "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+              "b2b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2"
+            ]
+          },
+          {
+            "id": "f6f6f6f6-f6f6-4f6f-8f6f-f6f6f6f6f6f6",
+            "copy_ids": [],
+            "status": "delivered"
+          }
+        ]
+      }
+    },
+    {
+      "name": "an inbound copy with sent_email_id replaces the held send",
+      "state": {
+        "cursor": "cursor-1",
+        "messages": [
+          {
+            "role": "assistant",
+            "direction": "outbound",
+            "id": "57575757-5757-4757-8757-575757575757",
+            "message_id": "<57575757@example.test>",
+            "from": "agent@example.test",
+            "to": "team@example.test",
+            "subject": "Re: Invoice",
+            "text": "Team update",
+            "timestamp": "2026-03-01T10:00:00.000Z",
+            "status": "delivered"
+          },
+          {
+            "role": "user",
+            "direction": "inbound",
+            "id": "d4d4d4d4-d4d4-4d4d-8d4d-d4d4d4d4d4d4",
+            "message_id": "<d4d4d4d4@example.test>",
+            "from": "ada@example.test",
+            "to": "support@example.test",
+            "subject": "Invoice",
+            "text": "Thanks for the update",
+            "timestamp": "2026-03-01T10:10:00.000Z"
+          }
+        ]
+      },
+      "pages": [
+        {
+          "since": "cursor-1",
+          "response": {
+            "success": true,
+            "data": {
+              "thread_id": "0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c",
+              "subject": "Invoice",
+              "message_count": 2,
+              "truncated": false,
+              "messages": [
+                {
+                  "role": "user",
+                  "direction": "inbound",
+                  "id": "c3c3c3c3-c3c3-4c3c-8c3c-c3c3c3c3c3c3",
+                  "message_id": "<c3c3c3c3@example.test>",
+                  "from": "ada@example.test",
+                  "to": "team@example.test",
+                  "subject": "Invoice",
+                  "text": "Team update",
+                  "timestamp": "2026-03-01T10:05:00.000Z",
+                  "copies": [
+                    {
+                      "id": "c3c3c3c3-c3c3-4c3c-8c3c-c3c3c3c3c3c3",
+                      "recipient": "team@example.test"
+                    }
+                  ],
+                  "sent_email_id": "57575757-5757-4757-8757-575757575757"
+                }
+              ],
+              "cursor": "cursor-2",
+              "has_more": false
+            }
+          }
+        }
+      ],
+      "expected": {
+        "cursor": "cursor-2",
+        "messages": [
+          {
+            "id": "c3c3c3c3-c3c3-4c3c-8c3c-c3c3c3c3c3c3",
+            "copy_ids": [
+              "c3c3c3c3-c3c3-4c3c-8c3c-c3c3c3c3c3c3"
+            ]
+          },
+          {
+            "id": "d4d4d4d4-d4d4-4d4d-8d4d-d4d4d4d4d4d4",
+            "copy_ids": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "pages through has_more from start",
+      "state": null,
+      "pages": [
+        {
+          "since": "start",
+          "response": {
+            "success": true,
+            "data": {
+              "thread_id": "0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c",
+              "subject": "Invoice",
+              "message_count": 3,
+              "truncated": false,
+              "messages": [
+                {
+                  "role": "user",
+                  "direction": "inbound",
+                  "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+                  "message_id": "<a1a1a1a1@example.test>",
+                  "from": "ada@example.test",
+                  "to": "support@example.test",
+                  "subject": "Invoice",
+                  "text": "Where is my invoice?",
+                  "timestamp": "2026-03-01T10:00:00.000Z",
+                  "copies": [
+                    {
+                      "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+                      "recipient": "support@example.test"
+                    }
+                  ]
+                },
+                {
+                  "role": "assistant",
+                  "direction": "outbound",
+                  "id": "f6f6f6f6-f6f6-4f6f-8f6f-f6f6f6f6f6f6",
+                  "message_id": "<f6f6f6f6@example.test>",
+                  "from": "agent@example.test",
+                  "to": "ada@example.test",
+                  "subject": "Re: Invoice",
+                  "text": "Looking into it.",
+                  "timestamp": "2026-03-01T10:05:00.000Z",
+                  "status": "queued"
+                }
+              ],
+              "cursor": "page-1",
+              "has_more": true
+            }
+          }
+        },
+        {
+          "since": "page-1",
+          "response": {
+            "success": true,
+            "data": {
+              "thread_id": "0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c",
+              "subject": "Invoice",
+              "message_count": 3,
+              "truncated": false,
+              "messages": [
+                {
+                  "role": "user",
+                  "direction": "inbound",
+                  "id": "d4d4d4d4-d4d4-4d4d-8d4d-d4d4d4d4d4d4",
+                  "message_id": "<d4d4d4d4@example.test>",
+                  "from": "ada@example.test",
+                  "to": "support@example.test",
+                  "subject": "Invoice",
+                  "text": "Any news?",
+                  "timestamp": "2026-03-01T10:10:00.000Z"
+                }
+              ],
+              "cursor": "page-2",
+              "has_more": true
+            }
+          }
+        },
+        {
+          "since": "page-2",
+          "response": {
+            "success": true,
+            "data": {
+              "thread_id": "0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c",
+              "subject": "Invoice",
+              "message_count": 3,
+              "truncated": false,
+              "messages": [
+                {
+                  "role": "assistant",
+                  "direction": "outbound",
+                  "id": "f6f6f6f6-f6f6-4f6f-8f6f-f6f6f6f6f6f6",
+                  "message_id": "<f6f6f6f6@example.test>",
+                  "from": "agent@example.test",
+                  "to": "ada@example.test",
+                  "subject": "Re: Invoice",
+                  "text": "Looking into it.",
+                  "timestamp": "2026-03-01T10:05:00.000Z",
+                  "status": "delivered"
+                }
+              ],
+              "cursor": "page-3",
+              "has_more": false
+            }
+          }
+        }
+      ],
+      "expected": {
+        "cursor": "page-3",
+        "messages": [
+          {
+            "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+            "copy_ids": [
+              "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1"
+            ]
+          },
+          {
+            "id": "f6f6f6f6-f6f6-4f6f-8f6f-f6f6f6f6f6f6",
+            "copy_ids": [],
+            "status": "delivered"
+          },
+          {
+            "id": "d4d4d4d4-d4d4-4d4d-8d4d-d4d4d4d4d4d4",
+            "copy_ids": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "an older message returned by a later delta is placed by timestamp",
+      "state": {
+        "cursor": "cursor-1",
+        "messages": [
+          {
+            "role": "user",
+            "direction": "inbound",
+            "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+            "message_id": "<a1a1a1a1@example.test>",
+            "from": "ada@example.test",
+            "to": "support@example.test",
+            "subject": "Invoice",
+            "text": "Where is my invoice?",
+            "timestamp": "2026-03-01T10:00:00.000Z"
+          },
+          {
+            "role": "assistant",
+            "direction": "outbound",
+            "id": "f6f6f6f6-f6f6-4f6f-8f6f-f6f6f6f6f6f6",
+            "message_id": "<f6f6f6f6@example.test>",
+            "from": "agent@example.test",
+            "to": "ada@example.test",
+            "subject": "Re: Invoice",
+            "text": "Looking into it.",
+            "timestamp": "2026-03-01T10:05:00.000Z",
+            "status": "delivered"
+          }
+        ]
+      },
+      "pages": [
+        {
+          "since": "cursor-1",
+          "response": {
+            "success": true,
+            "data": {
+              "thread_id": "0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c",
+              "subject": "Invoice",
+              "message_count": 4,
+              "truncated": false,
+              "messages": [
+                {
+                  "role": "user",
+                  "direction": "inbound",
+                  "id": "d4d4d4d4-d4d4-4d4d-8d4d-d4d4d4d4d4d4",
+                  "message_id": "<d4d4d4d4@example.test>",
+                  "from": "ada@example.test",
+                  "to": "support@example.test",
+                  "subject": "Invoice",
+                  "text": "Any news?",
+                  "timestamp": "2026-03-01T10:15:00.000Z"
+                },
+                {
+                  "role": "user",
+                  "direction": "inbound",
+                  "id": "e5e5e5e5-e5e5-4e5e-8e5e-e5e5e5e5e5e5",
+                  "message_id": "<e5e5e5e5@example.test>",
+                  "from": "ada@example.test",
+                  "to": "support@example.test",
+                  "subject": "Invoice",
+                  "text": "Sending the invoice number first",
+                  "timestamp": "2026-03-01T09:55:00.000Z"
+                }
+              ],
+              "cursor": "cursor-2",
+              "has_more": false
+            }
+          }
+        }
+      ],
+      "expected": {
+        "cursor": "cursor-2",
+        "messages": [
+          {
+            "id": "e5e5e5e5-e5e5-4e5e-8e5e-e5e5e5e5e5e5",
+            "copy_ids": []
+          },
+          {
+            "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+            "copy_ids": []
+          },
+          {
+            "id": "f6f6f6f6-f6f6-4f6f-8f6f-f6f6f6f6f6f6",
+            "copy_ids": [],
+            "status": "delivered"
+          },
+          {
+            "id": "d4d4d4d4-d4d4-4d4d-8d4d-d4d4d4d4d4d4",
+            "copy_ids": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "an empty delta keeps the held messages and advances the cursor",
+      "state": {
+        "cursor": "cursor-1",
+        "messages": [
+          {
+            "role": "user",
+            "direction": "inbound",
+            "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+            "message_id": "<a1a1a1a1@example.test>",
+            "from": "ada@example.test",
+            "to": "support@example.test",
+            "subject": "Invoice",
+            "text": "Where is my invoice?",
+            "timestamp": "2026-03-01T10:00:00.000Z"
+          }
+        ]
+      },
+      "pages": [
+        {
+          "since": "cursor-1",
+          "response": {
+            "success": true,
+            "data": {
+              "thread_id": "0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c",
+              "subject": "Invoice",
+              "messages": [],
+              "cursor": "cursor-2",
+              "has_more": false
+            }
+          }
+        }
+      ],
+      "expected": {
+        "cursor": "cursor-2",
+        "messages": [
+          {
+            "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+            "copy_ids": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "a held message whose copies list the incoming id is replaced by it",
+      "state": {
+        "cursor": "cursor-1",
+        "messages": [
+          {
+            "role": "user",
+            "direction": "inbound",
+            "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+            "message_id": "<a1a1a1a1@example.test>",
+            "from": "ada@example.test",
+            "to": "support@example.test",
+            "subject": "Invoice",
+            "text": "Where is my invoice?",
+            "timestamp": "2026-03-01T10:00:00.000Z",
+            "copies": [
+              {
+                "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+                "recipient": "support@example.test"
+              },
+              {
+                "id": "b2b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2",
+                "recipient": "billing@example.test"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "direction": "outbound",
+            "id": "f6f6f6f6-f6f6-4f6f-8f6f-f6f6f6f6f6f6",
+            "message_id": "<f6f6f6f6@example.test>",
+            "from": "agent@example.test",
+            "to": "ada@example.test",
+            "subject": "Re: Invoice",
+            "text": "Looking into it.",
+            "timestamp": "2026-03-01T10:05:00.000Z",
+            "status": "delivered"
+          }
+        ]
+      },
+      "pages": [
+        {
+          "since": "cursor-1",
+          "response": {
+            "success": true,
+            "data": {
+              "thread_id": "0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c",
+              "subject": "Invoice",
+              "message_count": 2,
+              "truncated": false,
+              "messages": [
+                {
+                  "role": "user",
+                  "direction": "inbound",
+                  "id": "b2b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2",
+                  "message_id": "<b2b2b2b2@example.test>",
+                  "from": "ada@example.test",
+                  "to": "billing@example.test",
+                  "subject": "Invoice",
+                  "text": "Where is my invoice?",
+                  "timestamp": "2026-03-01T10:00:00.000Z",
+                  "copies": [
+                    {
+                      "id": "b2b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2",
+                      "recipient": "billing@example.test"
+                    }
+                  ]
+                }
+              ],
+              "cursor": "cursor-2",
+              "has_more": false
+            }
+          }
+        }
+      ],
+      "expected": {
+        "cursor": "cursor-2",
+        "messages": [
+          {
+            "id": "b2b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2",
+            "copy_ids": [
+              "b2b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2"
+            ]
+          },
+          {
+            "id": "f6f6f6f6-f6f6-4f6f-8f6f-f6f6f6f6f6f6",
+            "copy_ids": [],
+            "status": "delivered"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a timestamp without an offset is read as UTC",
+      "state": {
+        "cursor": "cursor-1",
+        "messages": [
+          {
+            "role": "user",
+            "direction": "inbound",
+            "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+            "message_id": "<a1a1a1a1@example.test>",
+            "from": "ada@example.test",
+            "to": "support@example.test",
+            "subject": "Invoice",
+            "text": "Where is my invoice?",
+            "timestamp": "2026-03-01T10:00:00.000Z"
+          },
+          {
+            "role": "assistant",
+            "direction": "outbound",
+            "id": "f6f6f6f6-f6f6-4f6f-8f6f-f6f6f6f6f6f6",
+            "message_id": "<f6f6f6f6@example.test>",
+            "from": "agent@example.test",
+            "to": "ada@example.test",
+            "subject": "Re: Invoice",
+            "text": "Looking into it.",
+            "timestamp": "2026-03-01T10:05:00.000Z",
+            "status": "delivered"
+          }
+        ]
+      },
+      "pages": [
+        {
+          "since": "cursor-1",
+          "response": {
+            "success": true,
+            "data": {
+              "thread_id": "0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c",
+              "subject": "Invoice",
+              "message_count": 3,
+              "truncated": false,
+              "messages": [
+                {
+                  "role": "user",
+                  "direction": "inbound",
+                  "id": "d4d4d4d4-d4d4-4d4d-8d4d-d4d4d4d4d4d4",
+                  "message_id": "<d4d4d4d4@example.test>",
+                  "from": "ada@example.test",
+                  "to": "support@example.test",
+                  "subject": "Invoice",
+                  "text": "Sent before the invoice question",
+                  "timestamp": "2026-03-01T09:58:00"
+                }
+              ],
+              "cursor": "cursor-2",
+              "has_more": false
+            }
+          }
+        }
+      ],
+      "expected": {
+        "cursor": "cursor-2",
+        "messages": [
+          {
+            "id": "d4d4d4d4-d4d4-4d4d-8d4d-d4d4d4d4d4d4",
+            "copy_ids": []
+          },
+          {
+            "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+            "copy_ids": []
+          },
+          {
+            "id": "f6f6f6f6-f6f6-4f6f-8f6f-f6f6f6f6f6f6",
+            "copy_ids": [],
+            "status": "delivered"
+          }
+        ]
+      }
+    },
+    {
+      "name": "an unparseable timestamp sorts last without failing",
+      "state": {
+        "cursor": "cursor-1",
+        "messages": [
+          {
+            "role": "user",
+            "direction": "inbound",
+            "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+            "message_id": "<a1a1a1a1@example.test>",
+            "from": "ada@example.test",
+            "to": "support@example.test",
+            "subject": "Invoice",
+            "text": "Where is my invoice?",
+            "timestamp": "2026-03-01T10:00:00.000Z"
+          },
+          {
+            "role": "assistant",
+            "direction": "outbound",
+            "id": "f6f6f6f6-f6f6-4f6f-8f6f-f6f6f6f6f6f6",
+            "message_id": "<f6f6f6f6@example.test>",
+            "from": "agent@example.test",
+            "to": "ada@example.test",
+            "subject": "Re: Invoice",
+            "text": "Looking into it.",
+            "timestamp": "2026-03-01T10:05:00.000Z",
+            "status": "delivered"
+          }
+        ]
+      },
+      "pages": [
+        {
+          "since": "cursor-1",
+          "response": {
+            "success": true,
+            "data": {
+              "thread_id": "0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c",
+              "subject": "Invoice",
+              "message_count": 4,
+              "truncated": false,
+              "messages": [
+                {
+                  "role": "user",
+                  "direction": "inbound",
+                  "id": "e5e5e5e5-e5e5-4e5e-8e5e-e5e5e5e5e5e5",
+                  "message_id": "<e5e5e5e5@example.test>",
+                  "from": "ada@example.test",
+                  "to": "support@example.test",
+                  "subject": "Invoice",
+                  "text": "No usable time",
+                  "timestamp": "yesterday"
+                },
+                {
+                  "role": "user",
+                  "direction": "inbound",
+                  "id": "d4d4d4d4-d4d4-4d4d-8d4d-d4d4d4d4d4d4",
+                  "message_id": "<d4d4d4d4@example.test>",
+                  "from": "ada@example.test",
+                  "to": "support@example.test",
+                  "subject": "Invoice",
+                  "text": "Any news?",
+                  "timestamp": "2026-03-01T10:10:00.000Z"
+                }
+              ],
+              "cursor": "cursor-2",
+              "has_more": false
+            }
+          }
+        }
+      ],
+      "expected": {
+        "cursor": "cursor-2",
+        "messages": [
+          {
+            "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+            "copy_ids": []
+          },
+          {
+            "id": "f6f6f6f6-f6f6-4f6f-8f6f-f6f6f6f6f6f6",
+            "copy_ids": [],
+            "status": "delivered"
+          },
+          {
+            "id": "d4d4d4d4-d4d4-4d4d-8d4d-d4d4d4d4d4d4",
+            "copy_ids": []
+          },
+          {
+            "id": "e5e5e5e5-e5e5-4e5e-8e5e-e5e5e5e5e5e5",
+            "copy_ids": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "a page without a cursor is an error",
+      "state": null,
+      "pages": [
+        {
+          "since": "start",
+          "response": {
+            "success": true,
+            "data": {
+              "thread_id": "0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c",
+              "subject": "Invoice",
+              "message_count": 1,
+              "truncated": false,
+              "messages": [
+                {
+                  "role": "user",
+                  "direction": "inbound",
+                  "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+                  "message_id": "<a1a1a1a1@example.test>",
+                  "from": "ada@example.test",
+                  "to": "support@example.test",
+                  "subject": "Invoice",
+                  "text": "Where is my invoice?",
+                  "timestamp": "2026-03-01T10:00:00.000Z"
+                }
+              ],
+              "has_more": false
+            }
+          }
+        }
+      ],
+      "expected": {
+        "error": true
+      }
+    },
+    {
+      "name": "has_more without a new cursor is an error",
+      "state": {
+        "cursor": "cursor-1",
+        "messages": []
+      },
+      "pages": [
+        {
+          "since": "cursor-1",
+          "response": {
+            "success": true,
+            "data": {
+              "thread_id": "0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c",
+              "subject": "Invoice",
+              "message_count": 1,
+              "truncated": false,
+              "messages": [
+                {
+                  "role": "user",
+                  "direction": "inbound",
+                  "id": "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
+                  "message_id": "<a1a1a1a1@example.test>",
+                  "from": "ada@example.test",
+                  "to": "support@example.test",
+                  "subject": "Invoice",
+                  "text": "Where is my invoice?",
+                  "timestamp": "2026-03-01T10:00:00.000Z"
+                }
+              ],
+              "cursor": "cursor-1",
+              "has_more": true
+            }
+          }
+        }
+      ],
+      "expected": {
+        "error": true
+      }
+    }
+  ],
+  "timestamps": [
+    {
+      "input": "2026-03-01T10:00:00.000Z",
+      "normalized": "2026-03-01T10:00:00.000Z",
+      "ms": 1772359200000
+    },
+    {
+      "input": "2026-03-01T10:00:00",
+      "normalized": "2026-03-01T10:00:00Z",
+      "ms": 1772359200000
+    },
+    {
+      "input": "2026-03-01T12:00:00+02:00",
+      "normalized": "2026-03-01T12:00:00+02:00",
+      "ms": 1772359200000
+    },
+    {
+      "input": "2026-03-01T10:00:00-05:30",
+      "normalized": "2026-03-01T10:00:00-05:30",
+      "ms": 1772379000000
+    },
+    {
+      "input": "2026-03-01T10:00:00.123456789Z",
+      "normalized": "2026-03-01T10:00:00.123456789Z",
+      "ms": 1772359200123
+    },
+    {
+      "input": "2026-03-01T10:00:00.9999Z",
+      "normalized": "2026-03-01T10:00:00.9999Z",
+      "ms": 1772359200999
+    },
+    {
+      "input": "2024-02-29T10:00:00Z",
+      "normalized": "2024-02-29T10:00:00Z",
+      "ms": 1709200800000
+    },
+    {
+      "input": "2026-02-29T10:00:00Z",
+      "normalized": null,
+      "ms": null
+    },
+    {
+      "input": "2026-03-01T24:00:00Z",
+      "normalized": null,
+      "ms": null
+    },
+    {
+      "input": "2026-03-01T10:60:00Z",
+      "normalized": null,
+      "ms": null
+    },
+    {
+      "input": "2026-03-01T10:00:60Z",
+      "normalized": null,
+      "ms": null
+    },
+    {
+      "input": "2026-03-01T10:00:00.1234567890Z",
+      "normalized": null,
+      "ms": null
+    },
+    {
+      "input": "2026-03-01T10:00:00+24:00",
+      "normalized": null,
+      "ms": null
+    },
+    {
+      "input": "0000-01-01T00:00:00Z",
+      "normalized": null,
+      "ms": null
+    },
+    {
+      "input": "2026-03-01 10:00:00Z",
+      "normalized": null,
+      "ms": null
+    },
+    {
+      "input": "2026-03-01t10:00:00z",
+      "normalized": null,
+      "ms": null
+    },
+    {
+      "input": "yesterday",
+      "normalized": null,
+      "ms": null
+    }
+  ]
+}

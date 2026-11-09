@@ -10,14 +10,21 @@ from ... import errors
 
 from ...models.error_response import ErrorResponse
 from ...models.rotate_webhook_secret_response_200 import RotateWebhookSecretResponse200
+from ...types import UNSET, Unset
 from typing import cast
 
 
 
 def _get_kwargs(
-    
+    *,
+    idempotency_key: str | Unset = UNSET,
+
 ) -> dict[str, Any]:
-    
+    headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
+
 
     
 
@@ -29,6 +36,7 @@ def _get_kwargs(
     }
 
 
+    _kwargs["headers"] = headers
     return _kwargs
 
 
@@ -87,12 +95,16 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | RotateWebhookSecretResponse200]:
     """ Rotate webhook signing secret
 
      Generates a new webhook signing secret, replacing the current one.
     Rate limited to once per 60 minutes.
+
+    Args:
+        idempotency_key (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -104,7 +116,8 @@ def sync_detailed(
 
 
     kwargs = _get_kwargs(
-        
+        idempotency_key=idempotency_key,
+
     )
 
     response = client.get_httpx_client().request(
@@ -116,12 +129,16 @@ def sync_detailed(
 def sync(
     *,
     client: AuthenticatedClient | Client,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | RotateWebhookSecretResponse200 | None:
     """ Rotate webhook signing secret
 
      Generates a new webhook signing secret, replacing the current one.
     Rate limited to once per 60 minutes.
+
+    Args:
+        idempotency_key (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -134,18 +151,23 @@ def sync(
 
     return sync_detailed(
         client=client,
+idempotency_key=idempotency_key,
 
     ).parsed
 
 async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | RotateWebhookSecretResponse200]:
     """ Rotate webhook signing secret
 
      Generates a new webhook signing secret, replacing the current one.
     Rate limited to once per 60 minutes.
+
+    Args:
+        idempotency_key (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -157,7 +179,8 @@ async def asyncio_detailed(
 
 
     kwargs = _get_kwargs(
-        
+        idempotency_key=idempotency_key,
+
     )
 
     response = await client.get_async_httpx_client().request(
@@ -169,12 +192,16 @@ async def asyncio_detailed(
 async def asyncio(
     *,
     client: AuthenticatedClient | Client,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | RotateWebhookSecretResponse200 | None:
     """ Rotate webhook signing secret
 
      Generates a new webhook signing secret, replacing the current one.
     Rate limited to once per 60 minutes.
+
+    Args:
+        idempotency_key (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -187,5 +214,6 @@ async def asyncio(
 
     return (await asyncio_detailed(
         client=client,
+idempotency_key=idempotency_key,
 
     )).parsed

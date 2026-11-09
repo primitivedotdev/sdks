@@ -26,8 +26,7 @@ T = TypeVar("T", bound="MemoryRecord")
 
 @_attrs_define
 class MemoryRecord:
-    """ Metadata for a Primitive memory. Search responses omit `value` when
-    `include_value=false`.
+    """ Metadata for a Primitive memory. Search responses omit `value` when `include_value=false`.
 
         Attributes:
             id (UUID):
@@ -43,9 +42,8 @@ class MemoryRecord:
             created_by (None | str): Actor that created the memory, when available.
             updated_by (None | str): Actor that last updated the memory, when available.
             value (bool | float | list[Any] | MemoryJsonValueType5 | None | str | Unset): JSON value accepted by Primitive
-                Memories. The server accepts strings,
-                numbers, booleans, null, arrays, and objects, validates nested values,
-                and rejects values that do not serialize as JSON.
+                Memories. The server accepts strings, numbers, booleans, null, arrays, and objects, validates nested values, and
+                rejects values that do not serialize as JSON.
      """
 
     id: UUID
@@ -61,6 +59,7 @@ class MemoryRecord:
     created_by: None | str
     updated_by: None | str
     value: bool | float | list[Any] | MemoryJsonValueType5 | None | str | Unset = UNSET
+    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
 
@@ -117,7 +116,7 @@ class MemoryRecord:
 
 
         field_dict: dict[str, Any] = {}
-
+        field_dict.update(self.additional_properties)
         field_dict.update({
             "id": id,
             "key": key,
@@ -268,5 +267,22 @@ class MemoryRecord:
             value=value,
         )
 
+
+        memory_record.additional_properties = d
         return memory_record
 
+    @property
+    def additional_keys(self) -> list[str]:
+        return list(self.additional_properties.keys())
+
+    def __getitem__(self, key: str) -> Any:
+        return self.additional_properties[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.additional_properties[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.additional_properties[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.additional_properties

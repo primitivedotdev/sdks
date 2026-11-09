@@ -45,7 +45,6 @@ def _get_kwargs(
     spam_score_gte: float | Unset = UNSET,
     awaiting: SearchEmailsAwaiting | Unset = UNSET,
     automated: SearchEmailsAutomated | Unset = UNSET,
-    from_verified: SearchEmailsFromVerified | Unset = UNSET,
     sort: SearchEmailsSort | Unset = UNSET,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
@@ -54,6 +53,7 @@ def _get_kwargs(
     thread_id: UUID | Unset = UNSET,
     prefix: SearchEmailsPrefix | Unset = SearchEmailsPrefix.FALSE,
     count: SearchEmailsCount | Unset = SearchEmailsCount.TRUE,
+    from_verified: SearchEmailsFromVerified | Unset = UNSET,
     direction: SearchEmailsDirection | Unset = SearchEmailsDirection.INBOUND,
     include: str | Unset = UNSET,
 
@@ -122,12 +122,6 @@ def _get_kwargs(
 
     params["automated"] = json_automated
 
-    json_from_verified: str | Unset = UNSET
-    if not isinstance(from_verified, Unset):
-        json_from_verified = from_verified.value
-
-    params["from_verified"] = json_from_verified
-
     json_sort: str | Unset = UNSET
     if not isinstance(sort, Unset):
         json_sort = sort.value
@@ -166,6 +160,12 @@ def _get_kwargs(
         json_count = count.value
 
     params["count"] = json_count
+
+    json_from_verified: str | Unset = UNSET
+    if not isinstance(from_verified, Unset):
+        json_from_verified = from_verified.value
+
+    params["from_verified"] = json_from_verified
 
     json_direction: str | Unset = UNSET
     if not isinstance(direction, Unset):
@@ -266,7 +266,6 @@ def sync_detailed(
     spam_score_gte: float | Unset = UNSET,
     awaiting: SearchEmailsAwaiting | Unset = UNSET,
     automated: SearchEmailsAutomated | Unset = UNSET,
-    from_verified: SearchEmailsFromVerified | Unset = UNSET,
     sort: SearchEmailsSort | Unset = UNSET,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
@@ -275,6 +274,7 @@ def sync_detailed(
     thread_id: UUID | Unset = UNSET,
     prefix: SearchEmailsPrefix | Unset = SearchEmailsPrefix.FALSE,
     count: SearchEmailsCount | Unset = SearchEmailsCount.TRUE,
+    from_verified: SearchEmailsFromVerified | Unset = UNSET,
     direction: SearchEmailsDirection | Unset = SearchEmailsDirection.INBOUND,
     include: str | Unset = UNSET,
 
@@ -304,6 +304,14 @@ def sync_detailed(
     to the connected address in the same organization. An unavailable
     parent returns 404. Sender filters are not authentication proof;
     inspect the email detail's authentication evidence before trusting it.
+
+
+    Agent connection keys (pconn_) may search only mail received by their bound address. This
+    restriction applies to results, totals, facets and pagination; from/to and q filters cannot widen
+    it. When reply_to_sent_email_id is supplied, the parent must be a send from the connected address in
+    the same organization, otherwise the response is 404. The parent filter is optional. Existing
+    from/to filters are substring or domain filters, not proof of sender identity. Inspect getEmail
+    authentication details before trusting a sender.
 
     Args:
         q (str | Unset):
@@ -347,7 +355,6 @@ def sync_detailed(
         spam_score_gte (float | Unset):
         awaiting (SearchEmailsAwaiting | Unset):
         automated (SearchEmailsAutomated | Unset):
-        from_verified (SearchEmailsFromVerified | Unset):
         sort (SearchEmailsSort | Unset):
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
@@ -357,6 +364,7 @@ def sync_detailed(
         thread_id (UUID | Unset):
         prefix (SearchEmailsPrefix | Unset):  Default: SearchEmailsPrefix.FALSE.
         count (SearchEmailsCount | Unset):  Default: SearchEmailsCount.TRUE.
+        from_verified (SearchEmailsFromVerified | Unset):
         direction (SearchEmailsDirection | Unset):  Default: SearchEmailsDirection.INBOUND.
         include (str | Unset):  Example: body_text,headers.
 
@@ -385,7 +393,6 @@ spam_score_lt=spam_score_lt,
 spam_score_gte=spam_score_gte,
 awaiting=awaiting,
 automated=automated,
-from_verified=from_verified,
 sort=sort,
 cursor=cursor,
 limit=limit,
@@ -394,6 +401,7 @@ include_facets=include_facets,
 thread_id=thread_id,
 prefix=prefix,
 count=count,
+from_verified=from_verified,
 direction=direction,
 include=include,
 
@@ -423,7 +431,6 @@ def sync(
     spam_score_gte: float | Unset = UNSET,
     awaiting: SearchEmailsAwaiting | Unset = UNSET,
     automated: SearchEmailsAutomated | Unset = UNSET,
-    from_verified: SearchEmailsFromVerified | Unset = UNSET,
     sort: SearchEmailsSort | Unset = UNSET,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
@@ -432,6 +439,7 @@ def sync(
     thread_id: UUID | Unset = UNSET,
     prefix: SearchEmailsPrefix | Unset = SearchEmailsPrefix.FALSE,
     count: SearchEmailsCount | Unset = SearchEmailsCount.TRUE,
+    from_verified: SearchEmailsFromVerified | Unset = UNSET,
     direction: SearchEmailsDirection | Unset = SearchEmailsDirection.INBOUND,
     include: str | Unset = UNSET,
 
@@ -461,6 +469,14 @@ def sync(
     to the connected address in the same organization. An unavailable
     parent returns 404. Sender filters are not authentication proof;
     inspect the email detail's authentication evidence before trusting it.
+
+
+    Agent connection keys (pconn_) may search only mail received by their bound address. This
+    restriction applies to results, totals, facets and pagination; from/to and q filters cannot widen
+    it. When reply_to_sent_email_id is supplied, the parent must be a send from the connected address in
+    the same organization, otherwise the response is 404. The parent filter is optional. Existing
+    from/to filters are substring or domain filters, not proof of sender identity. Inspect getEmail
+    authentication details before trusting a sender.
 
     Args:
         q (str | Unset):
@@ -504,7 +520,6 @@ def sync(
         spam_score_gte (float | Unset):
         awaiting (SearchEmailsAwaiting | Unset):
         automated (SearchEmailsAutomated | Unset):
-        from_verified (SearchEmailsFromVerified | Unset):
         sort (SearchEmailsSort | Unset):
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
@@ -514,6 +529,7 @@ def sync(
         thread_id (UUID | Unset):
         prefix (SearchEmailsPrefix | Unset):  Default: SearchEmailsPrefix.FALSE.
         count (SearchEmailsCount | Unset):  Default: SearchEmailsCount.TRUE.
+        from_verified (SearchEmailsFromVerified | Unset):
         direction (SearchEmailsDirection | Unset):  Default: SearchEmailsDirection.INBOUND.
         include (str | Unset):  Example: body_text,headers.
 
@@ -543,7 +559,6 @@ spam_score_lt=spam_score_lt,
 spam_score_gte=spam_score_gte,
 awaiting=awaiting,
 automated=automated,
-from_verified=from_verified,
 sort=sort,
 cursor=cursor,
 limit=limit,
@@ -552,6 +567,7 @@ include_facets=include_facets,
 thread_id=thread_id,
 prefix=prefix,
 count=count,
+from_verified=from_verified,
 direction=direction,
 include=include,
 
@@ -575,7 +591,6 @@ async def asyncio_detailed(
     spam_score_gte: float | Unset = UNSET,
     awaiting: SearchEmailsAwaiting | Unset = UNSET,
     automated: SearchEmailsAutomated | Unset = UNSET,
-    from_verified: SearchEmailsFromVerified | Unset = UNSET,
     sort: SearchEmailsSort | Unset = UNSET,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
@@ -584,6 +599,7 @@ async def asyncio_detailed(
     thread_id: UUID | Unset = UNSET,
     prefix: SearchEmailsPrefix | Unset = SearchEmailsPrefix.FALSE,
     count: SearchEmailsCount | Unset = SearchEmailsCount.TRUE,
+    from_verified: SearchEmailsFromVerified | Unset = UNSET,
     direction: SearchEmailsDirection | Unset = SearchEmailsDirection.INBOUND,
     include: str | Unset = UNSET,
 
@@ -614,6 +630,14 @@ async def asyncio_detailed(
     parent returns 404. Sender filters are not authentication proof;
     inspect the email detail's authentication evidence before trusting it.
 
+
+    Agent connection keys (pconn_) may search only mail received by their bound address. This
+    restriction applies to results, totals, facets and pagination; from/to and q filters cannot widen
+    it. When reply_to_sent_email_id is supplied, the parent must be a send from the connected address in
+    the same organization, otherwise the response is 404. The parent filter is optional. Existing
+    from/to filters are substring or domain filters, not proof of sender identity. Inspect getEmail
+    authentication details before trusting a sender.
+
     Args:
         q (str | Unset):
         from_ (str | Unset):
@@ -656,7 +680,6 @@ async def asyncio_detailed(
         spam_score_gte (float | Unset):
         awaiting (SearchEmailsAwaiting | Unset):
         automated (SearchEmailsAutomated | Unset):
-        from_verified (SearchEmailsFromVerified | Unset):
         sort (SearchEmailsSort | Unset):
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
@@ -666,6 +689,7 @@ async def asyncio_detailed(
         thread_id (UUID | Unset):
         prefix (SearchEmailsPrefix | Unset):  Default: SearchEmailsPrefix.FALSE.
         count (SearchEmailsCount | Unset):  Default: SearchEmailsCount.TRUE.
+        from_verified (SearchEmailsFromVerified | Unset):
         direction (SearchEmailsDirection | Unset):  Default: SearchEmailsDirection.INBOUND.
         include (str | Unset):  Example: body_text,headers.
 
@@ -694,7 +718,6 @@ spam_score_lt=spam_score_lt,
 spam_score_gte=spam_score_gte,
 awaiting=awaiting,
 automated=automated,
-from_verified=from_verified,
 sort=sort,
 cursor=cursor,
 limit=limit,
@@ -703,6 +726,7 @@ include_facets=include_facets,
 thread_id=thread_id,
 prefix=prefix,
 count=count,
+from_verified=from_verified,
 direction=direction,
 include=include,
 
@@ -732,7 +756,6 @@ async def asyncio(
     spam_score_gte: float | Unset = UNSET,
     awaiting: SearchEmailsAwaiting | Unset = UNSET,
     automated: SearchEmailsAutomated | Unset = UNSET,
-    from_verified: SearchEmailsFromVerified | Unset = UNSET,
     sort: SearchEmailsSort | Unset = UNSET,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
@@ -741,6 +764,7 @@ async def asyncio(
     thread_id: UUID | Unset = UNSET,
     prefix: SearchEmailsPrefix | Unset = SearchEmailsPrefix.FALSE,
     count: SearchEmailsCount | Unset = SearchEmailsCount.TRUE,
+    from_verified: SearchEmailsFromVerified | Unset = UNSET,
     direction: SearchEmailsDirection | Unset = SearchEmailsDirection.INBOUND,
     include: str | Unset = UNSET,
 
@@ -771,6 +795,14 @@ async def asyncio(
     parent returns 404. Sender filters are not authentication proof;
     inspect the email detail's authentication evidence before trusting it.
 
+
+    Agent connection keys (pconn_) may search only mail received by their bound address. This
+    restriction applies to results, totals, facets and pagination; from/to and q filters cannot widen
+    it. When reply_to_sent_email_id is supplied, the parent must be a send from the connected address in
+    the same organization, otherwise the response is 404. The parent filter is optional. Existing
+    from/to filters are substring or domain filters, not proof of sender identity. Inspect getEmail
+    authentication details before trusting a sender.
+
     Args:
         q (str | Unset):
         from_ (str | Unset):
@@ -813,7 +845,6 @@ async def asyncio(
         spam_score_gte (float | Unset):
         awaiting (SearchEmailsAwaiting | Unset):
         automated (SearchEmailsAutomated | Unset):
-        from_verified (SearchEmailsFromVerified | Unset):
         sort (SearchEmailsSort | Unset):
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
@@ -823,6 +854,7 @@ async def asyncio(
         thread_id (UUID | Unset):
         prefix (SearchEmailsPrefix | Unset):  Default: SearchEmailsPrefix.FALSE.
         count (SearchEmailsCount | Unset):  Default: SearchEmailsCount.TRUE.
+        from_verified (SearchEmailsFromVerified | Unset):
         direction (SearchEmailsDirection | Unset):  Default: SearchEmailsDirection.INBOUND.
         include (str | Unset):  Example: body_text,headers.
 
@@ -852,7 +884,6 @@ spam_score_lt=spam_score_lt,
 spam_score_gte=spam_score_gte,
 awaiting=awaiting,
 automated=automated,
-from_verified=from_verified,
 sort=sort,
 cursor=cursor,
 limit=limit,
@@ -861,6 +892,7 @@ include_facets=include_facets,
 thread_id=thread_id,
 prefix=prefix,
 count=count,
+from_verified=from_verified,
 direction=direction,
 include=include,
 

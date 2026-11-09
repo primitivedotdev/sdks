@@ -23,12 +23,12 @@ T = TypeVar("T", bound="ListContactsResponse200Meta")
 class ListContactsResponse200Meta:
     """ 
         Attributes:
+            limit (int):
             cursor (None | str):
-            limit (int | Unset):
      """
 
+    limit: int
     cursor: None | str
-    limit: int | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -36,19 +36,18 @@ class ListContactsResponse200Meta:
 
 
     def to_dict(self) -> dict[str, Any]:
+        limit = self.limit
+
         cursor: None | str
         cursor = self.cursor
-
-        limit = self.limit
 
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
+            "limit": limit,
             "cursor": cursor,
         })
-        if limit is not UNSET:
-            field_dict["limit"] = limit
 
         return field_dict
 
@@ -57,6 +56,8 @@ class ListContactsResponse200Meta:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
+        limit = d.pop("limit")
+
         def _parse_cursor(data: object) -> None | str:
             if data is None:
                 return data
@@ -65,11 +66,9 @@ class ListContactsResponse200Meta:
         cursor = _parse_cursor(d.pop("cursor"))
 
 
-        limit = d.pop("limit", UNSET)
-
         list_contacts_response_200_meta = cls(
-            cursor=cursor,
             limit=limit,
+            cursor=cursor,
         )
 
 

@@ -9,6 +9,9 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.endpoint_kind import EndpointKind
+from ..models.endpoint_owner_key_status_type_1 import EndpointOwnerKeyStatusType1
+from ..models.endpoint_owner_key_status_type_2_type_1 import EndpointOwnerKeyStatusType2Type1
+from ..models.endpoint_owner_key_status_type_3_type_1 import EndpointOwnerKeyStatusType3Type1
 from typing import cast
 from uuid import UUID
 import datetime
@@ -39,8 +42,8 @@ class Endpoint:
             success_count (int): Successful deliveries
             failure_count (int): Failed deliveries
             consecutive_fails (int): Current streak of consecutive failures
-            recipient (None | str | Unset): Server-enforced recipient for an address-scoped pull subscription; null for
-                account-wide receiving.
+            recipient (None | str | Unset): Server-enforced recipient for an address-scoped pull subscription; null for an
+                account-wide destination created before pull creation required a connected-agent credential.
             receiver_capabilities (EndpointReceiverCapabilities | Unset):
             url (None | str | Unset):
             domain_id (None | Unset | UUID): Restrict this endpoint to emails from a specific domain
@@ -54,6 +57,14 @@ class Endpoint:
                 route, never as a domain's default destination, and is exempt from
                 the one-endpoint-per-domain rule (so many can share a domain).
             name (None | str | Unset): Stable name of a pull destination.
+            owned_by_key (bool | Unset): Whether an API key owns this webhook instead of the organization.
+            owner_key_id (None | Unset | UUID): The API key that owns this webhook. In endpoint responses it is set only for
+                a caller who may read API key metadata, and is null otherwise and when the organization owns the webhook. After
+                a rotation, the key that carries on for the key first named while it can act.
+            owner_key_status (EndpointOwnerKeyStatusType1 | EndpointOwnerKeyStatusType2Type1 |
+                EndpointOwnerKeyStatusType3Type1 | None | Unset): Whether the owning key can act now. In endpoint responses it
+                is set only for a caller who may read API key metadata. Suspended also covers an expired key. A suspended or
+                revoked owner is sent nothing.
      """
 
     id: UUID
@@ -78,6 +89,9 @@ class Endpoint:
     function_id: None | Unset | UUID = UNSET
     is_route_target: bool | Unset = UNSET
     name: None | str | Unset = UNSET
+    owned_by_key: bool | Unset = UNSET
+    owner_key_id: None | Unset | UUID = UNSET
+    owner_key_status: EndpointOwnerKeyStatusType1 | EndpointOwnerKeyStatusType2Type1 | EndpointOwnerKeyStatusType3Type1 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -184,6 +198,28 @@ class Endpoint:
         else:
             name = self.name
 
+        owned_by_key = self.owned_by_key
+
+        owner_key_id: None | str | Unset
+        if isinstance(self.owner_key_id, Unset):
+            owner_key_id = UNSET
+        elif isinstance(self.owner_key_id, UUID):
+            owner_key_id = str(self.owner_key_id)
+        else:
+            owner_key_id = self.owner_key_id
+
+        owner_key_status: None | str | Unset
+        if isinstance(self.owner_key_status, Unset):
+            owner_key_status = UNSET
+        elif isinstance(self.owner_key_status, EndpointOwnerKeyStatusType1):
+            owner_key_status = self.owner_key_status.value
+        elif isinstance(self.owner_key_status, EndpointOwnerKeyStatusType2Type1):
+            owner_key_status = self.owner_key_status.value
+        elif isinstance(self.owner_key_status, EndpointOwnerKeyStatusType3Type1):
+            owner_key_status = self.owner_key_status.value
+        else:
+            owner_key_status = self.owner_key_status
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -223,6 +259,12 @@ class Endpoint:
             field_dict["is_route_target"] = is_route_target
         if name is not UNSET:
             field_dict["name"] = name
+        if owned_by_key is not UNSET:
+            field_dict["owned_by_key"] = owned_by_key
+        if owner_key_id is not UNSET:
+            field_dict["owner_key_id"] = owner_key_id
+        if owner_key_status is not UNSET:
+            field_dict["owner_key_status"] = owner_key_status
 
         return field_dict
 
@@ -440,6 +482,68 @@ class Endpoint:
         name = _parse_name(d.pop("name", UNSET))
 
 
+        owned_by_key = d.pop("owned_by_key", UNSET)
+
+        def _parse_owner_key_id(data: object) -> None | Unset | UUID:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                owner_key_id_type_0 = UUID(data)
+
+
+
+                return owner_key_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | Unset | UUID, data)
+
+        owner_key_id = _parse_owner_key_id(d.pop("owner_key_id", UNSET))
+
+
+        def _parse_owner_key_status(data: object) -> EndpointOwnerKeyStatusType1 | EndpointOwnerKeyStatusType2Type1 | EndpointOwnerKeyStatusType3Type1 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                owner_key_status_type_1 = EndpointOwnerKeyStatusType1(data)
+
+
+
+                return owner_key_status_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                owner_key_status_type_2_type_1 = EndpointOwnerKeyStatusType2Type1(data)
+
+
+
+                return owner_key_status_type_2_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                owner_key_status_type_3_type_1 = EndpointOwnerKeyStatusType3Type1(data)
+
+
+
+                return owner_key_status_type_3_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EndpointOwnerKeyStatusType1 | EndpointOwnerKeyStatusType2Type1 | EndpointOwnerKeyStatusType3Type1 | None | Unset, data)
+
+        owner_key_status = _parse_owner_key_status(d.pop("owner_key_status", UNSET))
+
+
         endpoint = cls(
             id=id,
             org_id=org_id,
@@ -463,6 +567,9 @@ class Endpoint:
             function_id=function_id,
             is_route_target=is_route_target,
             name=name,
+            owned_by_key=owned_by_key,
+            owner_key_id=owner_key_id,
+            owner_key_status=owner_key_status,
         )
 
 

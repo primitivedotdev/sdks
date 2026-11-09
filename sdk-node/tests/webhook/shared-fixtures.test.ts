@@ -8,6 +8,7 @@ import {
   decodeRawEmail,
   type EmailReceivedEvent,
   type EmailRelay,
+  type EmailUnderstanding,
   handleWebhook,
   isRawIncluded,
   isTrustedSender,
@@ -15,6 +16,7 @@ import {
   parseHeaderAddress,
   parseWebhookEvent,
   RawEmailDecodeError,
+  type SenderAnalysis,
   safeValidateEmailReceivedEvent,
   validateEmailAuth,
   validateEmailReceivedEvent,
@@ -53,6 +55,8 @@ describe("shared compatibility fixtures", () => {
           relay?: EmailRelay | null;
           automated?: boolean | null;
           automated_reasons?: string[] | null;
+          understanding?: EmailUnderstanding | null;
+          sender?: SenderAnalysis | null;
           bounce?: {
             sent_email_id: string | null;
             failed_recipients: string[] | null;
@@ -78,6 +82,17 @@ describe("shared compatibility fixtures", () => {
         if (testCase.expected.automated_reasons !== undefined) {
           expect(event.email.automated_reasons ?? null, testCase.name).toEqual(
             testCase.expected.automated_reasons,
+          );
+        }
+        if (testCase.expected.understanding !== undefined) {
+          expect(
+            event.email.analysis.understanding ?? null,
+            testCase.name,
+          ).toEqual(testCase.expected.understanding);
+        }
+        if (testCase.expected.sender !== undefined) {
+          expect(event.email.analysis.sender ?? null, testCase.name).toEqual(
+            testCase.expected.sender,
           );
         }
         if (testCase.expected.bounce !== undefined) {

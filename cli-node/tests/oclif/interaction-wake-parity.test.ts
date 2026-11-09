@@ -41,7 +41,7 @@ const HOOK_SENTENCES = hook.WAKE_SENTENCES;
 
 const id = "6f1e2d3c-4b5a-4968-8776-655443322110";
 const cases = [
-  { interaction_hint: "card", interaction_kind: "x402.payment/1" },
+  { interaction_hint: "card", interaction_kind: "example.invoice/1" },
   { interaction_hint: "card", interaction_kind: "primitive.contact/1" },
   { interaction_hint: "card", interaction_kind: "repeat.tick/1" },
   { interaction_hint: "card", interaction_kind: "repeat.stop/1" },

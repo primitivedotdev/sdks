@@ -34,6 +34,14 @@ function makeFunctionDetail(
   overrides: Partial<FunctionDetail> = {},
 ): FunctionDetail {
   return {
+    last_invoked_at: null,
+    invocations_24h: 0,
+    invocations_total: 0,
+    tags: [],
+    has_code: true,
+    code_source: null,
+    current_deployment_id: null,
+    test_readiness: { ready: false, reason: "no_endpoint" },
     code: BUNDLE,
     created_at: "2026-05-09T00:00:00.000Z",
     deploy_status: "deployed",
@@ -283,8 +291,8 @@ describe("parseSecretFlags", () => {
 describe("resolveSecretFlags", () => {
   it("reads secrets from inline, env, file, and dotenv sources in deterministic order", () => {
     const result = resolveSecretFlags({
-      env: { OPENAI_KEY: "sk-env" },
-      fromEnv: ["OPENAI_KEY"],
+      env: { MY_API_KEY: "sk-env" },
+      fromEnv: ["MY_API_KEY"],
       fromEnvFile: [".env.local:OWNER_EMAIL"],
       fromFile: ["PRIVATE_KEY=private-key.pem"],
       inline: ["INLINE=abc"],
@@ -293,7 +301,7 @@ describe("resolveSecretFlags", () => {
         if (path === ".env.local") {
           return [
             "# comment",
-            "OPENAI_KEY=ignored",
+            "MY_API_KEY=ignored",
             "OWNER_EMAIL='owner@example.com'",
           ].join("\n");
         }
@@ -305,7 +313,7 @@ describe("resolveSecretFlags", () => {
     if (result.kind === "ok") {
       expect(result.secrets).toEqual([
         { key: "INLINE", value: "abc" },
-        { key: "OPENAI_KEY", value: "sk-env" },
+        { key: "MY_API_KEY", value: "sk-env" },
         { key: "PRIVATE_KEY", value: "pem\nwith trailing newline\n" },
         { key: "OWNER_EMAIL", value: "owner@example.com" },
       ]);
@@ -329,28 +337,28 @@ describe("resolveSecretFlags", () => {
 
   it("strips one trailing line ending from a stdin secret value", () => {
     const result = resolveSecretFlags({
-      fromStdin: "OPENAI_KEY",
+      fromStdin: "MY_API_KEY",
       readStdin: () => "sk-from-stdin\n",
     });
 
     expect(result.kind).toBe("ok");
     if (result.kind === "ok") {
       expect(result.secrets).toEqual([
-        { key: "OPENAI_KEY", value: "sk-from-stdin" },
+        { key: "MY_API_KEY", value: "sk-from-stdin" },
       ]);
     }
   });
 
   it("strips a CRLF stdin line ending without trimming other content", () => {
     const result = resolveSecretFlags({
-      fromStdin: "OPENAI_KEY",
+      fromStdin: "MY_API_KEY",
       readStdin: () => "  sk-from-stdin  \r\n",
     });
 
     expect(result.kind).toBe("ok");
     if (result.kind === "ok") {
       expect(result.secrets).toEqual([
-        { key: "OPENAI_KEY", value: "  sk-from-stdin  " },
+        { key: "MY_API_KEY", value: "  sk-from-stdin  " },
       ]);
     }
   });
@@ -372,25 +380,25 @@ describe("resolveSecretFlags", () => {
   it("reports a missing environment variable by name", () => {
     const result = resolveSecretFlags({
       env: {},
-      fromEnv: ["OPENAI_KEY"],
+      fromEnv: ["MY_API_KEY"],
     });
 
     expect(result.kind).toBe("error");
     if (result.kind === "error") {
-      expect(result.message).toContain("OPENAI_KEY");
+      expect(result.message).toContain("MY_API_KEY");
       expect(result.message).toContain("not set");
     }
   });
 
   it("reports a missing dotenv key with the file path", () => {
     const result = resolveSecretFlags({
-      fromEnvFile: [".env.local:OPENAI_KEY"],
+      fromEnvFile: [".env.local:MY_API_KEY"],
       readFile: () => "OTHER=value\n",
     });
 
     expect(result.kind).toBe("error");
     if (result.kind === "error") {
-      expect(result.message).toContain("OPENAI_KEY");
+      expect(result.message).toContain("MY_API_KEY");
       expect(result.message).toContain(".env.local");
     }
   });
@@ -433,7 +441,7 @@ describe("resolveSecretFlags", () => {
 
   it("reports stdin read errors for --secret-from-stdin", () => {
     const result = resolveSecretFlags({
-      fromStdin: "OPENAI_KEY",
+      fromStdin: "MY_API_KEY",
       readStdin: () => {
         throw new Error("stdin is a TTY");
       },

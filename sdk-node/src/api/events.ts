@@ -28,13 +28,20 @@ export { EventConnection, EventReceiverError } from "./event-transport.js";
 export type LocalEvent<T extends string = string> = {
   id: string;
   type: T;
-  body: string;
+  /**
+   * The webhook body, exactly as serialized. Null when the API withholds the
+   * message content from this credential.
+   */
+  body: string | null;
   headers: Readonly<Record<string, string>>;
-  data: string extends T
-    ? WebhookEvent
-    : Extract<KnownWebhookEvent, { event: T }> extends never
-      ? WebhookEvent
-      : Extract<KnownWebhookEvent, { event: T }>;
+  /** The parsed body, or null when `body` is null. */
+  data:
+    | (string extends T
+        ? WebhookEvent
+        : Extract<KnownWebhookEvent, { event: T }> extends never
+          ? WebhookEvent
+          : Extract<KnownWebhookEvent, { event: T }>)
+    | null;
 };
 export type EventStatus = {
   type: "ready" | "reconnecting" | "handler_error" | "gap" | "closed";
@@ -390,7 +397,10 @@ export class EventsResource {
       type: raw.event_type,
       body: raw.body,
       headers: raw.headers,
-      data: parseWebhookEvent(JSON.parse(raw.body), raw.event_type),
+      data:
+        raw.body === null
+          ? null
+          : parseWebhookEvent(JSON.parse(raw.body), raw.event_type),
     } as LocalEvent<T>;
     const started = performance.now();
     const lifetime = new AbortController();

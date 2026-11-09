@@ -1,0 +1,115 @@
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+
+from attrs import define as _attrs_define
+from attrs import field as _attrs_field
+
+from ..types import UNSET, Unset
+
+from typing import cast
+
+if TYPE_CHECKING:
+  from ..models.release_sent_email_response_200_meta import ReleaseSentEmailResponse200Meta
+  from ..models.sent_email_detail import SentEmailDetail
+
+
+
+
+
+T = TypeVar("T", bound="ReleaseSentEmailResponse200")
+
+
+
+@_attrs_define
+class ReleaseSentEmailResponse200:
+    """ 
+        Attributes:
+            success (bool):
+            data (SentEmailDetail): Full sent-email record, including `body_text` and
+                `body_html`. Returned by /sent-emails/{id}.
+            meta (ReleaseSentEmailResponse200Meta | Unset):
+     """
+
+    success: bool
+    data: SentEmailDetail
+    meta: ReleaseSentEmailResponse200Meta | Unset = UNSET
+    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
+
+
+
+
+
+    def to_dict(self) -> dict[str, Any]:
+        from ..models.release_sent_email_response_200_meta import ReleaseSentEmailResponse200Meta # noqa: PLC0415
+        from ..models.sent_email_detail import SentEmailDetail # noqa: PLC0415
+        success = self.success
+
+        data = self.data.to_dict()
+
+        meta: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.meta, Unset):
+            meta = self.meta.to_dict()
+
+
+        field_dict: dict[str, Any] = {}
+        field_dict.update(self.additional_properties)
+        field_dict.update({
+            "success": success,
+            "data": data,
+        })
+        if meta is not UNSET:
+            field_dict["meta"] = meta
+
+        return field_dict
+
+
+
+    @classmethod
+    def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.release_sent_email_response_200_meta import ReleaseSentEmailResponse200Meta # noqa: PLC0415
+        from ..models.sent_email_detail import SentEmailDetail # noqa: PLC0415
+        d = dict(src_dict)
+        success = d.pop("success")
+
+        data = SentEmailDetail.from_dict(d.pop("data"))
+
+
+
+
+        _meta = d.pop("meta", UNSET)
+        meta: ReleaseSentEmailResponse200Meta | Unset
+        if isinstance(_meta,  Unset):
+            meta = UNSET
+        else:
+            meta = ReleaseSentEmailResponse200Meta.from_dict(_meta)
+
+
+
+
+        release_sent_email_response_200 = cls(
+            success=success,
+            data=data,
+            meta=meta,
+        )
+
+
+        release_sent_email_response_200.additional_properties = d
+        return release_sent_email_response_200
+
+    @property
+    def additional_keys(self) -> list[str]:
+        return list(self.additional_properties.keys())
+
+    def __getitem__(self, key: str) -> Any:
+        return self.additional_properties[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.additional_properties[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.additional_properties[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.additional_properties

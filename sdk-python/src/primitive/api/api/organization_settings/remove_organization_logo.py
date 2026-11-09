@@ -1,0 +1,271 @@
+from http import HTTPStatus
+from typing import Any, cast
+from urllib.parse import quote
+
+import httpx
+
+from ...client import AuthenticatedClient, Client
+from ...types import Response, UNSET
+from ... import errors
+
+from ...models.error_response import ErrorResponse
+from ...models.remove_organization_logo_response_200 import RemoveOrganizationLogoResponse200
+from ...types import UNSET, Unset
+from typing import cast
+
+
+
+def _get_kwargs(
+    *,
+    primitive_step_up: str | Unset = UNSET,
+
+) -> dict[str, Any]:
+    headers: dict[str, Any] = {}
+    if not isinstance(primitive_step_up, Unset):
+        headers["Primitive-Step-Up"] = primitive_step_up
+
+
+
+    
+
+    
+
+    _kwargs: dict[str, Any] = {
+        "method": "delete",
+        "url": "/organization/logo",
+    }
+
+
+    _kwargs["headers"] = headers
+    return _kwargs
+
+
+
+def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> ErrorResponse | RemoveOrganizationLogoResponse200 | None:
+    if response.status_code == 200:
+        response_200 = RemoveOrganizationLogoResponse200.from_dict(response.json())
+
+
+
+        return response_200
+
+    if response.status_code == 400:
+        response_400 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_400
+
+    if response.status_code == 401:
+        response_401 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_401
+
+    if response.status_code == 403:
+        response_403 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_403
+
+    if response.status_code == 404:
+        response_404 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_404
+
+    if response.status_code == 409:
+        response_409 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_409
+
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_429
+
+    if response.status_code == 502:
+        response_502 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_502
+
+    if response.status_code == 503:
+        response_503 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_503
+
+    if client.raise_on_unexpected_status:
+        raise errors.UnexpectedStatus(response.status_code, response.content)
+    else:
+        return None
+
+
+def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[ErrorResponse | RemoveOrganizationLogoResponse200]:
+    return Response(
+        status_code=HTTPStatus(response.status_code),
+        content=response.content,
+        headers=response.headers,
+        parsed=_parse_response(client=client, response=response),
+    )
+
+
+def sync_detailed(
+    *,
+    client: AuthenticatedClient | Client,
+    primitive_step_up: str | Unset = UNSET,
+
+) -> Response[ErrorResponse | RemoveOrganizationLogoResponse200]:
+    """ Remove the organization logo
+
+     Remove the organization's logo.
+
+    Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+    `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+    step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when
+    the person's role could not do it anyway). The person's role must hold org:manage (or
+    members:manage). API keys and agent connection keys are refused. An agent acting for the person is
+    refused unless it carries a step-up token the person issued in the dashboard.
+
+    Args:
+        primitive_step_up (str | Unset):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Response[ErrorResponse | RemoveOrganizationLogoResponse200]
+     """
+
+
+    kwargs = _get_kwargs(
+        primitive_step_up=primitive_step_up,
+
+    )
+
+    response = client.get_httpx_client().request(
+        **kwargs,
+    )
+
+    return _build_response(client=client, response=response)
+
+def sync(
+    *,
+    client: AuthenticatedClient | Client,
+    primitive_step_up: str | Unset = UNSET,
+
+) -> ErrorResponse | RemoveOrganizationLogoResponse200 | None:
+    """ Remove the organization logo
+
+     Remove the organization's logo.
+
+    Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+    `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+    step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when
+    the person's role could not do it anyway). The person's role must hold org:manage (or
+    members:manage). API keys and agent connection keys are refused. An agent acting for the person is
+    refused unless it carries a step-up token the person issued in the dashboard.
+
+    Args:
+        primitive_step_up (str | Unset):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        ErrorResponse | RemoveOrganizationLogoResponse200
+     """
+
+
+    return sync_detailed(
+        client=client,
+primitive_step_up=primitive_step_up,
+
+    ).parsed
+
+async def asyncio_detailed(
+    *,
+    client: AuthenticatedClient | Client,
+    primitive_step_up: str | Unset = UNSET,
+
+) -> Response[ErrorResponse | RemoveOrganizationLogoResponse200]:
+    """ Remove the organization logo
+
+     Remove the organization's logo.
+
+    Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+    `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+    step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when
+    the person's role could not do it anyway). The person's role must hold org:manage (or
+    members:manage). API keys and agent connection keys are refused. An agent acting for the person is
+    refused unless it carries a step-up token the person issued in the dashboard.
+
+    Args:
+        primitive_step_up (str | Unset):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Response[ErrorResponse | RemoveOrganizationLogoResponse200]
+     """
+
+
+    kwargs = _get_kwargs(
+        primitive_step_up=primitive_step_up,
+
+    )
+
+    response = await client.get_async_httpx_client().request(
+        **kwargs
+    )
+
+    return _build_response(client=client, response=response)
+
+async def asyncio(
+    *,
+    client: AuthenticatedClient | Client,
+    primitive_step_up: str | Unset = UNSET,
+
+) -> ErrorResponse | RemoveOrganizationLogoResponse200 | None:
+    """ Remove the organization logo
+
+     Remove the organization's logo.
+
+    Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+    `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+    step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when
+    the person's role could not do it anyway). The person's role must hold org:manage (or
+    members:manage). API keys and agent connection keys are refused. An agent acting for the person is
+    refused unless it carries a step-up token the person issued in the dashboard.
+
+    Args:
+        primitive_step_up (str | Unset):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        ErrorResponse | RemoveOrganizationLogoResponse200
+     """
+
+
+    return (await asyncio_detailed(
+        client=client,
+primitive_step_up=primitive_step_up,
+
+    )).parsed

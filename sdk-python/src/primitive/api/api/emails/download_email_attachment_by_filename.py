@@ -104,6 +104,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_413
 
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_429
+
     if response.status_code == 502:
         response_502 = ErrorResponse.from_dict(response.json())
 
@@ -136,7 +143,7 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 def sync_detailed(
     id: UUID,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     filename: str,
 
 ) -> Response[ErrorResponse | File]:
@@ -178,7 +185,7 @@ filename=filename,
 def sync(
     id: UUID,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     filename: str,
 
 ) -> ErrorResponse | File | None:
@@ -215,7 +222,7 @@ filename=filename,
 async def asyncio_detailed(
     id: UUID,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     filename: str,
 
 ) -> Response[ErrorResponse | File]:
@@ -257,7 +264,7 @@ filename=filename,
 async def asyncio(
     id: UUID,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     filename: str,
 
 ) -> ErrorResponse | File | None:

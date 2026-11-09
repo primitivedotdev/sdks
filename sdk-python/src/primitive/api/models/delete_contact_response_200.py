@@ -26,11 +26,11 @@ class DeleteContactResponse200:
     """ 
         Attributes:
             success (bool):
-            data (DeleteContactResponse200Data):
+            data (DeleteContactResponse200Data | Unset):
      """
 
     success: bool
-    data: DeleteContactResponse200Data
+    data: DeleteContactResponse200Data | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -41,15 +41,18 @@ class DeleteContactResponse200:
         from ..models.delete_contact_response_200_data import DeleteContactResponse200Data # noqa: PLC0415
         success = self.success
 
-        data = self.data.to_dict()
+        data: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.data, Unset):
+            data = self.data.to_dict()
 
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
             "success": success,
-            "data": data,
         })
+        if data is not UNSET:
+            field_dict["data"] = data
 
         return field_dict
 
@@ -61,7 +64,12 @@ class DeleteContactResponse200:
         d = dict(src_dict)
         success = d.pop("success")
 
-        data = DeleteContactResponse200Data.from_dict(d.pop("data"))
+        _data = d.pop("data", UNSET)
+        data: DeleteContactResponse200Data | Unset
+        if isinstance(_data,  Unset):
+            data = UNSET
+        else:
+            data = DeleteContactResponse200Data.from_dict(_data)
 
 
 

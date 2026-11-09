@@ -385,10 +385,10 @@ it.each([
       threadId: null,
       inThread: false,
       attachments: true,
-      interaction: "x402.payment/1",
+      interaction: "example.invoice/1",
     },
     metadata:
-      "from=peer@example.com relationship=agent thread=none in_thread=no attachments=yes interaction=x402.payment/1",
+      "from=peer@example.com relationship=agent thread=none in_thread=no attachments=yes interaction=example.invoice/1",
   },
   {
     relation: undefined,

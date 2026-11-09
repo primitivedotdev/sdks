@@ -10,6 +10,7 @@ from ... import errors
 
 from ...models.error_response import ErrorResponse
 from ...models.get_conversation_response_200 import GetConversationResponse200
+from ...models.get_conversation_text import GetConversationText
 from ...types import UNSET, Unset
 from typing import cast
 from uuid import UUID
@@ -20,6 +21,11 @@ def _get_kwargs(
     id: UUID,
     *,
     since: str | Unset = UNSET,
+    around: UUID | Unset = UNSET,
+    before: str | Unset = UNSET,
+    after: str | Unset = UNSET,
+    limit: int | Unset = 25,
+    text: GetConversationText | Unset = UNSET,
 
 ) -> dict[str, Any]:
     
@@ -29,6 +35,23 @@ def _get_kwargs(
     params: dict[str, Any] = {}
 
     params["since"] = since
+
+    json_around: str | Unset = UNSET
+    if not isinstance(around, Unset):
+        json_around = str(around)
+    params["around"] = json_around
+
+    params["before"] = before
+
+    params["after"] = after
+
+    params["limit"] = limit
+
+    json_text: str | Unset = UNSET
+    if not isinstance(text, Unset):
+        json_text = text.value
+
+    params["text"] = json_text
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -94,6 +117,11 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     since: str | Unset = UNSET,
+    around: UUID | Unset = UNSET,
+    before: str | Unset = UNSET,
+    after: str | Unset = UNSET,
+    limit: int | Unset = 25,
+    text: GetConversationText | Unset = UNSET,
 
 ) -> Response[ErrorResponse | GetConversationResponse200]:
     """ Get the conversation an email belongs to
@@ -124,9 +152,19 @@ def sync_detailed(
     `cursor`. Without `since` the response carries no `cursor` and
     no per-message `status`.
 
+    To read an older part of a long conversation, such as the message a search result names, pass
+    `around` with that message's id: the response is a window of messages around it with `before_cursor`
+    and `after_cursor` to page older and newer. On these window reads `{id}` may be a sent email id as
+    well as an inbound email id.
+
     Args:
         id (UUID):
         since (str | Unset):
+        around (UUID | Unset):
+        before (str | Unset):
+        after (str | Unset):
+        limit (int | Unset):  Default: 25.
+        text (GetConversationText | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -140,6 +178,11 @@ def sync_detailed(
     kwargs = _get_kwargs(
         id=id,
 since=since,
+around=around,
+before=before,
+after=after,
+limit=limit,
+text=text,
 
     )
 
@@ -154,6 +197,11 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     since: str | Unset = UNSET,
+    around: UUID | Unset = UNSET,
+    before: str | Unset = UNSET,
+    after: str | Unset = UNSET,
+    limit: int | Unset = 25,
+    text: GetConversationText | Unset = UNSET,
 
 ) -> ErrorResponse | GetConversationResponse200 | None:
     """ Get the conversation an email belongs to
@@ -184,9 +232,19 @@ def sync(
     `cursor`. Without `since` the response carries no `cursor` and
     no per-message `status`.
 
+    To read an older part of a long conversation, such as the message a search result names, pass
+    `around` with that message's id: the response is a window of messages around it with `before_cursor`
+    and `after_cursor` to page older and newer. On these window reads `{id}` may be a sent email id as
+    well as an inbound email id.
+
     Args:
         id (UUID):
         since (str | Unset):
+        around (UUID | Unset):
+        before (str | Unset):
+        after (str | Unset):
+        limit (int | Unset):  Default: 25.
+        text (GetConversationText | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -201,6 +259,11 @@ def sync(
         id=id,
 client=client,
 since=since,
+around=around,
+before=before,
+after=after,
+limit=limit,
+text=text,
 
     ).parsed
 
@@ -209,6 +272,11 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     since: str | Unset = UNSET,
+    around: UUID | Unset = UNSET,
+    before: str | Unset = UNSET,
+    after: str | Unset = UNSET,
+    limit: int | Unset = 25,
+    text: GetConversationText | Unset = UNSET,
 
 ) -> Response[ErrorResponse | GetConversationResponse200]:
     """ Get the conversation an email belongs to
@@ -239,9 +307,19 @@ async def asyncio_detailed(
     `cursor`. Without `since` the response carries no `cursor` and
     no per-message `status`.
 
+    To read an older part of a long conversation, such as the message a search result names, pass
+    `around` with that message's id: the response is a window of messages around it with `before_cursor`
+    and `after_cursor` to page older and newer. On these window reads `{id}` may be a sent email id as
+    well as an inbound email id.
+
     Args:
         id (UUID):
         since (str | Unset):
+        around (UUID | Unset):
+        before (str | Unset):
+        after (str | Unset):
+        limit (int | Unset):  Default: 25.
+        text (GetConversationText | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -255,6 +333,11 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         id=id,
 since=since,
+around=around,
+before=before,
+after=after,
+limit=limit,
+text=text,
 
     )
 
@@ -269,6 +352,11 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     since: str | Unset = UNSET,
+    around: UUID | Unset = UNSET,
+    before: str | Unset = UNSET,
+    after: str | Unset = UNSET,
+    limit: int | Unset = 25,
+    text: GetConversationText | Unset = UNSET,
 
 ) -> ErrorResponse | GetConversationResponse200 | None:
     """ Get the conversation an email belongs to
@@ -299,9 +387,19 @@ async def asyncio(
     `cursor`. Without `since` the response carries no `cursor` and
     no per-message `status`.
 
+    To read an older part of a long conversation, such as the message a search result names, pass
+    `around` with that message's id: the response is a window of messages around it with `before_cursor`
+    and `after_cursor` to page older and newer. On these window reads `{id}` may be a sent email id as
+    well as an inbound email id.
+
     Args:
         id (UUID):
         since (str | Unset):
+        around (UUID | Unset):
+        before (str | Unset):
+        after (str | Unset):
+        limit (int | Unset):  Default: 25.
+        text (GetConversationText | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -316,5 +414,10 @@ async def asyncio(
         id=id,
 client=client,
 since=since,
+around=around,
+before=before,
+after=after,
+limit=limit,
+text=text,
 
     )).parsed

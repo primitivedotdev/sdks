@@ -19,9 +19,13 @@ from typing import cast
 def _get_kwargs(
     *,
     body: CreateAgentClaimLinkInput | Unset = UNSET,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -98,6 +102,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CreateAgentClaimLinkInput | Unset = UNSET,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateAgentClaimLinkResponse200 | ErrorResponse]:
     """ Create a browser claim link
@@ -108,6 +113,7 @@ def sync_detailed(
     resolve a web origin to build the link.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateAgentClaimLinkInput | Unset): No fields; an empty object is accepted.
 
     Raises:
@@ -121,6 +127,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -134,6 +141,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: CreateAgentClaimLinkInput | Unset = UNSET,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CreateAgentClaimLinkResponse200 | ErrorResponse | None:
     """ Create a browser claim link
@@ -144,6 +152,7 @@ def sync(
     resolve a web origin to build the link.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateAgentClaimLinkInput | Unset): No fields; an empty object is accepted.
 
     Raises:
@@ -158,6 +167,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -165,6 +175,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CreateAgentClaimLinkInput | Unset = UNSET,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateAgentClaimLinkResponse200 | ErrorResponse]:
     """ Create a browser claim link
@@ -175,6 +186,7 @@ async def asyncio_detailed(
     resolve a web origin to build the link.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateAgentClaimLinkInput | Unset): No fields; an empty object is accepted.
 
     Raises:
@@ -188,6 +200,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -201,6 +214,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: CreateAgentClaimLinkInput | Unset = UNSET,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CreateAgentClaimLinkResponse200 | ErrorResponse | None:
     """ Create a browser claim link
@@ -211,6 +225,7 @@ async def asyncio(
     resolve a web origin to build the link.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateAgentClaimLinkInput | Unset): No fields; an empty object is accepted.
 
     Raises:
@@ -225,5 +240,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

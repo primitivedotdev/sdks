@@ -80,6 +80,8 @@ def sync_detailed(
 ) -> Response[DeleteRouteResponse200 | ErrorResponse]:
     """ Delete a recipient route
 
+     Delete a recipient route
+
     Args:
         id (UUID):
 
@@ -111,6 +113,8 @@ def sync(
 ) -> DeleteRouteResponse200 | ErrorResponse | None:
     """ Delete a recipient route
 
+     Delete a recipient route
+
     Args:
         id (UUID):
 
@@ -136,6 +140,8 @@ async def asyncio_detailed(
 
 ) -> Response[DeleteRouteResponse200 | ErrorResponse]:
     """ Delete a recipient route
+
+     Delete a recipient route
 
     Args:
         id (UUID):
@@ -167,6 +173,8 @@ async def asyncio(
 
 ) -> DeleteRouteResponse200 | ErrorResponse | None:
     """ Delete a recipient route
+
+     Delete a recipient route
 
     Args:
         id (UUID):

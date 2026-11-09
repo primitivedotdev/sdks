@@ -1,9 +1,9 @@
 import { Command, Flags } from "@oclif/core";
 import type {
   CreateFunctionResult,
-  FunctionDetail,
   FunctionSecretWriteResult,
   PrimitiveApiClient,
+  UpdateFunctionResult,
 } from "@primitivedotdev/api-core";
 import {
   createFunction,
@@ -111,7 +111,7 @@ async function writeRouteStatusHint(
 export type DeployWithSecretsResult = {
   created: CreateFunctionResult;
   secrets?: FunctionSecretWriteResult[];
-  redeploy?: FunctionDetail;
+  redeploy?: UpdateFunctionResult;
 };
 
 // Minimal client surface runDeployWithSecrets needs. Factored out
@@ -137,7 +137,7 @@ export type DeployApiSurface = {
     code: string;
     sourceMap?: string;
   }) => Promise<{
-    data?: { data?: FunctionDetail };
+    data?: { data?: UpdateFunctionResult };
     error?: unknown;
   }>;
 };
@@ -336,10 +336,10 @@ class FunctionsDeployCommand extends Command {
     "<%= config.bin %> functions deploy --name triage --source . --wait",
     "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --wait",
     "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --source-map-file ./bundle.js.map",
-    "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --secret OPENAI_KEY=sk-... --secret OWNER_EMAIL=me@example.com",
-    "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --secret-from-env OPENAI_KEY --secret-from-env-file .env.local:OWNER_EMAIL",
-    "<%= config.bin %> functions deploy --name triage --source . --secret-from-env ANTHROPIC_API_KEY",
-    "printf '%s' \"$OPENAI_KEY\" | <%= config.bin %> functions deploy --name forwarder --file ./bundle.js --secret-from-stdin OPENAI_KEY",
+    "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --secret MY_API_KEY=sk-... --secret OWNER_EMAIL=me@example.com",
+    "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --secret-from-env MY_API_KEY --secret-from-env-file .env.local:OWNER_EMAIL",
+    "<%= config.bin %> functions deploy --name triage --source . --secret-from-env MY_API_KEY",
+    "printf '%s' \"$MY_API_KEY\" | <%= config.bin %> functions deploy --name forwarder --file ./bundle.js --secret-from-stdin MY_API_KEY",
   ];
 
   static flags = {
@@ -365,7 +365,7 @@ class FunctionsDeployCommand extends Command {
     }),
     source: Flags.string({
       description:
-        "Path to a project directory (containing package.json and src/) to deploy via managed build: the source is uploaded and the server installs dependencies, bundles for the Workers runtime, and deploys. Idempotent by name (creates the function, or redeploys it if --name already exists), so it is safe to run on every push. Exactly one of --file or --source is required.",
+        "Path to a project directory (containing package.json and src/) to deploy via managed build: the source is uploaded and the server installs dependencies, bundles for the Functions runtime, and deploys. Idempotent by name (creates the function, or redeploys it if --name already exists), so it is safe to run on every push. Exactly one of --file or --source is required.",
     }),
     "source-map-file": Flags.string({
       description:
@@ -377,7 +377,7 @@ class FunctionsDeployCommand extends Command {
     }),
     "secret-from-env": Flags.string({
       description:
-        "Secret KEY to read from the environment and seed on the deployed function. Repeatable. Example: --secret-from-env OPENAI_KEY reads process.env.OPENAI_KEY.",
+        "Secret KEY to read from the environment and seed on the deployed function. Repeatable. Example: --secret-from-env MY_API_KEY reads process.env.MY_API_KEY.",
       multiple: true,
     }),
     "secret-from-file": Flags.string({
@@ -387,7 +387,7 @@ class FunctionsDeployCommand extends Command {
     }),
     "secret-from-env-file": Flags.string({
       description:
-        "Secret FILE:KEY to read from a dotenv-style file and seed on the deployed function. Repeatable. Example: --secret-from-env-file .env.local:OPENAI_KEY.",
+        "Secret FILE:KEY to read from a dotenv-style file and seed on the deployed function. Repeatable. Example: --secret-from-env-file .env.local:MY_API_KEY.",
       multiple: true,
     }),
     "secret-from-stdin": Flags.string({

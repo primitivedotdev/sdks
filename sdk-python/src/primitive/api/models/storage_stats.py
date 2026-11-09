@@ -29,13 +29,16 @@ class StorageStats:
             quota_mb (float): The plan's included storage in megabytes, the same value as included_mb. It is an allowance,
                 not a limit; see limit_mb.
             percentage (float): Storage used as a percentage of the included storage (1 decimal). Can exceed 100.
-            emails_count (int): Number of stored emails
+            emails_count (int): Emails still holding their stored content, counted up to 100,000. When `emails_count_capped`
+                is true the organization holds more, and this is that floor.
             included_mb (float | Unset): Storage included with the plan, in megabytes.
             limit_mb (float | None | Unset): Storage in megabytes past which inbound email is refused. Null when inbound
                 email is never refused for storage.
             overage_mb (float | Unset): Storage past included_mb, in megabytes, counting stored email and the search index.
             search_index_bytes (int | Unset): Storage attributed to the semantic search index, in bytes. Counted toward
                 included_mb and overage_mb, never toward limit_mb.
+            emails_count_capped (bool | Unset): True when more than 100,000 stored emails exist and `emails_count` is a
+                floor.
      """
 
     used_bytes: int
@@ -48,6 +51,7 @@ class StorageStats:
     limit_mb: float | None | Unset = UNSET
     overage_mb: float | Unset = UNSET
     search_index_bytes: int | Unset = UNSET
+    emails_count_capped: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -79,6 +83,8 @@ class StorageStats:
 
         search_index_bytes = self.search_index_bytes
 
+        emails_count_capped = self.emails_count_capped
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -98,6 +104,8 @@ class StorageStats:
             field_dict["overage_mb"] = overage_mb
         if search_index_bytes is not UNSET:
             field_dict["search_index_bytes"] = search_index_bytes
+        if emails_count_capped is not UNSET:
+            field_dict["emails_count_capped"] = emails_count_capped
 
         return field_dict
 
@@ -134,6 +142,8 @@ class StorageStats:
 
         search_index_bytes = d.pop("search_index_bytes", UNSET)
 
+        emails_count_capped = d.pop("emails_count_capped", UNSET)
+
         storage_stats = cls(
             used_bytes=used_bytes,
             used_kb=used_kb,
@@ -145,6 +155,7 @@ class StorageStats:
             limit_mb=limit_mb,
             overage_mb=overage_mb,
             search_index_bytes=search_index_bytes,
+            emails_count_capped=emails_count_capped,
         )
 
 

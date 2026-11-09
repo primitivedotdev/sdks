@@ -23,12 +23,12 @@ T = TypeVar("T", bound="ListAgentConnectionsResponse200Meta")
 class ListAgentConnectionsResponse200Meta:
     """
         Attributes:
-            limit (int | Unset):
-            cursor (None | str | Unset):
+            limit (int): The page size this answer used.
+            cursor (None | str): The connection id to pass as cursor for the next page; null on the last page.
      """
 
-    limit: int | Unset = UNSET
-    cursor: None | str | Unset = UNSET
+    limit: int
+    cursor: None | str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -38,21 +38,16 @@ class ListAgentConnectionsResponse200Meta:
     def to_dict(self) -> dict[str, Any]:
         limit = self.limit
 
-        cursor: None | str | Unset
-        if isinstance(self.cursor, Unset):
-            cursor = UNSET
-        else:
-            cursor = self.cursor
+        cursor: None | str
+        cursor = self.cursor
 
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
+            "limit": limit,
+            "cursor": cursor,
         })
-        if limit is not UNSET:
-            field_dict["limit"] = limit
-        if cursor is not UNSET:
-            field_dict["cursor"] = cursor
 
         return field_dict
 
@@ -61,16 +56,14 @@ class ListAgentConnectionsResponse200Meta:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        limit = d.pop("limit", UNSET)
+        limit = d.pop("limit")
 
-        def _parse_cursor(data: object) -> None | str | Unset:
+        def _parse_cursor(data: object) -> None | str:
             if data is None:
                 return data
-            if isinstance(data, Unset):
-                return data
-            return cast(None | str | Unset, data)
+            return cast(None | str, data)
 
-        cursor = _parse_cursor(d.pop("cursor", UNSET))
+        cursor = _parse_cursor(d.pop("cursor"))
 
 
         list_agent_connections_response_200_meta = cls(

@@ -11,6 +11,7 @@ from ... import errors
 from ...models.error_response import ErrorResponse
 from ...models.verify_agent_signup_input import VerifyAgentSignupInput
 from ...models.verify_agent_signup_response_200 import VerifyAgentSignupResponse200
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -18,9 +19,13 @@ from typing import cast
 def _get_kwargs(
     *,
     body: VerifyAgentSignupInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -96,6 +101,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: VerifyAgentSignupInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | VerifyAgentSignupResponse200]:
     """ Verify agent signup and create OAuth tokens
@@ -107,6 +113,7 @@ def sync_detailed(
     accessible workspace should receive the new session.
 
     Args:
+        idempotency_key (str | Unset):
         body (VerifyAgentSignupInput):
 
     Raises:
@@ -120,6 +127,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -133,6 +141,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: VerifyAgentSignupInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | VerifyAgentSignupResponse200 | None:
     """ Verify agent signup and create OAuth tokens
@@ -144,6 +153,7 @@ def sync(
     accessible workspace should receive the new session.
 
     Args:
+        idempotency_key (str | Unset):
         body (VerifyAgentSignupInput):
 
     Raises:
@@ -158,6 +168,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -165,6 +176,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: VerifyAgentSignupInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | VerifyAgentSignupResponse200]:
     """ Verify agent signup and create OAuth tokens
@@ -176,6 +188,7 @@ async def asyncio_detailed(
     accessible workspace should receive the new session.
 
     Args:
+        idempotency_key (str | Unset):
         body (VerifyAgentSignupInput):
 
     Raises:
@@ -189,6 +202,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -202,6 +216,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: VerifyAgentSignupInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | VerifyAgentSignupResponse200 | None:
     """ Verify agent signup and create OAuth tokens
@@ -213,6 +228,7 @@ async def asyncio(
     accessible workspace should receive the new session.
 
     Args:
+        idempotency_key (str | Unset):
         body (VerifyAgentSignupInput):
 
     Raises:
@@ -227,5 +243,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

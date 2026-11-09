@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v2/api"
+	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v3/api"
 )
 
 var emailRegex = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
@@ -22,7 +22,7 @@ const (
 type sendAPI interface {
 	SendEmail(ctx context.Context, request *primitiveapi.SendMailInput, params primitiveapi.SendEmailParams) (primitiveapi.SendEmailRes, error)
 	ReplyToEmail(ctx context.Context, request *primitiveapi.ReplyInput, params primitiveapi.ReplyToEmailParams) (primitiveapi.ReplyToEmailRes, error)
-	SemanticSearch(ctx context.Context, request *primitiveapi.SemanticSearchInput) (primitiveapi.SemanticSearchRes, error)
+	SemanticSearch(ctx context.Context, request *primitiveapi.SemanticSearchInput, params primitiveapi.SemanticSearchParams) (primitiveapi.SemanticSearchRes, error)
 }
 
 type SendThread struct {
@@ -126,13 +126,15 @@ type SendIdempotency struct {
 }
 
 type SendResult struct {
-	ID                   string
-	Status               primitiveapi.SentEmailStatus
-	QueueID              primitiveapi.NilString
-	Accepted             []string
-	Rejected             []string
-	ClientIdempotencyKey string
-	RequestID            string
+	ID       string
+	Status   primitiveapi.SentEmailStatus
+	QueueID  primitiveapi.NilString
+	Accepted []string
+	Rejected []string
+	// ClientIdempotencyKey and RequestID are null when a replayed send
+	// was stored without one.
+	ClientIdempotencyKey primitiveapi.NilString
+	RequestID            primitiveapi.NilString
 	ContentHash          string
 	// IdempotentReplay is true when the response replays a previously
 	// recorded send keyed by ClientIdempotencyKey (same key, same
@@ -191,8 +193,19 @@ func optIntPtr(v primitiveapi.OptInt) *int {
 	return nil
 }
 
+// headerError maps an error response that carries headers. Retry-After is
+// kept on any status that sends it; the ratelimit-* headers only on a 429.
+func headerError(status int, v primitiveapi.ErrorResponseHeaders) *APIError {
+	if status == 429 {
+		return rateLimitedError(v)
+	}
+	err := apiErrorFromErrorResponse(status, v.Response)
+	err.RetryAfter = optIntPtr(v.RetryAfter)
+	return err
+}
+
 // rateLimitedError maps a 429 with its Retry-After and ratelimit-* headers.
-func rateLimitedError(v *primitiveapi.RateLimitedHeaders) *APIError {
+func rateLimitedError(v primitiveapi.ErrorResponseHeaders) *APIError {
 	err := apiErrorFromErrorResponse(429, v.Response)
 	err.RetryAfter = optIntPtr(v.RetryAfter)
 	rateLimit := RateLimit{
@@ -223,8 +236,8 @@ func (e *APIError) Error() string {
 //   - api / Host 1 (DefaultAPIBaseURL1, "https://www.primitive.dev/api/v1"):
 //     every operation except attachment-capable message sends.
 //   - apiSend / Host 2 (DefaultAPIBaseURL2, "https://api.primitive.dev/v1"):
-//     /send-mail and /emails/{id}/reply. Cloudflare Worker with a larger
-//     request body cap to support attachment sends and replies.
+//     /send-mail and /emails/{id}/reply, with a larger request body cap
+//     to support attachment sends and replies.
 type Client struct {
 	Events  *EventsResource
 	api     sendAPI
@@ -372,26 +385,30 @@ func apiErrorFromErrorResponse(status int, response primitiveapi.ErrorResponse) 
 
 func mapReplyError(res primitiveapi.ReplyToEmailRes) error {
 	switch v := res.(type) {
-	case *primitiveapi.ReplyToEmailGone:
-		return apiErrorFromErrorResponse(410, primitiveapi.ErrorResponse(*v))
-	case *primitiveapi.ReplyToEmailBadGateway:
-		return apiErrorFromErrorResponse(502, primitiveapi.ErrorResponse(*v))
 	case *primitiveapi.ReplyToEmailBadRequest:
 		return apiErrorFromErrorResponse(400, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.ReplyToEmailUnauthorized:
+		return headerError(401, primitiveapi.ErrorResponseHeaders(*v))
 	case *primitiveapi.ReplyToEmailForbidden:
 		return apiErrorFromErrorResponse(403, primitiveapi.ErrorResponse(*v))
-	case *primitiveapi.ReplyToEmailInternalServerError:
-		return apiErrorFromErrorResponse(500, primitiveapi.ErrorResponse(*v))
 	case *primitiveapi.ReplyToEmailNotFound:
 		return apiErrorFromErrorResponse(404, primitiveapi.ErrorResponse(*v))
-	case *primitiveapi.ReplyToEmailServiceUnavailable:
-		return apiErrorFromErrorResponse(503, primitiveapi.ErrorResponse(*v))
-	case *primitiveapi.ReplyToEmailUnauthorized:
-		return apiErrorFromErrorResponse(401, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.ReplyToEmailConflict:
+		return apiErrorFromErrorResponse(409, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.ReplyToEmailGone:
+		return apiErrorFromErrorResponse(410, primitiveapi.ErrorResponse(*v))
 	case *primitiveapi.ReplyToEmailUnprocessableEntity:
 		return apiErrorFromErrorResponse(422, primitiveapi.ErrorResponse(*v))
-	case *primitiveapi.RateLimitedHeaders:
-		return rateLimitedError(v)
+	case *primitiveapi.ReplyToEmailTooManyRequests:
+		return headerError(429, primitiveapi.ErrorResponseHeaders(*v))
+	case *primitiveapi.ReplyToEmailInternalServerError:
+		return headerError(500, primitiveapi.ErrorResponseHeaders(*v))
+	case *primitiveapi.ReplyToEmailBadGateway:
+		return headerError(502, primitiveapi.ErrorResponseHeaders(*v))
+	case *primitiveapi.ReplyToEmailServiceUnavailable:
+		return headerError(503, primitiveapi.ErrorResponseHeaders(*v))
+	case *primitiveapi.ReplyToEmailGatewayTimeout:
+		return headerError(504, primitiveapi.ErrorResponseHeaders(*v))
 	default:
 		return &APIError{
 			Message: fmt.Sprintf("primitive API reply failed: %T", res),
@@ -402,22 +419,28 @@ func mapReplyError(res primitiveapi.ReplyToEmailRes) error {
 
 func mapSendError(res primitiveapi.SendEmailRes) error {
 	switch v := res.(type) {
-	case *primitiveapi.SendEmailGone:
-		return apiErrorFromErrorResponse(410, primitiveapi.ErrorResponse(*v))
-	case *primitiveapi.SendEmailBadGateway:
-		return apiErrorFromErrorResponse(502, primitiveapi.ErrorResponse(*v))
 	case *primitiveapi.SendEmailBadRequest:
 		return apiErrorFromErrorResponse(400, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.SendEmailUnauthorized:
+		return headerError(401, primitiveapi.ErrorResponseHeaders(*v))
 	case *primitiveapi.SendEmailForbidden:
 		return apiErrorFromErrorResponse(403, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.SendEmailConflict:
+		return apiErrorFromErrorResponse(409, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.SendEmailGone:
+		return apiErrorFromErrorResponse(410, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.SendEmailUnprocessableEntity:
+		return apiErrorFromErrorResponse(422, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.SendEmailTooManyRequests:
+		return headerError(429, primitiveapi.ErrorResponseHeaders(*v))
 	case *primitiveapi.SendEmailInternalServerError:
-		return apiErrorFromErrorResponse(500, primitiveapi.ErrorResponse(*v))
+		return headerError(500, primitiveapi.ErrorResponseHeaders(*v))
+	case *primitiveapi.SendEmailBadGateway:
+		return headerError(502, primitiveapi.ErrorResponseHeaders(*v))
 	case *primitiveapi.SendEmailServiceUnavailable:
-		return apiErrorFromErrorResponse(503, primitiveapi.ErrorResponse(*v))
-	case *primitiveapi.SendEmailUnauthorized:
-		return apiErrorFromErrorResponse(401, primitiveapi.ErrorResponse(*v))
-	case *primitiveapi.RateLimitedHeaders:
-		return rateLimitedError(v)
+		return headerError(503, primitiveapi.ErrorResponseHeaders(*v))
+	case *primitiveapi.SendEmailGatewayTimeout:
+		return headerError(504, primitiveapi.ErrorResponseHeaders(*v))
 	default:
 		return &APIError{
 			Message: fmt.Sprintf("primitive API send failed: %T", res),
@@ -457,7 +480,7 @@ func (c *Client) SemanticSearch(ctx context.Context, request *primitiveapi.Seman
 	// /v1/semantic-search lives on the same worker host as /send-mail,
 	// reachable through the host-2 client (apiSend). The host swap is
 	// internal; callers don't see or configure it.
-	res, err := c.apiSend.SemanticSearch(ctx, request)
+	res, err := c.apiSend.SemanticSearch(ctx, request, primitiveapi.SemanticSearchParams{})
 	if err != nil {
 		return zero, err
 	}
@@ -475,15 +498,15 @@ func mapSemanticSearchError(res primitiveapi.SemanticSearchRes) error {
 	case *primitiveapi.SemanticSearchBadRequest:
 		return apiErrorFromErrorResponse(400, primitiveapi.ErrorResponse(*v))
 	case *primitiveapi.SemanticSearchUnauthorized:
-		return apiErrorFromErrorResponse(401, primitiveapi.ErrorResponse(*v))
+		return headerError(401, primitiveapi.ErrorResponseHeaders(*v))
 	case *primitiveapi.SemanticSearchForbidden:
 		return apiErrorFromErrorResponse(403, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.SemanticSearchTooManyRequests:
+		return headerError(429, primitiveapi.ErrorResponseHeaders(*v))
 	case *primitiveapi.SemanticSearchInternalServerError:
 		return apiErrorFromErrorResponse(500, primitiveapi.ErrorResponse(*v))
 	case *primitiveapi.SemanticSearchServiceUnavailable:
 		return apiErrorFromErrorResponse(503, primitiveapi.ErrorResponse(*v))
-	case *primitiveapi.RateLimitedHeaders:
-		return rateLimitedError(v)
 	default:
 		return &APIError{
 			Message: fmt.Sprintf("primitive API semantic-search failed: %T", res),
@@ -587,7 +610,7 @@ func mapSendMailResult(data primitiveapi.SendMailResult) SendResult {
 		ContentHash:          data.ContentHash,
 		IdempotentReplay:     data.IdempotentReplay,
 		Idempotency:          idempotency,
-		DedupReason:          data.DedupReason.Or(""),
+		DedupReason:          string(data.DedupReason.Or("")),
 		DeliveryStatus:       data.DeliveryStatus,
 		SMTPResponseCode:     data.SMTPResponseCode,
 		SMTPResponseText:     data.SMTPResponseText,

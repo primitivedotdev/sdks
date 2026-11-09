@@ -93,8 +93,10 @@ describe("wake metadata", () => {
       inThread: false,
       attachments: true,
     };
-    expect(formatWakeContext({ ...base, interaction: "x402.payment/1" })).toBe(
-      "from=peer@example.com relationship=agent thread=none in_thread=no attachments=yes interaction=x402.payment/1",
+    expect(
+      formatWakeContext({ ...base, interaction: "example.invoice/1" }),
+    ).toBe(
+      "from=peer@example.com relationship=agent thread=none in_thread=no attachments=yes interaction=example.invoice/1",
     );
     expect(formatWakeContext({ ...base, interaction: "fyi" })).toContain(
       " interaction=fyi",
@@ -128,10 +130,10 @@ describe("wake metadata", () => {
       (
         await wake({
           interaction_hint: "card",
-          interaction_kind: "x402.payment/1",
+          interaction_kind: "example.invoice/1",
         })
       ).interaction,
-    ).toBe("x402.payment/1");
+    ).toBe("example.invoice/1");
     expect(
       (await wake({ interaction_hint: "status", fyi: true })).interaction,
     ).toBe("fyi");
@@ -140,7 +142,7 @@ describe("wake metadata", () => {
         await wake({
           interaction_hint: "none",
           interaction_candidate: true,
-          headers: { "x-primitive-interaction": "x402.payment/1" },
+          headers: { "x-primitive-interaction": "example.invoice/1" },
         })
       ).interaction,
     ).toBeUndefined();

@@ -6,9 +6,9 @@ import (
 	"github.com/ogen-go/ogen/ogenerrors"
 )
 
-// Default production hosts. Two-host split exists because /send-mail
-// needs a larger body cap than Vercel allows; host 2 is a Cloudflare
-// Worker that accepts ~30 MiB raw. Host 1 carries everything else.
+// Default production hosts. Two hosts exist because /send-mail needs a
+// larger request body cap than host 1 has; host 2 accepts about 30 MiB.
+// Host 1 carries everything else.
 // Customers don't see this split: the top-level primitive.Client
 // routes /send-mail to host 2 internally via a second underlying
 // generated client, every other operation routes to host 1.

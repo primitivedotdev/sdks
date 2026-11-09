@@ -25,11 +25,15 @@ class SendMailAttachment:
             filename (str): Attachment filename. Control characters are rejected.
             content_base64 (str): Base64-encoded attachment bytes.
             content_type (str | Unset): Optional MIME content type. Control characters are rejected.
+            content_id (str | Unset): Content-ID for an inline attachment, without angle brackets. When set the part is sent
+                inline so an HTML body can reference it as `cid:<content_id>`. Printable ASCII with no whitespace and no `<` or
+                `>`.
      """
 
     filename: str
     content_base64: str
     content_type: str | Unset = UNSET
+    content_id: str | Unset = UNSET
 
 
 
@@ -42,6 +46,8 @@ class SendMailAttachment:
 
         content_type = self.content_type
 
+        content_id = self.content_id
+
 
         field_dict: dict[str, Any] = {}
 
@@ -51,6 +57,8 @@ class SendMailAttachment:
         })
         if content_type is not UNSET:
             field_dict["content_type"] = content_type
+        if content_id is not UNSET:
+            field_dict["content_id"] = content_id
 
         return field_dict
 
@@ -65,10 +73,13 @@ class SendMailAttachment:
 
         content_type = d.pop("content_type", UNSET)
 
+        content_id = d.pop("content_id", UNSET)
+
         send_mail_attachment = cls(
             filename=filename,
             content_base64=content_base64,
             content_type=content_type,
+            content_id=content_id,
         )
 
         return send_mail_attachment

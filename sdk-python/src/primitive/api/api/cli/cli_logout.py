@@ -19,9 +19,13 @@ from typing import cast
 def _get_kwargs(
     *,
     body: CliLogoutInput | Unset = UNSET,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -98,6 +102,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CliLogoutInput | Unset = UNSET,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CliLogoutResponse200 | ErrorResponse]:
     """ Revoke the current CLI OAuth session
@@ -107,6 +112,7 @@ def sync_detailed(
     keys so old local CLI state can be cleared safely.
 
     Args:
+        idempotency_key (str | Unset):
         body (CliLogoutInput | Unset):
 
     Raises:
@@ -120,6 +126,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -133,6 +140,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: CliLogoutInput | Unset = UNSET,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CliLogoutResponse200 | ErrorResponse | None:
     """ Revoke the current CLI OAuth session
@@ -142,6 +150,7 @@ def sync(
     keys so old local CLI state can be cleared safely.
 
     Args:
+        idempotency_key (str | Unset):
         body (CliLogoutInput | Unset):
 
     Raises:
@@ -156,6 +165,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -163,6 +173,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CliLogoutInput | Unset = UNSET,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CliLogoutResponse200 | ErrorResponse]:
     """ Revoke the current CLI OAuth session
@@ -172,6 +183,7 @@ async def asyncio_detailed(
     keys so old local CLI state can be cleared safely.
 
     Args:
+        idempotency_key (str | Unset):
         body (CliLogoutInput | Unset):
 
     Raises:
@@ -185,6 +197,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -198,6 +211,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: CliLogoutInput | Unset = UNSET,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CliLogoutResponse200 | ErrorResponse | None:
     """ Revoke the current CLI OAuth session
@@ -207,6 +221,7 @@ async def asyncio(
     keys so old local CLI state can be cleared safely.
 
     Args:
+        idempotency_key (str | Unset):
         body (CliLogoutInput | Unset):
 
     Raises:
@@ -221,5 +236,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

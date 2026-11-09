@@ -2,7 +2,7 @@
 .PHONY: cli-install cli-test cli-check cli-build cli-smoke cli-smoke-only cli-tarball-isolation cli-tarball-isolation-built cli-coverage
 .PHONY: python-sync python-generate python-check-generated python-test python-check python-build python-smoke python-coverage
 .PHONY: go-generate go-check-generated go-check go-build go-coverage
-.PHONY: shared-check check build release-check ci
+.PHONY: shared-check versions-check check build release-check ci
 .PHONY: signal-retry-smoke
 
 # Local packaged-SDK crash/retry proof. No real email or deployed API calls.
@@ -18,7 +18,7 @@ node-generate:
 	pnpm --filter @primitivedotdev/sdk generate
 
 node-check-generated:
-	pnpm --filter @primitivedotdev/sdk generate && git diff --exit-code -- openapi/primitive-api.codegen.json sdk-node/src/schema.generated.ts sdk-node/src/types.generated.ts sdk-node/src/generated packages/api-core/src/api packages/api-core/src/openapi/openapi.generated.ts packages/api-core/src/openapi/operations.generated.ts
+	pnpm --filter @primitivedotdev/sdk generate && git diff --exit-code -- openapi/primitive-api.codegen.json sdk-node/src/schema.generated.ts sdk-node/src/types.generated.ts sdk-node/src/generated packages/api-core/src/api packages/api-core/src/openapi/openapi.generated.ts packages/api-core/src/openapi/operations.generated.ts packages/api-core/src/openapi/permissions.generated.ts
 
 # Coverage replaces the ordinary suite in CI instead of repeating it.
 NODE_COVERAGE ?=
@@ -27,8 +27,9 @@ node-test:
 	pnpm --dir sdk-node $(if $(NODE_COVERAGE),test:coverage,test)
 
 node-check: node-check-generated
-	if command -v biome >/dev/null 2>&1; then cd sdk-node && biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/api/events.ts src/api/event-transport.ts src/openapi/index.ts src/payloads src/interactions tests/; else pnpm --dir sdk-node lint; fi
+	if command -v biome >/dev/null 2>&1; then cd sdk-node && biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/api/events.ts src/api/event-transport.ts src/api/conversation-sync.ts src/openapi/index.ts src/payloads src/interactions tests/; else pnpm --dir sdk-node lint; fi
 	pnpm --dir sdk-node typecheck
+	pnpm --filter @primitivedotdev/api-core test:scripts
 	$(MAKE) node-test
 
 node-build:
@@ -51,9 +52,9 @@ node-coverage:
 cli-install:
 	pnpm install --frozen-lockfile
 
-# The CLI imports @primitivedotdev/sdk/x402 (bundled at build time). Its types
-# resolve to the SDK's dist, so build the SDK first for typecheck, tests, and
-# the bundle to resolve.
+# The CLI imports @primitivedotdev/sdk subpaths (bundled at build time). Their
+# types resolve to the SDK's dist, so build the SDK first for typecheck, tests,
+# and the bundle to resolve.
 cli-test: node-build
 	pnpm --dir cli-node test
 
@@ -136,9 +137,6 @@ cli-smoke-only:
 	"$$bin" describe memories:get >/dev/null && \
 	"$$bin" describe memories:delete >/dev/null && \
 	"$$bin" describe memories:search >/dev/null && \
-	"$$bin" payments pay-email-step --help | grep -q -- "interaction.json" && \
-	"$$bin" payments pay-email-step --help | grep -q -- "--challenge-file" && \
-	"$$bin" payments create-email-challenge --help | grep -q -- "--from" && \
 	"$$bin" whoami --help | grep -q -- "--json" && \
 	"$$bin" signin --help-full | grep -q -- "signin <email>" && \
 	"$$bin" signin --help-full | grep -q -- "signin confirm" && \
@@ -191,7 +189,7 @@ cli-smoke-only:
 	"$$bin" functions init template-check --out-dir "$$function_dir" >"$$smoke_dir/functions-init.txt" && \
 	grep -q -- 'npm run deploy' "$$smoke_dir/functions-init.txt" && \
 	grep -q -- 'npm run test:function' "$$smoke_dir/functions-init.txt" && \
-	grep -qF -- 'primitive functions set-secret --id "$$PRIMITIVE_FUNCTION_ID" --key OPENAI_KEY --value-from-env OPENAI_KEY --redeploy' "$$function_dir/README.md" && \
+	grep -qF -- 'primitive functions set-secret --id "$$PRIMITIVE_FUNCTION_ID" --key MY_API_KEY --value-from-env MY_API_KEY --redeploy' "$$function_dir/README.md" && \
 	grep -qF -- 'primitive functions test --id $$PRIMITIVE_FUNCTION_ID --wait --show-sends' "$$function_dir/package.json" && \
 	if grep -qF -- '.primitive.email' "$$function_dir/handler.ts"; then echo "function template must not hardcode managed domain suffixes"; exit 1; fi && \
 	root_help_config="$$smoke_dir/root-help-config" && \
@@ -204,7 +202,7 @@ cli-smoke-only:
 	root_auth_log="$$smoke_dir/root-auth-server.log" && \
 	mkdir -p "$$root_auth_config" && \
 	( \
-	node -e 'const http = require("node:http"); const fs = require("node:fs"); const server = http.createServer((req, res) => { if (req.method !== "GET" || req.url !== "/v1/account" || req.headers.authorization !== "Bearer prim_oat_root") { res.writeHead(500, { "content-type": "text/plain" }); res.end("unexpected " + req.method + " " + req.url + " " + req.headers.authorization); return; } res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify({ success: true, data: { id: "acct-root", email: "root@example.com", plan: "pro", created_at: "2026-05-25T00:00:00.000Z", onboarding_completed: true, onboarding_step: null, stripe_subscription_status: null, subscription_current_period_end: null, subscription_cancel_at_period_end: false, spam_threshold: null, discard_content_on_webhook_confirmed: false, webhook_secret_rotated_at: null } })); }); server.listen(0, "127.0.0.1", () => fs.writeFileSync(process.argv[1], String(server.address().port)));' "$$root_auth_port_file" >"$$root_auth_log" 2>&1 & \
+	node -e 'const http = require("node:http"); const fs = require("node:fs"); const server = http.createServer((req, res) => { if (req.method !== "GET" || req.url !== "/v1/account" || req.headers.authorization !== "Bearer prim_oat_root") { res.writeHead(500, { "content-type": "text/plain" }); res.end("unexpected " + req.method + " " + req.url + " " + req.headers.authorization); return; } res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify({ success: true, data: { id: "acct-root", email: "root@example.com", plan: "pro", created_at: "2026-05-25T00:00:00.000Z", onboarding_completed: true, onboarding_step: null, subscription_status: null, subscription_current_period_end: null, subscription_cancel_at_period_end: false, spam_threshold: null, discard_content_on_webhook_confirmed: false, webhook_secret_rotated_at: null } })); }); server.listen(0, "127.0.0.1", () => fs.writeFileSync(process.argv[1], String(server.address().port)));' "$$root_auth_port_file" >"$$root_auth_log" 2>&1 & \
 	root_auth_pid=$$! && \
 	trap 'kill "$$root_auth_pid" 2>/dev/null || true' EXIT && \
 	for i in 1 2 3 4 5 6 7 8 9 10; do test -s "$$root_auth_port_file" && break; sleep 0.1; done && \
@@ -247,7 +245,7 @@ cli-smoke-only:
 	port_file="$$smoke_dir/zone-server-port" && \
 	server_log="$$smoke_dir/zone-server.log" && \
 	( \
-	node -e 'const http = require("node:http"); const fs = require("node:fs"); const zoneId = "33333333-3333-4333-8333-333333333333"; const account = { success: true, data: { id: "acct-1", email: "cli@example.com", plan: "pro", created_at: "2026-05-25T00:00:00.000Z", onboarding_completed: false, onboarding_step: "dns", stripe_subscription_status: "trialing", subscription_current_period_end: null, subscription_cancel_at_period_end: false, spam_threshold: null, discard_content_on_webhook_confirmed: false, webhook_secret_rotated_at: null } }; const domains = { success: true, data: [{ id: "dom-1", org_id: "acct-1", domain: "example.com", verified: true, is_active: true, spam_threshold: null, created_at: "2026-05-25T00:00:00.000Z", updated_at: "2026-05-25T00:00:00.000Z" }] }; const inbox = { success: true, data: { ready: true, receiving_ready: true, processing_ready: true, summary: "Inbound mail is ready and at least one processing route is enabled.", next_actions: [], domains: [{ id: "dom-1", domain: "example.com", verified: true, active: true, managed: false, receiving_ready: true, processing_ready: true, processing_route_count: 1, endpoint_count: 0, enabled_endpoint_count: 0, function_endpoint_count: 0, email_count: 1, latest_email_received_at: "2026-05-25T00:00:00.000Z", status: "ready" }], endpoints: { total: 1, enabled: 1, disabled: 0, fallback_enabled: 1, domain_scoped_enabled: 0, http_enabled: 1, function_enabled: 0 }, functions: { total: 0, deployed: 0, pending: 0, failed: 0 }, recent_emails: { total: 1, latest_received_at: "2026-05-25T00:00:00.000Z" } } }; const server = http.createServer((req, res) => { const expectedZone = "/v1/domains/" + zoneId + "/zone-file?outbound_only=true"; if (req.method !== "GET" || req.headers.authorization !== "Bearer prim_test") { res.writeHead(500, { "content-type": "text/plain" }); res.end("unexpected " + req.method + " " + req.url + " " + req.headers.authorization); return; } if (req.url === "/v1/account") { res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify(account)); return; } if (req.url === "/v1/domains") { res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify(domains)); return; } if (req.url === "/v1/inbox/status") { res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify(inbox)); return; } if (req.url === expectedZone) { res.writeHead(200, { "content-type": "text/plain; charset=utf-8", "content-disposition": "attachment; filename=\"example.com.zone\"" }); res.end("; Zone file for example.com\n$$ORIGIN example.com.\n"); return; } res.writeHead(500, { "content-type": "text/plain" }); res.end("unexpected " + req.method + " " + req.url + " " + req.headers.authorization); }); server.listen(0, "127.0.0.1", () => fs.writeFileSync(process.argv[1], String(server.address().port)));' "$$port_file" >"$$server_log" 2>&1 & \
+	node -e 'const http = require("node:http"); const fs = require("node:fs"); const zoneId = "33333333-3333-4333-8333-333333333333"; const account = { success: true, data: { id: "acct-1", email: "cli@example.com", plan: "pro", created_at: "2026-05-25T00:00:00.000Z", onboarding_completed: false, onboarding_step: "dns", subscription_status: "trialing", subscription_current_period_end: null, subscription_cancel_at_period_end: false, spam_threshold: null, discard_content_on_webhook_confirmed: false, webhook_secret_rotated_at: null } }; const domains = { success: true, data: [{ id: "dom-1", org_id: "acct-1", domain: "example.com", verified: true, is_active: true, spam_threshold: null, created_at: "2026-05-25T00:00:00.000Z", updated_at: "2026-05-25T00:00:00.000Z" }] }; const inbox = { success: true, data: { ready: true, receiving_ready: true, processing_ready: true, summary: "Inbound mail is ready and at least one processing route is enabled.", next_actions: [], domains: [{ id: "dom-1", domain: "example.com", verified: true, active: true, managed: false, receiving_ready: true, processing_ready: true, processing_route_count: 1, endpoint_count: 0, enabled_endpoint_count: 0, function_endpoint_count: 0, email_count: 1, latest_email_received_at: "2026-05-25T00:00:00.000Z", status: "ready" }], endpoints: { total: 1, enabled: 1, disabled: 0, fallback_enabled: 1, domain_scoped_enabled: 0, http_enabled: 1, function_enabled: 0 }, functions: { total: 0, deployed: 0, pending: 0, failed: 0 }, recent_emails: { total: 1, latest_received_at: "2026-05-25T00:00:00.000Z" } } }; const server = http.createServer((req, res) => { const expectedZone = "/v1/domains/" + zoneId + "/zone-file?outbound_only=true"; if (req.method !== "GET" || req.headers.authorization !== "Bearer prim_test") { res.writeHead(500, { "content-type": "text/plain" }); res.end("unexpected " + req.method + " " + req.url + " " + req.headers.authorization); return; } if (req.url === "/v1/account") { res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify(account)); return; } if (req.url === "/v1/domains") { res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify(domains)); return; } if (req.url === "/v1/inbox/status") { res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify(inbox)); return; } if (req.url === expectedZone) { res.writeHead(200, { "content-type": "text/plain; charset=utf-8", "content-disposition": "attachment; filename=\"example.com.zone\"" }); res.end("; Zone file for example.com\n$$ORIGIN example.com.\n"); return; } res.writeHead(500, { "content-type": "text/plain" }); res.end("unexpected " + req.method + " " + req.url + " " + req.headers.authorization); }); server.listen(0, "127.0.0.1", () => fs.writeFileSync(process.argv[1], String(server.address().port)));' "$$port_file" >"$$server_log" 2>&1 & \
 	server_pid=$$! && \
 	trap 'kill "$$server_pid" 2>/dev/null || true' EXIT && \
 	for i in 1 2 3 4 5 6 7 8 9 10; do test -s "$$port_file" && break; sleep 0.1; done && \
@@ -319,17 +317,22 @@ go-coverage:
 	cd sdk-go && raw_coverage_file=$$(mktemp) && filtered_coverage_file=$$(mktemp) && go test ./... -coverprofile="$$raw_coverage_file" && { IFS= read -r header && printf '%s\n' "$$header" > "$$filtered_coverage_file" && while IFS= read -r line; do case "$$line" in *"/schema_generated.go:"*|*"/doc.go:"*) ;; *) printf '%s\n' "$$line" >> "$$filtered_coverage_file" ;; esac; done; } < "$$raw_coverage_file" && go tool cover -func="$$filtered_coverage_file" && rm -f "$$raw_coverage_file" "$$filtered_coverage_file"
 
 shared-check:
-	cd sdk-node && pnpm exec vitest run tests/webhook/shared-fixtures.test.ts tests/webhook/sent-email-events.test.ts tests/api/send-payloads.test.ts tests/api/attachment-parts.test.ts tests/api/sent-email-recipients.test.ts tests/api/events.test.ts tests/interactions/envelopes.test.ts tests/interactions/signals.test.ts tests/interactions/classify.test.ts tests/interactions/presence.test.ts tests/interactions/repeats.test.ts
-	cd sdk-python && uv run pytest tests/test_shared_fixtures.py tests/test_sent_email_events.py tests/test_send_payloads.py tests/test_attachment_parts.py tests/test_sent_email_recipients.py tests/test_event_receiver.py tests/test_interactions.py tests/test_signals.py tests/test_signal_content.py tests/test_presence.py tests/test_repeats.py
-	cd sdk-go && go test -run 'TestSharedCompatibilityFixtures|TestSharedSentEmailEvents|TestSharedSendPayloadFixtures|TestAttachmentPart|TestSentEmailRecipientLists|TestSharedInteractionEnvelopes|TestSharedDecodedInteractions|TestSharedSignalEmails|TestSharedSignalContent|TestSharedPresenceEmails|TestPresenceSourceCopy|TestSharedRepeatInteractions|TestEvents' ./...
+	cd sdk-node && pnpm exec vitest run tests/webhook/shared-fixtures.test.ts tests/webhook/sent-email-events.test.ts tests/api/send-payloads.test.ts tests/api/attachment-parts.test.ts tests/api/sent-email-recipients.test.ts tests/api/events.test.ts tests/interactions/envelopes.test.ts tests/interactions/signals.test.ts tests/interactions/classify.test.ts tests/interactions/presence.test.ts tests/interactions/repeats.test.ts tests/api/conversation-sync.test.ts
+	cd sdk-python && uv run pytest tests/test_shared_fixtures.py tests/test_sent_email_events.py tests/test_send_payloads.py tests/test_attachment_parts.py tests/test_sent_email_recipients.py tests/test_event_receiver.py tests/test_interactions.py tests/test_signals.py tests/test_signal_content.py tests/test_presence.py tests/test_repeats.py tests/test_conversation_sync.py
+	cd sdk-go && go test -run 'TestSharedCompatibilityFixtures|TestSharedSentEmailEvents|TestSharedSendPayloadFixtures|TestAttachmentPart|TestSentEmailRecipientLists|TestSharedInteractionEnvelopes|TestSharedDecodedInteractions|TestSharedSignalEmails|TestSharedSignalContent|TestSharedPresenceEmails|TestPresenceSourceCopy|TestSharedRepeatInteractions|TestEvents|TestSharedConversationSync' ./...
 
-check: node-check cli-check python-check go-check shared-check
+# The SDKs and the CLI share one version; see RELEASE.md.
+versions-check:
+	scripts/check-release-versions.sh
+
+check: versions-check node-check cli-check python-check go-check shared-check
 
 build: node-build cli-build python-build go-build
 
-release-check: node-check node-build node-smoke cli-check cli-build cli-smoke python-check python-build python-smoke go-check go-build shared-check
+release-check: versions-check node-check node-build node-smoke cli-check cli-build cli-smoke python-check python-build python-smoke go-check go-build shared-check
 
 ci:
+	$(MAKE) versions-check
 	$(MAKE) node-install
 	$(MAKE) cli-install
 	$(MAKE) python-sync
@@ -347,6 +350,14 @@ ci:
 	$(MAKE) go-build
 	$(MAKE) go-coverage
 	$(MAKE) shared-check
+
+# Rewrite openapi/primitive-api.yaml from the OpenAPI document the API serves,
+# then run `make regen`. SERVED is a path to that document as JSON.
+openapi-sync:
+	@test -n "$(SERVED)" || { echo "usage: make openapi-sync SERVED=path/to/openapi.json"; exit 2; }
+	pnpm --filter @primitivedotdev/api-core sync:openapi "$(abspath $(SERVED))"
+
+.PHONY: openapi-sync
 
 # Regenerate every artifact derived from the JSON schemas and the OpenAPI spec
 # (node, python, go). Run after editing json-schema/ or openapi/primitive-api.yaml;

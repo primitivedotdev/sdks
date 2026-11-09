@@ -10,6 +10,7 @@ import {
 import { receiverStatusCommand } from "../agent-connect.js";
 import { cliInvocation } from "../agent-identity-suggestions.js";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
+import { extractErrorPayload, isGrantRefusal } from "../api-command.js";
 import { detectPrimitiveKeyEnvMisname, resolveCliAuth } from "../auth.js";
 import {
   AGENT_PROFILE_ENV,
@@ -162,6 +163,16 @@ function checkApiKey(opts: {
     }
 
     if (
+      parsed?.auth_method === "user_grant" &&
+      typeof parsed.refresh_token === "string" &&
+      parsed.refresh_token.length > 0
+    ) {
+      return {
+        status: "ok",
+        message: `loaded login as yourself from ${credsPath}`,
+      };
+    }
+    if (
       parsed?.auth_method === "oauth" &&
       typeof parsed.access_token === "string" &&
       parsed.access_token.length > 0
@@ -229,7 +240,7 @@ export function savedAgentProfiles(configDir: string): string[] {
   }
 }
 
-async function checkAccount(
+export async function checkAccount(
   client: PrimitiveApiClient,
 ): Promise<{ outcome: CheckOutcome; account: Account | null }> {
   try {
@@ -241,6 +252,16 @@ async function checkAccount(
     // typeof checks; result.error can resolve to never on the third
     // access when the generated union types collapse.
     const apiError: unknown = result.error;
+    if (apiError && isGrantRefusal(extractErrorPayload(apiError))) {
+      return {
+        outcome: {
+          status: "warn",
+          message: "credential accepted, but its grant cannot read the account",
+          hint: "Run `primitive whoami` to see what this credential can do.",
+        },
+        account: null,
+      };
+    }
     if (apiError) {
       const errorBody =
         typeof apiError === "object" && apiError !== null
@@ -269,7 +290,7 @@ async function checkAccount(
     return {
       outcome: {
         status: "ok",
-        message: `${account.email} (plan: ${account.plan}, id: ${account.id})`,
+        message: `${account.email ?? "account email not visible to this credential"} (plan: ${account.plan}, id: ${account.id})`,
       },
       account,
     };

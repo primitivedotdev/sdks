@@ -40,7 +40,7 @@ The shared fixtures define behavioral parity expectations across SDKs, including
 
 ### API
 
-The HTTP API contract lives at `openapi/primitive-api.yaml`.
+The HTTP API contract lives at `openapi/primitive-api.yaml`. It is generated from the OpenAPI document the API serves by `make openapi-sync`, not edited by hand.
 
 That source is transformed into a generated codegen artifact so all three SDKs generate from the same normalized API description, while Node also publishes the raw OpenAPI document for other JavaScript consumers.
 
@@ -114,7 +114,7 @@ When changing only one SDK's internal implementation, keep the shared fixture co
 
 When changing the HTTP API contract:
 
-1. update `openapi/primitive-api.yaml`
+1. sync `openapi/primitive-api.yaml` from the served API document with `make openapi-sync SERVED=<path>` (see `RELEASE.md`)
 2. regenerate the Node, Python, and Go API clients
 3. run `make node-check python-check go-check`
 4. verify the Node smoke test still exposes `api` and `openapi` (and still confirms the SDK tarball installs no `primitive` bin; the CLI bin is exercised by the separate CLI smoke test)

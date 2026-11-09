@@ -104,6 +104,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_422
 
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_429
+
     if response.status_code == 502:
         response_502 = ErrorResponse.from_dict(response.json())
 
@@ -138,7 +145,7 @@ def sync_detailed(
     attachment: str,
     path: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | File]:
     """ Download one file from inside a received zip or tar attachment
@@ -183,7 +190,7 @@ def sync(
     attachment: str,
     path: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | File | None:
     """ Download one file from inside a received zip or tar attachment
@@ -223,7 +230,7 @@ async def asyncio_detailed(
     attachment: str,
     path: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | File]:
     """ Download one file from inside a received zip or tar attachment
@@ -268,7 +275,7 @@ async def asyncio(
     attachment: str,
     path: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | File | None:
     """ Download one file from inside a received zip or tar attachment

@@ -77,6 +77,11 @@ def sync_detailed(
 ) -> Response[ErrorResponse | GetStorageStatsResponse200]:
     """ Get storage usage
 
+     Return stored-email storage usage for the authenticated organization: the plan's included storage,
+    the limit past which inbound mail is refused (null when it never is, as on paid plans), and the
+    storage billed as overage. `quota_mb` is the included allowance, not a limit. The search index is
+    billed as storage with mail (`search_index_bytes`) but never counts toward the limit.
+
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
@@ -103,6 +108,11 @@ def sync(
 ) -> ErrorResponse | GetStorageStatsResponse200 | None:
     """ Get storage usage
 
+     Return stored-email storage usage for the authenticated organization: the plan's included storage,
+    the limit past which inbound mail is refused (null when it never is, as on paid plans), and the
+    storage billed as overage. `quota_mb` is the included allowance, not a limit. The search index is
+    billed as storage with mail (`search_index_bytes`) but never counts toward the limit.
+
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
@@ -123,6 +133,11 @@ async def asyncio_detailed(
 
 ) -> Response[ErrorResponse | GetStorageStatsResponse200]:
     """ Get storage usage
+
+     Return stored-email storage usage for the authenticated organization: the plan's included storage,
+    the limit past which inbound mail is refused (null when it never is, as on paid plans), and the
+    storage billed as overage. `quota_mb` is the included allowance, not a limit. The search index is
+    billed as storage with mail (`search_index_bytes`) but never counts toward the limit.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -149,6 +164,11 @@ async def asyncio(
 
 ) -> ErrorResponse | GetStorageStatsResponse200 | None:
     """ Get storage usage
+
+     Return stored-email storage usage for the authenticated organization: the plan's included storage,
+    the limit past which inbound mail is refused (null when it never is, as on paid plans), and the
+    storage billed as overage. `quota_mb` is the included allowance, not a limit. The search index is
+    billed as storage with mail (`search_index_bytes`) but never counts toward the limit.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

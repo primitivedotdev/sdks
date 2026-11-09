@@ -8,6 +8,7 @@ import {
 import { installedConnectSkillFile } from "./connect-skill.js";
 import type { ConversationStatus } from "./conversation-status.js";
 import { wakeInteractionSentence } from "./interaction-actions.js";
+import { readableDelivery } from "./listen-handlers.js";
 import { ListenStateError, listenIdentity } from "./listen-state.js";
 import type { ListenHandler } from "./listen-types.js";
 import {
@@ -153,9 +154,10 @@ export async function openSessionNotifications(
       throw new ListenStateError(
         "Notification mode received an unrelated event. It remains uncompleted; use an email.received-only subscription.",
       );
+    const { body } = readableDelivery(delivery);
     let event: ReturnType<typeof parseWebhookEvent>;
     try {
-      event = parseWebhookEvent(JSON.parse(delivery.body), delivery.event_type);
+      event = parseWebhookEvent(JSON.parse(body), delivery.event_type);
     } catch {
       throw new ListenStateError(
         "Invalid email event; the delivery remains uncompleted.",

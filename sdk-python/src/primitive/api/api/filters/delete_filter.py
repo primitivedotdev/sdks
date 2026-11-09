@@ -87,6 +87,8 @@ def sync_detailed(
 ) -> Response[DeleteFilterResponse200 | ErrorResponse]:
     """ Delete a filter rule
 
+     Delete an inbound routing filter rule. Messages already processed by the rule are unaffected.
+
     Args:
         id (UUID):
 
@@ -118,6 +120,8 @@ def sync(
 ) -> DeleteFilterResponse200 | ErrorResponse | None:
     """ Delete a filter rule
 
+     Delete an inbound routing filter rule. Messages already processed by the rule are unaffected.
+
     Args:
         id (UUID):
 
@@ -143,6 +147,8 @@ async def asyncio_detailed(
 
 ) -> Response[DeleteFilterResponse200 | ErrorResponse]:
     """ Delete a filter rule
+
+     Delete an inbound routing filter rule. Messages already processed by the rule are unaffected.
 
     Args:
         id (UUID):
@@ -174,6 +180,8 @@ async def asyncio(
 
 ) -> DeleteFilterResponse200 | ErrorResponse | None:
     """ Delete a filter rule
+
+     Delete an inbound routing filter rule. Messages already processed by the rule are unaffected.
 
     Args:
         id (UUID):

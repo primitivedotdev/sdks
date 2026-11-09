@@ -8,7 +8,13 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.repeating_send_held_reason_type_1 import RepeatingSendHeldReasonType1
+from ..models.repeating_send_held_reason_type_2_type_1 import RepeatingSendHeldReasonType2Type1
+from ..models.repeating_send_held_reason_type_3_type_1 import RepeatingSendHeldReasonType3Type1
 from ..models.repeating_send_status import RepeatingSendStatus
+from ..models.repeating_send_stopped_by_type_1 import RepeatingSendStoppedByType1
+from ..models.repeating_send_stopped_by_type_2_type_1 import RepeatingSendStoppedByType2Type1
+from ..models.repeating_send_stopped_by_type_3_type_1 import RepeatingSendStoppedByType3Type1
 from typing import cast
 from uuid import UUID
 import datetime
@@ -49,6 +55,20 @@ class RepeatingSend:
                 text.
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
+            stopped_by (None | RepeatingSendStoppedByType1 | RepeatingSendStoppedByType2Type1 |
+                RepeatingSendStoppedByType3Type1): Who ended it: sender (canceled by its creator's side), recipient (stopped
+                with repeat-stop) or system (the platform ended it: max_sends reached, until passed, or the creator lost the
+                authority it was created under). Null while active or paused.
+            thread_id (None | UUID): The thread the repeat's sends live in; null until its first send exists.
+            last_error_code (None | str): Why the last attempt did not send, or null. A code starting retry: is a transient
+                failure the platform is retrying.
+            held_reason (None | RepeatingSendHeldReasonType1 | RepeatingSendHeldReasonType2Type1 |
+                RepeatingSendHeldReasonType3Type1): Why an active repeat's last tick was refused rather than sent:
+                sender_access_lost (whoever created it can no longer send from its From; it resumes on its own at the next
+                interval once that access returns) or send_refused (see last_error_code). Or, on a paused repeat,
+                credential_reuse_hold: it was paused because the OAuth grant that created it was revoked after its refresh token
+                was reused; resuming it (its creator, or an owner or admin, as a person) makes it the resumer's. Null when
+                nothing is holding it.
      """
 
     id: UUID
@@ -73,6 +93,11 @@ class RepeatingSend:
     stop_reason: None | str
     created_at: datetime.datetime
     updated_at: datetime.datetime
+    stopped_by: None | RepeatingSendStoppedByType1 | RepeatingSendStoppedByType2Type1 | RepeatingSendStoppedByType3Type1
+    thread_id: None | UUID
+    last_error_code: None | str
+    held_reason: None | RepeatingSendHeldReasonType1 | RepeatingSendHeldReasonType2Type1 | RepeatingSendHeldReasonType3Type1
+    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
 
@@ -149,9 +174,38 @@ class RepeatingSend:
 
         updated_at = self.updated_at.isoformat()
 
+        stopped_by: None | str
+        if isinstance(self.stopped_by, RepeatingSendStoppedByType1):
+            stopped_by = self.stopped_by.value
+        elif isinstance(self.stopped_by, RepeatingSendStoppedByType2Type1):
+            stopped_by = self.stopped_by.value
+        elif isinstance(self.stopped_by, RepeatingSendStoppedByType3Type1):
+            stopped_by = self.stopped_by.value
+        else:
+            stopped_by = self.stopped_by
+
+        thread_id: None | str
+        if isinstance(self.thread_id, UUID):
+            thread_id = str(self.thread_id)
+        else:
+            thread_id = self.thread_id
+
+        last_error_code: None | str
+        last_error_code = self.last_error_code
+
+        held_reason: None | str
+        if isinstance(self.held_reason, RepeatingSendHeldReasonType1):
+            held_reason = self.held_reason.value
+        elif isinstance(self.held_reason, RepeatingSendHeldReasonType2Type1):
+            held_reason = self.held_reason.value
+        elif isinstance(self.held_reason, RepeatingSendHeldReasonType3Type1):
+            held_reason = self.held_reason.value
+        else:
+            held_reason = self.held_reason
+
 
         field_dict: dict[str, Any] = {}
-
+        field_dict.update(self.additional_properties)
         field_dict.update({
             "id": id,
             "org_id": org_id,
@@ -175,6 +229,10 @@ class RepeatingSend:
             "stop_reason": stop_reason,
             "created_at": created_at,
             "updated_at": updated_at,
+            "stopped_by": stopped_by,
+            "thread_id": thread_id,
+            "last_error_code": last_error_code,
+            "held_reason": held_reason,
         })
 
         return field_dict
@@ -359,6 +417,108 @@ class RepeatingSend:
 
 
 
+        def _parse_stopped_by(data: object) -> None | RepeatingSendStoppedByType1 | RepeatingSendStoppedByType2Type1 | RepeatingSendStoppedByType3Type1:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                stopped_by_type_1 = RepeatingSendStoppedByType1(data)
+
+
+
+                return stopped_by_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                stopped_by_type_2_type_1 = RepeatingSendStoppedByType2Type1(data)
+
+
+
+                return stopped_by_type_2_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                stopped_by_type_3_type_1 = RepeatingSendStoppedByType3Type1(data)
+
+
+
+                return stopped_by_type_3_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | RepeatingSendStoppedByType1 | RepeatingSendStoppedByType2Type1 | RepeatingSendStoppedByType3Type1, data)
+
+        stopped_by = _parse_stopped_by(d.pop("stopped_by"))
+
+
+        def _parse_thread_id(data: object) -> None | UUID:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                thread_id_type_0 = UUID(data)
+
+
+
+                return thread_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | UUID, data)
+
+        thread_id = _parse_thread_id(d.pop("thread_id"))
+
+
+        def _parse_last_error_code(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        last_error_code = _parse_last_error_code(d.pop("last_error_code"))
+
+
+        def _parse_held_reason(data: object) -> None | RepeatingSendHeldReasonType1 | RepeatingSendHeldReasonType2Type1 | RepeatingSendHeldReasonType3Type1:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                held_reason_type_1 = RepeatingSendHeldReasonType1(data)
+
+
+
+                return held_reason_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                held_reason_type_2_type_1 = RepeatingSendHeldReasonType2Type1(data)
+
+
+
+                return held_reason_type_2_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                held_reason_type_3_type_1 = RepeatingSendHeldReasonType3Type1(data)
+
+
+
+                return held_reason_type_3_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | RepeatingSendHeldReasonType1 | RepeatingSendHeldReasonType2Type1 | RepeatingSendHeldReasonType3Type1, data)
+
+        held_reason = _parse_held_reason(d.pop("held_reason"))
+
+
         repeating_send = cls(
             id=id,
             org_id=org_id,
@@ -382,7 +542,28 @@ class RepeatingSend:
             stop_reason=stop_reason,
             created_at=created_at,
             updated_at=updated_at,
+            stopped_by=stopped_by,
+            thread_id=thread_id,
+            last_error_code=last_error_code,
+            held_reason=held_reason,
         )
 
+
+        repeating_send.additional_properties = d
         return repeating_send
 
+    @property
+    def additional_keys(self) -> list[str]:
+        return list(self.additional_properties.keys())
+
+    def __getitem__(self, key: str) -> Any:
+        return self.additional_properties[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.additional_properties[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.additional_properties[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.additional_properties

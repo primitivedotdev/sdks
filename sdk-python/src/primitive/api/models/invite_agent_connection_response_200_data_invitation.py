@@ -30,6 +30,7 @@ class InviteAgentConnectionResponse200DataInvitation:
 
     claim_url: str
     expires_at: datetime.datetime
+    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
 
@@ -42,7 +43,7 @@ class InviteAgentConnectionResponse200DataInvitation:
 
 
         field_dict: dict[str, Any] = {}
-
+        field_dict.update(self.additional_properties)
         field_dict.update({
             "claim_url": claim_url,
             "expires_at": expires_at,
@@ -67,4 +68,22 @@ class InviteAgentConnectionResponse200DataInvitation:
             expires_at=expires_at,
         )
 
+
+        invite_agent_connection_response_200_data_invitation.additional_properties = d
         return invite_agent_connection_response_200_data_invitation
+
+    @property
+    def additional_keys(self) -> list[str]:
+        return list(self.additional_properties.keys())
+
+    def __getitem__(self, key: str) -> Any:
+        return self.additional_properties[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.additional_properties[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.additional_properties[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.additional_properties

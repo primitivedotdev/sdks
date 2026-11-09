@@ -24,7 +24,7 @@ class CreateFunctionInputFiles:
     contents (for example {"package.json": "...",
     "src/index.ts": "..."}). Provide this INSTEAD of `code` to
     have the server install dependencies and bundle the source
-    for the Workers runtime before deploying. Include a
+    for the Functions runtime before deploying. Include a
     package.json (its `dependencies` are installed). Provide
     either `code` or `files`, not both.
 

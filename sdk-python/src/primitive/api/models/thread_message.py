@@ -14,6 +14,7 @@ from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
+  from ..models.thread_message_copies_item import ThreadMessageCopiesItem
   from ..models.thread_message_repeat_type_0 import ThreadMessageRepeatType0
   from ..models.thread_message_sender_member_type_0 import ThreadMessageSenderMemberType0
 
@@ -43,14 +44,22 @@ class ThreadMessage:
             repeat (None | ThreadMessageRepeatType0 | Unset): Set when Primitive sent this message as part of a repeating
                 send. Resolved from Primitive's own records, never from the message content. Null on every other message and on
                 servers that predate repeating sends.
-            sender_member (None | ThreadMessageSenderMemberType0 | Unset): Verified human authorship, projected only within
-                the member organization. Historical attribution is not current sending or owner authority.
+            sender_member (None | ThreadMessageSenderMemberType0 | Unset):
             fyi (bool | Unset): Outbound messages only. True when the send was an informational signal (a read, working or
                 typing signal, or an acknowledgement) and nothing else, so it is not a reply that takes part in the
                 conversation. Absent on inbound messages. Older servers omit it.
             interaction_hint (str | Unset): Outbound messages only. How to place this send in a timeline: `status` (a pure
                 status signal), `card` or `none`. Not declared as a closed enum so that a value added later does not fail
                 decoding; treat an unknown value as `none`. Absent on inbound messages. Older servers omit it.
+            copies (list[ThreadMessageCopiesItem] | Unset): Every inbound copy of this message you can read (a message to
+                several of the org's mailboxes is stored once per mailbox), in arrival order. At most 50; past that, the ones
+                listed are your own mailboxes' copies first, then the earliest. The entry's `id` is one of them unless the entry
+                is the send. A later read can return the message again with more copies listed, or under another id when a
+                better copy becomes visible: upsert entries by `id`, and drop any entry you hold whose id is in a newer entry's
+                `copies` or `sent_email_id`.
+            copies_truncated (bool | Unset): Present when `copies` may not list every copy you can read.
+            sent_email_id (UUID | Unset): The org's send of this message, when the entry is an inbound copy and you can read
+                the send. The entry's `status` stays the inbound copy's.
      """
 
     direction: ThreadMessageDirection
@@ -65,6 +74,9 @@ class ThreadMessage:
     sender_member: None | ThreadMessageSenderMemberType0 | Unset = UNSET
     fyi: bool | Unset = UNSET
     interaction_hint: str | Unset = UNSET
+    copies: list[ThreadMessageCopiesItem] | Unset = UNSET
+    copies_truncated: bool | Unset = UNSET
+    sent_email_id: UUID | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -72,6 +84,7 @@ class ThreadMessage:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.thread_message_copies_item import ThreadMessageCopiesItem # noqa: PLC0415
         from ..models.thread_message_repeat_type_0 import ThreadMessageRepeatType0 # noqa: PLC0415
         from ..models.thread_message_sender_member_type_0 import ThreadMessageSenderMemberType0 # noqa: PLC0415
         direction = self.direction.value
@@ -136,6 +149,21 @@ class ThreadMessage:
 
         interaction_hint = self.interaction_hint
 
+        copies: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.copies, Unset):
+            copies = []
+            for copies_item_data in self.copies:
+                copies_item = copies_item_data.to_dict()
+                copies.append(copies_item)
+
+
+
+        copies_truncated = self.copies_truncated
+
+        sent_email_id: str | Unset = UNSET
+        if not isinstance(self.sent_email_id, Unset):
+            sent_email_id = str(self.sent_email_id)
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -163,6 +191,12 @@ class ThreadMessage:
             field_dict["fyi"] = fyi
         if interaction_hint is not UNSET:
             field_dict["interaction_hint"] = interaction_hint
+        if copies is not UNSET:
+            field_dict["copies"] = copies
+        if copies_truncated is not UNSET:
+            field_dict["copies_truncated"] = copies_truncated
+        if sent_email_id is not UNSET:
+            field_dict["sent_email_id"] = sent_email_id
 
         return field_dict
 
@@ -170,6 +204,7 @@ class ThreadMessage:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.thread_message_copies_item import ThreadMessageCopiesItem # noqa: PLC0415
         from ..models.thread_message_repeat_type_0 import ThreadMessageRepeatType0 # noqa: PLC0415
         from ..models.thread_message_sender_member_type_0 import ThreadMessageSenderMemberType0 # noqa: PLC0415
         d = dict(src_dict)
@@ -297,6 +332,30 @@ class ThreadMessage:
 
         interaction_hint = d.pop("interaction_hint", UNSET)
 
+        _copies = d.pop("copies", UNSET)
+        copies: list[ThreadMessageCopiesItem] | Unset = UNSET
+        if _copies is not UNSET:
+            copies = []
+            for copies_item_data in _copies:
+                copies_item = ThreadMessageCopiesItem.from_dict(copies_item_data)
+
+
+
+                copies.append(copies_item)
+
+
+        copies_truncated = d.pop("copies_truncated", UNSET)
+
+        _sent_email_id = d.pop("sent_email_id", UNSET)
+        sent_email_id: UUID | Unset
+        if isinstance(_sent_email_id,  Unset):
+            sent_email_id = UNSET
+        else:
+            sent_email_id = UUID(_sent_email_id)
+
+
+
+
         thread_message = cls(
             direction=direction,
             id=id,
@@ -310,6 +369,9 @@ class ThreadMessage:
             sender_member=sender_member,
             fyi=fyi,
             interaction_hint=interaction_hint,
+            copies=copies,
+            copies_truncated=copies_truncated,
+            sent_email_id=sent_email_id,
         )
 
 

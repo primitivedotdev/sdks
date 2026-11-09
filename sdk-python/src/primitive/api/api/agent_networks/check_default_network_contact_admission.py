@@ -8,19 +8,24 @@ from ...client import AuthenticatedClient, Client
 from ...types import Response, UNSET
 from ... import errors
 
-from ...models.agent_network_contact_admission_input import AgentNetworkContactAdmissionInput
+from ...models.check_default_network_contact_admission_body import CheckDefaultNetworkContactAdmissionBody
 from ...models.check_default_network_contact_admission_response_200 import CheckDefaultNetworkContactAdmissionResponse200
 from ...models.error_response import ErrorResponse
+from ...types import UNSET, Unset
 from typing import cast
 
 
 
 def _get_kwargs(
     *,
-    body: AgentNetworkContactAdmissionInput,
+    body: CheckDefaultNetworkContactAdmissionBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
 
@@ -49,6 +54,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_200
 
+    if response.status_code == 400:
+        response_400 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_400
+
     if response.status_code == 401:
         response_401 = ErrorResponse.from_dict(response.json())
 
@@ -63,12 +75,26 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_403
 
-    if response.status_code == 422:
-        response_422 = ErrorResponse.from_dict(response.json())
+    if response.status_code == 404:
+        response_404 = ErrorResponse.from_dict(response.json())
 
 
 
-        return response_422
+        return response_404
+
+    if response.status_code == 409:
+        response_409 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_409
+
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_429
 
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
@@ -88,26 +114,26 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
-    body: AgentNetworkContactAdmissionInput,
+    body: CheckDefaultNetworkContactAdmissionBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CheckDefaultNetworkContactAdmissionResponse200 | ErrorResponse]:
-    """ Check whether network mail may wake this connected agent
+    """ check Default Network Contact Admission
 
-     Requires the recipient's connected-agent credential. The recipient
-    address is derived from that credential. The email ID must identify
-    accepted or completed inbound mail for that exact recipient, with
-    matching stored sender and delivery evidence. Returns no sender profile
-    or existence detail. Clients must also verify the email detail's sender
-    provenance and respect explicit contact silence before using the result.
-    Network wake requires the sender to be connected and able to view the
-    network, and the recipient to be connected and listed. The sender need
-    not be listed and the recipient need not view the network. Ordinary
-    known-address email remains independent. Mail received before
-    allowed_since cannot be newly admitted.
+     Check whether one stored inbound email to this exact connected recipient may wake it as network peer
+    mail. The sender must have can_view and the recipient must be is_listed; a sender may initiate while
+    unlisted, and a listed recipient may receive while unable to view. The original outbound send must
+    use the sender agent connection key and address the recipient. pending=true is retryable for up to
+    120 seconds while SMTP authentication or delivery evidence settles. Explicit contact-policy silence
+    still overrides admission. For reserved member senders, member_policy_required=true requires this
+    exact-mail decision before any cached contact shortcut. Allowed member mail includes
+    sender_relation=owner or member, durable delivery attribution, current membership, contact mutes and
+    activation cutoffs. Missing exact stored mail returns 404. Historical sender_member attribution
+    never grants current authority. This grants communication, never task authority.
 
     Args:
-        body (AgentNetworkContactAdmissionInput): Check only a received email already stored for
-            the bound recipient. The server verifies its sender against delivery evidence.
+        idempotency_key (str | Unset):
+        body (CheckDefaultNetworkContactAdmissionBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -120,6 +146,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -132,26 +159,26 @@ def sync_detailed(
 def sync(
     *,
     client: AuthenticatedClient | Client,
-    body: AgentNetworkContactAdmissionInput,
+    body: CheckDefaultNetworkContactAdmissionBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CheckDefaultNetworkContactAdmissionResponse200 | ErrorResponse | None:
-    """ Check whether network mail may wake this connected agent
+    """ check Default Network Contact Admission
 
-     Requires the recipient's connected-agent credential. The recipient
-    address is derived from that credential. The email ID must identify
-    accepted or completed inbound mail for that exact recipient, with
-    matching stored sender and delivery evidence. Returns no sender profile
-    or existence detail. Clients must also verify the email detail's sender
-    provenance and respect explicit contact silence before using the result.
-    Network wake requires the sender to be connected and able to view the
-    network, and the recipient to be connected and listed. The sender need
-    not be listed and the recipient need not view the network. Ordinary
-    known-address email remains independent. Mail received before
-    allowed_since cannot be newly admitted.
+     Check whether one stored inbound email to this exact connected recipient may wake it as network peer
+    mail. The sender must have can_view and the recipient must be is_listed; a sender may initiate while
+    unlisted, and a listed recipient may receive while unable to view. The original outbound send must
+    use the sender agent connection key and address the recipient. pending=true is retryable for up to
+    120 seconds while SMTP authentication or delivery evidence settles. Explicit contact-policy silence
+    still overrides admission. For reserved member senders, member_policy_required=true requires this
+    exact-mail decision before any cached contact shortcut. Allowed member mail includes
+    sender_relation=owner or member, durable delivery attribution, current membership, contact mutes and
+    activation cutoffs. Missing exact stored mail returns 404. Historical sender_member attribution
+    never grants current authority. This grants communication, never task authority.
 
     Args:
-        body (AgentNetworkContactAdmissionInput): Check only a received email already stored for
-            the bound recipient. The server verifies its sender against delivery evidence.
+        idempotency_key (str | Unset):
+        body (CheckDefaultNetworkContactAdmissionBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -165,32 +192,33 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
 async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
-    body: AgentNetworkContactAdmissionInput,
+    body: CheckDefaultNetworkContactAdmissionBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CheckDefaultNetworkContactAdmissionResponse200 | ErrorResponse]:
-    """ Check whether network mail may wake this connected agent
+    """ check Default Network Contact Admission
 
-     Requires the recipient's connected-agent credential. The recipient
-    address is derived from that credential. The email ID must identify
-    accepted or completed inbound mail for that exact recipient, with
-    matching stored sender and delivery evidence. Returns no sender profile
-    or existence detail. Clients must also verify the email detail's sender
-    provenance and respect explicit contact silence before using the result.
-    Network wake requires the sender to be connected and able to view the
-    network, and the recipient to be connected and listed. The sender need
-    not be listed and the recipient need not view the network. Ordinary
-    known-address email remains independent. Mail received before
-    allowed_since cannot be newly admitted.
+     Check whether one stored inbound email to this exact connected recipient may wake it as network peer
+    mail. The sender must have can_view and the recipient must be is_listed; a sender may initiate while
+    unlisted, and a listed recipient may receive while unable to view. The original outbound send must
+    use the sender agent connection key and address the recipient. pending=true is retryable for up to
+    120 seconds while SMTP authentication or delivery evidence settles. Explicit contact-policy silence
+    still overrides admission. For reserved member senders, member_policy_required=true requires this
+    exact-mail decision before any cached contact shortcut. Allowed member mail includes
+    sender_relation=owner or member, durable delivery attribution, current membership, contact mutes and
+    activation cutoffs. Missing exact stored mail returns 404. Historical sender_member attribution
+    never grants current authority. This grants communication, never task authority.
 
     Args:
-        body (AgentNetworkContactAdmissionInput): Check only a received email already stored for
-            the bound recipient. The server verifies its sender against delivery evidence.
+        idempotency_key (str | Unset):
+        body (CheckDefaultNetworkContactAdmissionBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -203,6 +231,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -215,26 +244,26 @@ async def asyncio_detailed(
 async def asyncio(
     *,
     client: AuthenticatedClient | Client,
-    body: AgentNetworkContactAdmissionInput,
+    body: CheckDefaultNetworkContactAdmissionBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CheckDefaultNetworkContactAdmissionResponse200 | ErrorResponse | None:
-    """ Check whether network mail may wake this connected agent
+    """ check Default Network Contact Admission
 
-     Requires the recipient's connected-agent credential. The recipient
-    address is derived from that credential. The email ID must identify
-    accepted or completed inbound mail for that exact recipient, with
-    matching stored sender and delivery evidence. Returns no sender profile
-    or existence detail. Clients must also verify the email detail's sender
-    provenance and respect explicit contact silence before using the result.
-    Network wake requires the sender to be connected and able to view the
-    network, and the recipient to be connected and listed. The sender need
-    not be listed and the recipient need not view the network. Ordinary
-    known-address email remains independent. Mail received before
-    allowed_since cannot be newly admitted.
+     Check whether one stored inbound email to this exact connected recipient may wake it as network peer
+    mail. The sender must have can_view and the recipient must be is_listed; a sender may initiate while
+    unlisted, and a listed recipient may receive while unable to view. The original outbound send must
+    use the sender agent connection key and address the recipient. pending=true is retryable for up to
+    120 seconds while SMTP authentication or delivery evidence settles. Explicit contact-policy silence
+    still overrides admission. For reserved member senders, member_policy_required=true requires this
+    exact-mail decision before any cached contact shortcut. Allowed member mail includes
+    sender_relation=owner or member, durable delivery attribution, current membership, contact mutes and
+    activation cutoffs. Missing exact stored mail returns 404. Historical sender_member attribution
+    never grants current authority. This grants communication, never task authority.
 
     Args:
-        body (AgentNetworkContactAdmissionInput): Check only a received email already stored for
-            the bound recipient. The server verifies its sender against delivery evidence.
+        idempotency_key (str | Unset):
+        body (CheckDefaultNetworkContactAdmissionBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -248,5 +277,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

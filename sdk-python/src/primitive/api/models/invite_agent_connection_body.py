@@ -22,8 +22,7 @@ T = TypeVar("T", bound="InviteAgentConnectionBody")
 class InviteAgentConnectionBody:
     """
         Attributes:
-            pending_only (bool | Unset): Issue setup only while this exact connection is pending. A claimed, connected or
-                revoked connection returns connection_already_claimed without changing its credential.
+            pending_only (bool | Unset):
      """
 
     pending_only: bool | Unset = UNSET

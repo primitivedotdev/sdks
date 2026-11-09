@@ -9,8 +9,7 @@ from ...types import Response, UNSET
 from ... import errors
 
 from ...models.error_response import ErrorResponse
-from ...models.put_agent_contact_body_type_0 import PutAgentContactBodyType0
-from ...models.put_agent_contact_body_type_1 import PutAgentContactBodyType1
+from ...models.put_agent_contact_request import PutAgentContactRequest
 from ...models.put_agent_contact_response_200 import PutAgentContactResponse200
 from typing import cast
 
@@ -20,7 +19,7 @@ def _get_kwargs(
     agent_address: str,
     contact_address: str,
     *,
-    body: PutAgentContactBodyType0 | PutAgentContactBodyType1,
+    body: PutAgentContactRequest,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
@@ -35,12 +34,7 @@ def _get_kwargs(
         "url": "/agent-contacts/{agent_address}/{contact_address}".format(agent_address=quote(str(agent_address), safe=""),contact_address=quote(str(contact_address), safe=""),),
     }
 
-    
-    if isinstance(body, PutAgentContactBodyType0):
-        _kwargs["json"] = body.to_dict()
-    else:
-        _kwargs["json"] = body.to_dict()
-
+    _kwargs["json"] = body.to_dict()
 
     headers["Content-Type"] = "application/json"
 
@@ -118,14 +112,17 @@ def sync_detailed(
     agent_address: str,
     contact_address: str,
     *,
-    client: AuthenticatedClient,
-    body: PutAgentContactBodyType0 | PutAgentContactBodyType1,
+    client: AuthenticatedClient | Client,
+    body: PutAgentContactRequest,
 
 ) -> Response[ErrorResponse | PutAgentContactResponse200]:
     """ put Agent Contact
 
      Organization directory and agent preferences; no profiles, message history or runtime presence.
-    Existing organization credentials use tenant permissions. Connected keys may read the directory,
+    Organization credentials retain tenant directory permissions. Human organization members may read
+    and change agent notification contacts only for personal connections bound to their current
+    membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+    their own agent contact list (another contact reads as 404) and always see display_name as null,
     create address-only missing contacts using if_absent:true, and access only their own agent
     memberships; they cannot edit shared labels or delete directory entries. Function credentials are
     not granted access. Memberships require an existing local agent connection (including revoked
@@ -143,7 +140,7 @@ def sync_detailed(
             tags.
         contact_address (str): Bare email address; trim and lowercase, preserving dots and plus
             tags.
-        body (PutAgentContactBodyType0 | PutAgentContactBodyType1):
+        body (PutAgentContactRequest):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -171,14 +168,17 @@ def sync(
     agent_address: str,
     contact_address: str,
     *,
-    client: AuthenticatedClient,
-    body: PutAgentContactBodyType0 | PutAgentContactBodyType1,
+    client: AuthenticatedClient | Client,
+    body: PutAgentContactRequest,
 
 ) -> ErrorResponse | PutAgentContactResponse200 | None:
     """ put Agent Contact
 
      Organization directory and agent preferences; no profiles, message history or runtime presence.
-    Existing organization credentials use tenant permissions. Connected keys may read the directory,
+    Organization credentials retain tenant directory permissions. Human organization members may read
+    and change agent notification contacts only for personal connections bound to their current
+    membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+    their own agent contact list (another contact reads as 404) and always see display_name as null,
     create address-only missing contacts using if_absent:true, and access only their own agent
     memberships; they cannot edit shared labels or delete directory entries. Function credentials are
     not granted access. Memberships require an existing local agent connection (including revoked
@@ -196,7 +196,7 @@ def sync(
             tags.
         contact_address (str): Bare email address; trim and lowercase, preserving dots and plus
             tags.
-        body (PutAgentContactBodyType0 | PutAgentContactBodyType1):
+        body (PutAgentContactRequest):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -219,14 +219,17 @@ async def asyncio_detailed(
     agent_address: str,
     contact_address: str,
     *,
-    client: AuthenticatedClient,
-    body: PutAgentContactBodyType0 | PutAgentContactBodyType1,
+    client: AuthenticatedClient | Client,
+    body: PutAgentContactRequest,
 
 ) -> Response[ErrorResponse | PutAgentContactResponse200]:
     """ put Agent Contact
 
      Organization directory and agent preferences; no profiles, message history or runtime presence.
-    Existing organization credentials use tenant permissions. Connected keys may read the directory,
+    Organization credentials retain tenant directory permissions. Human organization members may read
+    and change agent notification contacts only for personal connections bound to their current
+    membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+    their own agent contact list (another contact reads as 404) and always see display_name as null,
     create address-only missing contacts using if_absent:true, and access only their own agent
     memberships; they cannot edit shared labels or delete directory entries. Function credentials are
     not granted access. Memberships require an existing local agent connection (including revoked
@@ -244,7 +247,7 @@ async def asyncio_detailed(
             tags.
         contact_address (str): Bare email address; trim and lowercase, preserving dots and plus
             tags.
-        body (PutAgentContactBodyType0 | PutAgentContactBodyType1):
+        body (PutAgentContactRequest):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -272,14 +275,17 @@ async def asyncio(
     agent_address: str,
     contact_address: str,
     *,
-    client: AuthenticatedClient,
-    body: PutAgentContactBodyType0 | PutAgentContactBodyType1,
+    client: AuthenticatedClient | Client,
+    body: PutAgentContactRequest,
 
 ) -> ErrorResponse | PutAgentContactResponse200 | None:
     """ put Agent Contact
 
      Organization directory and agent preferences; no profiles, message history or runtime presence.
-    Existing organization credentials use tenant permissions. Connected keys may read the directory,
+    Organization credentials retain tenant directory permissions. Human organization members may read
+    and change agent notification contacts only for personal connections bound to their current
+    membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+    their own agent contact list (another contact reads as 404) and always see display_name as null,
     create address-only missing contacts using if_absent:true, and access only their own agent
     memberships; they cannot edit shared labels or delete directory entries. Function credentials are
     not granted access. Memberships require an existing local agent connection (including revoked
@@ -297,7 +303,7 @@ async def asyncio(
             tags.
         contact_address (str): Bare email address; trim and lowercase, preserving dots and plus
             tags.
-        body (PutAgentContactBodyType0 | PutAgentContactBodyType1):
+        body (PutAgentContactRequest):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

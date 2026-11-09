@@ -34,15 +34,24 @@ export {
   type Account,
   AccountResource,
   type AttachmentPartDownload,
+  BUILTIN_ROLE_KEYS,
+  type BuiltinRoleKey,
   type CreateAgentOptions,
   type CreatedAgent,
+  CredentialsResource,
   client,
   createAgent,
   createPrimitiveClient,
   type ForwardInput,
+  type GrantForbiddenDetailsShape,
+  GrantForbiddenError,
+  GrantSpec,
   type InboundEmail,
   InboxResource,
   type InboxStreamOptions,
+  isGrantForbiddenError,
+  type KeyStepUpOptions,
+  KeysResource,
   MemoriesResource,
   type MemoryDeleteInput,
   type MemoryGetInput,
@@ -52,6 +61,9 @@ export {
   type MemorySearchInput,
   type MemorySearchResponse,
   type MemorySetInput,
+  OPERATION_PERMISSIONS,
+  PERMISSIONS,
+  type Permission,
   PrimitiveApiError,
   PrimitiveClient,
   type PrimitiveClientOptions,
@@ -62,6 +74,7 @@ export {
   type RepeatStopInput,
   RepeatsResource,
   type ReplyInput,
+  RolesResource,
   type SendAttachment,
   type SendIdempotency,
   type SendIdempotencyKeySource,
@@ -71,38 +84,13 @@ export {
   type WaitForNextOptions,
 } from "./api/index.js";
 export * from "./webhook/index.js";
-export {
-  buildPayoutRegistrationMessage,
-  createX402Client,
-  deriveEip3009Nonce,
-  type NonceBinding,
-  type PayoutRegistrationMessageInput,
-  parseEmailChallengeFromPart,
-  type TokenDomain,
-  type TransferAuthorization,
-  type X402Challenge,
-  type X402ChargeInput,
-  X402Client,
-  type X402ClientOptions,
-  type X402DeclinedPayment,
-  X402Error,
-  type X402PaymentPayload,
-  type X402PaymentRequirements,
-  type X402PayoutAddress,
-  type X402Receipt,
-  type X402Signer,
-  type X402SpendPolicy,
-} from "./x402/index.js";
 
 import { client } from "./api/index.js";
 import { receive } from "./webhook/index.js";
-import { createX402Client } from "./x402/index.js";
 
 const primitive = {
   client,
   receive,
-  /** Construct an x402 payments client. See `X402Client`. */
-  x402: createX402Client,
 };
 
 export default primitive;

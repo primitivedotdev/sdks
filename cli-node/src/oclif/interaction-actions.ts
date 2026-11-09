@@ -19,8 +19,6 @@ export type InteractionCategory =
   | "fyi"
   /** A status signal (read, working, typing, ack): needs no reply. */
   | "signal"
-  /** `x402.payment/1`: answered by the payments commands. */
-  | "payment"
   /** `primitive.contact/1`: answered by `contacts accept`. */
   | "contact"
   /** `repeat.tick/1`: a repeating message; `repeat stop` ends it. */
@@ -46,8 +44,6 @@ export type EmailInteraction = {
 
 export type NextActionKind =
   | "reply"
-  | "inspect_payment"
-  | "pay"
   | "accept_contact"
   | "stop_repeat"
   | "read_again";
@@ -74,8 +70,6 @@ function categoryOf(
   if (hint === "pending") return candidate ? "pending" : "ordinary";
   if (hint === "card") {
     switch (kind) {
-      case "x402.payment/1":
-        return "payment";
       case "primitive.contact/1":
         return "contact";
       case "repeat.tick/1":
@@ -118,7 +112,6 @@ export function replyExpectation(
     case "signal":
     case "repeat_stopped":
       return "no_reply";
-    case "payment":
     case "contact":
       return "answer_with_command";
     case "repeat":
@@ -193,19 +186,6 @@ export function interactionNextActions(
   switch (interaction?.category ?? "ordinary") {
     case "ordinary":
       return [replyAction(bin, id)];
-    case "payment":
-      return [
-        buildFollowUpCommand(
-          "inspect_payment",
-          "Show the payment request's terms before paying",
-          [bin, "payments", "challenge-from-email", "--id", id],
-        ),
-        buildFollowUpCommand(
-          "pay",
-          "Pay the payment request (signs with your wallet key and sends the payment)",
-          [bin, "payments", "pay-email", "--in-reply-to", id],
-        ),
-      ];
     case "contact":
       return [
         buildFollowUpCommand(
@@ -260,13 +240,6 @@ export function interactionHumanLine(
       return `Status signal (${kind}): no reply needed.`;
     case "repeat_stopped":
       return `Notice that a repeating message stopped (${kind}): no reply needed.`;
-    case "payment": {
-      const inspect = command("inspect_payment");
-      const pay = command("pay");
-      return inspect && pay
-        ? `Payment interaction (${kind}). If it requests payment, review it with ${inspect} and pay with ${pay}. A plain reply does not pay or decline it.`
-        : null;
-    }
     case "contact": {
       const accept = command("accept_contact");
       return accept
@@ -371,13 +344,6 @@ export function replyInteractionWarning(
   const expectation = replyExpectation(interaction.category);
   if (expectation === "reply" || expectation === "repeat") return null;
   switch (interaction.category) {
-    case "payment":
-      return {
-        ...base,
-        code: "interaction_not_answered",
-        message: `Warning: email ${id} is a payment interaction (${label}). A plain reply does not pay or decline it; sending anyway. To pay: ${commandFor("pay")}`,
-        expected,
-      };
     case "contact":
       return {
         ...base,

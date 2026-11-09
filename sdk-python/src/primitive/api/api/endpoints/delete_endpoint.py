@@ -87,8 +87,10 @@ def sync_detailed(
 ) -> Response[DeleteEndpointResponse200 | ErrorResponse]:
     """ Delete a webhook endpoint
 
-     Soft-deletes a webhook endpoint. The endpoint will no longer
-    receive webhook deliveries.
+     Delete a webhook endpoint. Inbound messages are no longer delivered to it.
+
+    Agent connection keys (pconn_) may use endpoints.pull:manage instead of endpoints:manage here, for
+    their own pull subscriptions only.
 
     Args:
         id (UUID):
@@ -121,8 +123,10 @@ def sync(
 ) -> DeleteEndpointResponse200 | ErrorResponse | None:
     """ Delete a webhook endpoint
 
-     Soft-deletes a webhook endpoint. The endpoint will no longer
-    receive webhook deliveries.
+     Delete a webhook endpoint. Inbound messages are no longer delivered to it.
+
+    Agent connection keys (pconn_) may use endpoints.pull:manage instead of endpoints:manage here, for
+    their own pull subscriptions only.
 
     Args:
         id (UUID):
@@ -150,8 +154,10 @@ async def asyncio_detailed(
 ) -> Response[DeleteEndpointResponse200 | ErrorResponse]:
     """ Delete a webhook endpoint
 
-     Soft-deletes a webhook endpoint. The endpoint will no longer
-    receive webhook deliveries.
+     Delete a webhook endpoint. Inbound messages are no longer delivered to it.
+
+    Agent connection keys (pconn_) may use endpoints.pull:manage instead of endpoints:manage here, for
+    their own pull subscriptions only.
 
     Args:
         id (UUID):
@@ -184,8 +190,10 @@ async def asyncio(
 ) -> DeleteEndpointResponse200 | ErrorResponse | None:
     """ Delete a webhook endpoint
 
-     Soft-deletes a webhook endpoint. The endpoint will no longer
-    receive webhook deliveries.
+     Delete a webhook endpoint. Inbound messages are no longer delivered to it.
+
+    Agent connection keys (pconn_) may use endpoints.pull:manage instead of endpoints:manage here, for
+    their own pull subscriptions only.
 
     Args:
         id (UUID):

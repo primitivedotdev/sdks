@@ -150,9 +150,9 @@ enter it, wait for the email and take what you need from it:
 ```bash
 # Sign up with your address, then:
 primitive wait --from github.com --code      # prints 482913
-primitive wait --from vercel.com --link      # prints the sign-in link
+primitive wait --from accounts.example.com --link  # prints the sign-in link
 primitive wait --subject "verify" --timeout 90s
-primitive wait --from stripe.com --code --json
+primitive wait --from billing.example.com --code --json
 ```
 
 `primitive wait` waits for the next email to the identity the CLI resolves (a
@@ -227,6 +227,43 @@ Use `primitive logout --force` to remove local CLI credentials, pending email-co
 Use `primitive org leave` to leave the organization you are signed in to. It asks for confirmation first; pass `--yes` to skip the prompt in scripts. Leaving is final. Only a person signed in with `primitive login` can leave; API keys are refused. The only owner of an organization cannot leave it until someone else is made an owner. If the server asks you to confirm in the dashboard, the command prints the confirmation page and, in a terminal, asks for the token it shows; in a script, pass the token with `--step-up-token`. Refusals from the server are printed as returned, and the command exits 1.
 
 Use `primitive signup <email>` for new account creation, then `primitive signup confirm <email> <code>` with the emailed verification code. Non-interactive signup is available with `--accept-terms`.
+
+### Switching organizations
+
+Where the server supports it, browser login (`primitive login` with no email) logs you in as yourself rather than into one organization. The organization you choose in the browser becomes the current one, and you can switch without logging in again:
+
+```bash
+primitive orgs                 # your organizations, your role, and whether the CLI may be used there
+primitive org use acme         # switch by name or id
+primitive emails list --org beta   # act in another organization for one command
+```
+
+`--org` works on every command (set `PRIMITIVE_CLI_ORG` for the same effect; `primitive memories` keeps its own `--org` flag for organization-scoped memories). Each organization decides who may use the CLI there; when it refuses, `primitive orgs` and `primitive org use` show the reason (`not_a_member`, `cli_access_disabled_by_org`, `role_insufficient` or `cli_access_revoked`). The CLI keeps a short-lived access token per organization and gets a new one when it expires or is rejected. `primitive logout` signs you out of every organization.
+
+Against a server without organization switching, and for logins saved by earlier CLI versions, the login stays bound to one organization and works as before. `--org` naming a different organization is refused for such a login, for an API key and for a connected agent profile.
+
+`primitive login --permission <permission>` asks for a narrowed login. A server that does not offer narrowed CLI logins refuses it, and the CLI stops rather than logging in with a wider grant.
+
+### Grants and keys
+
+`primitive whoami` shows your organization, role and grant when the server reports them. `primitive whoami --check mail:send` asks whether the current credential may use a permission, prints the decision, and exits 1 when it may not; nothing is enforced by asking. A request refused because the credential's grant lacks a permission fails with `grant_forbidden`, and the CLI names the permission.
+
+```bash
+primitive keys list
+primitive keys list --json
+```
+
+`keys list` shows each key's id, prefix, name, grant, expiry and last use. It never shows a secret. API keys are created, rotated and revoked in the dashboard for now. CLI commands for this are planned. `keys list` uses the credential inventory, which the server answers only for an owner or admin in a dashboard session, so from the CLI it shows the server's refusal.
+
+`primitive roles list`, `primitive roles groups`, `primitive roles mailbox-access` and `primitive roles access-mode` read roles, groups, mailbox access and the access mode. Where the server has not enabled them, they print `feature_disabled`. The built-in roles are `owner`, `admin`, `operator` and `member`. `operator` has every permission `admin` has except managing members, changing roles, sending invitations and billing. By default, owners, admins and operators may use the CLI. An organization can open it to every member by setting `cli_access` to `all_members` in its credential policy.
+
+### Trying the preview
+
+Install the 3.0.0 preview with `npm install -g primitive@preview`. `npm install -g primitive` stays on the latest stable version.
+
+### Downgrading after signing in as yourself
+
+A login as yourself is saved with `auth_method: "user_grant"`, which CLI 1.75.0 and earlier cannot read: every command there fails with `Stored Primitive CLI credentials are malformed`. Run `primitive logout` with this CLI before installing an older one. If you have already downgraded, `primitive logout` removes the local file but does not revoke the login on the server, so sign in again afterwards.
 
 ## Reply state and the agent loop
 
@@ -317,6 +354,7 @@ primitive emails get --id <inbound-email-id> --compact
 primitive sent list
 primitive sent delete --id <sent-email-id>
 primitive domains list
+primitive billing
 primitive functions templates
 primitive functions init my-fn --template email-reply
 primitive functions logs --id <function-id>
@@ -429,8 +467,8 @@ signal or interaction, so two agents cannot keep acknowledging each other.
 acknowledgement for a message identified by its Message-Id.
 
 A plain `primitive reply` to an email the server classifies as an interaction
-the reply does not complete (a payment or contact request, or a kind this CLI
-cannot answer), or to informational mail or a status signal, is still sent.
+the reply does not complete (a contact request, or a kind this CLI cannot
+answer), or to informational mail or a status signal, is still sent.
 Without `--json` one `Warning:` line on stderr names the command that answers
 it; with `--json` the envelope carries `interaction_warning` (`code`,
 `email_id`, `kind`, `category`, `message`, `expected`), null otherwise.
@@ -630,66 +668,6 @@ primitive routes remove <route-id>
 
 Recipient routing is gated by an organization entitlement; routes are inert
 until it is enabled.
-
-## x402 payments
-
-The `primitive payments` command group drives non-custodial x402 USDC payments. One agent registers a payout address and requests a payment; the paying agent signs locally with its own wallet key and settles. The key never leaves your machine. Networks are `base` and `base-sepolia`. Amounts take a human USDC value (`--amount-usdc 0.01`) or token base units (`--amount 10000`, since USDC has 6 decimals). Your org is resolved automatically from your API key, so payout registration takes no org flag.
-
-```bash
-# Payee, one time: register the default address your org is paid at. Signs an
-# ownership message locally with your wallet key. Org is auto-resolved.
-primitive payments register-payout-address --network base-sepolia --label treasury
-
-# Payee: request a payment with a human USDC amount. Prints the challenge JSON
-# to stdout; a one-line summary goes to stderr.
-primitive payments charge --network base-sepolia --amount-usdc 0.01
-# Capture the challenge JSON to hand to the payer.
-primitive payments charge --network base-sepolia --amount-usdc 0.01 > challenge.json
-
-# Payer: sign and settle the challenge locally. Reads the challenge inline,
-# from a file, or piped on stdin.
-primitive payments pay --challenge-file challenge.json
-cat challenge.json | primitive payments pay
-
-# Email-native flow: the payee issues a challenge over an email thread.
-# Note: create-email-challenge takes --amount in token base units only; unlike
-# `charge` it has no --amount-usdc. USDC has 6 decimals, so multiply by
-# 1,000,000: 0.01 USDC is --amount 10000.
-primitive payments create-email-challenge --from payee@your-domain.example \
-  --to payer@their-domain.example --amount 10000 --network base-sepolia
-# Payer (recommended): pay the email challenge in one step. Signs the challenge
-# locally with your wallet key AND sends the signed interaction.json, so you
-# skip the manual sign-then-send dance. --in-reply-to is the inbound challenge
-# email you received; it is fetched to address the payment to the payee, with
-# From defaulting to the payer it was sent to. The send is not threaded under
-# the challenge (the payment associates by interaction_id). The message carries
-# a short default note alongside the attachment; pass --body to customize it.
-primitive payments pay-email --challenge-file challenge.json \
-  --in-reply-to <inbound-challenge-email-id> --wait
-
-# Advanced: sign only, without sending. Emits the portable interaction.json
-# artifact you can attach yourself (e.g. with `primitive send --attachment`).
-primitive payments pay-email-step --challenge-file challenge.json > interaction.json
-
-# Inspect a challenge by id, or list your registered payout addresses.
-primitive payments get-challenge --id <challenge-id>
-primitive payments list-payout-addresses
-
-# Read and update the org spend policy (kill-switch, per-payment and daily caps,
-# payee allowlist). The update merges: omitted fields keep their value.
-primitive payments get-spend-policy
-primitive payments update-spend-policy --max-per-payment 5000000
-```
-
-`charge` is the friendly verb that matches the SDK `charge` and accepts `--amount-usdc`; `create-challenge` is the lower-level command that takes base-unit `--amount`. Either creates a challenge. All four signing commands accept `--json`. `register-payout-address` and `pay` print a human-readable summary by default and raw JSON with `--json`; `pay-email` and `pay-email-step` print JSON by default (the send result and the `interaction.json` bytes, respectively), and `--json` switches them to a fuller envelope object.
-
-The signing commands (`register-payout-address`, `pay`, `pay-email`, and `pay-email-step`) need your wallet key. `pay-email` is the recommended payer path for the email-native flow: it signs and sends in one step. `pay-email-step` signs only and emits the `interaction.json` artifact for advanced use where you want to deliver it yourself. Set the key in `PRIMITIVE_X402_PRIVATE_KEY` (a `0x`-prefixed hex private key) so it never lands in shell history or the process list:
-
-```bash
-export PRIMITIVE_X402_PRIVATE_KEY=0x...
-```
-
-A `--private-key` flag is available as an escape hatch for scripted use, but the environment variable is preferred. The non-signing commands (`charge`, `get-challenge`, `list-payout-addresses`, `get-spend-policy`, `update-spend-policy`) need only your Primitive API key. Run `primitive payments <command> --help` for the full flag list of any command.
 
 ## Supported receiver API
 
@@ -1433,7 +1411,6 @@ untrusted content names the command:
 
 | Server classification | `how to answer` |
 |---|---|
-| `x402.payment/1` | `primitive payments challenge-from-email --id <id>` to review, `primitive payments pay-email --in-reply-to <id>` to pay |
 | `primitive.contact/1` | `primitive contacts accept --id <id>` |
 | `repeat.tick/1` | reply if needed; `primitive repeat stop --id <id>` once its goal is met |
 | `repeat.stop/1`, status signals, `fyi` | no reply needed |
@@ -1446,7 +1423,7 @@ When the server classifies the email as an interaction, its `interaction.json`
 part is left out of the attachment list. `primitive inbox next` carries the
 same `interaction` and `next_actions` in its JSON envelope, prints the same
 line above the conversation, and ends with matching instructions: the answering
-command first for payment and contact requests (a reply only as optional), "No
+command first for contact requests (a reply only as optional), "No
 reply needed." for fyi mail, signals and repeat-stopped notices, and the stop
 command for a repeat only when the recipient may stop it. `inbox next` skips
 mail that needs no reply (fyi mail, status signals, repeat-stopped notices):

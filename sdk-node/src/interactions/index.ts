@@ -1,7 +1,7 @@
 /** Portable interaction parsing and explicit signal helpers. Parsing has no effects. */
-export type { InteractionEnvelope } from "../x402/sign.js";
+export type { InteractionEnvelope } from "./envelope.js";
 
-import type { InteractionEnvelope } from "../x402/sign.js";
+import type { InteractionEnvelope } from "./envelope.js";
 
 export const MAX_INTERACTION_BYTES = 65_536;
 export const MAX_INTERACTION_DEPTH = 64;

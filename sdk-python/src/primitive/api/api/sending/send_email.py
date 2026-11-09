@@ -124,6 +124,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_503
 
+    if response.status_code == 504:
+        response_504 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_504
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -156,7 +163,7 @@ def sync_detailed(
     (`https://api.primitive.dev/v1`) so the request body can carry
     inline attachments up to ~30 MiB raw. The legacy dashboard
     compatibility host (`https://www.primitive.dev/api/v1`) also accepts
-    /send-mail, but Vercel request body limits apply before proxying.
+    /send-mail, but a lower request body limit applies there.
     The typed SDKs route /send-mail to the canonical API host
     automatically.
 
@@ -202,7 +209,7 @@ def sync(
     (`https://api.primitive.dev/v1`) so the request body can carry
     inline attachments up to ~30 MiB raw. The legacy dashboard
     compatibility host (`https://www.primitive.dev/api/v1`) also accepts
-    /send-mail, but Vercel request body limits apply before proxying.
+    /send-mail, but a lower request body limit applies there.
     The typed SDKs route /send-mail to the canonical API host
     automatically.
 
@@ -243,7 +250,7 @@ async def asyncio_detailed(
     (`https://api.primitive.dev/v1`) so the request body can carry
     inline attachments up to ~30 MiB raw. The legacy dashboard
     compatibility host (`https://www.primitive.dev/api/v1`) also accepts
-    /send-mail, but Vercel request body limits apply before proxying.
+    /send-mail, but a lower request body limit applies there.
     The typed SDKs route /send-mail to the canonical API host
     automatically.
 
@@ -289,7 +296,7 @@ async def asyncio(
     (`https://api.primitive.dev/v1`) so the request body can carry
     inline attachments up to ~30 MiB raw. The legacy dashboard
     compatibility host (`https://www.primitive.dev/api/v1`) also accepts
-    /send-mail, but Vercel request body limits apply before proxying.
+    /send-mail, but a lower request body limit applies there.
     The typed SDKs route /send-mail to the canonical API host
     automatically.
 

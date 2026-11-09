@@ -26,13 +26,11 @@ T = TypeVar("T", bound="CreditBalance")
 class CreditBalance:
     """ 
         Attributes:
-            budget (CreditBalanceBudgetType0 | None): The active agent spending budget an operator funded for top-ups,
-                or null when there is none.
-            prepaid_credit (CreditBalancePrepaidCreditType0 | None | Unset): Prepaid usage credit (top-ups, redeemed credit
-                codes and granted
-                credit) that can still pay for usage, or null when there is none.
-                Omitted when an exact figure cannot be given right now; the budget
-                is still returned.
+            budget (CreditBalanceBudgetType0 | None): Always null. Agent spending budgets were retired; the field is kept so
+                existing clients keep working.
+            prepaid_credit (CreditBalancePrepaidCreditType0 | None | Unset): Prepaid usage credit (redeemed credit codes and
+                granted credit) that can still pay for usage. Null when there is none. Omitted when an exact figure cannot be
+                given right now; the rest of the balance is still returned.
      """
 
     budget: CreditBalanceBudgetType0 | None

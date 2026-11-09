@@ -100,6 +100,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_422
 
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_429
+
     if response.status_code == 502:
         response_502 = ErrorResponse.from_dict(response.json())
 
@@ -133,7 +140,7 @@ def sync_detailed(
     id: UUID,
     attachment: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | ListEmailAttachmentArchiveMembersResponse200]:
     """ List the files inside a received zip or tar attachment
@@ -174,7 +181,7 @@ def sync(
     id: UUID,
     attachment: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | ListEmailAttachmentArchiveMembersResponse200 | None:
     """ List the files inside a received zip or tar attachment
@@ -210,7 +217,7 @@ async def asyncio_detailed(
     id: UUID,
     attachment: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | ListEmailAttachmentArchiveMembersResponse200]:
     """ List the files inside a received zip or tar attachment
@@ -251,7 +258,7 @@ async def asyncio(
     id: UUID,
     attachment: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | ListEmailAttachmentArchiveMembersResponse200 | None:
     """ List the files inside a received zip or tar attachment

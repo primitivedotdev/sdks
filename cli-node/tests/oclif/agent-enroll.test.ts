@@ -90,6 +90,7 @@ function server(
     listedName?: string;
     firstCreateStatus?: 400 | 401 | 403 | 409;
     domains?: string[];
+    domainsRefused?: boolean;
     createDenials?: Array<{ status: number; code: string } | null>;
     onCreate?: (address: string, attempt: number) => void;
     wrongOrigin?: boolean;
@@ -225,6 +226,15 @@ function server(
       }
     }
     if (url === `${stage}/domains`) {
+      if (options.domainsRefused) {
+        return Response.json(
+          {
+            success: false,
+            error: { code: "grant_forbidden", message: "Not allowed" },
+          },
+          { status: 403 },
+        );
+      }
       return Response.json({
         success: true,
         data: (
@@ -488,6 +498,24 @@ test("one enrollment command confirms pairing through the owner list without an 
   });
   assert.equal(value.connection.status, "connected");
   assert.equal(connectionListReads(), 2);
+  assert.equal(creates.length, 1);
+});
+
+test("a member who may not list domains can still enroll a session", async () => {
+  const configDir = owner();
+  const { fetcher, creates } = server({ domainsRefused: true });
+  const value = await enrollAgent({
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external",
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    confirmationSleep: async () => undefined,
+    setup: (async () => result) as typeof setupAgent,
+  });
+  assert.equal(value.connection.status, "connected");
   assert.equal(creates.length, 1);
 });
 

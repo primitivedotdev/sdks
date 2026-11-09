@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "primitivedotdev"
-version = "2.7.1"
+version = "3.0.0rc1"
 description = "Official Primitive Python SDK for webhook handling and API access"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -24,7 +24,6 @@ classifiers = [
 ]
 dependencies = [
   "attrs>=23.2.0,<27",
-  "eth-account>=0.11.0,<1",
   "httpx>=0.27.0,<1",
   "websockets>=15,<18",
   "jsonschema>=4.24.0,<5",

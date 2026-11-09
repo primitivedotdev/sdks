@@ -13,8 +13,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.memory_json_value_type_5 import MemoryJsonValueType5
-  from ..models.memory_scope_type_0 import MemoryScopeType0
-  from ..models.memory_scope_type_1 import MemoryScopeType1
+  from ..models.memory_scope import MemoryScope
 
 
 
@@ -30,27 +29,25 @@ class SetMemoryInput:
         Attributes:
             key (str): Caller-defined key, at most 512 UTF-8 bytes.
             value (bool | float | list[Any] | MemoryJsonValueType5 | None | str): JSON value accepted by Primitive Memories.
-                The server accepts strings,
-                numbers, booleans, null, arrays, and objects, validates nested values,
-                and rejects values that do not serialize as JSON.
-            scope (MemoryScopeType0 | MemoryScopeType1 | Unset): Memory scope. `org` resolves to the authenticated
-                organization.
-                `function` requires the function id UUID in `id`; function names are
-                not valid scope identifiers.
-            ttl_seconds (int | Unset): Set or replace the TTL in seconds. Mutually exclusive with
-                `expires_at` and `clear_ttl`.
-            expires_at (datetime.datetime | Unset): Set or replace the absolute expiration timestamp. Mutually
-                exclusive with `ttl_seconds` and `clear_ttl`.
-            clear_ttl (bool | Unset): Clear any existing TTL. Mutually exclusive with `ttl_seconds` and
-                `expires_at`.
-            if_absent (bool | Unset): Create only when the key is absent. Mutually exclusive with
-                `if_version`.
+                The server accepts strings, numbers, booleans, null, arrays, and objects, validates nested values, and rejects
+                values that do not serialize as JSON.
+            scope (MemoryScope | Unset): Memory scope. `org` resolves to the authenticated organization. `function` requires
+                the function id UUID in `id`; function names are not valid scope identifiers. Function-authenticated requests
+                cannot override their own Function scope. A Function scope is available only to that Function's own credential,
+                to an org-wide API key that can manage the Function, or to a person that can manage the Function; other
+                credentials get `403 forbidden`.
+            ttl_seconds (int | Unset): Set or replace the TTL in seconds. Mutually exclusive with `expires_at` and
+                `clear_ttl`.
+            expires_at (datetime.datetime | Unset): Set or replace the absolute expiration timestamp. Mutually exclusive
+                with `ttl_seconds` and `clear_ttl`.
+            clear_ttl (bool | Unset): Clear any existing TTL. Mutually exclusive with `ttl_seconds` and `expires_at`.
+            if_absent (bool | Unset): Create only when the key is absent. Mutually exclusive with `if_version`.
             if_version (str | Unset): Bigint counter serialized as a base-10 string.
      """
 
     key: str
     value: bool | float | list[Any] | MemoryJsonValueType5 | None | str
-    scope: MemoryScopeType0 | MemoryScopeType1 | Unset = UNSET
+    scope: MemoryScope | Unset = UNSET
     ttl_seconds: int | Unset = UNSET
     expires_at: datetime.datetime | Unset = UNSET
     clear_ttl: bool | Unset = UNSET
@@ -63,8 +60,7 @@ class SetMemoryInput:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.memory_json_value_type_5 import MemoryJsonValueType5 # noqa: PLC0415
-        from ..models.memory_scope_type_0 import MemoryScopeType0 # noqa: PLC0415
-        from ..models.memory_scope_type_1 import MemoryScopeType1 # noqa: PLC0415
+        from ..models.memory_scope import MemoryScope # noqa: PLC0415
         key = self.key
 
         value: bool | dict[str, Any] | float | list[Any] | None | str
@@ -77,14 +73,9 @@ class SetMemoryInput:
         else:
             value = self.value
 
-        scope: dict[str, Any] | Unset
-        if isinstance(self.scope, Unset):
-            scope = UNSET
-        elif isinstance(self.scope, MemoryScopeType0):
+        scope: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.scope, Unset):
             scope = self.scope.to_dict()
-        else:
-            scope = self.scope.to_dict()
-
 
         ttl_seconds = self.ttl_seconds
 
@@ -125,8 +116,7 @@ class SetMemoryInput:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.memory_json_value_type_5 import MemoryJsonValueType5 # noqa: PLC0415
-        from ..models.memory_scope_type_0 import MemoryScopeType0 # noqa: PLC0415
-        from ..models.memory_scope_type_1 import MemoryScopeType1 # noqa: PLC0415
+        from ..models.memory_scope import MemoryScope # noqa: PLC0415
         d = dict(src_dict)
         key = d.pop("key")
 
@@ -156,28 +146,14 @@ class SetMemoryInput:
         value = _parse_value(d.pop("value"))
 
 
-        def _parse_scope(data: object) -> MemoryScopeType0 | MemoryScopeType1 | Unset:
-            if isinstance(data, Unset):
-                return data
-            try:
-                if not isinstance(data, dict):
-                    raise TypeError()
-                componentsschemas_memory_scope_type_0 = MemoryScopeType0.from_dict(data)
+        _scope = d.pop("scope", UNSET)
+        scope: MemoryScope | Unset
+        if isinstance(_scope,  Unset):
+            scope = UNSET
+        else:
+            scope = MemoryScope.from_dict(_scope)
 
 
-
-                return componentsschemas_memory_scope_type_0
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            if not isinstance(data, dict):
-                raise TypeError()
-            componentsschemas_memory_scope_type_1 = MemoryScopeType1.from_dict(data)
-
-
-
-            return componentsschemas_memory_scope_type_1
-
-        scope = _parse_scope(d.pop("scope", UNSET))
 
 
         ttl_seconds = d.pop("ttl_seconds", UNSET)

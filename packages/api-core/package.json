@@ -16,6 +16,8 @@
   "sideEffects": false,
   "scripts": {
     "generate:openapi": "tsx scripts/generate-openapi-artifacts.ts",
+    "sync:openapi": "tsx scripts/sync-openapi.ts",
+    "test:scripts": "tsx --test scripts/sync-openapi.test.ts",
     "generate:api": "openapi-ts -f openapi-ts.config.ts && tsx scripts/fix-generated-api-imports.ts",
     "generate": "pnpm generate:openapi && pnpm generate:api"
   },

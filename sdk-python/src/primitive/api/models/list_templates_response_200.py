@@ -26,11 +26,11 @@ class ListTemplatesResponse200:
     """ 
         Attributes:
             success (bool):
-            data (TemplateRegistryPage):
+            data (TemplateRegistryPage | Unset):
      """
 
     success: bool
-    data: TemplateRegistryPage
+    data: TemplateRegistryPage | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -41,15 +41,18 @@ class ListTemplatesResponse200:
         from ..models.template_registry_page import TemplateRegistryPage # noqa: PLC0415
         success = self.success
 
-        data = self.data.to_dict()
+        data: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.data, Unset):
+            data = self.data.to_dict()
 
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
             "success": success,
-            "data": data,
         })
+        if data is not UNSET:
+            field_dict["data"] = data
 
         return field_dict
 
@@ -61,7 +64,12 @@ class ListTemplatesResponse200:
         d = dict(src_dict)
         success = d.pop("success")
 
-        data = TemplateRegistryPage.from_dict(d.pop("data"))
+        _data = d.pop("data", UNSET)
+        data: TemplateRegistryPage | Unset
+        if isinstance(_data,  Unset):
+            data = UNSET
+        else:
+            data = TemplateRegistryPage.from_dict(_data)
 
 
 

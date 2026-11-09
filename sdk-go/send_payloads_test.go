@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v2/api"
+	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v3/api"
 )
 
 type sendPayloadFixture struct {
@@ -114,8 +114,8 @@ func (s *capturingSendAPI) SendEmail(_ context.Context, request *primitiveapi.Se
 			QueueID:              primitiveapi.NilString{Null: true},
 			Accepted:             []string{},
 			Rejected:             []string{},
-			ClientIdempotencyKey: "auto",
-			RequestID:            "req",
+			ClientIdempotencyKey: primitiveapi.NewNilString("auto"),
+			RequestID:            primitiveapi.NewNilString("req"),
 			ContentHash:          "h",
 		},
 	}}, nil
@@ -132,14 +132,14 @@ func (s *capturingSendAPI) ReplyToEmail(_ context.Context, request *primitiveapi
 			QueueID:              primitiveapi.NilString{Null: true},
 			Accepted:             []string{},
 			Rejected:             []string{},
-			ClientIdempotencyKey: "auto",
-			RequestID:            "req",
+			ClientIdempotencyKey: primitiveapi.NewNilString("auto"),
+			RequestID:            primitiveapi.NewNilString("req"),
 			ContentHash:          "h",
 		},
 	}}, nil
 }
 
-func (s *capturingSendAPI) SemanticSearch(_ context.Context, _ *primitiveapi.SemanticSearchInput) (primitiveapi.SemanticSearchRes, error) {
+func (s *capturingSendAPI) SemanticSearch(_ context.Context, _ *primitiveapi.SemanticSearchInput, _ primitiveapi.SemanticSearchParams) (primitiveapi.SemanticSearchRes, error) {
 	return nil, nil
 }
 

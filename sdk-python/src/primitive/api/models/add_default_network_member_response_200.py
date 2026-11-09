@@ -11,7 +11,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.agent_network_member import AgentNetworkMember
+  from ..models.add_default_network_member_response_200_data import AddDefaultNetworkMemberResponse200Data
 
 
 
@@ -26,12 +26,11 @@ class AddDefaultNetworkMemberResponse200:
     """
         Attributes:
             success (bool):
-            data (AgentNetworkMember | Unset): One address in the default organization network, visible to the current
-                requester.
+            data (AddDefaultNetworkMemberResponse200Data):
      """
 
     success: bool
-    data: AgentNetworkMember | Unset = UNSET
+    data: AddDefaultNetworkMemberResponse200Data
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -39,21 +38,18 @@ class AddDefaultNetworkMemberResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.agent_network_member import AgentNetworkMember # noqa: PLC0415
+        from ..models.add_default_network_member_response_200_data import AddDefaultNetworkMemberResponse200Data # noqa: PLC0415
         success = self.success
 
-        data: dict[str, Any] | Unset = UNSET
-        if not isinstance(self.data, Unset):
-            data = self.data.to_dict()
+        data = self.data.to_dict()
 
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
             "success": success,
+            "data": data,
         })
-        if data is not UNSET:
-            field_dict["data"] = data
 
         return field_dict
 
@@ -61,16 +57,11 @@ class AddDefaultNetworkMemberResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.agent_network_member import AgentNetworkMember # noqa: PLC0415
+        from ..models.add_default_network_member_response_200_data import AddDefaultNetworkMemberResponse200Data # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 
-        _data = d.pop("data", UNSET)
-        data: AgentNetworkMember | Unset
-        if isinstance(_data,  Unset):
-            data = UNSET
-        else:
-            data = AgentNetworkMember.from_dict(_data)
+        data = AddDefaultNetworkMemberResponse200Data.from_dict(d.pop("data"))
 
 
 

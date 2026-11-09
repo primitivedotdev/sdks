@@ -41,6 +41,7 @@ class PullWebhookResponseData:
     last_gap_reason: None | str
     retention_seconds: PullWebhookResponseDataRetentionSeconds
     handler_timeout_seconds: PullWebhookResponseDataHandlerTimeoutSeconds
+    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
 
@@ -67,7 +68,7 @@ class PullWebhookResponseData:
 
 
         field_dict: dict[str, Any] = {}
-
+        field_dict.update(self.additional_properties)
         field_dict.update({
             "delivery": delivery,
             "backlog": backlog,
@@ -134,5 +135,22 @@ class PullWebhookResponseData:
             handler_timeout_seconds=handler_timeout_seconds,
         )
 
+
+        pull_webhook_response_data.additional_properties = d
         return pull_webhook_response_data
 
+    @property
+    def additional_keys(self) -> list[str]:
+        return list(self.additional_properties.keys())
+
+    def __getitem__(self, key: str) -> Any:
+        return self.additional_properties[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.additional_properties[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.additional_properties[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.additional_properties

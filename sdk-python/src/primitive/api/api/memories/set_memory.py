@@ -84,6 +84,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_402
 
+    if response.status_code == 403:
+        response_403 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_403
+
     if response.status_code == 404:
         response_404 = ErrorResponse.from_dict(response.json())
 
@@ -129,22 +136,10 @@ def sync_detailed(
 ) -> Response[ErrorResponse | SetMemoryResponse200 | SetMemoryResponse201]:
     """ Set a memory
 
-     Create or update a durable JSON memory under an org or function scope.
-    When no explicit scope is provided, function-authenticated requests
-    use that function's id automatically; requests with
-    `x-primitive-function-id` use that function id; all other requests
-    default to org scope.
-
-    `scope.type = function` requires the function id UUID in `scope.id`.
-    Function names are not accepted as scope identifiers. Values must be
-    valid JSON and serialize to at most 65536 UTF-8 bytes. Keys must be at
-    most 512 UTF-8 bytes. `version`, `read_count`, and `write_count` are
-    bigint counters serialized as strings.
-
-    Passing `if_absent` turns the write into create-only. Passing
-    `if_version` turns the write into compare-and-set. These options are
-    mutually exclusive and return `memory_conflict` on a stale version or
-    existing key.
+     Create or update a durable JSON memory under an org or function scope. Function-authenticated
+    requests use their own Function id and cannot override it. If no explicit scope is provided for
+    other credentials, `x-primitive-function-id` is used next, and other requests default to org scope.
+    Function scope uses the function id UUID, not the function name.
 
     Args:
         x_primitive_function_id (UUID | Unset):
@@ -180,22 +175,10 @@ def sync(
 ) -> ErrorResponse | SetMemoryResponse200 | SetMemoryResponse201 | None:
     """ Set a memory
 
-     Create or update a durable JSON memory under an org or function scope.
-    When no explicit scope is provided, function-authenticated requests
-    use that function's id automatically; requests with
-    `x-primitive-function-id` use that function id; all other requests
-    default to org scope.
-
-    `scope.type = function` requires the function id UUID in `scope.id`.
-    Function names are not accepted as scope identifiers. Values must be
-    valid JSON and serialize to at most 65536 UTF-8 bytes. Keys must be at
-    most 512 UTF-8 bytes. `version`, `read_count`, and `write_count` are
-    bigint counters serialized as strings.
-
-    Passing `if_absent` turns the write into create-only. Passing
-    `if_version` turns the write into compare-and-set. These options are
-    mutually exclusive and return `memory_conflict` on a stale version or
-    existing key.
+     Create or update a durable JSON memory under an org or function scope. Function-authenticated
+    requests use their own Function id and cannot override it. If no explicit scope is provided for
+    other credentials, `x-primitive-function-id` is used next, and other requests default to org scope.
+    Function scope uses the function id UUID, not the function name.
 
     Args:
         x_primitive_function_id (UUID | Unset):
@@ -226,22 +209,10 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | SetMemoryResponse200 | SetMemoryResponse201]:
     """ Set a memory
 
-     Create or update a durable JSON memory under an org or function scope.
-    When no explicit scope is provided, function-authenticated requests
-    use that function's id automatically; requests with
-    `x-primitive-function-id` use that function id; all other requests
-    default to org scope.
-
-    `scope.type = function` requires the function id UUID in `scope.id`.
-    Function names are not accepted as scope identifiers. Values must be
-    valid JSON and serialize to at most 65536 UTF-8 bytes. Keys must be at
-    most 512 UTF-8 bytes. `version`, `read_count`, and `write_count` are
-    bigint counters serialized as strings.
-
-    Passing `if_absent` turns the write into create-only. Passing
-    `if_version` turns the write into compare-and-set. These options are
-    mutually exclusive and return `memory_conflict` on a stale version or
-    existing key.
+     Create or update a durable JSON memory under an org or function scope. Function-authenticated
+    requests use their own Function id and cannot override it. If no explicit scope is provided for
+    other credentials, `x-primitive-function-id` is used next, and other requests default to org scope.
+    Function scope uses the function id UUID, not the function name.
 
     Args:
         x_primitive_function_id (UUID | Unset):
@@ -277,22 +248,10 @@ async def asyncio(
 ) -> ErrorResponse | SetMemoryResponse200 | SetMemoryResponse201 | None:
     """ Set a memory
 
-     Create or update a durable JSON memory under an org or function scope.
-    When no explicit scope is provided, function-authenticated requests
-    use that function's id automatically; requests with
-    `x-primitive-function-id` use that function id; all other requests
-    default to org scope.
-
-    `scope.type = function` requires the function id UUID in `scope.id`.
-    Function names are not accepted as scope identifiers. Values must be
-    valid JSON and serialize to at most 65536 UTF-8 bytes. Keys must be at
-    most 512 UTF-8 bytes. `version`, `read_count`, and `write_count` are
-    bigint counters serialized as strings.
-
-    Passing `if_absent` turns the write into create-only. Passing
-    `if_version` turns the write into compare-and-set. These options are
-    mutually exclusive and return `memory_conflict` on a stale version or
-    existing key.
+     Create or update a durable JSON memory under an org or function scope. Function-authenticated
+    requests use their own Function id and cannot override it. If no explicit scope is provided for
+    other credentials, `x-primitive-function-id` is used next, and other requests default to org scope.
+    Function scope uses the function id UUID, not the function name.
 
     Args:
         x_primitive_function_id (UUID | Unset):

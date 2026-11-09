@@ -43,7 +43,7 @@ import type {
  * deprecated them in 2013), but they remain extremely common in email due to:
  * - DNS TXT record size limits (255 bytes per string)
  * - Legacy infrastructure constraints
- * - Major ESPs like Amazon SES and Resend still use 1024-bit keys
+ * - Major email providers still use 1024-bit keys
  *
  * We flag keys <1024 bits as weak (these are truly dangerous), while accepting
  * >=1024 bits to avoid false positives against legitimate senders. For maximum

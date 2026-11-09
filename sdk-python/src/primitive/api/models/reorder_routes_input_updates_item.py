@@ -25,10 +25,15 @@ class ReorderRoutesInputUpdatesItem:
         Attributes:
             id (UUID):
             priority (int):
+            expected_priority (int | Unset): The priority the caller read for this route. When given, the whole reorder is
+                refused with 409 conflict (details.route_ids naming the routes) unless the route still has it, so two reorders
+                planned from the same list cannot both land. An entry whose priority equals its expected_priority only checks
+                and writes nothing.
      """
 
     id: UUID
     priority: int
+    expected_priority: int | Unset = UNSET
 
 
 
@@ -39,6 +44,8 @@ class ReorderRoutesInputUpdatesItem:
 
         priority = self.priority
 
+        expected_priority = self.expected_priority
+
 
         field_dict: dict[str, Any] = {}
 
@@ -46,6 +53,8 @@ class ReorderRoutesInputUpdatesItem:
             "id": id,
             "priority": priority,
         })
+        if expected_priority is not UNSET:
+            field_dict["expected_priority"] = expected_priority
 
         return field_dict
 
@@ -61,9 +70,12 @@ class ReorderRoutesInputUpdatesItem:
 
         priority = d.pop("priority")
 
+        expected_priority = d.pop("expected_priority", UNSET)
+
         reorder_routes_input_updates_item = cls(
             id=id,
             priority=priority,
+            expected_priority=expected_priority,
         )
 
         return reorder_routes_input_updates_item

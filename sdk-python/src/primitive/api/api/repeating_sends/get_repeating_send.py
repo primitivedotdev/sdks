@@ -80,6 +80,8 @@ def sync_detailed(
 ) -> Response[ErrorResponse | GetRepeatingSendResponse200]:
     """ Get a repeating send
 
+     Get a repeating send
+
     Args:
         id (UUID):
 
@@ -111,6 +113,8 @@ def sync(
 ) -> ErrorResponse | GetRepeatingSendResponse200 | None:
     """ Get a repeating send
 
+     Get a repeating send
+
     Args:
         id (UUID):
 
@@ -136,6 +140,8 @@ async def asyncio_detailed(
 
 ) -> Response[ErrorResponse | GetRepeatingSendResponse200]:
     """ Get a repeating send
+
+     Get a repeating send
 
     Args:
         id (UUID):
@@ -167,6 +173,8 @@ async def asyncio(
 
 ) -> ErrorResponse | GetRepeatingSendResponse200 | None:
     """ Get a repeating send
+
+     Get a repeating send
 
     Args:
         id (UUID):

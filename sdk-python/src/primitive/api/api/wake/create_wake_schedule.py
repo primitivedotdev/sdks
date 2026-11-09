@@ -11,6 +11,7 @@ from ... import errors
 from ...models.create_wake_schedule_input import CreateWakeScheduleInput
 from ...models.create_wake_schedule_response_201 import CreateWakeScheduleResponse201
 from ...models.error_response import ErrorResponse
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -18,9 +19,13 @@ from typing import cast
 def _get_kwargs(
     *,
     body: CreateWakeScheduleInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -82,6 +87,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CreateWakeScheduleInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateWakeScheduleResponse201 | ErrorResponse]:
     """ Create a wake schedule
@@ -92,6 +98,7 @@ def sync_detailed(
     time is computed without firing immediately.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateWakeScheduleInput):
 
     Raises:
@@ -105,6 +112,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -118,6 +126,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: CreateWakeScheduleInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CreateWakeScheduleResponse201 | ErrorResponse | None:
     """ Create a wake schedule
@@ -128,6 +137,7 @@ def sync(
     time is computed without firing immediately.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateWakeScheduleInput):
 
     Raises:
@@ -142,6 +152,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -149,6 +160,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CreateWakeScheduleInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateWakeScheduleResponse201 | ErrorResponse]:
     """ Create a wake schedule
@@ -159,6 +171,7 @@ async def asyncio_detailed(
     time is computed without firing immediately.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateWakeScheduleInput):
 
     Raises:
@@ -172,6 +185,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -185,6 +199,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: CreateWakeScheduleInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CreateWakeScheduleResponse201 | ErrorResponse | None:
     """ Create a wake schedule
@@ -195,6 +210,7 @@ async def asyncio(
     time is computed without firing immediately.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateWakeScheduleInput):
 
     Raises:
@@ -209,5 +225,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

@@ -2,6 +2,7 @@ import { Command, Flags } from "@oclif/core";
 import type {
   FunctionDetail,
   FunctionSecretWriteResult,
+  UpdateFunctionResult,
 } from "@primitivedotdev/api-core";
 import {
   getFunction,
@@ -54,7 +55,7 @@ import {
 // fixtures without redefining the structure.
 export type SetSecretResult = {
   secret: FunctionSecretWriteResult;
-  redeploy?: FunctionDetail;
+  redeploy?: UpdateFunctionResult;
 };
 
 // Minimal client surface runSetSecret needs. Factored out so the
@@ -72,7 +73,7 @@ export type SetSecretApiSurface = {
     error?: unknown;
   }>;
   updateFunction: (params: { id: string; code: string }) => Promise<{
-    data?: { data?: FunctionDetail };
+    data?: { data?: UpdateFunctionResult };
     error?: unknown;
   }>;
 };
@@ -144,8 +145,10 @@ export async function runSetSecret(
       stage: "get-function",
     };
   }
-  const fn = fnResult.data?.data;
-  if (!fn) {
+  // The stored code is null when the function has none or the caller may
+  // not read its source; either way there is nothing to redeploy.
+  const code = fnResult.data?.data?.code;
+  if (code === undefined || code === null) {
     return {
       kind: "error",
       payload: {
@@ -157,7 +160,7 @@ export async function runSetSecret(
   }
 
   const updateResult = await api.updateFunction({
-    code: fn.code,
+    code,
     id: params.id,
   });
   if (updateResult.error) {
@@ -202,9 +205,9 @@ class FunctionsSetSecretCommand extends Command {
   static examples = [
     "<%= config.bin %> functions set-secret --id <fn-id> --key API_TOKEN --value abc123",
     "<%= config.bin %> functions set-secret --id <fn-id> --key API_TOKEN --value abc123 --redeploy",
-    "<%= config.bin %> functions set-secret --id <fn-id> --key OPENAI_KEY --value-from-env OPENAI_KEY --redeploy",
-    "<%= config.bin %> functions set-secret --id <fn-id> --key OPENAI_KEY --value-from-env-file .env.local --redeploy",
-    "printf '%s' \"$OPENAI_KEY\" | <%= config.bin %> functions set-secret --id <fn-id> --key OPENAI_KEY --stdin --redeploy",
+    "<%= config.bin %> functions set-secret --id <fn-id> --key MY_API_KEY --value-from-env MY_API_KEY --redeploy",
+    "<%= config.bin %> functions set-secret --id <fn-id> --key MY_API_KEY --value-from-env-file .env.local --redeploy",
+    "printf '%s' \"$MY_API_KEY\" | <%= config.bin %> functions set-secret --id <fn-id> --key MY_API_KEY --stdin --redeploy",
   ];
 
   static flags = {
@@ -234,7 +237,7 @@ class FunctionsSetSecretCommand extends Command {
     }),
     "value-from-env": Flags.string({
       description:
-        "Environment variable to read as the secret value. Example: --value-from-env OPENAI_KEY reads process.env.OPENAI_KEY.",
+        "Environment variable to read as the secret value. Example: --value-from-env MY_API_KEY reads process.env.MY_API_KEY.",
     }),
     "value-file": Flags.string({
       description:
@@ -246,7 +249,7 @@ class FunctionsSetSecretCommand extends Command {
     }),
     stdin: Flags.boolean({
       description:
-        "Read the secret value from stdin. A single trailing line ending is stripped. Example: printf '%s' \"$OPENAI_KEY\" | primitive functions set-secret --id <fn-id> --key OPENAI_KEY --stdin",
+        "Read the secret value from stdin. A single trailing line ending is stripped. Example: printf '%s' \"$MY_API_KEY\" | primitive functions set-secret --id <fn-id> --key MY_API_KEY --stdin",
     }),
     redeploy: Flags.boolean({
       description:

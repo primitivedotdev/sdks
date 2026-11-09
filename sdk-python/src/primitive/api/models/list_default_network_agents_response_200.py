@@ -11,8 +11,8 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.agent_network_peer import AgentNetworkPeer
-  from ..models.pagination_meta import PaginationMeta
+  from ..models.list_default_network_agents_response_200_data_item import ListDefaultNetworkAgentsResponse200DataItem
+  from ..models.list_default_network_agents_response_200_meta import ListDefaultNetworkAgentsResponse200Meta
 
 
 
@@ -27,13 +27,13 @@ class ListDefaultNetworkAgentsResponse200:
     """
         Attributes:
             success (bool):
-            meta (PaginationMeta):
-            data (list[AgentNetworkPeer] | Unset):
+            data (list[ListDefaultNetworkAgentsResponse200DataItem]):
+            meta (ListDefaultNetworkAgentsResponse200Meta):
      """
 
     success: bool
-    meta: PaginationMeta
-    data: list[AgentNetworkPeer] | Unset = UNSET
+    data: list[ListDefaultNetworkAgentsResponse200DataItem]
+    meta: ListDefaultNetworkAgentsResponse200Meta
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -41,30 +41,27 @@ class ListDefaultNetworkAgentsResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.agent_network_peer import AgentNetworkPeer # noqa: PLC0415
-        from ..models.pagination_meta import PaginationMeta # noqa: PLC0415
+        from ..models.list_default_network_agents_response_200_data_item import ListDefaultNetworkAgentsResponse200DataItem # noqa: PLC0415
+        from ..models.list_default_network_agents_response_200_meta import ListDefaultNetworkAgentsResponse200Meta # noqa: PLC0415
         success = self.success
 
+        data = []
+        for data_item_data in self.data:
+            data_item = data_item_data.to_dict()
+            data.append(data_item)
+
+
+
         meta = self.meta.to_dict()
-
-        data: list[dict[str, Any]] | Unset = UNSET
-        if not isinstance(self.data, Unset):
-            data = []
-            for data_item_data in self.data:
-                data_item = data_item_data.to_dict()
-                data.append(data_item)
-
-
 
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
             "success": success,
+            "data": data,
             "meta": meta,
         })
-        if data is not UNSET:
-            field_dict["data"] = data
 
         return field_dict
 
@@ -72,32 +69,30 @@ class ListDefaultNetworkAgentsResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.agent_network_peer import AgentNetworkPeer # noqa: PLC0415
-        from ..models.pagination_meta import PaginationMeta # noqa: PLC0415
+        from ..models.list_default_network_agents_response_200_data_item import ListDefaultNetworkAgentsResponse200DataItem # noqa: PLC0415
+        from ..models.list_default_network_agents_response_200_meta import ListDefaultNetworkAgentsResponse200Meta # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 
-        meta = PaginationMeta.from_dict(d.pop("meta"))
+        data = []
+        _data = d.pop("data")
+        for data_item_data in (_data):
+            data_item = ListDefaultNetworkAgentsResponse200DataItem.from_dict(data_item_data)
 
 
 
-
-        _data = d.pop("data", UNSET)
-        data: list[AgentNetworkPeer] | Unset = UNSET
-        if _data is not UNSET:
-            data = []
-            for data_item_data in _data:
-                data_item = AgentNetworkPeer.from_dict(data_item_data)
+            data.append(data_item)
 
 
+        meta = ListDefaultNetworkAgentsResponse200Meta.from_dict(d.pop("meta"))
 
-                data.append(data_item)
+
 
 
         list_default_network_agents_response_200 = cls(
             success=success,
-            meta=meta,
             data=data,
+            meta=meta,
         )
 
 

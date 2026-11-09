@@ -33,9 +33,8 @@ class MemoryRecordWithValue:
             key (str): Caller-defined key, at most 512 UTF-8 bytes.
             scope (MemoryResolvedScope): Resolved memory scope returned by the API.
             value (bool | float | list[Any] | MemoryJsonValueType5 | None | str): JSON value accepted by Primitive Memories.
-                The server accepts strings,
-                numbers, booleans, null, arrays, and objects, validates nested values,
-                and rejects values that do not serialize as JSON.
+                The server accepts strings, numbers, booleans, null, arrays, and objects, validates nested values, and rejects
+                values that do not serialize as JSON.
             version (str): Bigint counter serialized as a base-10 string.
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
@@ -60,6 +59,7 @@ class MemoryRecordWithValue:
     expires_at: datetime.datetime | None
     created_by: None | str
     updated_by: None | str
+    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
 
@@ -114,7 +114,7 @@ class MemoryRecordWithValue:
 
 
         field_dict: dict[str, Any] = {}
-
+        field_dict.update(self.additional_properties)
         field_dict.update({
             "id": id,
             "key": key,
@@ -262,5 +262,22 @@ class MemoryRecordWithValue:
             updated_by=updated_by,
         )
 
+
+        memory_record_with_value.additional_properties = d
         return memory_record_with_value
 
+    @property
+    def additional_keys(self) -> list[str]:
+        return list(self.additional_properties.keys())
+
+    def __getitem__(self, key: str) -> Any:
+        return self.additional_properties[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.additional_properties[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.additional_properties[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.additional_properties

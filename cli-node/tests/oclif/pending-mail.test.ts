@@ -107,7 +107,7 @@ describe("pending mail notices", () => {
       configDir,
       profile,
       session,
-      mail(1, { interaction: "x402.payment/1" }),
+      mail(1, { interaction: "example.invoice/1" }),
     );
     await recordPendingMail(
       configDir,
@@ -116,7 +116,7 @@ describe("pending mail notices", () => {
       mail(2, { interaction: "Pay now!" }),
     );
     const rows = readPendingMail(configDir, profile, session);
-    expect(rows[0]?.interaction).toBe("x402.payment/1");
+    expect(rows[0]?.interaction).toBe("example.invoice/1");
     expect(rows[1]).toBeDefined();
     expect(rows[1]?.interaction).toBeUndefined();
   });

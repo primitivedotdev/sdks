@@ -80,6 +80,8 @@ def sync_detailed(
 ) -> Response[ErrorResponse | GetWakeScheduleResponse200]:
     """ Get a wake schedule
 
+     Get a wake schedule
+
     Args:
         id (UUID):
 
@@ -111,6 +113,8 @@ def sync(
 ) -> ErrorResponse | GetWakeScheduleResponse200 | None:
     """ Get a wake schedule
 
+     Get a wake schedule
+
     Args:
         id (UUID):
 
@@ -136,6 +140,8 @@ async def asyncio_detailed(
 
 ) -> Response[ErrorResponse | GetWakeScheduleResponse200]:
     """ Get a wake schedule
+
+     Get a wake schedule
 
     Args:
         id (UUID):
@@ -167,6 +173,8 @@ async def asyncio(
 
 ) -> ErrorResponse | GetWakeScheduleResponse200 | None:
     """ Get a wake schedule
+
+     Get a wake schedule
 
     Args:
         id (UUID):

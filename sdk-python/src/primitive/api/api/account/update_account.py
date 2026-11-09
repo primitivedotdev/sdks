@@ -93,6 +93,9 @@ def sync_detailed(
 ) -> Response[ErrorResponse | UpdateAccountResponse200]:
     """ Update account settings
 
+     Update the mutable account settings (such as display name and notification preferences) for the
+    authenticated organization.
+
     Args:
         body (UpdateAccountInput):
 
@@ -124,6 +127,9 @@ def sync(
 ) -> ErrorResponse | UpdateAccountResponse200 | None:
     """ Update account settings
 
+     Update the mutable account settings (such as display name and notification preferences) for the
+    authenticated organization.
+
     Args:
         body (UpdateAccountInput):
 
@@ -149,6 +155,9 @@ async def asyncio_detailed(
 
 ) -> Response[ErrorResponse | UpdateAccountResponse200]:
     """ Update account settings
+
+     Update the mutable account settings (such as display name and notification preferences) for the
+    authenticated organization.
 
     Args:
         body (UpdateAccountInput):
@@ -180,6 +189,9 @@ async def asyncio(
 
 ) -> ErrorResponse | UpdateAccountResponse200 | None:
     """ Update account settings
+
+     Update the mutable account settings (such as display name and notification preferences) for the
+    authenticated organization.
 
     Args:
         body (UpdateAccountInput):

@@ -25,14 +25,16 @@ class AccountUpdated:
     """ 
         Attributes:
             id (UUID):
-            email (str):
+            email (None | str): The signup email of the person who opened the account. Null when your credential may not see
+                it: it is shown to a caller that may read the organization's members' emails, and to that person signed in as
+                themself. Also null when the account has none.
             plan (str):
             discard_content_on_webhook_confirmed (bool):
             spam_threshold (float | None | Unset):
      """
 
     id: UUID
-    email: str
+    email: None | str
     plan: str
     discard_content_on_webhook_confirmed: bool
     spam_threshold: float | None | Unset = UNSET
@@ -45,6 +47,7 @@ class AccountUpdated:
     def to_dict(self) -> dict[str, Any]:
         id = str(self.id)
 
+        email: None | str
         email = self.email
 
         plan = self.plan
@@ -81,7 +84,13 @@ class AccountUpdated:
 
 
 
-        email = d.pop("email")
+        def _parse_email(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        email = _parse_email(d.pop("email"))
+
 
         plan = d.pop("plan")
 

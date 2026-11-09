@@ -19,10 +19,14 @@ from typing import cast
 def _get_kwargs(
     *,
     body: CreateAgentConnectionBody,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(primitive_step_up, Unset):
+        headers["Primitive-Step-Up"] = primitive_step_up
+
     if not isinstance(idempotency_key, Unset):
         headers["Idempotency-Key"] = idempotency_key
 
@@ -113,28 +117,26 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
 def sync_detailed(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     body: CreateAgentConnectionBody,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateAgentConnectionResponse200 | ErrorResponse]:
     """ create Agent Connection
 
-     Address-bound external runtime pairing. Any current human organization member may create and manage
-    their personal agent connections. Organization owners and admins may manage all connections and
-    explicitly create shared ones. An owner removed from the organization loses personal agent access,
-    and rejoining does not revive the old connection. Organization API keys cannot manage connections. A
-    current connected credential may disconnect only its own exact address. Claim is authorized only by
-    its one-use invitation. Connected means a real challenge was received and a reply sent by the
-    current bound credential was received back. Invitations expire after 15 minutes. Reconnection
-    preserves the address and revokes previous credentials. Status responses contain no credentials.
-    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
-    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission. Save create_request_id before dispatch to recover an interrupted
-    creation. Recovery returns the original current connection with recovered:true and invitation:null;
-    it never replays a secret or rotates credentials.
+     Create an address-bound agent. An explicit address may be on a Primitive-managed domain or on one of
+    the organization's own verified custom domains that receives and sends through Primitive; a
+    narrower-than-organization creator needs agent_connections:custom_domains for a custom domain and a
+    fresh address. Without an explicit address, allocate a readable name on a managed domain with a
+    bounded collision suffix. Persist create_request_id before dispatch to recover the same current
+    connection on retry; recovered responses have invitation:null and never rotate a key. Changed
+    choices or membership return 409 connection_create_request_conflict; a removed identity returns 409
+    connection_removed. A pending recovered connection can use inviteAgentConnection with
+    pending_only:true once to obtain a fresh invitation.
 
     Args:
+        primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (CreateAgentConnectionBody):
 
@@ -149,6 +151,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+primitive_step_up=primitive_step_up,
 idempotency_key=idempotency_key,
 
     )
@@ -161,28 +164,26 @@ idempotency_key=idempotency_key,
 
 def sync(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     body: CreateAgentConnectionBody,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> CreateAgentConnectionResponse200 | ErrorResponse | None:
     """ create Agent Connection
 
-     Address-bound external runtime pairing. Any current human organization member may create and manage
-    their personal agent connections. Organization owners and admins may manage all connections and
-    explicitly create shared ones. An owner removed from the organization loses personal agent access,
-    and rejoining does not revive the old connection. Organization API keys cannot manage connections. A
-    current connected credential may disconnect only its own exact address. Claim is authorized only by
-    its one-use invitation. Connected means a real challenge was received and a reply sent by the
-    current bound credential was received back. Invitations expire after 15 minutes. Reconnection
-    preserves the address and revokes previous credentials. Status responses contain no credentials.
-    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
-    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission. Save create_request_id before dispatch to recover an interrupted
-    creation. Recovery returns the original current connection with recovered:true and invitation:null;
-    it never replays a secret or rotates credentials.
+     Create an address-bound agent. An explicit address may be on a Primitive-managed domain or on one of
+    the organization's own verified custom domains that receives and sends through Primitive; a
+    narrower-than-organization creator needs agent_connections:custom_domains for a custom domain and a
+    fresh address. Without an explicit address, allocate a readable name on a managed domain with a
+    bounded collision suffix. Persist create_request_id before dispatch to recover the same current
+    connection on retry; recovered responses have invitation:null and never rotate a key. Changed
+    choices or membership return 409 connection_create_request_conflict; a removed identity returns 409
+    connection_removed. A pending recovered connection can use inviteAgentConnection with
+    pending_only:true once to obtain a fresh invitation.
 
     Args:
+        primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (CreateAgentConnectionBody):
 
@@ -198,34 +199,33 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+primitive_step_up=primitive_step_up,
 idempotency_key=idempotency_key,
 
     ).parsed
 
 async def asyncio_detailed(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     body: CreateAgentConnectionBody,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateAgentConnectionResponse200 | ErrorResponse]:
     """ create Agent Connection
 
-     Address-bound external runtime pairing. Any current human organization member may create and manage
-    their personal agent connections. Organization owners and admins may manage all connections and
-    explicitly create shared ones. An owner removed from the organization loses personal agent access,
-    and rejoining does not revive the old connection. Organization API keys cannot manage connections. A
-    current connected credential may disconnect only its own exact address. Claim is authorized only by
-    its one-use invitation. Connected means a real challenge was received and a reply sent by the
-    current bound credential was received back. Invitations expire after 15 minutes. Reconnection
-    preserves the address and revokes previous credentials. Status responses contain no credentials.
-    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
-    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission. Save create_request_id before dispatch to recover an interrupted
-    creation. Recovery returns the original current connection with recovered:true and invitation:null;
-    it never replays a secret or rotates credentials.
+     Create an address-bound agent. An explicit address may be on a Primitive-managed domain or on one of
+    the organization's own verified custom domains that receives and sends through Primitive; a
+    narrower-than-organization creator needs agent_connections:custom_domains for a custom domain and a
+    fresh address. Without an explicit address, allocate a readable name on a managed domain with a
+    bounded collision suffix. Persist create_request_id before dispatch to recover the same current
+    connection on retry; recovered responses have invitation:null and never rotate a key. Changed
+    choices or membership return 409 connection_create_request_conflict; a removed identity returns 409
+    connection_removed. A pending recovered connection can use inviteAgentConnection with
+    pending_only:true once to obtain a fresh invitation.
 
     Args:
+        primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (CreateAgentConnectionBody):
 
@@ -240,6 +240,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+primitive_step_up=primitive_step_up,
 idempotency_key=idempotency_key,
 
     )
@@ -252,28 +253,26 @@ idempotency_key=idempotency_key,
 
 async def asyncio(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     body: CreateAgentConnectionBody,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> CreateAgentConnectionResponse200 | ErrorResponse | None:
     """ create Agent Connection
 
-     Address-bound external runtime pairing. Any current human organization member may create and manage
-    their personal agent connections. Organization owners and admins may manage all connections and
-    explicitly create shared ones. An owner removed from the organization loses personal agent access,
-    and rejoining does not revive the old connection. Organization API keys cannot manage connections. A
-    current connected credential may disconnect only its own exact address. Claim is authorized only by
-    its one-use invitation. Connected means a real challenge was received and a reply sent by the
-    current bound credential was received back. Invitations expire after 15 minutes. Reconnection
-    preserves the address and revokes previous credentials. Status responses contain no credentials.
-    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
-    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission. Save create_request_id before dispatch to recover an interrupted
-    creation. Recovery returns the original current connection with recovered:true and invitation:null;
-    it never replays a secret or rotates credentials.
+     Create an address-bound agent. An explicit address may be on a Primitive-managed domain or on one of
+    the organization's own verified custom domains that receives and sends through Primitive; a
+    narrower-than-organization creator needs agent_connections:custom_domains for a custom domain and a
+    fresh address. Without an explicit address, allocate a readable name on a managed domain with a
+    bounded collision suffix. Persist create_request_id before dispatch to recover the same current
+    connection on retry; recovered responses have invitation:null and never rotate a key. Changed
+    choices or membership return 409 connection_create_request_conflict; a removed identity returns 409
+    connection_removed. A pending recovered connection can use inviteAgentConnection with
+    pending_only:true once to obtain a fresh invitation.
 
     Args:
+        primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (CreateAgentConnectionBody):
 
@@ -289,6 +288,7 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+primitive_step_up=primitive_step_up,
 idempotency_key=idempotency_key,
 
     )).parsed

@@ -23,6 +23,7 @@ import {
   readBoundSentMessageId,
   reserveConversationStatus,
 } from "./conversation-status.js";
+import { readableDelivery } from "./listen-handlers.js";
 import { ListenStateError } from "./listen-state.js";
 import type { ListenHandler } from "./listen-types.js";
 import { mentionsOnlyOthers } from "./mention-wake.js";
@@ -263,12 +264,10 @@ export async function createWakeMail(options: {
       signal.throwIfAborted();
       if (delivery.event_type !== "email.received")
         throw new ListenStateError("Wake received an unrelated event.");
+      const { body } = readableDelivery(delivery);
       let event: ReturnType<typeof parseWebhookEvent>;
       try {
-        event = parseWebhookEvent(
-          JSON.parse(delivery.body),
-          delivery.event_type,
-        );
+        event = parseWebhookEvent(JSON.parse(body), delivery.event_type);
       } catch {
         throw new ListenStateError("Wake received an invalid email event.");
       }

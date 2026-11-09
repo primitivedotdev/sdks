@@ -11,7 +11,7 @@ import sanitizeHtmlLib, { type IOptions } from "sanitize-html";
 // Implemented with `sanitize-html` (a pure-JS, htmlparser2-based allow-list
 // sanitizer) rather than DOMPurify. DOMPurify needs a live DOM: in the browser
 // that's `window`, and `isomorphic-dompurify` supplies a jsdom one for Node —
-// but jsdom is heavy and, critically, cannot run on edge/Workers runtimes (no
+// but jsdom is heavy and, critically, cannot run on edge runtimes (no
 // DOM, and pure-JS DOM shims either crash at init or silently no-op, which
 // would ship unsanitized HTML). `sanitize-html` needs no DOM, so the same
 // sanitizer runs in the browser, Node, and Workers from one implementation.

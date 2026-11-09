@@ -45,8 +45,7 @@ export function parseWebhookEvent(
 
   // The event name is carried in the `X-Webhook-Event` HEADER for every event
   // family. The stored body is sent verbatim with no envelope: email.* bodies
-  // carry `event`, payment.* bodies carry the name in `type`, and interaction.*
-  // bodies are just `{ interaction: { ... } }` with no event/type field. So the
+  // carry `event`, and interaction.* bodies are just `{ interaction: { ... } }` with no event/type field. So the
   // header is the PRIMARY discriminator; we fall back to a top-level `event`
   // string in the body only for backward-compat with any sender that embeds it.
   const resolvedEvent =
@@ -78,12 +77,6 @@ export function parseWebhookEvent(
       // the sent_email schema. The returned event is the validated body: its
       // `event` field is covered by the signature, the header is not.
       return validateSentEmailEvent(input);
-
-    case "payment.settled":
-    case "payment.failed":
-      // Payment bodies carry the name in `type`; overlay a canonical `event`
-      // (mirrored from the header) so consumers branch on a single field.
-      return { ...obj, event: resolvedEvent } as WebhookEvent;
 
     default:
       if (isKnownWebhookEventType(resolvedEvent)) {

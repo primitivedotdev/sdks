@@ -31,7 +31,9 @@ class DomainDnsRecord:
             value (str): Exact value to publish.
             required (bool):
             purpose (DomainDnsRecordPurpose):
-            status (DomainDnsRecordStatus):
+            status (DomainDnsRecordStatus): `legacy` means the MX routes mail to Primitive through a legacy host: mail is
+                delivered and the domain stays healthy, but the record should be updated to `value`. `unresolved` means the DNS
+                lookup itself was inconclusive.
             priority (int | Unset): MX priority. Present only for MX records.
             ttl (int | Unset): Suggested TTL in seconds when the API can provide one.
             message (str | Unset): Short explanation of why this record is needed.
@@ -47,6 +49,7 @@ class DomainDnsRecord:
     priority: int | Unset = UNSET
     ttl: int | Unset = UNSET
     message: str | Unset = UNSET
+    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
 
@@ -75,7 +78,7 @@ class DomainDnsRecord:
 
 
         field_dict: dict[str, Any] = {}
-
+        field_dict.update(self.additional_properties)
         field_dict.update({
             "type": type_,
             "name": name,
@@ -141,5 +144,22 @@ class DomainDnsRecord:
             message=message,
         )
 
+
+        domain_dns_record.additional_properties = d
         return domain_dns_record
 
+    @property
+    def additional_keys(self) -> list[str]:
+        return list(self.additional_properties.keys())
+
+    def __getitem__(self, key: str) -> Any:
+        return self.additional_properties[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.additional_properties[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.additional_properties[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.additional_properties

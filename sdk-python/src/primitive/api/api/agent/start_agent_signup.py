@@ -11,6 +11,7 @@ from ... import errors
 from ...models.error_response import ErrorResponse
 from ...models.start_agent_signup_input import StartAgentSignupInput
 from ...models.start_agent_signup_response_201 import StartAgentSignupResponse201
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -18,9 +19,13 @@ from typing import cast
 def _get_kwargs(
     *,
     body: StartAgentSignupInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -82,6 +87,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: StartAgentSignupInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | StartAgentSignupResponse201]:
     """ Start agent account signup
@@ -92,6 +98,7 @@ def sync_detailed(
     does not require an API key.
 
     Args:
+        idempotency_key (str | Unset):
         body (StartAgentSignupInput):
 
     Raises:
@@ -105,6 +112,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -118,6 +126,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: StartAgentSignupInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | StartAgentSignupResponse201 | None:
     """ Start agent account signup
@@ -128,6 +137,7 @@ def sync(
     does not require an API key.
 
     Args:
+        idempotency_key (str | Unset):
         body (StartAgentSignupInput):
 
     Raises:
@@ -142,6 +152,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -149,6 +160,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: StartAgentSignupInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | StartAgentSignupResponse201]:
     """ Start agent account signup
@@ -159,6 +171,7 @@ async def asyncio_detailed(
     does not require an API key.
 
     Args:
+        idempotency_key (str | Unset):
         body (StartAgentSignupInput):
 
     Raises:
@@ -172,6 +185,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -185,6 +199,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: StartAgentSignupInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | StartAgentSignupResponse201 | None:
     """ Start agent account signup
@@ -195,6 +210,7 @@ async def asyncio(
     does not require an API key.
 
     Args:
+        idempotency_key (str | Unset):
         body (StartAgentSignupInput):
 
     Raises:
@@ -209,5 +225,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

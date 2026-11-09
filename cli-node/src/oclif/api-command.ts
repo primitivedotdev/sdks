@@ -70,6 +70,8 @@ export const API_ERROR_CODES = {
   accessDenied: "access_denied",
   authorizationPending: "authorization_pending",
   expiredToken: "expired_token",
+  forbidden: "forbidden",
+  grantForbidden: "grant_forbidden",
   invalidDeviceCode: "invalid_device_code",
   notFound: "not_found",
   slowDown: "slow_down",
@@ -599,6 +601,69 @@ export function rateLimitHint(response?: Response): string {
     : `Hint: this request was rate limited. Retry in ${Math.max(1, Math.ceil(delay / 1000))} s.`;
 }
 
+/**
+ * True when the API refused because of the credential's grant or role. The
+ * credential itself was accepted, so this is not an authentication failure.
+ */
+export function isGrantRefusal(payload: unknown): boolean {
+  const code = extractErrorCode(payload);
+  return (
+    code === API_ERROR_CODES.grantForbidden ||
+    code === API_ERROR_CODES.forbidden
+  );
+}
+
+/** `details` of a refusal, whether the payload is the error or its envelope. */
+function refusalDetails(payload: unknown): Record<string, unknown> {
+  const outer =
+    payload && typeof payload === "object"
+      ? (payload as { details?: unknown; error?: unknown })
+      : {};
+  const inner =
+    outer.error && typeof outer.error === "object"
+      ? (outer.error as { details?: unknown })
+      : {};
+  const details = outer.details ?? inner.details;
+  return details && typeof details === "object"
+    ? (details as Record<string, unknown>)
+    : {};
+}
+
+function nonEmptyString(value: unknown): string | null {
+  return typeof value === "string" && value ? value : null;
+}
+
+/**
+ * The hint for a `403 grant_forbidden`: which permission the credential's
+ * grant lacks, and how to check a credential before using it.
+ */
+export function grantForbiddenHint(payload: unknown): string {
+  const record = refusalDetails(payload);
+  const permission = nonEmptyString(record.permission);
+  const reason = nonEmptyString(record.reason);
+  const missing = nonEmptyString(record.missing);
+  const what = permission
+    ? `This credential's grant does not include ${missing ?? permission}${reason ? ` (${reason})` : ""}.`
+    : "This credential's grant does not allow this operation.";
+  const check = permission
+    ? ` Check a credential with \`primitive whoami --check ${missing ?? permission}\`.`
+    : "";
+  return `Hint: ${what} Use a credential whose grant includes it, or ask an owner or admin to widen it.${check}`;
+}
+
+/**
+ * The hint for a `403 forbidden` that names a permission, or null when it does
+ * not (a dashboard-only route, say, explains itself in its message). Unlike
+ * `grant_forbidden`, this refusal can come from a route closed to keys and the
+ * CLI altogether, so it never promises that a wider credential opens it.
+ */
+export function forbiddenHint(payload: unknown): string | null {
+  const record = refusalDetails(payload);
+  const permission = nonEmptyString(record.permission);
+  if (!permission || record.reason !== "permission_missing") return null;
+  return `Hint: This operation needs ${permission}, which this credential does not have. Some operations stay closed to keys and the CLI even with it. Check a credential with \`primitive whoami --check ${permission}\`.`;
+}
+
 // Write a server / SDK error to stderr in the canonical envelope
 // shape, plus an actionable hint when the code is one we know how
 // to advise on. Replaces the bare
@@ -618,6 +683,15 @@ export function writeErrorWithHints(
     return;
   }
   if (!code) return;
+  if (code === "grant_forbidden") {
+    process.stderr.write(`${grantForbiddenHint(payload)}\n`);
+    return;
+  }
+  if (code === API_ERROR_CODES.forbidden) {
+    const hint = forbiddenHint(payload);
+    if (hint) process.stderr.write(`${hint}\n`);
+    return;
+  }
   if (code in ERROR_CODE_HINTS) {
     const hint = ERROR_CODE_HINTS[code as keyof typeof ERROR_CODE_HINTS];
     process.stderr.write(`${hint}\n`);
@@ -1048,20 +1122,41 @@ export function operationJsonDocument(
   return document;
 }
 
-export function isIncompleteDomainVerification(
-  operation: PrimitiveOperationManifest,
-  envelope: OperationResponseEnvelope,
-): boolean {
-  if (operation.sdkName !== "verifyDomain") return false;
-  const data = envelope?.data;
-  if (!data || typeof data !== "object") return false;
-  return (data as { verified?: unknown }).verified === false;
-}
+// Record statuses that need no change before verification can pass.
+const SETTLED_DNS_RECORD_STATUSES = new Set(["found", "legacy"]);
 
-function writeIncompleteDomainVerificationHint(): void {
-  process.stderr.write(
-    "Domain verification is incomplete. Add or fix the DNS records shown above, or run `primitive domains zone-file --id <domain-id>` to download the complete zone file, then retry `primitive domains verify --id <domain-id>`.\n",
+/**
+ * The hint for a failed domain verification: the API answers 400
+ * `dns_verification_failed` with every expected record, each with its
+ * `status`, in `error.details.records`. Lists the records that still need
+ * work, then how to finish.
+ */
+export function domainVerificationFailedHint(payload: unknown): string {
+  // Commands pass the error object already unwrapped from its envelope.
+  const body = (
+    payload !== null && typeof payload === "object" ? payload : {}
+  ) as {
+    details?: { records?: unknown };
+    error?: { details?: { records?: unknown } };
+  };
+  const records = body.details?.records ?? body.error?.details?.records;
+  const pending = (Array.isArray(records) ? records : []).filter(
+    (record): record is Record<string, unknown> =>
+      record !== null &&
+      typeof record === "object" &&
+      !SETTLED_DNS_RECORD_STATUSES.has(
+        String((record as { status?: unknown }).status),
+      ),
   );
+  const lines = pending.map((record) => {
+    const name = record.fqdn ?? record.name ?? "?";
+    return `  ${String(record.type ?? "?")} ${String(name)} ${String(record.value ?? "")} (${String(record.status ?? "unknown")})`;
+  });
+  return [
+    "Domain verification is incomplete.",
+    ...(lines.length > 0 ? ["Records to add or fix:", ...lines] : []),
+    "Add or fix those DNS records, or run `primitive domains zone-file --id <domain-id>` to download the complete zone file, then retry `primitive domains verify --id <domain-id>`.",
+  ].join("\n");
 }
 
 // Discoverability hints for generated commands that have a
@@ -1158,8 +1253,16 @@ export const MAIL_RELAY_UNAVAILABLE_MESSAGE =
 // line to print after the error envelope, or undefined for none.
 export const OPERATION_ERROR_HINTS: Record<
   string,
-  (code: string | undefined, body: unknown) => string | undefined
+  (
+    code: string | undefined,
+    body: unknown,
+    payload?: unknown,
+  ) => string | undefined
 > = {
+  verifyDomain: (code, _body, payload) =>
+    code === "dns_verification_failed"
+      ? domainVerificationFailedHint(payload)
+      : undefined,
   addDomain: (code, body) => {
     if (code === "mail_relay_unavailable")
       return MAIL_RELAY_UNAVAILABLE_MESSAGE;
@@ -1406,6 +1509,7 @@ export function createOperationCommand(
           const operationErrorHint = OPERATION_ERROR_HINTS[operation.sdkName]?.(
             extractErrorCode(errorPayload),
             body,
+            errorPayload,
           );
           if (operationErrorHint) {
             process.stderr.write(`${operationErrorHint}\n`);
@@ -1622,10 +1726,6 @@ export function createOperationCommand(
             2,
           ),
         );
-        if (isIncompleteDomainVerification(operation, envelope)) {
-          writeIncompleteDomainVerificationHint();
-          process.exitCode = 1;
-        }
       });
     }
   }

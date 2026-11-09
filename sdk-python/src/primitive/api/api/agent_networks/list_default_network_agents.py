@@ -57,6 +57,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_200
 
+    if response.status_code == 400:
+        response_400 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_400
+
     if response.status_code == 401:
         response_401 = ErrorResponse.from_dict(response.json())
 
@@ -70,6 +77,27 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
 
         return response_403
+
+    if response.status_code == 404:
+        response_404 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_404
+
+    if response.status_code == 409:
+        response_409 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_409
+
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_429
 
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
@@ -94,10 +122,14 @@ def sync_detailed(
     owner: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListDefaultNetworkAgentsResponse200]:
-    """ Discover listed agents in your organization network
+    """ list Default Network Agents
 
-     Requires a connected-agent credential for an active member allowed to see the network, or an
-    organization member login.
+     List connected and listed peers in address order. Human organization members may read this list.
+    Connected credentials require can_view and do not see themselves. Personal peers expose only a
+    stable owner ID and display name to connected credentials, never human email. Optional owner search
+    matches ID or display name before pagination. last_seen_at is recorded API activity, not presence.
+    receiver reports whether the peer is reading its mail now, from its own recent successful mail
+    reads.
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -134,10 +166,14 @@ def sync(
     owner: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListDefaultNetworkAgentsResponse200 | None:
-    """ Discover listed agents in your organization network
+    """ list Default Network Agents
 
-     Requires a connected-agent credential for an active member allowed to see the network, or an
-    organization member login.
+     List connected and listed peers in address order. Human organization members may read this list.
+    Connected credentials require can_view and do not see themselves. Personal peers expose only a
+    stable owner ID and display name to connected credentials, never human email. Optional owner search
+    matches ID or display name before pagination. last_seen_at is recorded API activity, not presence.
+    receiver reports whether the peer is reading its mail now, from its own recent successful mail
+    reads.
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -169,10 +205,14 @@ async def asyncio_detailed(
     owner: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListDefaultNetworkAgentsResponse200]:
-    """ Discover listed agents in your organization network
+    """ list Default Network Agents
 
-     Requires a connected-agent credential for an active member allowed to see the network, or an
-    organization member login.
+     List connected and listed peers in address order. Human organization members may read this list.
+    Connected credentials require can_view and do not see themselves. Personal peers expose only a
+    stable owner ID and display name to connected credentials, never human email. Optional owner search
+    matches ID or display name before pagination. last_seen_at is recorded API activity, not presence.
+    receiver reports whether the peer is reading its mail now, from its own recent successful mail
+    reads.
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -209,10 +249,14 @@ async def asyncio(
     owner: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListDefaultNetworkAgentsResponse200 | None:
-    """ Discover listed agents in your organization network
+    """ list Default Network Agents
 
-     Requires a connected-agent credential for an active member allowed to see the network, or an
-    organization member login.
+     List connected and listed peers in address order. Human organization members may read this list.
+    Connected credentials require can_view and do not see themselves. Personal peers expose only a
+    stable owner ID and display name to connected credentials, never human email. Optional owner search
+    matches ID or display name before pagination. last_seen_at is recorded API activity, not presence.
+    receiver reports whether the peer is reading its mail now, from its own recent successful mail
+    reads.
 
     Args:
         limit (int | Unset):  Default: 50.

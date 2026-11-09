@@ -38,6 +38,11 @@ class FunctionListItem:
                     `deploy_error` field carries the error message.
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
+            last_invoked_at (datetime.datetime | None): When the function last received a delivery, or null if it never has.
+            invocations_24h (int): Deliveries to the function in the last 24 hours.
+            invocations_total (int): Deliveries to the function over its lifetime.
+            tags (list[str]): The function's tags.
+            has_code (bool): Whether the function has stored source code.
             deployed_at (datetime.datetime | None | Unset): Timestamp of the most recent successful deploy. Null until the
                 first deploy succeeds.
      """
@@ -47,6 +52,11 @@ class FunctionListItem:
     deploy_status: FunctionDeployStatus
     created_at: datetime.datetime
     updated_at: datetime.datetime
+    last_invoked_at: datetime.datetime | None
+    invocations_24h: int
+    invocations_total: int
+    tags: list[str]
+    has_code: bool
     deployed_at: datetime.datetime | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -65,6 +75,22 @@ class FunctionListItem:
 
         updated_at = self.updated_at.isoformat()
 
+        last_invoked_at: None | str
+        if isinstance(self.last_invoked_at, datetime.datetime):
+            last_invoked_at = self.last_invoked_at.isoformat()
+        else:
+            last_invoked_at = self.last_invoked_at
+
+        invocations_24h = self.invocations_24h
+
+        invocations_total = self.invocations_total
+
+        tags = self.tags
+
+
+
+        has_code = self.has_code
+
         deployed_at: None | str | Unset
         if isinstance(self.deployed_at, Unset):
             deployed_at = UNSET
@@ -82,6 +108,11 @@ class FunctionListItem:
             "deploy_status": deploy_status,
             "created_at": created_at,
             "updated_at": updated_at,
+            "last_invoked_at": last_invoked_at,
+            "invocations_24h": invocations_24h,
+            "invocations_total": invocations_total,
+            "tags": tags,
+            "has_code": has_code,
         })
         if deployed_at is not UNSET:
             field_dict["deployed_at"] = deployed_at
@@ -115,6 +146,33 @@ class FunctionListItem:
 
 
 
+        def _parse_last_invoked_at(data: object) -> datetime.datetime | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                last_invoked_at_type_0 = datetime.datetime.fromisoformat(data)
+
+
+
+                return last_invoked_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None, data)
+
+        last_invoked_at = _parse_last_invoked_at(d.pop("last_invoked_at"))
+
+
+        invocations_24h = d.pop("invocations_24h")
+
+        invocations_total = d.pop("invocations_total")
+
+        tags = cast(list[str], d.pop("tags"))
+
+
+        has_code = d.pop("has_code")
+
         def _parse_deployed_at(data: object) -> datetime.datetime | None | Unset:
             if data is None:
                 return data
@@ -141,6 +199,11 @@ class FunctionListItem:
             deploy_status=deploy_status,
             created_at=created_at,
             updated_at=updated_at,
+            last_invoked_at=last_invoked_at,
+            invocations_24h=invocations_24h,
+            invocations_total=invocations_total,
+            tags=tags,
+            has_code=has_code,
             deployed_at=deployed_at,
         )
 

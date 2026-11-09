@@ -17,7 +17,7 @@ small default workflow:
 | --- | --- | --- |
 | Node.js | `npm install @primitivedotdev/sdk` | `sdk-node/README.md` |
 | Python | `pip install primitivedotdev` | `sdk-python/README.md` |
-| Go | `go get github.com/primitivedotdev/sdks/sdk-go/v2@latest` | `sdk-go/README.md` |
+| Go | `go get github.com/primitivedotdev/sdks/sdk-go/v3@latest` | `sdk-go/README.md` |
 
 ## Default API shape
 
@@ -48,16 +48,6 @@ export async function POST(req: Request) {
   return Response.json({ ok: true });
 }
 ```
-
-## x402 payments
-
-Each SDK also ships a non-custodial x402 payments client. One agent registers a
-payout address and requests a USDC payment; the paying agent signs locally with
-its own key and settles. Keys never leave the caller. Networks are `base` and
-`base-sepolia`, and amounts are token base units (USDC has 6 decimals, so
-`"10000"` is 0.01 USDC). See the "x402 payments" section in each SDK README
-(`sdk-node`, `sdk-python`, `sdk-go`) for runnable examples, and the
-`primitive payments` command group in the CLI for the same flow from a terminal.
 
 ## Advanced surfaces
 

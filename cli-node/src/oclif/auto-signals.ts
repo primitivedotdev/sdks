@@ -124,8 +124,8 @@ export function autoSignalEligible(
       !Array.isArray(to) ||
       to.length !== 1 ||
       lower(to[0]?.address) !== agent ||
-      (parsed.cc?.length ?? 0) > 0 ||
-      (parsed.bcc?.length ?? 0) > 0
+      (parsed?.cc?.length ?? 0) > 0 ||
+      (parsed?.bcc?.length ?? 0) > 0
     )
       return false;
     return isPlainChatReply(detail);

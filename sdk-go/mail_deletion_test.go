@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	api "github.com/primitivedotdev/sdks/sdk-go/v2/api"
+	api "github.com/primitivedotdev/sdks/sdk-go/v3/api"
 )
 
 func TestMailboxDeletionRoutesAndErrors(t *testing.T) {

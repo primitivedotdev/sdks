@@ -26,7 +26,8 @@ class CreateFunctionResponse201:
     """ 
         Attributes:
             success (bool):
-            data (CreateFunctionResult | Unset): Returned by POST /functions on a successful deploy.
+            data (CreateFunctionResult | Unset): Returned by POST /functions. deploy_status is pending when the request
+                carried no code.
      """
 
     success: bool

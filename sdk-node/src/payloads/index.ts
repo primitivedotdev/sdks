@@ -469,7 +469,7 @@ export async function pushFile(
   opts: PushOptions,
 ): Promise<PushResult> {
   // Resolved lazily (and before any network call) so this module stays
-  // Workers-bundleable; see node-fs.ts.
+  // edge-bundleable; see node-fs.ts.
   const { open, stat } = await loadNodeFsPromises("pushFile");
   const chunkSize = opts.chunkSize ?? CHUNK_SIZE;
   const concurrency = opts.concurrency ?? 3;
@@ -600,7 +600,7 @@ export async function pullFile(
   opts: PullOptions,
 ): Promise<PayloadManifest> {
   // Resolved lazily (and before any network call) so this module stays
-  // Workers-bundleable; see node-fs.ts.
+  // edge-bundleable; see node-fs.ts.
   const { createWriteStream } = await loadNodeFs("pullFile");
   const { rm } = await loadNodeFsPromises("pullFile");
   const manifest = await fetchManifest(opts, root);

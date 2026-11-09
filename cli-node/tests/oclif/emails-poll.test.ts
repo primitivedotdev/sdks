@@ -14,6 +14,10 @@ function makeEmail(
   overrides: Partial<EmailSearchResult> = {},
 ): EmailSearchResult {
   return {
+    from_verified: false,
+    from_header_email: null,
+    from_name: null,
+    snippet: null,
     attachment_count: 0,
     awaiting: "you",
     automated: false,

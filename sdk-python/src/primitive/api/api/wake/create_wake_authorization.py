@@ -11,6 +11,7 @@ from ... import errors
 from ...models.create_wake_authorization_input import CreateWakeAuthorizationInput
 from ...models.create_wake_authorization_response_201 import CreateWakeAuthorizationResponse201
 from ...models.error_response import ErrorResponse
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -18,9 +19,13 @@ from typing import cast
 def _get_kwargs(
     *,
     body: CreateWakeAuthorizationInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -96,6 +101,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CreateWakeAuthorizationInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateWakeAuthorizationResponse201 | ErrorResponse]:
     """ Create a wake authorization
@@ -104,6 +110,7 @@ def sync_detailed(
     permission to wake a target function. The domain must be fully-qualified.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateWakeAuthorizationInput):
 
     Raises:
@@ -117,6 +124,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -130,6 +138,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: CreateWakeAuthorizationInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CreateWakeAuthorizationResponse201 | ErrorResponse | None:
     """ Create a wake authorization
@@ -138,6 +147,7 @@ def sync(
     permission to wake a target function. The domain must be fully-qualified.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateWakeAuthorizationInput):
 
     Raises:
@@ -152,6 +162,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -159,6 +170,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CreateWakeAuthorizationInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateWakeAuthorizationResponse201 | ErrorResponse]:
     """ Create a wake authorization
@@ -167,6 +179,7 @@ async def asyncio_detailed(
     permission to wake a target function. The domain must be fully-qualified.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateWakeAuthorizationInput):
 
     Raises:
@@ -180,6 +193,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -193,6 +207,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: CreateWakeAuthorizationInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CreateWakeAuthorizationResponse201 | ErrorResponse | None:
     """ Create a wake authorization
@@ -201,6 +216,7 @@ async def asyncio(
     permission to wake a target function. The domain must be fully-qualified.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateWakeAuthorizationInput):
 
     Raises:
@@ -215,5 +231,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

@@ -159,7 +159,7 @@ export abstract class PrimitiveWebhookError extends Error {
   }
 
   /**
-   * Serializes cleanly for structured logging (Datadog, CloudWatch, etc.)
+   * Serializes cleanly for structured logging
    */
   toJSON() {
     return {
@@ -288,7 +288,7 @@ export class WebhookValidationError extends PrimitiveWebhookError {
   }
 
   /**
-   * Serializes cleanly for structured logging (Datadog, CloudWatch, etc.)
+   * Serializes cleanly for structured logging
    */
   toJSON() {
     return {

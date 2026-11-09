@@ -8,13 +8,18 @@ import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 const session = "11111111-1111-4111-8111-111111111111";
 
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), account: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  auth: vi.fn(),
+  account: vi.fn(),
+  ownGrant: vi.fn(),
+}));
 vi.mock("../../src/oclif/api-client.js", () => ({
   createAuthenticatedCliApiClient: mocks.auth,
 }));
 vi.mock("@primitivedotdev/api-core", async (original) => ({
   ...(await original<typeof import("@primitivedotdev/api-core")>()),
   getAccount: mocks.account,
+  getOwnGrant: mocks.ownGrant,
 }));
 
 import WhoamiCommand, {
@@ -35,7 +40,7 @@ function makeAccount(overrides: Record<string, unknown> = {}) {
     created_at: "2026-05-25T00:00:00.000Z",
     onboarding_completed: false,
     onboarding_step: "dns",
-    stripe_subscription_status: "trialing",
+    subscription_status: "trialing",
     subscription_current_period_end: "2026-06-25T00:00:00.000Z",
     subscription_cancel_at_period_end: false,
     spam_threshold: null,
@@ -62,9 +67,58 @@ describe("whoami command", () => {
     expect(output).toContain("Organization id: acct-1");
     expect(output).toContain("Plan: pro");
     expect(output).not.toContain("onboarding");
-    expect(output).not.toContain("stripe");
+    expect(output).not.toContain("trialing");
     expect(output).not.toContain("webhook");
     expect(output).not.toContain("Managed inbox");
+  });
+
+  it("does not print null when the credential may not see the email", () => {
+    const output = formatWhoamiSummary(makeAccount({ email: null }), null);
+
+    expect(output).toContain("Authenticated (");
+    expect(output).not.toContain("null");
+  });
+
+  it("reports the credential's own grant when refused the account", async () => {
+    mocks.auth.mockResolvedValue({
+      apiClient: { client: {} },
+      auth: { credentials: { org_id: "org-1", org_name: "Acme" } },
+      baseUrlOverridden: false,
+    });
+    mocks.account.mockResolvedValue({
+      error: {
+        success: false,
+        error: { code: "grant_forbidden", message: "Not allowed" },
+      },
+    });
+    mocks.ownGrant.mockResolvedValue({
+      data: {
+        data: {
+          org_id: "org-1",
+          auth_method: "user_grant",
+          key_id: null,
+          grant: {
+            credential_kind: "cli_user_access",
+            template: null,
+            permissions: ["mail:send"],
+            mail_scope: { addresses: ["a@b.test"], domains: [], depth: "raw" },
+            resources: null,
+            expires_at: null,
+          },
+        },
+      },
+    });
+    const output: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((value: unknown) => {
+      output.push(String(value));
+    });
+    const root = resolve(import.meta.dirname, "../..");
+    await WhoamiCommand.run([], { root });
+    expect(process.exitCode ?? 0).toBe(0);
+    const text = output.join("\n");
+    expect(text).toContain("lacks org:read");
+    expect(text).toContain("Organization: Acme (org-1)");
+    expect(text).toContain("grant with 1 permissions, a narrowed mail scope");
   });
 
   it("names the organization when the saved login recorded its name", () => {

@@ -125,20 +125,16 @@ def sync_detailed(
 ) -> Response[ErrorResponse | RedeemCreditCodeResponse200]:
     """ Redeem a credit code
 
-     Redeem a credit code for the authenticated organization. The credit is
-    added to the organization prepaid credit and shows in
-    `GET /credits/balance` under `prepaid_credit`.
-
-    Redeeming requires an organization owner or admin. An API key redeems
-    with the authority of the user who created it, based on that user's
-    current role; a key without that authority gets the same
-    `credit_code_invalid` refusal as an unknown code.
-
-    The `Idempotency-Key` header is required. Retrying with the same key
-    and code returns the original grant with `replayed: true` and grants
-    nothing new; the same key with a different code is refused with
-    `idempotency_key_reused`. Every refusal carries a human-readable
-    `error.message` that can be shown to the user as is.
+     Redeem a credit code for the authenticated organization. The credit is added to the organization
+    prepaid credit and shows in `GET /credits/balance` under `prepaid_credit`. Redeeming requires an
+    organization owner or admin: an API key redeems with the authority of the user who created it (or
+    the member it was transferred to), based on that user's current role, and a key without that
+    authority gets the same `credit_code_invalid` refusal as an unknown code. A key transferred to
+    another member without being rotated is refused with `403` and `error.details.reason`
+    `key_transferred_unrotated`: rotate it and redeem with its successor. The `Idempotency-Key` header
+    is required. Retrying with the same key and code returns the original grant with `replayed: true`
+    and grants nothing new; the same key with a different code is refused with `idempotency_key_reused`.
+    Every refusal carries a human-readable `error.message` that can be shown to the user as is.
 
     Args:
         idempotency_key (str):
@@ -174,20 +170,16 @@ def sync(
 ) -> ErrorResponse | RedeemCreditCodeResponse200 | None:
     """ Redeem a credit code
 
-     Redeem a credit code for the authenticated organization. The credit is
-    added to the organization prepaid credit and shows in
-    `GET /credits/balance` under `prepaid_credit`.
-
-    Redeeming requires an organization owner or admin. An API key redeems
-    with the authority of the user who created it, based on that user's
-    current role; a key without that authority gets the same
-    `credit_code_invalid` refusal as an unknown code.
-
-    The `Idempotency-Key` header is required. Retrying with the same key
-    and code returns the original grant with `replayed: true` and grants
-    nothing new; the same key with a different code is refused with
-    `idempotency_key_reused`. Every refusal carries a human-readable
-    `error.message` that can be shown to the user as is.
+     Redeem a credit code for the authenticated organization. The credit is added to the organization
+    prepaid credit and shows in `GET /credits/balance` under `prepaid_credit`. Redeeming requires an
+    organization owner or admin: an API key redeems with the authority of the user who created it (or
+    the member it was transferred to), based on that user's current role, and a key without that
+    authority gets the same `credit_code_invalid` refusal as an unknown code. A key transferred to
+    another member without being rotated is refused with `403` and `error.details.reason`
+    `key_transferred_unrotated`: rotate it and redeem with its successor. The `Idempotency-Key` header
+    is required. Retrying with the same key and code returns the original grant with `replayed: true`
+    and grants nothing new; the same key with a different code is refused with `idempotency_key_reused`.
+    Every refusal carries a human-readable `error.message` that can be shown to the user as is.
 
     Args:
         idempotency_key (str):
@@ -218,20 +210,16 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | RedeemCreditCodeResponse200]:
     """ Redeem a credit code
 
-     Redeem a credit code for the authenticated organization. The credit is
-    added to the organization prepaid credit and shows in
-    `GET /credits/balance` under `prepaid_credit`.
-
-    Redeeming requires an organization owner or admin. An API key redeems
-    with the authority of the user who created it, based on that user's
-    current role; a key without that authority gets the same
-    `credit_code_invalid` refusal as an unknown code.
-
-    The `Idempotency-Key` header is required. Retrying with the same key
-    and code returns the original grant with `replayed: true` and grants
-    nothing new; the same key with a different code is refused with
-    `idempotency_key_reused`. Every refusal carries a human-readable
-    `error.message` that can be shown to the user as is.
+     Redeem a credit code for the authenticated organization. The credit is added to the organization
+    prepaid credit and shows in `GET /credits/balance` under `prepaid_credit`. Redeeming requires an
+    organization owner or admin: an API key redeems with the authority of the user who created it (or
+    the member it was transferred to), based on that user's current role, and a key without that
+    authority gets the same `credit_code_invalid` refusal as an unknown code. A key transferred to
+    another member without being rotated is refused with `403` and `error.details.reason`
+    `key_transferred_unrotated`: rotate it and redeem with its successor. The `Idempotency-Key` header
+    is required. Retrying with the same key and code returns the original grant with `replayed: true`
+    and grants nothing new; the same key with a different code is refused with `idempotency_key_reused`.
+    Every refusal carries a human-readable `error.message` that can be shown to the user as is.
 
     Args:
         idempotency_key (str):
@@ -267,20 +255,16 @@ async def asyncio(
 ) -> ErrorResponse | RedeemCreditCodeResponse200 | None:
     """ Redeem a credit code
 
-     Redeem a credit code for the authenticated organization. The credit is
-    added to the organization prepaid credit and shows in
-    `GET /credits/balance` under `prepaid_credit`.
-
-    Redeeming requires an organization owner or admin. An API key redeems
-    with the authority of the user who created it, based on that user's
-    current role; a key without that authority gets the same
-    `credit_code_invalid` refusal as an unknown code.
-
-    The `Idempotency-Key` header is required. Retrying with the same key
-    and code returns the original grant with `replayed: true` and grants
-    nothing new; the same key with a different code is refused with
-    `idempotency_key_reused`. Every refusal carries a human-readable
-    `error.message` that can be shown to the user as is.
+     Redeem a credit code for the authenticated organization. The credit is added to the organization
+    prepaid credit and shows in `GET /credits/balance` under `prepaid_credit`. Redeeming requires an
+    organization owner or admin: an API key redeems with the authority of the user who created it (or
+    the member it was transferred to), based on that user's current role, and a key without that
+    authority gets the same `credit_code_invalid` refusal as an unknown code. A key transferred to
+    another member without being rotated is refused with `403` and `error.details.reason`
+    `key_transferred_unrotated`: rotate it and redeem with its successor. The `Idempotency-Key` header
+    is required. Retrying with the same key and code returns the original grant with `replayed: true`
+    and grants nothing new; the same key with a different code is refused with `idempotency_key_reused`.
+    Every refusal carries a human-readable `error.message` that can be shown to the user as is.
 
     Args:
         idempotency_key (str):

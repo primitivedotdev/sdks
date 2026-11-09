@@ -96,18 +96,18 @@ afterEach(() => {
 });
 
 describe("reply to an interaction", () => {
-  it("warns once on stderr for a prose reply to a payment request, and still sends", async () => {
+  it("warns once on stderr for a prose reply to a contact request, and still sends", async () => {
     mocks.getEmail.mockResolvedValue({
       data: {
         data: parent({
           interaction_hint: "card",
-          interaction_kind: "x402.payment/1",
+          interaction_kind: "primitive.contact/1",
         }),
       },
     });
-    const { stderr } = await reply(["--body", "I will pay later."]);
+    const { stderr } = await reply(["--body", "Happy to connect."]);
     expect(warningLines(stderr)).toEqual([
-      `Warning: email ${emailId} is a payment interaction (x402.payment/1). A plain reply does not pay or decline it; sending anyway. To pay: primitive payments pay-email --in-reply-to ${emailId}`,
+      `Warning: email ${emailId} is a contact interaction (primitive.contact/1). A plain reply does not accept it; sending anyway. To accept: primitive contacts accept --id ${emailId}`,
     ]);
     expect(mocks.replyToEmail).toHaveBeenCalledTimes(1);
   });
@@ -197,8 +197,8 @@ describe("reply to an interaction", () => {
           interaction_hint: "none",
           interaction_kind: null,
           interaction_candidate: true,
-          subject: "Payment request: x402.payment",
-          headers: { "x-primitive-interaction": "x402.payment/1" },
+          subject: "Payment request: example.invoice",
+          headers: { "x-primitive-interaction": "example.invoice/1" },
           parsed: {
             status: "complete",
             attachments: [{ filename: "interaction.json" }],
@@ -233,7 +233,7 @@ describe("replyInteractionWarning", () => {
     expect(replyInteractionWarning({}, emailId)).toBeNull();
     expect(
       replyInteractionWarning(
-        { interaction_hint: "card", interaction_kind: "x402.payment/1" },
+        { interaction_hint: "card", interaction_kind: "example.invoice/1" },
         "not-an-id",
       ),
     ).toBeNull();

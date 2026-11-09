@@ -26,7 +26,7 @@ class GetFunctionResponse200:
     """ 
         Attributes:
             success (bool):
-            data (FunctionDetail | Unset): Full function record returned by GET / PUT.
+            data (FunctionDetail | Unset): Full function record returned by getFunction.
      """
 
     success: bool

@@ -8,7 +8,11 @@ const raw = () => ({
   event_id: id,
   lease_expires_at: new Date(Date.now() + 60000).toISOString(),
 });
-const offer = (delivery: ReturnType<typeof raw> | null = raw()) => ({
+const offer = (
+  delivery:
+    | (Omit<ReturnType<typeof raw>, "body"> & { body: string | null })
+    | null = raw(),
+) => ({
   delivery,
   backlog: 0,
   gap_count: 0,
@@ -64,6 +68,32 @@ function setup(
 }
 const options = { subscription: "local-agent", transport: "poll" } as const;
 describe("in-process events", () => {
+  for (const withheld of fixture.withheld_deliveries) {
+    it(`surfaces a withheld body as null body and null data (${withheld.name})`, async () => {
+      const { client, bodies } = setup({
+        pull: async () =>
+          Response.json({
+            success: true,
+            data: {
+              ...offer(),
+              delivery: {
+                ...withheld.delivery,
+                event_id: id,
+                lease_expires_at: new Date(Date.now() + 60000).toISOString(),
+              },
+            },
+          }),
+      });
+      const delivery = await client.events.wait(options);
+      expect(delivery?.event).toMatchObject({
+        id,
+        type: "future.event",
+        body: null,
+        data: null,
+      });
+      expect(bodies).toHaveLength(0);
+    });
+  }
   it("returns a delivery without acknowledging; preserves canonical identity and body", async () => {
     const { client, bodies } = setup();
     const delivery = await client.events.wait(options);

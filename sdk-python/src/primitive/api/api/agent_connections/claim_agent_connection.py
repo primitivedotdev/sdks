@@ -128,9 +128,10 @@ def sync_detailed(
     its one-use invitation. Connected means a real challenge was received and a reply sent by the
     current bound credential was received back. Invitations expire after 15 minutes. Reconnection
     preserves the address and revokes previous credentials. Status responses contain no credentials.
-    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
-    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission.
+    Runtime credentials allow address-scoped mail operations, own-address note reads and writes, reads
+    of other organization agents' AGENT_WORKING, AGENT_RUNTIME and AGENT_INFO notes, exact-address self-
+    disconnect and self-rename, network discovery when can_view is enabled, and recipient-bound network
+    contact admission.
 
     Args:
         idempotency_key (str | Unset):
@@ -174,9 +175,10 @@ def sync(
     its one-use invitation. Connected means a real challenge was received and a reply sent by the
     current bound credential was received back. Invitations expire after 15 minutes. Reconnection
     preserves the address and revokes previous credentials. Status responses contain no credentials.
-    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
-    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission.
+    Runtime credentials allow address-scoped mail operations, own-address note reads and writes, reads
+    of other organization agents' AGENT_WORKING, AGENT_RUNTIME and AGENT_INFO notes, exact-address self-
+    disconnect and self-rename, network discovery when can_view is enabled, and recipient-bound network
+    contact admission.
 
     Args:
         idempotency_key (str | Unset):
@@ -215,9 +217,10 @@ async def asyncio_detailed(
     its one-use invitation. Connected means a real challenge was received and a reply sent by the
     current bound credential was received back. Invitations expire after 15 minutes. Reconnection
     preserves the address and revokes previous credentials. Status responses contain no credentials.
-    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
-    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission.
+    Runtime credentials allow address-scoped mail operations, own-address note reads and writes, reads
+    of other organization agents' AGENT_WORKING, AGENT_RUNTIME and AGENT_INFO notes, exact-address self-
+    disconnect and self-rename, network discovery when can_view is enabled, and recipient-bound network
+    contact admission.
 
     Args:
         idempotency_key (str | Unset):
@@ -261,9 +264,10 @@ async def asyncio(
     its one-use invitation. Connected means a real challenge was received and a reply sent by the
     current bound credential was received back. Invitations expire after 15 minutes. Reconnection
     preserves the address and revokes previous credentials. Status responses contain no credentials.
-    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
-    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission.
+    Runtime credentials allow address-scoped mail operations, own-address note reads and writes, reads
+    of other organization agents' AGENT_WORKING, AGENT_RUNTIME and AGENT_INFO notes, exact-address self-
+    disconnect and self-rename, network discovery when can_view is enabled, and recipient-bound network
+    contact admission.
 
     Args:
         idempotency_key (str | Unset):

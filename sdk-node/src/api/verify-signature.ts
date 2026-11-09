@@ -1,5 +1,5 @@
 /**
- * Workers-safe webhook signature verification.
+ * edge-safe webhook signature verification.
  *
  * Mirrors `verifyWebhookSignature` from `@primitivedotdev/sdk` but
  * implements the HMAC-SHA256 step with the Web Crypto API

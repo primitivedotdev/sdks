@@ -10,6 +10,7 @@ SDK_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SPEC_PATH = REPO_ROOT / "openapi" / "primitive-api.codegen.json"
 CONFIG_PATH = SDK_ROOT / "openapi-python-client-config.yml"
+TEMPLATES_PATH = SDK_ROOT / "openapi-python-client-templates"
 TARGET_PATH = SDK_ROOT / "src" / "primitive" / "api"
 GENERATED_ITEMS = ["api", "client.py", "errors.py", "models", "types.py"]
 
@@ -128,6 +129,8 @@ def main() -> None:
                 "none",
                 "--config",
                 str(CONFIG_PATH),
+                "--custom-template-path",
+                str(TEMPLATES_PATH),
                 "--path",
                 str(SPEC_PATH),
                 "--output-path",

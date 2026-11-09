@@ -1,0 +1,379 @@
+# Changelog
+
+Release notes for the packages in this repository:
+
+- Node SDK: `@primitivedotdev/sdk`
+- Node CLI: `primitive` (and its mirrors `primcli` and `@primitivedotdev/cli`)
+- Python SDK: `primitivedotdev`
+- Go SDK: `github.com/primitivedotdev/sdks/sdk-go/v3`
+
+From 3.0.0 all four share one version, because all four are generated from
+the same OpenAPI spec. See `RELEASE.md`.
+
+## 3.0.0
+
+`openapi/primitive-api.yaml` is now produced by `make openapi-sync` from the
+OpenAPI document the API serves, and every client is regenerated from it. Most
+of the changes below follow from that document.
+
+Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.1` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.1`), and `3.0.0rc1` for `primitivedotdev` on PyPI.
+
+### Breaking changes
+
+#### Versions and module path
+
+- The Node SDK, the Python SDK, the Go module and the CLI are all 3.0.0. The
+  CLI moves from 1.75.0.
+- The Go module path is `github.com/primitivedotdev/sdks/sdk-go/v3`. Update
+  imports from `.../sdk-go/v2` and `.../sdk-go/v2/api`.
+- `primitive functions init` scaffolds projects on `^3.0.0-preview.1` of both
+  `@primitivedotdev/sdk` and `primitive`.
+
+#### Removed code
+
+These no longer exist, so code that uses them stops compiling or running:
+
+- Node: the `@primitivedotdev/sdk/x402` subpath and the `X402*` exports.
+- Python: the `primitive.x402` package.
+- Go: `X402Client`, the `X402*` types and the payment helpers such as
+  `NewPrivateKeySigner`.
+- CLI: `primitive payments`, `primitive registries` and the
+  `PRIMITIVE_X402_PRIVATE_KEY` environment variable.
+- Generated clients: the payment and agent registry operations, and their
+  webhook event types and guards.
+
+#### Removed error codes and fields
+
+- The `error.code` enum no longer lists those features' codes or a retired
+  signup code that `signup_failed` replaced. Their generated enum members are
+  gone, for example the Go `ErrorResponseErrorCodeChallengeExpired` constant.
+- `Account` no longer declares its subscription status field, and the
+  generated `Account` types drop it.
+
+#### Not in the SDKs
+
+- `GET /health` (`getHealth`), an unauthenticated health check for uptime
+  monitors, is served but not wrapped by the SDKs or the CLI.
+
+#### Conversation reads
+
+- `Conversation` now requires only `thread_id` and `messages`. `subject`,
+  `message_count` and `truncated` are optional because an empty `since` delta
+  omits them. In Go, `Conversation.MessageCount` is `OptInt` (was `int`) and
+  `Conversation.Truncated` is `OptBool` (was `bool`); a delta without them
+  previously failed to decode.
+
+#### Newly required response fields
+
+These fields are now required in the generated types (non-optional in Node,
+no longer `UNSET` in Python, plain or `Nil*` fields rather than `Opt*` in Go):
+
+- `EmailSummary`, `EmailSearchResult`, `ChangeInboundMessage`:
+  `from_verified`, `from_header_email`, `snippet`.
+- `EmailDetail`: `from_verified`, `from_header_email`, `from_name`, `snippet`.
+- `SentEmailSummary`, `SentEmailDetail`, `ChangeOutboundMessage`:
+  `interaction_hint`, `interaction_kind`, `snippet`.
+- `Thread`: `latest_inbound_id`, `latest_outbound_id`.
+- `VerifiedDomain`: `dns_health`.
+- `PresenceControl`: `status`, `valid_for_ms`.
+- The list responses of `listContacts`, `listAgentContacts`,
+  `listAgentConnections`, `listDefaultNetworkMembers` and
+  `listDefaultNetworkAgents`: `meta`, with `limit` and a nullable `cursor`.
+  In Go, `Meta` is the plain meta type rather than an `Opt...` wrapper.
+
+#### Nullable values
+
+- A pulled event's body is null when the API withholds the content from the
+  credential, whether the API sends `body: null` or leaves the key out. All
+  three SDKs treat both the same way, pinned by
+  `test-fixtures/local-event-receiver.json`. Node `LocalEvent.body` is `string | null` and `data` is null
+  with it; Python `LocalEvent.body` is `str | None` and `data` is
+  `WebhookEvent | None`; Go `LocalEvent.Body` is `*string` and `Decode`
+  returns `ErrEventContentWithheld`.
+- A send result's client idempotency key and request id are null when a
+  replayed send was stored without one: Node `SendResult.clientIdempotencyKey`
+  and `requestId` are `string | null`, Python
+  `SendResult.client_idempotency_key` and `request_id` are `str | None`, and
+  Go `SendResult.ClientIdempotencyKey` and `RequestID` are
+  `primitiveapi.NilString`, as are the generated `SendMailResult` fields.
+- `getAccount` returns `limits` and `entitlements` as null for a credential
+  that does not hold `org:read`, and other account fields as null when the
+  credential lacks the permission each one needs.
+- An email's parsed content and a conversation message's `text` can be null.
+- An enum field that can be null lists null among its values in the published
+  spec, so a 3.1 validator accepts it, and the Node types include `| null`
+  (for example `Endpoint.owner_key_status`). In Python such a field is typed
+  as the union of generated enum classes used for other nullable enums, for
+  example `EndpointOwnerKeyStatusType1 | EndpointOwnerKeyStatusType2Type1 |
+  EndpointOwnerKeyStatusType3Type1 | None`.
+
+#### Domain verification
+
+`DomainVerifyResult` has one shape. A failed DNS check is answered with
+`400 dns_verification_failed` and the expected records in
+`error.details.records`, never a success body with `verified: false`. The Go
+`DomainVerifyResult0` and `DomainVerifyResult1` variants and the Python
+`DomainVerifyResultType0` and `DomainVerifyResultType1` models are gone.
+
+#### Go error response types
+
+63 generated error response types that had the type `ErrorResponse`, mostly
+the 401 `...Unauthorized` types plus some 500, 502 and 503 types, are now
+`ErrorResponseHeaders`. It holds the `ErrorResponse` in `Response` next to
+the `Retry-After` and `ratelimit-*` headers. Code that converted one of these
+types to `ErrorResponse` reads `.Response` instead. The high-level `Client`
+maps them to `APIError`, with `RetryAfter` set when the header is present.
+
+#### Python model names
+
+Nullable object components now carry their nullability on each reference, so
+their models have the component's own name:
+
+- `PresenceControlType0` is `PresenceControl`, and
+  `PresenceControlType0Status` is `PresenceControlStatus`.
+- `FunctionTestRunSendType0` is `FunctionTestRunSend`.
+- `FunctionTestRunInboundEmailType0` is `FunctionTestRunInboundEmail`.
+- `FunctionTestRunDeliveryEndpointType0` is `FunctionTestRunDeliveryEndpoint`.
+
+Other generated model names follow the served document's schema names and
+shapes. Among them: `MemoryScopeType0` and `MemoryScopeType1` are
+`MemoryScope`; `CallerIdentity` is `WhoamiResponse200Data`;
+`OrganizationLeft` is `LeaveOrganizationResult`; `InboxStatusEndpointSummary`,
+`InboxStatusFunctionSummary` and `InboxStatusRecentEmailSummary` are
+`InboxStatusEndpoints`, `InboxStatusFunctions` and `InboxStatusRecentEmails`.
+
+### Additions
+
+#### Conversation sync helper
+
+A helper in each SDK brings a conversation up to date with incremental
+`since` reads of `GET /emails/{id}/conversation`, paging through `has_more`.
+It upserts messages by `id`. Two entries are the same message when either
+one's id is in the other's `copies` or `sent_email_id`, and the newer one
+replaces the held one. The list is kept ordered by timestamp: a timestamp
+without an offset is read as UTC, and one that is not a valid RFC 3339
+date-time is kept as null and sorts last. A sync stops with an error after
+1000 pages. The three SDKs behave the same, pinned by
+`test-fixtures/conversation-sync.json`.
+
+- Node: `syncConversation(client, emailId, state?, options?)`,
+  `mergeConversationMessages(held, delta)` and `MAX_CONVERSATION_SYNC_PAGES`,
+  from `@primitivedotdev/sdk/api`.
+- Python: `sync_conversation(client, email_id, state=None)` returning
+  `ConversationSync`, `merge_conversation_messages(held, delta)` and
+  `MAX_CONVERSATION_SYNC_PAGES`.
+- Go: `SyncConversation(ctx, reader, emailID, state)`,
+  `Client.SyncConversation(ctx, emailID, state)`,
+  `MergeConversationMessages(held, delta)` and `MaxConversationSyncPages`.
+  With the generated `*primitiveapi.Client` as the reader, an error answer
+  becomes an `APIError` with its status, code, request id and `Retry-After`.
+
+#### New operations
+
+155 operations, by area:
+
+- Account: `getOwnGrant`.
+- Address notes: `listAddressNotes`, `listAddressNotesBatch`,
+  `getAddressNote`, `putAddressNote`, `deleteAddressNote`,
+  `listPublicAddressNotes`, `getPublicAddressNote`.
+- Agent connections: `setAgentConnectionVisibility`,
+  `renameAgentConnection`, `getAgentConnectionSettings`,
+  `updateAgentConnectionSettings`, `getOwnAgentConnection`,
+  `agentConnectionTrustedOrigins`.
+- Agent work: `agentWorkGet`, `agentWorkCreate`, `agentWorkList`,
+  `agentWorkProposeDeadline`, `agentWorkReportStatus`,
+  `agentWorkManageState`, `agentWorkAgreeDeadline`,
+  `agentWorkWithdrawDeadline`.
+- Contacts: `prepareContactRequest`, `prepareContactAcceptance`.
+- Credentials: `listCredentials`, `revokeCredential`,
+  `revokeAllCredentials`, `listCredentialEvents`, `getCredentialPolicy`,
+  `updateCredentialPolicy`, `getKeyBuilder`, `listKeys`, `createKey`,
+  `rotateKey`, `getKey`, `updateKey`, `getKeySuggestion`.
+- Domains: `getDomainAgentAuthorization`, `checkVanityInboxName`,
+  `claimVanityInboxName`.
+- Email rules: `compileEmailRule`, `testEmailRule`, `testEmailRuleOnSample`,
+  `listEmailRules`, `createEmailRule`, `getEmailRule`, `updateEmailRule`,
+  `deleteEmailRule`, `listEmailRuleDecisions`.
+- Emails: `getEmailReadable`.
+- Functions: `lookupFunction`, `getOrgFunctionUsage`,
+  `getOrgFunctionInvocationSeries`, `getOrgFunctionFallback`,
+  `redeployFunction`, `updateFunctionTags`, `listFunctionDeployments`,
+  `getFunctionDeployment`, `getFunctionSource`, `getFunctionUsage`,
+  `getFunctionUsers`, `listFunctionActivity`, `listFunctionInvocations`,
+  `getFunctionInvocation`, `listFunctionRuntimeKeyPresets`,
+  `requestFunctionRuntimeKeyRunner`, `getFunctionRuntimeKey`,
+  `setFunctionRuntimeKey`, `suspendFunctionRuntimeKey`,
+  `reaffirmFunctionRuntimeKey`.
+- Inbox: `listMailRouting`, `updateMailRouting`, `listMailTopicEdits`,
+  `updateMailTopicEdits`, `listMailTopicGenerations`,
+  `updateMailTopicGenerations`.
+- Interactions: `listInteractions`, `startInteraction`, `getInteraction`,
+  `sendInteractionStep`.
+- Mailbox access: `listMailboxAccess`, `setMailboxAccess`, `listGroups`,
+  `createGroup`, `updateGroup`, `deleteGroup`.
+- Organization settings: `listMyGrants`, `revokeMyGrant`, `listOAuthGrants`,
+  `revokeOAuthGrant`, `getOrganization`, `updateOrganization`,
+  `updateOrganizationLogo`, `removeOrganizationLogo`, `getSearchSettings`,
+  `updateSearchSettings`.
+- Organizations: `listOrganizationInvitations`, `inviteOrganizationMember`,
+  `revokeOrganizationInvitation`.
+- Projects: `listOrganizationPeople`, `listProjects`, `createProject`,
+  `getProject`, `updateProject`, `deleteProject`, `listProjectInvitations`,
+  `inviteProjectMember`, `revokeProjectInvitation`.
+- Roles and members: `listRoles`, `createRole`, `updateRole`, `deleteRole`,
+  `setMemberRole`, `removeMember`, `getAccessMode`, `setAccessMode`,
+  `decideAccessMode`, `listBreakGlass`, `startBreakGlass`, `endBreakGlass`,
+  `listOwnedItems`, `transferOwnedItems`, `listSuspensions`,
+  `decideSuspension`, `setOwnMailboxAccess`, `removeOwnAgentAccess`.
+  `leaveOrganization` moves here from Account.
+- Email rule requests: `createEmailRuleRequest`, `listEmailRuleRequests`,
+  `getEmailRuleRequest`, `acceptEmailRuleRequest`, `declineEmailRuleRequest`,
+  `withdrawEmailRuleRequest`.
+- Email rule shares: `listEmailRuleShares`, `listGivenEmailRuleShares`,
+  `getEmailRuleShare`, `listEmailRuleShareEmails`, `endEmailRuleShare`.
+- Relay auto join: `getRelayAutoJoin`, `setRelayAutoJoin`.
+- Sending: `downloadSentAttachments`, `signalEmail`, `checkSendability`,
+  `releaseSentEmail`, `sendMailBatch`.
+- Stats: `getInboundHourlyStats`, `getSentHourlyStats`,
+  `getWebhookDeliveryStats`.
+- Templates: `updateFunctionFromTemplate`.
+- Threads: `listMutedThreads`, `muteThread`, `unmuteThread`,
+  `markThreadRead`, `listThreadReadStates`.
+- Webhook deliveries: `getDelivery`.
+
+#### New parameters and fields on existing operations
+
+- `Primitive-Step-Up` is a declared header parameter on the 31 operations that
+  accept a step-up confirmation token, so a client can send the confirmation
+  token through the generated call: `headers: { "Primitive-Step-Up": token }`
+  in Node, `primitive_step_up=` in Python, and `PrimitiveStepUp` on the
+  operation's params in Go. They are `createAgentConnection`,
+  `inviteAgentConnection`, `inviteOrganizationMember`, `inviteProjectMember`,
+  `setMailboxAccess`, `createGroup`, `updateGroup`, `deleteGroup`,
+  `createKey`, `rotateKey`, `updateKey`, `updateOrganization`,
+  `updateOrganizationLogo`, `removeOrganizationLogo`, `updateSearchSettings`,
+  `createRole`, `updateRole`, `deleteRole`, `setMemberRole`, `removeMember`,
+  `leaveOrganization`, `setAccessMode`, `decideAccessMode`, `listBreakGlass`,
+  `startBreakGlass`, `endBreakGlass`, `listOwnedItems`,
+  `transferOwnedItems`, `listSuspensions`, `decideSuspension`,
+  `setOwnMailboxAccess` and `removeOwnAgentAccess`.
+- The `Idempotency-Key` descriptions say which operations do not perform the
+  action again when a request is retried with the same key (`replyToEmail`,
+  `startInteraction`, `sendInteractionStep`) and which do not use the key to
+  deduplicate.
+- The attachment downloads declare their `503` answers with `Retry-After`
+  and the `ratelimit-*` headers (in Go, `...ServiceUnavailable` types of
+  `ErrorResponseHeaders`). `downloadAttachments` and `downloadSentAttachments`
+  declare `409`, and `downloadAttachments` also `403`, `410` and `500`.
+- `listEmails`: `thread_id`, `exclude_muted`, `search_regex`,
+  `search_case_sensitive`, `search_negate`, `kind`, `content_discarded`,
+  `group`, `include_presence`. Email summaries gain `copies`,
+  `copies_truncated`, `sent_email_id`, `snippet`, `muted`, `parse_status`,
+  `in_reply_to`, `references` and `delivery_report`.
+- `getConversation`: window reads with `around`, `before`, `after` and
+  `limit`, answered with `before_cursor`, `after_cursor`, `has_more_before`
+  and `has_more_after`; `text=readable`; and `has_more` on a `since` delta.
+  Conversation and thread messages gain `copies`, `copies_truncated` and
+  `sent_email_id`.
+- `getThread`: `after`.
+- `listSentEmails`: `since`, `wait`.
+- `listAgentConnections`: `include_hidden`.
+- `whoami`: `include`, `check`, `resource`.
+
+#### Node SDK
+
+- `InboundEmail`, returned by `client.inbox.stream()` and
+  `client.inbox.waitForNext()`, extends the generated `EmailSummary` and
+  carries the whole row the API sent, including `snippet`, `copies`,
+  `sent_email_id` and `from_header_email`. The camelCase fields are
+  unchanged.
+
+#### Go SDK
+
+- The README documents that the generated decoder skips response fields the
+  generated types do not declare. Reading a field the API added later needs a
+  release generated from a spec that declares it.
+
+#### Signing in as yourself, organizations and grants
+
+- `primitive login` with no email asks for a login as the person
+  (`login_kind: "user"`). A server that refuses the field gets the
+  organization-bound login instead.
+- `primitive orgs` lists your organizations and whether the CLI may be used
+  there. `primitive org use <org>` switches, and `--org <org>` (or
+  `PRIMITIVE_CLI_ORG`) applies to one command.
+- `primitive login --permission <permission>` asks for a narrowed login. A
+  server that does not offer one refuses it, and the login is never widened.
+- `primitive whoami` shows the organization, role and grant where the server
+  reports them. `primitive whoami --check <permission>` asks whether the
+  credential may use a permission, and `--json --grant` adds the grant.
+- A credential that cannot read the account no longer fails `primitive
+  whoami`: it reports its own grant from `GET /whoami/grant`. `primitive
+  doctor` warns instead of reporting a rejected key, and `primitive login`
+  treats that session as a valid login.
+- `primitive send` without `--from` uses the single address a narrowed grant
+  names when the credential cannot list domains. Session enrollment no longer
+  needs `domains:read`.
+- `primitive keys list` and `primitive roles list|groups|mailbox-access|access-mode`
+  are read-only views.
+- A `403 grant_forbidden` names the missing permission. The CLI prints a hint,
+  and the Node, Python and Go SDKs raise a `GrantForbiddenError` that is still
+  their ordinary API error type.
+- Node SDK: `client.keys`, `client.credentials`, `client.roles`,
+  `client.account.whoami({ grant: true })`,
+  `client.account.checkPermission(...)`, `GrantSpec`, `PERMISSIONS`,
+  `OPERATION_PERMISSIONS` and `BUILTIN_ROLE_KEYS`.
+
+Saved login format: a login as the person is stored in `credentials.json` with
+`auth_method: "user_grant"` and a `user_grant` object holding the identity
+token and the per-organization tokens. Logins saved with `auth_method:
+"oauth"` keep working unchanged.
+
+Downgrading: CLI 1.75.0 and earlier cannot read a `user_grant` login. Every
+command fails with `Stored Primitive CLI credentials are malformed: auth_method
+must be oauth`. `primitive logout` on the older CLI removes the local file and
+does not revoke the login on the server, so log out with this CLI before
+downgrading, or sign in again afterwards.
+
+- Python and Go SDKs: the built-in role keys, as `BuiltinRoleKey` in both.
+
+#### Values the API adds later
+
+The generated Python and Go clients now keep an enum value they do not know
+instead of failing to decode the response, as the Node types already did. An
+unlisted `error.code` or email rule `state` decodes normally: in Python it is
+a member of the enum type holding that string, and in Go the typed string
+holds it. The published `primitive-api.yaml` also parses under YAML 1.1
+parsers.
+
+#### Email understanding
+
+- For organizations with email rules enabled, `email.received` events carry
+  `email.analysis.understanding` (`EmailUnderstanding`): a `version`, a
+  `status`, and when `ready`, `facts` keyed by name with a value and a
+  confidence. Rule-granted deliveries also list the matching `rules`. The
+  webhook schemas, the Node, Python and Go types and the shared fixtures cover
+  the field.
+
+#### CLI
+
+- `primitive billing` opens the dashboard's billing page, or prints its link.
+- Generated commands for the new operations, except `createKey`, `rotateKey`,
+  `updateKey` and `revokeCredential`, which have no CLI command.
+- The generated command for `leaveOrganization` is
+  `roles-and-members:leave-organization`, following the operation's tag.
+  `account:leave-organization` keeps working as an alias.
+- Flags for the new parameters, for example `primitive emails:list-emails
+  --thread-id --exclude-muted --search-regex --search-case-sensitive
+  --search-negate --kind --content-discarded --group --include-presence`,
+  `primitive emails:get-conversation --around --before --after --limit
+  --text`, `primitive threads:get-thread --after`, `primitive
+  sending:list-sent-emails --since --wait`, `primitive
+  agent-connections:list-agent-connections --include-hidden` and `primitive
+  account:whoami --include --check --resource`.
+- `primitive domains verify` reads a failed DNS check from the
+  `dns_verification_failed` error and names the records that still need
+  work.
+- The event listener stops with an explanation when an event's content is
+  withheld from the credential, instead of passing on an event it cannot
+  show.

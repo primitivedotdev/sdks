@@ -82,8 +82,8 @@ def artifacts(output, reuse_node_build=False):
     shutil.copy(ROOT / "scripts/signal-retry/caller.go", go / "main.go")
     (go / "go.mod").write_text(
         "module example.test/signal-retry\n\ngo 1.25.0\n\n"
-        "require github.com/primitivedotdev/sdks/sdk-go/v2 v2.0.0\n"
-        "replace github.com/primitivedotdev/sdks/sdk-go/v2 => ../sdk-go\n"
+        "require github.com/primitivedotdev/sdks/sdk-go/v3 v3.0.0\n"
+        "replace github.com/primitivedotdev/sdks/sdk-go/v3 => ../sdk-go\n"
     )
     command(["go", "mod", "tidy"], go)
     command(["go", "build", "-o", str(go / "caller"), "."], go)

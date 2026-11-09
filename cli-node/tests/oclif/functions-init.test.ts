@@ -57,12 +57,12 @@ describe("renderHandler", () => {
   it("imports the SDK surface from @primitivedotdev/sdk/api, NOT the root", () => {
     // This is the regression guard for the Run 4 footgun: importing
     // from the package root pulls in node:crypto-dependent webhook
-    // helpers and breaks Workers-style bundles. The scaffolder must
+    // helpers and breaks edge-style bundles. The scaffolder must
     // teach the /api subpath specifically. The import block must
     // include createPrimitiveClient (for outbound), replyToEmail (the
     // reply endpoint, so --show-sends works and the reply can carry
     // automation headers), getThread (for the per-thread reply cap),
-    // the Workers-safe signature verification helpers, and the
+    // the edge-safe signature verification helpers, and the
     // EmailReceivedEvent type.
     const handler = renderHandler();
     expect(handler).toMatch(/from\s+"@primitivedotdev\/sdk\/api"/);
@@ -77,7 +77,7 @@ describe("renderHandler", () => {
     expect(handler).not.toMatch(/from\s+"@primitivedotdev\/sdk\/webhook"/);
   });
 
-  it("exports a Worker-style default with async fetch(req, env)", () => {
+  it("exports a fetch-handler default with async fetch(req, env)", () => {
     const handler = renderHandler();
     expect(handler).toContain("export default {");
     expect(handler).toContain("async fetch(");
@@ -169,7 +169,7 @@ describe("renderHandler", () => {
   it("shows the exact secret command shape for API keys", () => {
     const handler = renderHandler();
     expect(handler).toContain(
-      "primitive functions set-secret --id <fn-id> --key OPENAI_KEY --value-from-env OPENAI_KEY --redeploy",
+      "primitive functions set-secret --id <fn-id> --key MY_API_KEY --value-from-env MY_API_KEY --redeploy",
     );
   });
 });
@@ -348,8 +348,11 @@ describe("renderPackageJson", () => {
     };
     const range = scaffolded.devDependencies.primitive;
 
-    // Range must be a caret on a 3-part semver: ^X.Y.Z.
-    const rangeMatch = range.match(/^\^(\d+)\.(\d+)\.(\d+)$/);
+    // Range must be a caret on a 3-part semver: ^X.Y.Z, with an optional
+    // prerelease suffix.
+    const rangeMatch = range.match(
+      /^\^(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z.-]+)?$/,
+    );
     expect(rangeMatch, `unexpected CLI range shape: ${range}`).not.toBeNull();
     if (!rangeMatch) return;
     const [, rangeMajor, rangeMinor, rangePatch] = rangeMatch;
@@ -388,7 +391,7 @@ describe("renderPackageJson", () => {
     const range = scaffolded.dependencies["@primitivedotdev/sdk"];
     expect(range, "scaffolded SDK range is missing").toBeDefined();
     expect(
-      range.match(/^\^\d+\.\d+\.\d+$/),
+      range.match(/^\^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/),
       `unexpected SDK range shape: ${range}`,
     ).not.toBeNull();
   });
@@ -536,7 +539,7 @@ describe("writeScaffold", () => {
     expect(readme).toContain("npm run test:function");
     expect(readme).toContain("npm run logs");
     expect(readme).toContain("primitive functions set-secret --id");
-    expect(readme).toContain("--value-from-env OPENAI_KEY --redeploy");
+    expect(readme).toContain("--value-from-env MY_API_KEY --redeploy");
   });
 
   it("refuses to overwrite an existing directory and leaves it untouched", () => {

@@ -418,7 +418,7 @@ Exit codes:
     },
     {
       description: "Click through a magic sign-in link",
-      command: "<%= config.bin %> wait --from vercel.com --link",
+      command: "<%= config.bin %> wait --from accounts.example.com --link",
     },
     {
       description: "Wait up to 90 seconds for a specific subject",
@@ -427,7 +427,8 @@ Exit codes:
     },
     {
       description: "Machine-readable, code included",
-      command: "<%= config.bin %> wait --from stripe.com --code --json",
+      command:
+        "<%= config.bin %> wait --from billing.example.com --code --json",
     },
     {
       description: "The code already arrived before you started waiting",

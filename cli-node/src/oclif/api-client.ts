@@ -19,6 +19,12 @@ import {
   validateCliHeaderValue,
 } from "./cli-config.js";
 import { AGENT_PROFILE_ENV } from "./connected-agent-profile.js";
+import { ORG_SELECTION_ENV } from "./global-org-flag.js";
+import {
+  ensureUserGrantSession,
+  reexchangingFetch,
+  savedLoginReexchange,
+} from "./user-grant.js";
 
 const API_HEADERS_ENV = "PRIMITIVE_API_HEADERS";
 const OAUTH_REFRESH_SKEW_MS = 60 * 1000;
@@ -220,6 +226,56 @@ function oauthErrorDescription(value: unknown): string | null {
   return typeof raw === "string" && raw.trim() ? raw : null;
 }
 
+/** The organization the global `--org` flag (or PRIMITIVE_CLI_ORG) selects, if any. */
+export function selectedOrgFromEnv(env: Env = process.env): string | null {
+  return env[ORG_SELECTION_ENV]?.trim() || null;
+}
+
+/**
+ * Refuse `--org` before a command acts with a connected agent profile's own
+ * key: the profile belongs to one organization and cannot act in another.
+ */
+export function refuseOrgSelectionForProfile(
+  profileName: string | undefined,
+  env: Env = process.env,
+): void {
+  const selection = selectedOrgFromEnv(env);
+  if (!selection) return;
+  const who = profileName
+    ? `Connected agent profile ${profileName}`
+    : "A connected agent credential";
+  throw new Errors.CLIError(
+    `--org (PRIMITIVE_CLI_ORG=${selection}) selects an organization for a saved \`primitive login\`. ${who} belongs to one organization; drop --org, or unset PRIMITIVE_CLI_ORG.`,
+    { exit: 1 },
+  );
+}
+
+function orgMatches(credentials: StoredCliCredentials, selection: string) {
+  const wanted = selection.toLowerCase();
+  return (
+    credentials.org_id.toLowerCase() === wanted ||
+    (credentials.org_name ?? "").trim().toLowerCase() === wanted
+  );
+}
+
+/**
+ * Refuse `--org` for an org-bound login unless it names that login's own
+ * organization: an org-bound login cannot act anywhere else.
+ */
+export function assertOrgBoundSelection(
+  credentials: StoredCliCredentials,
+  selection: string | null,
+): void {
+  if (!selection || orgMatches(credentials, selection)) return;
+  const org = credentials.org_name
+    ? `${credentials.org_name} (${credentials.org_id})`
+    : credentials.org_id;
+  throw new Errors.CLIError(
+    `This saved login is bound to organization ${org}, so --org ${selection} cannot be used with it. Run \`primitive logout\`, then \`primitive login\`, to sign in as yourself and switch between organizations.`,
+    { exit: 1 },
+  );
+}
+
 export async function refreshStoredCliCredentials(params: {
   apiBaseUrl: string;
   configDir: string;
@@ -228,8 +284,30 @@ export async function refreshStoredCliCredentials(params: {
   headers?: Record<string, string>;
   fetch?: FetchFn;
   now?: () => number;
+  /**
+   * The organization to act in. Undefined reads `--org` (PRIMITIVE_CLI_ORG);
+   * null means the login's current organization.
+   */
+  orgSelection?: string | null;
 }): Promise<StoredCliCredentials> {
   const now = params.now ?? Date.now;
+  const orgSelection =
+    params.orgSelection === undefined
+      ? selectedOrgFromEnv()
+      : params.orgSelection;
+  if (params.credentials.auth_method === "user_grant") {
+    return ensureUserGrantSession({
+      apiBaseUrl: params.apiBaseUrl,
+      configDir: params.configDir,
+      credentials: params.credentials,
+      credentialsLockHeld: params.credentialsLockHeld,
+      fetch: params.fetch,
+      headers: params.headers,
+      now,
+      orgSelection,
+    });
+  }
+  assertOrgBoundSelection(params.credentials, orgSelection);
   if (!shouldRefresh(params.credentials, now)) return params.credentials;
 
   let releaseLock: (() => void) | undefined;
@@ -249,6 +327,19 @@ export async function refreshStoredCliCredentials(params: {
         "Saved Primitive CLI OAuth session is no longer available. Run `primitive signin` to authenticate again.",
         { exit: 1 },
       );
+    }
+    if (current.auth_method === "user_grant") {
+      // Replaced by a user login while this command waited for the lock.
+      return ensureUserGrantSession({
+        apiBaseUrl: params.apiBaseUrl,
+        configDir: params.configDir,
+        credentials: current,
+        credentialsLockHeld: true,
+        fetch: params.fetch,
+        headers: params.headers,
+        now,
+        orgSelection,
+      });
     }
     if (!shouldRefresh(current, now)) return current;
 
@@ -353,6 +444,20 @@ export async function createAuthenticatedCliApiClient(params: {
     throw new ConnectedAgentKeyRequiredError(
       "A connected agent credential is required.",
     );
+  const orgSelection = selectedOrgFromEnv(params.env ?? process.env);
+  if (orgSelection && auth.source !== "stored") {
+    throw new Errors.CLIError(
+      `--org (PRIMITIVE_CLI_ORG=${orgSelection}) selects an organization for a saved \`primitive login\`. ${
+        auth.source === "connected-profile"
+          ? "A connected agent profile"
+          : auth.source === "flag-or-env"
+            ? "An API key"
+            : "This command's credential"
+      } belongs to one organization; drop --org, or unset PRIMITIVE_CLI_ORG.`,
+      { exit: 1 },
+    );
+  }
+  let userLoginToken: { current: string } | null = null;
   if (auth.source === "stored" && auth.credentials) {
     const refreshed = await refreshStoredCliCredentials({
       apiBaseUrl: auth.apiBaseUrl,
@@ -362,16 +467,41 @@ export async function createAuthenticatedCliApiClient(params: {
       fetch: params.fetch,
       headers: requestConfig.headers,
       now: params.now,
+      orgSelection,
     });
     auth = {
       ...auth,
       apiKey: refreshed.access_token,
       credentials: refreshed,
     };
+    if (refreshed.auth_method === "user_grant") {
+      userLoginToken = { current: refreshed.access_token };
+    }
   }
+  const tokenHolder = userLoginToken;
   return {
     apiClient: new PrimitiveApiClient({
-      apiKey: auth.apiKey,
+      ...(tokenHolder && auth.credentials
+        ? {
+            // A per-org token from a user login: send whatever token the
+            // last exchange produced, and exchange again on a 401.
+            auth: (security: { type?: string; scheme?: string }) =>
+              security.type === "http" && security.scheme === "bearer"
+                ? tokenHolder.current
+                : undefined,
+            fetch: reexchangingFetch({
+              reexchange: savedLoginReexchange({
+                apiBaseUrl: auth.apiBaseUrl,
+                configDir: params.configDir,
+                fetch: params.fetch,
+                headers: requestConfig.headers,
+                now: params.now,
+                orgId: auth.credentials.org_id,
+              }),
+              token: tokenHolder,
+            }),
+          }
+        : { apiKey: auth.apiKey }),
       apiBaseUrl: auth.apiBaseUrl,
       // A connected profile is bound to its trusted claim origin; ambient
       // request-header configuration is not part of that private profile.

@@ -739,7 +739,8 @@ function formatTimestamp(value: string | null | undefined): string {
 function formatMessage(message: ConversationMessage, index: number): string {
   const who = message.role === "user" ? "them" : "you";
   const header = `--- [${index + 1}] ${message.role} (${who}) ${message.from ?? "unknown"} -> ${message.to ?? "unknown"}, ${formatTimestamp(message.timestamp)}`;
-  const body = message.text.trim() === "" ? "(no text body)" : message.text;
+  const text = message.text ?? "";
+  const body = text.trim() === "" ? "(no text body)" : text;
   return sanitizeForTerminal(`${header}\n${body.replace(/\s+$/, "")}`);
 }
 
@@ -815,7 +816,7 @@ function transcriptFooter(
     case "answer_with_command":
       return [
         "Answer with:",
-        ...commands(["inspect_payment", "pay", "accept_contact"]),
+        ...commands(["accept_contact"]),
         "A plain reply does not complete it. Optional, to also write to the sender:",
         reply,
       ];

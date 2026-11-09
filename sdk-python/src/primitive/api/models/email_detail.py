@@ -9,6 +9,9 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.email_detail_awaiting import EmailDetailAwaiting
+from ..models.email_detail_parse_status_type_1 import EmailDetailParseStatusType1
+from ..models.email_detail_parse_status_type_2_type_1 import EmailDetailParseStatusType2Type1
+from ..models.email_detail_parse_status_type_3_type_1 import EmailDetailParseStatusType3Type1
 from ..models.email_status import EmailStatus
 from ..models.email_webhook_status_type_1 import EmailWebhookStatusType1
 from ..models.email_webhook_status_type_2_type_1 import EmailWebhookStatusType2Type1
@@ -20,12 +23,16 @@ import datetime
 if TYPE_CHECKING:
   from ..models.email_auth import EmailAuth
   from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
+  from ..models.email_detail_collaboration import EmailDetailCollaboration
+  from ..models.email_detail_delivery_report_type_0 import EmailDetailDeliveryReportType0
   from ..models.email_detail_relay_type_0 import EmailDetailRelayType0
   from ..models.email_detail_repeat_type_0 import EmailDetailRepeatType0
   from ..models.email_detail_reply import EmailDetailReply
   from ..models.email_detail_sender_member_type_0 import EmailDetailSenderMemberType0
+  from ..models.email_detail_shared_through_type_0 import EmailDetailSharedThroughType0
+  from ..models.email_detail_understanding_type_0 import EmailDetailUnderstandingType0
   from ..models.parsed_email_data import ParsedEmailData
-  from ..models.presence_control_type_0 import PresenceControlType0
+  from ..models.presence_control import PresenceControl
 
 
 
@@ -91,9 +98,9 @@ class EmailDetail:
                 **This is the canonical "who sent this email" field for
                 most use cases**, including comparing against allowlists,
                 routing replies, or displaying the sender to a user. Use
-                `from_name` when you need the display name, `from_header`
-                for the raw header, or `sender`/`smtp_mail_from` when you
-                need the SMTP envelope value (e.g. to follow a bounce).
+                `from_header` when you specifically need the display name,
+                or `sender`/`smtp_mail_from` when you need the SMTP
+                envelope value (e.g. to follow a bounce).
             to_email (str): Parsed to address (same as recipient)
             sender_connected_agent_verified (bool): True only when this inbound message matches a send made with the
                 current key bound to its sender address as a connected agent.
@@ -109,11 +116,14 @@ class EmailDetail:
                 this inbound's `message_id` in the same org. Includes
                 attempts that were gate-denied, so the array reflects every
                 recorded reply attempt regardless of outcome.
-            parsed (ParsedEmailData): Parsed MIME content for an inbound email. Mirrors the
-                `email.parsed` object on the webhook payload so a single parser
-                handles both surfaces. `status` is `complete` when parsing
-                succeeded; on `failed` the body/address/attachment fields are
-                absent and `error` describes why.
+            parsed (None | ParsedEmailData): Parsed MIME content (addresses, threading headers,
+                attachment metadata), matching the `email.parsed` object
+                on the webhook payload so one parser handles both the
+                webhook and this endpoint. The top-level `body_text` /
+                `body_html` fields above are the same values as
+                `parsed.body_text` / `parsed.body_html`, retained for
+                backward compatibility. May be null: this field carries message content, which is withheld when the content is
+                not available to your credential.
             auth (EmailAuth): SPF / DKIM / DMARC verdicts computed at ingest. Mirrors the
                 `email.auth` object on the webhook payload. Field names are
                 camelCase to match that payload exactly. For messages received
@@ -169,6 +179,21 @@ class EmailDetail:
                 `list_unsubscribe`, `list_id`, `auto_response_suppress`,
                 `failed_recipients`, `report`. Treat an unfamiliar value as a
                 reason added after your client was built.
+            from_verified (bool): Whether the From header domain was authenticated when the message arrived. See
+                EmailSummary.from_verified.
+            from_header_email (None | str): The From header address, lowercased, that `from_verified` is about; null when
+                the message had none. Unlike `sender` it is never the envelope address.
+            from_name (None | str): Display name from the `From:` header, decoded for display: RFC 2047 encoded words are
+                decoded in their declared charset and folded lines are joined (e.g. `Dana Rúiz` for `=?UTF-8?Q?Dana_R=C3=BAiz?=
+                <dana@example.com>`). Null when the header carries no display name. For display only: identify the sender by
+                `from_email`, never by this name, which the sender chooses freely.
+            snippet (None | str): A plain-text preview of `body_text` (never `body_html`), computed once when the message is
+                stored: quoted replies (an "On ... wrote:" line, an "Original Message" separator, a From/Sent header block, `>`
+                lines) and a `-- ` signature are cut off, whitespace is collapsed to single spaces, and the result is at most
+                200 characters. A message with no text body, or with nothing left once quotes and the signature are cut (a
+                quote-only reply), has no snippet. It is not a summary and may end mid-word; read the full body from the detail
+                endpoint. Null wherever the detail endpoint would not show the body: no text body, content not yet available or
+                discarded, a failed parse, or a sender-blocked rejection.
             message_id (None | str | Unset):
             domain_id (None | Unset | UUID):
             org_id (None | Unset | UUID):
@@ -219,20 +244,11 @@ class EmailDetail:
             smtp_rcpt_to (list[str] | None | Unset):
             from_header (None | str | Unset): Raw `From:` header from the message body, including any
                 display name (e.g. `"Alice Example" <alice@example.com>`).
-                The display name in this raw value may be RFC 2047 encoded
-                (`=?UTF-8?Q?...?=`); use `from_name` for the decoded name.
+                Use this when you need the display name for rendering.
 
                 For the bare email address (display name stripped), use
-                `from_email`.
-            from_name (None | str | Unset): Display name from the `From:` header, decoded for display:
-                RFC 2047 encoded words are decoded in their declared charset
-                and folded lines are joined (e.g. `Dana Rúiz` for
-                `=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>`). Null when
-                the header carries no display name, and may be absent; treat
-                a missing value the same as null.
-
-                For display only: the sender chooses this name freely, so
-                identify the sender by `from_email`, never by this name.
+                `from_email`. The display name in this raw value may be RFC 2047 encoded (`=?UTF-8?Q?...?=`); use `from_name`
+                for the decoded name.
             content_discarded_at (datetime.datetime | None | Unset):
             content_discarded_by_delivery_id (None | str | Unset):
             from_known_address (bool | Unset): True when the inbound's sender address has a matching grant
@@ -254,7 +270,7 @@ class EmailDetail:
                 `thread_id`; fetch `/threads/{thread_id}` for the full
                 ordered thread. Assigned at ingest. NULL on messages
                 received before threading was enabled (until backfilled).
-            presence_control (None | PresenceControlType0 | Unset):
+            presence_control (None | PresenceControl | Unset):
             automation_headers (EmailDetailAutomationHeadersType0 | None | Unset): What the message declared about being
                 automated, verbatim:
                 `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
@@ -262,15 +278,10 @@ class EmailDetail:
                 declared none, and on messages received before these headers
                 were captured, so a null value is not evidence that a person
                 sent the message.
-            from_verified (bool | Unset): Whether the From header domain was authenticated when the message arrived. See
-                EmailSummary.from_verified.
-            from_header_email (None | str | Unset): The From header address, lowercased, that `from_verified` is about; null
-                when the message had none. Unlike `sender` it is never the envelope address.
             repeat (EmailDetailRepeatType0 | None | Unset): Set when Primitive sent this message as part of a repeating
                 send. Resolved from Primitive's own records, never from the message content. Null on every other message and on
                 servers that predate repeating sends.
-            sender_member (EmailDetailSenderMemberType0 | None | Unset): Verified human authorship, projected only within
-                the member organization. Historical attribution is not current sending or owner authority.
+            sender_member (EmailDetailSenderMemberType0 | None | Unset):
             fyi (bool | Unset): True when the email is an informational signal (an acknowledgement, read, working or typing
                 signal) and nothing else, so it needs no answer, not even another informational reply. Never true for mail from
                 the reader's owner. Older servers omit it.
@@ -281,10 +292,9 @@ class EmailDetail:
                 header is never used, so an unsigned or forged message is always `none`. `status`: a pure status signal (`read`,
                 `working`, `typing`, or an `ack` in the strict signal shape), shown as a property of the message it is about
                 rather than as a row. `card`: an interaction that renders as its own timeline item (for example `ack-request`,
-                `x402.payment`, `wake.dispatch`, `primitive.contact`, `repeat.tick`, `repeat.stop`). `none`: ordinary mail,
-                including any interaction kind not listed. `pending`: the email has not finished processing; read it again
-                later. Email processed before the field existed is `none`. Treat an unfamiliar value as `none`. Older servers
-                omit it.
+                `wake.dispatch`, `primitive.contact`, `repeat.tick`, `repeat.stop`). `none`: ordinary mail, including any
+                interaction kind not listed. `pending`: the email has not finished processing; read it again later. Email
+                processed before the field existed is `none`. Treat an unfamiliar value as `none`. Older servers omit it.
             interaction_kind (None | str | Unset): The `<protocol>/<version>` that `interaction_hint` was decided from (for
                 example `repeat.tick/1` or `read/1`) when `interaction_hint` is `status` or `card`; null otherwise.
             interaction_candidate (bool | Unset): UNVERIFIED early signal for the `pending` window: true when the raw
@@ -295,6 +305,25 @@ class EmailDetail:
                 anything other than `pending`.
             relay (EmailDetailRelayType0 | None | Unset): Set when the message reached Primitive through a Primitive mail
                 relay. Null for other mail. The field may be absent; treat a missing value the same as null.
+            understanding (EmailDetailUnderstandingType0 | None | Unset): Classification facts for this email. Present only
+                for an org with email rules, where the body is shown. May be null: this field carries message content, which is
+                withheld when the content is not available to your credential.
+            shared_through (EmailDetailSharedThroughType0 | None | Unset): The rule share a reader has this email through,
+                when that is their only way to it. Null for everyone else.
+            parse_status (EmailDetailParseStatusType1 | EmailDetailParseStatusType2Type1 | EmailDetailParseStatusType3Type1
+                | None | Unset): Parsing state on inbox, history, arrival and detail reads. Failed is terminal and differs from
+                valid empty content (complete). Null covers legacy rows. Optional on shared summaries for compatibility with
+                older payloads and other summary endpoints.
+            delivery_report (EmailDetailDeliveryReportType0 | None | Unset): Classified inbound delivery notification, or
+                null. The linked sent_email_id is resolved within the receiving organization; null means uncorrelated. This is a
+                reported outcome, not a rewrite of the original send status. Transient reports may still be retried. Optional
+                for older payloads and other summary endpoints.
+            muted (bool | Unset): True when the reader's address muted this email's thread with `PUT /threads/{id}/mute`.
+                For a connected agent the reader is its own address; for other credentials it is the address the email was
+                delivered to.
+            collaboration (EmailDetailCollaboration | Unset): Facts for deciding how to act on this email, computed by the
+                server under your visibility. Read it before acting: when `newer_inbound_count` is above zero, read the newer
+                messages and answer the latest state once. Carries no text the sender wrote.
      """
 
     id: UUID
@@ -309,13 +338,17 @@ class EmailDetail:
     to_email: str
     sender_connected_agent_verified: bool
     replies: list[EmailDetailReply]
-    parsed: ParsedEmailData
+    parsed: None | ParsedEmailData
     auth: EmailAuth
     reply_count: int
     last_replied_at: datetime.datetime | None
     awaiting: EmailDetailAwaiting
     automated: bool
     automated_reasons: list[str]
+    from_verified: bool
+    from_header_email: None | str
+    from_name: None | str
+    snippet: None | str
     message_id: None | str | Unset = UNSET
     domain_id: None | Unset | UUID = UNSET
     org_id: None | Unset | UUID = UNSET
@@ -335,16 +368,13 @@ class EmailDetail:
     smtp_mail_from: None | str | Unset = UNSET
     smtp_rcpt_to: list[str] | None | Unset = UNSET
     from_header: None | str | Unset = UNSET
-    from_name: None | str | Unset = UNSET
     content_discarded_at: datetime.datetime | None | Unset = UNSET
     content_discarded_by_delivery_id: None | str | Unset = UNSET
     from_known_address: bool | Unset = UNSET
     reply_to_sent_email_id: None | Unset | UUID = UNSET
     thread_id: None | Unset | UUID = UNSET
-    presence_control: None | PresenceControlType0 | Unset = UNSET
+    presence_control: None | PresenceControl | Unset = UNSET
     automation_headers: EmailDetailAutomationHeadersType0 | None | Unset = UNSET
-    from_verified: bool | Unset = UNSET
-    from_header_email: None | str | Unset = UNSET
     repeat: EmailDetailRepeatType0 | None | Unset = UNSET
     sender_member: EmailDetailSenderMemberType0 | None | Unset = UNSET
     fyi: bool | Unset = UNSET
@@ -352,6 +382,12 @@ class EmailDetail:
     interaction_kind: None | str | Unset = UNSET
     interaction_candidate: bool | Unset = UNSET
     relay: EmailDetailRelayType0 | None | Unset = UNSET
+    understanding: EmailDetailUnderstandingType0 | None | Unset = UNSET
+    shared_through: EmailDetailSharedThroughType0 | None | Unset = UNSET
+    parse_status: EmailDetailParseStatusType1 | EmailDetailParseStatusType2Type1 | EmailDetailParseStatusType3Type1 | None | Unset = UNSET
+    delivery_report: EmailDetailDeliveryReportType0 | None | Unset = UNSET
+    muted: bool | Unset = UNSET
+    collaboration: EmailDetailCollaboration | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -361,12 +397,16 @@ class EmailDetail:
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_auth import EmailAuth # noqa: PLC0415
         from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0 # noqa: PLC0415
+        from ..models.email_detail_collaboration import EmailDetailCollaboration # noqa: PLC0415
+        from ..models.email_detail_delivery_report_type_0 import EmailDetailDeliveryReportType0 # noqa: PLC0415
         from ..models.email_detail_relay_type_0 import EmailDetailRelayType0 # noqa: PLC0415
         from ..models.email_detail_repeat_type_0 import EmailDetailRepeatType0 # noqa: PLC0415
         from ..models.email_detail_reply import EmailDetailReply # noqa: PLC0415
         from ..models.email_detail_sender_member_type_0 import EmailDetailSenderMemberType0 # noqa: PLC0415
+        from ..models.email_detail_shared_through_type_0 import EmailDetailSharedThroughType0 # noqa: PLC0415
+        from ..models.email_detail_understanding_type_0 import EmailDetailUnderstandingType0 # noqa: PLC0415
         from ..models.parsed_email_data import ParsedEmailData # noqa: PLC0415
-        from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
+        from ..models.presence_control import PresenceControl # noqa: PLC0415
         id = str(self.id)
 
         sender = self.sender
@@ -396,7 +436,11 @@ class EmailDetail:
 
 
 
-        parsed = self.parsed.to_dict()
+        parsed: dict[str, Any] | None
+        if isinstance(self.parsed, ParsedEmailData):
+            parsed = self.parsed.to_dict()
+        else:
+            parsed = self.parsed
 
         auth = self.auth.to_dict()
 
@@ -415,6 +459,17 @@ class EmailDetail:
         automated_reasons = self.automated_reasons
 
 
+
+        from_verified = self.from_verified
+
+        from_header_email: None | str
+        from_header_email = self.from_header_email
+
+        from_name: None | str
+        from_name = self.from_name
+
+        snippet: None | str
+        snippet = self.snippet
 
         message_id: None | str | Unset
         if isinstance(self.message_id, Unset):
@@ -548,12 +603,6 @@ class EmailDetail:
         else:
             from_header = self.from_header
 
-        from_name: None | str | Unset
-        if isinstance(self.from_name, Unset):
-            from_name = UNSET
-        else:
-            from_name = self.from_name
-
         content_discarded_at: None | str | Unset
         if isinstance(self.content_discarded_at, Unset):
             content_discarded_at = UNSET
@@ -589,7 +638,7 @@ class EmailDetail:
         presence_control: dict[str, Any] | None | Unset
         if isinstance(self.presence_control, Unset):
             presence_control = UNSET
-        elif isinstance(self.presence_control, PresenceControlType0):
+        elif isinstance(self.presence_control, PresenceControl):
             presence_control = self.presence_control.to_dict()
         else:
             presence_control = self.presence_control
@@ -601,14 +650,6 @@ class EmailDetail:
             automation_headers = self.automation_headers.to_dict()
         else:
             automation_headers = self.automation_headers
-
-        from_verified = self.from_verified
-
-        from_header_email: None | str | Unset
-        if isinstance(self.from_header_email, Unset):
-            from_header_email = UNSET
-        else:
-            from_header_email = self.from_header_email
 
         repeat: dict[str, Any] | None | Unset
         if isinstance(self.repeat, Unset):
@@ -646,6 +687,48 @@ class EmailDetail:
         else:
             relay = self.relay
 
+        understanding: dict[str, Any] | None | Unset
+        if isinstance(self.understanding, Unset):
+            understanding = UNSET
+        elif isinstance(self.understanding, EmailDetailUnderstandingType0):
+            understanding = self.understanding.to_dict()
+        else:
+            understanding = self.understanding
+
+        shared_through: dict[str, Any] | None | Unset
+        if isinstance(self.shared_through, Unset):
+            shared_through = UNSET
+        elif isinstance(self.shared_through, EmailDetailSharedThroughType0):
+            shared_through = self.shared_through.to_dict()
+        else:
+            shared_through = self.shared_through
+
+        parse_status: None | str | Unset
+        if isinstance(self.parse_status, Unset):
+            parse_status = UNSET
+        elif isinstance(self.parse_status, EmailDetailParseStatusType1):
+            parse_status = self.parse_status.value
+        elif isinstance(self.parse_status, EmailDetailParseStatusType2Type1):
+            parse_status = self.parse_status.value
+        elif isinstance(self.parse_status, EmailDetailParseStatusType3Type1):
+            parse_status = self.parse_status.value
+        else:
+            parse_status = self.parse_status
+
+        delivery_report: dict[str, Any] | None | Unset
+        if isinstance(self.delivery_report, Unset):
+            delivery_report = UNSET
+        elif isinstance(self.delivery_report, EmailDetailDeliveryReportType0):
+            delivery_report = self.delivery_report.to_dict()
+        else:
+            delivery_report = self.delivery_report
+
+        muted = self.muted
+
+        collaboration: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.collaboration, Unset):
+            collaboration = self.collaboration.to_dict()
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -669,6 +752,10 @@ class EmailDetail:
             "awaiting": awaiting,
             "automated": automated,
             "automated_reasons": automated_reasons,
+            "from_verified": from_verified,
+            "from_header_email": from_header_email,
+            "from_name": from_name,
+            "snippet": snippet,
         })
         if message_id is not UNSET:
             field_dict["message_id"] = message_id
@@ -708,8 +795,6 @@ class EmailDetail:
             field_dict["smtp_rcpt_to"] = smtp_rcpt_to
         if from_header is not UNSET:
             field_dict["from_header"] = from_header
-        if from_name is not UNSET:
-            field_dict["from_name"] = from_name
         if content_discarded_at is not UNSET:
             field_dict["content_discarded_at"] = content_discarded_at
         if content_discarded_by_delivery_id is not UNSET:
@@ -724,10 +809,6 @@ class EmailDetail:
             field_dict["presence_control"] = presence_control
         if automation_headers is not UNSET:
             field_dict["automation_headers"] = automation_headers
-        if from_verified is not UNSET:
-            field_dict["from_verified"] = from_verified
-        if from_header_email is not UNSET:
-            field_dict["from_header_email"] = from_header_email
         if repeat is not UNSET:
             field_dict["repeat"] = repeat
         if sender_member is not UNSET:
@@ -742,6 +823,18 @@ class EmailDetail:
             field_dict["interaction_candidate"] = interaction_candidate
         if relay is not UNSET:
             field_dict["relay"] = relay
+        if understanding is not UNSET:
+            field_dict["understanding"] = understanding
+        if shared_through is not UNSET:
+            field_dict["shared_through"] = shared_through
+        if parse_status is not UNSET:
+            field_dict["parse_status"] = parse_status
+        if delivery_report is not UNSET:
+            field_dict["delivery_report"] = delivery_report
+        if muted is not UNSET:
+            field_dict["muted"] = muted
+        if collaboration is not UNSET:
+            field_dict["collaboration"] = collaboration
 
         return field_dict
 
@@ -751,12 +844,16 @@ class EmailDetail:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_auth import EmailAuth # noqa: PLC0415
         from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0 # noqa: PLC0415
+        from ..models.email_detail_collaboration import EmailDetailCollaboration # noqa: PLC0415
+        from ..models.email_detail_delivery_report_type_0 import EmailDetailDeliveryReportType0 # noqa: PLC0415
         from ..models.email_detail_relay_type_0 import EmailDetailRelayType0 # noqa: PLC0415
         from ..models.email_detail_repeat_type_0 import EmailDetailRepeatType0 # noqa: PLC0415
         from ..models.email_detail_reply import EmailDetailReply # noqa: PLC0415
         from ..models.email_detail_sender_member_type_0 import EmailDetailSenderMemberType0 # noqa: PLC0415
+        from ..models.email_detail_shared_through_type_0 import EmailDetailSharedThroughType0 # noqa: PLC0415
+        from ..models.email_detail_understanding_type_0 import EmailDetailUnderstandingType0 # noqa: PLC0415
         from ..models.parsed_email_data import ParsedEmailData # noqa: PLC0415
-        from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
+        from ..models.presence_control import PresenceControl # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -802,9 +899,22 @@ class EmailDetail:
             replies.append(replies_item)
 
 
-        parsed = ParsedEmailData.from_dict(d.pop("parsed"))
+        def _parse_parsed(data: object) -> None | ParsedEmailData:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                parsed_type_1 = ParsedEmailData.from_dict(data)
 
 
+
+                return parsed_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | ParsedEmailData, data)
+
+        parsed = _parse_parsed(d.pop("parsed"))
 
 
         auth = EmailAuth.from_dict(d.pop("auth"))
@@ -840,6 +950,32 @@ class EmailDetail:
         automated = d.pop("automated")
 
         automated_reasons = cast(list[str], d.pop("automated_reasons"))
+
+
+        from_verified = d.pop("from_verified")
+
+        def _parse_from_header_email(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        from_header_email = _parse_from_header_email(d.pop("from_header_email"))
+
+
+        def _parse_from_name(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        from_name = _parse_from_name(d.pop("from_name"))
+
+
+        def _parse_snippet(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        snippet = _parse_snippet(d.pop("snippet"))
 
 
         def _parse_message_id(data: object) -> None | str | Unset:
@@ -1110,16 +1246,6 @@ class EmailDetail:
         from_header = _parse_from_header(d.pop("from_header", UNSET))
 
 
-        def _parse_from_name(data: object) -> None | str | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            return cast(None | str | Unset, data)
-
-        from_name = _parse_from_name(d.pop("from_name", UNSET))
-
-
         def _parse_content_discarded_at(data: object) -> datetime.datetime | None | Unset:
             if data is None:
                 return data
@@ -1192,7 +1318,7 @@ class EmailDetail:
         thread_id = _parse_thread_id(d.pop("thread_id", UNSET))
 
 
-        def _parse_presence_control(data: object) -> None | PresenceControlType0 | Unset:
+        def _parse_presence_control(data: object) -> None | PresenceControl | Unset:
             if data is None:
                 return data
             if isinstance(data, Unset):
@@ -1200,14 +1326,14 @@ class EmailDetail:
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                componentsschemas_presence_control_type_0 = PresenceControlType0.from_dict(data)
+                presence_control_type_1 = PresenceControl.from_dict(data)
 
 
 
-                return componentsschemas_presence_control_type_0
+                return presence_control_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(None | PresenceControlType0 | Unset, data)
+            return cast(None | PresenceControl | Unset, data)
 
         presence_control = _parse_presence_control(d.pop("presence_control", UNSET))
 
@@ -1230,18 +1356,6 @@ class EmailDetail:
             return cast(EmailDetailAutomationHeadersType0 | None | Unset, data)
 
         automation_headers = _parse_automation_headers(d.pop("automation_headers", UNSET))
-
-
-        from_verified = d.pop("from_verified", UNSET)
-
-        def _parse_from_header_email(data: object) -> None | str | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            return cast(None | str | Unset, data)
-
-        from_header_email = _parse_from_header_email(d.pop("from_header_email", UNSET))
 
 
         def _parse_repeat(data: object) -> EmailDetailRepeatType0 | None | Unset:
@@ -1320,6 +1434,118 @@ class EmailDetail:
         relay = _parse_relay(d.pop("relay", UNSET))
 
 
+        def _parse_understanding(data: object) -> EmailDetailUnderstandingType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                understanding_type_0 = EmailDetailUnderstandingType0.from_dict(data)
+
+
+
+                return understanding_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailDetailUnderstandingType0 | None | Unset, data)
+
+        understanding = _parse_understanding(d.pop("understanding", UNSET))
+
+
+        def _parse_shared_through(data: object) -> EmailDetailSharedThroughType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                shared_through_type_0 = EmailDetailSharedThroughType0.from_dict(data)
+
+
+
+                return shared_through_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailDetailSharedThroughType0 | None | Unset, data)
+
+        shared_through = _parse_shared_through(d.pop("shared_through", UNSET))
+
+
+        def _parse_parse_status(data: object) -> EmailDetailParseStatusType1 | EmailDetailParseStatusType2Type1 | EmailDetailParseStatusType3Type1 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                parse_status_type_1 = EmailDetailParseStatusType1(data)
+
+
+
+                return parse_status_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                parse_status_type_2_type_1 = EmailDetailParseStatusType2Type1(data)
+
+
+
+                return parse_status_type_2_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                parse_status_type_3_type_1 = EmailDetailParseStatusType3Type1(data)
+
+
+
+                return parse_status_type_3_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailDetailParseStatusType1 | EmailDetailParseStatusType2Type1 | EmailDetailParseStatusType3Type1 | None | Unset, data)
+
+        parse_status = _parse_parse_status(d.pop("parse_status", UNSET))
+
+
+        def _parse_delivery_report(data: object) -> EmailDetailDeliveryReportType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                delivery_report_type_0 = EmailDetailDeliveryReportType0.from_dict(data)
+
+
+
+                return delivery_report_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailDetailDeliveryReportType0 | None | Unset, data)
+
+        delivery_report = _parse_delivery_report(d.pop("delivery_report", UNSET))
+
+
+        muted = d.pop("muted", UNSET)
+
+        _collaboration = d.pop("collaboration", UNSET)
+        collaboration: EmailDetailCollaboration | Unset
+        if isinstance(_collaboration,  Unset):
+            collaboration = UNSET
+        else:
+            collaboration = EmailDetailCollaboration.from_dict(_collaboration)
+
+
+
+
         email_detail = cls(
             id=id,
             sender=sender,
@@ -1340,6 +1566,10 @@ class EmailDetail:
             awaiting=awaiting,
             automated=automated,
             automated_reasons=automated_reasons,
+            from_verified=from_verified,
+            from_header_email=from_header_email,
+            from_name=from_name,
+            snippet=snippet,
             message_id=message_id,
             domain_id=domain_id,
             org_id=org_id,
@@ -1359,7 +1589,6 @@ class EmailDetail:
             smtp_mail_from=smtp_mail_from,
             smtp_rcpt_to=smtp_rcpt_to,
             from_header=from_header,
-            from_name=from_name,
             content_discarded_at=content_discarded_at,
             content_discarded_by_delivery_id=content_discarded_by_delivery_id,
             from_known_address=from_known_address,
@@ -1367,8 +1596,6 @@ class EmailDetail:
             thread_id=thread_id,
             presence_control=presence_control,
             automation_headers=automation_headers,
-            from_verified=from_verified,
-            from_header_email=from_header_email,
             repeat=repeat,
             sender_member=sender_member,
             fyi=fyi,
@@ -1376,6 +1603,12 @@ class EmailDetail:
             interaction_kind=interaction_kind,
             interaction_candidate=interaction_candidate,
             relay=relay,
+            understanding=understanding,
+            shared_through=shared_through,
+            parse_status=parse_status,
+            delivery_report=delivery_report,
+            muted=muted,
+            collaboration=collaboration,
         )
 
 

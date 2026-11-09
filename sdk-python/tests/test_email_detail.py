@@ -43,6 +43,10 @@ SAMPLE = {
     "smtp_mail_from": "alice@example.com",
     "smtp_rcpt_to": ["support@example.com"],
     "from_header": "Alice <alice@example.com>",
+    "from_header_email": "alice@example.com",
+    "from_name": "Alice",
+    "from_verified": True,
+    "snippet": "Hi there",
     "content_discarded_at": None,
     "content_discarded_by_delivery_id": None,
     "from_email": "alice@example.com",
@@ -128,6 +132,7 @@ def test_email_detail_surfaces_replies_array() -> None:
 def test_email_detail_surfaces_thread_parsed_auth() -> None:
     detail = EmailDetail.from_dict(SAMPLE)
     assert str(detail.thread_id) == "44444444-4444-4444-4444-444444444444"
+    assert detail.parsed is not None
     assert detail.parsed.status == "complete"
     assert detail.auth.spf == "pass"
 
@@ -236,10 +241,9 @@ def test_email_detail_relay_delivery_is_optional() -> None:
     assert serialized[1]["smtp_code"] is None
 
 
-def test_email_detail_from_name_is_optional_and_nullable() -> None:
-    absent = EmailDetail.from_dict(SAMPLE)
-    assert absent.from_name is UNSET
-    assert "from_name" not in absent.to_dict()
+def test_email_detail_from_name_is_required_and_nullable() -> None:
+    present = EmailDetail.from_dict(SAMPLE)
+    assert present.from_name == "Alice"
 
     null = EmailDetail.from_dict({**SAMPLE, "from_name": None})
     assert null.from_name is None

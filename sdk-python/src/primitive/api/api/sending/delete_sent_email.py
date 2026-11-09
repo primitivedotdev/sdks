@@ -122,16 +122,15 @@ def sync_detailed(
 ) -> Response[DeleteSentEmailResponse200 | ErrorResponse]:
     """ Delete a sent email
 
-     Permanently deletes sender mailbox history and its owned attachment archive
-    and transient payload. Allows delivered, bounced, agent_failed, gate_denied,
-    canceled, deferred and wait_timeout; other states return 409. Cancel scheduled
-    sends first. This does not recall or cancel delivery already admitted.
-    Recipient copies, received replies and independent audit records are preserved.
-    Occupied idempotency keys and delivered-reply deduplication remain reserved.
-    Keys already released by cancellation, gate denial or a never-attempted failure
-    remain reusable. Repeating a completed deletion succeeds; unknown or foreign
-    IDs return 404. Organization API keys, sessions and OAuth are supported;
-    Function and connected-agent credentials are denied.
+     Permanently deletes eligible sender mailbox history and its owned attachment archive and transient
+    payload. Allows delivered, bounced, agent_failed, gate_denied, canceled, deferred and wait_timeout;
+    other states return 409 (cancel scheduled sends first). Preserves recipient copies, received replies
+    and independent interaction/delivery audit. This does not recall or cancel delivery already
+    admitted. A minimal non-content record preserves occupied idempotency keys and delivered-reply
+    deduplication. Keys already released by cancellation, gate denial or a never-attempted failure
+    remain reusable; deleting those records does not revoke their existing retry permission. Repeating a
+    completed deletion returns success; unknown or foreign IDs return 404. Organization API keys,
+    sessions and OAuth are supported; Function and connected-agent credentials are denied.
 
     Args:
         id (UUID):
@@ -164,16 +163,15 @@ def sync(
 ) -> DeleteSentEmailResponse200 | ErrorResponse | None:
     """ Delete a sent email
 
-     Permanently deletes sender mailbox history and its owned attachment archive
-    and transient payload. Allows delivered, bounced, agent_failed, gate_denied,
-    canceled, deferred and wait_timeout; other states return 409. Cancel scheduled
-    sends first. This does not recall or cancel delivery already admitted.
-    Recipient copies, received replies and independent audit records are preserved.
-    Occupied idempotency keys and delivered-reply deduplication remain reserved.
-    Keys already released by cancellation, gate denial or a never-attempted failure
-    remain reusable. Repeating a completed deletion succeeds; unknown or foreign
-    IDs return 404. Organization API keys, sessions and OAuth are supported;
-    Function and connected-agent credentials are denied.
+     Permanently deletes eligible sender mailbox history and its owned attachment archive and transient
+    payload. Allows delivered, bounced, agent_failed, gate_denied, canceled, deferred and wait_timeout;
+    other states return 409 (cancel scheduled sends first). Preserves recipient copies, received replies
+    and independent interaction/delivery audit. This does not recall or cancel delivery already
+    admitted. A minimal non-content record preserves occupied idempotency keys and delivered-reply
+    deduplication. Keys already released by cancellation, gate denial or a never-attempted failure
+    remain reusable; deleting those records does not revoke their existing retry permission. Repeating a
+    completed deletion returns success; unknown or foreign IDs return 404. Organization API keys,
+    sessions and OAuth are supported; Function and connected-agent credentials are denied.
 
     Args:
         id (UUID):
@@ -201,16 +199,15 @@ async def asyncio_detailed(
 ) -> Response[DeleteSentEmailResponse200 | ErrorResponse]:
     """ Delete a sent email
 
-     Permanently deletes sender mailbox history and its owned attachment archive
-    and transient payload. Allows delivered, bounced, agent_failed, gate_denied,
-    canceled, deferred and wait_timeout; other states return 409. Cancel scheduled
-    sends first. This does not recall or cancel delivery already admitted.
-    Recipient copies, received replies and independent audit records are preserved.
-    Occupied idempotency keys and delivered-reply deduplication remain reserved.
-    Keys already released by cancellation, gate denial or a never-attempted failure
-    remain reusable. Repeating a completed deletion succeeds; unknown or foreign
-    IDs return 404. Organization API keys, sessions and OAuth are supported;
-    Function and connected-agent credentials are denied.
+     Permanently deletes eligible sender mailbox history and its owned attachment archive and transient
+    payload. Allows delivered, bounced, agent_failed, gate_denied, canceled, deferred and wait_timeout;
+    other states return 409 (cancel scheduled sends first). Preserves recipient copies, received replies
+    and independent interaction/delivery audit. This does not recall or cancel delivery already
+    admitted. A minimal non-content record preserves occupied idempotency keys and delivered-reply
+    deduplication. Keys already released by cancellation, gate denial or a never-attempted failure
+    remain reusable; deleting those records does not revoke their existing retry permission. Repeating a
+    completed deletion returns success; unknown or foreign IDs return 404. Organization API keys,
+    sessions and OAuth are supported; Function and connected-agent credentials are denied.
 
     Args:
         id (UUID):
@@ -243,16 +240,15 @@ async def asyncio(
 ) -> DeleteSentEmailResponse200 | ErrorResponse | None:
     """ Delete a sent email
 
-     Permanently deletes sender mailbox history and its owned attachment archive
-    and transient payload. Allows delivered, bounced, agent_failed, gate_denied,
-    canceled, deferred and wait_timeout; other states return 409. Cancel scheduled
-    sends first. This does not recall or cancel delivery already admitted.
-    Recipient copies, received replies and independent audit records are preserved.
-    Occupied idempotency keys and delivered-reply deduplication remain reserved.
-    Keys already released by cancellation, gate denial or a never-attempted failure
-    remain reusable. Repeating a completed deletion succeeds; unknown or foreign
-    IDs return 404. Organization API keys, sessions and OAuth are supported;
-    Function and connected-agent credentials are denied.
+     Permanently deletes eligible sender mailbox history and its owned attachment archive and transient
+    payload. Allows delivered, bounced, agent_failed, gate_denied, canceled, deferred and wait_timeout;
+    other states return 409 (cancel scheduled sends first). Preserves recipient copies, received replies
+    and independent interaction/delivery audit. This does not recall or cancel delivery already
+    admitted. A minimal non-content record preserves occupied idempotency keys and delivered-reply
+    deduplication. Keys already released by cancellation, gate denial or a never-attempted failure
+    remain reusable; deleting those records does not revoke their existing retry permission. Repeating a
+    completed deletion returns success; unknown or foreign IDs return 404. Organization API keys,
+    sessions and OAuth are supported; Function and connected-agent credentials are denied.
 
     Args:
         id (UUID):

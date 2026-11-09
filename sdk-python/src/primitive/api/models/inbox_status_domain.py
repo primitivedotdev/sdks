@@ -56,6 +56,7 @@ class InboxStatusDomain:
     email_count: int
     latest_email_received_at: datetime.datetime | None
     status: InboxStatusDomainStatus
+    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
 
@@ -96,7 +97,7 @@ class InboxStatusDomain:
 
 
         field_dict: dict[str, Any] = {}
-
+        field_dict.update(self.additional_properties)
         field_dict.update({
             "id": id,
             "domain": domain,
@@ -185,5 +186,22 @@ class InboxStatusDomain:
             status=status,
         )
 
+
+        inbox_status_domain.additional_properties = d
         return inbox_status_domain
 
+    @property
+    def additional_keys(self) -> list[str]:
+        return list(self.additional_properties.keys())
+
+    def __getitem__(self, key: str) -> Any:
+        return self.additional_properties[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.additional_properties[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.additional_properties[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.additional_properties

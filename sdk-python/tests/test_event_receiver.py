@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import httpx
 import pytest
@@ -80,6 +80,51 @@ async def test_receipt_and_subscription_lifecycle() -> None:
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize(
+    "withheld",
+    FIXTURE["withheld_deliveries"],
+    ids=[case["name"] for case in FIXTURE["withheld_deliveries"]],
+)
+async def test_withheld_body_surfaces_as_none_body_and_data(
+    withheld: dict[str, Any],
+) -> None:
+    async def fetch(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/pull"):
+            data: object = {
+                "delivery": withheld["delivery"],
+                "backlog": 0,
+                "gap_count": 0,
+                "last_gap_reason": None,
+                "retention_seconds": 86400,
+                "handler_timeout_seconds": 30,
+            }
+        elif request.url.path.endswith("/complete"):
+            data = {"result": "completed"}
+        else:
+            data = {
+                "id": "endpoint",
+                "kind": "pull",
+                "receiver_capabilities": {
+                    "completion_modes": ["sdk"],
+                    "stream_protocols": ["primitive.events.v1"],
+                },
+            }
+        return httpx.Response(200, json={"success": True, "data": data})
+
+    async with httpx.AsyncClient(
+        base_url="https://api.example.test/v1/", transport=httpx.MockTransport(fetch)
+    ) as http:
+        client = PrimitiveClient("pconn_test")
+        client.api_client.set_async_httpx_client(http)
+        delivery = await client.events.wait(subscription="agent", transport="poll")
+        assert delivery is not None
+        assert delivery.event.body is None
+        assert delivery.event.data is None
+        assert delivery.event.id == FIXTURE["delivery"]["event_id"]
+        await delivery.ack()
+
+
+@pytest.mark.anyio
 async def test_account_key_is_refused_before_any_request() -> None:
     requests: list[httpx.Request] = []
 
@@ -92,7 +137,9 @@ async def test_account_key_is_refused_before_any_request() -> None:
     ) as http:
         client = PrimitiveClient("prim_account")
         client.api_client.set_async_httpx_client(http)
-        with pytest.raises(EventReceiverError, match="connected agent credential") as raised:
+        with pytest.raises(
+            EventReceiverError, match="connected agent credential"
+        ) as raised:
             await client.events.wait(subscription="agent", transport="poll")
         assert raised.value.code == "pull_subscription_requires_agent_connection"
         assert raised.value.status == 403

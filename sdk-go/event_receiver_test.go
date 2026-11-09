@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v2/api"
+	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v3/api"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -23,6 +23,11 @@ import (
 type receiverFixture struct {
 	InvalidNames []string          `json:"invalid_names"`
 	Delivery     eventWireDelivery `json:"delivery"`
+	// Raw JSON objects, so a case can leave the body key out entirely.
+	WithheldDeliveries []struct {
+		Name     string                 `json:"name"`
+		Delivery map[string]interface{} `json:"delivery"`
+	} `json:"withheld_deliveries"`
 }
 
 func loadReceiverFixture(t *testing.T) receiverFixture {
@@ -37,6 +42,62 @@ func loadReceiverFixture(t *testing.T) receiverFixture {
 	}
 	return fixture
 }
+func TestEventsWaitSurfacesWithheldBody(t *testing.T) {
+	fixture := loadReceiverFixture(t)
+	if len(fixture.WithheldDeliveries) == 0 {
+		t.Fatal("fixture has no withheld deliveries")
+	}
+	for _, withheldCase := range fixture.WithheldDeliveries {
+		t.Run(withheldCase.Name, func(t *testing.T) {
+			withheld := map[string]interface{}{}
+			for key, value := range withheldCase.Delivery {
+				withheld[key] = value
+			}
+			withheld["lease_expires_at"] = time.Now().Add(time.Minute).UTC().Format(time.RFC3339Nano)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				var data interface{}
+				switch r.URL.Path {
+				case "/v1/endpoints":
+					data = map[string]interface{}{"id": "endpoint", "kind": "pull", "receiver_capabilities": map[string]interface{}{"completion_modes": []string{"sdk"}, "stream_protocols": []string{"primitive.events.v1"}}}
+				case "/v1/endpoints/endpoint/pull":
+					data = map[string]interface{}{"delivery": withheld, "backlog": 0, "gap_count": 0, "last_gap_reason": nil, "retention_seconds": 86400, "handler_timeout_seconds": 30}
+				case "/v1/endpoints/endpoint/complete":
+					data = map[string]interface{}{"result": "completed"}
+				default:
+					t.Errorf("unexpected path %s", r.URL.Path)
+				}
+				_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "data": data})
+			}))
+			defer server.Close()
+			client, err := NewClientWithOptions("pconn_test", ClientOptions{APIBaseURL1: "http://127.0.0.1:1/v1"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			override, err := url.Parse(server.URL + "/v1")
+			if err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			ctx = primitiveapi.WithServerURL(ctx, override)
+			delivery, err := client.Events.Wait(ctx, EventOptions{Subscription: "agent", Transport: "poll"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if delivery.Event.Body != nil || delivery.Event.Data != nil {
+				t.Fatalf("withheld body surfaced as %v / %s", delivery.Event.Body, delivery.Event.Data)
+			}
+			var target map[string]interface{}
+			if err := delivery.Event.Decode(&target); !errors.Is(err, ErrEventContentWithheld) {
+				t.Fatalf("Decode on a withheld body: got %v", err)
+			}
+			if err := delivery.Ack(); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
 func TestEventsWaitReceiptLifecycle(t *testing.T) {
 	fixture := loadReceiverFixture(t)
 	var mu sync.Mutex
@@ -84,7 +145,7 @@ func TestEventsWaitReceiptLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if delivery.Event.Body != fixture.Delivery.Body || delivery.Event.ID != fixture.Delivery.EventID {
+	if delivery.Event.Body == nil || fixture.Delivery.Body == nil || *delivery.Event.Body != *fixture.Delivery.Body || delivery.Event.ID != fixture.Delivery.EventID {
 		t.Fatal("body or identity changed")
 	}
 	mu.Lock()

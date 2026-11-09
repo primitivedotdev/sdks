@@ -1,5 +1,5 @@
 /**
- * Webhook HMAC Signing (Stripe-style format)
+ * Webhook HMAC Signing
  *
  * Implements HMAC-SHA256 signature for webhook security with timestamp validation.
  * Prevents replay attacks by including timestamp in signature.
@@ -9,8 +9,8 @@
  *
  * Signed payload format: "{timestamp}.{raw_body}"
  *
- * This format matches Stripe's webhook signature scheme, which is widely understood
- * and easy to implement in any language with ~15 lines of code.
+ * A timestamped HMAC over the raw body is easy to verify in any language with
+ * ~15 lines of code.
  */
 
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";

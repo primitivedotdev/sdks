@@ -42,6 +42,24 @@ describe("checkExistingLogin", () => {
     rmSync(tempDir, { force: true, recursive: true });
   });
 
+  it("treats a grant refusal as a valid saved login", async () => {
+    saveCliCredentials(tempDir, CREDENTIALS);
+
+    const result = await checkExistingLogin({
+      configDir: tempDir,
+      credentials: CREDENTIALS,
+      checkAccount: async () => ({
+        error: {
+          success: false,
+          error: { code: "grant_forbidden", message: "Not allowed" },
+        },
+      }),
+    });
+
+    expect(result).toEqual({ status: "valid" });
+    expect(loadCliCredentials(tempDir)).toEqual(CREDENTIALS);
+  });
+
   it("reports a valid saved login without removing credentials", async () => {
     saveCliCredentials(tempDir, CREDENTIALS);
 

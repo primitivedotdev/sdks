@@ -12,9 +12,17 @@ from ...models.email_status import EmailStatus
 from ...models.error_response import ErrorResponse
 from ...models.list_emails_automated import ListEmailsAutomated
 from ...models.list_emails_awaiting import ListEmailsAwaiting
+from ...models.list_emails_content_discarded import ListEmailsContentDiscarded
 from ...models.list_emails_exclude_fyi import ListEmailsExcludeFyi
+from ...models.list_emails_exclude_muted import ListEmailsExcludeMuted
 from ...models.list_emails_from_verified import ListEmailsFromVerified
+from ...models.list_emails_group import ListEmailsGroup
+from ...models.list_emails_include_presence import ListEmailsIncludePresence
+from ...models.list_emails_kind import ListEmailsKind
 from ...models.list_emails_response_200 import ListEmailsResponse200
+from ...models.list_emails_search_case_sensitive import ListEmailsSearchCaseSensitive
+from ...models.list_emails_search_negate import ListEmailsSearchNegate
+from ...models.list_emails_search_regex import ListEmailsSearchRegex
 from ...types import UNSET, Unset
 from typing import cast
 from uuid import UUID
@@ -35,10 +43,19 @@ def _get_kwargs(
     wait: int | Unset = UNSET,
     awaiting: ListEmailsAwaiting | Unset = UNSET,
     automated: ListEmailsAutomated | Unset = UNSET,
-    from_verified: ListEmailsFromVerified | Unset = UNSET,
     recipient: str | Unset = UNSET,
     exclude_fyi: ListEmailsExcludeFyi | Unset = UNSET,
+    from_verified: ListEmailsFromVerified | Unset = UNSET,
     include: str | Unset = UNSET,
+    thread_id: UUID | Unset = UNSET,
+    exclude_muted: ListEmailsExcludeMuted | Unset = UNSET,
+    search_regex: ListEmailsSearchRegex | Unset = UNSET,
+    search_case_sensitive: ListEmailsSearchCaseSensitive | Unset = UNSET,
+    search_negate: ListEmailsSearchNegate | Unset = UNSET,
+    kind: ListEmailsKind | Unset = UNSET,
+    content_discarded: ListEmailsContentDiscarded | Unset = UNSET,
+    group: ListEmailsGroup | Unset = UNSET,
+    include_presence: ListEmailsIncludePresence | Unset = UNSET,
 
 ) -> dict[str, Any]:
     
@@ -90,12 +107,6 @@ def _get_kwargs(
 
     params["automated"] = json_automated
 
-    json_from_verified: str | Unset = UNSET
-    if not isinstance(from_verified, Unset):
-        json_from_verified = from_verified.value
-
-    params["from_verified"] = json_from_verified
-
     params["recipient"] = recipient
 
     json_exclude_fyi: str | Unset = UNSET
@@ -104,7 +115,66 @@ def _get_kwargs(
 
     params["exclude_fyi"] = json_exclude_fyi
 
+    json_from_verified: str | Unset = UNSET
+    if not isinstance(from_verified, Unset):
+        json_from_verified = from_verified.value
+
+    params["from_verified"] = json_from_verified
+
     params["include"] = include
+
+    json_thread_id: str | Unset = UNSET
+    if not isinstance(thread_id, Unset):
+        json_thread_id = str(thread_id)
+    params["thread_id"] = json_thread_id
+
+    json_exclude_muted: str | Unset = UNSET
+    if not isinstance(exclude_muted, Unset):
+        json_exclude_muted = exclude_muted.value
+
+    params["exclude_muted"] = json_exclude_muted
+
+    json_search_regex: str | Unset = UNSET
+    if not isinstance(search_regex, Unset):
+        json_search_regex = search_regex.value
+
+    params["search_regex"] = json_search_regex
+
+    json_search_case_sensitive: str | Unset = UNSET
+    if not isinstance(search_case_sensitive, Unset):
+        json_search_case_sensitive = search_case_sensitive.value
+
+    params["search_case_sensitive"] = json_search_case_sensitive
+
+    json_search_negate: str | Unset = UNSET
+    if not isinstance(search_negate, Unset):
+        json_search_negate = search_negate.value
+
+    params["search_negate"] = json_search_negate
+
+    json_kind: str | Unset = UNSET
+    if not isinstance(kind, Unset):
+        json_kind = kind.value
+
+    params["kind"] = json_kind
+
+    json_content_discarded: str | Unset = UNSET
+    if not isinstance(content_discarded, Unset):
+        json_content_discarded = content_discarded.value
+
+    params["content_discarded"] = json_content_discarded
+
+    json_group: str | Unset = UNSET
+    if not isinstance(group, Unset):
+        json_group = group.value
+
+    params["group"] = json_group
+
+    json_include_presence: str | Unset = UNSET
+    if not isinstance(include_presence, Unset):
+        json_include_presence = include_presence.value
+
+    params["include_presence"] = json_include_presence
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -143,6 +213,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_401
 
+    if response.status_code == 504:
+        response_504 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_504
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -172,10 +249,19 @@ def sync_detailed(
     wait: int | Unset = UNSET,
     awaiting: ListEmailsAwaiting | Unset = UNSET,
     automated: ListEmailsAutomated | Unset = UNSET,
-    from_verified: ListEmailsFromVerified | Unset = UNSET,
     recipient: str | Unset = UNSET,
     exclude_fyi: ListEmailsExcludeFyi | Unset = UNSET,
+    from_verified: ListEmailsFromVerified | Unset = UNSET,
     include: str | Unset = UNSET,
+    thread_id: UUID | Unset = UNSET,
+    exclude_muted: ListEmailsExcludeMuted | Unset = UNSET,
+    search_regex: ListEmailsSearchRegex | Unset = UNSET,
+    search_case_sensitive: ListEmailsSearchCaseSensitive | Unset = UNSET,
+    search_negate: ListEmailsSearchNegate | Unset = UNSET,
+    kind: ListEmailsKind | Unset = UNSET,
+    content_discarded: ListEmailsContentDiscarded | Unset = UNSET,
+    group: ListEmailsGroup | Unset = UNSET,
+    include_presence: ListEmailsIncludePresence | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListEmailsResponse200]:
     """ List inbound emails
@@ -234,10 +320,19 @@ def sync_detailed(
         wait (int | Unset):
         awaiting (ListEmailsAwaiting | Unset):
         automated (ListEmailsAutomated | Unset):
-        from_verified (ListEmailsFromVerified | Unset):
         recipient (str | Unset):
         exclude_fyi (ListEmailsExcludeFyi | Unset):
+        from_verified (ListEmailsFromVerified | Unset):
         include (str | Unset):  Example: body_text,headers.
+        thread_id (UUID | Unset):
+        exclude_muted (ListEmailsExcludeMuted | Unset):
+        search_regex (ListEmailsSearchRegex | Unset):
+        search_case_sensitive (ListEmailsSearchCaseSensitive | Unset):
+        search_negate (ListEmailsSearchNegate | Unset):
+        kind (ListEmailsKind | Unset):
+        content_discarded (ListEmailsContentDiscarded | Unset):
+        group (ListEmailsGroup | Unset):
+        include_presence (ListEmailsIncludePresence | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -260,10 +355,19 @@ since=since,
 wait=wait,
 awaiting=awaiting,
 automated=automated,
-from_verified=from_verified,
 recipient=recipient,
 exclude_fyi=exclude_fyi,
+from_verified=from_verified,
 include=include,
+thread_id=thread_id,
+exclude_muted=exclude_muted,
+search_regex=search_regex,
+search_case_sensitive=search_case_sensitive,
+search_negate=search_negate,
+kind=kind,
+content_discarded=content_discarded,
+group=group,
+include_presence=include_presence,
 
     )
 
@@ -287,10 +391,19 @@ def sync(
     wait: int | Unset = UNSET,
     awaiting: ListEmailsAwaiting | Unset = UNSET,
     automated: ListEmailsAutomated | Unset = UNSET,
-    from_verified: ListEmailsFromVerified | Unset = UNSET,
     recipient: str | Unset = UNSET,
     exclude_fyi: ListEmailsExcludeFyi | Unset = UNSET,
+    from_verified: ListEmailsFromVerified | Unset = UNSET,
     include: str | Unset = UNSET,
+    thread_id: UUID | Unset = UNSET,
+    exclude_muted: ListEmailsExcludeMuted | Unset = UNSET,
+    search_regex: ListEmailsSearchRegex | Unset = UNSET,
+    search_case_sensitive: ListEmailsSearchCaseSensitive | Unset = UNSET,
+    search_negate: ListEmailsSearchNegate | Unset = UNSET,
+    kind: ListEmailsKind | Unset = UNSET,
+    content_discarded: ListEmailsContentDiscarded | Unset = UNSET,
+    group: ListEmailsGroup | Unset = UNSET,
+    include_presence: ListEmailsIncludePresence | Unset = UNSET,
 
 ) -> ErrorResponse | ListEmailsResponse200 | None:
     """ List inbound emails
@@ -349,10 +462,19 @@ def sync(
         wait (int | Unset):
         awaiting (ListEmailsAwaiting | Unset):
         automated (ListEmailsAutomated | Unset):
-        from_verified (ListEmailsFromVerified | Unset):
         recipient (str | Unset):
         exclude_fyi (ListEmailsExcludeFyi | Unset):
+        from_verified (ListEmailsFromVerified | Unset):
         include (str | Unset):  Example: body_text,headers.
+        thread_id (UUID | Unset):
+        exclude_muted (ListEmailsExcludeMuted | Unset):
+        search_regex (ListEmailsSearchRegex | Unset):
+        search_case_sensitive (ListEmailsSearchCaseSensitive | Unset):
+        search_negate (ListEmailsSearchNegate | Unset):
+        kind (ListEmailsKind | Unset):
+        content_discarded (ListEmailsContentDiscarded | Unset):
+        group (ListEmailsGroup | Unset):
+        include_presence (ListEmailsIncludePresence | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -376,10 +498,19 @@ since=since,
 wait=wait,
 awaiting=awaiting,
 automated=automated,
-from_verified=from_verified,
 recipient=recipient,
 exclude_fyi=exclude_fyi,
+from_verified=from_verified,
 include=include,
+thread_id=thread_id,
+exclude_muted=exclude_muted,
+search_regex=search_regex,
+search_case_sensitive=search_case_sensitive,
+search_negate=search_negate,
+kind=kind,
+content_discarded=content_discarded,
+group=group,
+include_presence=include_presence,
 
     ).parsed
 
@@ -397,10 +528,19 @@ async def asyncio_detailed(
     wait: int | Unset = UNSET,
     awaiting: ListEmailsAwaiting | Unset = UNSET,
     automated: ListEmailsAutomated | Unset = UNSET,
-    from_verified: ListEmailsFromVerified | Unset = UNSET,
     recipient: str | Unset = UNSET,
     exclude_fyi: ListEmailsExcludeFyi | Unset = UNSET,
+    from_verified: ListEmailsFromVerified | Unset = UNSET,
     include: str | Unset = UNSET,
+    thread_id: UUID | Unset = UNSET,
+    exclude_muted: ListEmailsExcludeMuted | Unset = UNSET,
+    search_regex: ListEmailsSearchRegex | Unset = UNSET,
+    search_case_sensitive: ListEmailsSearchCaseSensitive | Unset = UNSET,
+    search_negate: ListEmailsSearchNegate | Unset = UNSET,
+    kind: ListEmailsKind | Unset = UNSET,
+    content_discarded: ListEmailsContentDiscarded | Unset = UNSET,
+    group: ListEmailsGroup | Unset = UNSET,
+    include_presence: ListEmailsIncludePresence | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListEmailsResponse200]:
     """ List inbound emails
@@ -459,10 +599,19 @@ async def asyncio_detailed(
         wait (int | Unset):
         awaiting (ListEmailsAwaiting | Unset):
         automated (ListEmailsAutomated | Unset):
-        from_verified (ListEmailsFromVerified | Unset):
         recipient (str | Unset):
         exclude_fyi (ListEmailsExcludeFyi | Unset):
+        from_verified (ListEmailsFromVerified | Unset):
         include (str | Unset):  Example: body_text,headers.
+        thread_id (UUID | Unset):
+        exclude_muted (ListEmailsExcludeMuted | Unset):
+        search_regex (ListEmailsSearchRegex | Unset):
+        search_case_sensitive (ListEmailsSearchCaseSensitive | Unset):
+        search_negate (ListEmailsSearchNegate | Unset):
+        kind (ListEmailsKind | Unset):
+        content_discarded (ListEmailsContentDiscarded | Unset):
+        group (ListEmailsGroup | Unset):
+        include_presence (ListEmailsIncludePresence | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -485,10 +634,19 @@ since=since,
 wait=wait,
 awaiting=awaiting,
 automated=automated,
-from_verified=from_verified,
 recipient=recipient,
 exclude_fyi=exclude_fyi,
+from_verified=from_verified,
 include=include,
+thread_id=thread_id,
+exclude_muted=exclude_muted,
+search_regex=search_regex,
+search_case_sensitive=search_case_sensitive,
+search_negate=search_negate,
+kind=kind,
+content_discarded=content_discarded,
+group=group,
+include_presence=include_presence,
 
     )
 
@@ -512,10 +670,19 @@ async def asyncio(
     wait: int | Unset = UNSET,
     awaiting: ListEmailsAwaiting | Unset = UNSET,
     automated: ListEmailsAutomated | Unset = UNSET,
-    from_verified: ListEmailsFromVerified | Unset = UNSET,
     recipient: str | Unset = UNSET,
     exclude_fyi: ListEmailsExcludeFyi | Unset = UNSET,
+    from_verified: ListEmailsFromVerified | Unset = UNSET,
     include: str | Unset = UNSET,
+    thread_id: UUID | Unset = UNSET,
+    exclude_muted: ListEmailsExcludeMuted | Unset = UNSET,
+    search_regex: ListEmailsSearchRegex | Unset = UNSET,
+    search_case_sensitive: ListEmailsSearchCaseSensitive | Unset = UNSET,
+    search_negate: ListEmailsSearchNegate | Unset = UNSET,
+    kind: ListEmailsKind | Unset = UNSET,
+    content_discarded: ListEmailsContentDiscarded | Unset = UNSET,
+    group: ListEmailsGroup | Unset = UNSET,
+    include_presence: ListEmailsIncludePresence | Unset = UNSET,
 
 ) -> ErrorResponse | ListEmailsResponse200 | None:
     """ List inbound emails
@@ -574,10 +741,19 @@ async def asyncio(
         wait (int | Unset):
         awaiting (ListEmailsAwaiting | Unset):
         automated (ListEmailsAutomated | Unset):
-        from_verified (ListEmailsFromVerified | Unset):
         recipient (str | Unset):
         exclude_fyi (ListEmailsExcludeFyi | Unset):
+        from_verified (ListEmailsFromVerified | Unset):
         include (str | Unset):  Example: body_text,headers.
+        thread_id (UUID | Unset):
+        exclude_muted (ListEmailsExcludeMuted | Unset):
+        search_regex (ListEmailsSearchRegex | Unset):
+        search_case_sensitive (ListEmailsSearchCaseSensitive | Unset):
+        search_negate (ListEmailsSearchNegate | Unset):
+        kind (ListEmailsKind | Unset):
+        content_discarded (ListEmailsContentDiscarded | Unset):
+        group (ListEmailsGroup | Unset):
+        include_presence (ListEmailsIncludePresence | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -601,9 +777,18 @@ since=since,
 wait=wait,
 awaiting=awaiting,
 automated=automated,
-from_verified=from_verified,
 recipient=recipient,
 exclude_fyi=exclude_fyi,
+from_verified=from_verified,
 include=include,
+thread_id=thread_id,
+exclude_muted=exclude_muted,
+search_regex=search_regex,
+search_case_sensitive=search_case_sensitive,
+search_negate=search_negate,
+kind=kind,
+content_discarded=content_discarded,
+group=group,
+include_presence=include_presence,
 
     )).parsed

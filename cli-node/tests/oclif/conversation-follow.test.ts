@@ -15,6 +15,7 @@ import {
   readConversationFollow,
 } from "../../src/oclif/conversation-follow.js";
 import { openSharedMailStore } from "../../src/oclif/shared-mail-state.js";
+import { parsedOf } from "./parsed-fixture.js";
 
 const directories: string[] = [];
 afterEach(() => {
@@ -46,6 +47,10 @@ function fixture() {
     received_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
     replies: [],
+    from_verified: false,
+    from_header_email: null,
+    from_name: null,
+    snippet: null,
     reply_count: 0,
     last_replied_at: null,
     awaiting: "you",
@@ -188,7 +193,10 @@ describe("durable native conversation following", () => {
       await followEmailConversation(f.context, {
         ...f.detail,
         thread_id: null,
-        parsed: { ...f.detail.parsed, references: ["<original@example.net>"] },
+        parsed: {
+          ...parsedOf(f.detail),
+          references: ["<original@example.net>"],
+        },
       }),
     ).toBeNull();
     expect(

@@ -11,6 +11,7 @@ from ... import errors
 from ...models.create_function_input import CreateFunctionInput
 from ...models.create_function_response_201 import CreateFunctionResponse201
 from ...models.error_response import ErrorResponse
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -18,9 +19,13 @@ from typing import cast
 def _get_kwargs(
     *,
     body: CreateFunctionInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -110,13 +115,14 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CreateFunctionInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateFunctionResponse201 | ErrorResponse]:
     """ Deploy a function
 
      Creates and deploys a new function. The handler must be a single
     ESM module whose default export is an object with an async
-    `fetch(request, env)` method (Workers-style). Primitive signs
+    `fetch(request, env)` method. Primitive signs
     each delivery and forwards the `Primitive-Signature` header to
     the handler. Verify the raw request body with
     `PRIMITIVE_WEBHOOK_SECRET` before parsing JSON; after verification
@@ -147,6 +153,7 @@ def sync_detailed(
     running handler on the next redeploy.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateFunctionInput):
 
     Raises:
@@ -160,6 +167,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -173,13 +181,14 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: CreateFunctionInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CreateFunctionResponse201 | ErrorResponse | None:
     """ Deploy a function
 
      Creates and deploys a new function. The handler must be a single
     ESM module whose default export is an object with an async
-    `fetch(request, env)` method (Workers-style). Primitive signs
+    `fetch(request, env)` method. Primitive signs
     each delivery and forwards the `Primitive-Signature` header to
     the handler. Verify the raw request body with
     `PRIMITIVE_WEBHOOK_SECRET` before parsing JSON; after verification
@@ -210,6 +219,7 @@ def sync(
     running handler on the next redeploy.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateFunctionInput):
 
     Raises:
@@ -224,6 +234,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -231,13 +242,14 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CreateFunctionInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateFunctionResponse201 | ErrorResponse]:
     """ Deploy a function
 
      Creates and deploys a new function. The handler must be a single
     ESM module whose default export is an object with an async
-    `fetch(request, env)` method (Workers-style). Primitive signs
+    `fetch(request, env)` method. Primitive signs
     each delivery and forwards the `Primitive-Signature` header to
     the handler. Verify the raw request body with
     `PRIMITIVE_WEBHOOK_SECRET` before parsing JSON; after verification
@@ -268,6 +280,7 @@ async def asyncio_detailed(
     running handler on the next redeploy.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateFunctionInput):
 
     Raises:
@@ -281,6 +294,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -294,13 +308,14 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: CreateFunctionInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CreateFunctionResponse201 | ErrorResponse | None:
     """ Deploy a function
 
      Creates and deploys a new function. The handler must be a single
     ESM module whose default export is an object with an async
-    `fetch(request, env)` method (Workers-style). Primitive signs
+    `fetch(request, env)` method. Primitive signs
     each delivery and forwards the `Primitive-Signature` header to
     the handler. Verify the raw request body with
     `PRIMITIVE_WEBHOOK_SECRET` before parsing JSON; after verification
@@ -331,6 +346,7 @@ async def asyncio(
     running handler on the next redeploy.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateFunctionInput):
 
     Raises:
@@ -345,5 +361,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

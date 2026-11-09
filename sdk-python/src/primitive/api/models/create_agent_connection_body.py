@@ -28,8 +28,8 @@ class CreateAgentConnectionBody:
             address (str | Unset):
             owner_address (str | Unset):
             ownership_kind (CreateAgentConnectionBodyOwnershipKind | Unset):
-            create_request_id (UUID | Unset): Stable request UUID saved before creating this agent. Replay recovers the
-                original current connection without returning or rotating an invitation.
+            create_request_id (UUID | Unset):
+            remove_others_access (bool | Unset):
      """
 
     name: str
@@ -37,6 +37,7 @@ class CreateAgentConnectionBody:
     owner_address: str | Unset = UNSET
     ownership_kind: CreateAgentConnectionBodyOwnershipKind | Unset = UNSET
     create_request_id: UUID | Unset = UNSET
+    remove_others_access: bool | Unset = UNSET
 
 
 
@@ -58,6 +59,8 @@ class CreateAgentConnectionBody:
         if not isinstance(self.create_request_id, Unset):
             create_request_id = str(self.create_request_id)
 
+        remove_others_access = self.remove_others_access
+
 
         field_dict: dict[str, Any] = {}
 
@@ -72,6 +75,8 @@ class CreateAgentConnectionBody:
             field_dict["ownership_kind"] = ownership_kind
         if create_request_id is not UNSET:
             field_dict["create_request_id"] = create_request_id
+        if remove_others_access is not UNSET:
+            field_dict["remove_others_access"] = remove_others_access
 
         return field_dict
 
@@ -106,12 +111,15 @@ class CreateAgentConnectionBody:
 
 
 
+        remove_others_access = d.pop("remove_others_access", UNSET)
+
         create_agent_connection_body = cls(
             name=name,
             address=address,
             owner_address=owner_address,
             ownership_kind=ownership_kind,
             create_request_id=create_request_id,
+            remove_others_access=remove_others_access,
         )
 
         return create_agent_connection_body

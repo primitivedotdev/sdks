@@ -251,7 +251,7 @@ export async function sendSignal(context: Context, options: SignalOptions) {
     to: context.identity.agentAddress,
     messageId: detail.message_id,
     subject: detail.subject ?? null,
-    references: detail.parsed.references ?? [],
+    references: detail.parsed?.references ?? [],
   };
   const key = createHash("sha256")
     .update(

@@ -77,6 +77,12 @@ def sync_detailed(
 ) -> Response[ErrorResponse | GetAccountResponse200]:
     """ Get account info
 
+     Retrieve the authenticated organization's account: organization identity, current plan, usage, and
+    onboarding state. Fields the credential has no permission to read are null: plan, limits,
+    entitlements, settings and the managed inbox need org:read, the subscription dates billing:read, the
+    signup email the access that shows members' emails, and the webhook secret rotation date
+    webhook_secret:read.
+
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
@@ -103,6 +109,12 @@ def sync(
 ) -> ErrorResponse | GetAccountResponse200 | None:
     """ Get account info
 
+     Retrieve the authenticated organization's account: organization identity, current plan, usage, and
+    onboarding state. Fields the credential has no permission to read are null: plan, limits,
+    entitlements, settings and the managed inbox need org:read, the subscription dates billing:read, the
+    signup email the access that shows members' emails, and the webhook secret rotation date
+    webhook_secret:read.
+
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
@@ -123,6 +135,12 @@ async def asyncio_detailed(
 
 ) -> Response[ErrorResponse | GetAccountResponse200]:
     """ Get account info
+
+     Retrieve the authenticated organization's account: organization identity, current plan, usage, and
+    onboarding state. Fields the credential has no permission to read are null: plan, limits,
+    entitlements, settings and the managed inbox need org:read, the subscription dates billing:read, the
+    signup email the access that shows members' emails, and the webhook secret rotation date
+    webhook_secret:read.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -149,6 +167,12 @@ async def asyncio(
 
 ) -> ErrorResponse | GetAccountResponse200 | None:
     """ Get account info
+
+     Retrieve the authenticated organization's account: organization identity, current plan, usage, and
+    onboarding state. Fields the credential has no permission to read are null: plan, limits,
+    entitlements, settings and the managed inbox need org:read, the subscription dates billing:read, the
+    signup email the access that shows members' emails, and the webhook secret rotation date
+    webhook_secret:read.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

@@ -15,6 +15,9 @@
     "body_size_bytes": 5,
     "body_text": "Hello",
     "body_html": null,
+    "snippet": "Hello",
+    "interaction_hint": "none",
+    "interaction_kind": null,
     "content_discarded_at": null,
     "attachments": [
       {

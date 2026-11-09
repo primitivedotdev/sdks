@@ -45,6 +45,7 @@ import {
 } from "./connected-agent-profile.js";
 import { evaluateContactPolicy } from "./contact-policy.js";
 import { runContactRequest } from "./contacts.js";
+import { withoutOrgSelection } from "./global-org-flag.js";
 import { acquireListenLock } from "./listen-state.js";
 import { createNotificationContactPolicy } from "./notification-contact-policy.js";
 import { connectNativeSession, SESSION_UUID } from "./notify-session-native.js";
@@ -795,11 +796,11 @@ function defaults(): AgentSetupDependencies {
           ...(contactRequests ? ["--contact-requests"] : []),
         ],
         {
-          env: {
+          env: withoutOrgSelection({
             ...process.env,
             [AGENT_PROFILE_ENV]: profile,
             PRIMITIVE_CONFIG_DIR: configDir,
-          },
+          }),
           timeout: 35_000,
           maxBuffer: 65_536,
         },

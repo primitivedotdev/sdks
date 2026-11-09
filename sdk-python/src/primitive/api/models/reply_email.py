@@ -12,6 +12,8 @@ from typing import cast
 from uuid import UUID
 import datetime
 
+if TYPE_CHECKING:
+  from ..models.email_auth import EmailAuth
 
 
 
@@ -42,6 +44,21 @@ class ReplyEmail:
             status (str): Inbound processing status of the reply row. Typically an
                 `EmailStatus` value, but left as an open string here to
                 match the server contract, which does not narrow it.
+            sender_verified (bool | Unset): True when the reply’s From address is one of the send’s `to`, `cc` or `bcc`
+                recipients and either it passed DMARC, its domain is the DMARC domain or a subdomain of it, and the whole
+                message body is signed by a passing DKIM signature aligned with that domain, or it is a verified direct delivery
+                from Primitive’s own outbound. A DMARC pass that rests on SPF alone, or on a DKIM signature that covers only
+                part of the body, is not verified. The full address is compared, so another mailbox on the same provider domain
+                is never verified.
+            sender_matches_recipient (bool | Unset): True when the reply’s From address is one of the send’s `to`, `cc` or
+                `bcc` recipients, whether or not it was authenticated. On its own it is not proof of authorship; see
+                `sender_verified`.
+            fyi (bool | Unset): True when the reply is an acknowledgement that needs no answer. Read, working and typing
+                signals are never returned as the reply.
+            auth (EmailAuth | Unset): SPF / DKIM / DMARC verdicts computed at ingest. Mirrors the
+                `email.auth` object on the webhook payload. Field names are
+                camelCase to match that payload exactly. For messages received
+                before auth was recorded, the verdicts default to `none`.
      """
 
     id: UUID
@@ -54,6 +71,10 @@ class ReplyEmail:
     body_html: None | str
     received_at: datetime.datetime | None
     status: str
+    sender_verified: bool | Unset = UNSET
+    sender_matches_recipient: bool | Unset = UNSET
+    fyi: bool | Unset = UNSET
+    auth: EmailAuth | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -61,6 +82,7 @@ class ReplyEmail:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_auth import EmailAuth # noqa: PLC0415
         id = str(self.id)
 
         thread_id: None | str
@@ -96,6 +118,16 @@ class ReplyEmail:
 
         status = self.status
 
+        sender_verified = self.sender_verified
+
+        sender_matches_recipient = self.sender_matches_recipient
+
+        fyi = self.fyi
+
+        auth: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.auth, Unset):
+            auth = self.auth.to_dict()
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -111,6 +143,14 @@ class ReplyEmail:
             "received_at": received_at,
             "status": status,
         })
+        if sender_verified is not UNSET:
+            field_dict["sender_verified"] = sender_verified
+        if sender_matches_recipient is not UNSET:
+            field_dict["sender_matches_recipient"] = sender_matches_recipient
+        if fyi is not UNSET:
+            field_dict["fyi"] = fyi
+        if auth is not UNSET:
+            field_dict["auth"] = auth
 
         return field_dict
 
@@ -118,6 +158,7 @@ class ReplyEmail:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_auth import EmailAuth # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -208,6 +249,22 @@ class ReplyEmail:
 
         status = d.pop("status")
 
+        sender_verified = d.pop("sender_verified", UNSET)
+
+        sender_matches_recipient = d.pop("sender_matches_recipient", UNSET)
+
+        fyi = d.pop("fyi", UNSET)
+
+        _auth = d.pop("auth", UNSET)
+        auth: EmailAuth | Unset
+        if isinstance(_auth,  Unset):
+            auth = UNSET
+        else:
+            auth = EmailAuth.from_dict(_auth)
+
+
+
+
         reply_email = cls(
             id=id,
             thread_id=thread_id,
@@ -219,6 +276,10 @@ class ReplyEmail:
             body_html=body_html,
             received_at=received_at,
             status=status,
+            sender_verified=sender_verified,
+            sender_matches_recipient=sender_matches_recipient,
+            fyi=fyi,
+            auth=auth,
         )
 
 

@@ -16,6 +16,7 @@ if TYPE_CHECKING:
   from ..models.repeat_input import RepeatInput
   from ..models.send_mail_attachment import SendMailAttachment
   from ..models.send_mail_input_headers import SendMailInputHeaders
+  from ..models.send_mail_input_tags_item import SendMailInputTagsItem
   from ..models.send_mail_payload_ref import SendMailPayloadRef
 
 
@@ -75,18 +76,6 @@ class SendMailInput:
                 (`2026-10-09T17:00:00Z`, `2026-10-09T13:00:00-04:00`); an
                 offset is converted to UTC, so the stored and echoed value
                 is UTC. A time with no zone, or a bare date, is rejected.
-            headers (SendMailInputHeaders | Unset): Extra headers, as `{ "Name": "value" }`, at most 25. A name is one of
-                `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-
-                Ref`, or a custom `X-` name of letters, digits and hyphens that is not credential-like (a word such as `auth`,
-                `token`, `key`, `secret`, `session` or `bearer`, joined forms included) and not in a reserved family:
-                X-Primitive*, X-Original-*, X-Originating-*, X-Forwarded-*, X-Received*, X-Authenticated*, X-Envelope-*,
-                X-Delivered-To, X-Apparently-To, X-Failed-Recipients, X-Loop, X-Priority, X-MSMail-*, X-MS-*, X-Microsoft-*,
-                X-Forefront-*, X-Exchange-*, X-Google-*, X-GM-*, X-Apple-*, X-Yahoo-*, X-YMail-*, X-AOL-*, X-Spam*, X-Virus-*,
-                X-Proofpoint-*, X-Barracuda-*, X-Rspamd-*, X-Mimecast-*, X-IronPort-*, X-Sophos-*, X-Report-Abuse*, X-CSA-*.
-                Names compare case-insensitively (`_` and `.` count as `-` for families); a repeated or any other name is a
-                `validation_error`. Values: 1 to 200 printable ASCII characters. Custom headers are sent as spelled, are not
-                DKIM-signed, and can be searched with `header` on `GET /sent-emails`. Example: {'X-Campaign-Id': 'spring-sale',
-                'Auto-Submitted': 'auto-generated'}.
             if_latest_message_id (UUID | Unset): Send only if this message id is still the newest message in the thread this
                 send joins, as this credential can see it. Newest means the message that joined the thread last, in the order
                 messages were attached to it, not by timestamp: a message accepted earlier but attached later is newer. Messages
@@ -106,6 +95,28 @@ class SendMailInput:
                 deduplication window, returns the original result without checking again, and a request that differs only in
                 if_latest_message_id is not a replay. On /send-mail it requires in_reply_to; it cannot be combined with
                 scheduled_at or repeat, because it is checked when the request is accepted.
+            fyi (bool | Unset): Send an informational message the receiver need not answer or wake for. It is sent as an
+                `ack` signal (status `received`) about the message in `in_reply_to`, whose note is `body_text` (at most 2000
+                characters, which may be omitted). Receivers see it as `fyi: true`. Plain text only: it cannot be combined with
+                `body_html`, `attachments`, `payload_attachments` or `scheduled_at`, and on `/send-mail` it requires
+                `in_reply_to`.
+            reply_to (list[str] | str | Unset): Reply-To addresses for the message. Either a single address or an array of
+                at most 10 addresses; each entry must be a single address and may carry a display name. Reply-To is a header,
+                not a recipient, so it does not count toward the recipient limit.
+            tags (list[SendMailInputTagsItem] | Unset): Metadata tags stored with the send for correlation and filtering, at
+                most 10, with unique names. Tags never affect delivery and are not added to the message.
+            headers (SendMailInputHeaders | Unset): Extra headers, as `{ "Name": "value" }`, at most 25. A name is one of
+                `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-
+                Ref`, `X-Primitive-Function-Hop`, or a custom `X-` name of letters, digits and hyphens that is not credential-
+                like (a word such as `auth`, `token`, `key`, `secret`, `session` or `bearer`, joined forms included) and not in
+                a reserved family: X-Primitive*, X-Original-*, X-Originating-*, X-Forwarded-*, X-Received*, X-Authenticated*,
+                X-Envelope-*, X-Delivered-To, X-Apparently-To, X-Failed-Recipients, X-Loop, X-Priority, X-MSMail-*, X-MS-*,
+                X-Microsoft-*, X-Forefront-*, X-Exchange-*, X-Google-*, X-GM-*, X-Apple-*, X-Yahoo-*, X-YMail-*, X-AOL-*,
+                X-Spam*, X-Virus-*, X-Proofpoint-*, X-Barracuda-*, X-Rspamd-*, X-Mimecast-*, X-IronPort-*, X-Sophos-*, X-Report-
+                Abuse*, X-CSA-*. Names compare case-insensitively (`_` and `.` count as `-` for families); a repeated or any
+                other name is a `validation_error`. Values: 1 to 200 printable ASCII characters. Custom headers are sent as
+                spelled, are not DKIM-signed, and can be searched with `header` on `GET /sent-emails`. Example: {'X-Campaign-
+                Id': 'spring-sale', 'Auto-Submitted': 'auto-generated'}.
      """
 
     from_: str
@@ -123,8 +134,11 @@ class SendMailInput:
     wait: bool | Unset = UNSET
     wait_timeout_ms: int | Unset = UNSET
     scheduled_at: datetime.datetime | Unset = UNSET
-    headers: SendMailInputHeaders | Unset = UNSET
     if_latest_message_id: UUID | Unset = UNSET
+    fyi: bool | Unset = UNSET
+    reply_to: list[str] | str | Unset = UNSET
+    tags: list[SendMailInputTagsItem] | Unset = UNSET
+    headers: SendMailInputHeaders | Unset = UNSET
 
 
 
@@ -134,6 +148,7 @@ class SendMailInput:
         from ..models.repeat_input import RepeatInput # noqa: PLC0415
         from ..models.send_mail_attachment import SendMailAttachment # noqa: PLC0415
         from ..models.send_mail_input_headers import SendMailInputHeaders # noqa: PLC0415
+        from ..models.send_mail_input_tags_item import SendMailInputTagsItem # noqa: PLC0415
         from ..models.send_mail_payload_ref import SendMailPayloadRef # noqa: PLC0415
         from_ = self.from_
 
@@ -203,13 +218,34 @@ class SendMailInput:
         if not isinstance(self.scheduled_at, Unset):
             scheduled_at = self.scheduled_at.isoformat()
 
-        headers: dict[str, Any] | Unset = UNSET
-        if not isinstance(self.headers, Unset):
-            headers = self.headers.to_dict()
-
         if_latest_message_id: str | Unset = UNSET
         if not isinstance(self.if_latest_message_id, Unset):
             if_latest_message_id = str(self.if_latest_message_id)
+
+        fyi = self.fyi
+
+        reply_to: list[str] | str | Unset
+        if isinstance(self.reply_to, Unset):
+            reply_to = UNSET
+        elif isinstance(self.reply_to, list):
+            reply_to = self.reply_to
+
+
+        else:
+            reply_to = self.reply_to
+
+        tags: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.tags, Unset):
+            tags = []
+            for tags_item_data in self.tags:
+                tags_item = tags_item_data.to_dict()
+                tags.append(tags_item)
+
+
+
+        headers: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.headers, Unset):
+            headers = self.headers.to_dict()
 
 
         field_dict: dict[str, Any] = {}
@@ -243,10 +279,16 @@ class SendMailInput:
             field_dict["wait_timeout_ms"] = wait_timeout_ms
         if scheduled_at is not UNSET:
             field_dict["scheduled_at"] = scheduled_at
-        if headers is not UNSET:
-            field_dict["headers"] = headers
         if if_latest_message_id is not UNSET:
             field_dict["if_latest_message_id"] = if_latest_message_id
+        if fyi is not UNSET:
+            field_dict["fyi"] = fyi
+        if reply_to is not UNSET:
+            field_dict["reply_to"] = reply_to
+        if tags is not UNSET:
+            field_dict["tags"] = tags
+        if headers is not UNSET:
+            field_dict["headers"] = headers
 
         return field_dict
 
@@ -257,6 +299,7 @@ class SendMailInput:
         from ..models.repeat_input import RepeatInput # noqa: PLC0415
         from ..models.send_mail_attachment import SendMailAttachment # noqa: PLC0415
         from ..models.send_mail_input_headers import SendMailInputHeaders # noqa: PLC0415
+        from ..models.send_mail_input_tags_item import SendMailInputTagsItem # noqa: PLC0415
         from ..models.send_mail_payload_ref import SendMailPayloadRef # noqa: PLC0415
         d = dict(src_dict)
         from_ = d.pop("from")
@@ -354,22 +397,52 @@ class SendMailInput:
 
 
 
-        _headers = d.pop("headers", UNSET)
-        headers: SendMailInputHeaders | Unset
-        if isinstance(_headers,  Unset):
-            headers = UNSET
-        else:
-            headers = SendMailInputHeaders.from_dict(_headers)
-
-
-
-
         _if_latest_message_id = d.pop("if_latest_message_id", UNSET)
         if_latest_message_id: UUID | Unset
         if isinstance(_if_latest_message_id,  Unset):
             if_latest_message_id = UNSET
         else:
             if_latest_message_id = UUID(_if_latest_message_id)
+
+
+
+
+        fyi = d.pop("fyi", UNSET)
+
+        def _parse_reply_to(data: object) -> list[str] | str | Unset:
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                reply_to_type_1 = cast(list[str], data)
+
+                return reply_to_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[str] | str | Unset, data)
+
+        reply_to = _parse_reply_to(d.pop("reply_to", UNSET))
+
+
+        _tags = d.pop("tags", UNSET)
+        tags: list[SendMailInputTagsItem] | Unset = UNSET
+        if _tags is not UNSET:
+            tags = []
+            for tags_item_data in _tags:
+                tags_item = SendMailInputTagsItem.from_dict(tags_item_data)
+
+
+
+                tags.append(tags_item)
+
+
+        _headers = d.pop("headers", UNSET)
+        headers: SendMailInputHeaders | Unset
+        if isinstance(_headers,  Unset):
+            headers = UNSET
+        else:
+            headers = SendMailInputHeaders.from_dict(_headers)
 
 
 
@@ -390,8 +463,11 @@ class SendMailInput:
             wait=wait,
             wait_timeout_ms=wait_timeout_ms,
             scheduled_at=scheduled_at,
-            headers=headers,
             if_latest_message_id=if_latest_message_id,
+            fyi=fyi,
+            reply_to=reply_to,
+            tags=tags,
+            headers=headers,
         )
 
         return send_mail_input

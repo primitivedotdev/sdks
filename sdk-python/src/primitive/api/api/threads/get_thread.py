@@ -10,6 +10,7 @@ from ... import errors
 
 from ...models.error_response import ErrorResponse
 from ...models.get_thread_response_200 import GetThreadResponse200
+from ...types import UNSET, Unset
 from typing import cast
 from uuid import UUID
 
@@ -17,17 +18,29 @@ from uuid import UUID
 
 def _get_kwargs(
     id: UUID,
+    *,
+    after: UUID | Unset = UNSET,
 
 ) -> dict[str, Any]:
     
 
     
 
-    
+    params: dict[str, Any] = {}
+
+    json_after: str | Unset = UNSET
+    if not isinstance(after, Unset):
+        json_after = str(after)
+    params["after"] = json_after
+
+
+    params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
+
 
     _kwargs: dict[str, Any] = {
         "method": "get",
         "url": "/threads/{id}".format(id=quote(str(id), safe=""),),
+        "params": params,
     }
 
 
@@ -83,6 +96,7 @@ def sync_detailed(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    after: UUID | Unset = UNSET,
 
 ) -> Response[ErrorResponse | GetThreadResponse200]:
     """ Get a conversation thread by id
@@ -104,6 +118,7 @@ def sync_detailed(
 
     Args:
         id (UUID):
+        after (UUID | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -116,6 +131,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         id=id,
+after=after,
 
     )
 
@@ -129,6 +145,7 @@ def sync(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    after: UUID | Unset = UNSET,
 
 ) -> ErrorResponse | GetThreadResponse200 | None:
     """ Get a conversation thread by id
@@ -150,6 +167,7 @@ def sync(
 
     Args:
         id (UUID):
+        after (UUID | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -163,6 +181,7 @@ def sync(
     return sync_detailed(
         id=id,
 client=client,
+after=after,
 
     ).parsed
 
@@ -170,6 +189,7 @@ async def asyncio_detailed(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    after: UUID | Unset = UNSET,
 
 ) -> Response[ErrorResponse | GetThreadResponse200]:
     """ Get a conversation thread by id
@@ -191,6 +211,7 @@ async def asyncio_detailed(
 
     Args:
         id (UUID):
+        after (UUID | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -203,6 +224,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         id=id,
+after=after,
 
     )
 
@@ -216,6 +238,7 @@ async def asyncio(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    after: UUID | Unset = UNSET,
 
 ) -> ErrorResponse | GetThreadResponse200 | None:
     """ Get a conversation thread by id
@@ -237,6 +260,7 @@ async def asyncio(
 
     Args:
         id (UUID):
+        after (UUID | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -250,5 +274,6 @@ async def asyncio(
     return (await asyncio_detailed(
         id=id,
 client=client,
+after=after,
 
     )).parsed

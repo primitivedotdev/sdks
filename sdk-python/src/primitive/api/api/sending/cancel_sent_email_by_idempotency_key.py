@@ -101,7 +101,7 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
 def sync_detailed(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     body: CancelSentEmailByIdempotencyKeyBody,
 
 ) -> Response[CancelSentEmailByIdempotencyKeyResponse200 | ErrorResponse]:
@@ -140,7 +140,7 @@ def sync_detailed(
 
 def sync(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     body: CancelSentEmailByIdempotencyKeyBody,
 
 ) -> CancelSentEmailByIdempotencyKeyResponse200 | ErrorResponse | None:
@@ -174,7 +174,7 @@ body=body,
 
 async def asyncio_detailed(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     body: CancelSentEmailByIdempotencyKeyBody,
 
 ) -> Response[CancelSentEmailByIdempotencyKeyResponse200 | ErrorResponse]:
@@ -213,7 +213,7 @@ async def asyncio_detailed(
 
 async def asyncio(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     body: CancelSentEmailByIdempotencyKeyBody,
 
 ) -> CancelSentEmailByIdempotencyKeyResponse200 | ErrorResponse | None:

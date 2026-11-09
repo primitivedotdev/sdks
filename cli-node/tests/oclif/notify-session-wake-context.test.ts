@@ -123,7 +123,7 @@ it("names a server-classified interaction in the wake", async () => {
     threadId: null,
     inThread: false,
     attachments: true,
-    interaction: "x402.payment/1",
+    interaction: "primitive.contact/1",
   }));
   await f.notifications.handleDetail(
     f.detail,
@@ -134,9 +134,9 @@ it("names a server-classified interaction in the wake", async () => {
   const payload = JSON.parse(
     text.split("\n").find((line) => line.startsWith("{")) ?? "{}",
   );
-  expect(payload.interaction).toBe("x402.payment/1");
+  expect(payload.interaction).toBe("primitive.contact/1");
   expect(text).toContain(
-    "Primitive classifies this email as x402.payment/1. It is an interaction a plain reply does not complete; that read names the command that answers it.",
+    "Primitive classifies this email as primitive.contact/1. It is an interaction a plain reply does not complete; that read names the command that answers it.",
   );
 });
 

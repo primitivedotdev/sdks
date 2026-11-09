@@ -24,6 +24,21 @@ available for advanced use cases.
 pip install primitivedotdev
 ```
 
+The 3.0.0 preview is a prerelease, so `pip install primitivedotdev` stays on the latest stable version. To try it:
+
+```bash
+pip install primitivedotdev==3.0.0rc1
+```
+
+## Upgrading to 3.0
+
+3.0 removes the payment client package and the payment webhook event
+types, renames some generated models, makes some response fields
+required or nullable, and adds `sync_conversation`. The full list is in the
+[changelog](https://github.com/primitivedotdev/sdks/blob/main/CHANGELOG.md).
+
+Enum values the API adds after your SDK version was generated no longer fail the response. An unlisted value, such as a new `error.code`, is kept as a member of its enum type and compares equal to its string.
+
 ## Basic usage
 
 ### Receive and reply
@@ -314,253 +329,8 @@ it does not verify DKIM or the webhook signature itself.
 Use `parse_interaction_envelope(str | bytes)` from `primitive.interactions` to read an
 `interaction.json` attachment for display. The bounded parser returns valid,
 unsupported, or invalid and preserves unknown protocols. It performs no
-authentication, network requests, payments, or sends. See the
+authentication, network requests, or sends. See the
 [parser contract and limits](../docs/interaction-envelopes.md).
-
-## x402 payments
-
-The x402 client lets one agent request a USDC payment and another pay it. It is
-non-custodial: the payer signs an EIP-3009 ``transferWithAuthorization`` locally
-with their own key, and the key never leaves the caller. The platform resolves
-the real payee address, verifies every signed field against its own records,
-enforces the org's spend policy, and settles on chain.
-
-The model in four steps:
-
-1. The payee registers a payout address once (proving control of it with a local
-   signature).
-2. The payee creates a challenge with ``charge()``, which the platform fills in
-   with the registered payout address.
-3. The payer signs the challenge locally and submits it with ``pay()``.
-4. The platform verifies and settles.
-
-Amounts can be given as a human USDC string (``amount_usdc="0.01"``) or as token
-base units (``amount="10000"``, since USDC has 6 decimals). Networks are ``base``
-(mainnet) and ``base-sepolia`` (testnet). A ``PrivateKeySigner`` holds the wallet
-key in process and signs both the EIP-712 payment authorization (for ``pay``) and
-the ownership message (for ``register_payout_address``); the key is never sent to
-Primitive.
-
-The public names are exported from both ``primitive`` and ``primitive.x402``:
-``create_x402_client``, ``X402Client``, ``PrivateKeySigner``, ``X402Error``,
-``X402Challenge``, ``X402Receipt``, ``X402PayoutAddress``, and
-``X402SpendPolicy``.
-
-### Register a payout address (payee, one time)
-
-The signer proves control of its own address with an ownership message; the
-recovered address becomes your default payout destination for that network.
-``charge()`` resolves its ``pay_to`` from this directory, so register before
-requesting payments. The org is resolved automatically from your API key, so you
-do not pass it (supply ``org`` only to override the default).
-
-```python
-import os
-import primitive
-
-x402 = primitive.create_x402_client(api_key=os.environ["PRIMITIVE_API_KEY"])
-payee = primitive.PrivateKeySigner(os.environ["PAYEE_KEY"])
-
-x402.register_payout_address(
-    signer=payee,
-    network="base-sepolia",
-    label="treasury",
-)
-```
-
-### Create a challenge (payee)
-
-```python
-challenge = x402.charge(
-    amount_usdc="0.01",  # human USDC amount
-    network="base-sepolia",
-    payer_org=os.environ.get("PAYER_ORG_ID"),  # org allowed to pay
-    description="API call",
-)
-```
-
-Pass exactly one of ``amount_usdc`` (a human USDC string like ``"0.01"``) or
-``amount`` (token base units, e.g. ``"10000"``). ``amount_usdc`` is the easy
-path; ``amount`` remains available when you already have a base-unit value.
-
-Hand the returned ``challenge`` to the payer over any out-of-band channel.
-``x402.get_challenge(id)`` re-hydrates a challenge by id, for example to retry
-``pay()`` after a restart.
-
-### Pay a challenge (payer)
-
-The payer signs the interaction-bound authorization locally and submits it. The
-key never leaves the caller.
-
-```python
-payer = primitive.PrivateKeySigner(os.environ["PAYER_KEY"])
-receipt = x402.pay(challenge, signer=payer)
-
-print(receipt.status, receipt.settle_tx)  # settled, on-chain tx hash
-```
-
-### Email-native payments
-
-The challenge can also ride a real email thread instead of a synthetic id. The
-payee issues it as an email; the payer signs it into an ``interaction.json``
-payment step and sends it back attached to the reply.
-
-The payee issues the challenge with ``create_email_challenge``. The ``pay_to``
-payout wallet and the token asset are resolved server-side; you only supply the
-addresses, amount, and network:
-
-```python
-issued = x402.create_email_challenge(
-    from_="payee@your-domain.example",  # your sending address (funds receiver)
-    to="payer@their-domain.example",    # the payer's address
-    amount_usdc="0.01",
-    network="base-sepolia",
-)
-# issued.interaction_id is the email thread the payment is bound to;
-# issued.challenge carries the payment_requirements + nonce_binding to sign.
-```
-
-The payer receives the challenge as an ``interaction.json`` MIME part on an
-inbound email. Rather than hand-parsing it, pass the part bytes to
-``extract_email_challenge``, which validates the envelope and returns the typed
-``X402EmailChallenge``:
-
-```python
-from primitive import extract_email_challenge
-
-# `interaction_part` is the body of the inbound email's `interaction.json`
-# attachment (str, bytes, or an already-parsed dict).
-issued = extract_email_challenge(interaction_part)
-```
-
-The payer then signs the challenge locally with ``pay_email_challenge`` and
-replies with the resulting envelope attached. ``pay_email_challenge`` does not
-send anything; it returns the signed payment-step envelope and its canonical
-JSON bytes. The validity window is computed and clamped into the accepted band
-for you, so you never hand-set ``valid_before``:
-
-```python
-import base64
-
-payer = primitive.PrivateKeySigner(os.environ["PAYER_KEY"])
-built = x402.pay_email_challenge(issued, signer=payer)
-
-# `built.json` is the interaction.json body. The payer received the challenge as
-# an inbound email; reply to it with the envelope attached as `interaction.json`
-# using the email client's `reply` method (see above). The platform reads the
-# envelope, re-derives the interaction-bound nonce, and settles on chain.
-attachment: primitive.SendAttachment = {
-    "filename": "interaction.json",
-    "content_type": "application/json",
-    "content_base64": base64.b64encode(built.json.encode("utf-8")).decode(),
-}
-client.reply(
-    challenge_email,
-    {"text": "Payment attached.", "attachments": [attachment]},
-)
-```
-
-### Signing primitives (lower level)
-
-``pay()`` builds and signs the payment for you. When you need to drive the
-signing yourself, for example to sign a challenge carried in an email reply and
-submit the payment separately, the same building blocks are exported directly:
-
-- ``derive_eip3009_nonce(binding)`` derives the interaction-bound EIP-3009
-  nonce, locked to a normative vector the platform recomputes.
-- ``extract_email_challenge(part)`` validates an inbound ``interaction.json``
-  challenge part (str, bytes, or a parsed dict) and returns the typed
-  ``X402EmailChallenge`` ready for ``pay_email_challenge``, so you never
-  hand-parse the envelope.
-- ``compute_payment_validity_window(challenge_expires_at_sec=..., now_sec=...)``
-  returns the ``(valid_after, valid_before)`` window, landed inside the band the
-  platform accepts by default: ``valid_before`` keeps at least a minimum
-  settlement headroom (60s) so a near-expired challenge is not signed into a
-  guaranteed rejection, and the total window is clamped to the 24h cap so a
-  far-future expiry never produces an "authorization window too wide" rejection.
-  Pass an explicit ``valid_before_sec``/``valid_after_sec`` to pin a bound; with
-  ``clamp=False`` an out-of-band pinned value raises a specific error naming
-  which bound was violated instead of silently signing a doomed authorization.
-- ``sign_interaction_payment(sign=..., payer=..., domain=..., pay_to=...,
-  amount=..., nonce_binding=..., valid_after=..., valid_before=...)`` derives the
-  bound nonce, assembles the authorization, and signs it. The key never leaves
-  the caller.
-- ``build_exact_evm_payment_payload(network=..., authorization=...,
-  signature=...)`` assembles the exact-EVM x402 wire payload.
-
-```python
-import math
-import time
-from dateutil.parser import isoparse
-from primitive import (
-    PrivateKeySigner,
-    TokenDomain,
-    NonceBinding,
-    compute_payment_validity_window,
-    sign_interaction_payment,
-    build_exact_evm_payment_payload,
-)
-
-payer = PrivateKeySigner(os.environ["PAYER_KEY"])
-pr = challenge.payment_requirements
-now_sec = math.floor(time.time())
-
-valid_after, valid_before = compute_payment_validity_window(
-    challenge_expires_at_sec=math.floor(isoparse(challenge.expires_at).timestamp()),
-    now_sec=now_sec,
-)
-
-authorization, signature = sign_interaction_payment(
-    sign=payer.sign_typed_data,
-    payer=payer.address,
-    domain=TokenDomain(
-        name=pr.extra["name"],
-        version=pr.extra["version"],
-        chain_id=84532,  # base-sepolia
-        verifying_contract=pr.asset,
-    ),
-    pay_to=pr.pay_to,
-    amount=int(pr.max_amount_required),
-    nonce_binding=NonceBinding(
-        interaction_id=challenge.nonce_binding["interaction_id"],
-        challenge_step_id=challenge.nonce_binding["challenge_step_id"],
-        challenge_nonce=challenge.nonce_binding["challenge_nonce"],
-    ),
-    valid_after=valid_after,
-    valid_before=valid_before,
-)
-
-payment = build_exact_evm_payment_payload(
-    network="base-sepolia",
-    authorization=authorization,
-    signature=signature,
-).to_dict()
-# submit `payment` to /v1/x402/challenges/{id}/pay
-```
-
-### Read and set the spend policy
-
-The spend policy guards outbound payments: a ``paused`` kill-switch, per-payment
-and daily caps (token base units, or ``None`` for no cap), and a payee
-``allowlist`` (``None`` means any on-net payee, ``[]`` denies all).
-``set_spend_policy`` merges: only the fields you pass change, and omitted fields
-keep their current value. Pass ``None`` to clear a cap.
-
-```python
-x402.set_spend_policy({"paused": False, "max_per_payment": "5000000"})
-policy = x402.get_spend_policy()
-
-x402.list_payout_addresses()
-```
-
-### Errors
-
-Every method raises ``primitive.X402Error`` on a client-side, transport, or
-non-2xx server error. It carries ``status`` (the HTTP status, or ``0`` for a
-request that never reached the server), ``body`` (the parsed error envelope when
-present), and ``retry_after`` (the ``Retry-After`` header, when the server sent
-one). On ``pay()``, a ``status == 0`` error means the request may not have been
-sent, so the payment outcome is indeterminate.
 
 ## Advanced usage
 
@@ -666,18 +436,20 @@ elif is_sent_email_completed_event(event):
 
 Parsed events are Pydantic models (`SentEmailAcceptedEvent`, `SentEmailRecipientResultEvent`, `SentEmailRollupResultEvent`, `SentEmailLegacyMessageResultEvent`, `SentEmailCompletedEvent`). `validate_sent_email_event` / `safe_validate_sent_email_event` validate an already parsed body, and the schema is exported as `sent_email_event_json_schema`. An `email.bounced` event's `email.analysis.bounce` carries `sent_email_id` (the send the bounce belongs to, or None when it could not be linked) and `failed_recipients` (every failed address, up to 100).
 
-### Payment and interaction webhook events
+### Email understanding and email rules
 
-Webhooks are not email-only. The same endpoint also receives `payment.*` settlement notifications and `interaction.x402.*` events from the x402-over-email flow. The event name is carried in the **`X-Webhook-Event` header** for every family. The body is sent verbatim with no envelope, so it is the header (not a body field) that names the event: an `email.*` body carries `event`, a `payment.*` body carries the name in `type`, and an `interaction.*` body is just `{"interaction": {...}}` with no event/type field at all.
+For organizations with email rules enabled, `email.received` events carry `email.analysis.understanding` (`EmailUnderstanding`): a `version`, a `status`, and when `ready`, `facts` keyed by name, each with a `value` and `confidence`. Rule-granted deliveries also list the matching `rules`. Treat an unfamiliar `status`, fact name or value as one added after your SDK was built. `email.analysis.sender` (`SenderAnalysis`) is the sender authentication verdict.
+
+The Email Rules operations in `primitive.api.api.email_rules` need a member's own OAuth token that is not narrowed, such as the one `primitive login` stores. API keys and connected agent credentials are refused.
+
+### Interaction webhook events
+
+Webhooks are not email-only. The same endpoint also receives `interaction.*` events. The event name is carried in the **`X-Webhook-Event` header** for every family. The body is sent verbatim with no envelope, so it is the header (not a body field) that names the event: an `email.*` body carries `event`, and an `interaction.*` body is just `{"interaction": {...}}` with no event/type field at all.
 
 `handle_webhook_event(...)` verifies the signature over the raw body first, then keys on the header to return a typed event for known types and an `UnknownEvent` (it does not raise) for the rest:
 
 ```python
-from primitive import (
-    handle_webhook_event,
-    is_payment_settled_event,
-    is_interaction_x402_event,
-)
+from primitive import handle_webhook_event
 
 event = handle_webhook_event(
     body=raw_body,
@@ -685,23 +457,17 @@ event = handle_webhook_event(
     secret=os.environ["PRIMITIVE_WEBHOOK_SECRET"],
 )
 
-if is_payment_settled_event(event):
-    # flat fields; amount is in token base units
-    print(event["challenge_id"], event["amount"], event["settle_tx"])
-elif is_interaction_x402_event(event):
-    # interaction.x402.* event (challenge/payment/settled/...)
-    ...
+if isinstance(event, dict) and event.get("event") == "interaction.ack.acked":
+    print(event.get("interaction"))
 ```
 
 The full catalog of header values is exported as the `WEBHOOK_EVENT_TYPES` tuple:
 
 - `email.received`, `email.bounced`, `email.tls_report`, `email.dmarc_report`, `email.dmarc_failure`
 - `sent_email.accepted`, `sent_email.delivered`, `sent_email.failed`, `sent_email.completed` (opt-in)
-- `payment.settled`, `payment.failed`
-- `interaction.x402.challenge`, `interaction.x402.payment`, `interaction.x402.settled`, `interaction.x402.rejected`, `interaction.x402.declined`, `interaction.x402.expired`, `interaction.x402.verify_timeout`
 - `interaction.ack.received`, `interaction.ack.requested`, `interaction.ack.acked`, `interaction.ack.canceled`, `interaction.ack.expired`
 
-Signature verification runs on the raw body and is independent of the event type, so it works identically for `payment.*` and `interaction.*` bodies. Each delivery is signed once; the same `t=...,v1=...` value is sent on the primary `Primitive-Signature` header plus `X-Primitive-Signature` and `X-Webhook-Signature` for non-SDK consumers. The SDK verifies `Primitive-Signature`, and still accepts the retired `MyMX-Signature` header name when verifying older captured deliveries. `handle_webhook(...)` remains hard-typed to `email.received` for backward compatibility; reach for `handle_webhook_event(...)` when you need the full event union.
+Signature verification runs on the raw body and is independent of the event type, so it works identically for `sent_email.*` and `interaction.*` bodies. Each delivery is signed once; the same `t=...,v1=...` value is sent on the primary `Primitive-Signature` header plus `X-Primitive-Signature` and `X-Webhook-Signature` for non-SDK consumers. The SDK verifies `Primitive-Signature`, and still accepts the retired `MyMX-Signature` header name when verifying older captured deliveries. `handle_webhook(...)` remains hard-typed to `email.received` for backward compatibility; reach for `handle_webhook_event(...)` when you need the full event union.
 
 ### Lower-level webhook helpers
 
@@ -734,6 +500,32 @@ make python-generate
 make python-check
 make python-build
 ```
+
+## Keep a conversation in sync
+
+`sync_conversation` reads `GET /emails/{id}/conversation?since=` and pages
+through `has_more`. Without a state it starts from `since=start`; pass the
+previous result back to read only what changed.
+
+```python
+from primitive import PrimitiveClient, sync_conversation
+
+client = PrimitiveClient(api_key)
+sync = sync_conversation(client, email_id)
+# later
+sync = sync_conversation(client, email_id, sync)
+print(len(sync.messages), sync.cursor)
+```
+
+A message can come back in a later read with more `copies`, or under a new
+id when a better copy of it becomes visible. The helper upserts messages by
+`id`, treats two entries as the same message when either one's id is in the
+other's `copies` or `sent_email_id` (the newer one wins), and keeps the list
+ordered by timestamp. A timestamp without an offset is read as UTC; one that
+is not a valid RFC 3339 date-time becomes null and sorts last. A sync stops
+with an error after 1000 pages. A `since` read does not report deleted
+messages, so sync from scratch (no state) now and then to reconcile. The merge on its own is
+`merge_conversation_messages(held, delta)`.
 
 ## Delete mailbox history
 

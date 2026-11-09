@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
 
-// Regression guard for Workers-style bundling of the Workers-safe entries.
+// Regression guard for edge-style bundling of the edge-safe entries.
 //
 // The email-reply project scaffolded by `primitive functions init` bundles
 // a handler that imports from "@primitivedotdev/sdk/api" with exactly these
@@ -29,7 +29,7 @@ function sourceEntry(relativePath: string): string {
   return fileURLToPath(new URL(relativePath, import.meta.url));
 }
 
-describe("workers-style bundling", () => {
+describe("edge-style bundling", () => {
   it("bundles the /api entry with zero errors", async () => {
     const result = await bundleForWorkers(
       sourceEntry("../../src/api/index.ts"),

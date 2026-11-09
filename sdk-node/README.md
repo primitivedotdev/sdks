@@ -22,6 +22,15 @@ npm install @primitivedotdev/sdk
 
 Requires Node.js 22 or newer.
 
+To try the 3.0.0 preview: `npm install @primitivedotdev/sdk@preview`.
+
+## Upgrading to 3.0
+
+3.0 removes the payment client subpath and the payment webhook event
+types, makes some response fields required or nullable, and
+adds `syncConversation`. The full list is in the
+[changelog](https://github.com/primitivedotdev/sdks/blob/main/CHANGELOG.md).
+
 ## Upgrading to 2.0
 
 2.0 changes one type. `EmailSearchMeta.total`, returned by `searchEmails`, is
@@ -227,6 +236,59 @@ try {
 }
 ```
 
+### Grants and narrowed keys
+
+A credential with a narrowed grant that calls an operation outside it gets a
+`403 grant_forbidden`, thrown as `GrantForbiddenError` (a subclass of
+`PrimitiveApiError`) with the missing permission and the reason:
+
+```ts
+import { GrantForbiddenError } from "@primitivedotdev/sdk";
+
+try {
+  await client.send({ from, to, subject, bodyText });
+} catch (err) {
+  if (err instanceof GrantForbiddenError) {
+    console.error(err.permission, err.reason, err.grant.credential_kind);
+  }
+  throw err;
+}
+```
+
+`PERMISSIONS` and the `Permission` type list the permissions operations
+require in this SDK version, and `OPERATION_PERMISSIONS` maps each operation
+id to its permissions; both come from the spec's `x-primitive-permission`.
+`client.account.whoami({ grant: true })` returns the caller's grant, and
+`client.account.checkPermission("mail:send")` asks whether the grant allows a
+permission (null from a server that does not answer checks).
+
+`client.keys.create`, `rotate` and `update` manage organization API keys;
+`GrantSpec` builds a typed grant for them:
+
+```ts
+import { GrantSpec } from "@primitivedotdev/sdk";
+
+const key = await client.keys.create(
+  {
+    name: "support-reader",
+    grant: GrantSpec.custom().allow("mail:read").addresses("support@example.com").build(),
+    expires_in_days: 30,
+  },
+  { stepUp: process.env.PRIMITIVE_STEP_UP },
+);
+```
+
+Managing keys is for people: a dashboard session, or an OAuth token with a
+step-up token from the dashboard. The server does not let API keys create or
+rotate keys.
+`client.credentials` reads the credential inventory, audit events and policy,
+and `client.roles` reads roles, groups, mailbox access and the access mode.
+Routes a server has not enabled answer `404 feature_disabled`.
+`BUILTIN_ROLE_KEYS` and the `BuiltinRoleKey` type list the built-in role keys
+(`owner`, `admin`, `operator` and `member`). `operator` has every
+permission `admin` has except managing members, changing roles, sending
+invitations and billing.
+
 ## The normalized email object
 
 `primitive.receive(...)` returns a normalized inbound email object that keeps the common case clean:
@@ -306,200 +368,8 @@ The same helper is available in the Python SDK (`is_trusted_sender`) and the Go 
 Use `parseInteractionEnvelope(string | Uint8Array)` from `@primitivedotdev/sdk/interactions` to read an
 `interaction.json` attachment for display. The bounded parser returns valid,
 unsupported, or invalid and preserves unknown protocols. It performs no
-authentication, network requests, payments, or sends. See the
+authentication, network requests, or sends. See the
 [parser contract and limits](../docs/interaction-envelopes.md).
-
-## x402 payments
-
-The `x402` client lets one agent request a USDC payment and another pay it. It is non-custodial: the payer signs an EIP-3009 `transferWithAuthorization` locally with their own key, and the key never leaves the caller. The platform resolves the real payee address, verifies every signed field against its own records, enforces the org's spend policy, and settles on chain.
-
-The model in four steps:
-
-1. The payee registers a payout address once (proving control of it with a local signature).
-2. The payee creates a challenge with `charge()`, which the platform fills in with the registered payout address.
-3. The payer signs the challenge locally and submits it with `pay()`.
-4. The platform verifies and settles.
-
-Amounts can be given as a human USDC string (`amountUsdc: "0.01"`) or as token base units (`amount: "10000"`, since USDC has 6 decimals). Networks are `base` (mainnet) and `base-sepolia` (testnet). A viem `LocalAccount` from `privateKeyToAccount` is a valid signer: `pay()` uses its `signTypedData`, and `registerPayoutAddress()` also uses its `signMessage`.
-
-Construct the client from the `x402` subpath import (or `primitive.x402(...)` from the root import):
-
-```ts
-import { createX402Client } from "@primitivedotdev/sdk/x402";
-
-const x402 = createX402Client({ apiKey: process.env.PRIMITIVE_API_KEY! });
-```
-
-### Register a payout address (payee, one time)
-
-The signer proves control of its own address with an ownership message that binds your organization id, so a captured signature can never register the address under a different org. The recovered address becomes your default payout destination for that network, and `charge()` resolves its `pay_to` from this directory, so register before requesting payments. The org id is resolved automatically from your account, so you do not pass it (supply `org` only to override).
-
-```ts
-import { createX402Client } from "@primitivedotdev/sdk/x402";
-import { privateKeyToAccount } from "viem/accounts";
-
-const x402 = createX402Client({ apiKey: process.env.PRIMITIVE_API_KEY! });
-const payee = privateKeyToAccount(process.env.PAYEE_KEY as `0x${string}`);
-
-await x402.registerPayoutAddress(
-  { network: "base-sepolia", label: "treasury" },
-  { signer: payee },
-);
-```
-
-### Create a challenge (payee)
-
-```ts
-const challenge = await x402.charge({
-  amountUsdc: "0.01", // human USDC amount
-  network: "base-sepolia",
-  payerOrg: process.env.PAYER_ORG_ID, // org allowed to pay this challenge
-  description: "API call",
-});
-```
-
-Pass exactly one of `amountUsdc` (a human USDC string like `"0.01"`) or `amount` (token base units, e.g. `"10000"`). `amountUsdc` is the easy path; `amount` remains available when you already have a base-unit value.
-
-Hand the returned `challenge` object to the payer (for example over email or any out-of-band channel). `getChallenge(id)` re-hydrates a challenge by id, for example to retry `pay()` after a restart.
-
-### Pay a challenge (payer)
-
-The payer signs the interaction-bound authorization locally and submits it. The key never leaves the caller.
-
-```ts
-import { privateKeyToAccount } from "viem/accounts";
-
-const payer = privateKeyToAccount(process.env.PAYER_KEY as `0x${string}`);
-const receipt = await x402.pay(challenge, { signer: payer });
-
-console.log(receipt.status, receipt.settle_tx); // settled, on-chain tx hash
-```
-
-### Email-native payments
-
-The challenge can also ride a real email thread instead of a synthetic id. The payee issues the challenge as an email; the payer signs it into an `interaction.json` payment step and sends it back as an attachment on the reply.
-
-The payee issues the challenge with `createEmailChallenge`. The `pay_to` payout wallet and the token asset are resolved server-side; you only supply the addresses, amount, and network:
-
-```ts
-const issued = await x402.createEmailChallenge({
-  from: "payee@your-domain.example", // your sending address (the funds receiver)
-  to: "payer@their-domain.example", // the payer's address
-  amountUsdc: "0.01",
-  network: "base-sepolia",
-});
-// issued.interaction_id is the email thread the payment is bound to;
-// issued.challenge carries the payment_requirements + nonce_binding the payer signs.
-```
-
-The payer receives the challenge as an `interaction.json` MIME part on an inbound email. Rather than hand-parsing it, pass the part bytes to `parseEmailChallengeFromPart`, which validates the envelope and returns the typed `X402EmailChallenge`:
-
-```ts
-import { parseEmailChallengeFromPart } from "@primitivedotdev/sdk/x402";
-
-// `interactionPart` is the body of the inbound email's `interaction.json`
-// attachment (a string, a Buffer/Uint8Array, or an already-parsed object).
-const issued = parseEmailChallengeFromPart(interactionPart);
-```
-
-The payer then signs the challenge locally with `payEmailChallenge` and sends the resulting envelope back as an `interaction.json` attachment. `payEmailChallenge` does not send anything; it returns the signed payment-step envelope and its canonical JSON bytes. The validity window is computed and clamped into the accepted band for you, so you never hand-set `validBefore`:
-
-```ts
-import { privateKeyToAccount } from "viem/accounts";
-
-const payer = privateKeyToAccount(process.env.PAYER_KEY as `0x${string}`);
-const built = await x402.payEmailChallenge(issued, { signer: payer });
-
-// `built.json` is the interaction.json body. The payer received the challenge
-// as an inbound email; reply to it with the envelope attached as
-// `interaction.json` using the email client's `reply` method (see the email
-// client above). The platform reads the envelope, re-derives the
-// interaction-bound nonce, and settles on chain.
-import { Buffer } from "node:buffer";
-import primitive from "@primitivedotdev/sdk";
-
-const mail = primitive.client({ apiKey: process.env.PRIMITIVE_API_KEY! });
-await mail.reply(challengeEmail, {
-  text: "Payment attached.",
-  attachments: [
-    {
-      filename: "interaction.json",
-      content_type: "application/json",
-      content_base64: Buffer.from(built.json, "utf8").toString("base64"),
-    },
-  ],
-});
-```
-
-### Signing primitives (lower level)
-
-`pay()` builds and signs the payment for you. When you need to drive the signing yourself, for example to sign a challenge carried in an email reply and submit the payment separately, the same building blocks are exported directly:
-
-- `deriveEip3009Nonce(binding)` derives the interaction-bound EIP-3009 nonce. The byte layout (`keccak256` over the lowercased `interaction_id`, a `0x00` separator, the lowercased `challenge_step_id`, a `0x00` separator, and the 32 raw bytes of the challenge nonce) is locked to a normative vector the platform recomputes.
-- `parseEmailChallengeFromPart(part)` validates an inbound `interaction.json` challenge part (string, bytes, or a parsed object) and returns the typed `X402EmailChallenge` ready for `payEmailChallenge`, so you never hand-parse the envelope.
-- `computePaymentValidityWindow({ challengeExpiresAtSec, nowSec })` returns the `{ validAfter, validBefore }` window. By default it lands the window inside the band the platform accepts: `validBefore` keeps at least a minimum settlement headroom (60s) so a near-expired challenge is not signed into a guaranteed rejection, and the total window is clamped to the 24h cap so a far-future expiry never produces an "authorization window too wide" rejection. Pass an explicit `validBeforeSec`/`validAfterSec` to pin a bound; with `clamp: false` an out-of-band pinned value throws a specific error naming which bound was violated instead of silently signing a doomed authorization.
-- `signInteractionPayment({ sign, payer, domain, payTo, amount, nonceBinding, validAfter, validBefore })` derives the bound nonce, assembles the authorization, and signs it with your `sign` callback. Returns `{ authorization, signature }`. The key never leaves the caller.
-- `buildExactEvmPaymentPayload({ network, authorization, signature })` assembles the exact-EVM x402 wire payload, validating the nonce and signature shape.
-
-```ts
-import {
-  buildExactEvmPaymentPayload,
-  computePaymentValidityWindow,
-  signInteractionPayment,
-} from "@primitivedotdev/sdk/x402";
-import { privateKeyToAccount } from "viem/accounts";
-
-const payer = privateKeyToAccount(process.env.PAYER_KEY as `0x${string}`);
-const pr = challenge.payment_requirements;
-const nowSec = Math.floor(Date.now() / 1000);
-
-const { validAfter, validBefore } = computePaymentValidityWindow({
-  challengeExpiresAtSec: Math.floor(Date.parse(challenge.expires_at) / 1000),
-  nowSec,
-});
-
-const { authorization, signature } = await signInteractionPayment({
-  sign: (typedData) => payer.signTypedData(typedData),
-  payer: payer.address,
-  domain: {
-    name: pr.extra.name,
-    version: pr.extra.version,
-    chainId: 84532, // base-sepolia
-    verifyingContract: pr.asset as `0x${string}`,
-  },
-  payTo: pr.payTo as `0x${string}`,
-  amount: BigInt(pr.maxAmountRequired),
-  nonceBinding: {
-    interactionId: challenge.nonce_binding.interaction_id,
-    challengeStepId: challenge.nonce_binding.challenge_step_id,
-    challengeNonce: challenge.nonce_binding.challenge_nonce,
-  },
-  validAfter,
-  validBefore,
-});
-
-const payment = buildExactEvmPaymentPayload({
-  network: "base-sepolia",
-  authorization,
-  signature,
-});
-// submit `payment` to /v1/x402/challenges/{id}/pay
-```
-
-### Read and set the spend policy
-
-The spend policy guards outbound payments: a `paused` kill-switch, per-payment and daily caps (token base units, or `null` for no cap), and a payee `allowlist` (`null` means any on-net payee, `[]` denies all). `setSpendPolicy` merges: only the fields you pass change, and omitted fields keep their current value. Pass `null` to clear a cap.
-
-```ts
-await x402.setSpendPolicy({ paused: false, max_per_payment: "5000000" });
-const policy = await x402.getSpendPolicy();
-
-await x402.listPayoutAddresses();
-```
-
-### Errors
-
-Every method throws `X402Error` on a client-side, transport, or non-2xx server error. It carries `status` (the HTTP status, or `0` for a request that never reached the server), `body` (the parsed error envelope when present), and `retryAfter` (the `Retry-After` header, when the server sent one). On `pay()`, a `status === 0` error means the request may not have been sent, so the payment outcome is indeterminate.
 
 ## Lower-level surfaces
 
@@ -706,18 +576,20 @@ if (isSentEmailFailedEvent(event) && event.scope === "recipient") {
 
 `validateSentEmailEvent` / `safeValidateSentEmailEvent` validate an already parsed body, and the schema is exported as `sentEmailEventJsonSchema`. An `email.bounced` event's `email.analysis.bounce` carries `sent_email_id` (the send the bounce belongs to, or null when it could not be linked) and `failed_recipients` (every failed address, up to 100).
 
-### Payment and interaction webhook events
+### Email understanding and email rules
 
-Webhooks are not email-only. The same endpoint also receives `payment.*` settlement notifications and `interaction.x402.*` events from the x402-over-email flow. The event name is carried in the **`X-Webhook-Event` header** for every family. The body is sent verbatim with no envelope, so it is the header (not a body field) that names the event: an `email.*` body carries `event`, a `payment.*` body carries the name in `type`, and an `interaction.*` body is just `{ interaction: { ... } }` with no event/type field at all.
+For organizations with email rules enabled, `email.received` events carry `email.analysis.understanding` (`EmailUnderstanding`): a `version`, a `status`, and when `ready`, `facts` keyed by name, each `{ value, confidence }`. Rule-granted deliveries also list the matching `rules`. Treat an unfamiliar `status`, fact name or value as one added after your SDK was built. `email.analysis.sender` (`SenderAnalysis`) is the sender authentication verdict.
+
+The Email Rules operations (`compileEmailRule`, `createEmailRule`, `listEmailRules`, `getEmailRule`, `updateEmailRule`, `deleteEmailRule`, `listEmailRuleDecisions`) need a member's own OAuth token that is not narrowed, such as the one `primitive login` stores. API keys and connected agent credentials are refused.
+
+### Interaction webhook events
+
+Webhooks are not email-only. The same endpoint also receives `interaction.*` events. The event name is carried in the **`X-Webhook-Event` header** for every family. The body is sent verbatim with no envelope, so it is the header (not a body field) that names the event: an `email.*` body carries `event`, and an `interaction.*` body is just `{ interaction: { ... } }` with no event/type field at all.
 
 `handleWebhookEvent` verifies the signature over the raw body first, then keys on the header to return a typed event for known types and an `UnknownEvent` (it does not throw) for the rest:
 
 ```ts
-import {
-  handleWebhookEvent,
-  isPaymentSettledEvent,
-  isInteractionX402Event,
-} from "@primitivedotdev/sdk/webhook";
+import { handleWebhookEvent } from "@primitivedotdev/sdk/webhook";
 
 const event = handleWebhookEvent({
   body: rawBodyString,
@@ -725,11 +597,7 @@ const event = handleWebhookEvent({
   secret: process.env.PRIMITIVE_WEBHOOK_SECRET!,
 });
 
-if (isPaymentSettledEvent(event)) {
-  // typed PaymentSettledEvent: flat fields, amount in token base units
-  console.log("settled", event.challenge_id, event.amount, event.settle_tx);
-} else if (isInteractionX402Event(event)) {
-  // typed interaction.x402.* event (challenge/payment/settled/...)
+if (event.event === "interaction.ack.acked") {
   console.log(event.event, event.interaction);
 }
 ```
@@ -738,11 +606,9 @@ The full catalog of header values is the `WebhookEventType` union, also exported
 
 - `email.received`, `email.bounced`, `email.tls_report`, `email.dmarc_report`, `email.dmarc_failure`
 - `sent_email.accepted`, `sent_email.delivered`, `sent_email.failed`, `sent_email.completed` (opt-in)
-- `payment.settled`, `payment.failed`
-- `interaction.x402.challenge`, `interaction.x402.payment`, `interaction.x402.settled`, `interaction.x402.rejected`, `interaction.x402.declined`, `interaction.x402.expired`, `interaction.x402.verify_timeout`
 - `interaction.ack.received`, `interaction.ack.requested`, `interaction.ack.acked`, `interaction.ack.canceled`, `interaction.ack.expired`
 
-Signature verification runs on the raw body and is independent of the event type, so it works identically for `payment.*` and `interaction.*` bodies. Each delivery is signed once; the same `t=...,v1=...` value is sent on the primary `Primitive-Signature` header plus `X-Primitive-Signature` and `X-Webhook-Signature` for non-SDK consumers. The SDK verifies `Primitive-Signature`, and still accepts the retired `MyMX-Signature` header name when verifying older captured deliveries. `handleWebhook` remains hard-typed to `email.received` for backward compatibility; reach for `handleWebhookEvent` when you need the full event union.
+Signature verification runs on the raw body and is independent of the event type, so it works identically for `sent_email.*` and `interaction.*` bodies. Each delivery is signed once; the same `t=...,v1=...` value is sent on the primary `Primitive-Signature` header plus `X-Primitive-Signature` and `X-Webhook-Signature` for non-SDK consumers. The SDK verifies `Primitive-Signature`, and still accepts the retired `MyMX-Signature` header name when verifying older captured deliveries. `handleWebhook` remains hard-typed to `email.received` for backward compatibility; reach for `handleWebhookEvent` when you need the full event union.
 
 ### Other subpath imports
 
@@ -776,6 +642,32 @@ make node-generate
 make node-check
 make node-build
 ```
+
+## Keep a conversation in sync
+
+`syncConversation` reads `GET /emails/{id}/conversation?since=` and pages
+through `has_more`. Without a state it starts from `since=start`; pass the
+previous result back to read only what changed.
+
+```ts
+import { PrimitiveClient, syncConversation } from "@primitivedotdev/sdk/api";
+
+const client = new PrimitiveClient({ apiKey: process.env.PRIMITIVE_API_KEY });
+let sync = await syncConversation(client, emailId);
+// later
+sync = await syncConversation(client, emailId, sync);
+console.log(sync.messages.length, sync.cursor);
+```
+
+A message can come back in a later read with more `copies`, or under a new
+id when a better copy of it becomes visible. The helper upserts messages by
+`id`, treats two entries as the same message when either one's id is in the
+other's `copies` or `sent_email_id` (the newer one wins), and keeps the list
+ordered by timestamp. A timestamp without an offset is read as UTC; one that
+is not a valid RFC 3339 date-time becomes null and sorts last. A sync stops
+with an error after 1000 pages. A `since` read does not report deleted
+messages, so sync from scratch (no state) now and then to reconcile. The merge on its own is
+`mergeConversationMessages(held, delta)`.
 
 ## Delete mailbox history
 

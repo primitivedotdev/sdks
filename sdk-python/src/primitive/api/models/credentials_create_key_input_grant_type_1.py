@@ -1,0 +1,207 @@
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+
+from attrs import define as _attrs_define
+from attrs import field as _attrs_field
+
+from ..types import UNSET, Unset
+
+from ..models.credentials_create_key_input_grant_type_1_depth import CredentialsCreateKeyInputGrantType1Depth
+from ..models.credentials_create_key_input_grant_type_1_mail_scope import CredentialsCreateKeyInputGrantType1MailScope
+from ..models.credentials_create_key_input_grant_type_1_preset import CredentialsCreateKeyInputGrantType1Preset
+from typing import cast
+
+if TYPE_CHECKING:
+  from ..models.credentials_create_key_input_grant_type_1_matrix import CredentialsCreateKeyInputGrantType1Matrix
+  from ..models.credentials_create_key_input_grant_type_1_resources import CredentialsCreateKeyInputGrantType1Resources
+
+
+
+
+
+T = TypeVar("T", bound="CredentialsCreateKeyInputGrantType1")
+
+
+
+@_attrs_define
+class CredentialsCreateKeyInputGrantType1:
+    """ 
+        Attributes:
+            preset (CredentialsCreateKeyInputGrantType1Preset):
+            matrix (CredentialsCreateKeyInputGrantType1Matrix | Unset):
+            permissions (list[str] | Unset):
+            addresses (list[str] | Unset):
+            domains (list[str] | Unset):
+            rules (list[str] | Unset):
+            depth (CredentialsCreateKeyInputGrantType1Depth | Unset): Deprecated: every key that reaches mail reads the full
+                email. Ignored, except that raw still adds mail.raw:read (Raw mail) to an address preset or a custom grant.
+            resources (CredentialsCreateKeyInputGrantType1Resources | Unset):
+            mail_scope (CredentialsCreateKeyInputGrantType1MailScope | Unset):
+     """
+
+    preset: CredentialsCreateKeyInputGrantType1Preset
+    matrix: CredentialsCreateKeyInputGrantType1Matrix | Unset = UNSET
+    permissions: list[str] | Unset = UNSET
+    addresses: list[str] | Unset = UNSET
+    domains: list[str] | Unset = UNSET
+    rules: list[str] | Unset = UNSET
+    depth: CredentialsCreateKeyInputGrantType1Depth | Unset = UNSET
+    resources: CredentialsCreateKeyInputGrantType1Resources | Unset = UNSET
+    mail_scope: CredentialsCreateKeyInputGrantType1MailScope | Unset = UNSET
+
+
+
+
+
+    def to_dict(self) -> dict[str, Any]:
+        from ..models.credentials_create_key_input_grant_type_1_matrix import CredentialsCreateKeyInputGrantType1Matrix # noqa: PLC0415
+        from ..models.credentials_create_key_input_grant_type_1_resources import CredentialsCreateKeyInputGrantType1Resources # noqa: PLC0415
+        preset = self.preset.value
+
+        matrix: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.matrix, Unset):
+            matrix = self.matrix.to_dict()
+
+        permissions: list[str] | Unset = UNSET
+        if not isinstance(self.permissions, Unset):
+            permissions = self.permissions
+
+
+
+        addresses: list[str] | Unset = UNSET
+        if not isinstance(self.addresses, Unset):
+            addresses = self.addresses
+
+
+
+        domains: list[str] | Unset = UNSET
+        if not isinstance(self.domains, Unset):
+            domains = self.domains
+
+
+
+        rules: list[str] | Unset = UNSET
+        if not isinstance(self.rules, Unset):
+            rules = self.rules
+
+
+
+        depth: str | Unset = UNSET
+        if not isinstance(self.depth, Unset):
+            depth = self.depth.value
+
+
+        resources: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.resources, Unset):
+            resources = self.resources.to_dict()
+
+        mail_scope: str | Unset = UNSET
+        if not isinstance(self.mail_scope, Unset):
+            mail_scope = self.mail_scope.value
+
+
+
+        field_dict: dict[str, Any] = {}
+
+        field_dict.update({
+            "preset": preset,
+        })
+        if matrix is not UNSET:
+            field_dict["matrix"] = matrix
+        if permissions is not UNSET:
+            field_dict["permissions"] = permissions
+        if addresses is not UNSET:
+            field_dict["addresses"] = addresses
+        if domains is not UNSET:
+            field_dict["domains"] = domains
+        if rules is not UNSET:
+            field_dict["rules"] = rules
+        if depth is not UNSET:
+            field_dict["depth"] = depth
+        if resources is not UNSET:
+            field_dict["resources"] = resources
+        if mail_scope is not UNSET:
+            field_dict["mail_scope"] = mail_scope
+
+        return field_dict
+
+
+
+    @classmethod
+    def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.credentials_create_key_input_grant_type_1_matrix import CredentialsCreateKeyInputGrantType1Matrix # noqa: PLC0415
+        from ..models.credentials_create_key_input_grant_type_1_resources import CredentialsCreateKeyInputGrantType1Resources # noqa: PLC0415
+        d = dict(src_dict)
+        preset = CredentialsCreateKeyInputGrantType1Preset(d.pop("preset"))
+
+
+
+
+        _matrix = d.pop("matrix", UNSET)
+        matrix: CredentialsCreateKeyInputGrantType1Matrix | Unset
+        if isinstance(_matrix,  Unset):
+            matrix = UNSET
+        else:
+            matrix = CredentialsCreateKeyInputGrantType1Matrix.from_dict(_matrix)
+
+
+
+
+        permissions = cast(list[str], d.pop("permissions", UNSET))
+
+
+        addresses = cast(list[str], d.pop("addresses", UNSET))
+
+
+        domains = cast(list[str], d.pop("domains", UNSET))
+
+
+        rules = cast(list[str], d.pop("rules", UNSET))
+
+
+        _depth = d.pop("depth", UNSET)
+        depth: CredentialsCreateKeyInputGrantType1Depth | Unset
+        if isinstance(_depth,  Unset):
+            depth = UNSET
+        else:
+            depth = CredentialsCreateKeyInputGrantType1Depth(_depth)
+
+
+
+
+        _resources = d.pop("resources", UNSET)
+        resources: CredentialsCreateKeyInputGrantType1Resources | Unset
+        if isinstance(_resources,  Unset):
+            resources = UNSET
+        else:
+            resources = CredentialsCreateKeyInputGrantType1Resources.from_dict(_resources)
+
+
+
+
+        _mail_scope = d.pop("mail_scope", UNSET)
+        mail_scope: CredentialsCreateKeyInputGrantType1MailScope | Unset
+        if isinstance(_mail_scope,  Unset):
+            mail_scope = UNSET
+        else:
+            mail_scope = CredentialsCreateKeyInputGrantType1MailScope(_mail_scope)
+
+
+
+
+        credentials_create_key_input_grant_type_1 = cls(
+            preset=preset,
+            matrix=matrix,
+            permissions=permissions,
+            addresses=addresses,
+            domains=domains,
+            rules=rules,
+            depth=depth,
+            resources=resources,
+            mail_scope=mail_scope,
+        )
+
+        return credentials_create_key_input_grant_type_1
+

@@ -11,6 +11,7 @@ from ... import errors
 from ...models.error_response import ErrorResponse
 from ...models.semantic_search_input import SemanticSearchInput
 from ...models.semantic_search_response_200 import SemanticSearchResponse200
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -18,9 +19,13 @@ from typing import cast
 def _get_kwargs(
     *,
     body: SemanticSearchInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -110,6 +115,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: SemanticSearchInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | SemanticSearchResponse200]:
     """ Semantic search across received and sent mail
@@ -131,6 +137,7 @@ def sync_detailed(
     entitlement; callers without them receive `403`.
 
     Args:
+        idempotency_key (str | Unset):
         body (SemanticSearchInput):
 
     Raises:
@@ -144,6 +151,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -157,6 +165,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: SemanticSearchInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | SemanticSearchResponse200 | None:
     """ Semantic search across received and sent mail
@@ -178,6 +187,7 @@ def sync(
     entitlement; callers without them receive `403`.
 
     Args:
+        idempotency_key (str | Unset):
         body (SemanticSearchInput):
 
     Raises:
@@ -192,6 +202,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -199,6 +210,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: SemanticSearchInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | SemanticSearchResponse200]:
     """ Semantic search across received and sent mail
@@ -220,6 +232,7 @@ async def asyncio_detailed(
     entitlement; callers without them receive `403`.
 
     Args:
+        idempotency_key (str | Unset):
         body (SemanticSearchInput):
 
     Raises:
@@ -233,6 +246,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -246,6 +260,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: SemanticSearchInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | SemanticSearchResponse200 | None:
     """ Semantic search across received and sent mail
@@ -267,6 +282,7 @@ async def asyncio(
     entitlement; callers without them receive `403`.
 
     Args:
+        idempotency_key (str | Unset):
         body (SemanticSearchInput):
 
     Raises:
@@ -281,5 +297,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

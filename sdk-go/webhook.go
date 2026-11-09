@@ -166,8 +166,7 @@ func VerifyWebhookSignature(options VerifyOptions) (bool, error) {
 // The event name is carried in the X-Webhook-Event HEADER for every event
 // family; pass it as the optional eventType argument (HandleWebhookEvent reads
 // it for you). The stored body is sent verbatim with no envelope: email.*
-// bodies carry "event", payment.* bodies carry the name in "type", and
-// interaction.* bodies are just {"interaction": {...}} with no event/type
+// bodies carry "event", and interaction.* bodies are just {"interaction": {...}} with no event/type
 // field. The header is therefore the PRIMARY discriminator; a top-level "event"
 // string in the body is used only as a backward-compat fallback.
 func ParseWebhookEvent(input any, eventType ...string) (WebhookEvent, error) {
@@ -234,45 +233,10 @@ func ParseWebhookEvent(input any, eventType ...string) (WebhookEvent, error) {
 		return nil, err
 	}
 
-	if resolvedEvent == "payment.settled" || resolvedEvent == "payment.failed" {
-		// Payment bodies are FLAT and carry the name in "type"; overlay a
-		// canonical Event (from the header) so consumers branch on a single
-		// field, and surface the on-the-wire fields as typed struct members.
-		payment := PaymentEvent{Event: resolvedEvent, Payload: preserved}
-		if t, ok := preserved["type"].(string); ok {
-			payment.Type = t
-		}
-		if v, ok := preserved["challenge_id"].(string); ok {
-			payment.ChallengeID = v
-		}
-		if v, ok := preserved["network"].(string); ok {
-			payment.Network = v
-		}
-		if v, ok := preserved["amount"].(string); ok {
-			payment.Amount = v
-		}
-		if v, ok := preserved["asset"].(string); ok {
-			payment.Asset = v
-		}
-		// payer_org is string|null on the wire; a present null leaves PayerOrg
-		// nil (not on-net), a present string sets it.
-		if v, ok := preserved["payer_org"].(string); ok {
-			payment.PayerOrg = &v
-		}
-		if resolvedEvent == "payment.settled" {
-			if v, ok := preserved["settle_tx"].(string); ok {
-				payment.SettleTx = v
-			}
-		} else if v, ok := preserved["failure_reason"].(string); ok {
-			payment.FailureReason = v
-		}
-		return payment, nil
-	}
-
 	if len(resolvedEvent) >= len("interaction.") && resolvedEvent[:len("interaction.")] == "interaction." {
 		// Interaction event: the body has no event/type field, so surface the
-		// canonical name from the header. Covers the typed interaction.x402.*
-		// lifecycle and the interaction.ack.* events.
+		// canonical name from the header. Covers the interaction.ack.* events
+		// and any other interaction protocol.
 		return InteractionEvent{Event: resolvedEvent, Payload: preserved}, nil
 	}
 
@@ -351,7 +315,7 @@ func HandleWebhookEvent(options HandleWebhookOptions) (WebhookEvent, error) {
 	}
 	// Classify on the X-Webhook-Event header (the primary discriminator).
 	// Verification above runs on the RAW body and is independent of the event
-	// type, so it works identically for email.*, payment.*, interaction.*.
+	// type, so it works identically for email.*, sent_email.*, interaction.*.
 	return ParseWebhookEvent(parsed, getHeaderValue(options.Headers, WebhookEventHeader))
 }
 

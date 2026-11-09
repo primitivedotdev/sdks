@@ -31,9 +31,10 @@ class FunctionTestRunOutboundRequest:
             email_id (None | UUID):
             endpoint_id (None | UUID):
             method (str):
-            url (str):
+            url (None | str): The URL the function requested. Null for a caller whose credential does not reach mail
+                content.
             host (str):
-            path (str):
+            path (None | str): The request path. Null for a caller whose credential does not reach mail content.
             status_code (int | None):
             ok (bool | None):
             duration_ms (int):
@@ -47,9 +48,9 @@ class FunctionTestRunOutboundRequest:
     email_id: None | UUID
     endpoint_id: None | UUID
     method: str
-    url: str
+    url: None | str
     host: str
-    path: str
+    path: None | str
     status_code: int | None
     ok: bool | None
     duration_ms: int
@@ -83,10 +84,12 @@ class FunctionTestRunOutboundRequest:
 
         method = self.method
 
+        url: None | str
         url = self.url
 
         host = self.host
 
+        path: None | str
         path = self.path
 
         status_code: int | None
@@ -185,11 +188,23 @@ class FunctionTestRunOutboundRequest:
 
         method = d.pop("method")
 
-        url = d.pop("url")
+        def _parse_url(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        url = _parse_url(d.pop("url"))
+
 
         host = d.pop("host")
 
-        path = d.pop("path")
+        def _parse_path(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        path = _parse_path(d.pop("path"))
+
 
         def _parse_status_code(data: object) -> int | None:
             if data is None:

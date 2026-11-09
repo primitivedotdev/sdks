@@ -23,11 +23,11 @@ def _get_kwargs(
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
     email_id: UUID | Unset = UNSET,
-    event_type: str | Unset = UNSET,
-    sent_email_id: UUID | Unset = UNSET,
     status: ListDeliveriesStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
+    event_type: str | Unset = UNSET,
+    sent_email_id: UUID | Unset = UNSET,
 
 ) -> dict[str, Any]:
     
@@ -45,13 +45,6 @@ def _get_kwargs(
         json_email_id = str(email_id)
     params["email_id"] = json_email_id
 
-    params["event_type"] = event_type
-
-    json_sent_email_id: str | Unset = UNSET
-    if not isinstance(sent_email_id, Unset):
-        json_sent_email_id = str(sent_email_id)
-    params["sent_email_id"] = json_sent_email_id
-
     json_status: str | Unset = UNSET
     if not isinstance(status, Unset):
         json_status = status.value
@@ -67,6 +60,13 @@ def _get_kwargs(
     if not isinstance(date_to, Unset):
         json_date_to = date_to.isoformat()
     params["date_to"] = json_date_to
+
+    params["event_type"] = event_type
+
+    json_sent_email_id: str | Unset = UNSET
+    if not isinstance(sent_email_id, Unset):
+        json_sent_email_id = str(sent_email_id)
+    params["sent_email_id"] = json_sent_email_id
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -126,31 +126,27 @@ def sync_detailed(
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
     email_id: UUID | Unset = UNSET,
-    event_type: str | Unset = UNSET,
-    sent_email_id: UUID | Unset = UNSET,
     status: ListDeliveriesStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
+    event_type: str | Unset = UNSET,
+    sent_email_id: UUID | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListDeliveriesResponse200]:
     """ List webhook deliveries
 
-     Returns a paginated list of webhook delivery attempts, newest first.
-    A delivery of an inbound email includes a nested `email` object with
-    sender, recipient, and subject. A delivery of an opt-in
-    `sent_email.*` event has `email_id` and `email` set to null and
-    `sent_email_id` set to the send it is about. Filter by `event_type`
-    and `sent_email_id` to find the deliveries of one send.
+     Returns a paginated list of webhook delivery attempts. Each delivery
+    includes a nested `email` object with sender, recipient, and subject.
 
     Args:
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
         email_id (UUID | Unset):
-        event_type (str | Unset):
-        sent_email_id (UUID | Unset):
         status (ListDeliveriesStatus | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
+        event_type (str | Unset):
+        sent_email_id (UUID | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -165,11 +161,11 @@ def sync_detailed(
         cursor=cursor,
 limit=limit,
 email_id=email_id,
-event_type=event_type,
-sent_email_id=sent_email_id,
 status=status,
 date_from=date_from,
 date_to=date_to,
+event_type=event_type,
+sent_email_id=sent_email_id,
 
     )
 
@@ -185,31 +181,27 @@ def sync(
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
     email_id: UUID | Unset = UNSET,
-    event_type: str | Unset = UNSET,
-    sent_email_id: UUID | Unset = UNSET,
     status: ListDeliveriesStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
+    event_type: str | Unset = UNSET,
+    sent_email_id: UUID | Unset = UNSET,
 
 ) -> ErrorResponse | ListDeliveriesResponse200 | None:
     """ List webhook deliveries
 
-     Returns a paginated list of webhook delivery attempts, newest first.
-    A delivery of an inbound email includes a nested `email` object with
-    sender, recipient, and subject. A delivery of an opt-in
-    `sent_email.*` event has `email_id` and `email` set to null and
-    `sent_email_id` set to the send it is about. Filter by `event_type`
-    and `sent_email_id` to find the deliveries of one send.
+     Returns a paginated list of webhook delivery attempts. Each delivery
+    includes a nested `email` object with sender, recipient, and subject.
 
     Args:
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
         email_id (UUID | Unset):
-        event_type (str | Unset):
-        sent_email_id (UUID | Unset):
         status (ListDeliveriesStatus | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
+        event_type (str | Unset):
+        sent_email_id (UUID | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -225,11 +217,11 @@ def sync(
 cursor=cursor,
 limit=limit,
 email_id=email_id,
-event_type=event_type,
-sent_email_id=sent_email_id,
 status=status,
 date_from=date_from,
 date_to=date_to,
+event_type=event_type,
+sent_email_id=sent_email_id,
 
     ).parsed
 
@@ -239,31 +231,27 @@ async def asyncio_detailed(
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
     email_id: UUID | Unset = UNSET,
-    event_type: str | Unset = UNSET,
-    sent_email_id: UUID | Unset = UNSET,
     status: ListDeliveriesStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
+    event_type: str | Unset = UNSET,
+    sent_email_id: UUID | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListDeliveriesResponse200]:
     """ List webhook deliveries
 
-     Returns a paginated list of webhook delivery attempts, newest first.
-    A delivery of an inbound email includes a nested `email` object with
-    sender, recipient, and subject. A delivery of an opt-in
-    `sent_email.*` event has `email_id` and `email` set to null and
-    `sent_email_id` set to the send it is about. Filter by `event_type`
-    and `sent_email_id` to find the deliveries of one send.
+     Returns a paginated list of webhook delivery attempts. Each delivery
+    includes a nested `email` object with sender, recipient, and subject.
 
     Args:
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
         email_id (UUID | Unset):
-        event_type (str | Unset):
-        sent_email_id (UUID | Unset):
         status (ListDeliveriesStatus | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
+        event_type (str | Unset):
+        sent_email_id (UUID | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -278,11 +266,11 @@ async def asyncio_detailed(
         cursor=cursor,
 limit=limit,
 email_id=email_id,
-event_type=event_type,
-sent_email_id=sent_email_id,
 status=status,
 date_from=date_from,
 date_to=date_to,
+event_type=event_type,
+sent_email_id=sent_email_id,
 
     )
 
@@ -298,31 +286,27 @@ async def asyncio(
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
     email_id: UUID | Unset = UNSET,
-    event_type: str | Unset = UNSET,
-    sent_email_id: UUID | Unset = UNSET,
     status: ListDeliveriesStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
+    event_type: str | Unset = UNSET,
+    sent_email_id: UUID | Unset = UNSET,
 
 ) -> ErrorResponse | ListDeliveriesResponse200 | None:
     """ List webhook deliveries
 
-     Returns a paginated list of webhook delivery attempts, newest first.
-    A delivery of an inbound email includes a nested `email` object with
-    sender, recipient, and subject. A delivery of an opt-in
-    `sent_email.*` event has `email_id` and `email` set to null and
-    `sent_email_id` set to the send it is about. Filter by `event_type`
-    and `sent_email_id` to find the deliveries of one send.
+     Returns a paginated list of webhook delivery attempts. Each delivery
+    includes a nested `email` object with sender, recipient, and subject.
 
     Args:
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
         email_id (UUID | Unset):
-        event_type (str | Unset):
-        sent_email_id (UUID | Unset):
         status (ListDeliveriesStatus | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
+        event_type (str | Unset):
+        sent_email_id (UUID | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -338,10 +322,10 @@ async def asyncio(
 cursor=cursor,
 limit=limit,
 email_id=email_id,
-event_type=event_type,
-sent_email_id=sent_email_id,
 status=status,
 date_from=date_from,
 date_to=date_to,
+event_type=event_type,
+sent_email_id=sent_email_id,
 
     )).parsed

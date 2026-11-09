@@ -11,7 +11,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.get_contact_response_200_data import GetContactResponse200Data
+  from ..models.contact import Contact
 
 
 
@@ -26,11 +26,11 @@ class GetContactResponse200:
     """ 
         Attributes:
             success (bool):
-            data (GetContactResponse200Data):
+            data (Contact | Unset):
      """
 
     success: bool
-    data: GetContactResponse200Data
+    data: Contact | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -38,18 +38,21 @@ class GetContactResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.get_contact_response_200_data import GetContactResponse200Data # noqa: PLC0415
+        from ..models.contact import Contact # noqa: PLC0415
         success = self.success
 
-        data = self.data.to_dict()
+        data: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.data, Unset):
+            data = self.data.to_dict()
 
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
             "success": success,
-            "data": data,
         })
+        if data is not UNSET:
+            field_dict["data"] = data
 
         return field_dict
 
@@ -57,11 +60,16 @@ class GetContactResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.get_contact_response_200_data import GetContactResponse200Data # noqa: PLC0415
+        from ..models.contact import Contact # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 
-        data = GetContactResponse200Data.from_dict(d.pop("data"))
+        _data = d.pop("data", UNSET)
+        data: Contact | Unset
+        if isinstance(_data,  Unset):
+            data = UNSET
+        else:
+            data = Contact.from_dict(_data)
 
 
 

@@ -1,4 +1,4 @@
-"""Header-keyed webhook event parsing tests (payment.* and interaction.x402.*)."""
+"""Header-keyed webhook event parsing tests (interaction.* and unknown events)."""
 
 from __future__ import annotations
 
@@ -7,14 +7,9 @@ import json
 from primitive import (
     EMAIL_EVENT_TYPES,
     INTERACTION_EVENT_TYPES,
-    PAYMENT_EVENT_TYPES,
     WEBHOOK_EVENT_TYPES,
     handle_webhook_event,
-    is_interaction_x402_event,
     is_known_webhook_event_type,
-    is_payment_event,
-    is_payment_failed_event,
-    is_payment_settled_event,
     parse_webhook_event,
     sign_webhook_payload,
 )
@@ -31,132 +26,77 @@ def _event_name(event: object) -> object:
     return event.get("event")
 
 
-def test_payment_settled_body_parses_to_typed_event() -> None:
-    # The real stored payment body is FLAT and carries the name in `type`, not
-    # `event`: challenge_id/network/amount/asset/payer_org plus settle_tx, with
-    # no id and no nested payment object.
-    body = {
-        "type": "payment.settled",
-        "challenge_id": "chl_1",
-        "network": "base-sepolia",
-        "amount": "10000",
-        "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-        "payer_org": "org_1",
-        "settle_tx": "0xdeadbeef",
-    }
+def test_interaction_ack_body_parses_with_header_name() -> None:
+    # Interaction bodies have no event/type field at all.
+    body = {"interaction": {"protocol": "ack", "step": "ack"}}
+
+    event = parse_webhook_event(body, "interaction.ack.acked")
+
+    assert _event_name(event) == "interaction.ack.acked"
+    assert isinstance(event, dict)
+    assert event.get("interaction") == {"protocol": "ack", "step": "ack"}
+
+
+def test_unknown_header_type_returns_unknown_event_without_raising() -> None:
+    body = {"type": "payment.settled", "challenge_id": "chl_1"}
 
     event = parse_webhook_event(body, "payment.settled")
 
     assert _event_name(event) == "payment.settled"
-    assert is_payment_settled_event(event)
-    assert not is_payment_failed_event(event)
+    assert not is_known_webhook_event_type("payment.settled")
     assert isinstance(event, dict)
-    # The on-the-wire flat fields must be accessible by their typed keys.
-    assert event.get("type") == "payment.settled"
     assert event.get("challenge_id") == "chl_1"
-    assert event.get("amount") == "10000"
-    assert event.get("network") == "base-sepolia"
-    assert event.get("settle_tx") == "0xdeadbeef"
-    assert event.get("payer_org") == "org_1"
-
-
-def test_payment_failed_body_parses_to_typed_event() -> None:
-    body = {
-        "type": "payment.failed",
-        "challenge_id": "chl_2",
-        "network": "base",
-        "amount": "250",
-        "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-        "payer_org": None,
-        "failure_reason": "insufficient funds",
-    }
-
-    event = parse_webhook_event(body, "payment.failed")
-
-    assert _event_name(event) == "payment.failed"
-    assert is_payment_failed_event(event)
-    assert not is_payment_settled_event(event)
-    assert isinstance(event, dict)
-    assert event.get("challenge_id") == "chl_2"
-    assert event.get("failure_reason") == "insufficient funds"
-    assert event.get("payer_org") is None
-
-
-def test_interaction_x402_settled_body_parses_to_typed_event() -> None:
-    # Interaction bodies have no event/type field at all.
-    body = {"interaction": {"protocol": "x402", "step": "receipt"}}
-
-    event = parse_webhook_event(body, "interaction.x402.settled")
-
-    assert _event_name(event) == "interaction.x402.settled"
-    assert is_interaction_x402_event(event)
-
-
-def test_unknown_header_type_returns_unknown_event_without_raising() -> None:
-    event = parse_webhook_event({"foo": "bar"}, "payment.refunded")
-
-    assert _event_name(event) == "payment.refunded"
-    assert not is_payment_settled_event(event)
-    assert not is_interaction_x402_event(event)
 
 
 def test_falls_back_to_body_event_when_no_header() -> None:
-    event = parse_webhook_event({"event": "payment.failed", "id": "pay_2"})
-
-    assert _event_name(event) == "payment.failed"
-    assert is_payment_failed_event(event)
+    event = parse_webhook_event({"event": "interaction.ack.requested", "id": "evt_2"})
+    assert _event_name(event) == "interaction.ack.requested"
 
 
-def test_catalog_contains_payment_and_interaction_events() -> None:
-    assert "payment.settled" in WEBHOOK_EVENT_TYPES
-    assert "payment.failed" in WEBHOOK_EVENT_TYPES
-    assert "interaction.x402.settled" in WEBHOOK_EVENT_TYPES
-    assert "interaction.x402.verify_timeout" in WEBHOOK_EVENT_TYPES
+def test_catalog_contains_email_sent_email_and_interaction_events() -> None:
     assert "interaction.ack.acked" in WEBHOOK_EVENT_TYPES
     assert "email.received" in WEBHOOK_EVENT_TYPES
+    assert "sent_email.delivered" in WEBHOOK_EVENT_TYPES
     assert "email.bounced" in EMAIL_EVENT_TYPES
-    assert "payment.failed" in PAYMENT_EVENT_TYPES
-    assert "interaction.x402.challenge" in INTERACTION_EVENT_TYPES
+    assert "interaction.ack.expired" in INTERACTION_EVENT_TYPES
 
 
-def test_is_payment_event_matches_both() -> None:
-    assert is_payment_event({"event": "payment.settled"})
-    assert is_payment_event({"event": "payment.failed"})
-    assert not is_payment_event({"event": "email.received"})
-    assert not is_payment_event(None)
+def test_catalog_no_longer_lists_payment_events() -> None:
+    assert "payment.settled" not in WEBHOOK_EVENT_TYPES
+    assert "payment.failed" not in WEBHOOK_EVENT_TYPES
 
 
 def test_is_known_webhook_event_type() -> None:
-    assert is_known_webhook_event_type("payment.settled")
-    assert is_known_webhook_event_type("interaction.x402.settled")
-    assert not is_known_webhook_event_type("payment.refunded")
+    assert is_known_webhook_event_type("interaction.ack.acked")
+    assert is_known_webhook_event_type("sent_email.failed")
+    assert not is_known_webhook_event_type("payment.settled")
     assert not is_known_webhook_event_type(None)
 
 
 def test_event_header_is_read_case_insensitively() -> None:
     # Exercise header keying through the public verify-then-parse entry point:
     # the X-Webhook-Event header is the discriminator and must be matched
-    # regardless of letter case. A payment body carries its name in `type`, so a
-    # correctly read header is what overlays the canonical `event`.
-    body = json.dumps(
-        {"type": "payment.settled", "id": "pay_h", "payment": {"amount": "5"}}
-    )
+    # regardless of letter case. An interaction body carries no event name, so
+    # a correctly read header is what overlays the canonical `event`.
+    body = json.dumps({"interaction": {"protocol": "ack"}})
     signature = _sign(body)
 
     for header_name in ("x-webhook-event", "X-Webhook-Event", "X-WEBHOOK-EVENT"):
         event = handle_webhook_event(
             body=body,
-            headers={"primitive-signature": signature, header_name: "payment.settled"},
+            headers={
+                "primitive-signature": signature,
+                header_name: "interaction.ack.acked",
+            },
             secret=SECRET,
         )
-        assert _event_name(event) == "payment.settled"
-        assert is_payment_settled_event(event)
+        assert _event_name(event) == "interaction.ack.acked"
 
 
 def test_missing_event_header_falls_back_to_body_event() -> None:
     # With no X-Webhook-Event header present, the public entry point falls back
     # to the body's own `event` field rather than inventing a name.
-    body = json.dumps({"event": "payment.failed", "id": "pay_b"})
+    body = json.dumps({"event": "interaction.ack.received", "id": "evt_b"})
 
     event = handle_webhook_event(
         body=body,
@@ -164,32 +104,16 @@ def test_missing_event_header_falls_back_to_body_event() -> None:
         secret=SECRET,
     )
 
-    assert _event_name(event) == "payment.failed"
-    assert is_payment_failed_event(event)
-
-
-def test_handle_webhook_event_verifies_payment_body() -> None:
-    body = json.dumps(
-        {"type": "payment.settled", "id": "pay_3", "payment": {"amount": "250"}}
-    )
-    headers = {
-        "primitive-signature": _sign(body),
-        "x-webhook-event": "payment.settled",
-    }
-
-    event = handle_webhook_event(body=body, headers=headers, secret=SECRET)
-
-    assert is_payment_settled_event(event)
-    assert _event_name(event) == "payment.settled"
+    assert _event_name(event) == "interaction.ack.received"
 
 
 def test_handle_webhook_event_verifies_interaction_body() -> None:
-    body = json.dumps({"interaction": {"protocol": "x402"}})
+    body = json.dumps({"interaction": {"protocol": "ack"}})
     headers = {
         "primitive-signature": _sign(body),
-        "x-webhook-event": "interaction.x402.settled",
+        "x-webhook-event": "interaction.ack.acked",
     }
 
     event = handle_webhook_event(body=body, headers=headers, secret=SECRET)
 
-    assert is_interaction_x402_event(event)
+    assert _event_name(event) == "interaction.ack.acked"

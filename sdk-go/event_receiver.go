@@ -48,15 +48,27 @@ func (e *EventReceiverError) Error() string {
 var ErrDeliveryExpired = &EventReceiverError{Code: "delivery_expired", Status: 409}
 
 type LocalEvent struct {
-	ID      string
-	Type    string
-	Data    json.RawMessage
-	Body    string
+	ID   string
+	Type string
+	// Data is the body as raw JSON, or nil when Body is nil.
+	Data json.RawMessage
+	// Body is the webhook body, exactly as serialized. Nil when the API
+	// withholds the message content from this credential.
+	Body    *string
 	Headers map[string]string
 }
 
+// ErrEventContentWithheld is returned by Decode for an event whose body the
+// API withheld from this credential.
+var ErrEventContentWithheld = errors.New("event content withheld from this credential")
+
 // Decode provides typed access while preserving unknown future event payloads.
-func (e LocalEvent) Decode(target interface{}) error { return json.Unmarshal(e.Data, target) }
+func (e LocalEvent) Decode(target interface{}) error {
+	if e.Body == nil {
+		return ErrEventContentWithheld
+	}
+	return json.Unmarshal(e.Data, target)
+}
 
 type EventStatus struct {
 	Type          string
@@ -179,7 +191,7 @@ type eventWireDelivery struct {
 	DeliveryID     string            `json:"delivery_id"`
 	LeaseToken     string            `json:"lease_token"`
 	LeaseExpiresAt time.Time         `json:"lease_expires_at"`
-	Body           string            `json:"body"`
+	Body           *string           `json:"body"`
 	Headers        map[string]string `json:"headers"`
 }
 type eventOffer struct {
@@ -513,7 +525,7 @@ type PendingEvent struct {
 }
 
 func newPendingEvent(ctx context.Context, raw *eventWireDelivery, connection *eventConnection, release func()) (*PendingEvent, error) {
-	if raw == nil || raw.EventID == "" || raw.EventType == "" || raw.LeaseToken == "" || raw.QueueID == "" || raw.DeliveryID == "" || raw.Headers == nil || !json.Valid([]byte(raw.Body)) {
+	if raw == nil || raw.EventID == "" || raw.EventType == "" || raw.LeaseToken == "" || raw.QueueID == "" || raw.DeliveryID == "" || raw.Headers == nil || (raw.Body != nil && !json.Valid([]byte(*raw.Body))) {
 		return nil, &EventReceiverError{Code: "invalid_response"}
 	}
 	duration := min(30*time.Second, time.Until(raw.LeaseExpiresAt)-5*time.Second)
@@ -523,7 +535,11 @@ func newPendingEvent(ctx context.Context, raw *eventWireDelivery, connection *ev
 	deliveryCtx, cancelCause := context.WithCancelCause(ctx)
 	cancel := func() { cancelCause(context.Canceled) }
 	var once sync.Once
-	d := &PendingEvent{Event: LocalEvent{ID: raw.EventID, Type: raw.EventType, Data: json.RawMessage(raw.Body), Body: raw.Body, Headers: raw.Headers}, Context: deliveryCtx, cancel: cancel, connection: connection, raw: *raw, started: time.Now(), release: func() { once.Do(release) }}
+	var data json.RawMessage
+	if raw.Body != nil {
+		data = json.RawMessage(*raw.Body)
+	}
+	d := &PendingEvent{Event: LocalEvent{ID: raw.EventID, Type: raw.EventType, Data: data, Body: raw.Body, Headers: raw.Headers}, Context: deliveryCtx, cancel: cancel, connection: connection, raw: *raw, started: time.Now(), release: func() { once.Do(release) }}
 	d.timer = time.AfterFunc(duration, func() { cancelCause(ErrDeliveryExpired) })
 	go func() { <-deliveryCtx.Done(); d.release() }()
 	return d, nil

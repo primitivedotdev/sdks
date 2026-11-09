@@ -3,6 +3,13 @@
 package api
 
 // setDefaults set default value of fields.
+func (s *AgentWorkCreateReq) setDefaults() {
+	{
+		s.ProposedDeadlineAt.Null = true
+	}
+}
+
+// setDefaults set default value of fields.
 func (s *CompleteWebhookHttpInput) setDefaults() {
 	{
 		val := bool(false)
@@ -23,6 +30,36 @@ func (s *CreateWakeScheduleInput) setDefaults() {
 	{
 		val := string("UTC")
 		s.Timezone.SetTo(val)
+	}
+}
+
+// setDefaults set default value of fields.
+func (s *PrepareContactRequestReq) setDefaults() {
+	{
+		val := int(86400)
+		s.ExpiresInSeconds.SetTo(val)
+	}
+}
+
+// setDefaults set default value of fields.
+func (s *ProjectsCreateProjectInput) setDefaults() {
+	{
+		val := string("")
+		s.Description.SetTo(val)
+	}
+	{
+		s.Repository.Null = true
+	}
+}
+
+// setDefaults set default value of fields.
+func (s *ProjectsUpdateProjectInput) setDefaults() {
+	{
+		val := string("")
+		s.Description.SetTo(val)
+	}
+	{
+		s.Repository.Null = true
 	}
 }
 
@@ -55,10 +92,54 @@ func (s *SemanticSearchInput) setDefaults() {
 }
 
 // setDefaults set default value of fields.
+func (s *SetMailboxAccessRequestEntriesItem) setDefaults() {
+	{
+		val := SetMailboxAccessRequestEntriesItemDepth("content")
+		s.Depth.SetTo(val)
+	}
+}
+
+// setDefaults set default value of fields.
+func (s *SetOwnMailboxAccessRequestEntriesItem) setDefaults() {
+	{
+		val := SetOwnMailboxAccessRequestEntriesItemDepth("content")
+		s.Depth.SetTo(val)
+	}
+}
+
+// setDefaults set default value of fields.
+func (s *StartBreakGlassRequest) setDefaults() {
+	{
+		val := int(1)
+		s.Hours.SetTo(val)
+	}
+}
+
+// setDefaults set default value of fields.
+func (s *StartInteractionRequest) setDefaults() {
+	{
+		val := int(1)
+		s.ProtocolVersion.SetTo(val)
+	}
+}
+
+// setDefaults set default value of fields.
 func (s *TemplateInstall) setDefaults() {
 	{
 		val := string("")
 		s.Reason = val
+	}
+}
+
+// setDefaults set default value of fields.
+func (s *TemplateSchedule) setDefaults() {
+	{
+		val := string("UTC")
+		s.Timezone = val
+	}
+	{
+		val := string("scheduler")
+		s.SenderLocalpart = val
 	}
 }
 

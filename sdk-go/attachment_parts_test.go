@@ -12,7 +12,7 @@ import (
 
 	"github.com/go-faster/jx"
 	"github.com/google/uuid"
-	api "github.com/primitivedotdev/sdks/sdk-go/v2/api"
+	api "github.com/primitivedotdev/sdks/sdk-go/v3/api"
 )
 
 type attachmentPartSecurity struct{}
@@ -27,7 +27,7 @@ func (attachmentPartSecurity) DownloadToken(context.Context, api.OperationName) 
 func TestAttachmentPartOriginalBytes(t *testing.T) {
 	var fixture struct {
 		ID                 string `json:"id"`
-		PartIndex          int32  `json:"part_index"`
+		PartIndex          int    `json:"part_index"`
 		Bytes              []int  `json:"bytes"`
 		SHA256             string `json:"sha256"`
 		ContentDisposition string `json:"content_disposition"`
@@ -72,18 +72,26 @@ func TestAttachmentPartOriginalBytes(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			part, ok := result.(*api.AttachmentPartHeaders)
-			if !ok {
+			var body io.Reader
+			var sha256, disposition, cacheControl string
+			switch part := result.(type) {
+			case *api.DownloadEmailAttachmentPartOKHeaders:
+				body = part.Response
+				sha256, disposition, cacheControl = part.XContentSHA256.Value, part.ContentDisposition.Value, string(part.CacheControl.Value)
+			case *api.DownloadSentAttachmentPartOKHeaders:
+				body = part.Response
+				sha256, disposition, cacheControl = part.XContentSHA256.Value, part.ContentDisposition.Value, string(part.CacheControl.Value)
+			default:
 				t.Fatalf("Unexpected response type %T", result)
 			}
-			actual, err := io.ReadAll(part.Response)
+			actual, err := io.ReadAll(body)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if !bytes.Equal(actual, expected) {
 				t.Fatalf("Bytes changed: %v", actual)
 			}
-			if part.XContentSHA256.Value != fixture.SHA256 || part.ContentDisposition.Value != fixture.ContentDisposition || part.CacheControl.Value != "private, no-store" {
+			if sha256 != fixture.SHA256 || disposition != fixture.ContentDisposition || cacheControl != "private, no-store" {
 				t.Fatal("Download metadata changed")
 			}
 		})
@@ -106,12 +114,15 @@ func TestAttachmentPartRetryResponse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	failure, ok := result.(*api.ErrorResponseHeaders)
+	failure, ok := result.(*api.DownloadSentAttachmentPartServiceUnavailable)
 	if !ok {
 		t.Fatalf("Unexpected response type %T", result)
 	}
-	if failure.RetryAfter.Value != 3 || failure.Response.Error.Code != api.ErrorResponseErrorCodeAttachmentStorageUnavailable {
+	if failure.Response.Error.Code != api.ErrorResponseErrorCodeAttachmentStorageUnavailable {
 		t.Fatal("Error metadata changed")
+	}
+	if retryAfter, ok := failure.RetryAfter.Get(); !ok || retryAfter != 3 {
+		t.Fatalf("Retry-After = %v, want 3", failure.RetryAfter)
 	}
 }
 
@@ -192,12 +203,12 @@ func TestAttachmentPartSentDiscovery(t *testing.T) {
 		if metadata.PartIndex != 7 || metadata.SizeBytes != len(expected) || metadata.ContentType != "application/octet-stream" || metadata.TarPath != "7/sample.bin" {
 			t.Fatalf("Lost metadata: %+v", metadata)
 		}
-		downloaded, err := client.DownloadSentAttachmentPart(context.Background(), api.DownloadSentAttachmentPartParams{ID: detail.ID, PartIndex: int32(metadata.PartIndex)})
+		downloaded, err := client.DownloadSentAttachmentPart(context.Background(), api.DownloadSentAttachmentPartParams{ID: detail.ID, PartIndex: metadata.PartIndex})
 		if err != nil {
 			server.Close()
 			t.Fatal(err)
 		}
-		part, ok := downloaded.(*api.AttachmentPartHeaders)
+		part, ok := downloaded.(*api.DownloadSentAttachmentPartOKHeaders)
 		if !ok {
 			server.Close()
 			t.Fatalf("Unexpected download %T", downloaded)

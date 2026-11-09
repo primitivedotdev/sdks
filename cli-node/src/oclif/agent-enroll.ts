@@ -266,14 +266,21 @@ export function assertNativeSessionIdentity(
     );
 }
 
+/**
+ * Preflight for enrollment: the managed domains an address could land on.
+ * Null when the member's grant may not list domains; creating a connection
+ * needs only agent_connections:manage, and the server picks the address and
+ * refuses with connection_domain_unavailable when none is usable.
+ */
 async function managedDomains(
   client: PrimitiveApiClient,
   apiBaseUrl: string,
-): Promise<string[]> {
+): Promise<string[] | null> {
   const response = await listDomains({
     client: client.client,
     responseStyle: "fields",
   });
+  if (response.response?.status === 403) return null;
   const rows = response.data?.data;
   if (response.error || !Array.isArray(rows))
     throw refuse(
@@ -1207,7 +1214,7 @@ export async function enrollAgent(params: AgentEnrollOptions) {
         }),
         apiBaseUrl,
       );
-      if (!domains.length)
+      if (domains && !domains.length)
         throw refuse("No managed domain is available for enrollment.");
       state = {
         version: 2,

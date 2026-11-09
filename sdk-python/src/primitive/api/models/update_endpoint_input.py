@@ -30,12 +30,21 @@ class UpdateEndpointInput:
             enabled (bool | Unset):
             domain_id (None | Unset | UUID):
             rules (UpdateEndpointInputRules | Unset):
+            takeover (bool | Unset): For a move to another domain_id whose slot already has an active endpoint: false (the
+                default) answers 409 conflict with details.holder naming it; true retires that endpoint in the same request,
+                after the checks deleting it would need.
+            owner_key_id (None | Unset | UUID): Give this webhook to an API key of the organization. Only a route target can
+                be given to a key; a default endpoint stays the organization's, and takeover is refused with it. null gives a
+                key-owned webhook back to the organization (a caller with access to every mailbox only); it stays a route
+                target.
      """
 
     url: str | Unset = UNSET
     enabled: bool | Unset = UNSET
     domain_id: None | Unset | UUID = UNSET
     rules: UpdateEndpointInputRules | Unset = UNSET
+    takeover: bool | Unset = UNSET
+    owner_key_id: None | Unset | UUID = UNSET
 
 
 
@@ -59,6 +68,16 @@ class UpdateEndpointInput:
         if not isinstance(self.rules, Unset):
             rules = self.rules.to_dict()
 
+        takeover = self.takeover
+
+        owner_key_id: None | str | Unset
+        if isinstance(self.owner_key_id, Unset):
+            owner_key_id = UNSET
+        elif isinstance(self.owner_key_id, UUID):
+            owner_key_id = str(self.owner_key_id)
+        else:
+            owner_key_id = self.owner_key_id
+
 
         field_dict: dict[str, Any] = {}
 
@@ -72,6 +91,10 @@ class UpdateEndpointInput:
             field_dict["domain_id"] = domain_id
         if rules is not UNSET:
             field_dict["rules"] = rules
+        if takeover is not UNSET:
+            field_dict["takeover"] = takeover
+        if owner_key_id is not UNSET:
+            field_dict["owner_key_id"] = owner_key_id
 
         return field_dict
 
@@ -115,11 +138,35 @@ class UpdateEndpointInput:
 
 
 
+        takeover = d.pop("takeover", UNSET)
+
+        def _parse_owner_key_id(data: object) -> None | Unset | UUID:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                owner_key_id_type_0 = UUID(data)
+
+
+
+                return owner_key_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | Unset | UUID, data)
+
+        owner_key_id = _parse_owner_key_id(d.pop("owner_key_id", UNSET))
+
+
         update_endpoint_input = cls(
             url=url,
             enabled=enabled,
             domain_id=domain_id,
             rules=rules,
+            takeover=takeover,
+            owner_key_id=owner_key_id,
         )
 
         return update_endpoint_input

@@ -34,9 +34,44 @@ const CREDENTIALS_LOCK_CLEANUP_SIGNALS = [
   "SIGHUP",
 ] as const;
 
+/** A short-lived access token in one organization, from a CLI user login. */
+export type StoredCliOrgToken = {
+  access_token: string;
+  expires_at: string;
+  oauth_grant_id: string;
+  org_id: string;
+  org_name: string | null;
+  role: string | null;
+};
+
+/**
+ * The person's own login, present when `auth_method` is `user_grant`. Its
+ * identity token only lists organizations and is exchanged for per-org tokens;
+ * `refresh_token` on the outer object renews it.
+ */
+export type StoredCliUserGrant = {
+  user_grant_id: string;
+  user_id: string;
+  /** Identity access token (`prim_uat_`). */
+  access_token: string;
+  expires_at: string;
+  /** The person's role in the current organization, from its exchange. */
+  org_role: string | null;
+  /** The grant asked for at login (`--permission`), sent on each exchange. */
+  requested_grant: string | null;
+  /** Tokens for organizations other than the current one, by org id. */
+  org_tokens: Record<string, StoredCliOrgToken>;
+};
+
 // Disk shape for saved CLI credentials.
+//
+// `oauth` is the org-bound login every released CLI writes; its fields are
+// unchanged. `user_grant` is a login as the person: the standard fields then
+// hold the current organization's short-lived token (empty when no
+// organization is selected yet), `refresh_token` renews the person's
+// identity token, and `user_grant` holds the rest.
 export type StoredCliCredentials = {
-  auth_method: "oauth";
+  auth_method: "oauth" | "user_grant";
   access_token: string;
   refresh_token: string;
   token_type: "Bearer";
@@ -47,6 +82,7 @@ export type StoredCliCredentials = {
   org_name: string | null;
   api_base_url: string;
   created_at: string;
+  user_grant?: StoredCliUserGrant;
 };
 
 export type ResolvedCliAuth = {
@@ -104,6 +140,10 @@ function parseCredentials(raw: unknown): StoredCliCredentials {
     );
   }
 
+  if (raw.auth_method === "user_grant") {
+    return parseUserGrantCredentials(raw);
+  }
+
   if (raw.auth_method !== "oauth") {
     if (
       typeof raw.api_key === "string" ||
@@ -143,6 +183,88 @@ function parseCredentials(raw: unknown): StoredCliCredentials {
     org_name: orgName,
     api_base_url: readStoredApiBaseUrl(raw),
     created_at: requireString(raw, "created_at"),
+  };
+}
+
+function malformed(detail: string): Error {
+  return new Error(
+    `Stored Primitive CLI credentials are malformed: ${detail}. ${MALFORMED_CREDENTIALS_HINT}`,
+  );
+}
+
+function requireText(
+  value: Record<string, unknown>,
+  key: string,
+  options: { allowEmpty?: boolean } = {},
+): string {
+  const raw = value[key];
+  if (
+    typeof raw !== "string" ||
+    (!options.allowEmpty && raw.trim().length === 0)
+  ) {
+    throw malformed(`${key} must be a non-empty string`);
+  }
+  return raw;
+}
+
+function nullableText(value: Record<string, unknown>, key: string) {
+  const raw = value[key];
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== "string")
+    throw malformed(`${key} must be a string or null`);
+  return raw;
+}
+
+function parseOrgToken(raw: unknown): StoredCliOrgToken {
+  if (!isRecord(raw))
+    throw malformed("user_grant.org_tokens entries must be objects");
+  return {
+    access_token: requireText(raw, "access_token"),
+    expires_at: requireText(raw, "expires_at"),
+    oauth_grant_id: requireText(raw, "oauth_grant_id"),
+    org_id: requireText(raw, "org_id"),
+    org_name: nullableText(raw, "org_name"),
+    role: nullableText(raw, "role"),
+  };
+}
+
+function parseUserGrantCredentials(
+  raw: Record<string, unknown>,
+): StoredCliCredentials {
+  const grantRaw = raw.user_grant;
+  if (!isRecord(grantRaw)) throw malformed("user_grant must be an object");
+  if (raw.token_type !== "Bearer") throw malformed("token_type must be Bearer");
+  const tokensRaw = grantRaw.org_tokens ?? {};
+  if (!isRecord(tokensRaw))
+    throw malformed("user_grant.org_tokens must be an object");
+  const orgTokens: Record<string, StoredCliOrgToken> = {};
+  for (const [orgId, token] of Object.entries(tokensRaw)) {
+    orgTokens[orgId] = parseOrgToken(token);
+  }
+  // The current-organization fields are empty until an organization is
+  // selected (a login whose browser organization refused the CLI).
+  const orgId = requireText(raw, "org_id", { allowEmpty: true });
+  return {
+    access_token: requireText(raw, "access_token", { allowEmpty: true }),
+    api_base_url: readStoredApiBaseUrl(raw),
+    auth_method: "user_grant",
+    created_at: requireText(raw, "created_at"),
+    expires_at: requireText(raw, "expires_at"),
+    oauth_client_id: requireText(raw, "oauth_client_id"),
+    oauth_grant_id: requireText(raw, "oauth_grant_id", { allowEmpty: true }),
+    org_id: orgId,
+    org_name: nullableText(raw, "org_name"),
+    refresh_token: requireText(raw, "refresh_token"),
+    token_type: "Bearer",
+    user_grant: {
+      access_token: requireText(grantRaw, "access_token"),
+      expires_at: requireText(grantRaw, "expires_at"),
+      org_role: nullableText(grantRaw, "org_role"),
+      org_tokens: orgTokens,
+      requested_grant: nullableText(grantRaw, "requested_grant"),
+      user_grant_id: requireText(grantRaw, "user_grant_id"),
+      user_id: requireText(grantRaw, "user_id"),
+    },
   };
 }
 

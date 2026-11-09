@@ -26,7 +26,7 @@ export {
 // The scaffolded handler imports `createPrimitiveClient` from
 // `@primitivedotdev/sdk/api`, NOT from the package root. The root export
 // pulls in webhook helpers that depend on `node:crypto`, which breaks
-// Workers-style bundles. The `/api` subpath is the runtime-client
+// edge-style bundles. The `/api` subpath is the runtime-client
 // surface and is the documented import for in-handler use.
 
 // Validate a directory name passed as the positional argument.

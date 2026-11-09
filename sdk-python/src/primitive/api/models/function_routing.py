@@ -32,7 +32,8 @@ class FunctionRouting:
     reserved for future routing predicates.
 
         Attributes:
-            endpoint_id (UUID):
+            endpoint_id (None | UUID): The function's endpoint. Null when the function is routed to a domain outside the
+                caller's scope (domain_hidden).
             enabled (bool):
             domain (FunctionRoutingDomainType0 | None):
             rules (FunctionRoutingRules): Future routing predicates. Currently empty.
@@ -43,9 +44,12 @@ class FunctionRouting:
             last_delivery_at (datetime.datetime | None | Unset):
             last_success_at (datetime.datetime | None | Unset):
             last_failure_at (datetime.datetime | None | Unset):
+            domain_hidden (bool | Unset): Present, and true, when the function is routed to a domain outside the caller's
+                scope: domain is null, but the binding is not the fallback, and the endpoint's id, rules and delivery counters
+                are left out.
      """
 
-    endpoint_id: UUID
+    endpoint_id: None | UUID
     enabled: bool
     domain: FunctionRoutingDomainType0 | None
     rules: FunctionRoutingRules
@@ -56,6 +60,7 @@ class FunctionRouting:
     last_delivery_at: datetime.datetime | None | Unset = UNSET
     last_success_at: datetime.datetime | None | Unset = UNSET
     last_failure_at: datetime.datetime | None | Unset = UNSET
+    domain_hidden: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -65,7 +70,11 @@ class FunctionRouting:
     def to_dict(self) -> dict[str, Any]:
         from ..models.function_routing_domain_type_0 import FunctionRoutingDomainType0 # noqa: PLC0415
         from ..models.function_routing_rules import FunctionRoutingRules # noqa: PLC0415
-        endpoint_id = str(self.endpoint_id)
+        endpoint_id: None | str
+        if isinstance(self.endpoint_id, UUID):
+            endpoint_id = str(self.endpoint_id)
+        else:
+            endpoint_id = self.endpoint_id
 
         enabled = self.enabled
 
@@ -109,6 +118,8 @@ class FunctionRouting:
         else:
             last_failure_at = self.last_failure_at
 
+        domain_hidden = self.domain_hidden
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -132,6 +143,8 @@ class FunctionRouting:
             field_dict["last_success_at"] = last_success_at
         if last_failure_at is not UNSET:
             field_dict["last_failure_at"] = last_failure_at
+        if domain_hidden is not UNSET:
+            field_dict["domain_hidden"] = domain_hidden
 
         return field_dict
 
@@ -142,9 +155,22 @@ class FunctionRouting:
         from ..models.function_routing_domain_type_0 import FunctionRoutingDomainType0 # noqa: PLC0415
         from ..models.function_routing_rules import FunctionRoutingRules # noqa: PLC0415
         d = dict(src_dict)
-        endpoint_id = UUID(d.pop("endpoint_id"))
+        def _parse_endpoint_id(data: object) -> None | UUID:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                endpoint_id_type_0 = UUID(data)
 
 
+
+                return endpoint_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | UUID, data)
+
+        endpoint_id = _parse_endpoint_id(d.pop("endpoint_id"))
 
 
         enabled = d.pop("enabled")
@@ -240,6 +266,8 @@ class FunctionRouting:
         last_failure_at = _parse_last_failure_at(d.pop("last_failure_at", UNSET))
 
 
+        domain_hidden = d.pop("domain_hidden", UNSET)
+
         function_routing = cls(
             endpoint_id=endpoint_id,
             enabled=enabled,
@@ -252,6 +280,7 @@ class FunctionRouting:
             last_delivery_at=last_delivery_at,
             last_success_at=last_success_at,
             last_failure_at=last_failure_at,
+            domain_hidden=domain_hidden,
         )
 
 

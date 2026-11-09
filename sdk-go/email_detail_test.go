@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v2/api"
+	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v3/api"
 )
 
 // Round-trip pin for the new EmailDetail fields (replies,
@@ -42,6 +42,10 @@ const emailDetailSampleJSON = `{
   "smtp_mail_from": "alice@example.com",
   "smtp_rcpt_to": ["support@example.com"],
   "from_header": "Alice <alice@example.com>",
+  "from_header_email": "alice@example.com",
+  "from_name": "Alice",
+  "from_verified": true,
+  "snippet": "Hi there",
   "content_discarded_at": null,
   "content_discarded_by_delivery_id": null,
   "from_email": "alice@example.com",
@@ -271,25 +275,22 @@ func TestEmailDetailUnmarshalsOptionalRelayDelivery(t *testing.T) {
 	}
 }
 
-func TestEmailDetailUnmarshalsOptionalFromName(t *testing.T) {
-	const anchor = `"automated": true,`
-	if !strings.Contains(emailDetailSampleJSON, anchor) {
-		t.Fatalf("sample JSON no longer contains %q", anchor)
+func TestEmailDetailUnmarshalsRequiredNullableFromName(t *testing.T) {
+	const field = `"from_name": "Alice",`
+	if !strings.Contains(emailDetailSampleJSON, field) {
+		t.Fatalf("sample JSON no longer contains %q", field)
 	}
 	withFromName := func(value string) string {
-		return strings.Replace(emailDetailSampleJSON, anchor, `"from_name": `+value+`, `+anchor, 1)
+		return strings.Replace(emailDetailSampleJSON, field, value, 1)
 	}
 
 	var absent primitiveapi.EmailDetail
-	if err := json.Unmarshal([]byte(emailDetailSampleJSON), &absent); err != nil {
-		t.Fatalf("unmarshal without from_name: %v", err)
-	}
-	if absent.FromName.Set {
-		t.Errorf("from_name without the field: got %+v, want unset", absent.FromName)
+	if err := json.Unmarshal([]byte(withFromName("")), &absent); err == nil {
+		t.Fatal("unmarshal without from_name: want an error, from_name is required")
 	}
 
 	var null primitiveapi.EmailDetail
-	if err := json.Unmarshal([]byte(withFromName("null")), &null); err != nil {
+	if err := json.Unmarshal([]byte(withFromName(`"from_name": null,`)), &null); err != nil {
 		t.Fatalf("unmarshal with null from_name: %v", err)
 	}
 	if _, ok := null.FromName.Get(); ok || !null.FromName.Null {
@@ -297,7 +298,7 @@ func TestEmailDetailUnmarshalsOptionalFromName(t *testing.T) {
 	}
 
 	var named primitiveapi.EmailDetail
-	if err := json.Unmarshal([]byte(withFromName(`"Dana R\u00faiz"`)), &named); err != nil {
+	if err := json.Unmarshal([]byte(withFromName(`"from_name": "Dana R\u00faiz",`)), &named); err != nil {
 		t.Fatalf("unmarshal with from_name: %v", err)
 	}
 	if name, ok := named.FromName.Get(); !ok || name != "Dana R\u00faiz" {

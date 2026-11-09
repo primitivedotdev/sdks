@@ -18,6 +18,14 @@ function makeFunctionDetail(
   overrides: Partial<FunctionDetail> = {},
 ): FunctionDetail {
   return {
+    last_invoked_at: null,
+    invocations_24h: 0,
+    invocations_total: 0,
+    tags: [],
+    has_code: true,
+    code_source: null,
+    current_deployment_id: null,
+    test_readiness: { ready: false, reason: "no_endpoint" },
     code: BUNDLE,
     created_at: "2026-05-09T00:00:00.000Z",
     deploy_status: "deployed",

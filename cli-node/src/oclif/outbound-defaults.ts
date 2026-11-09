@@ -11,13 +11,14 @@ import type {
   PrimitiveApiClient,
   VerifiedDomain,
 } from "@primitivedotdev/api-core";
-import { listDomains } from "@primitivedotdev/api-core";
+import { getOwnGrant, listDomains } from "@primitivedotdev/api-core";
 import { parseFromHeader } from "@primitivedotdev/sdk/parser/address";
 import {
   API_ERROR_CODES,
   extractErrorCode,
   extractErrorPayload,
   formatErrorPayload,
+  isGrantRefusal,
   surfaceUnauthorizedHint,
   writeErrorWithHints,
 } from "./api-command.js";
@@ -152,6 +153,26 @@ export type AuthFailureContext = {
 // auth hint and bail rather than wrapping it as a generic "couldn't
 // resolve --from" error: the actual send would 401 with the same
 // hint anyway, and rewriting the message obscures the real fix.
+/**
+ * The one address a narrowed grant may send from, or null when the grant
+ * does not name exactly one.
+ */
+async function soleGrantedSendAddress(
+  apiClient: PrimitiveApiClient,
+): Promise<string | null> {
+  const result = await getOwnGrant({
+    client: apiClient.client,
+    responseStyle: "fields",
+  });
+  if (result.error) return null;
+  const grant = result.data?.data.grant;
+  const scope = grant?.send_scope ?? grant?.mail_scope;
+  if (!scope || typeof scope === "string" || scope.direction === "inbound") {
+    return null;
+  }
+  return scope.addresses.length === 1 ? (scope.addresses[0] ?? null) : null;
+}
+
 export async function pickDefaultFromAddress(
   apiClient: PrimitiveApiClient,
   authFailureContext: AuthFailureContext,
@@ -182,6 +203,16 @@ export async function pickDefaultFromAddress(
       // branch on exit code.
       throw new Errors.CLIError(
         "Cannot send: CLI auth is missing or invalid (see hint above).",
+        { exit: 1 },
+      );
+    }
+    // A narrowed grant may not list domains. It can still send from the one
+    // address it names; otherwise the sender has to be chosen explicitly.
+    if (isGrantRefusal(errorPayload)) {
+      const granted = await soleGrantedSendAddress(apiClient);
+      if (granted) return granted;
+      throw new Errors.CLIError(
+        "This credential cannot list the organization's domains and its grant does not name one address to send from. Pass --from explicitly.",
         { exit: 1 },
       );
     }

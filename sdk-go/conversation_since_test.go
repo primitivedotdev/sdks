@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	api "github.com/primitivedotdev/sdks/sdk-go/v2/api"
+	api "github.com/primitivedotdev/sdks/sdk-go/v3/api"
 )
 
 const (
@@ -89,8 +89,8 @@ func TestConversationSinceSendsCursorBackVerbatim(t *testing.T) {
 		t.Fatalf("Unexpected next cursor %q", got)
 	}
 	// Thread fields describe the whole conversation, not the delta.
-	if next.Data.MessageCount != 2 || len(next.Data.Messages) != 1 {
-		t.Fatalf("Unexpected delta shape: count=%d messages=%d", next.Data.MessageCount, len(next.Data.Messages))
+	if count, _ := next.Data.MessageCount.Get(); count != 2 || len(next.Data.Messages) != 1 {
+		t.Fatalf("Unexpected delta shape: count=%d messages=%d", count, len(next.Data.Messages))
 	}
 	message := next.Data.Messages[0]
 	if message.Direction != api.ConversationMessageDirectionOutbound || message.ID.String() != "22222222-2222-4222-8222-222222222222" {
@@ -126,5 +126,39 @@ func TestConversationWithoutSinceSendsNoParameter(t *testing.T) {
 	}
 	if _, present := ok.Data.Cursor.Get(); present {
 		t.Fatal("Cursor present on a read without since")
+	}
+}
+
+// An empty delta carries no thread counts: the server leaves out subject,
+// message_count and truncated when no message changed since the cursor.
+func TestConversationEmptyDeltaDecodesWithoutThreadCounts(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"success":true,"data":{"thread_id":"33333333-3333-4333-8333-333333333333","messages":[],"cursor":"` + conversationNextCursor + `","has_more":false}}`))
+	}))
+	defer server.Close()
+	client, err := api.NewClient(server.URL, attachmentPartSecurity{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := client.GetConversation(context.Background(), api.GetConversationParams{
+		ID:    uuid.MustParse("11111111-1111-4111-8111-111111111111"),
+		Since: api.NewOptString(conversationFirstCursor),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ok, isOK := res.(*api.GetConversationOK)
+	if !isOK {
+		t.Fatalf("Unexpected response %T", res)
+	}
+	if _, present := ok.Data.MessageCount.Get(); present {
+		t.Fatal("message_count reported on an empty delta")
+	}
+	if hasMore, present := ok.Data.HasMore.Get(); !present || hasMore {
+		t.Fatalf("Unexpected has_more %v, present=%v", hasMore, present)
+	}
+	if len(ok.Data.Messages) != 0 {
+		t.Fatalf("Expected no messages, got %d", len(ok.Data.Messages))
 	}
 }

@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
-	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v2/api"
+	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v3/api"
 )
 
 type stubSendAPI struct {
@@ -44,7 +44,7 @@ func (s *stubSendAPI) ReplyToEmail(_ context.Context, request *primitiveapi.Repl
 	return s.replyResult, s.replyErr
 }
 
-func (s *stubSendAPI) SemanticSearch(_ context.Context, request *primitiveapi.SemanticSearchInput) (primitiveapi.SemanticSearchRes, error) {
+func (s *stubSendAPI) SemanticSearch(_ context.Context, request *primitiveapi.SemanticSearchInput, _ primitiveapi.SemanticSearchParams) (primitiveapi.SemanticSearchRes, error) {
 	s.semanticCalled = true
 	s.semanticRequest = request
 	return s.semanticResult, s.semanticErr
@@ -57,8 +57,8 @@ func sendMailResult() primitiveapi.SendMailResult {
 		QueueID:              primitiveapi.NewNilString("qid-123"),
 		Accepted:             []string{"alice@example.com"},
 		Rejected:             []string{},
-		ClientIdempotencyKey: "idem-123",
-		RequestID:            "req-123",
+		ClientIdempotencyKey: primitiveapi.NewNilString("idem-123"),
+		RequestID:            primitiveapi.NewNilString("req-123"),
 		ContentHash:          "hash-123",
 	}
 }
@@ -171,7 +171,7 @@ func TestClientSendReturnsSendResult(t *testing.T) {
 	if queueID, ok := result.QueueID.Get(); !ok || queueID != "qid-123" {
 		t.Fatalf("unexpected queue ID: %#v", result.QueueID)
 	}
-	if result.ID != "sent-123" || result.Status != primitiveapi.SentEmailStatusSubmittedToAgent || result.ClientIdempotencyKey != "idem-123" || result.RequestID != "req-123" || result.ContentHash != "hash-123" {
+	if result.ID != "sent-123" || result.Status != primitiveapi.SentEmailStatusSubmittedToAgent || result.ClientIdempotencyKey.Value != "idem-123" || result.RequestID.Value != "req-123" || result.ContentHash != "hash-123" {
 		t.Fatalf("unexpected result metadata: %#v", result)
 	}
 	if len(result.Accepted) != 1 || result.Accepted[0] != "alice@example.com" || len(result.Rejected) != 0 {
@@ -327,7 +327,7 @@ func TestClientSendForwardsIdempotentReplay(t *testing.T) {
 func replayedSendMailResult(source primitiveapi.SendMailIdempotencyReplayKeySource, window primitiveapi.NilInt) primitiveapi.SendMailResult {
 	data := sendMailResult()
 	data.IdempotentReplay = true
-	data.DedupReason = primitiveapi.NewOptNilString(DedupReasonContentHashMatch)
+	data.DedupReason = primitiveapi.NewOptNilSendMailResultDedupReason(primitiveapi.SendMailResultDedupReasonContentHashMatch)
 	data.Idempotency = primitiveapi.NewOptSendMailIdempotencyReplay(primitiveapi.SendMailIdempotencyReplay{
 		Replayed:            true,
 		KeySource:           source,
@@ -380,7 +380,7 @@ func TestClientReplySurfacesParentDedupWithoutWindow(t *testing.T) {
 		primitiveapi.SendMailIdempotencyReplayKeySourceAutoContent,
 		primitiveapi.NilInt{Null: true},
 	)
-	data.DedupReason = primitiveapi.NewOptNilString(DedupReasonParentAlreadyReplied)
+	data.DedupReason = primitiveapi.NewOptNilSendMailResultDedupReason(primitiveapi.SendMailResultDedupReasonParentAlreadyReplied)
 	replay := data.Idempotency.Value
 	replay.OriginalCreatedAt = primitiveapi.NilDateTime{Null: true}
 	data.Idempotency.SetTo(replay)
@@ -602,7 +602,7 @@ func TestClientSendSurfacesGatesAndRequestID(t *testing.T) {
 func TestClientSendSurfacesRetryAfterOn429(t *testing.T) {
 	retryAfter := 12
 	stub := &stubSendAPI{
-		result: &primitiveapi.RateLimitedHeaders{
+		result: &primitiveapi.SendEmailTooManyRequests{
 			RetryAfter: primitiveapi.NewOptInt(retryAfter),
 			Response: primitiveapi.ErrorResponse{
 				Success: false,
@@ -795,7 +795,7 @@ func TestClientSemanticSearchWrapsForbidden(t *testing.T) {
 func TestClientSemanticSearchSurfacesRetryAfterOn429(t *testing.T) {
 	retryAfter := 7
 	stub := &stubSendAPI{
-		semanticResult: &primitiveapi.RateLimitedHeaders{
+		semanticResult: &primitiveapi.SemanticSearchTooManyRequests{
 			RetryAfter: primitiveapi.NewOptInt(retryAfter),
 			Response: primitiveapi.ErrorResponse{
 				Success: false,

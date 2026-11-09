@@ -36,6 +36,7 @@ const ACCOUNT: AgentAccountResult = {
     description: "Confirm an email to lift the send cap.",
     claim_path: "/v1/agent/claim/start",
   },
+  funding: null,
 };
 
 describe("client.agent", () => {

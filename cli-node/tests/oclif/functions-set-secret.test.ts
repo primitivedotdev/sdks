@@ -28,6 +28,14 @@ function makeFunctionDetail(
   overrides: Partial<FunctionDetail> = {},
 ): FunctionDetail {
   return {
+    last_invoked_at: null,
+    invocations_24h: 0,
+    invocations_total: 0,
+    tags: [],
+    has_code: true,
+    code_source: null,
+    current_deployment_id: null,
+    test_readiness: { ready: false, reason: "no_endpoint" },
     code: "export default { async fetch(req, env, ctx) { return new Response('ok'); } };",
     created_at: "2026-05-09T00:00:00.000Z",
     deploy_status: "deployed",
@@ -111,9 +119,9 @@ describe("resolveSingleSecretValue", () => {
 
   it("reads --value-from-env from the provided environment", () => {
     const result = resolveSingleSecretValue({
-      env: { OPENAI_KEY: "sk-env" },
-      key: "OPENAI_KEY",
-      valueFromEnv: "OPENAI_KEY",
+      env: { MY_API_KEY: "sk-env" },
+      key: "MY_API_KEY",
+      valueFromEnv: "MY_API_KEY",
     });
 
     expect(result).toEqual({ kind: "ok", value: "sk-env" });
@@ -131,8 +139,8 @@ describe("resolveSingleSecretValue", () => {
 
   it("reads --key from --value-from-env-file when no suffix is provided", () => {
     const result = resolveSingleSecretValue({
-      key: "OPENAI_KEY",
-      readFile: () => "OPENAI_KEY=sk-file\n",
+      key: "MY_API_KEY",
+      readFile: () => "MY_API_KEY=sk-file\n",
       valueFromEnvFile: ".env.local",
     });
 
@@ -141,7 +149,7 @@ describe("resolveSingleSecretValue", () => {
 
   it("reads an explicit key from --value-from-env-file FILE:KEY", () => {
     const result = resolveSingleSecretValue({
-      key: "OPENAI_KEY",
+      key: "MY_API_KEY",
       readFile: () => "OTHER_KEY=from-other\n",
       valueFromEnvFile: ".env.local:OTHER_KEY",
     });
@@ -151,7 +159,7 @@ describe("resolveSingleSecretValue", () => {
 
   it("strips one trailing line ending from --stdin", () => {
     const result = resolveSingleSecretValue({
-      key: "OPENAI_KEY",
+      key: "MY_API_KEY",
       readStdin: () => "sk-stdin\n",
       stdin: true,
     });
@@ -161,7 +169,7 @@ describe("resolveSingleSecretValue", () => {
 
   it("strips only one trailing line ending from --stdin", () => {
     const result = resolveSingleSecretValue({
-      key: "OPENAI_KEY",
+      key: "MY_API_KEY",
       readStdin: () => "sk-stdin\n\n",
       stdin: true,
     });
@@ -171,7 +179,7 @@ describe("resolveSingleSecretValue", () => {
 
   it("reports --stdin read errors", () => {
     const result = resolveSingleSecretValue({
-      key: "OPENAI_KEY",
+      key: "MY_API_KEY",
       readStdin: () => {
         throw new Error("stdin is a TTY");
       },
@@ -229,13 +237,13 @@ describe("resolveSingleSecretValue", () => {
   it("reports a missing --value-from-env variable", () => {
     const result = resolveSingleSecretValue({
       env: {},
-      key: "OPENAI_KEY",
-      valueFromEnv: "OPENAI_KEY",
+      key: "MY_API_KEY",
+      valueFromEnv: "MY_API_KEY",
     });
 
     expect(result.kind).toBe("error");
     if (result.kind === "error") {
-      expect(result.message).toContain("OPENAI_KEY");
+      expect(result.message).toContain("MY_API_KEY");
       expect(result.message).toContain("not set");
     }
   });

@@ -61,23 +61,13 @@ export {
   WebhookVerificationError,
   type WebhookVerificationErrorCode,
 } from "./errors.js";
-// Event catalog, typed payment/interaction events, and type guards
+// Event catalog, typed interaction events, and type guards
 export {
   EMAIL_EVENT_TYPES,
   INTERACTION_EVENT_TYPES,
   type InteractionEvent,
-  type InteractionX402Event,
-  type InteractionX402Suffix,
   isEmailReceivedEvent,
-  isInteractionX402Event,
   isKnownWebhookEventType,
-  isPaymentEvent,
-  isPaymentFailedEvent,
-  isPaymentSettledEvent,
-  PAYMENT_EVENT_TYPES,
-  type PaymentEvent,
-  type PaymentFailedEvent,
-  type PaymentSettledEvent,
   WEBHOOK_EVENT_TYPES,
   type WebhookEventType,
 } from "./events.js";
@@ -173,6 +163,7 @@ export type {
   EmailAuth,
   EmailReceivedEvent,
   EmailRelay,
+  EmailUnderstanding,
   // Forward analysis types
   ForwardAnalysis,
   ForwardOriginalSender,
@@ -191,7 +182,11 @@ export type {
   RawContentInline,
   // Recipient-routing decision
   RoutingDecision,
+  SenderAnalysis,
   TlsReportAnalysis,
+  UnderstandingFact,
+  UnderstandingRule,
+  UnderstandingRuleQuestion,
   UnknownEvent,
   ValidateEmailAuthResult,
   WebhookAttachment,
@@ -283,7 +278,7 @@ import { parseWebhookEvent } from "./parse-event.js";
  *
  * Accepts:
  * - **Plain object** from Express/Node.js (`req.headers`)
- * - **Fetch API `Headers`** from Next.js App Router, Cloudflare Workers (`request.headers`)
+ * - **Fetch API `Headers`** from Next.js App Router and edge runtimes (`request.headers`)
  *
  * Header lookup is case-insensitive per RFC 7230.
  */
@@ -323,7 +318,7 @@ export interface HandleWebhookOptions {
 
 /**
  * The header that names the webhook event for ALL event families
- * (`email.*`, `sent_email.*`, `payment.*`, `interaction.*`). It is the
+ * (`email.*`, `sent_email.*`, `interaction.*`). It is the
  * primary discriminator the parser keys on, because the stored body is sent
  * verbatim with no envelope.
  */
@@ -491,7 +486,7 @@ function verifyWebhookRequest(options: HandleWebhookOptions): void {
 
   // Verify signature (Standard Webhooks or Primitive format). This runs on the
   // RAW body and is independent of the event type, so it works identically for
-  // email.*, payment.*, and interaction.* bodies.
+  // email.*, sent_email.*, and interaction.* bodies.
   const swHeaders = getStandardWebhooksHeaders(headers);
   if (swHeaders) {
     verifyStandardWebhooksSignature({
@@ -517,8 +512,8 @@ function verifyWebhookRequest(options: HandleWebhookOptions): void {
  * Verify, then parse any webhook event into a typed value.
  *
  * Unlike {@link handleWebhook}, this returns the full {@link WebhookEvent}
- * union, so it handles `sent_email.*`, `payment.*` and `interaction.x402.*`
- * events in addition to `email.*`. The flow is:
+ * union, so it handles `sent_email.*` and `interaction.*` events in addition
+ * to `email.*`. The flow is:
  *
  * 1. Verify the signature over the RAW body (works for every event family).
  * 2. Parse the JSON body.
@@ -531,10 +526,6 @@ function verifyWebhookRequest(options: HandleWebhookOptions): void {
  * if (isSentEmailFailedEvent(event) && event.scope === "recipient") {
  *   // typed sent_email.failed about one recipient
  *   console.log(event.recipient.address, event.outcome.smtp_enhanced_status_code);
- * } else if (isPaymentSettledEvent(event)) {
- *   // typed PaymentSettledEvent
- * } else if (isInteractionX402Event(event)) {
- *   // typed interaction.x402.* event
  * }
  * ```
  */
@@ -555,7 +546,7 @@ export function handleWebhook(
   const parsed = parseJsonBody(options.body);
 
   // handleWebhook is hard-typed to the email.received payload for backward
-  // compatibility. Use handleWebhookEvent for payment/interaction events.
+  // compatibility. Use handleWebhookEvent for sent_email/interaction events.
   return validateEmailReceivedEvent(parsed);
 }
 

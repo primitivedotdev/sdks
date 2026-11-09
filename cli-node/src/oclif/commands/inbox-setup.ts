@@ -15,12 +15,6 @@ import {
 } from "../api-command.js";
 import { statusText } from "./inbox-status.js";
 
-type InboxStatusEnvelope = {
-  data?: InboxStatus;
-  success?: boolean;
-  [key: string]: unknown;
-};
-
 export type InboxSetupCommandSet = {
   scaffold: string[];
   logs: string;
@@ -308,9 +302,9 @@ class InboxSetupCommand extends Command {
         return;
       }
 
-      const envelope = (result.data ?? {}) as InboxStatusEnvelope;
-      const status = envelope.data;
-      if (!status) {
+      const envelope = result.data;
+      const status = envelope?.data;
+      if (!envelope || !status) {
         throw new Errors.CLIError("Primitive API returned no inbox status.", {
           exit: 1,
         });

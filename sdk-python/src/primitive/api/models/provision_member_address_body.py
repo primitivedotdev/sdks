@@ -24,10 +24,12 @@ class ProvisionMemberAddressBody:
         Attributes:
             address (str):
             confirm_existing_mail (bool | Unset):
+            remove_others_access (bool | Unset):
      """
 
     address: str
     confirm_existing_mail: bool | Unset = UNSET
+    remove_others_access: bool | Unset = UNSET
 
 
 
@@ -38,6 +40,8 @@ class ProvisionMemberAddressBody:
 
         confirm_existing_mail = self.confirm_existing_mail
 
+        remove_others_access = self.remove_others_access
+
 
         field_dict: dict[str, Any] = {}
 
@@ -46,6 +50,8 @@ class ProvisionMemberAddressBody:
         })
         if confirm_existing_mail is not UNSET:
             field_dict["confirm_existing_mail"] = confirm_existing_mail
+        if remove_others_access is not UNSET:
+            field_dict["remove_others_access"] = remove_others_access
 
         return field_dict
 
@@ -58,9 +64,12 @@ class ProvisionMemberAddressBody:
 
         confirm_existing_mail = d.pop("confirm_existing_mail", UNSET)
 
+        remove_others_access = d.pop("remove_others_access", UNSET)
+
         provision_member_address_body = cls(
             address=address,
             confirm_existing_mail=confirm_existing_mail,
+            remove_others_access=remove_others_access,
         )
 
         return provision_member_address_body

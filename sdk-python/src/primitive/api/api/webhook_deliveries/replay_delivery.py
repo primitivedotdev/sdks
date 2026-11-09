@@ -10,15 +10,22 @@ from ... import errors
 
 from ...models.error_response import ErrorResponse
 from ...models.replay_delivery_response_200 import ReplayDeliveryResponse200
+from ...types import UNSET, Unset
 from typing import cast
 
 
 
 def _get_kwargs(
     id: str,
+    *,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
-    
+    headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
+
 
     
 
@@ -30,6 +37,7 @@ def _get_kwargs(
     }
 
 
+    _kwargs["headers"] = headers
     return _kwargs
 
 
@@ -89,22 +97,20 @@ def sync_detailed(
     id: str,
     *,
     client: AuthenticatedClient | Client,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ReplayDeliveryResponse200]:
     """ Replay a webhook delivery
 
-     Re-sends a previous delivery to its original endpoint. If that
-    endpoint was deleted or deactivated, the replay is rejected.
-    Supports inbound email deliveries and `sent_email.*` deliveries.
-    An inbound email delivery is replayed with its original stored
-    payload and event id. A `sent_email.*` delivery is replayed with the
-    same event id but a payload rebuilt from the send as it is now; it
-    is rejected if the send was deleted or the endpoint is no longer an
-    active http endpoint. Rate limited per-org, sharing an org-wide
-    budget with email replays.
+     Re-sends the stored webhook payload from a previous delivery attempt.
+    If the original endpoint is still active, it is targeted. If the
+    original endpoint was deleted, the oldest active endpoint is used.
+    Deactivated endpoints cannot be replayed to. Rate limited per-org,
+    sharing an org-wide budget with email replays.
 
     Args:
         id (str):
+        idempotency_key (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -117,6 +123,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         id=id,
+idempotency_key=idempotency_key,
 
     )
 
@@ -130,22 +137,20 @@ def sync(
     id: str,
     *,
     client: AuthenticatedClient | Client,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | ReplayDeliveryResponse200 | None:
     """ Replay a webhook delivery
 
-     Re-sends a previous delivery to its original endpoint. If that
-    endpoint was deleted or deactivated, the replay is rejected.
-    Supports inbound email deliveries and `sent_email.*` deliveries.
-    An inbound email delivery is replayed with its original stored
-    payload and event id. A `sent_email.*` delivery is replayed with the
-    same event id but a payload rebuilt from the send as it is now; it
-    is rejected if the send was deleted or the endpoint is no longer an
-    active http endpoint. Rate limited per-org, sharing an org-wide
-    budget with email replays.
+     Re-sends the stored webhook payload from a previous delivery attempt.
+    If the original endpoint is still active, it is targeted. If the
+    original endpoint was deleted, the oldest active endpoint is used.
+    Deactivated endpoints cannot be replayed to. Rate limited per-org,
+    sharing an org-wide budget with email replays.
 
     Args:
         id (str):
+        idempotency_key (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -159,6 +164,7 @@ def sync(
     return sync_detailed(
         id=id,
 client=client,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -166,22 +172,20 @@ async def asyncio_detailed(
     id: str,
     *,
     client: AuthenticatedClient | Client,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ReplayDeliveryResponse200]:
     """ Replay a webhook delivery
 
-     Re-sends a previous delivery to its original endpoint. If that
-    endpoint was deleted or deactivated, the replay is rejected.
-    Supports inbound email deliveries and `sent_email.*` deliveries.
-    An inbound email delivery is replayed with its original stored
-    payload and event id. A `sent_email.*` delivery is replayed with the
-    same event id but a payload rebuilt from the send as it is now; it
-    is rejected if the send was deleted or the endpoint is no longer an
-    active http endpoint. Rate limited per-org, sharing an org-wide
-    budget with email replays.
+     Re-sends the stored webhook payload from a previous delivery attempt.
+    If the original endpoint is still active, it is targeted. If the
+    original endpoint was deleted, the oldest active endpoint is used.
+    Deactivated endpoints cannot be replayed to. Rate limited per-org,
+    sharing an org-wide budget with email replays.
 
     Args:
         id (str):
+        idempotency_key (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -194,6 +198,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         id=id,
+idempotency_key=idempotency_key,
 
     )
 
@@ -207,22 +212,20 @@ async def asyncio(
     id: str,
     *,
     client: AuthenticatedClient | Client,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | ReplayDeliveryResponse200 | None:
     """ Replay a webhook delivery
 
-     Re-sends a previous delivery to its original endpoint. If that
-    endpoint was deleted or deactivated, the replay is rejected.
-    Supports inbound email deliveries and `sent_email.*` deliveries.
-    An inbound email delivery is replayed with its original stored
-    payload and event id. A `sent_email.*` delivery is replayed with the
-    same event id but a payload rebuilt from the send as it is now; it
-    is rejected if the send was deleted or the endpoint is no longer an
-    active http endpoint. Rate limited per-org, sharing an org-wide
-    budget with email replays.
+     Re-sends the stored webhook payload from a previous delivery attempt.
+    If the original endpoint is still active, it is targeted. If the
+    original endpoint was deleted, the oldest active endpoint is used.
+    Deactivated endpoints cannot be replayed to. Rate limited per-org,
+    sharing an org-wide budget with email replays.
 
     Args:
         id (str):
+        idempotency_key (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -236,5 +239,6 @@ async def asyncio(
     return (await asyncio_detailed(
         id=id,
 client=client,
+idempotency_key=idempotency_key,
 
     )).parsed

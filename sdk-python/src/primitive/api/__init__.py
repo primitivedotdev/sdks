@@ -13,9 +13,9 @@ from .downloads import (
 from .errors import UnexpectedStatus
 from .types import UNSET, File, Response, Unset
 
-# Default production hosts. Two-host split exists because /send-mail
-# needs a larger body cap than Vercel allows; host 2 is a Cloudflare
-# Worker that accepts ~30 MiB raw. Host 1 carries everything else.
+# Default production hosts. Two hosts exist because /send-mail needs a
+# larger request body cap than host 1 has; host 2 accepts about 30 MiB.
+# Host 1 carries everything else.
 # Customers don't see this split: PrimitiveClient.send() always routes
 # to host 2 internally, every other operation routes to host 1.
 #

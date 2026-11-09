@@ -21,7 +21,7 @@ class OrgSecretsRemoveCommand extends Command {
 
   static aliases = ["org:secrets:delete"];
 
-  static examples = ["<%= config.bin %> org secrets remove --key STRIPE_KEY"];
+  static examples = ["<%= config.bin %> org secrets remove --key MY_API_KEY"];
 
   static flags = {
     "api-key": Flags.string({

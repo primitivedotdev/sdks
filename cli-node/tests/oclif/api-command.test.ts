@@ -6,13 +6,14 @@ import type { PrimitiveOperationManifest } from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createOperationCommand,
+  domainVerificationFailedHint,
   EMPTY_RESULT_HINTS,
   extractErrorCode,
   extractErrorPayload,
   flagForParameter,
   formatElapsed,
   formatErrorPayload,
-  isIncompleteDomainVerification,
+  OPERATION_ERROR_HINTS,
   OPERATION_HINTS,
   OPERATION_SUCCESS_HOOKS,
   operationOutputPayload,
@@ -680,32 +681,72 @@ describe("operationOutputPayload", () => {
   });
 });
 
-describe("isIncompleteDomainVerification", () => {
-  it("treats verified false from verifyDomain as an incomplete CLI result", () => {
+describe("verifyDomain dns_verification_failed hint", () => {
+  const payload = {
+    success: false,
+    error: {
+      code: "dns_verification_failed",
+      message: "DNS verification failed",
+      details: {
+        records: [
+          {
+            type: "MX",
+            fqdn: "example.com",
+            value: "mx.example.net",
+            status: "found",
+          },
+          {
+            type: "TXT",
+            fqdn: "_primitive.example.com",
+            value: "primitive-verify=abc",
+            status: "missing",
+          },
+          {
+            type: "CNAME",
+            fqdn: "sel._domainkey.example.com",
+            value: "sel.dkim.example.net",
+            status: "incorrect",
+          },
+        ],
+      },
+    },
+  };
+
+  it("names the records that still need work and how to finish", () => {
+    const hint = OPERATION_ERROR_HINTS.verifyDomain?.(
+      "dns_verification_failed",
+      undefined,
+      payload,
+    );
+    expect(hint).toBe(domainVerificationFailedHint(payload));
+    expect(hint).toContain("Domain verification is incomplete.");
+    expect(hint).toContain(
+      "  TXT _primitive.example.com primitive-verify=abc (missing)",
+    );
+    expect(hint).toContain(
+      "  CNAME sel._domainkey.example.com sel.dkim.example.net (incorrect)",
+    );
+    expect(hint).not.toContain("mx.example.net");
+    expect(hint).toContain("primitive domains zone-file --id <domain-id>");
+  });
+
+  it("stays quiet for other verifyDomain errors", () => {
     expect(
-      isIncompleteDomainVerification(
-        {
-          binaryResponse: false,
-          bodyRequired: false,
-          command: "verify",
-          description: "Verify domain",
-          hasJsonBody: false,
-          method: "POST",
-          operationId: "verifyDomain",
-          path: "/domains/{id}/verify",
-          pathParams: [],
-          queryParams: [],
-          headerParams: [],
-          requestSchema: null,
-          responseSchema: null,
-          sdkName: "verifyDomain",
-          summary: "Verify domain",
-          tag: "Domains",
-          tagCommand: "domains",
-        },
-        { data: { verified: false } },
-      ),
-    ).toBe(true);
+      OPERATION_ERROR_HINTS.verifyDomain?.("not_found", undefined, payload),
+    ).toBeUndefined();
+  });
+
+  it("reads the records from an error already unwrapped from its envelope", () => {
+    const hint = domainVerificationFailedHint(payload.error);
+    expect(hint).toContain(
+      "  TXT _primitive.example.com primitive-verify=abc (missing)",
+    );
+  });
+
+  it("still guides when the error carries no records", () => {
+    expect(domainVerificationFailedHint({ error: {} })).not.toContain(
+      "Records to add or fix:",
+    );
   });
 });
 
@@ -764,6 +805,7 @@ describe("createOperationCommand description", () => {
       pathParams: [],
       queryParams: [],
       headerParams: [],
+      permissions: null,
       requestSchema: null,
       responseSchema: null,
       sdkName: "fakeOp",

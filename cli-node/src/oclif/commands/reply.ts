@@ -100,7 +100,7 @@ class ReplyCommand extends Command {
   the email being answered is itself a signal or interaction.
 
   A plain reply to an email the server classifies as an interaction
-  (for example a payment or contact request) does not complete that
+  (for example a contact request) does not complete that
   interaction, and an informational (fyi) email or status signal needs
   no reply. In those cases the reply is still sent, and a one-line
   warning naming the command that answers the interaction goes to

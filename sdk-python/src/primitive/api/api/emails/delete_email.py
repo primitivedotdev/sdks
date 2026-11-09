@@ -87,6 +87,8 @@ def sync_detailed(
 ) -> Response[DeleteEmailResponse200 | ErrorResponse]:
     """ Delete an email
 
+     Permanently delete a received email and its stored content. This cannot be undone.
+
     Args:
         id (UUID):
 
@@ -118,6 +120,8 @@ def sync(
 ) -> DeleteEmailResponse200 | ErrorResponse | None:
     """ Delete an email
 
+     Permanently delete a received email and its stored content. This cannot be undone.
+
     Args:
         id (UUID):
 
@@ -143,6 +147,8 @@ async def asyncio_detailed(
 
 ) -> Response[DeleteEmailResponse200 | ErrorResponse]:
     """ Delete an email
+
+     Permanently delete a received email and its stored content. This cannot be undone.
 
     Args:
         id (UUID):
@@ -174,6 +180,8 @@ async def asyncio(
 
 ) -> DeleteEmailResponse200 | ErrorResponse | None:
     """ Delete an email
+
+     Permanently delete a received email and its stored content. This cannot be undone.
 
     Args:
         id (UUID):

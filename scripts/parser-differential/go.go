@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	sdk "github.com/primitivedotdev/sdks/sdk-go/v2"
+	sdk "github.com/primitivedotdev/sdks/sdk-go/v3"
 	"math"
 	"os"
 )

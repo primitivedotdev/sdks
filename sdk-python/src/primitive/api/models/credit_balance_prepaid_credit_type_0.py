@@ -22,10 +22,8 @@ T = TypeVar("T", bound="CreditBalancePrepaidCreditType0")
 
 @_attrs_define
 class CreditBalancePrepaidCreditType0:
-    """ Prepaid usage credit (top-ups, redeemed credit codes and granted
-    credit) that can still pay for usage, or null when there is none.
-    Omitted when an exact figure cannot be given right now; the budget
-    is still returned.
+    """ Prepaid usage credit (redeemed credit codes and granted credit) that can still pay for usage. Null when there is
+    none. Omitted when an exact figure cannot be given right now; the rest of the balance is still returned.
 
         Attributes:
             currency (str): Currency of the credit, which is the organization billing currency.
@@ -37,6 +35,7 @@ class CreditBalancePrepaidCreditType0:
     currency: str
     remaining_micros: str
     next_expires_at: datetime.datetime | None
+    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
 
@@ -55,7 +54,7 @@ class CreditBalancePrepaidCreditType0:
 
 
         field_dict: dict[str, Any] = {}
-
+        field_dict.update(self.additional_properties)
         field_dict.update({
             "currency": currency,
             "remaining_micros": remaining_micros,
@@ -97,5 +96,22 @@ class CreditBalancePrepaidCreditType0:
             next_expires_at=next_expires_at,
         )
 
+
+        credit_balance_prepaid_credit_type_0.additional_properties = d
         return credit_balance_prepaid_credit_type_0
 
+    @property
+    def additional_keys(self) -> list[str]:
+        return list(self.additional_properties.keys())
+
+    def __getitem__(self, key: str) -> Any:
+        return self.additional_properties[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.additional_properties[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.additional_properties[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.additional_properties

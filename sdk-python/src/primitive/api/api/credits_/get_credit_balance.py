@@ -84,11 +84,10 @@ def sync_detailed(
 ) -> Response[ErrorResponse | GetCreditBalanceResponse200]:
     """ Get credit balance
 
-     Read the organization credit position. `prepaid_credit` is the prepaid
-    usage credit (paid top-ups, redeemed credit codes and granted credit)
-    that can still pay for usage. `budget` is the active agent spending
-    budget an operator funded for top-ups, or null when there is none.
-    Amounts are strings of integer micros (1 USD = 1000000 micros).
+     Read the organization credit position. `prepaid_credit` is the prepaid usage credit (redeemed credit
+    codes and granted credit) that can still pay for usage. `budget` is always null: agent spending
+    budgets were retired, and the field is kept for existing clients. Amounts are strings of integer
+    micros (1 USD = 1000000 micros).
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -116,11 +115,10 @@ def sync(
 ) -> ErrorResponse | GetCreditBalanceResponse200 | None:
     """ Get credit balance
 
-     Read the organization credit position. `prepaid_credit` is the prepaid
-    usage credit (paid top-ups, redeemed credit codes and granted credit)
-    that can still pay for usage. `budget` is the active agent spending
-    budget an operator funded for top-ups, or null when there is none.
-    Amounts are strings of integer micros (1 USD = 1000000 micros).
+     Read the organization credit position. `prepaid_credit` is the prepaid usage credit (redeemed credit
+    codes and granted credit) that can still pay for usage. `budget` is always null: agent spending
+    budgets were retired, and the field is kept for existing clients. Amounts are strings of integer
+    micros (1 USD = 1000000 micros).
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -143,11 +141,10 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | GetCreditBalanceResponse200]:
     """ Get credit balance
 
-     Read the organization credit position. `prepaid_credit` is the prepaid
-    usage credit (paid top-ups, redeemed credit codes and granted credit)
-    that can still pay for usage. `budget` is the active agent spending
-    budget an operator funded for top-ups, or null when there is none.
-    Amounts are strings of integer micros (1 USD = 1000000 micros).
+     Read the organization credit position. `prepaid_credit` is the prepaid usage credit (redeemed credit
+    codes and granted credit) that can still pay for usage. `budget` is always null: agent spending
+    budgets were retired, and the field is kept for existing clients. Amounts are strings of integer
+    micros (1 USD = 1000000 micros).
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -175,11 +172,10 @@ async def asyncio(
 ) -> ErrorResponse | GetCreditBalanceResponse200 | None:
     """ Get credit balance
 
-     Read the organization credit position. `prepaid_credit` is the prepaid
-    usage credit (paid top-ups, redeemed credit codes and granted credit)
-    that can still pay for usage. `budget` is the active agent spending
-    budget an operator funded for top-ups, or null when there is none.
-    Amounts are strings of integer micros (1 USD = 1000000 micros).
+     Read the organization credit position. `prepaid_credit` is the prepaid usage credit (redeemed credit
+    codes and granted credit) that can still pay for usage. `budget` is always null: agent spending
+    budgets were retired, and the field is kept for existing clients. Amounts are strings of integer
+    micros (1 USD = 1000000 micros).
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

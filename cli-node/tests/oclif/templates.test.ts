@@ -240,7 +240,7 @@ describe("templates black-box command invocation", () => {
         "example.com",
         "--raw-body",
         JSON.stringify({
-          secrets: { ANTHROPIC_API_KEY: "sk-test" },
+          secrets: { MY_API_KEY: "sk-test" },
           variables: { TONE: "brief" },
         }),
       ]),
@@ -250,7 +250,7 @@ describe("templates black-box command invocation", () => {
         body: {
           address: "reply",
           domain: "example.com",
-          secrets: { ANTHROPIC_API_KEY: "sk-test" },
+          secrets: { MY_API_KEY: "sk-test" },
           variables: { TONE: "brief" },
         },
         client: { host: "api" },

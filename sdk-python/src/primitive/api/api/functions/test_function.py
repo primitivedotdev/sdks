@@ -21,9 +21,13 @@ def _get_kwargs(
     id: UUID,
     *,
     body: TestFunctionBody | Unset = UNSET,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -115,6 +119,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: TestFunctionBody | Unset = UNSET,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | TestFunctionResponse200]:
     """ Send a test invocation
@@ -143,6 +148,7 @@ def sync_detailed(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (TestFunctionBody | Unset):
 
     Raises:
@@ -157,6 +163,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         id=id,
 body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -171,6 +178,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: TestFunctionBody | Unset = UNSET,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | TestFunctionResponse200 | None:
     """ Send a test invocation
@@ -199,6 +207,7 @@ def sync(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (TestFunctionBody | Unset):
 
     Raises:
@@ -214,6 +223,7 @@ def sync(
         id=id,
 client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -222,6 +232,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: TestFunctionBody | Unset = UNSET,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | TestFunctionResponse200]:
     """ Send a test invocation
@@ -250,6 +261,7 @@ async def asyncio_detailed(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (TestFunctionBody | Unset):
 
     Raises:
@@ -264,6 +276,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         id=id,
 body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -278,6 +291,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: TestFunctionBody | Unset = UNSET,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | TestFunctionResponse200 | None:
     """ Send a test invocation
@@ -306,6 +320,7 @@ async def asyncio(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (TestFunctionBody | Unset):
 
     Raises:
@@ -321,5 +336,6 @@ async def asyncio(
         id=id,
 client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

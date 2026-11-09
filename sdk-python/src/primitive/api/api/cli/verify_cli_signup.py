@@ -11,6 +11,7 @@ from ... import errors
 from ...models.error_response import ErrorResponse
 from ...models.verify_cli_signup_input import VerifyCliSignupInput
 from ...models.verify_cli_signup_response_200 import VerifyCliSignupResponse200
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -18,9 +19,13 @@ from typing import cast
 def _get_kwargs(
     *,
     body: VerifyCliSignupInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -82,6 +87,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: VerifyCliSignupInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | VerifyCliSignupResponse200]:
     """ Verify CLI signup and create OAuth session
@@ -92,6 +98,7 @@ def sync_detailed(
     require an API key.
 
     Args:
+        idempotency_key (str | Unset):
         body (VerifyCliSignupInput):
 
     Raises:
@@ -105,6 +112,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -118,6 +126,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: VerifyCliSignupInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | VerifyCliSignupResponse200 | None:
     """ Verify CLI signup and create OAuth session
@@ -128,6 +137,7 @@ def sync(
     require an API key.
 
     Args:
+        idempotency_key (str | Unset):
         body (VerifyCliSignupInput):
 
     Raises:
@@ -142,6 +152,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -149,6 +160,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: VerifyCliSignupInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | VerifyCliSignupResponse200]:
     """ Verify CLI signup and create OAuth session
@@ -159,6 +171,7 @@ async def asyncio_detailed(
     require an API key.
 
     Args:
+        idempotency_key (str | Unset):
         body (VerifyCliSignupInput):
 
     Raises:
@@ -172,6 +185,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -185,6 +199,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: VerifyCliSignupInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | VerifyCliSignupResponse200 | None:
     """ Verify CLI signup and create OAuth session
@@ -195,6 +210,7 @@ async def asyncio(
     require an API key.
 
     Args:
+        idempotency_key (str | Unset):
         body (VerifyCliSignupInput):
 
     Raises:
@@ -209,5 +225,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

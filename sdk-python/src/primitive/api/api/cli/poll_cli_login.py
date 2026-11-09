@@ -11,6 +11,7 @@ from ... import errors
 from ...models.error_response import ErrorResponse
 from ...models.poll_cli_login_input import PollCliLoginInput
 from ...models.poll_cli_login_response_200 import PollCliLoginResponse200
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -18,9 +19,13 @@ from typing import cast
 def _get_kwargs(
     *,
     body: PollCliLoginInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -82,6 +87,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: PollCliLoginInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | PollCliLoginResponse200]:
     """ Poll CLI browser login
@@ -89,8 +95,11 @@ def sync_detailed(
      Polls a CLI login session until the browser approval either succeeds,
     is denied, expires, or is polled too quickly. The OAuth token set is
     created only after approval and is returned exactly once.
+    A login started with `login_kind: "user"` succeeds with a
+    `CliUserLoginPollResult` instead (`auth_method: "user_grant"`).
 
     Args:
+        idempotency_key (str | Unset):
         body (PollCliLoginInput):
 
     Raises:
@@ -104,6 +113,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -117,6 +127,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: PollCliLoginInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | PollCliLoginResponse200 | None:
     """ Poll CLI browser login
@@ -124,8 +135,11 @@ def sync(
      Polls a CLI login session until the browser approval either succeeds,
     is denied, expires, or is polled too quickly. The OAuth token set is
     created only after approval and is returned exactly once.
+    A login started with `login_kind: "user"` succeeds with a
+    `CliUserLoginPollResult` instead (`auth_method: "user_grant"`).
 
     Args:
+        idempotency_key (str | Unset):
         body (PollCliLoginInput):
 
     Raises:
@@ -140,6 +154,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -147,6 +162,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: PollCliLoginInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | PollCliLoginResponse200]:
     """ Poll CLI browser login
@@ -154,8 +170,11 @@ async def asyncio_detailed(
      Polls a CLI login session until the browser approval either succeeds,
     is denied, expires, or is polled too quickly. The OAuth token set is
     created only after approval and is returned exactly once.
+    A login started with `login_kind: "user"` succeeds with a
+    `CliUserLoginPollResult` instead (`auth_method: "user_grant"`).
 
     Args:
+        idempotency_key (str | Unset):
         body (PollCliLoginInput):
 
     Raises:
@@ -169,6 +188,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -182,6 +202,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: PollCliLoginInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | PollCliLoginResponse200 | None:
     """ Poll CLI browser login
@@ -189,8 +210,11 @@ async def asyncio(
      Polls a CLI login session until the browser approval either succeeds,
     is denied, expires, or is polled too quickly. The OAuth token set is
     created only after approval and is returned exactly once.
+    A login started with `login_kind: "user"` succeeds with a
+    `CliUserLoginPollResult` instead (`auth_method: "user_grant"`).
 
     Args:
+        idempotency_key (str | Unset):
         body (PollCliLoginInput):
 
     Raises:
@@ -205,5 +229,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

@@ -200,7 +200,7 @@ export const WAKE_SENTENCES = {
 export function wakeSentence(label) {
   if (label === "fyi" || label === "repeat.stop/1")
     return WAKE_SENTENCES.no_reply;
-  if (label === "x402.payment/1" || label === "primitive.contact/1")
+  if (label === "primitive.contact/1")
     return WAKE_SENTENCES.answer_with_command;
   if (label === "repeat.tick/1") return WAKE_SENTENCES.repeat;
   return WAKE_SENTENCES.unsupported;

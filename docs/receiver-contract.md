@@ -227,12 +227,6 @@ public. A supported interface would need to cover:
 - How long a policy read stays valid. The CLI rereads after 30 seconds
   (`CONTACT_POLICY_MAX_AGE_MS`).
 
-### Some email fields are not in the API spec
-
-`wake-context.ts` reads `muted` and a `collaboration` object
-(`sender_relationship`, `muted`) from the email detail. Neither is
-in `openapi/primitive-api.yaml`, so generated SDK types do not include them.
-
 ### CLI state files are private
 
 These files have a `version` field but no published format. Do not read or write

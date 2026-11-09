@@ -20,10 +20,14 @@ def _get_kwargs(
     address: str,
     *,
     body: InviteAgentConnectionBody,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(primitive_step_up, Unset):
+        headers["Primitive-Step-Up"] = primitive_step_up
+
     if not isinstance(idempotency_key, Unset):
         headers["Idempotency-Key"] = idempotency_key
 
@@ -97,6 +101,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_429
 
+    if response.status_code == 503:
+        response_503 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_503
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -115,28 +126,22 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 def sync_detailed(
     address: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     body: InviteAgentConnectionBody,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | InviteAgentConnectionResponse200]:
     """ invite Agent Connection
 
-     Address-bound external runtime pairing. Any current human organization member may create and manage
-    their personal agent connections. Organization owners and admins may manage all connections and
-    explicitly create shared ones. An owner removed from the organization loses personal agent access,
-    and rejoining does not revive the old connection. Organization API keys cannot manage connections. A
-    current connected credential may disconnect only its own exact address. Claim is authorized only by
-    its one-use invitation. Connected means a real challenge was received and a reply sent by the
-    current bound credential was received back. Invitations expire after 15 minutes. Reconnection
-    preserves the address and revokes previous credentials. Status responses contain no credentials.
-    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
-    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission. pending_only protects an already claimed credential. An ambiguous
-    invitation response must not be retried automatically; invitation secrets are never replayed.
+     Explicitly reconnect an existing agent. Set pending_only:true for Continue setup: the locked
+    connection must still be pending or the server returns 409 connection_already_claimed without
+    deleting any credential. Generic reconnect revokes old credentials and returns a new single-use
+    invitation. An uncertain response must not be automatically retried.
 
     Args:
         address (str):
+        primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (InviteAgentConnectionBody):
 
@@ -152,6 +157,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         address=address,
 body=body,
+primitive_step_up=primitive_step_up,
 idempotency_key=idempotency_key,
 
     )
@@ -165,28 +171,22 @@ idempotency_key=idempotency_key,
 def sync(
     address: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     body: InviteAgentConnectionBody,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | InviteAgentConnectionResponse200 | None:
     """ invite Agent Connection
 
-     Address-bound external runtime pairing. Any current human organization member may create and manage
-    their personal agent connections. Organization owners and admins may manage all connections and
-    explicitly create shared ones. An owner removed from the organization loses personal agent access,
-    and rejoining does not revive the old connection. Organization API keys cannot manage connections. A
-    current connected credential may disconnect only its own exact address. Claim is authorized only by
-    its one-use invitation. Connected means a real challenge was received and a reply sent by the
-    current bound credential was received back. Invitations expire after 15 minutes. Reconnection
-    preserves the address and revokes previous credentials. Status responses contain no credentials.
-    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
-    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission. pending_only protects an already claimed credential. An ambiguous
-    invitation response must not be retried automatically; invitation secrets are never replayed.
+     Explicitly reconnect an existing agent. Set pending_only:true for Continue setup: the locked
+    connection must still be pending or the server returns 409 connection_already_claimed without
+    deleting any credential. Generic reconnect revokes old credentials and returns a new single-use
+    invitation. An uncertain response must not be automatically retried.
 
     Args:
         address (str):
+        primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (InviteAgentConnectionBody):
 
@@ -203,6 +203,7 @@ def sync(
         address=address,
 client=client,
 body=body,
+primitive_step_up=primitive_step_up,
 idempotency_key=idempotency_key,
 
     ).parsed
@@ -210,28 +211,22 @@ idempotency_key=idempotency_key,
 async def asyncio_detailed(
     address: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     body: InviteAgentConnectionBody,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | InviteAgentConnectionResponse200]:
     """ invite Agent Connection
 
-     Address-bound external runtime pairing. Any current human organization member may create and manage
-    their personal agent connections. Organization owners and admins may manage all connections and
-    explicitly create shared ones. An owner removed from the organization loses personal agent access,
-    and rejoining does not revive the old connection. Organization API keys cannot manage connections. A
-    current connected credential may disconnect only its own exact address. Claim is authorized only by
-    its one-use invitation. Connected means a real challenge was received and a reply sent by the
-    current bound credential was received back. Invitations expire after 15 minutes. Reconnection
-    preserves the address and revokes previous credentials. Status responses contain no credentials.
-    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
-    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission. pending_only protects an already claimed credential. An ambiguous
-    invitation response must not be retried automatically; invitation secrets are never replayed.
+     Explicitly reconnect an existing agent. Set pending_only:true for Continue setup: the locked
+    connection must still be pending or the server returns 409 connection_already_claimed without
+    deleting any credential. Generic reconnect revokes old credentials and returns a new single-use
+    invitation. An uncertain response must not be automatically retried.
 
     Args:
         address (str):
+        primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (InviteAgentConnectionBody):
 
@@ -247,6 +242,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         address=address,
 body=body,
+primitive_step_up=primitive_step_up,
 idempotency_key=idempotency_key,
 
     )
@@ -260,28 +256,22 @@ idempotency_key=idempotency_key,
 async def asyncio(
     address: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     body: InviteAgentConnectionBody,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | InviteAgentConnectionResponse200 | None:
     """ invite Agent Connection
 
-     Address-bound external runtime pairing. Any current human organization member may create and manage
-    their personal agent connections. Organization owners and admins may manage all connections and
-    explicitly create shared ones. An owner removed from the organization loses personal agent access,
-    and rejoining does not revive the old connection. Organization API keys cannot manage connections. A
-    current connected credential may disconnect only its own exact address. Claim is authorized only by
-    its one-use invitation. Connected means a real challenge was received and a reply sent by the
-    current bound credential was received back. Invitations expire after 15 minutes. Reconnection
-    preserves the address and revokes previous credentials. Status responses contain no credentials.
-    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
-    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission. pending_only protects an already claimed credential. An ambiguous
-    invitation response must not be retried automatically; invitation secrets are never replayed.
+     Explicitly reconnect an existing agent. Set pending_only:true for Continue setup: the locked
+    connection must still be pending or the server returns 409 connection_already_claimed without
+    deleting any credential. Generic reconnect revokes old credentials and returns a new single-use
+    invitation. An uncertain response must not be automatically retried.
 
     Args:
         address (str):
+        primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (InviteAgentConnectionBody):
 
@@ -298,6 +288,7 @@ async def asyncio(
         address=address,
 client=client,
 body=body,
+primitive_step_up=primitive_step_up,
 idempotency_key=idempotency_key,
 
     )).parsed

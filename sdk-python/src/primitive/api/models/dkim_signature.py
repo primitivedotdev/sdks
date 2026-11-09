@@ -21,21 +21,22 @@ T = TypeVar("T", bound="DkimSignature")
 
 @_attrs_define
 class DkimSignature:
-    """ One DKIM signature found on the message, with its verdict.
+    """ One DKIM signature found on the message, with its verdict. Any field may be absent or null on mail stored before
+    that field was recorded.
 
         Attributes:
-            domain (str):
-            selector (str):
-            result (str): Verification result (e.g. `pass`, `fail`, `none`).
-            aligned (bool): Whether the signing domain aligns with the From domain (for DMARC).
+            domain (None | str | Unset):
+            selector (None | str | Unset):
+            result (None | str | Unset): Verification result (e.g. `pass`, `fail`, `none`).
+            aligned (bool | None | Unset): Whether the signing domain aligns with the From domain (for DMARC).
             key_bits (int | None | Unset):
             algo (None | str | Unset):
      """
 
-    domain: str
-    selector: str
-    result: str
-    aligned: bool
+    domain: None | str | Unset = UNSET
+    selector: None | str | Unset = UNSET
+    result: None | str | Unset = UNSET
+    aligned: bool | None | Unset = UNSET
     key_bits: int | None | Unset = UNSET
     algo: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -45,13 +46,29 @@ class DkimSignature:
 
 
     def to_dict(self) -> dict[str, Any]:
-        domain = self.domain
+        domain: None | str | Unset
+        if isinstance(self.domain, Unset):
+            domain = UNSET
+        else:
+            domain = self.domain
 
-        selector = self.selector
+        selector: None | str | Unset
+        if isinstance(self.selector, Unset):
+            selector = UNSET
+        else:
+            selector = self.selector
 
-        result = self.result
+        result: None | str | Unset
+        if isinstance(self.result, Unset):
+            result = UNSET
+        else:
+            result = self.result
 
-        aligned = self.aligned
+        aligned: bool | None | Unset
+        if isinstance(self.aligned, Unset):
+            aligned = UNSET
+        else:
+            aligned = self.aligned
 
         key_bits: int | None | Unset
         if isinstance(self.key_bits, Unset):
@@ -69,11 +86,15 @@ class DkimSignature:
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
-            "domain": domain,
-            "selector": selector,
-            "result": result,
-            "aligned": aligned,
         })
+        if domain is not UNSET:
+            field_dict["domain"] = domain
+        if selector is not UNSET:
+            field_dict["selector"] = selector
+        if result is not UNSET:
+            field_dict["result"] = result
+        if aligned is not UNSET:
+            field_dict["aligned"] = aligned
         if key_bits is not UNSET:
             field_dict["keyBits"] = key_bits
         if algo is not UNSET:
@@ -86,13 +107,45 @@ class DkimSignature:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        domain = d.pop("domain")
+        def _parse_domain(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
 
-        selector = d.pop("selector")
+        domain = _parse_domain(d.pop("domain", UNSET))
 
-        result = d.pop("result")
 
-        aligned = d.pop("aligned")
+        def _parse_selector(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        selector = _parse_selector(d.pop("selector", UNSET))
+
+
+        def _parse_result(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        result = _parse_result(d.pop("result", UNSET))
+
+
+        def _parse_aligned(data: object) -> bool | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(bool | None | Unset, data)
+
+        aligned = _parse_aligned(d.pop("aligned", UNSET))
+
 
         def _parse_key_bits(data: object) -> int | None | Unset:
             if data is None:

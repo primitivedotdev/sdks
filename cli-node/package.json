@@ -1,6 +1,9 @@
 {
   "name": "primitive",
-  "version": "1.75.0",
+  "version": "3.0.0-preview.1",
+  "publishConfig": {
+    "tag": "preview"
+  },
   "description": "Official Primitive CLI: deploy Primitive Functions, send and inspect mail, manage endpoints, all from the terminal. Wraps the @primitivedotdev/sdk runtime client with one-shot commands.",
   "type": "module",
   "sideEffects": false,
@@ -79,9 +82,6 @@
       "domains": {
         "description": "Claim, verify, manage email domains, and download DNS zone files"
       },
-      "registries": {
-        "description": "Create and manage agent registries, publish and resolve agents by handle, and moderate publication requests"
-      },
       "network": {
         "description": "Discover same-organization agents by email address and manage default network visibility. Use `primitive network` to see the commands."
       },
@@ -138,13 +138,49 @@
         "description": "Browse and install Function templates. Use `primitive templates list-templates`, `primitive templates get-template`, `primitive templates install-template`, and `primitive templates get-template-install`."
       },
       "org": {
-        "description": "Manage org-level (global) resources shared across functions, or leave the organization"
+        "description": "Switch the CLI between your organizations (`primitive org use <org>`, list them with `primitive orgs`), manage org-level (global) resources shared across functions, or leave the organization"
       },
       "org:secrets": {
         "description": "Global secrets shared across every function. Use `primitive org secrets list|set|remove`. Changes land in a function on its next redeploy; a function secret of the same name overrides the global."
       },
-      "payments": {
-        "description": "Collect and pay x402 stablecoin (USDC) payments. Start with `primitive payments register-payout-address`, then `primitive payments create-challenge` to request a payment and `primitive payments pay` to settle one. Settlement is non-custodial; signing happens locally with your wallet key. Manage caps with `primitive payments get-policy|update-spend-policy`."
+      "keys": {
+        "description": "List organization API keys (metadata only, never secrets) with `primitive keys list`. API keys are created, rotated and revoked in the dashboard for now. CLI commands for this are planned."
+      },
+      "roles": {
+        "description": "Read roles, groups, mailbox access and the access mode. Use `primitive roles list|groups|mailbox-access|access-mode`; generated API names remain available."
+      },
+      "projects": {
+        "description": "Organization people, shared projects and project invitations"
+      },
+      "organizations": {
+        "description": "Organization invitations"
+      },
+      "mailbox-access": {
+        "description": "Who may read, draft and send for each mailbox, and the groups access can be given to"
+      },
+      "credentials": {
+        "description": "API keys, the credential inventory, the credential audit trail and the credential policy"
+      },
+      "organization-settings": {
+        "description": "Your connected apps and CLI logins, the organization's connected apps, name, logo, search settings and billing"
+      },
+      "roles-and-members": {
+        "description": "Roles, member roles and removal, the mailbox access mode, break-glass, transfers and suspensions, and leaving the organization"
+      },
+      "agent-work": {
+        "description": "Agent work records: create, list and read them, report status, and propose, agree or withdraw deadlines"
+      },
+      "address-notes": {
+        "description": "Private organization notes and public JSON notes about email addresses"
+      },
+      "interactions": {
+        "description": "Typed multi-step protocols carried over email between agents"
+      },
+      "stats": {
+        "description": "Received and sent mail per hour, and how webhook deliveries ended"
+      },
+      "email-rules": {
+        "description": "Rules written in plain English that pick out received mail"
       },
       "routes": {
         "description": "Manage recipient routes. Bind an address pattern to an endpoint or function: `primitive routes add alice@d --function <id>`, `primitive routes list`, `primitive routes test <recipient>`, `primitive routes remove <id>`."
@@ -222,7 +258,6 @@
     "@oclif/plugin-autocomplete": "^4.0.6",
     "@oclif/plugin-help": "^7.0.4",
     "@oclif/plugin-warn-if-update-available": "^4.0.1",
-    "viem": "^2.57.14",
     "ws": "^8.22.0"
   },
   "devDependencies": {

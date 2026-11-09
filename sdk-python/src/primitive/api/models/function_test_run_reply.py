@@ -53,7 +53,7 @@ class FunctionTestRunReply:
                     execution. `canceled_at` carries the cancellation time
                     and nothing was dispatched.
             to (str):
-            subject (str):
+            subject (None | str): The reply's subject. Null when a refused send's content was discarded.
             queue_id (None | str):
             created_at (datetime.datetime):
      """
@@ -61,7 +61,7 @@ class FunctionTestRunReply:
     id: UUID
     status: SentEmailStatus
     to: str
-    subject: str
+    subject: None | str
     queue_id: None | str
     created_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -77,6 +77,7 @@ class FunctionTestRunReply:
 
         to = self.to
 
+        subject: None | str
         subject = self.subject
 
         queue_id: None | str
@@ -115,7 +116,13 @@ class FunctionTestRunReply:
 
         to = d.pop("to")
 
-        subject = d.pop("subject")
+        def _parse_subject(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        subject = _parse_subject(d.pop("subject"))
+
 
         def _parse_queue_id(data: object) -> None | str:
             if data is None:

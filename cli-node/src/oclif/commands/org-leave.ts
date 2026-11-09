@@ -1,5 +1,11 @@
 import { createInterface } from "node:readline/promises";
 import { Command, Flags } from "@oclif/core";
+import {
+  createClient,
+  createConfig,
+  type LeaveOrganizationData,
+  leaveOrganization,
+} from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorCode,
@@ -10,9 +16,11 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import type { ResolvedCliAuth } from "../auth.js";
-import { orgSecretsErrorPayload } from "./org-secrets-shared.js";
 
-export const STEP_UP_HEADER = "primitive-step-up";
+// The step-up header the generated leaveOrganization operation declares.
+export const STEP_UP_HEADER = "Primitive-Step-Up" satisfies keyof NonNullable<
+  LeaveOrganizationData["headers"]
+>;
 
 export function organizationLeaveUrl(baseUrl: string): string {
   return `${baseUrl.replace(/\/$/, "")}/organization/leave`;
@@ -54,31 +62,54 @@ type RequestOutcome =
   | { kind: "ok"; data: unknown }
   | { kind: "error"; payload: unknown };
 
+// A refusal whose body is not a JSON error: the generated client hands back
+// the body text (or an empty object for an empty body).
+function leaveErrorPayload(
+  error: unknown,
+  response: Response | undefined,
+): unknown {
+  const isText = typeof error === "string";
+  const isEmpty =
+    !!error &&
+    typeof error === "object" &&
+    !Array.isArray(error) &&
+    Object.keys(error).length === 0;
+  if (!isText && !isEmpty) return extractErrorPayload(error);
+  const text = isText ? (error as string).trim() : "";
+  return {
+    code: "http_error",
+    message:
+      text ||
+      `HTTP ${response?.status ?? ""} ${response?.statusText ?? ""}`.trim(),
+  };
+}
+
 async function postLeave(
   input: OrgLeaveInput,
   stepUpToken: string | undefined,
 ): Promise<RequestOutcome> {
-  const headers = {
-    ...input.headers,
-    ...(stepUpToken ? { [STEP_UP_HEADER]: stepUpToken } : {}),
-  };
-  let response: Response;
+  const client = createClient(
+    createConfig({
+      baseUrl: input.baseUrl,
+      fetch: input.fetchImpl,
+      headers: input.headers,
+    }),
+  );
   try {
-    response = await input.fetchImpl(organizationLeaveUrl(input.baseUrl), {
-      method: "POST",
-      headers,
+    const result = await leaveOrganization({
+      client,
+      ...(stepUpToken ? { headers: { [STEP_UP_HEADER]: stepUpToken } } : {}),
     });
+    if (result.error !== undefined || !result.response?.ok) {
+      return {
+        kind: "error",
+        payload: leaveErrorPayload(result.error, result.response),
+      };
+    }
+    return { kind: "ok", data: result.data?.data ?? null };
   } catch (error) {
     return { kind: "error", payload: extractErrorPayload(error) };
   }
-  if (!response.ok) {
-    return {
-      kind: "error",
-      payload: extractErrorPayload(await orgSecretsErrorPayload(response)),
-    };
-  }
-  const body = (await response.json().catch(() => ({}))) as { data?: unknown };
-  return { kind: "ok", data: body.data ?? null };
 }
 
 function stepUpUrlOf(payload: unknown): string | undefined {

@@ -6,7 +6,7 @@ import {
 } from "../../src/api/verify-signature.js";
 import { signWebhookPayload } from "../../src/webhook/signing.js";
 
-// The Workers-safe verifier in src/api/verify-signature.ts must produce
+// The edge-safe verifier in src/api/verify-signature.ts must produce
 // the same accept/reject decisions as the Node verifier in
 // src/webhook/signing.ts for every shape of input. The signing side
 // stays on node:crypto (faster path for server-side use), so these

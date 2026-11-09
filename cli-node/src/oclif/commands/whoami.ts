@@ -1,12 +1,23 @@
 import { Command, Errors, Flags } from "@oclif/core";
-import type { Account } from "@primitivedotdev/api-core";
-import { getAccount, listDomains } from "@primitivedotdev/api-core";
+import type {
+  Account,
+  CallerIdentity,
+  GetOwnGrantResponses,
+  GrantDescription,
+  PermissionCheck,
+} from "@primitivedotdev/api-core";
+import {
+  getAccount,
+  getOwnGrant,
+  listDomains,
+} from "@primitivedotdev/api-core";
 import { receiverStatusCommand } from "../agent-connect.js";
 import { cliInvocation } from "../agent-identity-suggestions.js";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   API_BASE_URL_FLAG_DESCRIPTION,
   extractErrorPayload,
+  isGrantRefusal,
   runWithTiming,
   surfaceUnauthorizedHint,
   TIME_FLAG_DESCRIPTION,
@@ -30,6 +41,78 @@ import { agentIdentitySource } from "../session-agent-env.js";
 // it removes the post-signup hunt for the assigned *.primitive.email
 // domain that drove the original AGX pain.
 
+type GeneratedApiClient = Awaited<
+  ReturnType<typeof createAuthenticatedCliApiClient>
+>["apiClient"]["client"];
+
+/**
+ * `GET /whoami` with its grant query parameters. A server without grants
+ * ignores them and answers without `grant` or `check`.
+ */
+export async function fetchCallerIdentity(
+  client: GeneratedApiClient,
+  query: Record<string, string>,
+): Promise<{ identity: CallerIdentity | null; error: unknown }> {
+  const result = await client.get<
+    { 200: { success: true; data: CallerIdentity } },
+    unknown,
+    false
+  >({
+    query,
+    responseStyle: "fields",
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/whoami",
+  });
+  if (result.error) return { identity: null, error: result.error };
+  const identity =
+    (result.data as { data?: CallerIdentity } | undefined)?.data ?? null;
+  return { identity, error: null };
+}
+
+type GrantLineFields = Pick<
+  GrantDescription,
+  "credential_kind" | "expires_at" | "grant_type" | "mail_scope" | "template"
+> & { permissions: readonly string[] };
+
+function formatGrant(grant: GrantLineFields): string[] {
+  const what = grant.template
+    ? `template ${grant.template}`
+    : `${grant.grant_type ?? "grant"} with ${grant.permissions.length} permissions`;
+  const scope =
+    grant.mail_scope === "org" || grant.mail_scope === undefined
+      ? "all mail in the organization"
+      : "a narrowed mail scope";
+  const lines = [`Grant: ${what}, ${scope} (${grant.credential_kind})`];
+  if (grant.expires_at) lines.push(`Credential expires: ${grant.expires_at}`);
+  return lines;
+}
+
+/** Lines describing the caller's organization, role and grant. */
+export function formatGrantLines(
+  identity: CallerIdentity,
+  options: { orgName?: string | null; userLogin?: boolean } = {},
+): string[] {
+  const lines: string[] = [];
+  const org = options.orgName
+    ? `${options.orgName} (${identity.org_id})`
+    : identity.org_id;
+  lines.push(`Organization: ${org}`);
+  lines.push(`Role: ${identity.role}`);
+  const grant = identity.grant as GrantDescription | null | undefined;
+  if (grant) lines.push(...formatGrant(grant));
+  if (options.userLogin) {
+    lines.push(
+      "Signed in as yourself. Switch organizations with `primitive org use <org>`.",
+    );
+  }
+  return lines;
+}
+
+export function formatPermissionCheck(check: PermissionCheck): string {
+  if (check.allow) return `${check.permission}: allowed`;
+  return `${check.permission}: not allowed${check.reason ? ` (${check.reason})` : ""}`;
+}
+
 // The account id is the organization's id. Its name comes from the saved
 // OAuth login (recorded at sign-in); an API key alone carries no name.
 export function formatWhoamiSummary(
@@ -38,7 +121,9 @@ export function formatWhoamiSummary(
   orgName: string | null = null,
 ): string {
   const lines = [
-    `Authenticated as ${account.email}`,
+    account.email
+      ? `Authenticated as ${account.email}`
+      : "Authenticated (this credential may not see the account email)",
     orgName
       ? `Organization: ${orgName} (${account.id})`
       : `Organization id: ${account.id}`,
@@ -48,6 +133,35 @@ export function formatWhoamiSummary(
     lines.push(`Managed inbox: any-local-part@${managedInboxDomain}`);
   }
   return lines.join("\n");
+}
+
+type OwnGrant = GetOwnGrantResponses[200]["data"];
+
+/** `GET /whoami/grant`, which any credential may ask about itself. */
+async function fetchOwnGrant(
+  client: GeneratedApiClient,
+): Promise<OwnGrant | null> {
+  try {
+    const result = await getOwnGrant({ client, responseStyle: "fields" });
+    if (result.error) return null;
+    return (result.data as { data?: OwnGrant } | undefined)?.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** The summary for a valid credential whose grant cannot read the account. */
+export function formatOwnGrantSummary(
+  own: OwnGrant,
+  orgName: string | null,
+): string {
+  return [
+    "Authenticated. This credential cannot read the account (it lacks org:read).",
+    orgName
+      ? `Organization: ${orgName} (${own.org_id})`
+      : `Organization id: ${own.org_id}`,
+    ...(own.grant ? formatGrant(own.grant as GrantLineFields) : []),
+  ].join("\n");
 }
 
 class WhoamiCommand extends Command {
@@ -82,6 +196,19 @@ class WhoamiCommand extends Command {
       description:
         "Print the account JSON response, or the saved connected identity marked verification: offline. Never prints credentials.",
     }),
+    grant: Flags.boolean({
+      description:
+        "With --json, add `grant`: the organization, role and grant of this credential. The summary always shows them when the server reports them.",
+    }),
+    check: Flags.string({
+      description:
+        "Ask whether this credential may use a permission, such as mail:send. Prints the decision and exits 1 when it is not allowed. Nothing is enforced by asking.",
+    }),
+    resource: Flags.string({
+      description:
+        "With --check, the resource to check against, as function:<id>, domain:<id>, endpoint:<id> or route:<id>.",
+      dependsOn: ["check"],
+    }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
@@ -98,6 +225,12 @@ class WhoamiCommand extends Command {
           configDir: this.config.configDir,
         });
 
+      if (auth.connectedAgent && flags.check !== undefined) {
+        throw new Errors.CLIError(
+          "--check needs a live account credential. A selected connected-agent profile is shown offline; rerun with `PRIMITIVE_AGENT_PROFILE=` in front of the command to check the member login.",
+          { exit: 1 },
+        );
+      }
       if (auth.connectedAgent) {
         const identity = auth.connectedAgent;
         const statusCommand = `${cliInvocation(process.argv[1])} agent connect --profile ${identity.profileName} --status --json`;
@@ -144,6 +277,49 @@ class WhoamiCommand extends Command {
         );
       }
 
+      if (flags.check !== undefined) {
+        const check = flags.check.trim();
+        if (!/^[a-z][a-z0-9_.]*:[a-z][a-z0-9_]*$/.test(check)) {
+          throw new Errors.CLIError(
+            `--check ${JSON.stringify(flags.check)} is not a permission. Permissions look like \`mail:send\`.`,
+            { exit: 2 },
+          );
+        }
+        const { identity, error } = await fetchCallerIdentity(
+          apiClient.client,
+          {
+            check,
+            ...(flags.resource ? { resource: flags.resource.trim() } : {}),
+          },
+        );
+        if (error) {
+          const errorPayload = extractErrorPayload(error);
+          writeErrorWithHints(errorPayload);
+          surfaceUnauthorizedHint({
+            auth,
+            baseUrlOverridden,
+            configDir: this.config.configDir,
+            payload: errorPayload,
+          });
+          process.exitCode = 1;
+          return;
+        }
+        const decision = identity?.check;
+        if (!decision) {
+          throw new Errors.CLIError(
+            "This Primitive server does not answer permission checks.",
+            { exit: 1 },
+          );
+        }
+        this.log(
+          flags.json
+            ? JSON.stringify(decision, null, 2)
+            : formatPermissionCheck(decision),
+        );
+        if (!decision.allow) process.exitCode = 1;
+        return;
+      }
+
       const result = await getAccount({
         client: apiClient.client,
         responseStyle: "fields",
@@ -151,6 +327,27 @@ class WhoamiCommand extends Command {
 
       if (result.error) {
         const errorPayload = extractErrorPayload(result.error);
+        // A narrowed credential may be refused the account and still be
+        // valid: report what it can do instead of failing the smoke test.
+        const own = isGrantRefusal(errorPayload)
+          ? await fetchOwnGrant(apiClient.client)
+          : null;
+        if (own) {
+          const orgName =
+            auth.credentials?.org_id === own.org_id
+              ? (auth.credentials.org_name ?? null)
+              : null;
+          this.log(
+            flags.json
+              ? JSON.stringify(
+                  { account: null, ...own, org_name: orgName },
+                  null,
+                  2,
+                )
+              : formatOwnGrantSummary(own, orgName),
+          );
+          return;
+        }
         writeErrorWithHints(errorPayload);
         surfaceUnauthorizedHint({
           auth,
@@ -225,6 +422,21 @@ class WhoamiCommand extends Command {
         registration = null;
       }
 
+      // Best effort, like the managed inbox: the organization, role and
+      // grant. An older server answers without `grant`; any failure only
+      // drops these lines.
+      // Skipped for --json without --grant, whose output does not use it.
+      let identity: CallerIdentity | null = null;
+      if (!flags.json || flags.grant) {
+        try {
+          identity = (
+            await fetchCallerIdentity(apiClient.client, { include: "grant" })
+          ).identity;
+        } catch {
+          identity = null;
+        }
+      }
+
       if (flags.json) {
         this.log(
           JSON.stringify(
@@ -233,6 +445,13 @@ class WhoamiCommand extends Command {
               managed_inbox_domain: managedInboxDomain,
               org_name: orgName,
               ...(registration ? { session_registration: registration } : {}),
+              ...(flags.grant
+                ? {
+                    grant: identity?.grant ?? null,
+                    org_id: identity?.org_id ?? null,
+                    role: identity?.role ?? null,
+                  }
+                : {}),
             },
             null,
             2,
@@ -241,7 +460,21 @@ class WhoamiCommand extends Command {
         return;
       }
 
-      this.log(formatWhoamiSummary(account, managedInboxDomain, orgName));
+      const summary = [
+        formatWhoamiSummary(account, managedInboxDomain, orgName),
+      ];
+      // Only where the server reports a grant, so the summary from a server
+      // without grants reads exactly as before. The organization is already
+      // on the summary's second line.
+      if (identity?.grant) {
+        summary.push(
+          ...formatGrantLines(identity, {
+            orgName: auth.credentials?.org_name ?? null,
+            userLogin: auth.credentials?.auth_method === "user_grant",
+          }).filter((line) => !line.startsWith("Organization:")),
+        );
+      }
+      this.log(summary.join("\n"));
       if (registration) this.log(registrationSummaryLine(registration));
     });
   }

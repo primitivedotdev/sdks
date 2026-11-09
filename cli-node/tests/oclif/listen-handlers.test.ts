@@ -15,9 +15,10 @@ import {
   createListenHandler,
   validateListenHandlerOptions,
 } from "../../src/oclif/listen-handlers.js";
+import { ListenStateError } from "../../src/oclif/listen-state.js";
 import type { ListenDelivery } from "../../src/oclif/listen-types.js";
 
-const delivery: ListenDelivery = {
+const delivery = {
   body: '{"text":"hello 🌎 $(this-is-data)","ok":true}',
   event_id: "11111111-1111-4111-8111-111111111111",
   event_type: "email.received",
@@ -26,7 +27,7 @@ const delivery: ListenDelivery = {
   lease_token: "44444444-4444-4444-8444-444444444444",
   lease_expires_at: new Date(Date.now() + 60_000).toISOString(),
   headers: { "Content-Type": "application/json" },
-};
+} satisfies ListenDelivery;
 const servers: Server[] = [];
 const processes = new Set<number>();
 const liveSignal = () => new AbortController().signal;
@@ -101,6 +102,18 @@ describe("local webhook handler options", () => {
       createListenHandler({ exec: "cat", forwardTo: "http://localhost" }),
     ).toThrow();
     expect(() => createListenHandler({ exec: "  " })).toThrow();
+  });
+});
+
+describe("withheld event content", () => {
+  it("stops instead of handing on an event whose body the API withheld", async () => {
+    const stdout = output();
+    const handler = createListenHandler({ stdout: stdout.stream });
+    const withheld: ListenDelivery = { ...delivery, body: null };
+    await expect(handler(withheld, liveSignal())).rejects.toBeInstanceOf(
+      ListenStateError,
+    );
+    expect(stdout.text()).toBe("");
   });
 });
 

@@ -47,26 +47,26 @@ export const PRIMITIVE_TEAM_AUTHOR: FunctionTemplateAuthor = {
 };
 
 // The SDK version range that ships in the scaffolded package.json's
-// dependencies. Pinned to the current shipped minor with a caret so
-// patch releases of the SDK pick up automatically. Update alongside
-// any minor or major version bump of the SDK so scaffolded projects
-// use the same SDK version this CLI release was tested against.
-const SDK_VERSION_RANGE = "^2.0.0";
+// dependencies. A caret range on the current major so later releases
+// of the SDK pick up automatically. The SDK and this CLI share one
+// version (see RELEASE.md), so update this alongside every major
+// bump; scaffolded projects then use the SDK version this CLI release
+// was tested against.
+const SDK_VERSION_RANGE = "^3.0.0-preview.1";
 
 // The CLI version range that ships in the scaffolded devDependencies.
-// Pinned separately from SDK_VERSION_RANGE because primitive
-// and @primitivedotdev/sdk are independent packages on independent
-// release cadences. Coupling them silently breaks `npm install` in
-// every scaffolded project the day we bump one without publishing the
-// other. Must include this CLI's own version: a `primitive
+// Kept as its own constant because primitive and @primitivedotdev/sdk
+// are separate npm packages, published by separate workflows; the CLI
+// release waits for the matching SDK version to be installable before
+// it publishes. Must include this CLI's own version: a `primitive
 // functions:init` run from CLI v1.2.3 should scaffold a project that
 // resolves at least v1.2.3, so the user does not silently downgrade
 // the bin under themselves. The lockstep test in functions-init.test.ts
 // enforces that invariant.
-const CLI_VERSION_RANGE = "^1.75.0";
+const CLI_VERSION_RANGE = "^3.0.0-preview.1";
 
 // esbuild version range. Pinned to the latest stable major used
-// elsewhere in the Primitive codebase for bundling Workers-style
+// elsewhere in the Primitive codebase for bundling edge-style
 // handlers. Caret range so patch fixes flow in automatically.
 const ESBUILD_VERSION_RANGE = "^0.27.0";
 
@@ -87,8 +87,8 @@ export function renderHandler(): string {
 //
 // Imports are taken from the \`/api\` subpath, NOT the package root.
 // The root export pulls in webhook signing helpers that depend on
-// \`node:crypto\`, which breaks Workers-style bundles. The \`/api\`
-// subpath is Workers-safe and exposes everything a handler needs,
+// \`node:crypto\`, which breaks edge-style bundles. The \`/api\`
+// subpath is edge-safe and exposes everything a handler needs,
 // including Web Crypto signature verification.
 import {
   createPrimitiveClient,
@@ -388,8 +388,8 @@ export default {
 
       // To add an LLM or another API, store its key as a Function secret.
       // Example:
-      //   export OPENAI_KEY=sk-...
-      //   primitive functions set-secret --id <fn-id> --key OPENAI_KEY --value-from-env OPENAI_KEY --redeploy
+      //   export MY_API_KEY=sk-...
+      //   primitive functions set-secret --id <fn-id> --key MY_API_KEY --value-from-env MY_API_KEY --redeploy
 
       // Recipient gate
       // https://www.primitive.dev/docs/sending#who-you-can-send-to
@@ -494,7 +494,7 @@ export function renderBuildMjs(): string {
   return `import { build } from "esbuild";
 
 // Bundle handler.ts into a single ESM file suitable for the Primitive
-// Functions runtime. The runtime is a Workers-style environment, so
+// Functions runtime. The runtime is an edge-style environment, so
 // we pick the "worker" / "browser" export conditions on @primitivedotdev/sdk
 // (which routes us to the /api subpath safely without dragging in
 // node:crypto-dependent webhook helpers).
@@ -609,8 +609,8 @@ Use secrets for API keys used by your handler. \`--redeploy\` makes the
 new value visible to the running Function immediately.
 
 \`\`\`
-export OPENAI_KEY=sk-...
-primitive functions set-secret --id "$PRIMITIVE_FUNCTION_ID" --key OPENAI_KEY --value-from-env OPENAI_KEY --redeploy
+export MY_API_KEY=sk-...
+primitive functions set-secret --id "$PRIMITIVE_FUNCTION_ID" --key MY_API_KEY --value-from-env MY_API_KEY --redeploy
 \`\`\`
 `;
 }

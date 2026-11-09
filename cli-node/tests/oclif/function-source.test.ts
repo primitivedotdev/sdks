@@ -93,6 +93,11 @@ const FILES = { "package.json": "{}", "src/index.ts": "export default {}" };
 
 function listItem(name: string, id: string): FunctionListItem {
   return {
+    last_invoked_at: null,
+    invocations_24h: 0,
+    invocations_total: 0,
+    tags: [],
+    has_code: true,
     created_at: "2026-05-26T00:00:00Z",
     deploy_status: "deployed",
     id,
@@ -107,6 +112,14 @@ function createResult(name: string, id: string): CreateFunctionResult {
 
 function detail(name: string, id: string): FunctionDetail {
   return {
+    last_invoked_at: null,
+    invocations_24h: 0,
+    invocations_total: 0,
+    tags: [],
+    has_code: true,
+    code_source: null,
+    current_deployment_id: null,
+    test_readiness: { ready: false, reason: "no_endpoint" },
     code: "export default {}",
     created_at: "2026-05-26T00:00:00Z",
     deploy_status: "deployed",
@@ -214,7 +227,7 @@ describe("runSourceDeployWithSecrets", () => {
     const setSecret = vi
       .fn()
       .mockResolvedValueOnce({
-        data: { data: secretResult("ANTHROPIC_API_KEY") },
+        data: { data: secretResult("MY_API_KEY") },
       })
       .mockResolvedValueOnce({ data: { data: secretResult("OWNER_EMAIL") } });
     const api: SourceDeployWithSecretsApiSurface = {
@@ -231,7 +244,7 @@ describe("runSourceDeployWithSecrets", () => {
       files: FILES,
       name: "dev_help",
       secrets: [
-        { key: "ANTHROPIC_API_KEY", value: "sk-anth" },
+        { key: "MY_API_KEY", value: "sk-anth" },
         { key: "OWNER_EMAIL", value: "me@example.com" },
       ],
     });
@@ -240,7 +253,7 @@ describe("runSourceDeployWithSecrets", () => {
     expect(result.result.action).toBe("created");
     expect(result.result.redeploy).toEqual(detail("dev_help", "id-1"));
     expect(result.result.secrets.map((s) => s.key)).toEqual([
-      "ANTHROPIC_API_KEY",
+      "MY_API_KEY",
       "OWNER_EMAIL",
     ]);
     expect(setSecret).toHaveBeenCalledTimes(2);
@@ -255,7 +268,7 @@ describe("runSourceDeployWithSecrets", () => {
 
   it("skips an intermediate redeploy when the function already exists, then writes secrets and redeploys once", async () => {
     const setSecret = vi.fn(async () => ({
-      data: { data: secretResult("ANTHROPIC_API_KEY") },
+      data: { data: secretResult("MY_API_KEY") },
     }));
     const updateFunction = vi.fn(async () => ({
       data: { data: detail("dev_help", "id-9") },
@@ -271,7 +284,7 @@ describe("runSourceDeployWithSecrets", () => {
     const result = await runSourceDeployWithSecrets(api, {
       files: FILES,
       name: "dev_help",
-      secrets: [{ key: "ANTHROPIC_API_KEY", value: "sk-anth" }],
+      secrets: [{ key: "MY_API_KEY", value: "sk-anth" }],
     });
     expect(result.kind).toBe("ok");
     if (result.kind !== "ok") return;
@@ -285,7 +298,7 @@ describe("runSourceDeployWithSecrets", () => {
     expect(api.createFunction).not.toHaveBeenCalled();
     expect(setSecret).toHaveBeenCalledWith({
       id: "id-9",
-      key: "ANTHROPIC_API_KEY",
+      key: "MY_API_KEY",
       value: "sk-anth",
     });
   });

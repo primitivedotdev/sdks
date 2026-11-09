@@ -143,6 +143,10 @@ function replyEmail(overrides: Partial<EmailDetail> = {}): EmailDetail {
   return {
     awaiting: "you",
     automated: false,
+    from_verified: false,
+    from_header_email: null,
+    from_name: null,
+    snippet: null,
     automated_reasons: [],
     body_html: null,
     body_text: "Rotate your API key from the dashboard.",
@@ -1820,6 +1824,10 @@ describe("resolveIdempotentReplayReply", () => {
   // emails-poll.test.ts so the helper under test sees real shapes.
   function makeRow(overrides: Partial<EmailSearchResult>): EmailSearchResult {
     return {
+      from_verified: false,
+      from_header_email: null,
+      from_name: null,
+      snippet: null,
       attachment_count: 0,
       awaiting: "you",
       automated: false,

@@ -19,7 +19,7 @@ const key = ["fixture", "credential"].join("-");
 
 describe("public contact operations", () => {
   it.each(["/contacts", "/agent-contacts/{agent_address}"] as const)(
-    "requires explicit terminal pagination metadata for %s",
+    "declares a nullable terminal pagination cursor for %s",
     (path) => {
       expect(openapiDocument).toMatchObject({
         paths: {
@@ -31,11 +31,10 @@ describe("public contact operations", () => {
                     "application/json": {
                       schema: {
                         allOf: [
-                          { required: expect.arrayContaining(["meta"]) },
+                          { $ref: "#/components/schemas/SuccessEnvelope" },
                           {
                             properties: {
                               meta: {
-                                required: expect.arrayContaining(["cursor"]),
                                 properties: {
                                   cursor: { type: ["string", "null"] },
                                 },

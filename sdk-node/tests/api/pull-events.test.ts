@@ -47,9 +47,9 @@ describe("generated event receiving types", () => {
     );
   });
 
-  it("retains string bodies and nullable delivery instead of unknown", () => {
+  it("retains string or withheld (null) bodies and nullable delivery instead of unknown", () => {
     type Delivery = NonNullable<PullWebhookResponse["data"]["delivery"]>;
-    expectTypeOf<Delivery["body"]>().toEqualTypeOf<string>();
+    expectTypeOf<Delivery["body"]>().toEqualTypeOf<string | null>();
     expectTypeOf<Delivery["headers"]>().toEqualTypeOf<Record<string, string>>();
     expectTypeOf<
       PullWebhookResponse["data"]["delivery"]

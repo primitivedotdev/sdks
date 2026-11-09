@@ -31,11 +31,14 @@ class UpdateFunctionInput:
             files (UpdateFunctionInputFiles | Unset): Source files for a managed build, as a map of path to file
                 contents. Provide this INSTEAD of `code` to rebuild and
                 redeploy from source. Same rules as CreateFunctionInput.files.
+            entry_point (str | Unset): Entry file for a managed build: a key of files. Only valid with files; without it the
+                builder looks for a conventional entry such as src/index.ts.
      """
 
     code: str | Unset = UNSET
     source_map: str | Unset = UNSET
     files: UpdateFunctionInputFiles | Unset = UNSET
+    entry_point: str | Unset = UNSET
 
 
 
@@ -51,6 +54,8 @@ class UpdateFunctionInput:
         if not isinstance(self.files, Unset):
             files = self.files.to_dict()
 
+        entry_point = self.entry_point
+
 
         field_dict: dict[str, Any] = {}
 
@@ -62,6 +67,8 @@ class UpdateFunctionInput:
             field_dict["sourceMap"] = source_map
         if files is not UNSET:
             field_dict["files"] = files
+        if entry_point is not UNSET:
+            field_dict["entryPoint"] = entry_point
 
         return field_dict
 
@@ -85,10 +92,13 @@ class UpdateFunctionInput:
 
 
 
+        entry_point = d.pop("entryPoint", UNSET)
+
         update_function_input = cls(
             code=code,
             source_map=source_map,
             files=files,
+            entry_point=entry_point,
         )
 
         return update_function_input

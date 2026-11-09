@@ -16,6 +16,9 @@ const HAND_ROLLED_VISIBLE_TOPICS = new Set([
   "agent:runtime",
   "login",
   "listen",
+  // Read-only key and role views over the credentials and roles operations.
+  "keys",
+  "roles",
   "network",
   "otp",
   "signin",

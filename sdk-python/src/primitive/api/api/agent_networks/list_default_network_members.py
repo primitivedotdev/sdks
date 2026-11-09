@@ -57,6 +57,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_200
 
+    if response.status_code == 400:
+        response_400 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_400
+
     if response.status_code == 401:
         response_401 = ErrorResponse.from_dict(response.json())
 
@@ -70,6 +77,27 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
 
         return response_403
+
+    if response.status_code == 404:
+        response_404 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_404
+
+    if response.status_code == 409:
+        response_409 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_409
+
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_429
 
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
@@ -94,12 +122,13 @@ def sync_detailed(
     owner: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListDefaultNetworkMembersResponse200]:
-    """ List default network memberships available to your login
+    """ list Default Network Members
 
-     An owner or admin sees all connected addresses, including hidden and excluded members. Other human
-    members see only personal addresses owned by their current membership. Filtering happens before
-    pagination. Connected-agent credentials cannot read this roster. Each row includes whether the
-    requester can manage it.
+     Current owner or admin sees all connected addresses. A human member sees only personal addresses
+    owned by their current membership, filtered before pagination. Rows include can_manage, current
+    human owner identity, independent can_view and is_listed controls, durable exclusions, and last
+    recorded API activity. Excluded rows are retained. Optional owner search matches user ID, display
+    name or email before pagination within the authorized scope.
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -136,12 +165,13 @@ def sync(
     owner: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListDefaultNetworkMembersResponse200 | None:
-    """ List default network memberships available to your login
+    """ list Default Network Members
 
-     An owner or admin sees all connected addresses, including hidden and excluded members. Other human
-    members see only personal addresses owned by their current membership. Filtering happens before
-    pagination. Connected-agent credentials cannot read this roster. Each row includes whether the
-    requester can manage it.
+     Current owner or admin sees all connected addresses. A human member sees only personal addresses
+    owned by their current membership, filtered before pagination. Rows include can_manage, current
+    human owner identity, independent can_view and is_listed controls, durable exclusions, and last
+    recorded API activity. Excluded rows are retained. Optional owner search matches user ID, display
+    name or email before pagination within the authorized scope.
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -173,12 +203,13 @@ async def asyncio_detailed(
     owner: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListDefaultNetworkMembersResponse200]:
-    """ List default network memberships available to your login
+    """ list Default Network Members
 
-     An owner or admin sees all connected addresses, including hidden and excluded members. Other human
-    members see only personal addresses owned by their current membership. Filtering happens before
-    pagination. Connected-agent credentials cannot read this roster. Each row includes whether the
-    requester can manage it.
+     Current owner or admin sees all connected addresses. A human member sees only personal addresses
+    owned by their current membership, filtered before pagination. Rows include can_manage, current
+    human owner identity, independent can_view and is_listed controls, durable exclusions, and last
+    recorded API activity. Excluded rows are retained. Optional owner search matches user ID, display
+    name or email before pagination within the authorized scope.
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -215,12 +246,13 @@ async def asyncio(
     owner: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListDefaultNetworkMembersResponse200 | None:
-    """ List default network memberships available to your login
+    """ list Default Network Members
 
-     An owner or admin sees all connected addresses, including hidden and excluded members. Other human
-    members see only personal addresses owned by their current membership. Filtering happens before
-    pagination. Connected-agent credentials cannot read this roster. Each row includes whether the
-    requester can manage it.
+     Current owner or admin sees all connected addresses. A human member sees only personal addresses
+    owned by their current membership, filtered before pagination. Rows include can_manage, current
+    human owner identity, independent can_view and is_listed controls, durable exclusions, and last
+    recorded API activity. Excluded rows are retained. Optional owner search matches user ID, display
+    name or email before pagination within the authorized scope.
 
     Args:
         limit (int | Unset):  Default: 50.

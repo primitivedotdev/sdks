@@ -110,6 +110,8 @@ def sync_detailed(
 ) -> Response[ErrorResponse | UpdateRouteResponse200]:
     """ Update a recipient route
 
+     Update a recipient route
+
     Args:
         id (UUID):
         body (UpdateRouteInput):
@@ -144,6 +146,8 @@ def sync(
 ) -> ErrorResponse | UpdateRouteResponse200 | None:
     """ Update a recipient route
 
+     Update a recipient route
+
     Args:
         id (UUID):
         body (UpdateRouteInput):
@@ -172,6 +176,8 @@ async def asyncio_detailed(
 
 ) -> Response[ErrorResponse | UpdateRouteResponse200]:
     """ Update a recipient route
+
+     Update a recipient route
 
     Args:
         id (UUID):
@@ -206,6 +212,8 @@ async def asyncio(
 
 ) -> ErrorResponse | UpdateRouteResponse200 | None:
     """ Update a recipient route
+
+     Update a recipient route
 
     Args:
         id (UUID):

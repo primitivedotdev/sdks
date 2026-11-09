@@ -12,10 +12,10 @@ from typing import cast
 
 if TYPE_CHECKING:
   from ..models.inbox_status_domain import InboxStatusDomain
-  from ..models.inbox_status_endpoint_summary import InboxStatusEndpointSummary
-  from ..models.inbox_status_function_summary import InboxStatusFunctionSummary
+  from ..models.inbox_status_endpoints import InboxStatusEndpoints
+  from ..models.inbox_status_functions import InboxStatusFunctions
   from ..models.inbox_status_next_action import InboxStatusNextAction
-  from ..models.inbox_status_recent_email_summary import InboxStatusRecentEmailSummary
+  from ..models.inbox_status_recent_emails import InboxStatusRecentEmails
 
 
 
@@ -29,15 +29,15 @@ T = TypeVar("T", bound="InboxStatus")
 class InboxStatus:
     """ 
         Attributes:
-            ready (bool): True when at least one active inbound domain has an enabled processing route.
+            ready (bool): True when an active inbound domain and at least one processing route are both ready.
             receiving_ready (bool): True when at least one active verified or managed domain can receive mail.
             processing_ready (bool): True when at least one receiving-ready domain has an enabled webhook or function route.
-            summary (str): Short human-readable status summary.
+            summary (str):
             next_actions (list[InboxStatusNextAction]):
             domains (list[InboxStatusDomain]):
-            endpoints (InboxStatusEndpointSummary):
-            functions (InboxStatusFunctionSummary):
-            recent_emails (InboxStatusRecentEmailSummary): Inbound email activity from the last 30 days.
+            endpoints (InboxStatusEndpoints):
+            functions (InboxStatusFunctions):
+            recent_emails (InboxStatusRecentEmails): Inbound email activity from the last 30 days.
      """
 
     ready: bool
@@ -46,9 +46,10 @@ class InboxStatus:
     summary: str
     next_actions: list[InboxStatusNextAction]
     domains: list[InboxStatusDomain]
-    endpoints: InboxStatusEndpointSummary
-    functions: InboxStatusFunctionSummary
-    recent_emails: InboxStatusRecentEmailSummary
+    endpoints: InboxStatusEndpoints
+    functions: InboxStatusFunctions
+    recent_emails: InboxStatusRecentEmails
+    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
 
@@ -56,10 +57,10 @@ class InboxStatus:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.inbox_status_domain import InboxStatusDomain # noqa: PLC0415
-        from ..models.inbox_status_endpoint_summary import InboxStatusEndpointSummary # noqa: PLC0415
-        from ..models.inbox_status_function_summary import InboxStatusFunctionSummary # noqa: PLC0415
+        from ..models.inbox_status_endpoints import InboxStatusEndpoints # noqa: PLC0415
+        from ..models.inbox_status_functions import InboxStatusFunctions # noqa: PLC0415
         from ..models.inbox_status_next_action import InboxStatusNextAction # noqa: PLC0415
-        from ..models.inbox_status_recent_email_summary import InboxStatusRecentEmailSummary # noqa: PLC0415
+        from ..models.inbox_status_recent_emails import InboxStatusRecentEmails # noqa: PLC0415
         ready = self.ready
 
         receiving_ready = self.receiving_ready
@@ -90,7 +91,7 @@ class InboxStatus:
 
 
         field_dict: dict[str, Any] = {}
-
+        field_dict.update(self.additional_properties)
         field_dict.update({
             "ready": ready,
             "receiving_ready": receiving_ready,
@@ -110,10 +111,10 @@ class InboxStatus:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.inbox_status_domain import InboxStatusDomain # noqa: PLC0415
-        from ..models.inbox_status_endpoint_summary import InboxStatusEndpointSummary # noqa: PLC0415
-        from ..models.inbox_status_function_summary import InboxStatusFunctionSummary # noqa: PLC0415
+        from ..models.inbox_status_endpoints import InboxStatusEndpoints # noqa: PLC0415
+        from ..models.inbox_status_functions import InboxStatusFunctions # noqa: PLC0415
         from ..models.inbox_status_next_action import InboxStatusNextAction # noqa: PLC0415
-        from ..models.inbox_status_recent_email_summary import InboxStatusRecentEmailSummary # noqa: PLC0415
+        from ..models.inbox_status_recent_emails import InboxStatusRecentEmails # noqa: PLC0415
         d = dict(src_dict)
         ready = d.pop("ready")
 
@@ -143,17 +144,17 @@ class InboxStatus:
             domains.append(domains_item)
 
 
-        endpoints = InboxStatusEndpointSummary.from_dict(d.pop("endpoints"))
+        endpoints = InboxStatusEndpoints.from_dict(d.pop("endpoints"))
 
 
 
 
-        functions = InboxStatusFunctionSummary.from_dict(d.pop("functions"))
+        functions = InboxStatusFunctions.from_dict(d.pop("functions"))
 
 
 
 
-        recent_emails = InboxStatusRecentEmailSummary.from_dict(d.pop("recent_emails"))
+        recent_emails = InboxStatusRecentEmails.from_dict(d.pop("recent_emails"))
 
 
 
@@ -170,5 +171,22 @@ class InboxStatus:
             recent_emails=recent_emails,
         )
 
+
+        inbox_status.additional_properties = d
         return inbox_status
 
+    @property
+    def additional_keys(self) -> list[str]:
+        return list(self.additional_properties.keys())
+
+    def __getitem__(self, key: str) -> Any:
+        return self.additional_properties[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.additional_properties[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.additional_properties[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.additional_properties

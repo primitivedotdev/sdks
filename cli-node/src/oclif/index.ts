@@ -1,9 +1,7 @@
 import { Args, Command, Errors } from "@oclif/core";
-import {
-  operationManifest,
-  type PrimitiveOperationManifest,
-} from "@primitivedotdev/api-core";
+import type { PrimitiveOperationManifest } from "@primitivedotdev/api-core";
 import { createOperationCommand } from "./api-command.js";
+import { cliOperationManifest } from "./cli-operations.js";
 import AgentCheckMailCommand from "./commands/agent-check-mail.js";
 import AgentConnectCommand from "./commands/agent-connect.js";
 import AgentContactsAddCommand from "./commands/agent-contacts-add.js";
@@ -32,6 +30,7 @@ import {
   AgentWorkingGetCommand,
   AgentWorkingSetCommand,
 } from "./commands/agent-working.js";
+import BillingCommand from "./commands/billing.js";
 import ChatCommand, { ChatReplyCommand } from "./commands/chat.js";
 import {
   ConfigCommand,
@@ -76,6 +75,7 @@ import FunctionsTestFunctionCommand from "./commands/functions-test-function.js"
 import InboxNextCommand from "./commands/inbox-next.js";
 import InboxSetupCommand from "./commands/inbox-setup.js";
 import InboxStatusCommand from "./commands/inbox-status.js";
+import { KeysListCommand } from "./commands/keys.js";
 import ListenCommand from "./commands/listen.js";
 import ListenInitCommand from "./commands/listen-init.js";
 import ListenPendingCommand from "./commands/listen-pending.js";
@@ -101,16 +101,11 @@ import OrgLeaveCommand from "./commands/org-leave.js";
 import OrgSecretsListCommand from "./commands/org-secrets-list.js";
 import OrgSecretsRemoveCommand from "./commands/org-secrets-remove.js";
 import OrgSecretsSetCommand from "./commands/org-secrets-set.js";
+import { OrgsCommand, OrgUseCommand } from "./commands/orgs.js";
 import {
   PayloadsPullCommand,
   PayloadsPushCommand,
 } from "./commands/payloads.js";
-import PaymentsChallengeFromEmailCommand from "./commands/payments-challenge-from-email.js";
-import PaymentsChargeCommand from "./commands/payments-charge.js";
-import PaymentsPayCommand from "./commands/payments-pay.js";
-import PaymentsPayEmailCommand from "./commands/payments-pay-email.js";
-import PaymentsPayEmailStepCommand from "./commands/payments-pay-email-step.js";
-import PaymentsRegisterPayoutAddressCommand from "./commands/payments-register-payout-address.js";
 import {
   RepeatStopCommand,
   RepeatsCancelCommand,
@@ -120,6 +115,12 @@ import {
   RepeatsResumeCommand,
 } from "./commands/repeats.js";
 import ReplyCommand from "./commands/reply.js";
+import {
+  RolesAccessModeCommand,
+  RolesGroupsCommand,
+  RolesListCommand,
+  RolesMailboxAccessCommand,
+} from "./commands/roles.js";
 import RoutesAddCommand from "./commands/routes-add.js";
 import RoutesListCommand from "./commands/routes-list.js";
 import RoutesRemoveCommand from "./commands/routes-remove.js";
@@ -186,7 +187,7 @@ class ListOperationsCommand extends Command {
   static summary = "List all generated API operations (JSON)";
 
   async run(): Promise<void> {
-    this.log(JSON.stringify(operationManifest, null, 2));
+    this.log(JSON.stringify(cliOperationManifest, null, 2));
   }
 }
 
@@ -277,7 +278,7 @@ export function lookupOperation(id: string): {
   const trimmed = resolveOperationAlias(id.trim());
 
   const match =
-    operationManifest.find((op) =>
+    cliOperationManifest.find((op) =>
       operationLookupTokens(op).some(
         (token) =>
           token === trimmed ||
@@ -287,7 +288,7 @@ export function lookupOperation(id: string): {
 
   if (match) return { match, candidates: [] };
 
-  const candidates = operationManifest
+  const candidates = cliOperationManifest
     .map((op) => ({ id: operationId(op), score: scoreOperation(trimmed, op) }))
     .filter(({ score }) => score >= 45)
     .sort(
@@ -426,6 +427,9 @@ class CompletionCommand extends Command {
 }
 
 export const CANONICAL_OPERATION_ALIASES: Record<string, string> = {
+  // leaveOrganization moved from the Account tag to Roles and members; the
+  // old generated id keeps working.
+  "account:leave-organization": "roles-and-members:leave-organization",
   "account:show": "account:get-account",
   "account:storage": "account:get-storage-stats",
   "account:webhook-secret": "account:get-webhook-secret",
@@ -463,18 +467,6 @@ export const CANONICAL_OPERATION_ALIASES: Record<string, string> = {
   "functions:get": "functions:get-function",
   "functions:list": "functions:list-functions",
   "functions:list-secrets": "functions:list-function-secrets",
-  "registries:agent": "registries:get-agent",
-  "registries:agents": "registries:list-registry-agents",
-  "registries:create": "registries:create-registry",
-  "registries:decide": "registries:decide-registry-request",
-  "registries:define": "registries:define-agent",
-  "registries:get": "registries:get-registry",
-  "registries:list": "registries:list-registries",
-  "registries:publish": "registries:publish-agent",
-  "registries:requests": "registries:list-registry-requests",
-  "registries:resolve": "registries:resolve-registry-handle",
-  "registries:unpublish": "registries:unpublish-agent",
-  "registries:update": "registries:update-registry",
   "sending:get": "sending:get-sent-email",
   "sending:list": "sending:list-sent-emails",
   "sending:permissions": "sending:get-send-permissions",
@@ -526,23 +518,17 @@ const OVERRIDDEN_OPERATION_IDS = new Set<string>([
   // discover the topic-nested form. The manual COMMANDS entry below
   // keeps the topic-nested id callable for back-compat scripts.
   "search:semantic-search",
-  // `payments:register-payout-address` and `payments:pay-challenge` are
-  // hand-rolled because their wire bodies carry signatures the user cannot
-  // produce by hand: the ownership proof and the signed EIP-3009 payment. The
-  // hand-rolled commands sign locally with the caller's wallet key. The other
-  // five x402 operations (create-challenge, get-challenge, list-payout-
-  // addresses, get/update-spend-policy) need no signing and keep their
-  // auto-generated wrappers.
-  "payments:register-payout-address",
-  "payments:pay-challenge",
   // `credits:redeem-credit-code` is hand-rolled because the redeem route
   // requires an Idempotency-Key header, which generated wrappers do not send.
   // The friendly `credits:redeem` shares the same command.
   "credits:redeem-credit-code",
+  // `cli:list-cli-orgs` needs the login's identity token, not the per-org
+  // token every generated command sends; `primitive orgs` serves the id.
+  "cli:list-cli-orgs",
 ]);
 
 const generatedCommands = Object.fromEntries(
-  operationManifest
+  cliOperationManifest
     .filter(
       (operation) => !OVERRIDDEN_OPERATION_IDS.has(operationId(operation)),
     )
@@ -690,6 +676,8 @@ export const COMMANDS: Record<string, typeof Command> = {
   // had no single command to bisect "is the CLI / network / key /
   // server broken"; doctor is that command.
   doctor: DoctorCommand,
+  // Billing lives in the dashboard; this opens the page.
+  billing: BillingCommand,
   // `machine doctor` checks and repairs the per-machine setup that lets
   // coding sessions register and receive mail (hooks, instructions, skills).
   "machine:doctor": MachineDoctorCommand,
@@ -779,6 +767,20 @@ export const COMMANDS: Record<string, typeof Command> = {
   "org:leave": OrgLeaveCommand,
   // Org-level ("global") secrets, shared across every function. Hand-rolled
   // with raw fetch because /v1/org/secrets is not on the generated client yet.
+  // Organization switching for a login made as yourself.
+  orgs: OrgsCommand,
+  "org:use": OrgUseCommand,
+  // `cli list-cli-orgs` authenticates with the login's identity token, which
+  // only the hand-rolled `orgs` holds, so the id is served by it.
+  "cli:list-cli-orgs": OrgsCommand,
+  // API keys: list only. Keys are created, rotated and revoked in the
+  // dashboard; see DASHBOARD_ONLY_OPERATION_IDS in cli-operations.ts.
+  "keys:list": KeysListCommand,
+  // Read-only role views.
+  "roles:list": RolesListCommand,
+  "roles:groups": RolesGroupsCommand,
+  "roles:mailbox-access": RolesMailboxAccessCommand,
+  "roles:access-mode": RolesAccessModeCommand,
   "org:secrets:list": OrgSecretsListCommand,
   "org:secrets:set": OrgSecretsSetCommand,
   "org:secrets:remove": OrgSecretsRemoveCommand,
@@ -843,30 +845,6 @@ export const COMMANDS: Record<string, typeof Command> = {
   // tailing. The raw generated functions:list-function-logs operation
   // remains available for callers that want the full page envelope.
   "functions:logs": FunctionsLogsCommand,
-  // x402 payments. The two signing commands are hand-rolled (see
-  // OVERRIDDEN_OPERATION_IDS); the friendly `payments:pay` /
-  // `payments:register-payout` aliases sit alongside the canonical
-  // operation-shaped ids so both are discoverable.
-  "payments:register-payout-address": PaymentsRegisterPayoutAddressCommand,
-  "payments:register-payout": PaymentsRegisterPayoutAddressCommand,
-  "payments:charge": PaymentsChargeCommand,
-  "payments:pay-challenge": PaymentsPayCommand,
-  "payments:pay": PaymentsPayCommand,
-  // Email-native payer flow. `pay-email` is the recommended one-shot: it signs
-  // the received challenge locally with the caller's wallet key AND sends the
-  // signed `interaction.json` as an in-thread reply, in a single command.
-  // `pay-email-step` is the sign-only primitive that emits the portable
-  // `interaction.json` artifact without sending, for advanced use. Both are
-  // hand-rolled because they sign locally, which no auto-generated wrapper can
-  // do; both share the exact signing path via `signEmailChallenge`.
-  "payments:pay-email": PaymentsPayEmailCommand,
-  "payments:pay-email-step": PaymentsPayEmailStepCommand,
-  // `challenge-from-email` reshapes an inbound payment-request email's
-  // interaction.json attachment (the wire envelope a payer actually receives)
-  // into the challenge object the signing commands consume. It exists so SDK and
-  // pay-email-step users can get the correctly-shaped challenge without
-  // hand-mapping the envelope; `pay-email --in-reply-to` derives it internally.
-  "payments:challenge-from-email": PaymentsChallengeFromEmailCommand,
   // Repeating sends start from `send`/`reply --repeat-every`. `repeat stop`
   // is the recipient side; `repeats ...` manages repeats you created.
   "repeat:stop": RepeatStopCommand,

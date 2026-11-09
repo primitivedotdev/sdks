@@ -184,6 +184,10 @@ export async function runSharedMailTransport(
       const delivery = offer.delivery;
       if (!delivery) continue;
       const started = performance.now();
+      if (delivery.body === null)
+        throw invalid(
+          "The API withheld this event's content from the listening credential.",
+        );
       let body: unknown;
       try {
         body = JSON.parse(delivery.body);

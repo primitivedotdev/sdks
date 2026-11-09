@@ -120,6 +120,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_402
 
+    if response.status_code == 403:
+        response_403 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_403
+
     if response.status_code == 404:
         response_404 = ErrorResponse.from_dict(response.json())
 
@@ -165,12 +172,9 @@ def sync_detailed(
 ) -> Response[ErrorResponse | SearchMemoriesResponse200]:
     """ Search memories
 
-     List active memories in a scope by lexicographic key prefix. Results
-    are ordered by key ascending. The `meta.cursor` value is the next key
-    cursor; pass it back as `cursor` to continue after that key.
-
-    Search records one memory read usage event for the operation. Pass
-    `include_value=false` to return metadata only.
+     List active memories in a scope by lexicographic key prefix. Results are ordered by key ascending.
+    This is prefix search, not free-text search. Function-authenticated requests use their own Function
+    id and cannot override it. Pass `include_value=false` to return metadata only.
 
     Args:
         prefix (str | Unset):  Default: ''.
@@ -228,12 +232,9 @@ def sync(
 ) -> ErrorResponse | SearchMemoriesResponse200 | None:
     """ Search memories
 
-     List active memories in a scope by lexicographic key prefix. Results
-    are ordered by key ascending. The `meta.cursor` value is the next key
-    cursor; pass it back as `cursor` to continue after that key.
-
-    Search records one memory read usage event for the operation. Pass
-    `include_value=false` to return metadata only.
+     List active memories in a scope by lexicographic key prefix. Results are ordered by key ascending.
+    This is prefix search, not free-text search. Function-authenticated requests use their own Function
+    id and cannot override it. Pass `include_value=false` to return metadata only.
 
     Args:
         prefix (str | Unset):  Default: ''.
@@ -286,12 +287,9 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | SearchMemoriesResponse200]:
     """ Search memories
 
-     List active memories in a scope by lexicographic key prefix. Results
-    are ordered by key ascending. The `meta.cursor` value is the next key
-    cursor; pass it back as `cursor` to continue after that key.
-
-    Search records one memory read usage event for the operation. Pass
-    `include_value=false` to return metadata only.
+     List active memories in a scope by lexicographic key prefix. Results are ordered by key ascending.
+    This is prefix search, not free-text search. Function-authenticated requests use their own Function
+    id and cannot override it. Pass `include_value=false` to return metadata only.
 
     Args:
         prefix (str | Unset):  Default: ''.
@@ -349,12 +347,9 @@ async def asyncio(
 ) -> ErrorResponse | SearchMemoriesResponse200 | None:
     """ Search memories
 
-     List active memories in a scope by lexicographic key prefix. Results
-    are ordered by key ascending. The `meta.cursor` value is the next key
-    cursor; pass it back as `cursor` to continue after that key.
-
-    Search records one memory read usage event for the operation. Pass
-    `include_value=false` to return metadata only.
+     List active memories in a scope by lexicographic key prefix. Results are ordered by key ascending.
+    This is prefix search, not free-text search. Function-authenticated requests use their own Function
+    id and cannot override it. Pass `include_value=false` to return metadata only.
 
     Args:
         prefix (str | Unset):  Default: ''.

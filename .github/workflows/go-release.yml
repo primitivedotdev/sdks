@@ -75,7 +75,12 @@ jobs:
           TAG: sdk-go/v${{ steps.version.outputs.current }}
           VERSION: ${{ steps.version.outputs.current }}
         run: |
+          prerelease_flags=()
+          if [[ "$VERSION" == *-* ]]; then
+            prerelease_flags=(--prerelease --latest=false)
+          fi
           gh release create "$TAG" \
             --target "$GITHUB_SHA" \
             --title "Go SDK v$VERSION" \
-            --generate-notes
+            --generate-notes \
+            "${prerelease_flags[@]}"

@@ -56,8 +56,11 @@ class DeliveryExpired(EventReceiverError):
 class LocalEvent:
     id: str
     type: str
-    data: WebhookEvent
-    body: str
+    #: The parsed body, or None when ``body`` is None.
+    data: WebhookEvent | None
+    #: The webhook body, exactly as serialized. None when the API withholds the
+    #: message content from this credential.
+    body: str | None
     headers: dict[str, str]
 
 
@@ -326,7 +329,6 @@ class PendingEvent:
         for key in (
             "event_id",
             "event_type",
-            "body",
             "queue_id",
             "delivery_id",
             "lease_token",
@@ -334,15 +336,20 @@ class PendingEvent:
         ):
             if not isinstance(data.get(key), str):
                 raise EventReceiverError("invalid_response")
-        body, event_type = str(data["body"]), str(data["event_type"])
+        raw_body = data.get("body")
+        if raw_body is not None and not isinstance(raw_body, str):
+            raise EventReceiverError("invalid_response")
+        event_type = str(data["event_type"])
         headers = _object(data.get("headers"))
         if not all(isinstance(value, str) for value in headers.values()):
             raise EventReceiverError("invalid_response")
         self.event = LocalEvent(
             str(data["event_id"]),
             event_type,
-            parse_webhook_event(json.loads(body), event_type),
-            body,
+            None
+            if raw_body is None
+            else parse_webhook_event(json.loads(raw_body), event_type),
+            raw_body,
             cast(dict[str, str], headers),
         )
         self.signal = asyncio.Event()

@@ -11,6 +11,7 @@ from ... import errors
 from ...models.error_response import ErrorResponse
 from ...models.test_endpoint_rules_input import TestEndpointRulesInput
 from ...models.test_endpoint_rules_response_200 import TestEndpointRulesResponse200
+from ...types import UNSET, Unset
 from typing import cast
 from uuid import UUID
 
@@ -20,9 +21,13 @@ def _get_kwargs(
     id: UUID,
     *,
     body: TestEndpointRulesInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -92,6 +97,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: TestEndpointRulesInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | TestEndpointRulesResponse200]:
     """ Dry-run endpoint rules against a received email
@@ -119,6 +125,7 @@ def sync_detailed(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (TestEndpointRulesInput):
 
     Raises:
@@ -133,6 +140,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         id=id,
 body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -147,6 +155,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: TestEndpointRulesInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | TestEndpointRulesResponse200 | None:
     """ Dry-run endpoint rules against a received email
@@ -174,6 +183,7 @@ def sync(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (TestEndpointRulesInput):
 
     Raises:
@@ -189,6 +199,7 @@ def sync(
         id=id,
 client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -197,6 +208,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: TestEndpointRulesInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | TestEndpointRulesResponse200]:
     """ Dry-run endpoint rules against a received email
@@ -224,6 +236,7 @@ async def asyncio_detailed(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (TestEndpointRulesInput):
 
     Raises:
@@ -238,6 +251,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         id=id,
 body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -252,6 +266,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: TestEndpointRulesInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | TestEndpointRulesResponse200 | None:
     """ Dry-run endpoint rules against a received email
@@ -279,6 +294,7 @@ async def asyncio(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (TestEndpointRulesInput):
 
     Raises:
@@ -294,5 +310,6 @@ async def asyncio(
         id=id,
 client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

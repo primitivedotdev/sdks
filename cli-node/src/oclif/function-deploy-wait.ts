@@ -6,7 +6,8 @@ export const DEFAULT_DEPLOY_POLL_INTERVAL_SECONDS = 2;
 
 export type FunctionDeployWaitSnapshot = {
   id: string;
-  name: string;
+  /** Absent on an update answer that does not echo the name. */
+  name?: string;
   deploy_status: FunctionDetail["deploy_status"];
   deploy_error?: string | null;
   deployed_at?: string | null;
@@ -68,7 +69,7 @@ function toDeployWaitSnapshot(
       ? { deployed_at: value.deployed_at }
       : {}),
     id: value.id,
-    name: value.name,
+    ...(value.name !== undefined ? { name: value.name } : {}),
     ...(value.updated_at !== undefined ? { updated_at: value.updated_at } : {}),
   };
 }

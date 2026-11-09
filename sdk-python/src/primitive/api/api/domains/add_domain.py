@@ -11,6 +11,7 @@ from ... import errors
 from ...models.add_domain_input import AddDomainInput
 from ...models.add_domain_response_201 import AddDomainResponse201
 from ...models.error_response import ErrorResponse
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -18,9 +19,13 @@ from typing import cast
 def _get_kwargs(
     *,
     body: AddDomainInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -89,6 +94,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: AddDomainInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[AddDomainResponse201 | ErrorResponse]:
     """ Claim a new domain
@@ -100,6 +106,7 @@ def sync_detailed(
     `primitive domains zone-file --id <domain-id>`.
 
     Args:
+        idempotency_key (str | Unset):
         body (AddDomainInput):
 
     Raises:
@@ -113,6 +120,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -126,6 +134,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: AddDomainInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> AddDomainResponse201 | ErrorResponse | None:
     """ Claim a new domain
@@ -137,6 +146,7 @@ def sync(
     `primitive domains zone-file --id <domain-id>`.
 
     Args:
+        idempotency_key (str | Unset):
         body (AddDomainInput):
 
     Raises:
@@ -151,6 +161,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -158,6 +169,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: AddDomainInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[AddDomainResponse201 | ErrorResponse]:
     """ Claim a new domain
@@ -169,6 +181,7 @@ async def asyncio_detailed(
     `primitive domains zone-file --id <domain-id>`.
 
     Args:
+        idempotency_key (str | Unset):
         body (AddDomainInput):
 
     Raises:
@@ -182,6 +195,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -195,6 +209,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: AddDomainInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> AddDomainResponse201 | ErrorResponse | None:
     """ Claim a new domain
@@ -206,6 +221,7 @@ async def asyncio(
     `primitive domains zone-file --id <domain-id>`.
 
     Args:
+        idempotency_key (str | Unset):
         body (AddDomainInput):
 
     Raises:
@@ -220,5 +236,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

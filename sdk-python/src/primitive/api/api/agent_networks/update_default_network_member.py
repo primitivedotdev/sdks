@@ -9,7 +9,7 @@ from ...types import Response, UNSET
 from ... import errors
 
 from ...models.error_response import ErrorResponse
-from ...models.update_agent_network_member_input import UpdateAgentNetworkMemberInput
+from ...models.update_default_network_member_body import UpdateDefaultNetworkMemberBody
 from ...models.update_default_network_member_response_200 import UpdateDefaultNetworkMemberResponse200
 from typing import cast
 
@@ -18,7 +18,7 @@ from typing import cast
 def _get_kwargs(
     address: str,
     *,
-    body: UpdateAgentNetworkMemberInput,
+    body: UpdateDefaultNetworkMemberBody,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
@@ -50,6 +50,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_200
 
+    if response.status_code == 400:
+        response_400 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_400
+
     if response.status_code == 401:
         response_401 = ErrorResponse.from_dict(response.json())
 
@@ -71,12 +78,19 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_404
 
-    if response.status_code == 422:
-        response_422 = ErrorResponse.from_dict(response.json())
+    if response.status_code == 409:
+        response_409 = ErrorResponse.from_dict(response.json())
 
 
 
-        return response_422
+        return response_409
+
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_429
 
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
@@ -97,18 +111,17 @@ def sync_detailed(
     address: str,
     *,
     client: AuthenticatedClient | Client,
-    body: UpdateAgentNetworkMemberInput,
+    body: UpdateDefaultNetworkMemberBody,
 
 ) -> Response[ErrorResponse | UpdateDefaultNetworkMemberResponse200]:
-    """ Change whether an agent can see or be seen in the network
+    """ update Default Network Member
 
-     An owner or admin may update any active address. Other human members may update only their own
-    current, non-excluded personal address. Connected-agent credentials cannot update visibility.
-    Omitted settings keep their current value.
+     Current owner or admin may update any connected address. A human member may update only their own
+    current, non-excluded personal address. Re-enabling a permission advances its activation time.
 
     Args:
         address (str):
-        body (UpdateAgentNetworkMemberInput): Set one or both independent discovery permissions.
+        body (UpdateDefaultNetworkMemberBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -135,18 +148,17 @@ def sync(
     address: str,
     *,
     client: AuthenticatedClient | Client,
-    body: UpdateAgentNetworkMemberInput,
+    body: UpdateDefaultNetworkMemberBody,
 
 ) -> ErrorResponse | UpdateDefaultNetworkMemberResponse200 | None:
-    """ Change whether an agent can see or be seen in the network
+    """ update Default Network Member
 
-     An owner or admin may update any active address. Other human members may update only their own
-    current, non-excluded personal address. Connected-agent credentials cannot update visibility.
-    Omitted settings keep their current value.
+     Current owner or admin may update any connected address. A human member may update only their own
+    current, non-excluded personal address. Re-enabling a permission advances its activation time.
 
     Args:
         address (str):
-        body (UpdateAgentNetworkMemberInput): Set one or both independent discovery permissions.
+        body (UpdateDefaultNetworkMemberBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -168,18 +180,17 @@ async def asyncio_detailed(
     address: str,
     *,
     client: AuthenticatedClient | Client,
-    body: UpdateAgentNetworkMemberInput,
+    body: UpdateDefaultNetworkMemberBody,
 
 ) -> Response[ErrorResponse | UpdateDefaultNetworkMemberResponse200]:
-    """ Change whether an agent can see or be seen in the network
+    """ update Default Network Member
 
-     An owner or admin may update any active address. Other human members may update only their own
-    current, non-excluded personal address. Connected-agent credentials cannot update visibility.
-    Omitted settings keep their current value.
+     Current owner or admin may update any connected address. A human member may update only their own
+    current, non-excluded personal address. Re-enabling a permission advances its activation time.
 
     Args:
         address (str):
-        body (UpdateAgentNetworkMemberInput): Set one or both independent discovery permissions.
+        body (UpdateDefaultNetworkMemberBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -206,18 +217,17 @@ async def asyncio(
     address: str,
     *,
     client: AuthenticatedClient | Client,
-    body: UpdateAgentNetworkMemberInput,
+    body: UpdateDefaultNetworkMemberBody,
 
 ) -> ErrorResponse | UpdateDefaultNetworkMemberResponse200 | None:
-    """ Change whether an agent can see or be seen in the network
+    """ update Default Network Member
 
-     An owner or admin may update any active address. Other human members may update only their own
-    current, non-excluded personal address. Connected-agent credentials cannot update visibility.
-    Omitted settings keep their current value.
+     Current owner or admin may update any connected address. A human member may update only their own
+    current, non-excluded personal address. Re-enabling a permission advances its activation time.
 
     Args:
         address (str):
-        body (UpdateAgentNetworkMemberInput): Set one or both independent discovery permissions.
+        body (UpdateDefaultNetworkMemberBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

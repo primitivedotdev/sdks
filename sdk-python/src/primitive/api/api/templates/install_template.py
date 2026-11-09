@@ -11,6 +11,7 @@ from ... import errors
 from ...models.error_response import ErrorResponse
 from ...models.install_template_body import InstallTemplateBody
 from ...models.install_template_response_201 import InstallTemplateResponse201
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -19,9 +20,13 @@ def _get_kwargs(
     id: str,
     *,
     body: InstallTemplateBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -117,18 +122,21 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 def sync_detailed(
     id: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     body: InstallTemplateBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | InstallTemplateResponse201]:
     """ Install a function template
 
-     Start a one-shot deploy of an approved deploy-mode Function template.
-    The response returns an install record immediately; poll
-    `GET /templates/installs/{id}` for progress.
+     Start a one-shot deploy of an approved deploy-mode Function template. The response returns an
+    install record immediately; poll `GET /templates/installs/{id}` for progress. A custom runtime_grant
+    (sent, or recommended by the template) must list addresses or send mail_scope "org"; one that does
+    neither is refused (400 validation_error, details.reason mail_scope_required).
 
     Args:
-        id (str):
+        id (str): Template slug.
+        idempotency_key (str | Unset):
         body (InstallTemplateBody):
 
     Raises:
@@ -143,6 +151,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         id=id,
 body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -155,18 +164,21 @@ body=body,
 def sync(
     id: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     body: InstallTemplateBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | InstallTemplateResponse201 | None:
     """ Install a function template
 
-     Start a one-shot deploy of an approved deploy-mode Function template.
-    The response returns an install record immediately; poll
-    `GET /templates/installs/{id}` for progress.
+     Start a one-shot deploy of an approved deploy-mode Function template. The response returns an
+    install record immediately; poll `GET /templates/installs/{id}` for progress. A custom runtime_grant
+    (sent, or recommended by the template) must list addresses or send mail_scope "org"; one that does
+    neither is refused (400 validation_error, details.reason mail_scope_required).
 
     Args:
-        id (str):
+        id (str): Template slug.
+        idempotency_key (str | Unset):
         body (InstallTemplateBody):
 
     Raises:
@@ -182,24 +194,28 @@ def sync(
         id=id,
 client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
 async def asyncio_detailed(
     id: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     body: InstallTemplateBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | InstallTemplateResponse201]:
     """ Install a function template
 
-     Start a one-shot deploy of an approved deploy-mode Function template.
-    The response returns an install record immediately; poll
-    `GET /templates/installs/{id}` for progress.
+     Start a one-shot deploy of an approved deploy-mode Function template. The response returns an
+    install record immediately; poll `GET /templates/installs/{id}` for progress. A custom runtime_grant
+    (sent, or recommended by the template) must list addresses or send mail_scope "org"; one that does
+    neither is refused (400 validation_error, details.reason mail_scope_required).
 
     Args:
-        id (str):
+        id (str): Template slug.
+        idempotency_key (str | Unset):
         body (InstallTemplateBody):
 
     Raises:
@@ -214,6 +230,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         id=id,
 body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -226,18 +243,21 @@ body=body,
 async def asyncio(
     id: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     body: InstallTemplateBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | InstallTemplateResponse201 | None:
     """ Install a function template
 
-     Start a one-shot deploy of an approved deploy-mode Function template.
-    The response returns an install record immediately; poll
-    `GET /templates/installs/{id}` for progress.
+     Start a one-shot deploy of an approved deploy-mode Function template. The response returns an
+    install record immediately; poll `GET /templates/installs/{id}` for progress. A custom runtime_grant
+    (sent, or recommended by the template) must list addresses or send mail_scope "org"; one that does
+    neither is refused (400 validation_error, details.reason mail_scope_required).
 
     Args:
-        id (str):
+        id (str): Template slug.
+        idempotency_key (str | Unset):
         body (InstallTemplateBody):
 
     Raises:
@@ -253,5 +273,6 @@ async def asyncio(
         id=id,
 client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

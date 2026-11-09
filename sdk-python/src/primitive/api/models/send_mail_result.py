@@ -9,6 +9,9 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.delivery_status import DeliveryStatus
+from ..models.send_mail_result_dedup_reason_type_1 import SendMailResultDedupReasonType1
+from ..models.send_mail_result_dedup_reason_type_2_type_1 import SendMailResultDedupReasonType2Type1
+from ..models.send_mail_result_dedup_reason_type_3_type_1 import SendMailResultDedupReasonType3Type1
 from ..models.sent_email_status import SentEmailStatus
 from typing import cast
 from uuid import UUID
@@ -72,7 +75,7 @@ class SendMailResult:
 
                 The receiver may also report its own queue id in
                 `smtp_response_text` (e.g. `"250 2.0.0 Ok: queued as
-                99D111927CDA"` from a Postfix receiver). Those two ids
+                99D111927CDA"`). Those two ids
                 refer to different mail systems and are NOT comparable.
                 Treat `queue_id` as Primitive-internal and the
                 receiver's id as remote-system-internal.
@@ -81,8 +84,10 @@ class SendMailResult:
                 gate_denied, agent_failed before signing).
             accepted (list[str]): Recipient addresses accepted by the relay.
             rejected (list[str]): Recipient addresses rejected by the relay.
-            client_idempotency_key (str): Effective idempotency key used for this send.
-            request_id (str): Server-issued request identifier for support and tracing.
+            client_idempotency_key (None | str): Effective idempotency key used for this send. Null when a replayed send was
+                stored without one.
+            request_id (None | str): Server-issued request identifier for support and tracing. Null when a replayed send was
+                stored without one.
             content_hash (str): Stable hash of the canonical send payload.
             idempotent_replay (bool): True when the response replays a previously-recorded send
                 keyed by `client_idempotency_key` (same key, same canonical
@@ -110,22 +115,29 @@ class SendMailResult:
                 is true.
             smtp_response_text (str | Unset): SMTP response text from the first downstream delivery outcome when wait is
                 true.
-            dedup_reason (None | str | Unset): Why the response was a replay; null or absent on a fresh
-                send. `content_hash_match`: the idempotency key matched an
-                earlier send. `parent_already_replied`: a reply sent without
-                an `Idempotency-Key` header was matched to the reply its
-                parent email already has. Pass an `Idempotency-Key` to send
-                another reply to the same email.
-            idempotency (SendMailIdempotencyReplay | Unset): Present only when the request was answered with an existing
-                send
-                instead of making a new one (`idempotent_replay: true`). Nothing
-                was sent for this request. Says how the idempotency key was
-                derived and which send the request collapsed onto. On the replay
-                of a stored failure the same object is under `error.details`.
             scheduled_at (datetime.datetime | Unset): Echoed requested execution time on a `scheduled`
                 response. On scheduled creates, nothing is dispatched
                 yet: `queue_id` is null and `accepted` / `rejected` are
                 empty. Absent on immediate sends.
+            smtp_enhanced_status_code (None | str | Unset): Enhanced SMTP status code (for example `2.0.0`) from the first
+                downstream delivery outcome when wait is true, or null when the server did not report one.
+            idempotency (SendMailIdempotencyReplay | Unset): Present only when the request was answered with an existing
+                send instead of making a new one (`idempotent_replay: true`). Nothing was sent for this request. Says how the
+                idempotency key was derived and which send the request collapsed onto.
+            dedup_reason (None | SendMailResultDedupReasonType1 | SendMailResultDedupReasonType2Type1 |
+                SendMailResultDedupReasonType3Type1 | Unset): Why the request was answered with an existing send. Set on every
+                replay (`idempotent_replay: true`), whether it answers with `200` or with the stored error of an earlier send
+                that failed. `content_hash_match`: the request's idempotency key matched an earlier send. That key is the
+                `Idempotency-Key` header when one was sent, otherwise the key derived from the request content (see
+                `idempotency.key_source`). `parent_already_replied`: a send with no `Idempotency-Key` collapsed onto an earlier
+                reply to the same inbound email made in the last 5 minutes (at any time for a retry from the same Function
+                answering the same inbound email) with the same credential, the same `from`, the same set of recipients (`to`,
+                `cc`, `bcc`) and the same `in_reply_to`, even though its body differs. Any other difference is sent. Pass an
+                `Idempotency-Key` to send a second reply. Absent or null on a request that made a send of its own.
+            deduplicated (bool | Unset): Present and `true` when nothing was sent for this request because it collapsed onto
+                an earlier send (`original_sent_email_id`). Absent on a request that made a send of its own.
+            original_sent_email_id (UUID | Unset): With `deduplicated: true`: the earlier send this request collapsed onto.
+                Same value as `id`.
      """
 
     id: str
@@ -134,17 +146,20 @@ class SendMailResult:
     queue_id: None | str
     accepted: list[str]
     rejected: list[str]
-    client_idempotency_key: str
-    request_id: str
+    client_idempotency_key: None | str
+    request_id: None | str
     content_hash: str
     idempotent_replay: bool
     repeat_id: UUID | Unset = UNSET
     delivery_status: DeliveryStatus | Unset = UNSET
     smtp_response_code: int | None | Unset = UNSET
     smtp_response_text: str | Unset = UNSET
-    dedup_reason: None | str | Unset = UNSET
-    idempotency: SendMailIdempotencyReplay | Unset = UNSET
     scheduled_at: datetime.datetime | Unset = UNSET
+    smtp_enhanced_status_code: None | str | Unset = UNSET
+    idempotency: SendMailIdempotencyReplay | Unset = UNSET
+    dedup_reason: None | SendMailResultDedupReasonType1 | SendMailResultDedupReasonType2Type1 | SendMailResultDedupReasonType3Type1 | Unset = UNSET
+    deduplicated: bool | Unset = UNSET
+    original_sent_email_id: UUID | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -170,8 +185,10 @@ class SendMailResult:
 
 
 
+        client_idempotency_key: None | str
         client_idempotency_key = self.client_idempotency_key
 
+        request_id: None | str
         request_id = self.request_id
 
         content_hash = self.content_hash
@@ -195,19 +212,37 @@ class SendMailResult:
 
         smtp_response_text = self.smtp_response_text
 
-        dedup_reason: None | str | Unset
-        if isinstance(self.dedup_reason, Unset):
-            dedup_reason = UNSET
+        scheduled_at: str | Unset = UNSET
+        if not isinstance(self.scheduled_at, Unset):
+            scheduled_at = self.scheduled_at.isoformat()
+
+        smtp_enhanced_status_code: None | str | Unset
+        if isinstance(self.smtp_enhanced_status_code, Unset):
+            smtp_enhanced_status_code = UNSET
         else:
-            dedup_reason = self.dedup_reason
+            smtp_enhanced_status_code = self.smtp_enhanced_status_code
 
         idempotency: dict[str, Any] | Unset = UNSET
         if not isinstance(self.idempotency, Unset):
             idempotency = self.idempotency.to_dict()
 
-        scheduled_at: str | Unset = UNSET
-        if not isinstance(self.scheduled_at, Unset):
-            scheduled_at = self.scheduled_at.isoformat()
+        dedup_reason: None | str | Unset
+        if isinstance(self.dedup_reason, Unset):
+            dedup_reason = UNSET
+        elif isinstance(self.dedup_reason, SendMailResultDedupReasonType1):
+            dedup_reason = self.dedup_reason.value
+        elif isinstance(self.dedup_reason, SendMailResultDedupReasonType2Type1):
+            dedup_reason = self.dedup_reason.value
+        elif isinstance(self.dedup_reason, SendMailResultDedupReasonType3Type1):
+            dedup_reason = self.dedup_reason.value
+        else:
+            dedup_reason = self.dedup_reason
+
+        deduplicated = self.deduplicated
+
+        original_sent_email_id: str | Unset = UNSET
+        if not isinstance(self.original_sent_email_id, Unset):
+            original_sent_email_id = str(self.original_sent_email_id)
 
 
         field_dict: dict[str, Any] = {}
@@ -232,12 +267,18 @@ class SendMailResult:
             field_dict["smtp_response_code"] = smtp_response_code
         if smtp_response_text is not UNSET:
             field_dict["smtp_response_text"] = smtp_response_text
-        if dedup_reason is not UNSET:
-            field_dict["dedup_reason"] = dedup_reason
-        if idempotency is not UNSET:
-            field_dict["idempotency"] = idempotency
         if scheduled_at is not UNSET:
             field_dict["scheduled_at"] = scheduled_at
+        if smtp_enhanced_status_code is not UNSET:
+            field_dict["smtp_enhanced_status_code"] = smtp_enhanced_status_code
+        if idempotency is not UNSET:
+            field_dict["idempotency"] = idempotency
+        if dedup_reason is not UNSET:
+            field_dict["dedup_reason"] = dedup_reason
+        if deduplicated is not UNSET:
+            field_dict["deduplicated"] = deduplicated
+        if original_sent_email_id is not UNSET:
+            field_dict["original_sent_email_id"] = original_sent_email_id
 
         return field_dict
 
@@ -270,9 +311,21 @@ class SendMailResult:
         rejected = cast(list[str], d.pop("rejected"))
 
 
-        client_idempotency_key = d.pop("client_idempotency_key")
+        def _parse_client_idempotency_key(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
 
-        request_id = d.pop("request_id")
+        client_idempotency_key = _parse_client_idempotency_key(d.pop("client_idempotency_key"))
+
+
+        def _parse_request_id(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        request_id = _parse_request_id(d.pop("request_id"))
+
 
         content_hash = d.pop("content_hash")
 
@@ -310,14 +363,24 @@ class SendMailResult:
 
         smtp_response_text = d.pop("smtp_response_text", UNSET)
 
-        def _parse_dedup_reason(data: object) -> None | str | Unset:
+        _scheduled_at = d.pop("scheduled_at", UNSET)
+        scheduled_at: datetime.datetime | Unset
+        if isinstance(_scheduled_at,  Unset):
+            scheduled_at = UNSET
+        else:
+            scheduled_at = datetime.datetime.fromisoformat(_scheduled_at)
+
+
+
+
+        def _parse_smtp_enhanced_status_code(data: object) -> None | str | Unset:
             if data is None:
                 return data
             if isinstance(data, Unset):
                 return data
             return cast(None | str | Unset, data)
 
-        dedup_reason = _parse_dedup_reason(d.pop("dedup_reason", UNSET))
+        smtp_enhanced_status_code = _parse_smtp_enhanced_status_code(d.pop("smtp_enhanced_status_code", UNSET))
 
 
         _idempotency = d.pop("idempotency", UNSET)
@@ -330,12 +393,54 @@ class SendMailResult:
 
 
 
-        _scheduled_at = d.pop("scheduled_at", UNSET)
-        scheduled_at: datetime.datetime | Unset
-        if isinstance(_scheduled_at,  Unset):
-            scheduled_at = UNSET
+        def _parse_dedup_reason(data: object) -> None | SendMailResultDedupReasonType1 | SendMailResultDedupReasonType2Type1 | SendMailResultDedupReasonType3Type1 | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                dedup_reason_type_1 = SendMailResultDedupReasonType1(data)
+
+
+
+                return dedup_reason_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                dedup_reason_type_2_type_1 = SendMailResultDedupReasonType2Type1(data)
+
+
+
+                return dedup_reason_type_2_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                dedup_reason_type_3_type_1 = SendMailResultDedupReasonType3Type1(data)
+
+
+
+                return dedup_reason_type_3_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | SendMailResultDedupReasonType1 | SendMailResultDedupReasonType2Type1 | SendMailResultDedupReasonType3Type1 | Unset, data)
+
+        dedup_reason = _parse_dedup_reason(d.pop("dedup_reason", UNSET))
+
+
+        deduplicated = d.pop("deduplicated", UNSET)
+
+        _original_sent_email_id = d.pop("original_sent_email_id", UNSET)
+        original_sent_email_id: UUID | Unset
+        if isinstance(_original_sent_email_id,  Unset):
+            original_sent_email_id = UNSET
         else:
-            scheduled_at = datetime.datetime.fromisoformat(_scheduled_at)
+            original_sent_email_id = UUID(_original_sent_email_id)
 
 
 
@@ -355,9 +460,12 @@ class SendMailResult:
             delivery_status=delivery_status,
             smtp_response_code=smtp_response_code,
             smtp_response_text=smtp_response_text,
-            dedup_reason=dedup_reason,
-            idempotency=idempotency,
             scheduled_at=scheduled_at,
+            smtp_enhanced_status_code=smtp_enhanced_status_code,
+            idempotency=idempotency,
+            dedup_reason=dedup_reason,
+            deduplicated=deduplicated,
+            original_sent_email_id=original_sent_email_id,
         )
 
 

@@ -14,7 +14,7 @@ from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
-  from ..models.function_test_run_delivery_endpoint_type_0 import FunctionTestRunDeliveryEndpointType0
+  from ..models.function_test_run_delivery_endpoint import FunctionTestRunDeliveryEndpoint
 
 
 
@@ -30,7 +30,8 @@ class FunctionTestRunDelivery:
         Attributes:
             id (str): Webhook delivery id.
             endpoint_id (UUID):
-            endpoint_url (str):
+            endpoint_url (None | str): The delivery's destination. Null for a delivery to another endpoint the same message
+                went to.
             status (FunctionTestRunDeliveryStatus):
             attempt_count (int):
             duration_ms (int | None):
@@ -38,12 +39,12 @@ class FunctionTestRunDelivery:
             last_error_code (None | str):
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
-            endpoint (FunctionTestRunDeliveryEndpointType0 | None):
+            endpoint (FunctionTestRunDeliveryEndpoint | None):
      """
 
     id: str
     endpoint_id: UUID
-    endpoint_url: str
+    endpoint_url: None | str
     status: FunctionTestRunDeliveryStatus
     attempt_count: int
     duration_ms: int | None
@@ -51,7 +52,7 @@ class FunctionTestRunDelivery:
     last_error_code: None | str
     created_at: datetime.datetime
     updated_at: datetime.datetime
-    endpoint: FunctionTestRunDeliveryEndpointType0 | None
+    endpoint: FunctionTestRunDeliveryEndpoint | None
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -59,11 +60,12 @@ class FunctionTestRunDelivery:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.function_test_run_delivery_endpoint_type_0 import FunctionTestRunDeliveryEndpointType0 # noqa: PLC0415
+        from ..models.function_test_run_delivery_endpoint import FunctionTestRunDeliveryEndpoint # noqa: PLC0415
         id = self.id
 
         endpoint_id = str(self.endpoint_id)
 
+        endpoint_url: None | str
         endpoint_url = self.endpoint_url
 
         status = self.status.value
@@ -84,7 +86,7 @@ class FunctionTestRunDelivery:
         updated_at = self.updated_at.isoformat()
 
         endpoint: dict[str, Any] | None
-        if isinstance(self.endpoint, FunctionTestRunDeliveryEndpointType0):
+        if isinstance(self.endpoint, FunctionTestRunDeliveryEndpoint):
             endpoint = self.endpoint.to_dict()
         else:
             endpoint = self.endpoint
@@ -112,7 +114,7 @@ class FunctionTestRunDelivery:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.function_test_run_delivery_endpoint_type_0 import FunctionTestRunDeliveryEndpointType0 # noqa: PLC0415
+        from ..models.function_test_run_delivery_endpoint import FunctionTestRunDeliveryEndpoint # noqa: PLC0415
         d = dict(src_dict)
         id = d.pop("id")
 
@@ -121,7 +123,13 @@ class FunctionTestRunDelivery:
 
 
 
-        endpoint_url = d.pop("endpoint_url")
+        def _parse_endpoint_url(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        endpoint_url = _parse_endpoint_url(d.pop("endpoint_url"))
+
 
         status = FunctionTestRunDeliveryStatus(d.pop("status"))
 
@@ -164,20 +172,20 @@ class FunctionTestRunDelivery:
 
 
 
-        def _parse_endpoint(data: object) -> FunctionTestRunDeliveryEndpointType0 | None:
+        def _parse_endpoint(data: object) -> FunctionTestRunDeliveryEndpoint | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                componentsschemas_function_test_run_delivery_endpoint_type_0 = FunctionTestRunDeliveryEndpointType0.from_dict(data)
+                endpoint_type_1 = FunctionTestRunDeliveryEndpoint.from_dict(data)
 
 
 
-                return componentsschemas_function_test_run_delivery_endpoint_type_0
+                return endpoint_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(FunctionTestRunDeliveryEndpointType0 | None, data)
+            return cast(FunctionTestRunDeliveryEndpoint | None, data)
 
         endpoint = _parse_endpoint(d.pop("endpoint"))
 

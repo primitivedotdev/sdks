@@ -2,16 +2,16 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import type {
   CreateFunctionResult,
-  FunctionDetail,
   FunctionListItem,
   FunctionSecretWriteResult,
+  UpdateFunctionResult,
 } from "@primitivedotdev/api-core";
 import { extractErrorPayload } from "./api-command.js";
 import type { SecretFlagPair } from "./secret-flags.js";
 
 // Source-deploy (managed build): instead of uploading a pre-built bundle
 // (--file), the CLI ships the project's source (--source <dir>) and the
-// server installs dependencies, bundles for the Workers runtime, and
+// server installs dependencies, bundles for the Functions runtime, and
 // deploys. This file holds the two testable pieces: collecting the source
 // directory into a files map, and the create-or-redeploy orchestration.
 
@@ -100,7 +100,7 @@ export type SourceDeployApiSurface = {
   updateFunction: (params: {
     id: string;
     files: Record<string, string>;
-  }) => Promise<{ data?: { data?: FunctionDetail }; error?: unknown }>;
+  }) => Promise<{ data?: { data?: UpdateFunctionResult }; error?: unknown }>;
 };
 
 // runSourceDeployWithSecrets needs everything runSourceDeploy does plus a
@@ -116,7 +116,7 @@ export type SourceDeployWithSecretsApiSurface = SourceDeployApiSurface & {
 
 export type RunSourceDeployResult =
   | { kind: "ok"; action: "created"; result: CreateFunctionResult }
-  | { kind: "ok"; action: "redeployed"; result: FunctionDetail }
+  | { kind: "ok"; action: "redeployed"; result: UpdateFunctionResult }
   | {
       kind: "error";
       stage: "lookup" | "create" | "redeploy";
@@ -195,7 +195,7 @@ export async function runSourceDeploy(
 export type SourceDeployWithSecretsResult = {
   action: "created" | "redeployed";
   secrets: FunctionSecretWriteResult[];
-  redeploy: FunctionDetail;
+  redeploy: UpdateFunctionResult;
 };
 
 // Discriminated result for runSourceDeployWithSecrets. Stages map to the

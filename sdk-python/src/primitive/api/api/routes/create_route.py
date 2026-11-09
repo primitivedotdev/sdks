@@ -11,6 +11,7 @@ from ... import errors
 from ...models.create_route_input import CreateRouteInput
 from ...models.create_route_response_201 import CreateRouteResponse201
 from ...models.error_response import ErrorResponse
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -18,9 +19,13 @@ from typing import cast
 def _get_kwargs(
     *,
     body: CreateRouteInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -96,6 +101,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CreateRouteInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateRouteResponse201 | ErrorResponse]:
     """ Create a recipient route
@@ -107,6 +113,7 @@ def sync_detailed(
     `alice@acme.com -> functionA`).
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateRouteInput): Provide exactly one of `endpoint_id` or `function_id`. With
             `function_id`,
             a route-target endpoint is minted for that function and the route is bound
@@ -123,6 +130,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -136,6 +144,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: CreateRouteInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CreateRouteResponse201 | ErrorResponse | None:
     """ Create a recipient route
@@ -147,6 +156,7 @@ def sync(
     `alice@acme.com -> functionA`).
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateRouteInput): Provide exactly one of `endpoint_id` or `function_id`. With
             `function_id`,
             a route-target endpoint is minted for that function and the route is bound
@@ -164,6 +174,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -171,6 +182,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CreateRouteInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateRouteResponse201 | ErrorResponse]:
     """ Create a recipient route
@@ -182,6 +194,7 @@ async def asyncio_detailed(
     `alice@acme.com -> functionA`).
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateRouteInput): Provide exactly one of `endpoint_id` or `function_id`. With
             `function_id`,
             a route-target endpoint is minted for that function and the route is bound
@@ -198,6 +211,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -211,6 +225,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: CreateRouteInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CreateRouteResponse201 | ErrorResponse | None:
     """ Create a recipient route
@@ -222,6 +237,7 @@ async def asyncio(
     `alice@acme.com -> functionA`).
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateRouteInput): Provide exactly one of `endpoint_id` or `function_id`. With
             `function_id`,
             a route-target endpoint is minted for that function and the route is bound
@@ -239,5 +255,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

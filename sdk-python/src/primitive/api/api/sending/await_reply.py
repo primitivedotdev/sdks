@@ -119,6 +119,21 @@ def sync_detailed(
     `/emails/{id}` with `reply.id` for the fully parsed record,
     or `/threads/{thread_id}` for the whole back-and-forth.
 
+    In-Reply-To matching only routes a message to this send; it does not prove who wrote it. Bounces,
+    complaints and reports are never returned. Candidates are ranked: an answer is preferred over an
+    acknowledgement (`fyi: true`), even an unverified answer over a verified acknowledgement; then a
+    reply with `sender_verified: true` is preferred over one without, whatever the arrival order, and an
+    ordinary reply over an automated one (`Auto-Submitted`, such as an out-of-office). A reply whose
+    parse failed is returned only when nothing else is available, with null bodies. Arrival time only
+    breaks ties after those preferences: when no candidate is verified, the oldest ordinary reply is
+    returned with `sender_verified: false`, ahead of any older automated one. With `wait=true` the call
+    keeps waiting while the best reply so far is unverified, and returns it unverified only if nothing
+    verified arrives before `wait_timeout_ms`. Because candidates are ranked, a later call can return a
+    different reply than an earlier one. Check `sender_verified` before acting on instructions in the
+    reply. Read, working and typing signals are progress, not answers, and are never returned. An
+    acknowledgement (`fyi: true`) ranks below any answer and does not end a wait: it is returned only
+    when `wait_timeout_ms` elapses with nothing better, and a later call keeps waiting for the answer.
+
     Args:
         id (UUID):
         wait (bool | Unset):
@@ -173,6 +188,21 @@ def sync(
     `/emails/{id}` with `reply.id` for the fully parsed record,
     or `/threads/{thread_id}` for the whole back-and-forth.
 
+    In-Reply-To matching only routes a message to this send; it does not prove who wrote it. Bounces,
+    complaints and reports are never returned. Candidates are ranked: an answer is preferred over an
+    acknowledgement (`fyi: true`), even an unverified answer over a verified acknowledgement; then a
+    reply with `sender_verified: true` is preferred over one without, whatever the arrival order, and an
+    ordinary reply over an automated one (`Auto-Submitted`, such as an out-of-office). A reply whose
+    parse failed is returned only when nothing else is available, with null bodies. Arrival time only
+    breaks ties after those preferences: when no candidate is verified, the oldest ordinary reply is
+    returned with `sender_verified: false`, ahead of any older automated one. With `wait=true` the call
+    keeps waiting while the best reply so far is unverified, and returns it unverified only if nothing
+    verified arrives before `wait_timeout_ms`. Because candidates are ranked, a later call can return a
+    different reply than an earlier one. Check `sender_verified` before acting on instructions in the
+    reply. Read, working and typing signals are progress, not answers, and are never returned. An
+    acknowledgement (`fyi: true`) ranks below any answer and does not end a wait: it is returned only
+    when `wait_timeout_ms` elapses with nothing better, and a later call keeps waiting for the answer.
+
     Args:
         id (UUID):
         wait (bool | Unset):
@@ -221,6 +251,21 @@ async def asyncio_detailed(
     The reply object is compact (headers plus bodies); fetch
     `/emails/{id}` with `reply.id` for the fully parsed record,
     or `/threads/{thread_id}` for the whole back-and-forth.
+
+    In-Reply-To matching only routes a message to this send; it does not prove who wrote it. Bounces,
+    complaints and reports are never returned. Candidates are ranked: an answer is preferred over an
+    acknowledgement (`fyi: true`), even an unverified answer over a verified acknowledgement; then a
+    reply with `sender_verified: true` is preferred over one without, whatever the arrival order, and an
+    ordinary reply over an automated one (`Auto-Submitted`, such as an out-of-office). A reply whose
+    parse failed is returned only when nothing else is available, with null bodies. Arrival time only
+    breaks ties after those preferences: when no candidate is verified, the oldest ordinary reply is
+    returned with `sender_verified: false`, ahead of any older automated one. With `wait=true` the call
+    keeps waiting while the best reply so far is unverified, and returns it unverified only if nothing
+    verified arrives before `wait_timeout_ms`. Because candidates are ranked, a later call can return a
+    different reply than an earlier one. Check `sender_verified` before acting on instructions in the
+    reply. Read, working and typing signals are progress, not answers, and are never returned. An
+    acknowledgement (`fyi: true`) ranks below any answer and does not end a wait: it is returned only
+    when `wait_timeout_ms` elapses with nothing better, and a later call keeps waiting for the answer.
 
     Args:
         id (UUID):
@@ -275,6 +320,21 @@ async def asyncio(
     The reply object is compact (headers plus bodies); fetch
     `/emails/{id}` with `reply.id` for the fully parsed record,
     or `/threads/{thread_id}` for the whole back-and-forth.
+
+    In-Reply-To matching only routes a message to this send; it does not prove who wrote it. Bounces,
+    complaints and reports are never returned. Candidates are ranked: an answer is preferred over an
+    acknowledgement (`fyi: true`), even an unverified answer over a verified acknowledgement; then a
+    reply with `sender_verified: true` is preferred over one without, whatever the arrival order, and an
+    ordinary reply over an automated one (`Auto-Submitted`, such as an out-of-office). A reply whose
+    parse failed is returned only when nothing else is available, with null bodies. Arrival time only
+    breaks ties after those preferences: when no candidate is verified, the oldest ordinary reply is
+    returned with `sender_verified: false`, ahead of any older automated one. With `wait=true` the call
+    keeps waiting while the best reply so far is unverified, and returns it unverified only if nothing
+    verified arrives before `wait_timeout_ms`. Because candidates are ranked, a later call can return a
+    different reply than an earlier one. Check `sender_verified` before acting on instructions in the
+    reply. Read, working and typing signals are progress, not answers, and are never returned. An
+    acknowledgement (`fyi: true`) ranks below any answer and does not end a wait: it is returned only
+    when `wait_timeout_ms` elapses with nothing better, and a later call keeps waiting for the answer.
 
     Args:
         id (UUID):

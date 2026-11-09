@@ -11,6 +11,7 @@ from ... import errors
 from ...models.create_filter_input import CreateFilterInput
 from ...models.create_filter_response_201 import CreateFilterResponse201
 from ...models.error_response import ErrorResponse
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -18,9 +19,13 @@ from typing import cast
 def _get_kwargs(
     *,
     body: CreateFilterInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -89,6 +94,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CreateFilterInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateFilterResponse201 | ErrorResponse]:
     """ Create a filter rule
@@ -97,6 +103,7 @@ def sync_detailed(
     require a Pro plan. Patterns are stored as lowercase.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateFilterInput):
 
     Raises:
@@ -110,6 +117,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -123,6 +131,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: CreateFilterInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CreateFilterResponse201 | ErrorResponse | None:
     """ Create a filter rule
@@ -131,6 +140,7 @@ def sync(
     require a Pro plan. Patterns are stored as lowercase.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateFilterInput):
 
     Raises:
@@ -145,6 +155,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -152,6 +163,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CreateFilterInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateFilterResponse201 | ErrorResponse]:
     """ Create a filter rule
@@ -160,6 +172,7 @@ async def asyncio_detailed(
     require a Pro plan. Patterns are stored as lowercase.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateFilterInput):
 
     Raises:
@@ -173,6 +186,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -186,6 +200,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: CreateFilterInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CreateFilterResponse201 | ErrorResponse | None:
     """ Create a filter rule
@@ -194,6 +209,7 @@ async def asyncio(
     require a Pro plan. Patterns are stored as lowercase.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateFilterInput):
 
     Raises:
@@ -208,5 +224,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

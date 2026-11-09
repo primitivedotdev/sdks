@@ -15,12 +15,6 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 
-type InboxStatusEnvelope = {
-  data?: InboxStatus;
-  success?: boolean;
-  [key: string]: unknown;
-};
-
 const DOMAIN_DISPLAY_WIDTH = 34;
 const STATUS_DISPLAY_WIDTH = 12;
 const BOOL_DISPLAY_WIDTH = 7;
@@ -255,9 +249,9 @@ class InboxStatusCommand extends Command {
         return;
       }
 
-      const envelope = (result.data ?? {}) as InboxStatusEnvelope;
-      const status = envelope.data;
-      if (!status) {
+      const envelope = result.data;
+      const status = envelope?.data;
+      if (!envelope || !status) {
         throw new Errors.CLIError("Primitive API returned no inbox status.", {
           exit: 1,
         });

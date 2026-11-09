@@ -171,13 +171,19 @@ jobs:
           TAG: cli-node/v${{ steps.version.outputs.current }}
           VERSION: ${{ steps.version.outputs.current }}
         run: |
+          prerelease_flags=()
+          if [[ "$VERSION" == *-* ]]; then
+            prerelease_flags=(--prerelease --latest=false)
+          fi
           gh release create "$TAG" \
             --target "$GITHUB_SHA" \
             --title "CLI v$VERSION" \
-            --generate-notes
+            --generate-notes \
+            "${prerelease_flags[@]}"
 
       - name: Configure AWS credentials
-        if: ${{ steps.version.outputs.changed == 'true' }}
+        # A version with a hyphen is a prerelease, which the tap does not follow.
+        if: ${{ steps.version.outputs.changed == 'true' && !contains(steps.version.outputs.current, '-') }}
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ vars.AWS_HOMEBREW_TAP_ROLE_ARN }}
@@ -185,7 +191,8 @@ jobs:
 
       - name: Fetch CI App credential from Secrets Manager
         id: app-creds
-        if: ${{ steps.version.outputs.changed == 'true' }}
+        # A version with a hyphen is a prerelease, which the tap does not follow.
+        if: ${{ steps.version.outputs.changed == 'true' && !contains(steps.version.outputs.current, '-') }}
         run: |
           set -euo pipefail
           JSON=$(aws secretsmanager get-secret-value \
@@ -205,7 +212,8 @@ jobs:
 
       - name: Mint Homebrew tap app token
         id: app-token
-        if: ${{ steps.version.outputs.changed == 'true' }}
+        # A version with a hyphen is a prerelease, which the tap does not follow.
+        if: ${{ steps.version.outputs.changed == 'true' && !contains(steps.version.outputs.current, '-') }}
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           app-id: ${{ steps.app-creds.outputs.app-id }}
@@ -214,7 +222,8 @@ jobs:
           repositories: homebrew-tap
 
       - name: Trigger Homebrew tap update
-        if: ${{ steps.version.outputs.changed == 'true' }}
+        # A version with a hyphen is a prerelease, which the tap does not follow.
+        if: ${{ steps.version.outputs.changed == 'true' && !contains(steps.version.outputs.current, '-') }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           VERSION: ${{ steps.version.outputs.current }}

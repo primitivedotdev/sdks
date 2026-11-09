@@ -96,6 +96,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_402
 
+    if response.status_code == 403:
+        response_403 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_403
+
     if response.status_code == 404:
         response_404 = ErrorResponse.from_dict(response.json())
 
@@ -144,12 +151,9 @@ def sync_detailed(
 ) -> Response[DeleteMemoryResponse200 | ErrorResponse]:
     """ Delete a memory
 
-     Delete one active memory by key and scope. Deletes are idempotent when
-    `if_version` is omitted: deleting a missing key returns `deleted:
-    false`. With `if_version`, a missing key still returns `deleted: false`,
-    but a stale version returns `memory_conflict`.
-
-    A successful delete records memory write usage.
+     Delete one active memory by key and scope. Function-authenticated requests use their own Function id
+    and cannot override it. Deletes are idempotent without `if_version`; a stale `if_version` returns
+    `memory_conflict`.
 
     Args:
         key (str):
@@ -194,12 +198,9 @@ def sync(
 ) -> DeleteMemoryResponse200 | ErrorResponse | None:
     """ Delete a memory
 
-     Delete one active memory by key and scope. Deletes are idempotent when
-    `if_version` is omitted: deleting a missing key returns `deleted:
-    false`. With `if_version`, a missing key still returns `deleted: false`,
-    but a stale version returns `memory_conflict`.
-
-    A successful delete records memory write usage.
+     Delete one active memory by key and scope. Function-authenticated requests use their own Function id
+    and cannot override it. Deletes are idempotent without `if_version`; a stale `if_version` returns
+    `memory_conflict`.
 
     Args:
         key (str):
@@ -239,12 +240,9 @@ async def asyncio_detailed(
 ) -> Response[DeleteMemoryResponse200 | ErrorResponse]:
     """ Delete a memory
 
-     Delete one active memory by key and scope. Deletes are idempotent when
-    `if_version` is omitted: deleting a missing key returns `deleted:
-    false`. With `if_version`, a missing key still returns `deleted: false`,
-    but a stale version returns `memory_conflict`.
-
-    A successful delete records memory write usage.
+     Delete one active memory by key and scope. Function-authenticated requests use their own Function id
+    and cannot override it. Deletes are idempotent without `if_version`; a stale `if_version` returns
+    `memory_conflict`.
 
     Args:
         key (str):
@@ -289,12 +287,9 @@ async def asyncio(
 ) -> DeleteMemoryResponse200 | ErrorResponse | None:
     """ Delete a memory
 
-     Delete one active memory by key and scope. Deletes are idempotent when
-    `if_version` is omitted: deleting a missing key returns `deleted:
-    false`. With `if_version`, a missing key still returns `deleted: false`,
-    but a stale version returns `memory_conflict`.
-
-    A successful delete records memory write usage.
+     Delete one active memory by key and scope. Function-authenticated requests use their own Function id
+    and cannot override it. Deletes are idempotent without `if_version`; a stale `if_version` returns
+    `memory_conflict`.
 
     Args:
         key (str):

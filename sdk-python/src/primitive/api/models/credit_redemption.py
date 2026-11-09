@@ -30,8 +30,8 @@ class CreditRedemption:
             granted_at (datetime.datetime): When the credit was granted.
             expires_at (datetime.datetime | None): When the granted credit expires, or null when it does not expire.
             label (None | str): Customer-facing label of the promotion, when it has one.
-            replayed (bool): True when this Idempotency-Key already redeemed this code and the
-                original grant is returned. No second grant is made.
+            replayed (bool): True when this Idempotency-Key already redeemed this code and the original grant is returned.
+                No second grant is made.
             message (str): Human-readable summary of the grant, suitable to show as is.
      """
 
@@ -43,6 +43,7 @@ class CreditRedemption:
     label: None | str
     replayed: bool
     message: str
+    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
 
@@ -72,7 +73,7 @@ class CreditRedemption:
 
 
         field_dict: dict[str, Any] = {}
-
+        field_dict.update(self.additional_properties)
         field_dict.update({
             "redemption_id": redemption_id,
             "amount_micros": amount_micros,
@@ -143,5 +144,22 @@ class CreditRedemption:
             message=message,
         )
 
+
+        credit_redemption.additional_properties = d
         return credit_redemption
 
+    @property
+    def additional_keys(self) -> list[str]:
+        return list(self.additional_properties.keys())
+
+    def __getitem__(self, key: str) -> Any:
+        return self.additional_properties[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.additional_properties[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.additional_properties[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.additional_properties

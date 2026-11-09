@@ -56,9 +56,11 @@ export function validateOffer(value: unknown): EventOffer {
         "delivery_id",
         "lease_token",
         "event_type",
-        "body",
         "lease_expires_at",
       ].every((key) => typeof d[key] === "string") ||
+      // The body is null, or absent, when the API withholds the content
+      // from this credential.
+      (d.body !== null && d.body !== undefined && typeof d.body !== "string") ||
       !Number.isFinite(Date.parse(String(d.lease_expires_at))) ||
       !record(d.headers) ||
       !Object.values(d.headers).every((header) => typeof header === "string"))
@@ -68,6 +70,9 @@ export function validateOffer(value: unknown): EventOffer {
       "invalid_response",
     );
   }
+  // An absent body is withheld content, the same as a null one, as in the
+  // Python and Go SDKs.
+  if (d !== null && d.body === undefined) d.body = null;
   return value as EventOffer;
 }
 export function retryAfter(value: string | null): number {

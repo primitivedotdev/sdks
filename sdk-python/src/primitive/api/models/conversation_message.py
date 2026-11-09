@@ -16,9 +16,12 @@ from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
+  from ..models.conversation_message_copies_item import ConversationMessageCopiesItem
+  from ..models.conversation_message_hold import ConversationMessageHold
   from ..models.conversation_message_repeat_type_0 import ConversationMessageRepeatType0
   from ..models.conversation_message_sender_member_type_0 import ConversationMessageSenderMemberType0
-  from ..models.presence_control_type_0 import PresenceControlType0
+  from ..models.email_attachment import EmailAttachment
+  from ..models.presence_control import PresenceControl
 
 
 
@@ -42,8 +45,9 @@ class ConversationMessage:
             direction (ConversationMessageDirection): `inbound` for a received email (`/emails/{id}`), `outbound`
                 for a send (`/sent-emails/{id}`).
             id (UUID):
-            text (str): Plain-text body. Empty string when the message has no text
-                part or its content was discarded by retention.
+            text (None | str): Plain-text body. Empty string when the message has no text
+                part or its content was discarded by retention. May be null: this field carries message content, which is
+                withheld when the content is not available to your credential.
             message_id (None | str | Unset):
             from_ (None | str | Unset):
             to (None | str | Unset):
@@ -74,35 +78,57 @@ class ConversationMessage:
                   - `canceled`: terminal; a scheduled send canceled before
                     execution. `canceled_at` carries the cancellation time
                     and nothing was dispatched.
-            presence_control (None | PresenceControlType0 | Unset):
+            presence_control (None | PresenceControl | Unset):
             repeat (ConversationMessageRepeatType0 | None | Unset): Set when Primitive sent this message as part of a
                 repeating send. Resolved from Primitive's own records, never from the message content. Null on every other
                 message and on servers that predate repeating sends.
-            sender_member (ConversationMessageSenderMemberType0 | None | Unset): Verified human authorship, projected only
-                within the member organization. Historical attribution is not current sending or owner authority.
+            sender_member (ConversationMessageSenderMemberType0 | None | Unset):
             fyi (bool | Unset): Outbound messages only. True when the send was an informational signal (a read, working or
                 typing signal, or an acknowledgement) and nothing else, so it is not a reply that takes part in the
                 conversation. Absent on inbound messages. Older servers omit it.
             interaction_hint (str | Unset): Outbound messages only. How to place this send in a timeline: `status` (a pure
                 status signal), `card` or `none`. Not declared as a closed enum so that a value added later does not fail
                 decoding; treat an unknown value as `none`. Absent on inbound messages. Older servers omit it.
+            attachments (list[EmailAttachment] | Unset): Attachment metadata for this message, each item as its own detail
+                read reports it: `parsed.attachments` on `/emails/{id}` for inbound, `attachments` on `/sent-emails/{id}` for
+                outbound, in the same order. Empty when there are none or an inbound message has no parsed content. No bytes or
+                download URLs; download a part with `/emails/{id}/attachments/{part_index}` or `/sent-
+                emails/{id}/attachments/{part_index}`.
+            copies (list[ConversationMessageCopiesItem] | Unset): Every inbound copy of this message you can read (a message
+                to several of the org's mailboxes is stored once per mailbox), in arrival order. At most 50; past that, the ones
+                listed are your own mailboxes' copies first, then the earliest. The entry's `id` is one of them unless the entry
+                is the send. A later read can return the message again with more copies listed, or under another id when a
+                better copy becomes visible: upsert entries by `id`, and drop any entry you hold whose id is in a newer entry's
+                `copies` or `sent_email_id`.
+            copies_truncated (bool | Unset): Present when `copies` may not list every copy you can read.
+            sent_email_id (UUID | Unset): The org's send of this message, when the entry is an inbound copy and you can read
+                the send. On a `since` read, when you read the send as its sender, the entry's `status` and `hold` describe the
+                send.
+            hold (ConversationMessageHold | Unset): Only on a held scheduled send: its OAuth grant was revoked after refresh
+                token reuse, so it waits until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days.
+                Status stays scheduled.
      """
 
     role: ConversationMessageRole
     direction: ConversationMessageDirection
     id: UUID
-    text: str
+    text: None | str
     message_id: None | str | Unset = UNSET
     from_: None | str | Unset = UNSET
     to: None | str | Unset = UNSET
     subject: None | str | Unset = UNSET
     timestamp: datetime.datetime | None | Unset = UNSET
     status: SentEmailStatus | Unset = UNSET
-    presence_control: None | PresenceControlType0 | Unset = UNSET
+    presence_control: None | PresenceControl | Unset = UNSET
     repeat: ConversationMessageRepeatType0 | None | Unset = UNSET
     sender_member: ConversationMessageSenderMemberType0 | None | Unset = UNSET
     fyi: bool | Unset = UNSET
     interaction_hint: str | Unset = UNSET
+    attachments: list[EmailAttachment] | Unset = UNSET
+    copies: list[ConversationMessageCopiesItem] | Unset = UNSET
+    copies_truncated: bool | Unset = UNSET
+    sent_email_id: UUID | Unset = UNSET
+    hold: ConversationMessageHold | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -110,15 +136,19 @@ class ConversationMessage:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.conversation_message_copies_item import ConversationMessageCopiesItem # noqa: PLC0415
+        from ..models.conversation_message_hold import ConversationMessageHold # noqa: PLC0415
         from ..models.conversation_message_repeat_type_0 import ConversationMessageRepeatType0 # noqa: PLC0415
         from ..models.conversation_message_sender_member_type_0 import ConversationMessageSenderMemberType0 # noqa: PLC0415
-        from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
+        from ..models.email_attachment import EmailAttachment # noqa: PLC0415
+        from ..models.presence_control import PresenceControl # noqa: PLC0415
         role = self.role.value
 
         direction = self.direction.value
 
         id = str(self.id)
 
+        text: None | str
         text = self.text
 
         message_id: None | str | Unset
@@ -161,7 +191,7 @@ class ConversationMessage:
         presence_control: dict[str, Any] | None | Unset
         if isinstance(self.presence_control, Unset):
             presence_control = UNSET
-        elif isinstance(self.presence_control, PresenceControlType0):
+        elif isinstance(self.presence_control, PresenceControl):
             presence_control = self.presence_control.to_dict()
         else:
             presence_control = self.presence_control
@@ -185,6 +215,34 @@ class ConversationMessage:
         fyi = self.fyi
 
         interaction_hint = self.interaction_hint
+
+        attachments: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.attachments, Unset):
+            attachments = []
+            for attachments_item_data in self.attachments:
+                attachments_item = attachments_item_data.to_dict()
+                attachments.append(attachments_item)
+
+
+
+        copies: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.copies, Unset):
+            copies = []
+            for copies_item_data in self.copies:
+                copies_item = copies_item_data.to_dict()
+                copies.append(copies_item)
+
+
+
+        copies_truncated = self.copies_truncated
+
+        sent_email_id: str | Unset = UNSET
+        if not isinstance(self.sent_email_id, Unset):
+            sent_email_id = str(self.sent_email_id)
+
+        hold: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.hold, Unset):
+            hold = self.hold.to_dict()
 
 
         field_dict: dict[str, Any] = {}
@@ -217,6 +275,16 @@ class ConversationMessage:
             field_dict["fyi"] = fyi
         if interaction_hint is not UNSET:
             field_dict["interaction_hint"] = interaction_hint
+        if attachments is not UNSET:
+            field_dict["attachments"] = attachments
+        if copies is not UNSET:
+            field_dict["copies"] = copies
+        if copies_truncated is not UNSET:
+            field_dict["copies_truncated"] = copies_truncated
+        if sent_email_id is not UNSET:
+            field_dict["sent_email_id"] = sent_email_id
+        if hold is not UNSET:
+            field_dict["hold"] = hold
 
         return field_dict
 
@@ -224,9 +292,12 @@ class ConversationMessage:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.conversation_message_copies_item import ConversationMessageCopiesItem # noqa: PLC0415
+        from ..models.conversation_message_hold import ConversationMessageHold # noqa: PLC0415
         from ..models.conversation_message_repeat_type_0 import ConversationMessageRepeatType0 # noqa: PLC0415
         from ..models.conversation_message_sender_member_type_0 import ConversationMessageSenderMemberType0 # noqa: PLC0415
-        from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
+        from ..models.email_attachment import EmailAttachment # noqa: PLC0415
+        from ..models.presence_control import PresenceControl # noqa: PLC0415
         d = dict(src_dict)
         role = ConversationMessageRole(d.pop("role"))
 
@@ -243,7 +314,13 @@ class ConversationMessage:
 
 
 
-        text = d.pop("text")
+        def _parse_text(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        text = _parse_text(d.pop("text"))
+
 
         def _parse_message_id(data: object) -> None | str | Unset:
             if data is None:
@@ -315,7 +392,7 @@ class ConversationMessage:
 
 
 
-        def _parse_presence_control(data: object) -> None | PresenceControlType0 | Unset:
+        def _parse_presence_control(data: object) -> None | PresenceControl | Unset:
             if data is None:
                 return data
             if isinstance(data, Unset):
@@ -323,14 +400,14 @@ class ConversationMessage:
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                componentsschemas_presence_control_type_0 = PresenceControlType0.from_dict(data)
+                presence_control_type_1 = PresenceControl.from_dict(data)
 
 
 
-                return componentsschemas_presence_control_type_0
+                return presence_control_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(None | PresenceControlType0 | Unset, data)
+            return cast(None | PresenceControl | Unset, data)
 
         presence_control = _parse_presence_control(d.pop("presence_control", UNSET))
 
@@ -379,6 +456,52 @@ class ConversationMessage:
 
         interaction_hint = d.pop("interaction_hint", UNSET)
 
+        _attachments = d.pop("attachments", UNSET)
+        attachments: list[EmailAttachment] | Unset = UNSET
+        if _attachments is not UNSET:
+            attachments = []
+            for attachments_item_data in _attachments:
+                attachments_item = EmailAttachment.from_dict(attachments_item_data)
+
+
+
+                attachments.append(attachments_item)
+
+
+        _copies = d.pop("copies", UNSET)
+        copies: list[ConversationMessageCopiesItem] | Unset = UNSET
+        if _copies is not UNSET:
+            copies = []
+            for copies_item_data in _copies:
+                copies_item = ConversationMessageCopiesItem.from_dict(copies_item_data)
+
+
+
+                copies.append(copies_item)
+
+
+        copies_truncated = d.pop("copies_truncated", UNSET)
+
+        _sent_email_id = d.pop("sent_email_id", UNSET)
+        sent_email_id: UUID | Unset
+        if isinstance(_sent_email_id,  Unset):
+            sent_email_id = UNSET
+        else:
+            sent_email_id = UUID(_sent_email_id)
+
+
+
+
+        _hold = d.pop("hold", UNSET)
+        hold: ConversationMessageHold | Unset
+        if isinstance(_hold,  Unset):
+            hold = UNSET
+        else:
+            hold = ConversationMessageHold.from_dict(_hold)
+
+
+
+
         conversation_message = cls(
             role=role,
             direction=direction,
@@ -395,6 +518,11 @@ class ConversationMessage:
             sender_member=sender_member,
             fyi=fyi,
             interaction_hint=interaction_hint,
+            attachments=attachments,
+            copies=copies,
+            copies_truncated=copies_truncated,
+            sent_email_id=sent_email_id,
+            hold=hold,
         )
 
 

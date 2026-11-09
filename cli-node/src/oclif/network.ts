@@ -66,11 +66,22 @@ export async function runNetworkRequest(
     if (request.owner !== undefined && (!owner || owner.length > 100))
       throw new Error("--owner must be a name or user ID of 1-100 characters.");
     const query = { cursor, limit, ...(owner ? { owner } : {}) };
-    const result = await response(
+    const result =
       request.action === "members"
-        ? listDefaultNetworkMembers({ client, query, responseStyle: "fields" })
-        : listDefaultNetworkAgents({ client, query, responseStyle: "fields" }),
-    );
+        ? await response(
+            listDefaultNetworkMembers({
+              client,
+              query,
+              responseStyle: "fields",
+            }),
+          )
+        : await response(
+            listDefaultNetworkAgents({
+              client,
+              query,
+              responseStyle: "fields",
+            }),
+          );
     if (
       !Array.isArray(result.data) ||
       (result.meta?.cursor !== null && typeof result.meta?.cursor !== "string")

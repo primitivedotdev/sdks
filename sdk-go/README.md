@@ -1,4 +1,4 @@
-# `github.com/primitivedotdev/sdks/sdk-go/v2`
+# `github.com/primitivedotdev/sdks/sdk-go/v3`
 
 Official Primitive Go SDK.
 
@@ -21,26 +21,35 @@ advanced use.
 ## Installation
 
 ```bash
-go get github.com/primitivedotdev/sdks/sdk-go/v2@latest
+go get github.com/primitivedotdev/sdks/sdk-go/v3@latest
 ```
 
-## Upgrading to v2
-
-The module path now ends in `/v2`. Update your imports and dependency:
+To try the 3.0.0 preview, pin it:
 
 ```bash
-go get github.com/primitivedotdev/sdks/sdk-go/v2@latest
+go get github.com/primitivedotdev/sdks/sdk-go/v3@v3.0.0-preview.1
+```
+
+## Upgrading to v3
+
+The module path now ends in `/v3`. Update your imports and dependency:
+
+```bash
+go get github.com/primitivedotdev/sdks/sdk-go/v3@latest
 ```
 
 ```go
 import (
-	primitive "github.com/primitivedotdev/sdks/sdk-go/v2"
-	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v2/api"
+	primitive "github.com/primitivedotdev/sdks/sdk-go/v3"
+	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v3/api"
 )
 ```
 
-Then remove the old `github.com/primitivedotdev/sdks/sdk-go` requirement with
-`go mod tidy`. Package names are unchanged.
+Then remove the old `github.com/primitivedotdev/sdks/sdk-go/v2` requirement
+with `go mod tidy`. Package names are unchanged. The other breaking changes in
+v3 are listed in the [changelog](https://github.com/primitivedotdev/sdks/blob/main/CHANGELOG.md).
+
+### Upgrading from v1 to v2
 
 v2 changes two types on email search results from `SearchEmails`:
 
@@ -55,6 +64,8 @@ Search results also gain a `Direction` field, and `SearchEmailsParams` gains
 the `ThreadID`, `Prefix` and `Count` options. See
 [Searching received mail](#searching-received-mail).
 
+Enum values the API adds after your SDK version was generated no longer fail the response. An unlisted value, such as a new `error.code`, is kept in the typed string.
+
 ## Basic usage
 
 ### Receive and reply
@@ -67,7 +78,7 @@ import (
 	"log"
 	"time"
 
-	primitive "github.com/primitivedotdev/sdks/sdk-go/v2"
+	primitive "github.com/primitivedotdev/sdks/sdk-go/v3"
 )
 
 func handle(ctx context.Context, body []byte, headers map[string]string) {
@@ -124,8 +135,7 @@ long enough for SMTP delivery, typically 30-60 seconds.
 Every client method that performs a network request takes `ctx context.Context`
 as its first argument, so per-call deadlines, cancellation, and request-scoped
 values use the standard library directly. There is no separate `RequestOptions`
-struct. The one exception is `X402Client.PayEmailChallenge`, which signs a
-payment locally without any I/O and therefore takes no context.
+struct.
 
 ```go
 // Per-call timeout: cancel after 15 seconds.
@@ -344,276 +354,8 @@ it does not verify DKIM or the webhook signature itself.
 Use `ParseInteractionEnvelope([]byte)` or `ParseInteractionEnvelopeString(string)` to read an
 `interaction.json` attachment for display. The bounded parser returns valid,
 unsupported, or invalid and preserves unknown protocols. It performs no
-authentication, network requests, payments, or sends. See the
+authentication, network requests, or sends. See the
 [parser contract and limits](../docs/interaction-envelopes.md).
-
-## x402 payments
-
-The x402 client lets one agent request a USDC payment and another pay it. It is
-non-custodial: the payer signs an EIP-3009 `transferWithAuthorization` locally
-with their own key, and the key never leaves the caller. The platform resolves
-the real payee address, verifies every signed field against its own records,
-enforces the org's spend policy, and settles on chain.
-
-The model in four steps:
-
-1. The payee registers a payout address once (proving control of it with a local
-   signature).
-2. The payee creates a challenge with `Charge`, which the platform fills in with
-   the registered payout address.
-3. The payer signs the challenge locally and submits it with `Pay`.
-4. The platform verifies and settles.
-
-Amounts can be given as a human USDC string (`AmountUsdc: "0.01"`) or as token
-base units (`Amount: "10000"`, since USDC has 6 decimals). Networks are `base`
-(mainnet) and `base-sepolia` (testnet). A `PrivateKeySigner` built from a hex
-private key holds the wallet key in process and signs both the EIP-712 payment
-authorization (for `Pay`) and the ownership message (for `RegisterPayoutAddress`);
-the key is never sent to Primitive.
-
-Build the client with `NewX402Client`. With zero options it reads
-`PRIMITIVE_API_KEY` from the environment and targets the production host.
-
-```go
-client := primitive.NewX402Client(primitive.X402ClientOptions{
-	APIKey: os.Getenv("PRIMITIVE_API_KEY"),
-})
-```
-
-### Register a payout address (payee, one time)
-
-The signer proves control of its own address with an ownership message; the
-recovered address becomes your default payout destination for that network.
-`Charge` resolves its `PayTo` from this directory, so register before requesting
-payments. The org is resolved automatically from your API key, so you do not set
-it (set `Org` only to override the default).
-
-```go
-payee, err := primitive.NewPrivateKeySigner(os.Getenv("PAYEE_KEY"))
-if err != nil {
-	log.Fatal(err)
-}
-
-label := "treasury"
-_, err = client.RegisterPayoutAddress(ctx, primitive.X402PayoutRegistrationInput{
-	Network: "base-sepolia",
-	Label:   &label,
-}, payee)
-```
-
-### Create a challenge (payee)
-
-```go
-challenge, err := client.Charge(ctx, primitive.X402ChargeInput{
-	AmountUsdc:  "0.01", // human USDC amount
-	Network:     "base-sepolia",
-	PayerOrg:    os.Getenv("PAYER_ORG_ID"), // org allowed to pay
-	Description: "API call",
-})
-```
-
-Set exactly one of `AmountUsdc` (a human USDC string like `"0.01"`) or `Amount`
-(token base units, e.g. `"10000"`). `AmountUsdc` is the easy path; `Amount`
-remains available when you already have a base-unit value.
-
-Hand the returned `*X402Challenge` to the payer over any out-of-band channel.
-`client.GetChallenge(ctx, id)` re-hydrates a challenge by id, for example to
-retry `Pay` after a restart.
-
-### Pay a challenge (payer)
-
-The payer signs the interaction-bound authorization locally and submits it. The
-key never leaves the caller.
-
-```go
-payer, err := primitive.NewPrivateKeySigner(os.Getenv("PAYER_KEY"))
-if err != nil {
-	log.Fatal(err)
-}
-
-receipt, err := client.Pay(ctx, challenge, payer)
-if err != nil {
-	log.Fatal(err)
-}
-log.Println(receipt.Status, receipt.SettleTx) // settled, on-chain tx hash
-```
-
-### Email-native payments
-
-The challenge can also ride a real email thread instead of a synthetic id. The
-payee issues it as an email; the payer signs it into an `interaction.json`
-payment step and sends it back attached to the reply.
-
-The payee issues the challenge with `CreateEmailChallenge`. The `pay_to` payout
-wallet and the token asset are resolved server-side; you only supply the
-addresses, amount, and network:
-
-```go
-issued, err := client.CreateEmailChallenge(ctx, primitive.X402EmailChargeInput{
-	From:       "payee@your-domain.example", // your sending address (funds receiver)
-	To:         "payer@their-domain.example", // the payer's address
-	AmountUsdc: "0.01",
-	Network:    "base-sepolia",
-})
-if err != nil {
-	log.Fatal(err)
-}
-// issued.InteractionID is the email thread the payment is bound to;
-// issued.Challenge carries the payment_requirements + nonce_binding to sign.
-```
-
-The payer receives the challenge as an `interaction.json` MIME part on an
-inbound email. Rather than hand-parsing it, pass the part bytes to
-`ExtractEmailChallenge`, which validates the envelope and returns the typed
-`*X402EmailChallenge`:
-
-```go
-// interactionPart is the body of the inbound email's `interaction.json`
-// attachment.
-issued, err := primitive.ExtractEmailChallenge(interactionPart)
-if err != nil {
-	log.Fatal(err)
-}
-```
-
-The payer then signs the challenge locally with `PayEmailChallenge` and replies
-with the resulting envelope attached. `PayEmailChallenge` does not send
-anything; it returns the signed payment-step envelope and its canonical JSON
-bytes. The validity window is computed and clamped into the accepted band for
-you, so you never hand-set `ValidBefore`:
-
-```go
-payer, err := primitive.NewPrivateKeySigner(os.Getenv("PAYER_KEY"))
-if err != nil {
-	log.Fatal(err)
-}
-
-built, err := client.PayEmailChallenge(issued, payer)
-if err != nil {
-	log.Fatal(err)
-}
-
-// built.JSON is the interaction.json body. The payer received the challenge as
-// an inbound email; reply to it with the envelope attached as `interaction.json`
-// using the email client's Reply method (see above). The platform reads the
-// envelope, re-derives the interaction-bound nonce, and settles on chain.
-_, err = client.Reply(ctx, challengeEmail, primitive.ReplyParams{
-	BodyText: "Payment attached.",
-	Attachments: []primitive.SendAttachment{
-		{
-			Filename:      "interaction.json",
-			ContentBase64: base64.StdEncoding.EncodeToString([]byte(built.JSON)),
-		},
-	},
-})
-if err != nil {
-	log.Fatal(err)
-}
-```
-
-### Signing primitives (lower level)
-
-`Pay` builds and signs the payment for you. When you need to drive the signing
-yourself, for example to sign a challenge carried in an email reply and submit
-the payment separately, the same building blocks are exported directly:
-
-- `DeriveEIP3009Nonce(binding)` derives the interaction-bound EIP-3009 nonce,
-  locked to a normative vector the platform recomputes.
-- `ExtractEmailChallenge(part)` validates an inbound `interaction.json` challenge
-  part (its raw bytes) and returns the typed `*X402EmailChallenge` ready for
-  `PayEmailChallenge`, so you never hand-parse the envelope.
-- `ComputePaymentValidityWindow(input)` returns the `(validAfter, validBefore)`
-  window, landed inside the band the platform accepts by default: `validBefore`
-  keeps at least a minimum settlement headroom (60s) so a near-expired challenge
-  is not signed into a guaranteed rejection, and the total window is clamped to
-  the 24h cap so a far-future expiry never produces an "authorization window too
-  wide" rejection. Pin `ValidBeforeSec`/`ValidAfterSec` to set a bound; with
-  `Clamp` pointing to false an out-of-band pinned value returns a specific error
-  naming which bound was violated instead of silently signing a doomed
-  authorization.
-- `SignInteractionPayment(input)` derives the bound nonce, assembles the
-  authorization, and signs it with your `Sign` callback. The key never leaves the
-  caller.
-- `BuildExactEvmPaymentPayload(network, authorization, signature)` assembles the
-  exact-EVM x402 wire payload.
-
-```go
-payer, err := primitive.NewPrivateKeySigner(os.Getenv("PAYER_KEY"))
-if err != nil {
-	log.Fatal(err)
-}
-pr := challenge.PaymentRequirements
-expiresAt, _ := time.Parse(time.RFC3339Nano, challenge.ExpiresAt)
-
-validAfter, validBefore, err := primitive.ComputePaymentValidityWindow(primitive.ValidityWindowInput{
-	ChallengeExpiresAtSec: expiresAt.Unix(),
-	NowSec:                time.Now().Unix(),
-})
-if err != nil {
-	log.Fatal(err)
-}
-
-amount, _ := new(big.Int).SetString(pr.MaxAmountRequired, 10)
-auth, signature, err := primitive.SignInteractionPayment(primitive.SignInteractionPaymentInput{
-	Sign:  payer.SignTypedData,
-	Payer: payer.Address(),
-	Domain: primitive.TokenDomain{
-		Name:              pr.Extra.Name,
-		Version:           pr.Extra.Version,
-		ChainID:           84532, // base-sepolia
-		VerifyingContract: pr.Asset,
-	},
-	PayTo:  pr.PayTo,
-	Amount: amount,
-	NonceBinding: primitive.NonceBinding{
-		InteractionID:   challenge.NonceBinding.InteractionID,
-		ChallengeStepID: challenge.NonceBinding.ChallengeStepID,
-		ChallengeNonce:  challenge.NonceBinding.ChallengeNonce,
-	},
-	ValidAfter:  validAfter,
-	ValidBefore: validBefore,
-})
-if err != nil {
-	log.Fatal(err)
-}
-
-payment, err := primitive.BuildExactEvmPaymentPayload(challenge.Network, auth, signature)
-if err != nil {
-	log.Fatal(err)
-}
-// submit `payment` to /v1/x402/challenges/{id}/pay
-```
-
-### Read and set the spend policy
-
-The spend policy guards outbound payments: a `Paused` kill-switch, per-payment
-and daily caps (token base units, or nil for no cap), and a payee allowlist (nil
-means any on-net payee, an empty slice denies all). `SetSpendPolicy` merges: only
-the fields you set on the update change, and omitted fields keep their current
-value. Use the builder methods on `X402SpendPolicyUpdate`, and
-`ClearMaxPerPayment` / `ClearMaxPerDay` to remove a cap.
-
-```go
-var update primitive.X402SpendPolicyUpdate
-update.SetPaused(false).SetMaxPerPayment("5000000")
-
-policy, err := client.SetSpendPolicy(ctx, update)
-if err != nil {
-	log.Fatal(err)
-}
-_ = policy
-
-addresses, err := client.ListPayoutAddresses(ctx)
-```
-
-### Errors
-
-Every method returns a `*primitive.X402Error` on a client-side, transport, or
-non-2xx server error. Use `errors.As` to inspect it. It carries `Status` (the
-HTTP status, or `0` for a request that never reached the server), `Body` (the
-parsed error envelope when present), and `RetryAfter` (the `Retry-After` header,
-when the server sent one). On `Pay`, a `Status == 0` error means the request may
-not have been sent, so the payment outcome is indeterminate.
 
 ## Advanced usage
 
@@ -622,7 +364,7 @@ not have been sent, so the payment outcome is indeterminate.
 Use the sibling `api` package when you want the full generated HTTP API surface.
 
 ```go
-import primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v2/api"
+import primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v3/api"
 
 client, err := primitiveapi.NewAPIClient("prim_test")
 if err != nil {
@@ -643,6 +385,17 @@ Primitive Memories store durable JSON values by key. Calls default to org scope.
 Function-scoped memories use the function id UUID, not the function name. The
 generated memory methods are `SetMemory`, `GetMemory`, `DeleteMemory`, and
 `SearchMemories`.
+
+#### Fields the client does not know yet
+
+The generated types hold the fields the API declared when this module was
+generated. When a response carries a field the types do not have, for example
+one the API added after this release, the decoder skips it: decoding still
+succeeds, but the value is not available on the Go struct and is not kept
+anywhere else. The Node and Python SDKs pass such fields through; this module
+does not. To read a new field, upgrade to a release generated from a spec that
+declares it. If you need the raw JSON before then, make the request with your
+own `http.Client` and decode the body yourself.
 
 ### Searching received mail
 
@@ -719,9 +472,15 @@ if sent, ok := event.(primitive.SentEmailEvent); ok {
 
 `ValidateSentEmailEvent` / `SafeValidateSentEmailEvent` validate an already parsed body, and the schema is exported as `SentEmailEventJSONSchema`. An `email.bounced` event's `Email.Analysis.Bounce` carries `SentEmailID` (the send the bounce belongs to, or nil when it could not be linked) and `FailedRecipients` (every failed address, up to 100).
 
-### Payment and interaction webhook events
+### Email understanding and email rules
 
-Webhooks are not email-only. The same endpoint also receives `payment.*` settlement notifications and `interaction.x402.*` events from the x402-over-email flow. The event name is carried in the **`X-Webhook-Event` header** for every family. The body is sent verbatim with no envelope, so it is the header (not a body field) that names the event: an `email.*` body carries `event`, a `payment.*` body carries the name in `type`, and an `interaction.*` body is just `{"interaction": {...}}` with no event/type field at all.
+For organizations with email rules enabled, `email.received` events carry `Email.Analysis.Understanding` (`*EmailUnderstanding`): a `Version`, a `Status`, and when `"ready"`, `Facts` keyed by name, each with a `Value` (read with `AsBool`, `AsString`, `AsStrings` or `AsNumber`) and `Confidence`. Rule-granted deliveries also list the matching `Rules`. Treat an unfamiliar `Status`, fact name or value as one added after your SDK was built. `Email.Analysis.Sender` (`*SenderAnalysis`) is the sender authentication verdict.
+
+The Email Rules operations on the generated `api` client need a member's own OAuth token that is not narrowed, such as the one `primitive login` stores. API keys and connected agent credentials are refused.
+
+### Interaction webhook events
+
+Webhooks are not email-only. The same endpoint also receives `interaction.*` events. The event name is carried in the **`X-Webhook-Event` header** for every family. The body is sent verbatim with no envelope, so it is the header (not a body field) that names the event: an `email.*` body carries `event`, and an `interaction.*` body is just `{"interaction": {...}}` with no event/type field at all.
 
 `HandleWebhookEvent(...)` verifies the signature over the raw body first, then keys on the header to return a typed event for known types and an `UnknownEvent` (it does not error) for the rest:
 
@@ -735,13 +494,8 @@ if err != nil {
 	// signature/verification failure
 }
 
-switch {
-case primitive.IsPaymentSettledEvent(event):
-	settled := event.(primitive.PaymentEvent) // flat fields; amount in base units
-	log.Println(settled.ChallengeID, settled.Amount, settled.SettleTx)
-case primitive.IsInteractionX402Event(event):
-	x402 := event.(primitive.InteractionEvent) // interaction.x402.* lifecycle
-	_ = x402
+if interaction, ok := event.(primitive.InteractionEvent); ok {
+	log.Println(interaction.Event, interaction.Payload["interaction"])
 }
 ```
 
@@ -749,11 +503,9 @@ The full catalog of header values is exported as the `WebhookEventTypes` slice:
 
 - `email.received`, `email.bounced`, `email.tls_report`, `email.dmarc_report`, `email.dmarc_failure`
 - `sent_email.accepted`, `sent_email.delivered`, `sent_email.failed`, `sent_email.completed` (opt-in)
-- `payment.settled`, `payment.failed`
-- `interaction.x402.challenge`, `interaction.x402.payment`, `interaction.x402.settled`, `interaction.x402.rejected`, `interaction.x402.declined`, `interaction.x402.expired`, `interaction.x402.verify_timeout`
 - `interaction.ack.received`, `interaction.ack.requested`, `interaction.ack.acked`, `interaction.ack.canceled`, `interaction.ack.expired`
 
-Signature verification runs on the raw body and is independent of the event type, so it works identically for `payment.*` and `interaction.*` bodies. Each delivery is signed once; the same `t=...,v1=...` value is sent on the primary `Primitive-Signature` header plus `X-Primitive-Signature` and `X-Webhook-Signature` for non-SDK consumers. The SDK verifies `Primitive-Signature`, and still accepts the retired `MyMX-Signature` header name when verifying older captured deliveries. `HandleWebhook(...)` remains hard-typed to `email.received` for backward compatibility; reach for `HandleWebhookEvent(...)` when you need the full event union.
+Signature verification runs on the raw body and is independent of the event type, so it works identically for `sent_email.*` and `interaction.*` bodies. Each delivery is signed once; the same `t=...,v1=...` value is sent on the primary `Primitive-Signature` header plus `X-Primitive-Signature` and `X-Webhook-Signature` for non-SDK consumers. The SDK verifies `Primitive-Signature`, and still accepts the retired `MyMX-Signature` header name when verifying older captured deliveries. `HandleWebhook(...)` remains hard-typed to `email.received` for backward compatibility; reach for `HandleWebhookEvent(...)` when you need the full event union.
 
 ### Lower-level webhook helpers
 
@@ -781,6 +533,34 @@ make go-generate
 make go-check
 make go-build
 ```
+
+## Keep a conversation in sync
+
+`SyncConversation` reads `GET /emails/{id}/conversation?since=` and pages
+through `has_more`. With a nil state it starts from `since=start`; pass the
+previous result back to read only what changed.
+
+```go
+sync, err := client.SyncConversation(ctx, emailID, nil)
+if err != nil {
+	log.Fatal(err)
+}
+// later
+sync, err = client.SyncConversation(ctx, emailID, sync)
+```
+
+The package-level `primitive.SyncConversation(ctx, reader, emailID, state)`
+takes any `ConversationReader`, such as the generated `*primitiveapi.Client`.
+
+A message can come back in a later read with more `Copies`, or under a new
+id when a better copy of it becomes visible. The helper upserts messages by
+`ID`, treats two entries as the same message when either one's ID is in the
+other's `Copies` or `SentEmailID` (the newer one wins), and keeps the list
+ordered by timestamp. A timestamp without an offset is read as UTC; one that
+is not a valid RFC 3339 date-time becomes null and sorts last. A sync stops
+with an error after 1000 pages. A `since` read does not report deleted
+messages, so sync from scratch (no state) now and then to reconcile. The merge on its own is
+`MergeConversationMessages(held, delta)`.
 
 ## Delete mailbox history
 

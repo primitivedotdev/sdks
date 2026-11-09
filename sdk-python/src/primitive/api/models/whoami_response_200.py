@@ -11,7 +11,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.caller_identity import CallerIdentity
+  from ..models.whoami_response_200_data import WhoamiResponse200Data
 
 
 
@@ -26,11 +26,11 @@ class WhoamiResponse200:
     """ 
         Attributes:
             success (bool):
-            data (CallerIdentity):
+            data (WhoamiResponse200Data):
      """
 
     success: bool
-    data: CallerIdentity
+    data: WhoamiResponse200Data
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -38,7 +38,7 @@ class WhoamiResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.caller_identity import CallerIdentity # noqa: PLC0415
+        from ..models.whoami_response_200_data import WhoamiResponse200Data # noqa: PLC0415
         success = self.success
 
         data = self.data.to_dict()
@@ -57,11 +57,11 @@ class WhoamiResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.caller_identity import CallerIdentity # noqa: PLC0415
+        from ..models.whoami_response_200_data import WhoamiResponse200Data # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 
-        data = CallerIdentity.from_dict(d.pop("data"))
+        data = WhoamiResponse200Data.from_dict(d.pop("data"))
 
 
 

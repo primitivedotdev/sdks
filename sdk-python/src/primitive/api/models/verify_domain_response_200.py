@@ -11,8 +11,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.domain_verify_result_type_0 import DomainVerifyResultType0
-  from ..models.domain_verify_result_type_1 import DomainVerifyResultType1
+  from ..models.domain_verify_result import DomainVerifyResult
 
 
 
@@ -27,11 +26,12 @@ class VerifyDomainResponse200:
     """ 
         Attributes:
             success (bool):
-            data (DomainVerifyResultType0 | DomainVerifyResultType1 | Unset):
+            data (DomainVerifyResult | Unset): The verified domain. A check that does not pass is a 400
+                `dns_verification_failed` error instead.
      """
 
     success: bool
-    data: DomainVerifyResultType0 | DomainVerifyResultType1 | Unset = UNSET
+    data: DomainVerifyResult | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -39,18 +39,12 @@ class VerifyDomainResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.domain_verify_result_type_0 import DomainVerifyResultType0 # noqa: PLC0415
-        from ..models.domain_verify_result_type_1 import DomainVerifyResultType1 # noqa: PLC0415
+        from ..models.domain_verify_result import DomainVerifyResult # noqa: PLC0415
         success = self.success
 
-        data: dict[str, Any] | Unset
-        if isinstance(self.data, Unset):
-            data = UNSET
-        elif isinstance(self.data, DomainVerifyResultType0):
+        data: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.data, Unset):
             data = self.data.to_dict()
-        else:
-            data = self.data.to_dict()
-
 
 
         field_dict: dict[str, Any] = {}
@@ -67,33 +61,18 @@ class VerifyDomainResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.domain_verify_result_type_0 import DomainVerifyResultType0 # noqa: PLC0415
-        from ..models.domain_verify_result_type_1 import DomainVerifyResultType1 # noqa: PLC0415
+        from ..models.domain_verify_result import DomainVerifyResult # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 
-        def _parse_data(data: object) -> DomainVerifyResultType0 | DomainVerifyResultType1 | Unset:
-            if isinstance(data, Unset):
-                return data
-            try:
-                if not isinstance(data, dict):
-                    raise TypeError()
-                componentsschemas_domain_verify_result_type_0 = DomainVerifyResultType0.from_dict(data)
+        _data = d.pop("data", UNSET)
+        data: DomainVerifyResult | Unset
+        if isinstance(_data,  Unset):
+            data = UNSET
+        else:
+            data = DomainVerifyResult.from_dict(_data)
 
 
-
-                return componentsschemas_domain_verify_result_type_0
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            if not isinstance(data, dict):
-                raise TypeError()
-            componentsschemas_domain_verify_result_type_1 = DomainVerifyResultType1.from_dict(data)
-
-
-
-            return componentsschemas_domain_verify_result_type_1
-
-        data = _parse_data(d.pop("data", UNSET))
 
 
         verify_domain_response_200 = cls(

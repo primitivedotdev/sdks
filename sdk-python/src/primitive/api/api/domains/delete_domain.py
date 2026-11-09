@@ -87,7 +87,7 @@ def sync_detailed(
 ) -> Response[DeleteDomainResponse200 | ErrorResponse]:
     """ Delete a domain
 
-     Deletes a verified or unverified domain claim.
+     Remove a domain from the organization. Inbound mail for its addresses stops being accepted.
 
     Args:
         id (UUID):
@@ -120,7 +120,7 @@ def sync(
 ) -> DeleteDomainResponse200 | ErrorResponse | None:
     """ Delete a domain
 
-     Deletes a verified or unverified domain claim.
+     Remove a domain from the organization. Inbound mail for its addresses stops being accepted.
 
     Args:
         id (UUID):
@@ -148,7 +148,7 @@ async def asyncio_detailed(
 ) -> Response[DeleteDomainResponse200 | ErrorResponse]:
     """ Delete a domain
 
-     Deletes a verified or unverified domain claim.
+     Remove a domain from the organization. Inbound mail for its addresses stops being accepted.
 
     Args:
         id (UUID):
@@ -181,7 +181,7 @@ async def asyncio(
 ) -> DeleteDomainResponse200 | ErrorResponse | None:
     """ Delete a domain
 
-     Deletes a verified or unverified domain claim.
+     Remove a domain from the organization. Inbound mail for its addresses stops being accepted.
 
     Args:
         id (UUID):

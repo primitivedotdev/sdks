@@ -58,6 +58,26 @@ export type TlsReportAnalysis = NonNullable<EmailAnalysis["tls_report"]>;
 
 export type DmarcReportAnalysis = NonNullable<EmailAnalysis["dmarc_report"]>;
 
+/** The sender authentication verdict, derived from `email.auth`. */
+export type SenderAnalysis = NonNullable<EmailAnalysis["sender"]>;
+
+/** What Primitive understood about the email. */
+export type EmailUnderstanding = NonNullable<EmailAnalysis["understanding"]>;
+
+/** A classified fact. */
+export type UnderstandingFact = NonNullable<
+  EmailUnderstanding["facts"]
+>[string];
+
+/** A rule that matched the email and granted this delivery. */
+export type UnderstandingRule = NonNullable<
+  EmailUnderstanding["rules"]
+>[number];
+
+export type UnderstandingRuleQuestion = NonNullable<
+  UnderstandingRule["questions"]
+>[number];
+
 export type ForwardResultInline = Extract<ForwardResult, { type: "inline" }>;
 
 export type ForwardResultAttachmentAnalyzed = Extract<
@@ -171,25 +191,12 @@ export interface UnknownEvent {
   [key: string]: unknown;
 }
 
-import type {
-  InteractionX402Event,
-  PaymentFailedEvent,
-  PaymentSettledEvent,
-} from "./webhook/events.js";
 import type { SentEmailEvent } from "./webhook/sent-email-events.js";
 
 /**
  * The webhook events the SDK returns as fully typed values. The email.received
- * and sent_email.* bodies are schema-validated; the payment.* and
- * interaction.x402.* shapes are keyed off the `X-Webhook-Event` header and
- * surfaced with a canonical `event` field so consumers can branch on a single
- * discriminator.
+ * and sent_email.* bodies are schema-validated.
  */
-export type KnownWebhookEvent =
-  | EmailReceivedEvent
-  | SentEmailEvent
-  | PaymentSettledEvent
-  | PaymentFailedEvent
-  | InteractionX402Event;
+export type KnownWebhookEvent = EmailReceivedEvent | SentEmailEvent;
 
 export type WebhookEvent = KnownWebhookEvent | UnknownEvent;

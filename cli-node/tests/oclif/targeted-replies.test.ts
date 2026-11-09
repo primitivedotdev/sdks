@@ -7,6 +7,7 @@ import {
   inspectTargetedReply,
   readTargetedReplyPage,
 } from "../../src/oclif/targeted-replies.js";
+import { parsedOf } from "./parsed-fixture.js";
 
 const target = {
   sentId: "11111111-1111-4111-8111-111111111111",
@@ -29,6 +30,10 @@ function fixture() {
     received_at: "2026-02-01T00:00:00Z",
     reply_to_sent_email_id: target.sentId,
     replies: [],
+    from_verified: false,
+    from_header_email: null,
+    from_name: null,
+    snippet: null,
     reply_count: 0,
     last_replied_at: null,
     awaiting: "you",
@@ -284,7 +289,7 @@ describe("targeted reply recovery", () => {
     state.detail = {
       ...original,
       parsed: {
-        ...original.parsed,
+        ...parsedOf(original),
         attachments: [{ filename: "interaction.json", size_bytes: 1 }],
       },
     };

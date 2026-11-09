@@ -11,7 +11,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.verified_domain import VerifiedDomain
+  from ..models.updated_domain import UpdatedDomain
 
 
 
@@ -26,11 +26,12 @@ class UpdateDomainResponse200:
     """ 
         Attributes:
             success (bool):
-            data (VerifiedDomain | Unset):
+            data (UpdatedDomain | Unset): A verified domain as `PATCH /domains/{id}` returns it: the verified domain's
+                fields, without `verified`.
      """
 
     success: bool
-    data: VerifiedDomain | Unset = UNSET
+    data: UpdatedDomain | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -38,7 +39,7 @@ class UpdateDomainResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.verified_domain import VerifiedDomain # noqa: PLC0415
+        from ..models.updated_domain import UpdatedDomain # noqa: PLC0415
         success = self.success
 
         data: dict[str, Any] | Unset = UNSET
@@ -60,16 +61,16 @@ class UpdateDomainResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.verified_domain import VerifiedDomain # noqa: PLC0415
+        from ..models.updated_domain import UpdatedDomain # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 
         _data = d.pop("data", UNSET)
-        data: VerifiedDomain | Unset
+        data: UpdatedDomain | Unset
         if isinstance(_data,  Unset):
             data = UNSET
         else:
-            data = VerifiedDomain.from_dict(_data)
+            data = UpdatedDomain.from_dict(_data)
 
 
 

@@ -14,6 +14,7 @@ import {
 } from "../../src/oclif/conversation-status.js";
 import type { ConversationStatusContent } from "../../src/oclif/notify-session-content.js";
 import type { SharedMailWait } from "../../src/oclif/shared-mail-state.js";
+import { parsedOf } from "./parsed-fixture.js";
 
 const directories: string[] = [];
 afterEach(() => {
@@ -134,7 +135,10 @@ describe("exact conversation status", () => {
     expect(
       check({
         ...f.detail,
-        parsed: { ...f.detail.parsed, in_reply_to: ["<other@example.test>"] },
+        parsed: {
+          ...parsedOf(f.detail),
+          in_reply_to: ["<other@example.test>"],
+        },
       }),
     ).toBeNull();
     expect(
@@ -142,7 +146,7 @@ describe("exact conversation status", () => {
         {
           ...f.detail,
           parsed: {
-            ...f.detail.parsed,
+            ...parsedOf(f.detail),
             in_reply_to: ["<other@example.test>"],
             references: [f.messageId, "<other@example.test>"],
           },

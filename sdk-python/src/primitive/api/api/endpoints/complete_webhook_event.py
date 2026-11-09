@@ -14,6 +14,7 @@ from ...models.complete_webhook_response import CompleteWebhookResponse
 from ...models.complete_webhook_sdk_input import CompleteWebhookSdkInput
 from ...models.complete_webhook_stdout_input import CompleteWebhookStdoutInput
 from ...models.error_response import ErrorResponse
+from ...types import UNSET, Unset
 from typing import cast
 from uuid import UUID
 
@@ -23,9 +24,13 @@ def _get_kwargs(
     id: UUID,
     *,
     body: CompleteWebhookExecInput | CompleteWebhookHttpInput | CompleteWebhookSdkInput | CompleteWebhookStdoutInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -146,21 +151,24 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CompleteWebhookExecInput | CompleteWebhookHttpInput | CompleteWebhookSdkInput | CompleteWebhookStdoutInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CompleteWebhookResponse | ErrorResponse]:
     """ Report the outcome of a local webhook delivery attempt
 
      Report normalized handling evidence for the queue, attempt and lease. Required JSON fields:
     queue_id, delivery_id, lease_token, mode, duration_ms. For mode=exec include exit_code; stdout
-    includes write_succeeded; http includes status_code and optional transport_error, error_code,
-    confirmed. Supply this discriminated request with --raw-body in the generated CLI. The server
-    classifies success and retry. Duplicate identical completion is idempotent; a stale lease cannot
-    finish a newer attempt. Exec success means durable input acceptance, not completion of agent
-    reasoning. Only successful HTTP handling with recognized confirmation evidence can confirm content
-    discard. Never send arbitrary handler output or HTTP response bodies.
+    includes write_succeeded; sdk includes accepted (and optional timeout/io transport_error); http
+    includes status_code and optional transport_error, error_code, confirmed. Supply this discriminated
+    request with --raw-body in the generated CLI. The server classifies success and retry. Duplicate
+    identical completion is idempotent; a stale lease cannot finish a newer attempt. Exec success means
+    durable input acceptance, not completion of agent reasoning. Only successful HTTP handling with
+    recognized confirmation evidence can confirm content discard. Never send arbitrary handler output or
+    HTTP response bodies.
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (CompleteWebhookExecInput | CompleteWebhookHttpInput | CompleteWebhookSdkInput |
             CompleteWebhookStdoutInput):
 
@@ -176,6 +184,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         id=id,
 body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -190,21 +199,24 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: CompleteWebhookExecInput | CompleteWebhookHttpInput | CompleteWebhookSdkInput | CompleteWebhookStdoutInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CompleteWebhookResponse | ErrorResponse | None:
     """ Report the outcome of a local webhook delivery attempt
 
      Report normalized handling evidence for the queue, attempt and lease. Required JSON fields:
     queue_id, delivery_id, lease_token, mode, duration_ms. For mode=exec include exit_code; stdout
-    includes write_succeeded; http includes status_code and optional transport_error, error_code,
-    confirmed. Supply this discriminated request with --raw-body in the generated CLI. The server
-    classifies success and retry. Duplicate identical completion is idempotent; a stale lease cannot
-    finish a newer attempt. Exec success means durable input acceptance, not completion of agent
-    reasoning. Only successful HTTP handling with recognized confirmation evidence can confirm content
-    discard. Never send arbitrary handler output or HTTP response bodies.
+    includes write_succeeded; sdk includes accepted (and optional timeout/io transport_error); http
+    includes status_code and optional transport_error, error_code, confirmed. Supply this discriminated
+    request with --raw-body in the generated CLI. The server classifies success and retry. Duplicate
+    identical completion is idempotent; a stale lease cannot finish a newer attempt. Exec success means
+    durable input acceptance, not completion of agent reasoning. Only successful HTTP handling with
+    recognized confirmation evidence can confirm content discard. Never send arbitrary handler output or
+    HTTP response bodies.
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (CompleteWebhookExecInput | CompleteWebhookHttpInput | CompleteWebhookSdkInput |
             CompleteWebhookStdoutInput):
 
@@ -221,6 +233,7 @@ def sync(
         id=id,
 client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -229,21 +242,24 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CompleteWebhookExecInput | CompleteWebhookHttpInput | CompleteWebhookSdkInput | CompleteWebhookStdoutInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CompleteWebhookResponse | ErrorResponse]:
     """ Report the outcome of a local webhook delivery attempt
 
      Report normalized handling evidence for the queue, attempt and lease. Required JSON fields:
     queue_id, delivery_id, lease_token, mode, duration_ms. For mode=exec include exit_code; stdout
-    includes write_succeeded; http includes status_code and optional transport_error, error_code,
-    confirmed. Supply this discriminated request with --raw-body in the generated CLI. The server
-    classifies success and retry. Duplicate identical completion is idempotent; a stale lease cannot
-    finish a newer attempt. Exec success means durable input acceptance, not completion of agent
-    reasoning. Only successful HTTP handling with recognized confirmation evidence can confirm content
-    discard. Never send arbitrary handler output or HTTP response bodies.
+    includes write_succeeded; sdk includes accepted (and optional timeout/io transport_error); http
+    includes status_code and optional transport_error, error_code, confirmed. Supply this discriminated
+    request with --raw-body in the generated CLI. The server classifies success and retry. Duplicate
+    identical completion is idempotent; a stale lease cannot finish a newer attempt. Exec success means
+    durable input acceptance, not completion of agent reasoning. Only successful HTTP handling with
+    recognized confirmation evidence can confirm content discard. Never send arbitrary handler output or
+    HTTP response bodies.
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (CompleteWebhookExecInput | CompleteWebhookHttpInput | CompleteWebhookSdkInput |
             CompleteWebhookStdoutInput):
 
@@ -259,6 +275,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         id=id,
 body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -273,21 +290,24 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: CompleteWebhookExecInput | CompleteWebhookHttpInput | CompleteWebhookSdkInput | CompleteWebhookStdoutInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CompleteWebhookResponse | ErrorResponse | None:
     """ Report the outcome of a local webhook delivery attempt
 
      Report normalized handling evidence for the queue, attempt and lease. Required JSON fields:
     queue_id, delivery_id, lease_token, mode, duration_ms. For mode=exec include exit_code; stdout
-    includes write_succeeded; http includes status_code and optional transport_error, error_code,
-    confirmed. Supply this discriminated request with --raw-body in the generated CLI. The server
-    classifies success and retry. Duplicate identical completion is idempotent; a stale lease cannot
-    finish a newer attempt. Exec success means durable input acceptance, not completion of agent
-    reasoning. Only successful HTTP handling with recognized confirmation evidence can confirm content
-    discard. Never send arbitrary handler output or HTTP response bodies.
+    includes write_succeeded; sdk includes accepted (and optional timeout/io transport_error); http
+    includes status_code and optional transport_error, error_code, confirmed. Supply this discriminated
+    request with --raw-body in the generated CLI. The server classifies success and retry. Duplicate
+    identical completion is idempotent; a stale lease cannot finish a newer attempt. Exec success means
+    durable input acceptance, not completion of agent reasoning. Only successful HTTP handling with
+    recognized confirmation evidence can confirm content discard. Never send arbitrary handler output or
+    HTTP response bodies.
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (CompleteWebhookExecInput | CompleteWebhookHttpInput | CompleteWebhookSdkInput |
             CompleteWebhookStdoutInput):
 
@@ -304,5 +324,6 @@ async def asyncio(
         id=id,
 client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

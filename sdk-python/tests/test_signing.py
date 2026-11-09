@@ -64,7 +64,7 @@ def test_signature_header_constants() -> None:
     assert PRIMITIVE_CONFIRMED_HEADER == "X-Primitive-Confirmed"
 
 
-def test_sign_webhook_payload_uses_stripe_style_format() -> None:
+def test_sign_webhook_payload_uses_timestamped_format() -> None:
     result = sign_webhook_payload("{}", "secret", 1734567890)
     assert result["header"].startswith("t=1734567890,v1=")
     assert len(str(result["v1"])) == 64
@@ -519,7 +519,7 @@ def test_verify_webhook_signature_rejects_modified_timestamp_header() -> None:
         )
 
 
-def test_customer_can_verify_signature_manually_with_stripe_style_format() -> None:
+def test_customer_can_verify_signature_manually_with_timestamped_format() -> None:
     payload = {
         "message_id": "msg_789",
         "from": "sender@example.com",

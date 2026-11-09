@@ -11,6 +11,7 @@ from ... import errors
 from ...models.error_response import ErrorResponse
 from ...models.resend_cli_signup_verification_input import ResendCliSignupVerificationInput
 from ...models.resend_cli_signup_verification_response_200 import ResendCliSignupVerificationResponse200
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -18,9 +19,13 @@ from typing import cast
 def _get_kwargs(
     *,
     body: ResendCliSignupVerificationInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -82,6 +87,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: ResendCliSignupVerificationInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ResendCliSignupVerificationResponse200]:
     """ Resend CLI signup verification code
@@ -90,6 +96,7 @@ def sync_detailed(
     This endpoint does not require an API key.
 
     Args:
+        idempotency_key (str | Unset):
         body (ResendCliSignupVerificationInput):
 
     Raises:
@@ -103,6 +110,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -116,6 +124,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: ResendCliSignupVerificationInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | ResendCliSignupVerificationResponse200 | None:
     """ Resend CLI signup verification code
@@ -124,6 +133,7 @@ def sync(
     This endpoint does not require an API key.
 
     Args:
+        idempotency_key (str | Unset):
         body (ResendCliSignupVerificationInput):
 
     Raises:
@@ -138,6 +148,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -145,6 +156,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: ResendCliSignupVerificationInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ResendCliSignupVerificationResponse200]:
     """ Resend CLI signup verification code
@@ -153,6 +165,7 @@ async def asyncio_detailed(
     This endpoint does not require an API key.
 
     Args:
+        idempotency_key (str | Unset):
         body (ResendCliSignupVerificationInput):
 
     Raises:
@@ -166,6 +179,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -179,6 +193,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: ResendCliSignupVerificationInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | ResendCliSignupVerificationResponse200 | None:
     """ Resend CLI signup verification code
@@ -187,6 +202,7 @@ async def asyncio(
     This endpoint does not require an API key.
 
     Args:
+        idempotency_key (str | Unset):
         body (ResendCliSignupVerificationInput):
 
     Raises:
@@ -201,5 +217,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

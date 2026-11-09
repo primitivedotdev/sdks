@@ -92,6 +92,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_429
 
+    if response.status_code == 503:
+        response_503 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_503
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -110,7 +117,7 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 def sync_detailed(
     address: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | RemoveAgentConnectionResponse200]:
@@ -120,7 +127,7 @@ def sync_detailed(
     their own record; organization owners and admins may remove any record. Disconnect first using
     revokeAgentConnection; an active connection returns 409 connection_not_revoked. Missing or already
     removed records return 404. Mail, address notes, domains and external runtimes are preserved. The
-    same address can be paired again with a new invitation; old credentials and invitations remain
+    removed address stays reserved within the organization; old credentials and invitations remain
     invalid.
 
     Args:
@@ -151,7 +158,7 @@ idempotency_key=idempotency_key,
 def sync(
     address: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | RemoveAgentConnectionResponse200 | None:
@@ -161,7 +168,7 @@ def sync(
     their own record; organization owners and admins may remove any record. Disconnect first using
     revokeAgentConnection; an active connection returns 409 connection_not_revoked. Missing or already
     removed records return 404. Mail, address notes, domains and external runtimes are preserved. The
-    same address can be paired again with a new invitation; old credentials and invitations remain
+    removed address stays reserved within the organization; old credentials and invitations remain
     invalid.
 
     Args:
@@ -187,7 +194,7 @@ idempotency_key=idempotency_key,
 async def asyncio_detailed(
     address: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | RemoveAgentConnectionResponse200]:
@@ -197,7 +204,7 @@ async def asyncio_detailed(
     their own record; organization owners and admins may remove any record. Disconnect first using
     revokeAgentConnection; an active connection returns 409 connection_not_revoked. Missing or already
     removed records return 404. Mail, address notes, domains and external runtimes are preserved. The
-    same address can be paired again with a new invitation; old credentials and invitations remain
+    removed address stays reserved within the organization; old credentials and invitations remain
     invalid.
 
     Args:
@@ -228,7 +235,7 @@ idempotency_key=idempotency_key,
 async def asyncio(
     address: str,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | RemoveAgentConnectionResponse200 | None:
@@ -238,7 +245,7 @@ async def asyncio(
     their own record; organization owners and admins may remove any record. Disconnect first using
     revokeAgentConnection; an active connection returns 409 connection_not_revoked. Missing or already
     removed records return 404. Mail, address notes, domains and external runtimes are preserved. The
-    same address can be paired again with a new invitation; old credentials and invitations remain
+    removed address stays reserved within the organization; old credentials and invitations remain
     invalid.
 
     Args:

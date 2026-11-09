@@ -15,10 +15,11 @@ if TYPE_CHECKING:
   from ..models.function_log_row import FunctionLogRow
   from ..models.function_test_run import FunctionTestRun
   from ..models.function_test_run_delivery import FunctionTestRunDelivery
-  from ..models.function_test_run_inbound_email_type_0 import FunctionTestRunInboundEmailType0
+  from ..models.function_test_run_inbound_email import FunctionTestRunInboundEmail
   from ..models.function_test_run_outbound_request import FunctionTestRunOutboundRequest
   from ..models.function_test_run_reply import FunctionTestRunReply
-  from ..models.function_test_run_send_type_0 import FunctionTestRunSendType0
+  from ..models.function_test_run_send import FunctionTestRunSend
+  from ..models.function_test_run_trace_not_delivered import FunctionTestRunTraceNotDelivered
 
 
 
@@ -43,22 +44,25 @@ class FunctionTestRunTrace:
                   - `completed`: the function webhook completed successfully.
                   - `failed`: webhook delivery exhausted retries.
             test_run (FunctionTestRun):
-            test_send (FunctionTestRunSendType0 | None):
-            inbound_email (FunctionTestRunInboundEmailType0 | None):
+            test_send (FunctionTestRunSend | None):
+            inbound_email (FunctionTestRunInboundEmail | None):
             deliveries (list[FunctionTestRunDelivery]):
             outbound_requests (list[FunctionTestRunOutboundRequest]):
             logs (list[FunctionLogRow]):
             replies (list[FunctionTestRunReply]):
+            not_delivered (FunctionTestRunTraceNotDelivered | Unset): Present when the function's key or state refused the
+                test message: the refusal code and its explanation. Never anything the function wrote.
      """
 
     state: FunctionTestRunState
     test_run: FunctionTestRun
-    test_send: FunctionTestRunSendType0 | None
-    inbound_email: FunctionTestRunInboundEmailType0 | None
+    test_send: FunctionTestRunSend | None
+    inbound_email: FunctionTestRunInboundEmail | None
     deliveries: list[FunctionTestRunDelivery]
     outbound_requests: list[FunctionTestRunOutboundRequest]
     logs: list[FunctionLogRow]
     replies: list[FunctionTestRunReply]
+    not_delivered: FunctionTestRunTraceNotDelivered | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -69,22 +73,23 @@ class FunctionTestRunTrace:
         from ..models.function_log_row import FunctionLogRow # noqa: PLC0415
         from ..models.function_test_run import FunctionTestRun # noqa: PLC0415
         from ..models.function_test_run_delivery import FunctionTestRunDelivery # noqa: PLC0415
-        from ..models.function_test_run_inbound_email_type_0 import FunctionTestRunInboundEmailType0 # noqa: PLC0415
+        from ..models.function_test_run_inbound_email import FunctionTestRunInboundEmail # noqa: PLC0415
         from ..models.function_test_run_outbound_request import FunctionTestRunOutboundRequest # noqa: PLC0415
         from ..models.function_test_run_reply import FunctionTestRunReply # noqa: PLC0415
-        from ..models.function_test_run_send_type_0 import FunctionTestRunSendType0 # noqa: PLC0415
+        from ..models.function_test_run_send import FunctionTestRunSend # noqa: PLC0415
+        from ..models.function_test_run_trace_not_delivered import FunctionTestRunTraceNotDelivered # noqa: PLC0415
         state = self.state.value
 
         test_run = self.test_run.to_dict()
 
         test_send: dict[str, Any] | None
-        if isinstance(self.test_send, FunctionTestRunSendType0):
+        if isinstance(self.test_send, FunctionTestRunSend):
             test_send = self.test_send.to_dict()
         else:
             test_send = self.test_send
 
         inbound_email: dict[str, Any] | None
-        if isinstance(self.inbound_email, FunctionTestRunInboundEmailType0):
+        if isinstance(self.inbound_email, FunctionTestRunInboundEmail):
             inbound_email = self.inbound_email.to_dict()
         else:
             inbound_email = self.inbound_email
@@ -117,6 +122,10 @@ class FunctionTestRunTrace:
 
 
 
+        not_delivered: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.not_delivered, Unset):
+            not_delivered = self.not_delivered.to_dict()
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -130,6 +139,8 @@ class FunctionTestRunTrace:
             "logs": logs,
             "replies": replies,
         })
+        if not_delivered is not UNSET:
+            field_dict["not_delivered"] = not_delivered
 
         return field_dict
 
@@ -140,10 +151,11 @@ class FunctionTestRunTrace:
         from ..models.function_log_row import FunctionLogRow # noqa: PLC0415
         from ..models.function_test_run import FunctionTestRun # noqa: PLC0415
         from ..models.function_test_run_delivery import FunctionTestRunDelivery # noqa: PLC0415
-        from ..models.function_test_run_inbound_email_type_0 import FunctionTestRunInboundEmailType0 # noqa: PLC0415
+        from ..models.function_test_run_inbound_email import FunctionTestRunInboundEmail # noqa: PLC0415
         from ..models.function_test_run_outbound_request import FunctionTestRunOutboundRequest # noqa: PLC0415
         from ..models.function_test_run_reply import FunctionTestRunReply # noqa: PLC0415
-        from ..models.function_test_run_send_type_0 import FunctionTestRunSendType0 # noqa: PLC0415
+        from ..models.function_test_run_send import FunctionTestRunSend # noqa: PLC0415
+        from ..models.function_test_run_trace_not_delivered import FunctionTestRunTraceNotDelivered # noqa: PLC0415
         d = dict(src_dict)
         state = FunctionTestRunState(d.pop("state"))
 
@@ -155,38 +167,38 @@ class FunctionTestRunTrace:
 
 
 
-        def _parse_test_send(data: object) -> FunctionTestRunSendType0 | None:
+        def _parse_test_send(data: object) -> FunctionTestRunSend | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                componentsschemas_function_test_run_send_type_0 = FunctionTestRunSendType0.from_dict(data)
+                test_send_type_1 = FunctionTestRunSend.from_dict(data)
 
 
 
-                return componentsschemas_function_test_run_send_type_0
+                return test_send_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(FunctionTestRunSendType0 | None, data)
+            return cast(FunctionTestRunSend | None, data)
 
         test_send = _parse_test_send(d.pop("test_send"))
 
 
-        def _parse_inbound_email(data: object) -> FunctionTestRunInboundEmailType0 | None:
+        def _parse_inbound_email(data: object) -> FunctionTestRunInboundEmail | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                componentsschemas_function_test_run_inbound_email_type_0 = FunctionTestRunInboundEmailType0.from_dict(data)
+                inbound_email_type_1 = FunctionTestRunInboundEmail.from_dict(data)
 
 
 
-                return componentsschemas_function_test_run_inbound_email_type_0
+                return inbound_email_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(FunctionTestRunInboundEmailType0 | None, data)
+            return cast(FunctionTestRunInboundEmail | None, data)
 
         inbound_email = _parse_inbound_email(d.pop("inbound_email"))
 
@@ -231,6 +243,16 @@ class FunctionTestRunTrace:
             replies.append(replies_item)
 
 
+        _not_delivered = d.pop("not_delivered", UNSET)
+        not_delivered: FunctionTestRunTraceNotDelivered | Unset
+        if isinstance(_not_delivered,  Unset):
+            not_delivered = UNSET
+        else:
+            not_delivered = FunctionTestRunTraceNotDelivered.from_dict(_not_delivered)
+
+
+
+
         function_test_run_trace = cls(
             state=state,
             test_run=test_run,
@@ -240,6 +262,7 @@ class FunctionTestRunTrace:
             outbound_requests=outbound_requests,
             logs=logs,
             replies=replies,
+            not_delivered=not_delivered,
         )
 
 

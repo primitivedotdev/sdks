@@ -47,6 +47,7 @@ class OutboundStatus:
     sendable_domains: list[str]
     domains: list[OutboundStatusDomain]
     next_actions: list[OutboundStatusNextActionsItem]
+    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
 
@@ -79,7 +80,7 @@ class OutboundStatus:
 
 
         field_dict: dict[str, Any] = {}
-
+        field_dict.update(self.additional_properties)
         field_dict.update({
             "ready": ready,
             "summary": summary,
@@ -132,5 +133,22 @@ class OutboundStatus:
             next_actions=next_actions,
         )
 
+
+        outbound_status.additional_properties = d
         return outbound_status
 
+    @property
+    def additional_keys(self) -> list[str]:
+        return list(self.additional_properties.keys())
+
+    def __getitem__(self, key: str) -> Any:
+        return self.additional_properties[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.additional_properties[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.additional_properties[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.additional_properties

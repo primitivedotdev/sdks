@@ -86,12 +86,11 @@ def sync_detailed(
 ) -> Response[ErrorResponse | GetTemplateResponse200]:
     """ Get a function template
 
-     Fetch one approved Function template by slug, including its manifest
-    snapshot and README. The stored source files used for install are not
-    returned.
+     Fetch one approved Function template by slug, including its manifest snapshot and README. The stored
+    source files used for install are not returned.
 
     Args:
-        id (str):
+        id (str): Template slug.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -121,12 +120,11 @@ def sync(
 ) -> ErrorResponse | GetTemplateResponse200 | None:
     """ Get a function template
 
-     Fetch one approved Function template by slug, including its manifest
-    snapshot and README. The stored source files used for install are not
-    returned.
+     Fetch one approved Function template by slug, including its manifest snapshot and README. The stored
+    source files used for install are not returned.
 
     Args:
-        id (str):
+        id (str): Template slug.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -151,12 +149,11 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | GetTemplateResponse200]:
     """ Get a function template
 
-     Fetch one approved Function template by slug, including its manifest
-    snapshot and README. The stored source files used for install are not
-    returned.
+     Fetch one approved Function template by slug, including its manifest snapshot and README. The stored
+    source files used for install are not returned.
 
     Args:
-        id (str):
+        id (str): Template slug.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -186,12 +183,11 @@ async def asyncio(
 ) -> ErrorResponse | GetTemplateResponse200 | None:
     """ Get a function template
 
-     Fetch one approved Function template by slug, including its manifest
-    snapshot and README. The stored source files used for install are not
-    returned.
+     Fetch one approved Function template by slug, including its manifest snapshot and README. The stored
+    source files used for install are not returned.
 
     Args:
-        id (str):
+        id (str): Template slug.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

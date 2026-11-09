@@ -158,3 +158,112 @@ export function createPrimitiveApiClient(
 ) {
   return new PrimitiveApiClient(options);
 }
+
+/** The `details` of a `403 grant_forbidden`. */
+export type GrantForbiddenDetailsShape = {
+  /** The permission the operation requires, such as `mail:send`. */
+  readonly permission: string;
+  /** The kind of credential that was refused, such as `org_key`. */
+  readonly credential_kind: string;
+  /** The grant template, when the credential holds one. */
+  readonly grant_template_key?: string;
+  /** The concrete grant id, when the credential holds one. */
+  readonly credential_grant_id?: string;
+  /** Version of the permission catalog the decision used. */
+  readonly catalog_version: string;
+  /** Why the grant refused, such as `permission_missing`. */
+  readonly reason: string;
+  /** A further permission the operation requires, when that one is missing. */
+  readonly missing?: string;
+  /** The resource the decision was about, when it named one. */
+  readonly resource?: { readonly type: string; readonly id: string };
+};
+
+export const GRANT_FORBIDDEN_CODE = "grant_forbidden";
+
+function readGrantForbiddenDetails(
+  details: unknown,
+): GrantForbiddenDetailsShape {
+  const raw =
+    details && typeof details === "object" && !Array.isArray(details)
+      ? (details as Record<string, unknown>)
+      : {};
+  const text = (key: string): string | undefined =>
+    typeof raw[key] === "string" ? (raw[key] as string) : undefined;
+  const resourceRaw = raw.resource;
+  const resource =
+    resourceRaw &&
+    typeof resourceRaw === "object" &&
+    typeof (resourceRaw as { type?: unknown }).type === "string" &&
+    typeof (resourceRaw as { id?: unknown }).id === "string"
+      ? {
+          type: (resourceRaw as { type: string }).type,
+          id: (resourceRaw as { id: string }).id,
+        }
+      : undefined;
+  const parsed: {
+    -readonly [K in keyof GrantForbiddenDetailsShape]: GrantForbiddenDetailsShape[K];
+  } = {
+    permission: text("permission") ?? "",
+    credential_kind: text("credential_kind") ?? "",
+    catalog_version: text("catalog_version") ?? "",
+    reason: text("reason") ?? "",
+  };
+  const templateKey = text("grant_template_key");
+  if (templateKey !== undefined) parsed.grant_template_key = templateKey;
+  const grantId = text("credential_grant_id");
+  if (grantId !== undefined) parsed.credential_grant_id = grantId;
+  const missing = text("missing");
+  if (missing !== undefined) parsed.missing = missing;
+  if (resource) parsed.resource = resource;
+  return parsed;
+}
+
+/**
+ * A `403 grant_forbidden`: returned when the credential's grant does not
+ * include a permission the operation requires. `permission` and `reason`
+ * say which one and why.
+ *
+ * It is a `PrimitiveApiError`, so existing `instanceof PrimitiveApiError`
+ * checks keep matching.
+ */
+export class GrantForbiddenError extends PrimitiveApiError {
+  /** The parsed `details`; fields the server omitted are empty strings. */
+  readonly grant: GrantForbiddenDetailsShape;
+  /** The permission the operation requires. */
+  readonly permission: string;
+  /** Why the grant refused, such as `permission_missing`. */
+  readonly reason: string;
+
+  constructor(
+    message: string,
+    options: ConstructorParameters<typeof PrimitiveApiError>[1],
+  ) {
+    super(message, { ...options, code: GRANT_FORBIDDEN_CODE });
+    this.name = "GrantForbiddenError";
+    this.grant = readGrantForbiddenDetails(options.details);
+    this.permission = this.grant.permission;
+    this.reason = this.grant.reason;
+  }
+}
+
+/**
+ * Build the error for an API failure: a `GrantForbiddenError` for
+ * `grant_forbidden`, otherwise a `PrimitiveApiError`.
+ */
+export function createPrimitiveApiError(
+  message: string,
+  options: ConstructorParameters<typeof PrimitiveApiError>[1],
+): PrimitiveApiError {
+  if (options.code === GRANT_FORBIDDEN_CODE) {
+    return new GrantForbiddenError(message, options);
+  }
+  return new PrimitiveApiError(message, options);
+}
+
+/** True when `error` is a `403 grant_forbidden` from the API. */
+export function isGrantForbiddenError(
+  error: unknown,
+): error is GrantForbiddenError {
+  return error instanceof GrantForbiddenError;
+}

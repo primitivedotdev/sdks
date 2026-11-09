@@ -324,7 +324,7 @@ function parseEnvFileKeyRef(
   if (sep <= 0 || sep === entry.length - 1) {
     return {
       kind: "error",
-      message: `${flagLabel} expects FILE:KEY (got ${JSON.stringify(entry)}). Example: ${flagLabel} .env.local:OPENAI_KEY`,
+      message: `${flagLabel} expects FILE:KEY (got ${JSON.stringify(entry)}). Example: ${flagLabel} .env.local:MY_API_KEY`,
     };
   }
   const path = entry.slice(0, sep);
@@ -346,7 +346,7 @@ function parseSingleValueEnvFileRef(
   if (sep <= 0 || sep === entry.length - 1) {
     return {
       kind: "error",
-      message: `${flagLabel} expects FILE or FILE:KEY (got ${JSON.stringify(entry)}). Example: ${flagLabel} .env.local or ${flagLabel} .env.local:OPENAI_KEY`,
+      message: `${flagLabel} expects FILE or FILE:KEY (got ${JSON.stringify(entry)}). Example: ${flagLabel} .env.local or ${flagLabel} .env.local:MY_API_KEY`,
     };
   }
   const path = entry.slice(0, sep);

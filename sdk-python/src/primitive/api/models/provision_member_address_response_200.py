@@ -11,7 +11,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.member_address import MemberAddress
+  from ..models.provision_member_address_response_200_data import ProvisionMemberAddressResponse200Data
 
 
 
@@ -26,11 +26,11 @@ class ProvisionMemberAddressResponse200:
     """ 
         Attributes:
             success (bool):
-            data (MemberAddress):
+            data (ProvisionMemberAddressResponse200Data):
      """
 
     success: bool
-    data: MemberAddress
+    data: ProvisionMemberAddressResponse200Data
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -38,7 +38,7 @@ class ProvisionMemberAddressResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.member_address import MemberAddress # noqa: PLC0415
+        from ..models.provision_member_address_response_200_data import ProvisionMemberAddressResponse200Data # noqa: PLC0415
         success = self.success
 
         data = self.data.to_dict()
@@ -57,11 +57,11 @@ class ProvisionMemberAddressResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.member_address import MemberAddress # noqa: PLC0415
+        from ..models.provision_member_address_response_200_data import ProvisionMemberAddressResponse200Data # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 
-        data = MemberAddress.from_dict(d.pop("data"))
+        data = ProvisionMemberAddressResponse200Data.from_dict(d.pop("data"))
 
 
 

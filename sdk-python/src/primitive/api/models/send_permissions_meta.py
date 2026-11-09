@@ -33,10 +33,13 @@ class SendPermissionsMeta:
                 addresses and the list was truncated. False when every
                 known address is represented or when the org holds no
                 address rules at all.
+            replies_only (bool | Unset): Present and true when this credential can only reply to mail it received (it holds
+                mail:reply but not mail:send). The rules in `data` then apply to its replies; it cannot start a new message.
      """
 
     address_cap: int
     truncated: bool
+    replies_only: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -48,6 +51,8 @@ class SendPermissionsMeta:
 
         truncated = self.truncated
 
+        replies_only = self.replies_only
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -55,6 +60,8 @@ class SendPermissionsMeta:
             "address_cap": address_cap,
             "truncated": truncated,
         })
+        if replies_only is not UNSET:
+            field_dict["replies_only"] = replies_only
 
         return field_dict
 
@@ -67,9 +74,12 @@ class SendPermissionsMeta:
 
         truncated = d.pop("truncated")
 
+        replies_only = d.pop("replies_only", UNSET)
+
         send_permissions_meta = cls(
             address_cap=address_cap,
             truncated=truncated,
+            replies_only=replies_only,
         )
 
 

@@ -27,7 +27,7 @@ describe("personal address choice", () => {
     const owner = document.paths["/agent-connections"].get.parameters.find(
       (parameter) => "name" in parameter && parameter.name === "owner",
     );
-    expect(owner).toMatchObject({ schema: { type: "string", enum: ["self"] } });
+    expect(owner).toMatchObject({ schema: { type: "string", const: "self" } });
   });
   it("requires explicit history confirmation and does not retry or choose another address", async () => {
     const bodies: unknown[] = [];

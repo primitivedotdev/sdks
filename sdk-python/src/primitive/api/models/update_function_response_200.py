@@ -11,7 +11,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.function_detail import FunctionDetail
+  from ..models.update_function_result import UpdateFunctionResult
 
 
 
@@ -26,11 +26,12 @@ class UpdateFunctionResponse200:
     """ 
         Attributes:
             success (bool):
-            data (FunctionDetail | Unset): Full function record returned by GET / PUT.
+            data (UpdateFunctionResult | Unset): Returned by PUT /functions/{id}. A code upload answers with the function's
+                name, timestamps and deploy result; a managed build (files) answers with deployment_id and build instead.
      """
 
     success: bool
-    data: FunctionDetail | Unset = UNSET
+    data: UpdateFunctionResult | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -38,7 +39,7 @@ class UpdateFunctionResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.function_detail import FunctionDetail # noqa: PLC0415
+        from ..models.update_function_result import UpdateFunctionResult # noqa: PLC0415
         success = self.success
 
         data: dict[str, Any] | Unset = UNSET
@@ -60,16 +61,16 @@ class UpdateFunctionResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.function_detail import FunctionDetail # noqa: PLC0415
+        from ..models.update_function_result import UpdateFunctionResult # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 
         _data = d.pop("data", UNSET)
-        data: FunctionDetail | Unset
+        data: UpdateFunctionResult | Unset
         if isinstance(_data,  Unset):
             data = UNSET
         else:
-            data = FunctionDetail.from_dict(_data)
+            data = UpdateFunctionResult.from_dict(_data)
 
 
 

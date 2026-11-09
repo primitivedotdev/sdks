@@ -87,14 +87,7 @@ def sync_detailed(
 ) -> Response[DeleteFunctionResponse200 | ErrorResponse]:
     """ Delete a function
 
-     Soft-deletes the function row, removes the script from the edge
-    runtime, and deactivates any route bound to this function so no
-    further inbound mail is delivered. Past deploy history,
-    invocations, and logs are retained.
-
-    Returns 502 if the runtime delete fails partway; the function
-    row stays in place and the call is safe to retry until it
-    succeeds.
+     Delete a hosted inbound function. It stops running on future inbound messages.
 
     Args:
         id (UUID):
@@ -127,14 +120,7 @@ def sync(
 ) -> DeleteFunctionResponse200 | ErrorResponse | None:
     """ Delete a function
 
-     Soft-deletes the function row, removes the script from the edge
-    runtime, and deactivates any route bound to this function so no
-    further inbound mail is delivered. Past deploy history,
-    invocations, and logs are retained.
-
-    Returns 502 if the runtime delete fails partway; the function
-    row stays in place and the call is safe to retry until it
-    succeeds.
+     Delete a hosted inbound function. It stops running on future inbound messages.
 
     Args:
         id (UUID):
@@ -162,14 +148,7 @@ async def asyncio_detailed(
 ) -> Response[DeleteFunctionResponse200 | ErrorResponse]:
     """ Delete a function
 
-     Soft-deletes the function row, removes the script from the edge
-    runtime, and deactivates any route bound to this function so no
-    further inbound mail is delivered. Past deploy history,
-    invocations, and logs are retained.
-
-    Returns 502 if the runtime delete fails partway; the function
-    row stays in place and the call is safe to retry until it
-    succeeds.
+     Delete a hosted inbound function. It stops running on future inbound messages.
 
     Args:
         id (UUID):
@@ -202,14 +181,7 @@ async def asyncio(
 ) -> DeleteFunctionResponse200 | ErrorResponse | None:
     """ Delete a function
 
-     Soft-deletes the function row, removes the script from the edge
-    runtime, and deactivates any route bound to this function so no
-    further inbound mail is delivered. Past deploy history,
-    invocations, and logs are retained.
-
-    Returns 502 if the runtime delete fails partway; the function
-    row stays in place and the call is safe to retry until it
-    succeeds.
+     Delete a hosted inbound function. It stops running on future inbound messages.
 
     Args:
         id (UUID):

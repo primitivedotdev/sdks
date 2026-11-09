@@ -41,8 +41,10 @@ def test_public_connection_list_preserves_inactive_owner_status() -> None:
                         "ownership_kind": "personal",
                         "owner_user_id": "user-1",
                         "owner_active": False,
+                        "owner_member_address": None,
                     }
                 ],
+                "meta": {"limit": 50, "cursor": None},
             },
         )
 
@@ -57,6 +59,8 @@ def test_public_connection_list_preserves_inactive_owner_status() -> None:
     assert result.data[0].ownership_kind.value == "personal"
     assert result.data[0].owner_user_id == "user-1"
     assert result.data[0].owner_active is False
+    assert result.meta.limit == 50
+    assert result.meta.cursor is None
 
 
 def test_public_connection_create_serializes_explicit_ownership() -> None:
@@ -96,8 +100,8 @@ def test_recovered_connection_response_keeps_null_invitation() -> None:
     from primitive.api.models.create_agent_connection_response_200 import (
         CreateAgentConnectionResponse200,
     )
-    from primitive.api.models.create_agent_connection_response_200_data_type_1 import (
-        CreateAgentConnectionResponse200DataType1,
+    from primitive.api.models.create_agent_connection_response_200_data import (
+        CreateAgentConnectionResponse200Data,
     )
 
     connection = {
@@ -113,6 +117,7 @@ def test_recovered_connection_response_keeps_null_invitation() -> None:
         "ownership_kind": "personal",
         "owner_user_id": "user-1",
         "owner_active": True,
+        "owner_member_address": None,
     }
     payload = {
         "success": True,
@@ -132,7 +137,7 @@ def test_recovered_connection_response_keeps_null_invitation() -> None:
             client=client, body=CreateAgentConnectionBody(name="Agent")
         )
     assert isinstance(result, CreateAgentConnectionResponse200)
-    assert isinstance(result.data, CreateAgentConnectionResponse200DataType1)
+    assert isinstance(result.data, CreateAgentConnectionResponse200Data)
     assert result.data.recovered is True
     assert result.data.invitation is None
     assert result.data.connection.address == "agent@example.test"

@@ -39,6 +39,7 @@ class RepeatStopResult:
     stopped_at: datetime.datetime
     stop_reason: None | str
     reply_sent_email_id: None | UUID
+    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
 
@@ -62,7 +63,7 @@ class RepeatStopResult:
 
 
         field_dict: dict[str, Any] = {}
-
+        field_dict.update(self.additional_properties)
         field_dict.update({
             "repeat_id": repeat_id,
             "status": status,
@@ -127,5 +128,22 @@ class RepeatStopResult:
             reply_sent_email_id=reply_sent_email_id,
         )
 
+
+        repeat_stop_result.additional_properties = d
         return repeat_stop_result
 
+    @property
+    def additional_keys(self) -> list[str]:
+        return list(self.additional_properties.keys())
+
+    def __getitem__(self, key: str) -> Any:
+        return self.additional_properties[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.additional_properties[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.additional_properties[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.additional_properties

@@ -1,9 +1,9 @@
 import {
   openapiDocument,
-  operationManifest,
   type PrimitiveOperationManifest,
 } from "@primitivedotdev/api-core";
 import { headerFlagName } from "./api-command.js";
+import { cliOperationManifest } from "./cli-operations.js";
 
 type OpenApiTag = {
   description?: string;
@@ -45,7 +45,7 @@ const BIN_PLACEHOLDER = "__BIN__";
 export function renderFishCompletion(binName: string): string {
   const tagDescriptionByCommand = tagDescriptions();
   const topLevelTopics = [
-    ...new Set(operationManifest.map((operation) => operation.tagCommand)),
+    ...new Set(cliOperationManifest.map((operation) => operation.tagCommand)),
   ];
   const lines = [
     `function __fish_${binName}_needs_command`,
@@ -89,7 +89,7 @@ export function renderFishCompletion(binName: string): string {
   );
 
   for (const topic of topLevelTopics) {
-    const topicOperations = operationManifest.filter(
+    const topicOperations = cliOperationManifest.filter(
       (operation) => operation.tagCommand === topic,
     );
     for (const operation of topicOperations) {

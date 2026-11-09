@@ -77,15 +77,9 @@ def sync_detailed(
 ) -> Response[ErrorResponse | GetInboxStatusResponse200]:
     """ Get inbound inbox readiness
 
-     Returns one consolidated view of inbound domain readiness,
-    webhook/function processing routes, deployed Functions, and
-    recent inbound email activity.
-
-    Agents should call this before guiding a user through inbound
-    setup. It answers the practical questions "can I receive mail",
-    "will anything process that mail", and "what should I do next"
-    without forcing clients to stitch together domains, endpoints,
-    functions, and emails manually.
+     Returns one consolidated view of domain verification, webhook/function processing routes, deployed
+    functions, and recent inbound mail. Agents should use this before guiding users through inbound
+    email setup.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -113,15 +107,9 @@ def sync(
 ) -> ErrorResponse | GetInboxStatusResponse200 | None:
     """ Get inbound inbox readiness
 
-     Returns one consolidated view of inbound domain readiness,
-    webhook/function processing routes, deployed Functions, and
-    recent inbound email activity.
-
-    Agents should call this before guiding a user through inbound
-    setup. It answers the practical questions "can I receive mail",
-    "will anything process that mail", and "what should I do next"
-    without forcing clients to stitch together domains, endpoints,
-    functions, and emails manually.
+     Returns one consolidated view of domain verification, webhook/function processing routes, deployed
+    functions, and recent inbound mail. Agents should use this before guiding users through inbound
+    email setup.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -144,15 +132,9 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | GetInboxStatusResponse200]:
     """ Get inbound inbox readiness
 
-     Returns one consolidated view of inbound domain readiness,
-    webhook/function processing routes, deployed Functions, and
-    recent inbound email activity.
-
-    Agents should call this before guiding a user through inbound
-    setup. It answers the practical questions "can I receive mail",
-    "will anything process that mail", and "what should I do next"
-    without forcing clients to stitch together domains, endpoints,
-    functions, and emails manually.
+     Returns one consolidated view of domain verification, webhook/function processing routes, deployed
+    functions, and recent inbound mail. Agents should use this before guiding users through inbound
+    email setup.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -180,15 +162,9 @@ async def asyncio(
 ) -> ErrorResponse | GetInboxStatusResponse200 | None:
     """ Get inbound inbox readiness
 
-     Returns one consolidated view of inbound domain readiness,
-    webhook/function processing routes, deployed Functions, and
-    recent inbound email activity.
-
-    Agents should call this before guiding a user through inbound
-    setup. It answers the practical questions "can I receive mail",
-    "will anything process that mail", and "what should I do next"
-    without forcing clients to stitch together domains, endpoints,
-    functions, and emails manually.
+     Returns one consolidated view of domain verification, webhook/function processing routes, deployed
+    functions, and recent inbound mail. Agents should use this before guiding users through inbound
+    email setup.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

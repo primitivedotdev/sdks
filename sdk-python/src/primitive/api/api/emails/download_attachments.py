@@ -70,12 +70,47 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_401
 
+    if response.status_code == 403:
+        response_403 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_403
+
     if response.status_code == 404:
         response_404 = ErrorResponse.from_dict(response.json())
 
 
 
         return response_404
+
+    if response.status_code == 409:
+        response_409 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_409
+
+    if response.status_code == 410:
+        response_410 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_410
+
+    if response.status_code == 500:
+        response_500 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_500
+
+    if response.status_code == 503:
+        response_503 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_503
 
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
@@ -101,9 +136,13 @@ def sync_detailed(
 ) -> Response[ErrorResponse | File]:
     """ Download email attachments
 
-     Downloads all attachments as a gzip-compressed tar archive.
-    Authenticates via a signed download token (provided in webhook
-    payloads) or a valid session.
+     Downloads all attachments of a received email as a gzip-compressed tar archive. Authenticate with a
+    dashboard session, an organization API key, an authorized organization OAuth token, an address-bound
+    agent connection key (only for mail received at its own address), or the signed download token a
+    webhook payload carries (the `token` query parameter). A signed token that names who it was issued
+    for works only while that access still reaches the email. Function credentials are refused, and so
+    is access that reaches the mailbox only below content depth (403). Content the organization's sender
+    filter withheld is not served.
 
     Args:
         id (UUID):
@@ -139,9 +178,13 @@ def sync(
 ) -> ErrorResponse | File | None:
     """ Download email attachments
 
-     Downloads all attachments as a gzip-compressed tar archive.
-    Authenticates via a signed download token (provided in webhook
-    payloads) or a valid session.
+     Downloads all attachments of a received email as a gzip-compressed tar archive. Authenticate with a
+    dashboard session, an organization API key, an authorized organization OAuth token, an address-bound
+    agent connection key (only for mail received at its own address), or the signed download token a
+    webhook payload carries (the `token` query parameter). A signed token that names who it was issued
+    for works only while that access still reaches the email. Function credentials are refused, and so
+    is access that reaches the mailbox only below content depth (403). Content the organization's sender
+    filter withheld is not served.
 
     Args:
         id (UUID):
@@ -172,9 +215,13 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | File]:
     """ Download email attachments
 
-     Downloads all attachments as a gzip-compressed tar archive.
-    Authenticates via a signed download token (provided in webhook
-    payloads) or a valid session.
+     Downloads all attachments of a received email as a gzip-compressed tar archive. Authenticate with a
+    dashboard session, an organization API key, an authorized organization OAuth token, an address-bound
+    agent connection key (only for mail received at its own address), or the signed download token a
+    webhook payload carries (the `token` query parameter). A signed token that names who it was issued
+    for works only while that access still reaches the email. Function credentials are refused, and so
+    is access that reaches the mailbox only below content depth (403). Content the organization's sender
+    filter withheld is not served.
 
     Args:
         id (UUID):
@@ -210,9 +257,13 @@ async def asyncio(
 ) -> ErrorResponse | File | None:
     """ Download email attachments
 
-     Downloads all attachments as a gzip-compressed tar archive.
-    Authenticates via a signed download token (provided in webhook
-    payloads) or a valid session.
+     Downloads all attachments of a received email as a gzip-compressed tar archive. Authenticate with a
+    dashboard session, an organization API key, an authorized organization OAuth token, an address-bound
+    agent connection key (only for mail received at its own address), or the signed download token a
+    webhook payload carries (the `token` query parameter). A signed token that names who it was issued
+    for works only while that access still reaches the email. Function credentials are refused, and so
+    is access that reaches the mailbox only below content depth (403). Content the organization's sender
+    filter withheld is not served.
 
     Args:
         id (UUID):

@@ -69,18 +69,6 @@ class ReplyInput:
                 `repeat_recipient_external`). `only_if_recipient_idle_minutes` needs
                 a recipient in your organization (422
                 `repeat_idle_requires_internal_recipient`).
-            headers (ReplyInputHeaders | Unset): Extra headers, as `{ "Name": "value" }`, at most 25. A name is one of
-                `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-
-                Ref`, or a custom `X-` name of letters, digits and hyphens that is not credential-like (a word such as `auth`,
-                `token`, `key`, `secret`, `session` or `bearer`, joined forms included) and not in a reserved family:
-                X-Primitive*, X-Original-*, X-Originating-*, X-Forwarded-*, X-Received*, X-Authenticated*, X-Envelope-*,
-                X-Delivered-To, X-Apparently-To, X-Failed-Recipients, X-Loop, X-Priority, X-MSMail-*, X-MS-*, X-Microsoft-*,
-                X-Forefront-*, X-Exchange-*, X-Google-*, X-GM-*, X-Apple-*, X-Yahoo-*, X-YMail-*, X-AOL-*, X-Spam*, X-Virus-*,
-                X-Proofpoint-*, X-Barracuda-*, X-Rspamd-*, X-Mimecast-*, X-IronPort-*, X-Sophos-*, X-Report-Abuse*, X-CSA-*.
-                Names compare case-insensitively (`_` and `.` count as `-` for families); a repeated or any other name is a
-                `validation_error`. Values: 1 to 200 printable ASCII characters. Custom headers are sent as spelled, are not
-                DKIM-signed, and can be searched with `header` on `GET /sent-emails`. Example: {'X-Campaign-Id': 'spring-sale',
-                'Auto-Submitted': 'auto-generated'}.
             if_latest_message_id (UUID | Unset): Send only if this message id is still the newest message in the thread this
                 send joins, as this credential can see it. Newest means the message that joined the thread last, in the order
                 messages were attached to it, not by timestamp: a message accepted earlier but attached later is newer. Messages
@@ -100,6 +88,23 @@ class ReplyInput:
                 deduplication window, returns the original result without checking again, and a request that differs only in
                 if_latest_message_id is not a replay. On /send-mail it requires in_reply_to; it cannot be combined with
                 scheduled_at or repeat, because it is checked when the request is accepted.
+            fyi (bool | Unset): Send an informational message the receiver need not answer or wake for. It is sent as an
+                `ack` signal (status `received`) about the message in `in_reply_to`, whose note is `body_text` (at most 2000
+                characters, which may be omitted). Receivers see it as `fyi: true`. Plain text only: it cannot be combined with
+                `body_html`, `attachments`, `payload_attachments` or `scheduled_at`, and on `/send-mail` it requires
+                `in_reply_to`.
+            headers (ReplyInputHeaders | Unset): Extra headers, as `{ "Name": "value" }`, at most 25. A name is one of
+                `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-
+                Ref`, `X-Primitive-Function-Hop`, or a custom `X-` name of letters, digits and hyphens that is not credential-
+                like (a word such as `auth`, `token`, `key`, `secret`, `session` or `bearer`, joined forms included) and not in
+                a reserved family: X-Primitive*, X-Original-*, X-Originating-*, X-Forwarded-*, X-Received*, X-Authenticated*,
+                X-Envelope-*, X-Delivered-To, X-Apparently-To, X-Failed-Recipients, X-Loop, X-Priority, X-MSMail-*, X-MS-*,
+                X-Microsoft-*, X-Forefront-*, X-Exchange-*, X-Google-*, X-GM-*, X-Apple-*, X-Yahoo-*, X-YMail-*, X-AOL-*,
+                X-Spam*, X-Virus-*, X-Proofpoint-*, X-Barracuda-*, X-Rspamd-*, X-Mimecast-*, X-IronPort-*, X-Sophos-*, X-Report-
+                Abuse*, X-CSA-*. Names compare case-insensitively (`_` and `.` count as `-` for families); a repeated or any
+                other name is a `validation_error`. Values: 1 to 200 printable ASCII characters. Custom headers are sent as
+                spelled, are not DKIM-signed, and can be searched with `header` on `GET /sent-emails`. Example: {'X-Campaign-
+                Id': 'spring-sale', 'Auto-Submitted': 'auto-generated'}.
      """
 
     body_text: str | Unset = UNSET
@@ -109,8 +114,9 @@ class ReplyInput:
     reply_all: bool | Unset = UNSET
     attachments: list[SendMailAttachment] | Unset = UNSET
     repeat: RepeatInput | Unset = UNSET
-    headers: ReplyInputHeaders | Unset = UNSET
     if_latest_message_id: UUID | Unset = UNSET
+    fyi: bool | Unset = UNSET
+    headers: ReplyInputHeaders | Unset = UNSET
 
 
 
@@ -143,13 +149,15 @@ class ReplyInput:
         if not isinstance(self.repeat, Unset):
             repeat = self.repeat.to_dict()
 
-        headers: dict[str, Any] | Unset = UNSET
-        if not isinstance(self.headers, Unset):
-            headers = self.headers.to_dict()
-
         if_latest_message_id: str | Unset = UNSET
         if not isinstance(self.if_latest_message_id, Unset):
             if_latest_message_id = str(self.if_latest_message_id)
+
+        fyi = self.fyi
+
+        headers: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.headers, Unset):
+            headers = self.headers.to_dict()
 
 
         field_dict: dict[str, Any] = {}
@@ -170,10 +178,12 @@ class ReplyInput:
             field_dict["attachments"] = attachments
         if repeat is not UNSET:
             field_dict["repeat"] = repeat
-        if headers is not UNSET:
-            field_dict["headers"] = headers
         if if_latest_message_id is not UNSET:
             field_dict["if_latest_message_id"] = if_latest_message_id
+        if fyi is not UNSET:
+            field_dict["fyi"] = fyi
+        if headers is not UNSET:
+            field_dict["headers"] = headers
 
         return field_dict
 
@@ -217,22 +227,24 @@ class ReplyInput:
 
 
 
-        _headers = d.pop("headers", UNSET)
-        headers: ReplyInputHeaders | Unset
-        if isinstance(_headers,  Unset):
-            headers = UNSET
-        else:
-            headers = ReplyInputHeaders.from_dict(_headers)
-
-
-
-
         _if_latest_message_id = d.pop("if_latest_message_id", UNSET)
         if_latest_message_id: UUID | Unset
         if isinstance(_if_latest_message_id,  Unset):
             if_latest_message_id = UNSET
         else:
             if_latest_message_id = UUID(_if_latest_message_id)
+
+
+
+
+        fyi = d.pop("fyi", UNSET)
+
+        _headers = d.pop("headers", UNSET)
+        headers: ReplyInputHeaders | Unset
+        if isinstance(_headers,  Unset):
+            headers = UNSET
+        else:
+            headers = ReplyInputHeaders.from_dict(_headers)
 
 
 
@@ -245,8 +257,9 @@ class ReplyInput:
             reply_all=reply_all,
             attachments=attachments,
             repeat=repeat,
-            headers=headers,
             if_latest_message_id=if_latest_message_id,
+            fyi=fyi,
+            headers=headers,
         )
 
         return reply_input

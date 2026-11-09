@@ -1,0 +1,132 @@
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+
+from attrs import define as _attrs_define
+from attrs import field as _attrs_field
+
+from ..types import UNSET, Unset
+
+from ..models.test_email_rule_on_sample_request_evaluation_scope import TestEmailRuleOnSampleRequestEvaluationScope
+from typing import cast
+from uuid import UUID
+
+if TYPE_CHECKING:
+  from ..models.test_email_rule_on_sample_request_email import TestEmailRuleOnSampleRequestEmail
+  from ..models.test_email_rule_on_sample_request_tree import TestEmailRuleOnSampleRequestTree
+
+
+
+
+
+T = TypeVar("T", bound="TestEmailRuleOnSampleRequest")
+
+
+
+@_attrs_define
+class TestEmailRuleOnSampleRequest:
+    """ 
+        Attributes:
+            email (TestEmailRuleOnSampleRequestEmail): A made-up received email. Nothing about it is stored.
+            tree (TestEmailRuleOnSampleRequestTree | Unset): An unsaved rule tree, as POST /email-rules/compile returned it.
+                Give tree or rule_id, not both.
+            evaluation_scope (TestEmailRuleOnSampleRequestEvaluationScope | Unset): Whose mail an unsaved tree runs over.
+                author, the default: all the mail you can read. own_mailboxes: only mail to your own addresses. Only with tree:
+                a saved rule uses its own.
+            rule_id (UUID | Unset): A saved rule you can see. Its current version is tested.
+     """
+
+    email: TestEmailRuleOnSampleRequestEmail
+    tree: TestEmailRuleOnSampleRequestTree | Unset = UNSET
+    evaluation_scope: TestEmailRuleOnSampleRequestEvaluationScope | Unset = UNSET
+    rule_id: UUID | Unset = UNSET
+
+
+
+
+
+    def to_dict(self) -> dict[str, Any]:
+        from ..models.test_email_rule_on_sample_request_email import TestEmailRuleOnSampleRequestEmail # noqa: PLC0415
+        from ..models.test_email_rule_on_sample_request_tree import TestEmailRuleOnSampleRequestTree # noqa: PLC0415
+        email = self.email.to_dict()
+
+        tree: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.tree, Unset):
+            tree = self.tree.to_dict()
+
+        evaluation_scope: str | Unset = UNSET
+        if not isinstance(self.evaluation_scope, Unset):
+            evaluation_scope = self.evaluation_scope.value
+
+
+        rule_id: str | Unset = UNSET
+        if not isinstance(self.rule_id, Unset):
+            rule_id = str(self.rule_id)
+
+
+        field_dict: dict[str, Any] = {}
+
+        field_dict.update({
+            "email": email,
+        })
+        if tree is not UNSET:
+            field_dict["tree"] = tree
+        if evaluation_scope is not UNSET:
+            field_dict["evaluation_scope"] = evaluation_scope
+        if rule_id is not UNSET:
+            field_dict["rule_id"] = rule_id
+
+        return field_dict
+
+
+
+    @classmethod
+    def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.test_email_rule_on_sample_request_email import TestEmailRuleOnSampleRequestEmail # noqa: PLC0415
+        from ..models.test_email_rule_on_sample_request_tree import TestEmailRuleOnSampleRequestTree # noqa: PLC0415
+        d = dict(src_dict)
+        email = TestEmailRuleOnSampleRequestEmail.from_dict(d.pop("email"))
+
+
+
+
+        _tree = d.pop("tree", UNSET)
+        tree: TestEmailRuleOnSampleRequestTree | Unset
+        if isinstance(_tree,  Unset):
+            tree = UNSET
+        else:
+            tree = TestEmailRuleOnSampleRequestTree.from_dict(_tree)
+
+
+
+
+        _evaluation_scope = d.pop("evaluation_scope", UNSET)
+        evaluation_scope: TestEmailRuleOnSampleRequestEvaluationScope | Unset
+        if isinstance(_evaluation_scope,  Unset):
+            evaluation_scope = UNSET
+        else:
+            evaluation_scope = TestEmailRuleOnSampleRequestEvaluationScope(_evaluation_scope)
+
+
+
+
+        _rule_id = d.pop("rule_id", UNSET)
+        rule_id: UUID | Unset
+        if isinstance(_rule_id,  Unset):
+            rule_id = UNSET
+        else:
+            rule_id = UUID(_rule_id)
+
+
+
+
+        test_email_rule_on_sample_request = cls(
+            email=email,
+            tree=tree,
+            evaluation_scope=evaluation_scope,
+            rule_id=rule_id,
+        )
+
+        return test_email_rule_on_sample_request
+

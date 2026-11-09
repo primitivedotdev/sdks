@@ -96,13 +96,13 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 def sync_detailed(
     id: UUID,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetTemplateInstallResponse200]:
     """ Get template install status
 
-     Fetch the current state of a template install. Reads may advance the
-    self-test phase when a reply effect has been observed.
+     Fetch the current state of a template install. Reads may advance the self-test phase when a reply
+    effect has been observed.
 
     Args:
         id (UUID):
@@ -130,13 +130,13 @@ def sync_detailed(
 def sync(
     id: UUID,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetTemplateInstallResponse200 | None:
     """ Get template install status
 
-     Fetch the current state of a template install. Reads may advance the
-    self-test phase when a reply effect has been observed.
+     Fetch the current state of a template install. Reads may advance the self-test phase when a reply
+    effect has been observed.
 
     Args:
         id (UUID):
@@ -159,13 +159,13 @@ client=client,
 async def asyncio_detailed(
     id: UUID,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetTemplateInstallResponse200]:
     """ Get template install status
 
-     Fetch the current state of a template install. Reads may advance the
-    self-test phase when a reply effect has been observed.
+     Fetch the current state of a template install. Reads may advance the self-test phase when a reply
+    effect has been observed.
 
     Args:
         id (UUID):
@@ -193,13 +193,13 @@ async def asyncio_detailed(
 async def asyncio(
     id: UUID,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetTemplateInstallResponse200 | None:
     """ Get template install status
 
-     Fetch the current state of a template install. Reads may advance the
-    self-test phase when a reply effect has been observed.
+     Fetch the current state of a template install. Reads may advance the self-test phase when a reply
+    effect has been observed.
 
     Args:
         id (UUID):

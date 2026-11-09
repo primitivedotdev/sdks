@@ -10,7 +10,7 @@
  * not proof that Primitive sent the message: use the server-verified `repeat`
  * marker on the email for that.
  */
-import type { InteractionEnvelope } from "../x402/sign.js";
+import type { InteractionEnvelope } from "./envelope.js";
 import { parseInteractionEnvelope } from "./index.js";
 
 export const REPEAT_TICK_PROTOCOL = "repeat.tick";

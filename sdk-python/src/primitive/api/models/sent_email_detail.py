@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.sent_email_status import SentEmailStatus
+from ..models.sent_email_summary_interaction_hint import SentEmailSummaryInteractionHint
 from ..models.sent_email_summary_truncated_fields_item import SentEmailSummaryTruncatedFieldsItem
 from typing import cast
 from uuid import UUID
@@ -17,9 +18,11 @@ import datetime
 if TYPE_CHECKING:
   from ..models.gate_denial import GateDenial
   from ..models.included_message_headers import IncludedMessageHeaders
-  from ..models.presence_control_type_0 import PresenceControlType0
+  from ..models.presence_control import PresenceControl
   from ..models.sent_email_detail_tags_type_0_item import SentEmailDetailTagsType0Item
   from ..models.sent_email_summary_attachments_item import SentEmailSummaryAttachmentsItem
+  from ..models.sent_email_summary_delivery_recipients_type_0_item import SentEmailSummaryDeliveryRecipientsType0Item
+  from ..models.sent_email_summary_hold import SentEmailSummaryHold
   from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0
   from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0
 
@@ -78,19 +81,34 @@ class SentEmailDetail:
             to_header (str): Raw `To:` header as sent on the wire, including any
                 display name.
             to_address (str): Bare email address parsed from `to_header`.
-            subject (str):
+            subject (None | str): Null once the content of a send refused by a gate has been discarded
+                (`content_discarded_at` set).
             body_size_bytes (int): Total UTF-8 byte length of `body_text` + `body_html`.
                 Surfaced on the list endpoint so callers can see "this
                 row has a 4MB body" without fetching it.
+            interaction_hint (SentEmailSummaryInteractionHint): How to place this send in a timeline without downloading it,
+                decided when it was sent from the `interaction.json` part it carried (no authentication check: the sending
+                organization wrote it). Same values as on received email except that a send is never `pending`. Decided once by
+                the server from the message's authoritative `interaction.json` part, and for received mail only when a passing
+                DKIM signature covering From and Content-Type authenticates the From that wrote it; the `X-Primitive-
+                Interaction` header is never used, so an unsigned or forged message is always `none`. `status`: a pure status
+                signal (`read`, `working`, `typing`, or an `ack` that is the strict signal shape), to be shown as a property of
+                the message it is about, not as a row. `card`: an interaction that renders as its own timeline item (`ack-
+                request`, `wake.dispatch`, `primitive.contact`, `repeat.tick`, `repeat.stop`, and the reserved `approval` and
+                `schedule.send`). `none`: ordinary mail, including any interaction kind not listed. Treat an unfamiliar value as
+                `none`.
+            interaction_kind (None | str): The `<protocol>/<version>` the hint was decided from when `interaction_hint` is
+                `status` or `card`; null otherwise.
+            snippet (None | str): A plain-text preview of `body_text` (never `body_html`), computed once when the message is
+                stored: quoted replies (an "On ... wrote:" line, an "Original Message" separator, a From/Sent header block, `>`
+                lines) and a `-- ` signature are cut off, whitespace is collapsed to single spaces, and the result is at most
+                200 characters. A message with no text body, or with nothing left once quotes and the signature are cut (a
+                quote-only reply), has no snippet. It is not a summary and may end mid-word; read the full body from the detail
+                endpoint. Null when the send has no text body or its content was discarded.
             client_idempotency_key (None | str | Unset): Effective idempotency key used for this send. If the
                 caller passed the `Idempotency-Key` header, this is
                 that value; otherwise it's a server-derived hash of
                 the canonical request payload.
-            recipient_count (int | None | Unset): Every recipient of the send, To, Cc and Bcc together, each address counted
-                once: the size of `to_addresses`, `cc` and `bcc` combined without duplicates. On a mail relay send `bcc` lists
-                every hidden recipient. Null when the request uses an address-bound agent connection key whose address is not
-                the sender, because the count would reveal Bcc recipients. The `sent_email` object of the `sent_email.*` webhook
-                events carries the same field.
             content_discarded_at (datetime.datetime | None | Unset): Timestamp at which the bodies were discarded by an
                 entitlement-driven retention policy. Null when bodies
                 are still present. The detail endpoint returns
@@ -119,7 +137,7 @@ class SentEmailDetail:
                 Populated on terminal delivery statuses; may be null
                 on a deferred where the agent never got an SMTP-level
                 response (TCP refused, DNS failed, TLS handshake
-                failed). `smtp_response_text` still carries Postfix's
+                failed). `smtp_response_text` still carries the relay's
                 descriptive text in those cases.
             smtp_response_text (None | str | Unset): Free-form text portion of the receiver's SMTP
                 response. The most useful debugging signal on a
@@ -151,12 +169,15 @@ class SentEmailDetail:
                 ordinary immediate sends.
             canceled_at (datetime.datetime | None | Unset): When a scheduled send was canceled. Null unless the row
                 reached the `canceled` status.
-            presence_control (None | PresenceControlType0 | Unset):
+            presence_control (None | PresenceControl | Unset):
             repeat (None | SentEmailSummaryRepeatType0 | Unset): Set when Primitive sent this message as part of a repeating
                 send. Resolved from Primitive's own records, never from the message content. Null on every other message and on
                 servers that predate repeating sends.
-            sender_member (None | SentEmailSummarySenderMemberType0 | Unset): Verified human authorship, projected only
-                within the member organization. Historical attribution is not current sending or owner authority.
+            sender_member (None | SentEmailSummarySenderMemberType0 | Unset):
+            delivery_recipients (list[SentEmailSummaryDeliveryRecipientsType0Item] | None | Unset): Per-recipient SMTP
+                outcomes, including partial failures even when the aggregate send status is delivered. Sender-only; empty when
+                withheld from another recipient or when legacy metadata has no outcomes. Null means stored delivery metadata is
+                unreadable. Optional on older payloads.
             body_text (None | str | Unset): Plain-text body sent on the wire. Null when the
                 send carried only an HTML body, or when bodies have
                 been discarded post-send (`content_discarded_at`
@@ -172,16 +193,13 @@ class SentEmailDetail:
             truncated (bool | Unset): With `include`: true when a body on this row was cut or left out.
             truncated_fields (list[SentEmailSummaryTruncatedFieldsItem] | Unset): With `include`: the body fields on this
                 row that were cut or left out.
-            attachments_size_bytes (int | Unset): Original decoded attachment byte total accepted for this send, not the
-                compressed archive size. It may exceed the retained inline total after offloading.
-            attachments_complete (bool | Unset): Whether attachments enumerates the complete original submitted attachment
-                set, including zero-byte and inline CID parts. True requires no submitted payload-reference, offloaded, or
-                visibility-filtered attachment to be omitted, retained content, and a published archive when the attachment
-                inventory is nonempty. False or absent provides no completeness proof, including for legacy or discarded
-                content. This field grants no download access and has no interaction semantics.
-            attachments_download_available (bool | Unset): Whether an inline attachment archive has been successfully
-                retained and is available for download. Download authorization is checked separately; address-bound agent
-                connection keys cannot download archives.
+            recipient_count (int | None | Unset): Every recipient of the send, To, Cc and Bcc together, each address counted
+                once: the size of `to_addresses`, `cc` and `bcc` combined without duplicates. On a mail relay send `bcc` lists
+                every hidden recipient. Null when the request uses an address-bound agent connection key whose address is not
+                the sender, because the count would reveal Bcc recipients.
+            hold (SentEmailSummaryHold | Unset): Only on a held scheduled send: its OAuth grant was revoked after refresh
+                token reuse, so it waits until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days.
+                Status stays scheduled.
             to_addresses (list[str] | None | Unset): Every normalized To recipient of the send. Always populated on
                 new sends (a single-recipient send carries a one-element array);
                 null only on records that predate this field. `to_address` keeps
@@ -200,6 +218,16 @@ class SentEmailDetail:
                 the send had none. Also null when the request uses an
                 address-bound agent connection key whose address is not the
                 sender, because tags are withheld from recipients.
+            attachments_size_bytes (int | Unset): Original decoded attachment byte total accepted for this send, not the
+                compressed archive size. It may exceed the retained inline total after offloading.
+            attachments_download_available (bool | Unset): Whether an inline attachment archive has been successfully
+                retained and is available for download. Download authorization is checked separately; address-bound agent
+                connection keys cannot download archives.
+            attachments_complete (bool | Unset): True only when the returned attachments enumerate the complete original
+                submitted attachment set, including zero-byte and inline CID parts, with retained content and a published
+                archive for nonempty inventory. False when any submitted payload-reference, offloaded, or visibility-filtered
+                attachment is omitted, or completeness is unknown. False or absent does not prove absence of attachments. This
+                field does not grant download access.
      """
 
     id: UUID
@@ -212,10 +240,12 @@ class SentEmailDetail:
     from_address: str
     to_header: str
     to_address: str
-    subject: str
+    subject: None | str
     body_size_bytes: int
+    interaction_hint: SentEmailSummaryInteractionHint
+    interaction_kind: None | str
+    snippet: None | str
     client_idempotency_key: None | str | Unset = UNSET
-    recipient_count: int | None | Unset = UNSET
     content_discarded_at: datetime.datetime | None | Unset = UNSET
     message_id: None | str | Unset = UNSET
     in_reply_to: None | str | Unset = UNSET
@@ -234,23 +264,26 @@ class SentEmailDetail:
     request_id: None | str | Unset = UNSET
     scheduled_at: datetime.datetime | None | Unset = UNSET
     canceled_at: datetime.datetime | None | Unset = UNSET
-    presence_control: None | PresenceControlType0 | Unset = UNSET
+    presence_control: None | PresenceControl | Unset = UNSET
     repeat: None | SentEmailSummaryRepeatType0 | Unset = UNSET
     sender_member: None | SentEmailSummarySenderMemberType0 | Unset = UNSET
+    delivery_recipients: list[SentEmailSummaryDeliveryRecipientsType0Item] | None | Unset = UNSET
     body_text: None | str | Unset = UNSET
     body_html: None | str | Unset = UNSET
     headers: IncludedMessageHeaders | None | Unset = UNSET
     attachments: list[SentEmailSummaryAttachmentsItem] | Unset = UNSET
     truncated: bool | Unset = UNSET
     truncated_fields: list[SentEmailSummaryTruncatedFieldsItem] | Unset = UNSET
-    attachments_size_bytes: int | Unset = UNSET
-    attachments_complete: bool | Unset = UNSET
-    attachments_download_available: bool | Unset = UNSET
+    recipient_count: int | None | Unset = UNSET
+    hold: SentEmailSummaryHold | Unset = UNSET
     to_addresses: list[str] | None | Unset = UNSET
     cc: list[str] | None | Unset = UNSET
     bcc: list[str] | None | Unset = UNSET
     reply_to: list[str] | None | Unset = UNSET
     tags: list[SentEmailDetailTagsType0Item] | None | Unset = UNSET
+    attachments_size_bytes: int | Unset = UNSET
+    attachments_download_available: bool | Unset = UNSET
+    attachments_complete: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -260,9 +293,11 @@ class SentEmailDetail:
     def to_dict(self) -> dict[str, Any]:
         from ..models.gate_denial import GateDenial # noqa: PLC0415
         from ..models.included_message_headers import IncludedMessageHeaders # noqa: PLC0415
-        from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
+        from ..models.presence_control import PresenceControl # noqa: PLC0415
         from ..models.sent_email_detail_tags_type_0_item import SentEmailDetailTagsType0Item # noqa: PLC0415
         from ..models.sent_email_summary_attachments_item import SentEmailSummaryAttachmentsItem # noqa: PLC0415
+        from ..models.sent_email_summary_delivery_recipients_type_0_item import SentEmailSummaryDeliveryRecipientsType0Item # noqa: PLC0415
+        from ..models.sent_email_summary_hold import SentEmailSummaryHold # noqa: PLC0415
         from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0 # noqa: PLC0415
         from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0 # noqa: PLC0415
         id = str(self.id)
@@ -285,21 +320,24 @@ class SentEmailDetail:
 
         to_address = self.to_address
 
+        subject: None | str
         subject = self.subject
 
         body_size_bytes = self.body_size_bytes
+
+        interaction_hint = self.interaction_hint.value
+
+        interaction_kind: None | str
+        interaction_kind = self.interaction_kind
+
+        snippet: None | str
+        snippet = self.snippet
 
         client_idempotency_key: None | str | Unset
         if isinstance(self.client_idempotency_key, Unset):
             client_idempotency_key = UNSET
         else:
             client_idempotency_key = self.client_idempotency_key
-
-        recipient_count: int | None | Unset
-        if isinstance(self.recipient_count, Unset):
-            recipient_count = UNSET
-        else:
-            recipient_count = self.recipient_count
 
         content_discarded_at: None | str | Unset
         if isinstance(self.content_discarded_at, Unset):
@@ -429,7 +467,7 @@ class SentEmailDetail:
         presence_control: dict[str, Any] | None | Unset
         if isinstance(self.presence_control, Unset):
             presence_control = UNSET
-        elif isinstance(self.presence_control, PresenceControlType0):
+        elif isinstance(self.presence_control, PresenceControl):
             presence_control = self.presence_control.to_dict()
         else:
             presence_control = self.presence_control
@@ -449,6 +487,19 @@ class SentEmailDetail:
             sender_member = self.sender_member.to_dict()
         else:
             sender_member = self.sender_member
+
+        delivery_recipients: list[dict[str, Any]] | None | Unset
+        if isinstance(self.delivery_recipients, Unset):
+            delivery_recipients = UNSET
+        elif isinstance(self.delivery_recipients, list):
+            delivery_recipients = []
+            for delivery_recipients_type_0_item_data in self.delivery_recipients:
+                delivery_recipients_type_0_item = delivery_recipients_type_0_item_data.to_dict()
+                delivery_recipients.append(delivery_recipients_type_0_item)
+
+
+        else:
+            delivery_recipients = self.delivery_recipients
 
         body_text: None | str | Unset
         if isinstance(self.body_text, Unset):
@@ -490,11 +541,15 @@ class SentEmailDetail:
 
 
 
-        attachments_size_bytes = self.attachments_size_bytes
+        recipient_count: int | None | Unset
+        if isinstance(self.recipient_count, Unset):
+            recipient_count = UNSET
+        else:
+            recipient_count = self.recipient_count
 
-        attachments_complete = self.attachments_complete
-
-        attachments_download_available = self.attachments_download_available
+        hold: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.hold, Unset):
+            hold = self.hold.to_dict()
 
         to_addresses: list[str] | None | Unset
         if isinstance(self.to_addresses, Unset):
@@ -549,6 +604,12 @@ class SentEmailDetail:
         else:
             tags = self.tags
 
+        attachments_size_bytes = self.attachments_size_bytes
+
+        attachments_download_available = self.attachments_download_available
+
+        attachments_complete = self.attachments_complete
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -565,11 +626,12 @@ class SentEmailDetail:
             "to_address": to_address,
             "subject": subject,
             "body_size_bytes": body_size_bytes,
+            "interaction_hint": interaction_hint,
+            "interaction_kind": interaction_kind,
+            "snippet": snippet,
         })
         if client_idempotency_key is not UNSET:
             field_dict["client_idempotency_key"] = client_idempotency_key
-        if recipient_count is not UNSET:
-            field_dict["recipient_count"] = recipient_count
         if content_discarded_at is not UNSET:
             field_dict["content_discarded_at"] = content_discarded_at
         if message_id is not UNSET:
@@ -612,6 +674,8 @@ class SentEmailDetail:
             field_dict["repeat"] = repeat
         if sender_member is not UNSET:
             field_dict["sender_member"] = sender_member
+        if delivery_recipients is not UNSET:
+            field_dict["delivery_recipients"] = delivery_recipients
         if body_text is not UNSET:
             field_dict["body_text"] = body_text
         if body_html is not UNSET:
@@ -624,12 +688,10 @@ class SentEmailDetail:
             field_dict["truncated"] = truncated
         if truncated_fields is not UNSET:
             field_dict["truncated_fields"] = truncated_fields
-        if attachments_size_bytes is not UNSET:
-            field_dict["attachments_size_bytes"] = attachments_size_bytes
-        if attachments_complete is not UNSET:
-            field_dict["attachments_complete"] = attachments_complete
-        if attachments_download_available is not UNSET:
-            field_dict["attachments_download_available"] = attachments_download_available
+        if recipient_count is not UNSET:
+            field_dict["recipient_count"] = recipient_count
+        if hold is not UNSET:
+            field_dict["hold"] = hold
         if to_addresses is not UNSET:
             field_dict["to_addresses"] = to_addresses
         if cc is not UNSET:
@@ -640,6 +702,12 @@ class SentEmailDetail:
             field_dict["reply_to"] = reply_to
         if tags is not UNSET:
             field_dict["tags"] = tags
+        if attachments_size_bytes is not UNSET:
+            field_dict["attachments_size_bytes"] = attachments_size_bytes
+        if attachments_download_available is not UNSET:
+            field_dict["attachments_download_available"] = attachments_download_available
+        if attachments_complete is not UNSET:
+            field_dict["attachments_complete"] = attachments_complete
 
         return field_dict
 
@@ -649,9 +717,11 @@ class SentEmailDetail:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.gate_denial import GateDenial # noqa: PLC0415
         from ..models.included_message_headers import IncludedMessageHeaders # noqa: PLC0415
-        from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
+        from ..models.presence_control import PresenceControl # noqa: PLC0415
         from ..models.sent_email_detail_tags_type_0_item import SentEmailDetailTagsType0Item # noqa: PLC0415
         from ..models.sent_email_summary_attachments_item import SentEmailSummaryAttachmentsItem # noqa: PLC0415
+        from ..models.sent_email_summary_delivery_recipients_type_0_item import SentEmailSummaryDeliveryRecipientsType0Item # noqa: PLC0415
+        from ..models.sent_email_summary_hold import SentEmailSummaryHold # noqa: PLC0415
         from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0 # noqa: PLC0415
         from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0 # noqa: PLC0415
         d = dict(src_dict)
@@ -690,9 +760,36 @@ class SentEmailDetail:
 
         to_address = d.pop("to_address")
 
-        subject = d.pop("subject")
+        def _parse_subject(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        subject = _parse_subject(d.pop("subject"))
+
 
         body_size_bytes = d.pop("body_size_bytes")
+
+        interaction_hint = SentEmailSummaryInteractionHint(d.pop("interaction_hint"))
+
+
+
+
+        def _parse_interaction_kind(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        interaction_kind = _parse_interaction_kind(d.pop("interaction_kind"))
+
+
+        def _parse_snippet(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        snippet = _parse_snippet(d.pop("snippet"))
+
 
         def _parse_client_idempotency_key(data: object) -> None | str | Unset:
             if data is None:
@@ -702,16 +799,6 @@ class SentEmailDetail:
             return cast(None | str | Unset, data)
 
         client_idempotency_key = _parse_client_idempotency_key(d.pop("client_idempotency_key", UNSET))
-
-
-        def _parse_recipient_count(data: object) -> int | None | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            return cast(int | None | Unset, data)
-
-        recipient_count = _parse_recipient_count(d.pop("recipient_count", UNSET))
 
 
         def _parse_content_discarded_at(data: object) -> datetime.datetime | None | Unset:
@@ -959,7 +1046,7 @@ class SentEmailDetail:
         canceled_at = _parse_canceled_at(d.pop("canceled_at", UNSET))
 
 
-        def _parse_presence_control(data: object) -> None | PresenceControlType0 | Unset:
+        def _parse_presence_control(data: object) -> None | PresenceControl | Unset:
             if data is None:
                 return data
             if isinstance(data, Unset):
@@ -967,14 +1054,14 @@ class SentEmailDetail:
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                componentsschemas_presence_control_type_0 = PresenceControlType0.from_dict(data)
+                presence_control_type_1 = PresenceControl.from_dict(data)
 
 
 
-                return componentsschemas_presence_control_type_0
+                return presence_control_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(None | PresenceControlType0 | Unset, data)
+            return cast(None | PresenceControl | Unset, data)
 
         presence_control = _parse_presence_control(d.pop("presence_control", UNSET))
 
@@ -1017,6 +1104,31 @@ class SentEmailDetail:
             return cast(None | SentEmailSummarySenderMemberType0 | Unset, data)
 
         sender_member = _parse_sender_member(d.pop("sender_member", UNSET))
+
+
+        def _parse_delivery_recipients(data: object) -> list[SentEmailSummaryDeliveryRecipientsType0Item] | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                delivery_recipients_type_0 = []
+                _delivery_recipients_type_0 = data
+                for delivery_recipients_type_0_item_data in (_delivery_recipients_type_0):
+                    delivery_recipients_type_0_item = SentEmailSummaryDeliveryRecipientsType0Item.from_dict(delivery_recipients_type_0_item_data)
+
+
+
+                    delivery_recipients_type_0.append(delivery_recipients_type_0_item)
+
+                return delivery_recipients_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[SentEmailSummaryDeliveryRecipientsType0Item] | None | Unset, data)
+
+        delivery_recipients = _parse_delivery_recipients(d.pop("delivery_recipients", UNSET))
 
 
         def _parse_body_text(data: object) -> None | str | Unset:
@@ -1085,11 +1197,25 @@ class SentEmailDetail:
                 truncated_fields.append(truncated_fields_item)
 
 
-        attachments_size_bytes = d.pop("attachments_size_bytes", UNSET)
+        def _parse_recipient_count(data: object) -> int | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(int | None | Unset, data)
 
-        attachments_complete = d.pop("attachments_complete", UNSET)
+        recipient_count = _parse_recipient_count(d.pop("recipient_count", UNSET))
 
-        attachments_download_available = d.pop("attachments_download_available", UNSET)
+
+        _hold = d.pop("hold", UNSET)
+        hold: SentEmailSummaryHold | Unset
+        if isinstance(_hold,  Unset):
+            hold = UNSET
+        else:
+            hold = SentEmailSummaryHold.from_dict(_hold)
+
+
+
 
         def _parse_to_addresses(data: object) -> list[str] | None | Unset:
             if data is None:
@@ -1188,6 +1314,12 @@ class SentEmailDetail:
         tags = _parse_tags(d.pop("tags", UNSET))
 
 
+        attachments_size_bytes = d.pop("attachments_size_bytes", UNSET)
+
+        attachments_download_available = d.pop("attachments_download_available", UNSET)
+
+        attachments_complete = d.pop("attachments_complete", UNSET)
+
         sent_email_detail = cls(
             id=id,
             status=status,
@@ -1201,8 +1333,10 @@ class SentEmailDetail:
             to_address=to_address,
             subject=subject,
             body_size_bytes=body_size_bytes,
+            interaction_hint=interaction_hint,
+            interaction_kind=interaction_kind,
+            snippet=snippet,
             client_idempotency_key=client_idempotency_key,
-            recipient_count=recipient_count,
             content_discarded_at=content_discarded_at,
             message_id=message_id,
             in_reply_to=in_reply_to,
@@ -1224,20 +1358,23 @@ class SentEmailDetail:
             presence_control=presence_control,
             repeat=repeat,
             sender_member=sender_member,
+            delivery_recipients=delivery_recipients,
             body_text=body_text,
             body_html=body_html,
             headers=headers,
             attachments=attachments,
             truncated=truncated,
             truncated_fields=truncated_fields,
-            attachments_size_bytes=attachments_size_bytes,
-            attachments_complete=attachments_complete,
-            attachments_download_available=attachments_download_available,
+            recipient_count=recipient_count,
+            hold=hold,
             to_addresses=to_addresses,
             cc=cc,
             bcc=bcc,
             reply_to=reply_to,
             tags=tags,
+            attachments_size_bytes=attachments_size_bytes,
+            attachments_download_available=attachments_download_available,
+            attachments_complete=attachments_complete,
         )
 
 

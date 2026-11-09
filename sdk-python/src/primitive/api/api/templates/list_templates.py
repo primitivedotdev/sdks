@@ -100,9 +100,8 @@ def sync_detailed(
 ) -> Response[ErrorResponse | ListTemplatesResponse200]:
     """ List function templates
 
-     List approved Function templates available for browsing and
-    installation. Results are cacheable and paginated with
-    `data.next_cursor`.
+     List approved Function templates available for browsing and installation. Results are cacheable and
+    paginated with `data.next_cursor`.
 
     Args:
         q (str | Unset):
@@ -144,9 +143,8 @@ def sync(
 ) -> ErrorResponse | ListTemplatesResponse200 | None:
     """ List function templates
 
-     List approved Function templates available for browsing and
-    installation. Results are cacheable and paginated with
-    `data.next_cursor`.
+     List approved Function templates available for browsing and installation. Results are cacheable and
+    paginated with `data.next_cursor`.
 
     Args:
         q (str | Unset):
@@ -183,9 +181,8 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | ListTemplatesResponse200]:
     """ List function templates
 
-     List approved Function templates available for browsing and
-    installation. Results are cacheable and paginated with
-    `data.next_cursor`.
+     List approved Function templates available for browsing and installation. Results are cacheable and
+    paginated with `data.next_cursor`.
 
     Args:
         q (str | Unset):
@@ -227,9 +224,8 @@ async def asyncio(
 ) -> ErrorResponse | ListTemplatesResponse200 | None:
     """ List function templates
 
-     List approved Function templates available for browsing and
-    installation. Results are cacheable and paginated with
-    `data.next_cursor`.
+     List approved Function templates available for browsing and installation. Results are cacheable and
+    paginated with `data.next_cursor`.
 
     Args:
         q (str | Unset):

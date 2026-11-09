@@ -33,7 +33,8 @@ class PullWebhookResponseDataDeliveryType0:
             delivery_id (UUID):
             lease_token (UUID):
             lease_expires_at (datetime.datetime):
-            body (str):
+            body (None | str): The webhook body, exactly as serialized. May be null: this field carries message content,
+                which is withheld when the content is not available to your credential.
             headers (PullWebhookResponseDataDeliveryType0Headers):
      """
 
@@ -43,8 +44,9 @@ class PullWebhookResponseDataDeliveryType0:
     delivery_id: UUID
     lease_token: UUID
     lease_expires_at: datetime.datetime
-    body: str
+    body: None | str
     headers: PullWebhookResponseDataDeliveryType0Headers
+    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
 
@@ -64,13 +66,14 @@ class PullWebhookResponseDataDeliveryType0:
 
         lease_expires_at = self.lease_expires_at.isoformat()
 
+        body: None | str
         body = self.body
 
         headers = self.headers.to_dict()
 
 
         field_dict: dict[str, Any] = {}
-
+        field_dict.update(self.additional_properties)
         field_dict.update({
             "queue_id": queue_id,
             "event_id": event_id,
@@ -117,7 +120,13 @@ class PullWebhookResponseDataDeliveryType0:
 
 
 
-        body = d.pop("body")
+        def _parse_body(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        body = _parse_body(d.pop("body"))
+
 
         headers = PullWebhookResponseDataDeliveryType0Headers.from_dict(d.pop("headers"))
 
@@ -135,5 +144,22 @@ class PullWebhookResponseDataDeliveryType0:
             headers=headers,
         )
 
+
+        pull_webhook_response_data_delivery_type_0.additional_properties = d
         return pull_webhook_response_data_delivery_type_0
 
+    @property
+    def additional_keys(self) -> list[str]:
+        return list(self.additional_properties.keys())
+
+    def __getitem__(self, key: str) -> Any:
+        return self.additional_properties[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.additional_properties[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.additional_properties[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.additional_properties

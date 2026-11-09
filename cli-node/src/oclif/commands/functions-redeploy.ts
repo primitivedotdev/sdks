@@ -1,7 +1,7 @@
 import { Command, Flags } from "@oclif/core";
 import type {
-  FunctionDetail,
   FunctionSecretWriteResult,
+  UpdateFunctionResult,
 } from "@primitivedotdev/api-core";
 import {
   getFunction,
@@ -48,7 +48,7 @@ import {
 // Final payload runRedeployWithSecrets produces on the happy path.
 // `secrets` is omitted when no --secret flags were passed.
 export type RedeployWithSecretsResult = {
-  redeploy: FunctionDetail;
+  redeploy: UpdateFunctionResult;
   secrets?: FunctionSecretWriteResult[];
 };
 
@@ -65,7 +65,7 @@ export type RedeployApiSurface = {
     code: string;
     sourceMap?: string;
   }) => Promise<{
-    data?: { data?: FunctionDetail };
+    data?: { data?: UpdateFunctionResult };
     error?: unknown;
   }>;
 };
@@ -205,9 +205,9 @@ class FunctionsRedeployCommand extends Command {
     "<%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js",
     "<%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js --wait",
     "<%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js --source-map-file ./bundle.js.map",
-    "<%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js --secret OPENAI_KEY=sk-... --secret OWNER_EMAIL=me@example.com",
-    "<%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js --secret-from-env OPENAI_KEY --secret-from-file PRIVATE_KEY=./private-key.pem",
-    "printf '%s' \"$OPENAI_KEY\" | <%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js --secret-from-stdin OPENAI_KEY",
+    "<%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js --secret MY_API_KEY=sk-... --secret OWNER_EMAIL=me@example.com",
+    "<%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js --secret-from-env MY_API_KEY --secret-from-file PRIVATE_KEY=./private-key.pem",
+    "printf '%s' \"$MY_API_KEY\" | <%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js --secret-from-stdin MY_API_KEY",
   ];
 
   static flags = {
@@ -241,7 +241,7 @@ class FunctionsRedeployCommand extends Command {
     }),
     "secret-from-env": Flags.string({
       description:
-        "Secret KEY to read from the environment and write before the redeploy. Repeatable. Example: --secret-from-env OPENAI_KEY reads process.env.OPENAI_KEY.",
+        "Secret KEY to read from the environment and write before the redeploy. Repeatable. Example: --secret-from-env MY_API_KEY reads process.env.MY_API_KEY.",
       multiple: true,
     }),
     "secret-from-file": Flags.string({
@@ -251,7 +251,7 @@ class FunctionsRedeployCommand extends Command {
     }),
     "secret-from-env-file": Flags.string({
       description:
-        "Secret FILE:KEY to read from a dotenv-style file and write before the redeploy. Repeatable. Example: --secret-from-env-file .env.local:OPENAI_KEY.",
+        "Secret FILE:KEY to read from a dotenv-style file and write before the redeploy. Repeatable. Example: --secret-from-env-file .env.local:MY_API_KEY.",
       multiple: true,
     }),
     "secret-from-stdin": Flags.string({

@@ -11,7 +11,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.organization_left import OrganizationLeft
+  from ..models.leave_organization_result import LeaveOrganizationResult
 
 
 
@@ -26,11 +26,11 @@ class LeaveOrganizationResponse200:
     """ 
         Attributes:
             success (bool):
-            data (OrganizationLeft | Unset):
+            data (LeaveOrganizationResult):
      """
 
     success: bool
-    data: OrganizationLeft | Unset = UNSET
+    data: LeaveOrganizationResult
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -38,21 +38,18 @@ class LeaveOrganizationResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.organization_left import OrganizationLeft # noqa: PLC0415
+        from ..models.leave_organization_result import LeaveOrganizationResult # noqa: PLC0415
         success = self.success
 
-        data: dict[str, Any] | Unset = UNSET
-        if not isinstance(self.data, Unset):
-            data = self.data.to_dict()
+        data = self.data.to_dict()
 
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
             "success": success,
+            "data": data,
         })
-        if data is not UNSET:
-            field_dict["data"] = data
 
         return field_dict
 
@@ -60,16 +57,11 @@ class LeaveOrganizationResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.organization_left import OrganizationLeft # noqa: PLC0415
+        from ..models.leave_organization_result import LeaveOrganizationResult # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 
-        _data = d.pop("data", UNSET)
-        data: OrganizationLeft | Unset
-        if isinstance(_data,  Unset):
-            data = UNSET
-        else:
-            data = OrganizationLeft.from_dict(_data)
+        data = LeaveOrganizationResult.from_dict(d.pop("data"))
 
 
 

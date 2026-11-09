@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
-import type { AgentNetworkContactAdmission } from "@primitivedotdev/api-core";
+import type { CheckDefaultNetworkContactAdmissionResponse } from "@primitivedotdev/api-core";
 import { describe, expect, it } from "vitest";
 import { createWakePolicy, type NetworkAdmission } from "../src/receiver.js";
 import { emptyContactPolicy } from "./oclif/contact-policy-fixture.js";
 
 // The network reader returns the API's own response shape.
-const apiDecisionFits: AgentNetworkContactAdmission extends NetworkAdmission
+const apiDecisionFits: CheckDefaultNetworkContactAdmissionResponse["data"] extends NetworkAdmission
   ? true
   : false = true;
 

@@ -34,7 +34,7 @@ const STEP_UP_REQUIRED = {
   },
 };
 
-type Call = { url: string; init: RequestInit | undefined };
+type Call = { url: string; method: string; headers: Headers };
 
 function harness(
   responses: Response[],
@@ -44,8 +44,12 @@ function harness(
   const calls: Call[] = [];
   const prompts: string[] = [];
   const written: string[] = [];
-  const fetchImpl = (async (url: string, init?: RequestInit) => {
-    calls.push({ url: String(url), init });
+  const fetchImpl = (async (input: Request) => {
+    calls.push({
+      url: input.url,
+      method: input.method,
+      headers: input.headers,
+    });
     const next = responses.shift();
     if (!next) throw new Error("unexpected request");
     return next;
@@ -70,7 +74,7 @@ function harness(
 }
 
 function headerOf(call: Call | undefined, name: string): string | undefined {
-  return (call?.init?.headers as Record<string, string> | undefined)?.[name];
+  return call?.headers.get(name) ?? undefined;
 }
 
 describe("organizationLeaveUrl", () => {
@@ -93,10 +97,8 @@ describe("runOrgLeave", () => {
     expect(h.prompts[0]).toContain("Leave organization Acme (org-1)?");
     expect(h.prompts[0]).toContain("Leaving is final");
     expect(h.calls).toHaveLength(1);
-    expect(h.calls[0]?.url).toBe(
-      "https://api.example.test/v1/organization/leave",
-    );
-    expect(h.calls[0]?.init?.method).toBe("POST");
+    expect(h.calls[0]?.url).toBe(organizationLeaveUrl(BASE));
+    expect(h.calls[0]?.method).toBe("POST");
     expect(headerOf(h.calls[0], "authorization")).toBe("Bearer t");
     expect(headerOf(h.calls[0], STEP_UP_HEADER)).toBeUndefined();
   });
@@ -241,6 +243,14 @@ describe("org leave command", () => {
       .flags;
     expect(flags).toHaveProperty("yes");
     expect(flags).toHaveProperty("step-up-token");
+  });
+});
+
+describe("generated leave command", () => {
+  it("keeps account:leave-organization as an alias of the new id", () => {
+    const command = COMMANDS["roles-and-members:leave-organization"];
+    expect(command).toBeDefined();
+    expect(COMMANDS["account:leave-organization"]).toBe(command);
   });
 });
 

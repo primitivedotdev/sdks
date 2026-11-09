@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import tempfile
@@ -12,42 +13,68 @@ TARGET_PATH = SDK_ROOT / "api"
 GENERATOR_VERSION = "v1.20.3"
 
 
-def repair_shared_error_headers(output_path: Path) -> None:
-    """Add a header field omitted by ogen when it aliases error wrappers.
+# ogen rejects a response whose enum value is not in the spec, and has no
+# option or template hook for it, so its validators are adjusted here: a value
+# the API added after this client was generated is kept instead of failing the
+# whole response. A request parameter stays strict, through validateKnown: an
+# unsupported filter is still refused.
+_ENUM_VALIDATOR = re.compile(
+    r"func \(s (?P<receiver>\*?\w+)\) Validate\(\) error \{\n"
+    r"\tswitch s \{\n"
+    r"(?P<cases>(?:\tcase [^\n]+:\n\t\treturn nil\n)+)"
+    r"\tdefault:\n"
+    r"\t\treturn errors\.Errorf\(\"invalid value: %v\", s\)\n"
+    r"\t\}\n"
+    r"\}\n"
+)
 
-    ogen v1.20.3 shares ErrorResponseHeaders between errors with rate-limit
-    headers and errors with Retry-After. Its decoder expects RetryAfter on that
-    wrapper, but its schema generator omits it. Keep the generated API usable
-    until the generator can emit the union of those headers itself.
-    """
-    schema_path = output_path / "oas_schemas_gen.go"
-    source = schema_path.read_text()
-    original = (
-        "type ErrorResponseHeaders struct {\n"
-        "\tRatelimitLimit  OptInt\n"
-        "\tRatelimitPolicy OptString\n"
-        "\tResponse        ErrorResponse\n"
-        "}\n"
+_PARAMETER_VALIDATE_CALL = "if err := value.Validate(); err != nil {"
+
+_VALIDATE_PARAMETER_HELPER = """
+// validateParameter refuses an enum value the spec does not list. Validate
+// tolerates one, because it also runs on decoded responses.
+func validateParameter(value interface{ Validate() error }) error {
+\tif known, ok := value.(interface{ validateKnown() error }); ok {
+\t\treturn known.validateKnown()
+\t}
+\treturn value.Validate()
+}
+"""
+
+
+def tolerate_unknown_enum_values(directory: Path) -> None:
+    path = directory / "oas_validators_gen.go"
+    text = path.read_text()
+    strict: list[str] = []
+
+    def adjust(match: re.Match[str]) -> str:
+        receiver, cases = match.group("receiver"), match.group("cases")
+        strict.append(
+            f"\nfunc (s {receiver}) validateKnown() error {{\n\tswitch s {{\n{cases}"
+            '\tdefault:\n\t\treturn errors.Errorf("invalid value: %v", s)\n\t}\n}\n'
+        )
+        return (
+            f"func (s {receiver}) Validate() error {{\n\tswitch s {{\n{cases}"
+            "\tdefault:\n\t\t// Added to the API after this client was generated.\n\t\treturn nil\n\t}\n}\n"
+        )
+
+    new_text, count = _ENUM_VALIDATOR.subn(adjust, text)
+    if count == 0:
+        raise SystemExit(f"no enum validators found in {path}")
+    if "invalid value: %v" in new_text:
+        raise SystemExit(f"an enum validator in {path} was not adjusted")
+    path.write_text(new_text + "".join(strict) + _VALIDATE_PARAMETER_HELPER)
+
+    parameters = directory / "oas_parameters_gen.go"
+    parameter_text = parameters.read_text()
+    if _PARAMETER_VALIDATE_CALL not in parameter_text:
+        raise SystemExit(f"no parameter validation found in {parameters}")
+    parameters.write_text(
+        parameter_text.replace(
+            _PARAMETER_VALIDATE_CALL,
+            "if err := validateParameter(value); err != nil {",
+        )
     )
-    repaired = (
-        "type ErrorResponseHeaders struct {\n"
-        "\tRatelimitLimit  OptInt\n"
-        "\tRatelimitPolicy OptString\n"
-        "\tRetryAfter      OptInt\n"
-        "\tResponse        ErrorResponse\n"
-        "}\n\n"
-        "// GetRetryAfter returns the value of RetryAfter.\n"
-        "func (s *ErrorResponseHeaders) GetRetryAfter() OptInt {\n"
-        "\treturn s.RetryAfter\n"
-        "}\n\n"
-        "// SetRetryAfter sets the value of RetryAfter.\n"
-        "func (s *ErrorResponseHeaders) SetRetryAfter(val OptInt) {\n"
-        "\ts.RetryAfter = val\n"
-        "}\n"
-    )
-    if source.count(original) != 1:
-        raise RuntimeError("ogen ErrorResponseHeaders shape changed; review header workaround")
-    schema_path.write_text(source.replace(original, repaired, 1))
 
 
 def remove_generated_files() -> None:
@@ -75,10 +102,10 @@ def main() -> None:
             cwd=SDK_ROOT,
         )
 
-        repair_shared_error_headers(output_path)
         remove_generated_files()
         for source in output_path.glob("*.go"):
             shutil.copy2(source, TARGET_PATH / source.name)
+        tolerate_unknown_enum_values(TARGET_PATH)
 
 
 if __name__ == "__main__":

@@ -10,8 +10,112 @@ import (
 	ht "github.com/ogen-go/ogen/http"
 )
 
+func encodeAcceptEmailRuleRequestRequest(
+	req OptAcceptEmailRuleRequestRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	if !req.Set {
+		// Keep request with empty body if value is not set.
+		return nil
+	}
+	e := new(jx.Encoder)
+	{
+		if req.Set {
+			req.Encode(e)
+		}
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeAddDomainRequest(
 	req *AddDomainInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeAgentWorkAgreeDeadlineRequest(
+	req *AgentWorkAgreeDeadlineReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeAgentWorkCreateRequest(
+	req *AgentWorkCreateReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeAgentWorkManageStateRequest(
+	req *AgentWorkManageStateReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeAgentWorkProposeDeadlineRequest(
+	req *AgentWorkProposeDeadlineReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeAgentWorkReportStatusRequest(
+	req *AgentWorkReportStatusReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeAgentWorkWithdrawDeadlineRequest(
+	req *AgentWorkWithdrawDeadlineReq,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -39,7 +143,21 @@ func encodeCancelSentEmailByIdempotencyKeyRequest(
 }
 
 func encodeCheckDefaultNetworkContactAdmissionRequest(
-	req *AgentNetworkContactAdmissionInput,
+	req *CheckDefaultNetworkContactAdmissionReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeCheckSendabilityRequest(
+	req *CheckSendabilityRequest,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -66,6 +184,20 @@ func encodeClaimAgentConnectionRequest(
 	return nil
 }
 
+func encodeClaimVanityInboxNameRequest(
+	req *ClaimVanityInboxNameRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeCliLogoutRequest(
 	req OptCliLogoutInput,
 	r *http.Request,
@@ -80,6 +212,20 @@ func encodeCliLogoutRequest(
 		if req.Set {
 			req.Encode(e)
 		}
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeCompileEmailRuleRequest(
+	req *CompileEmailRuleRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
 	}
 	encoded := e.Bytes()
 	ht.SetBody(r, bytes.NewReader(encoded), contentType)
@@ -144,8 +290,8 @@ func encodeCreateAgentConnectionRequest(
 	return nil
 }
 
-func encodeCreateChallengeRequest(
-	req *CreateChallengeInput,
+func encodeCreateEmailRuleRequest(
+	req *CreateEmailRuleRequest,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -158,8 +304,8 @@ func encodeCreateChallengeRequest(
 	return nil
 }
 
-func encodeCreateEmailChallengeRequest(
-	req *CreateEmailChallengeInput,
+func encodeCreateEmailRuleRequestRequest(
+	req *CreateEmailRuleRequestRequest,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -228,6 +374,34 @@ func encodeCreateFunctionSecretRequest(
 	return nil
 }
 
+func encodeCreateGroupRequest(
+	req *CreateGroupRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeCreateKeyRequest(
+	req *CredentialsCreateKeyInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeCreateOrgSecretRequest(
 	req *CreateOrgSecretInput,
 	r *http.Request,
@@ -242,8 +416,22 @@ func encodeCreateOrgSecretRequest(
 	return nil
 }
 
-func encodeCreateRegistryRequest(
-	req *CreateRegistryInput,
+func encodeCreateProjectRequest(
+	req *ProjectsCreateProjectInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeCreateRoleRequest(
+	req *CreateRoleRequest,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -298,8 +486,8 @@ func encodeCreateWakeScheduleRequest(
 	return nil
 }
 
-func encodeDecideRegistryRequestRequest(
-	req *DecideRegistryRequestInput,
+func encodeDecideAccessModeRequest(
+	req *DecideAccessModeRequest,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -312,8 +500,8 @@ func encodeDecideRegistryRequestRequest(
 	return nil
 }
 
-func encodeDefineAgentRequest(
-	req *DefineAgentInput,
+func encodeDecideSuspensionRequest(
+	req *DecideSuspensionRequest,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -354,8 +542,36 @@ func encodeInviteAgentConnectionRequest(
 	return nil
 }
 
-func encodePayChallengeRequest(
-	req *PayChallengeInput,
+func encodeInviteOrganizationMemberRequest(
+	req *ProjectsInviteOrganizationMemberInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeInviteProjectMemberRequest(
+	req *ProjectsInviteProjectMemberInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeMarkThreadReadRequest(
+	req *MarkThreadReadInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -382,8 +598,8 @@ func encodePollCliLoginRequest(
 	return nil
 }
 
-func encodeProvisionMemberAddressRequest(
-	req *ProvisionMemberAddressReq,
+func encodePrepareContactAcceptanceRequest(
+	req *PrepareContactAcceptanceReq,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -396,8 +612,22 @@ func encodeProvisionMemberAddressRequest(
 	return nil
 }
 
-func encodePublishAgentRequest(
-	req *PublishAgentInput,
+func encodePrepareContactRequestRequest(
+	req *PrepareContactRequestReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeProvisionMemberAddressRequest(
+	req *ProvisionMemberAddressReq,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -424,8 +654,22 @@ func encodePullWebhookEventRequest(
 	return nil
 }
 
+func encodePutAddressNoteRequest(
+	req *PutAddressNoteRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodePutAgentContactRequest(
-	req PutAgentContactReq,
+	req *PutAgentContactRequest,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -453,7 +697,7 @@ func encodePutAgentContactPolicyRequest(
 }
 
 func encodePutContactRequest(
-	req PutContactReq,
+	req *PutContactRequest,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -480,6 +724,26 @@ func encodePutContactPolicyRequest(
 	return nil
 }
 
+func encodeReaffirmFunctionRuntimeKeyRequest(
+	req OptReaffirmFunctionRuntimeKeyRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	if !req.Set {
+		// Keep request with empty body if value is not set.
+		return nil
+	}
+	e := new(jx.Encoder)
+	{
+		if req.Set {
+			req.Encode(e)
+		}
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeRedeemCreditCodeRequest(
 	req *RedeemCreditCodeInput,
 	r *http.Request,
@@ -494,8 +758,28 @@ func encodeRedeemCreditCodeRequest(
 	return nil
 }
 
-func encodeRegisterPayoutAddressRequest(
-	req *RegisterPayoutAddressInput,
+func encodeReleaseSentEmailRequest(
+	req OptReleaseSentEmailReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	if !req.Set {
+		// Keep request with empty body if value is not set.
+		return nil
+	}
+	e := new(jx.Encoder)
+	{
+		if req.Set {
+			req.Encode(e)
+		}
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeRenameAgentConnectionRequest(
+	req *RenameAgentConnectionReq,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -524,6 +808,20 @@ func encodeReorderRoutesRequest(
 
 func encodeReplyToEmailRequest(
 	req *ReplyInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeRequestFunctionRuntimeKeyRunnerRequest(
+	req *RequestFunctionRuntimeKeyRunnerRequest,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -578,6 +876,62 @@ func encodeResendCliSignupVerificationRequest(
 	return nil
 }
 
+func encodeRevokeAllCredentialsRequest(
+	req *CredentialsRevokeAllCredentialsInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeRevokeCredentialRequest(
+	req *CredentialsRevokeCredentialInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeRevokeMyGrantRequest(
+	req *OrgSettingsRevokeMyGrantInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeRotateKeyRequest(
+	req *CredentialsRotateKeyInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeSemanticSearchRequest(
 	req *SemanticSearchInput,
 	r *http.Request,
@@ -606,6 +960,62 @@ func encodeSendEmailRequest(
 	return nil
 }
 
+func encodeSendInteractionStepRequest(
+	req *SendInteractionStepRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeSendMailBatchRequest(
+	req *SendMailBatchReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeSetAccessModeRequest(
+	req *SetAccessModeRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeSetAgentConnectionVisibilityRequest(
+	req *SetAgentConnectionVisibilityReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeSetFunctionRouteRequest(
 	req *FunctionRouteBody,
 	r *http.Request,
@@ -620,8 +1030,50 @@ func encodeSetFunctionRouteRequest(
 	return nil
 }
 
+func encodeSetFunctionRuntimeKeyRequest(
+	req *SetFunctionRuntimeKeyRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeSetFunctionSecretRequest(
 	req *SetFunctionSecretInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeSetMailboxAccessRequest(
+	req *SetMailboxAccessRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeSetMemberRoleRequest(
+	req *SetMemberRoleRequest,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -650,6 +1102,48 @@ func encodeSetMemoryRequest(
 
 func encodeSetOrgSecretRequest(
 	req *SetOrgSecretInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeSetOwnMailboxAccessRequest(
+	req *SetOwnMailboxAccessRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeSetRelayAutoJoinRequest(
+	req *SetRelayAutoJoinRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeSignalEmailRequest(
+	req *EmailSignalInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -704,6 +1198,20 @@ func encodeStartAgentSignupRequest(
 	return nil
 }
 
+func encodeStartBreakGlassRequest(
+	req *StartBreakGlassRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeStartCliLoginRequest(
 	req OptStartCliLoginInput,
 	r *http.Request,
@@ -738,6 +1246,20 @@ func encodeStartCliSignupRequest(
 	return nil
 }
 
+func encodeStartInteractionRequest(
+	req *StartInteractionRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeStopRepeatFromEmailRequest(
 	req OptRepeatStopRequest,
 	r *http.Request,
@@ -752,6 +1274,48 @@ func encodeStopRepeatFromEmailRequest(
 		if req.Set {
 			req.Encode(e)
 		}
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeSuspendFunctionRuntimeKeyRequest(
+	req *SuspendFunctionRuntimeKeyRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeTestEmailRuleRequest(
+	req *TestEmailRuleRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeTestEmailRuleOnSampleRequest(
+	req *TestEmailRuleOnSampleRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
 	}
 	encoded := e.Bytes()
 	ht.SetBody(r, bytes.NewReader(encoded), contentType)
@@ -792,6 +1356,20 @@ func encodeTestFunctionRequest(
 	return nil
 }
 
+func encodeTransferOwnedItemsRequest(
+	req *TransferOwnedItemsRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeUpdateAccountRequest(
 	req *UpdateAccountInput,
 	r *http.Request,
@@ -806,8 +1384,36 @@ func encodeUpdateAccountRequest(
 	return nil
 }
 
+func encodeUpdateAgentConnectionSettingsRequest(
+	req *UpdateAgentConnectionSettingsReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateCredentialPolicyRequest(
+	req *CredentialsUpdateCredentialPolicyInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeUpdateDefaultNetworkMemberRequest(
-	req *UpdateAgentNetworkMemberInput,
+	req *UpdateDefaultNetworkMemberReq,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -822,6 +1428,20 @@ func encodeUpdateDefaultNetworkMemberRequest(
 
 func encodeUpdateDomainRequest(
 	req *UpdateDomainInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateEmailRuleRequest(
+	req *UpdateEmailRuleRequest,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -876,8 +1496,120 @@ func encodeUpdateFunctionRequest(
 	return nil
 }
 
-func encodeUpdateRegistryRequest(
-	req *UpdateRegistryInput,
+func encodeUpdateFunctionTagsRequest(
+	req *UpdateFunctionTagsRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateGroupRequest(
+	req *UpdateGroupRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateKeyRequest(
+	req *CredentialsUpdateKeyInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateMailRoutingRequest(
+	req *PutMailRoutingRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateMailTopicEditsRequest(
+	req *PutMailTopicEditsRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateMailTopicGenerationsRequest(
+	req *PutMailTopicGenerationsRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateOrganizationRequest(
+	req *OrgSettingsUpdateOrganizationInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateOrganizationLogoRequest(
+	req *OrgSettingsUpdateOrganizationLogoInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateProjectRequest(
+	req *ProjectsUpdateProjectInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -904,6 +1636,20 @@ func encodeUpdateRepeatingSendRequest(
 	return nil
 }
 
+func encodeUpdateRoleRequest(
+	req *UpdateRoleRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeUpdateRouteRequest(
 	req *UpdateRouteInput,
 	r *http.Request,
@@ -918,8 +1664,8 @@ func encodeUpdateRouteRequest(
 	return nil
 }
 
-func encodeUpdateSpendPolicyRequest(
-	req *UpdateSpendPolicyInput,
+func encodeUpdateSearchSettingsRequest(
+	req *OrgSettingsUpdateSearchSettingsInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

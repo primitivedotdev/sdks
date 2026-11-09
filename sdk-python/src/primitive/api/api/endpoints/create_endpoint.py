@@ -12,6 +12,7 @@ from ...models.create_endpoint_input import CreateEndpointInput
 from ...models.create_endpoint_response_200 import CreateEndpointResponse200
 from ...models.create_endpoint_response_201 import CreateEndpointResponse201
 from ...models.error_response import ErrorResponse
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -19,9 +20,13 @@ from typing import cast
 def _get_kwargs(
     *,
     body: CreateEndpointInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -71,6 +76,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_401
 
+    if response.status_code == 403:
+        response_403 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_403
+
     if response.status_code == 409:
         response_409 = ErrorResponse.from_dict(response.json())
 
@@ -104,6 +116,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CreateEndpointInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse]:
     """ Create a webhook endpoint
@@ -136,7 +149,23 @@ def sync_detailed(
     recipients. Pull destinations do not occupy HTTP routing slots. Signing-secret setup and a test HTTP
     delivery are not required for pull receiving.
 
+    For local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named
+    creation resumes the same active destination; omitted filters preserve its selection, while
+    conflicting supplied configuration returns 409. Creating a pull destination requires a connected-
+    agent credential; it creates a private subscription restricted to inbound email for the assigned
+    address of that credential. Account API keys receive 403 pull_subscription_requires_agent_connection
+    and can instead receive mail with GET /emails?since=<cursor>&wait=30 or an HTTP endpoint. Pulling or
+    completing an account destination created earlier returns the same 403. Names are isolated per
+    credential; revocation or replacement deletes its subscriptions. Address-scoped events contain
+    parsed mail without raw MIME, signed download links, routing metadata, or sibling envelope
+    recipients. Pull destinations do not occupy HTTP routing slots. Signing-secret setup and a test HTTP
+    delivery are not required for pull receiving.
+
+    Agent connection keys (pconn_) may use endpoints.pull:manage instead of endpoints:manage here, for
+    their own pull subscriptions only.
+
     Args:
+        idempotency_key (str | Unset):
         body (CreateEndpointInput):
 
     Raises:
@@ -150,6 +179,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -163,6 +193,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: CreateEndpointInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse | None:
     """ Create a webhook endpoint
@@ -195,7 +226,23 @@ def sync(
     recipients. Pull destinations do not occupy HTTP routing slots. Signing-secret setup and a test HTTP
     delivery are not required for pull receiving.
 
+    For local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named
+    creation resumes the same active destination; omitted filters preserve its selection, while
+    conflicting supplied configuration returns 409. Creating a pull destination requires a connected-
+    agent credential; it creates a private subscription restricted to inbound email for the assigned
+    address of that credential. Account API keys receive 403 pull_subscription_requires_agent_connection
+    and can instead receive mail with GET /emails?since=<cursor>&wait=30 or an HTTP endpoint. Pulling or
+    completing an account destination created earlier returns the same 403. Names are isolated per
+    credential; revocation or replacement deletes its subscriptions. Address-scoped events contain
+    parsed mail without raw MIME, signed download links, routing metadata, or sibling envelope
+    recipients. Pull destinations do not occupy HTTP routing slots. Signing-secret setup and a test HTTP
+    delivery are not required for pull receiving.
+
+    Agent connection keys (pconn_) may use endpoints.pull:manage instead of endpoints:manage here, for
+    their own pull subscriptions only.
+
     Args:
+        idempotency_key (str | Unset):
         body (CreateEndpointInput):
 
     Raises:
@@ -210,6 +257,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -217,6 +265,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CreateEndpointInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse]:
     """ Create a webhook endpoint
@@ -249,7 +298,23 @@ async def asyncio_detailed(
     recipients. Pull destinations do not occupy HTTP routing slots. Signing-secret setup and a test HTTP
     delivery are not required for pull receiving.
 
+    For local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named
+    creation resumes the same active destination; omitted filters preserve its selection, while
+    conflicting supplied configuration returns 409. Creating a pull destination requires a connected-
+    agent credential; it creates a private subscription restricted to inbound email for the assigned
+    address of that credential. Account API keys receive 403 pull_subscription_requires_agent_connection
+    and can instead receive mail with GET /emails?since=<cursor>&wait=30 or an HTTP endpoint. Pulling or
+    completing an account destination created earlier returns the same 403. Names are isolated per
+    credential; revocation or replacement deletes its subscriptions. Address-scoped events contain
+    parsed mail without raw MIME, signed download links, routing metadata, or sibling envelope
+    recipients. Pull destinations do not occupy HTTP routing slots. Signing-secret setup and a test HTTP
+    delivery are not required for pull receiving.
+
+    Agent connection keys (pconn_) may use endpoints.pull:manage instead of endpoints:manage here, for
+    their own pull subscriptions only.
+
     Args:
+        idempotency_key (str | Unset):
         body (CreateEndpointInput):
 
     Raises:
@@ -263,6 +328,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -276,6 +342,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: CreateEndpointInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse | None:
     """ Create a webhook endpoint
@@ -308,7 +375,23 @@ async def asyncio(
     recipients. Pull destinations do not occupy HTTP routing slots. Signing-secret setup and a test HTTP
     delivery are not required for pull receiving.
 
+    For local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named
+    creation resumes the same active destination; omitted filters preserve its selection, while
+    conflicting supplied configuration returns 409. Creating a pull destination requires a connected-
+    agent credential; it creates a private subscription restricted to inbound email for the assigned
+    address of that credential. Account API keys receive 403 pull_subscription_requires_agent_connection
+    and can instead receive mail with GET /emails?since=<cursor>&wait=30 or an HTTP endpoint. Pulling or
+    completing an account destination created earlier returns the same 403. Names are isolated per
+    credential; revocation or replacement deletes its subscriptions. Address-scoped events contain
+    parsed mail without raw MIME, signed download links, routing metadata, or sibling envelope
+    recipients. Pull destinations do not occupy HTTP routing slots. Signing-secret setup and a test HTTP
+    delivery are not required for pull receiving.
+
+    Agent connection keys (pconn_) may use endpoints.pull:manage instead of endpoints:manage here, for
+    their own pull subscriptions only.
+
     Args:
+        idempotency_key (str | Unset):
         body (CreateEndpointInput):
 
     Raises:
@@ -323,5 +406,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

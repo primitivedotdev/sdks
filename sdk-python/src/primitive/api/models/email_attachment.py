@@ -32,6 +32,8 @@ class EmailAttachment:
             content_type (None | str | Unset):
             sha256 (None | str | Unset):
             part_index (int | Unset): Zero-based index of this part within the message.
+            tar_path (str | Unset): This part's file name inside the message's attachments archive. Absent on attachments
+                stored before it was recorded.
      """
 
     size_bytes: int
@@ -39,6 +41,7 @@ class EmailAttachment:
     content_type: None | str | Unset = UNSET
     sha256: None | str | Unset = UNSET
     part_index: int | Unset = UNSET
+    tar_path: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -68,6 +71,8 @@ class EmailAttachment:
 
         part_index = self.part_index
 
+        tar_path = self.tar_path
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -82,6 +87,8 @@ class EmailAttachment:
             field_dict["sha256"] = sha256
         if part_index is not UNSET:
             field_dict["part_index"] = part_index
+        if tar_path is not UNSET:
+            field_dict["tar_path"] = tar_path
 
         return field_dict
 
@@ -124,12 +131,15 @@ class EmailAttachment:
 
         part_index = d.pop("part_index", UNSET)
 
+        tar_path = d.pop("tar_path", UNSET)
+
         email_attachment = cls(
             size_bytes=size_bytes,
             filename=filename,
             content_type=content_type,
             sha256=sha256,
             part_index=part_index,
+            tar_path=tar_path,
         )
 
 

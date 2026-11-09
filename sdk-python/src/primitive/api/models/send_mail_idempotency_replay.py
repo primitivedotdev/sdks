@@ -24,29 +24,23 @@ T = TypeVar("T", bound="SendMailIdempotencyReplay")
 
 @_attrs_define
 class SendMailIdempotencyReplay:
-    """ Present only when the request was answered with an existing send
-    instead of making a new one (`idempotent_replay: true`). Nothing
-    was sent for this request. Says how the idempotency key was
-    derived and which send the request collapsed onto. On the replay
-    of a stored failure the same object is under `error.details`.
+    """ Present only when the request was answered with an existing send instead of making a new one (`idempotent_replay:
+    true`). Nothing was sent for this request. Says how the idempotency key was derived and which send the request
+    collapsed onto.
 
         Attributes:
             replayed (bool): Always `true`. The object is absent on a request that made a send of its own.
             key_source (SendMailIdempotencyReplayKeySource): `explicit`: the request carried an `Idempotency-Key` header.
-                `auto_content`: no header was sent, so the key was derived
-                from the canonical request content (recipients included) and
-                a fixed 5-minute window; an identical send inside the same
-                window was not sent again. `function_trigger`: no header on a
-                send made by a Function, so the key was derived from the
-                content, the Function and the inbound email (or event) that
-                invoked it.
+                `auto_content`: no header was sent, so the key was derived from the canonical request content (recipients
+                included) and a fixed 5-minute window; an identical send inside the same window was not sent again.
+                `function_trigger`: no header on a send made by a Function, so the key was derived from the content, the
+                Function and the inbound email (or event) that invoked it.
             original_sent_email_id (UUID): The send this request collapsed onto. Same value as `id`.
             original_created_at (datetime.datetime | None): When that send was created.
-            window_seconds (int | None): Length of the content window (300) when an `auto_content`
-                key matched on content. Null for `explicit` and
-                `function_trigger` keys, which have no window, and for a
-                keyless reply matched because its parent already has a reply
-                (`dedup_reason: parent_already_replied`).
+            window_seconds (int | None): Length of the content window (300) when an `auto_content` key matched on content.
+                Also set for a `parent_already_replied` replay matched inside that window; null for one matched past it, which
+                only a retry from the same Function can be. Null for `explicit` and `function_trigger` keys matched on their
+                key, which have no window.
      """
 
     replayed: bool

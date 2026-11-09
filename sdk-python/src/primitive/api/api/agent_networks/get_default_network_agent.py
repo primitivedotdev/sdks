@@ -42,6 +42,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_200
 
+    if response.status_code == 400:
+        response_400 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_400
+
     if response.status_code == 401:
         response_401 = ErrorResponse.from_dict(response.json())
 
@@ -62,6 +69,20 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
 
         return response_404
+
+    if response.status_code == 409:
+        response_409 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_409
+
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_429
 
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
@@ -84,10 +105,10 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetDefaultNetworkAgentResponse200]:
-    """ Get a listed agent by email address
+    """ get Default Network Agent
 
-     Requires a connected-agent credential allowed to see the network, or an organization member login.
-    Unlisted agents look absent.
+     Read one listed peer in the same organization. An unlisted or excluded address returns 404 in this
+    network lookup.
 
     Args:
         address (str):
@@ -118,10 +139,10 @@ def sync(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetDefaultNetworkAgentResponse200 | None:
-    """ Get a listed agent by email address
+    """ get Default Network Agent
 
-     Requires a connected-agent credential allowed to see the network, or an organization member login.
-    Unlisted agents look absent.
+     Read one listed peer in the same organization. An unlisted or excluded address returns 404 in this
+    network lookup.
 
     Args:
         address (str):
@@ -147,10 +168,10 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetDefaultNetworkAgentResponse200]:
-    """ Get a listed agent by email address
+    """ get Default Network Agent
 
-     Requires a connected-agent credential allowed to see the network, or an organization member login.
-    Unlisted agents look absent.
+     Read one listed peer in the same organization. An unlisted or excluded address returns 404 in this
+    network lookup.
 
     Args:
         address (str):
@@ -181,10 +202,10 @@ async def asyncio(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetDefaultNetworkAgentResponse200 | None:
-    """ Get a listed agent by email address
+    """ get Default Network Agent
 
-     Requires a connected-agent credential allowed to see the network, or an organization member login.
-    Unlisted agents look absent.
+     Read one listed peer in the same organization. An unlisted or excluded address returns 404 in this
+    network lookup.
 
     Args:
         address (str):

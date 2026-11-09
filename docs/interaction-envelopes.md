@@ -5,8 +5,7 @@ checks its JSON and envelope shape for display. It makes no requests, sends no
 mail, verifies no identity or signature, and makes no payment or protocol-state
 decision. Treat the payload and every displayed field as untrusted data.
 
-The shape follows the public [x402 over email guide](https://docs.primitive.dev/docs/x402-over-email)
-and the existing `InteractionEnvelope` type. Unknown protocol names and protocol
+The shape follows the existing `InteractionEnvelope` type. Unknown protocol names and protocol
 versions remain valid; an unknown positive integer `interaction_version` returns
 `unsupported`. Version 1 requires the snake_case envelope fields, UUID step IDs,
 a `uuid@domain` interaction ID, nonblank protocol and step, a positive integer

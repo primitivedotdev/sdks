@@ -14,6 +14,10 @@ if TYPE_CHECKING:
   from ..models.send_permission_address import SendPermissionAddress
   from ..models.send_permission_any_recipient import SendPermissionAnyRecipient
   from ..models.send_permission_managed_zone import SendPermissionManagedZone
+  from ..models.send_permission_opted_in_domains import SendPermissionOptedInDomains
+  from ..models.send_permission_org_member_email import SendPermissionOrgMemberEmail
+  from ..models.send_permission_org_member_emails import SendPermissionOrgMemberEmails
+  from ..models.send_permission_primitive_managed_domain import SendPermissionPrimitiveManagedDomain
   from ..models.send_permission_your_domain import SendPermissionYourDomain
   from ..models.send_permissions_meta import SendPermissionsMeta
 
@@ -31,7 +35,8 @@ class GetSendPermissionsResponse200:
         Attributes:
             success (bool):
             data (list[SendPermissionAddress | SendPermissionAnyRecipient | SendPermissionManagedZone |
-                SendPermissionYourDomain]):
+                SendPermissionOptedInDomains | SendPermissionOrgMemberEmail | SendPermissionOrgMemberEmails |
+                SendPermissionPrimitiveManagedDomain | SendPermissionYourDomain]):
             meta (SendPermissionsMeta): Response metadata for /send-permissions. The `address_cap`
                 bounds the size of the `address` rule subset; orgs with more
                 than `address_cap` known addresses almost always also hold a
@@ -41,7 +46,7 @@ class GetSendPermissionsResponse200:
      """
 
     success: bool
-    data: list[SendPermissionAddress | SendPermissionAnyRecipient | SendPermissionManagedZone | SendPermissionYourDomain]
+    data: list[SendPermissionAddress | SendPermissionAnyRecipient | SendPermissionManagedZone | SendPermissionOptedInDomains | SendPermissionOrgMemberEmail | SendPermissionOrgMemberEmails | SendPermissionPrimitiveManagedDomain | SendPermissionYourDomain]
     meta: SendPermissionsMeta
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -53,6 +58,10 @@ class GetSendPermissionsResponse200:
         from ..models.send_permission_address import SendPermissionAddress # noqa: PLC0415
         from ..models.send_permission_any_recipient import SendPermissionAnyRecipient # noqa: PLC0415
         from ..models.send_permission_managed_zone import SendPermissionManagedZone # noqa: PLC0415
+        from ..models.send_permission_opted_in_domains import SendPermissionOptedInDomains # noqa: PLC0415
+        from ..models.send_permission_org_member_email import SendPermissionOrgMemberEmail # noqa: PLC0415
+        from ..models.send_permission_org_member_emails import SendPermissionOrgMemberEmails # noqa: PLC0415
+        from ..models.send_permission_primitive_managed_domain import SendPermissionPrimitiveManagedDomain # noqa: PLC0415
         from ..models.send_permission_your_domain import SendPermissionYourDomain # noqa: PLC0415
         from ..models.send_permissions_meta import SendPermissionsMeta # noqa: PLC0415
         success = self.success
@@ -65,6 +74,14 @@ class GetSendPermissionsResponse200:
             elif isinstance(data_item_data, SendPermissionManagedZone):
                 data_item = data_item_data.to_dict()
             elif isinstance(data_item_data, SendPermissionYourDomain):
+                data_item = data_item_data.to_dict()
+            elif isinstance(data_item_data, SendPermissionAddress):
+                data_item = data_item_data.to_dict()
+            elif isinstance(data_item_data, SendPermissionPrimitiveManagedDomain):
+                data_item = data_item_data.to_dict()
+            elif isinstance(data_item_data, SendPermissionOptedInDomains):
+                data_item = data_item_data.to_dict()
+            elif isinstance(data_item_data, SendPermissionOrgMemberEmail):
                 data_item = data_item_data.to_dict()
             else:
                 data_item = data_item_data.to_dict()
@@ -93,6 +110,10 @@ class GetSendPermissionsResponse200:
         from ..models.send_permission_address import SendPermissionAddress # noqa: PLC0415
         from ..models.send_permission_any_recipient import SendPermissionAnyRecipient # noqa: PLC0415
         from ..models.send_permission_managed_zone import SendPermissionManagedZone # noqa: PLC0415
+        from ..models.send_permission_opted_in_domains import SendPermissionOptedInDomains # noqa: PLC0415
+        from ..models.send_permission_org_member_email import SendPermissionOrgMemberEmail # noqa: PLC0415
+        from ..models.send_permission_org_member_emails import SendPermissionOrgMemberEmails # noqa: PLC0415
+        from ..models.send_permission_primitive_managed_domain import SendPermissionPrimitiveManagedDomain # noqa: PLC0415
         from ..models.send_permission_your_domain import SendPermissionYourDomain # noqa: PLC0415
         from ..models.send_permissions_meta import SendPermissionsMeta # noqa: PLC0415
         d = dict(src_dict)
@@ -101,7 +122,7 @@ class GetSendPermissionsResponse200:
         data = []
         _data = d.pop("data")
         for data_item_data in (_data):
-            def _parse_data_item(data: object) -> SendPermissionAddress | SendPermissionAnyRecipient | SendPermissionManagedZone | SendPermissionYourDomain:
+            def _parse_data_item(data: object) -> SendPermissionAddress | SendPermissionAnyRecipient | SendPermissionManagedZone | SendPermissionOptedInDomains | SendPermissionOrgMemberEmail | SendPermissionOrgMemberEmails | SendPermissionPrimitiveManagedDomain | SendPermissionYourDomain:
                 try:
                     if not isinstance(data, dict):
                         raise TypeError()
@@ -132,13 +153,53 @@ class GetSendPermissionsResponse200:
                     return componentsschemas_send_permission_rule_type_2
                 except (TypeError, ValueError, AttributeError, KeyError):
                     pass
+                try:
+                    if not isinstance(data, dict):
+                        raise TypeError()
+                    componentsschemas_send_permission_rule_type_3 = SendPermissionAddress.from_dict(data)
+
+
+
+                    return componentsschemas_send_permission_rule_type_3
+                except (TypeError, ValueError, AttributeError, KeyError):
+                    pass
+                try:
+                    if not isinstance(data, dict):
+                        raise TypeError()
+                    componentsschemas_send_permission_rule_type_4 = SendPermissionPrimitiveManagedDomain.from_dict(data)
+
+
+
+                    return componentsschemas_send_permission_rule_type_4
+                except (TypeError, ValueError, AttributeError, KeyError):
+                    pass
+                try:
+                    if not isinstance(data, dict):
+                        raise TypeError()
+                    componentsschemas_send_permission_rule_type_5 = SendPermissionOptedInDomains.from_dict(data)
+
+
+
+                    return componentsschemas_send_permission_rule_type_5
+                except (TypeError, ValueError, AttributeError, KeyError):
+                    pass
+                try:
+                    if not isinstance(data, dict):
+                        raise TypeError()
+                    componentsschemas_send_permission_rule_type_6 = SendPermissionOrgMemberEmail.from_dict(data)
+
+
+
+                    return componentsschemas_send_permission_rule_type_6
+                except (TypeError, ValueError, AttributeError, KeyError):
+                    pass
                 if not isinstance(data, dict):
                     raise TypeError()
-                componentsschemas_send_permission_rule_type_3 = SendPermissionAddress.from_dict(data)
+                componentsschemas_send_permission_rule_type_7 = SendPermissionOrgMemberEmails.from_dict(data)
 
 
 
-                return componentsschemas_send_permission_rule_type_3
+                return componentsschemas_send_permission_rule_type_7
 
             data_item = _parse_data_item(data_item_data)
 

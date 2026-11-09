@@ -113,7 +113,7 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
 def sync_detailed(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     since: str | Unset = UNSET,
     wait: int | Unset = 0,
     limit: int | Unset = 100,
@@ -176,7 +176,7 @@ address=address,
 
 def sync(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     since: str | Unset = UNSET,
     wait: int | Unset = 0,
     limit: int | Unset = 100,
@@ -234,7 +234,7 @@ address=address,
 
 async def asyncio_detailed(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     since: str | Unset = UNSET,
     wait: int | Unset = 0,
     limit: int | Unset = 100,
@@ -297,7 +297,7 @@ address=address,
 
 async def asyncio(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     since: str | Unset = UNSET,
     wait: int | Unset = 0,
     limit: int | Unset = 100,

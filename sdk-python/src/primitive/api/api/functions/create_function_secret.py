@@ -12,6 +12,7 @@ from ...models.create_function_secret_input import CreateFunctionSecretInput
 from ...models.create_function_secret_response_200 import CreateFunctionSecretResponse200
 from ...models.create_function_secret_response_201 import CreateFunctionSecretResponse201
 from ...models.error_response import ErrorResponse
+from ...types import UNSET, Unset
 from typing import cast
 from uuid import UUID
 
@@ -21,9 +22,13 @@ def _get_kwargs(
     id: UUID,
     *,
     body: CreateFunctionSecretInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -100,6 +105,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CreateFunctionSecretInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateFunctionSecretResponse200 | CreateFunctionSecretResponse201 | ErrorResponse]:
     """ Create or update a secret
@@ -117,6 +123,7 @@ def sync_detailed(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (CreateFunctionSecretInput): Body for POST /functions/{id}/secrets.
 
     Raises:
@@ -131,6 +138,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         id=id,
 body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -145,6 +153,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: CreateFunctionSecretInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CreateFunctionSecretResponse200 | CreateFunctionSecretResponse201 | ErrorResponse | None:
     """ Create or update a secret
@@ -162,6 +171,7 @@ def sync(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (CreateFunctionSecretInput): Body for POST /functions/{id}/secrets.
 
     Raises:
@@ -177,6 +187,7 @@ def sync(
         id=id,
 client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -185,6 +196,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CreateFunctionSecretInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateFunctionSecretResponse200 | CreateFunctionSecretResponse201 | ErrorResponse]:
     """ Create or update a secret
@@ -202,6 +214,7 @@ async def asyncio_detailed(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (CreateFunctionSecretInput): Body for POST /functions/{id}/secrets.
 
     Raises:
@@ -216,6 +229,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         id=id,
 body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -230,6 +244,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: CreateFunctionSecretInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CreateFunctionSecretResponse200 | CreateFunctionSecretResponse201 | ErrorResponse | None:
     """ Create or update a secret
@@ -247,6 +262,7 @@ async def asyncio(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (CreateFunctionSecretInput): Body for POST /functions/{id}/secrets.
 
     Raises:
@@ -262,5 +278,6 @@ async def asyncio(
         id=id,
 client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

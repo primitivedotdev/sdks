@@ -54,9 +54,9 @@ describe("parseWebhookEvent", () => {
         result satisfies EmailReceivedEvent;
         expect(result.event).toBe("email.received");
       } else {
-        // The else branch is the rest of the WebhookEvent union (payment.*,
-        // interaction.x402.*, UnknownEvent) now that the parser keys on the
-        // X-Webhook-Event header and returns typed non-email events.
+        // The else branch is the rest of the WebhookEvent union (sent_email.*,
+        // UnknownEvent) now that the parser keys on the X-Webhook-Event header
+        // and returns typed non-email events.
         result satisfies Exclude<WebhookEvent, EmailReceivedEvent>;
         expect.fail("expected valid payload to narrow to EmailReceivedEvent");
       }

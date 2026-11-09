@@ -28,18 +28,20 @@ class Account:
     """ 
         Attributes:
             id (UUID):
-            email (str):
+            email (None | str): The signup email of the person who opened the account. Null when your credential may not see
+                it: it is shown to a caller that may read the organization's members' emails, and to that person signed in as
+                themself. Also null when the account has none.
             plan (str):
-            limits (PlanLimits): Plan-derived quota limits for an account.
-            entitlements (list[str]): Granted org entitlement keys (sorted). A headless caller reads its
+            limits (None | PlanLimits): Null when your credential does not hold org:read.
+            entitlements (list[str] | None): Granted org entitlement keys (sorted). A headless caller reads its
                 capabilities here - e.g. an emailless agent seeing only
-                ["send_mail", "send_to_known_addresses"] knows it is reply-only.
+                ["send_mail", "send_to_known_addresses"] knows it is reply-only. Null when your credential does not hold
+                org:read.
             managed_inbox_address (None | str): The managed inbox FQDN to reply as, or null if the org has no managed inbox.
             created_at (datetime.datetime):
             discard_content_on_webhook_confirmed (bool):
             onboarding_completed (bool | Unset):
             onboarding_step (None | str | Unset):
-            stripe_subscription_status (None | str | Unset):
             subscription_current_period_end (datetime.datetime | None | Unset):
             subscription_cancel_at_period_end (bool | None | Unset):
             spam_threshold (float | None | Unset):
@@ -47,16 +49,15 @@ class Account:
      """
 
     id: UUID
-    email: str
+    email: None | str
     plan: str
-    limits: PlanLimits
-    entitlements: list[str]
+    limits: None | PlanLimits
+    entitlements: list[str] | None
     managed_inbox_address: None | str
     created_at: datetime.datetime
     discard_content_on_webhook_confirmed: bool
     onboarding_completed: bool | Unset = UNSET
     onboarding_step: None | str | Unset = UNSET
-    stripe_subscription_status: None | str | Unset = UNSET
     subscription_current_period_end: datetime.datetime | None | Unset = UNSET
     subscription_cancel_at_period_end: bool | None | Unset = UNSET
     spam_threshold: float | None | Unset = UNSET
@@ -71,15 +72,24 @@ class Account:
         from ..models.plan_limits import PlanLimits # noqa: PLC0415
         id = str(self.id)
 
+        email: None | str
         email = self.email
 
         plan = self.plan
 
-        limits = self.limits.to_dict()
+        limits: dict[str, Any] | None
+        if isinstance(self.limits, PlanLimits):
+            limits = self.limits.to_dict()
+        else:
+            limits = self.limits
 
-        entitlements = self.entitlements
+        entitlements: list[str] | None
+        if isinstance(self.entitlements, list):
+            entitlements = self.entitlements
 
 
+        else:
+            entitlements = self.entitlements
 
         managed_inbox_address: None | str
         managed_inbox_address = self.managed_inbox_address
@@ -95,12 +105,6 @@ class Account:
             onboarding_step = UNSET
         else:
             onboarding_step = self.onboarding_step
-
-        stripe_subscription_status: None | str | Unset
-        if isinstance(self.stripe_subscription_status, Unset):
-            stripe_subscription_status = UNSET
-        else:
-            stripe_subscription_status = self.stripe_subscription_status
 
         subscription_current_period_end: None | str | Unset
         if isinstance(self.subscription_current_period_end, Unset):
@@ -147,8 +151,6 @@ class Account:
             field_dict["onboarding_completed"] = onboarding_completed
         if onboarding_step is not UNSET:
             field_dict["onboarding_step"] = onboarding_step
-        if stripe_subscription_status is not UNSET:
-            field_dict["stripe_subscription_status"] = stripe_subscription_status
         if subscription_current_period_end is not UNSET:
             field_dict["subscription_current_period_end"] = subscription_current_period_end
         if subscription_cancel_at_period_end is not UNSET:
@@ -171,16 +173,48 @@ class Account:
 
 
 
-        email = d.pop("email")
+        def _parse_email(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        email = _parse_email(d.pop("email"))
+
 
         plan = d.pop("plan")
 
-        limits = PlanLimits.from_dict(d.pop("limits"))
+        def _parse_limits(data: object) -> None | PlanLimits:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                limits_type_1 = PlanLimits.from_dict(data)
 
 
 
+                return limits_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | PlanLimits, data)
 
-        entitlements = cast(list[str], d.pop("entitlements"))
+        limits = _parse_limits(d.pop("limits"))
+
+
+        def _parse_entitlements(data: object) -> list[str] | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                entitlements_type_0 = cast(list[str], data)
+
+                return entitlements_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[str] | None, data)
+
+        entitlements = _parse_entitlements(d.pop("entitlements"))
 
 
         def _parse_managed_inbox_address(data: object) -> None | str:
@@ -208,16 +242,6 @@ class Account:
             return cast(None | str | Unset, data)
 
         onboarding_step = _parse_onboarding_step(d.pop("onboarding_step", UNSET))
-
-
-        def _parse_stripe_subscription_status(data: object) -> None | str | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            return cast(None | str | Unset, data)
-
-        stripe_subscription_status = _parse_stripe_subscription_status(d.pop("stripe_subscription_status", UNSET))
 
 
         def _parse_subscription_current_period_end(data: object) -> datetime.datetime | None | Unset:
@@ -291,7 +315,6 @@ class Account:
             discard_content_on_webhook_confirmed=discard_content_on_webhook_confirmed,
             onboarding_completed=onboarding_completed,
             onboarding_step=onboarding_step,
-            stripe_subscription_status=stripe_subscription_status,
             subscription_current_period_end=subscription_current_period_end,
             subscription_cancel_at_period_end=subscription_cancel_at_period_end,
             spam_threshold=spam_threshold,

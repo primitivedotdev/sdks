@@ -9,18 +9,21 @@ from ...types import Response, UNSET
 from ... import errors
 
 from ...models.error_response import ErrorResponse
+from ...models.list_agent_connections_include_hidden import ListAgentConnectionsIncludeHidden
 from ...models.list_agent_connections_owner import ListAgentConnectionsOwner
 from ...models.list_agent_connections_response_200 import ListAgentConnectionsResponse200
 from ...types import UNSET, Unset
 from typing import cast
+from uuid import UUID
 
 
 
 def _get_kwargs(
     *,
     limit: int | Unset = 50,
-    cursor: str | Unset = UNSET,
+    cursor: UUID | Unset = UNSET,
     owner: ListAgentConnectionsOwner | Unset = UNSET,
+    include_hidden: ListAgentConnectionsIncludeHidden | Unset = UNSET,
 
 ) -> dict[str, Any]:
 
@@ -31,13 +34,22 @@ def _get_kwargs(
 
     params["limit"] = limit
 
-    params["cursor"] = cursor
+    json_cursor: str | Unset = UNSET
+    if not isinstance(cursor, Unset):
+        json_cursor = str(cursor)
+    params["cursor"] = json_cursor
 
     json_owner: str | Unset = UNSET
     if not isinstance(owner, Unset):
         json_owner = owner.value
 
     params["owner"] = json_owner
+
+    json_include_hidden: str | Unset = UNSET
+    if not isinstance(include_hidden, Unset):
+        json_include_hidden = include_hidden.value
+
+    params["include_hidden"] = json_include_hidden
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -121,10 +133,11 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
 def sync_detailed(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     limit: int | Unset = 50,
-    cursor: str | Unset = UNSET,
+    cursor: UUID | Unset = UNSET,
     owner: ListAgentConnectionsOwner | Unset = UNSET,
+    include_hidden: ListAgentConnectionsIncludeHidden | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListAgentConnectionsResponse200]:
     """ list Agent Connections
@@ -137,14 +150,18 @@ def sync_detailed(
     its one-use invitation. Connected means a real challenge was received and a reply sent by the
     current bound credential was received back. Invitations expire after 15 minutes. Reconnection
     preserves the address and revokes previous credentials. Status responses contain no credentials.
-    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
-    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission.
+    Runtime credentials allow address-scoped mail operations, own-address note reads and writes, reads
+    of other organization agents' AGENT_WORKING, AGENT_RUNTIME and AGENT_INFO notes, exact-address self-
+    disconnect and self-rename, network discovery when can_view is enabled, and recipient-bound network
+    contact admission. Hidden connections are left out unless include_hidden=true, which returns them
+    with hidden, hidden_reason and hidden_at set. Hiding is display only: a hidden agent stays
+    connected, keeps its credential, and still receives mail and wakes.
 
     Args:
         limit (int | Unset):  Default: 50.
-        cursor (str | Unset):
+        cursor (UUID | Unset):
         owner (ListAgentConnectionsOwner | Unset):
+        include_hidden (ListAgentConnectionsIncludeHidden | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -159,6 +176,7 @@ def sync_detailed(
         limit=limit,
 cursor=cursor,
 owner=owner,
+include_hidden=include_hidden,
 
     )
 
@@ -170,10 +188,11 @@ owner=owner,
 
 def sync(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     limit: int | Unset = 50,
-    cursor: str | Unset = UNSET,
+    cursor: UUID | Unset = UNSET,
     owner: ListAgentConnectionsOwner | Unset = UNSET,
+    include_hidden: ListAgentConnectionsIncludeHidden | Unset = UNSET,
 
 ) -> ErrorResponse | ListAgentConnectionsResponse200 | None:
     """ list Agent Connections
@@ -186,14 +205,18 @@ def sync(
     its one-use invitation. Connected means a real challenge was received and a reply sent by the
     current bound credential was received back. Invitations expire after 15 minutes. Reconnection
     preserves the address and revokes previous credentials. Status responses contain no credentials.
-    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
-    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission.
+    Runtime credentials allow address-scoped mail operations, own-address note reads and writes, reads
+    of other organization agents' AGENT_WORKING, AGENT_RUNTIME and AGENT_INFO notes, exact-address self-
+    disconnect and self-rename, network discovery when can_view is enabled, and recipient-bound network
+    contact admission. Hidden connections are left out unless include_hidden=true, which returns them
+    with hidden, hidden_reason and hidden_at set. Hiding is display only: a hidden agent stays
+    connected, keeps its credential, and still receives mail and wakes.
 
     Args:
         limit (int | Unset):  Default: 50.
-        cursor (str | Unset):
+        cursor (UUID | Unset):
         owner (ListAgentConnectionsOwner | Unset):
+        include_hidden (ListAgentConnectionsIncludeHidden | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -209,15 +232,17 @@ def sync(
 limit=limit,
 cursor=cursor,
 owner=owner,
+include_hidden=include_hidden,
 
     ).parsed
 
 async def asyncio_detailed(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     limit: int | Unset = 50,
-    cursor: str | Unset = UNSET,
+    cursor: UUID | Unset = UNSET,
     owner: ListAgentConnectionsOwner | Unset = UNSET,
+    include_hidden: ListAgentConnectionsIncludeHidden | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListAgentConnectionsResponse200]:
     """ list Agent Connections
@@ -230,14 +255,18 @@ async def asyncio_detailed(
     its one-use invitation. Connected means a real challenge was received and a reply sent by the
     current bound credential was received back. Invitations expire after 15 minutes. Reconnection
     preserves the address and revokes previous credentials. Status responses contain no credentials.
-    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
-    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission.
+    Runtime credentials allow address-scoped mail operations, own-address note reads and writes, reads
+    of other organization agents' AGENT_WORKING, AGENT_RUNTIME and AGENT_INFO notes, exact-address self-
+    disconnect and self-rename, network discovery when can_view is enabled, and recipient-bound network
+    contact admission. Hidden connections are left out unless include_hidden=true, which returns them
+    with hidden, hidden_reason and hidden_at set. Hiding is display only: a hidden agent stays
+    connected, keeps its credential, and still receives mail and wakes.
 
     Args:
         limit (int | Unset):  Default: 50.
-        cursor (str | Unset):
+        cursor (UUID | Unset):
         owner (ListAgentConnectionsOwner | Unset):
+        include_hidden (ListAgentConnectionsIncludeHidden | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -252,6 +281,7 @@ async def asyncio_detailed(
         limit=limit,
 cursor=cursor,
 owner=owner,
+include_hidden=include_hidden,
 
     )
 
@@ -263,10 +293,11 @@ owner=owner,
 
 async def asyncio(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     limit: int | Unset = 50,
-    cursor: str | Unset = UNSET,
+    cursor: UUID | Unset = UNSET,
     owner: ListAgentConnectionsOwner | Unset = UNSET,
+    include_hidden: ListAgentConnectionsIncludeHidden | Unset = UNSET,
 
 ) -> ErrorResponse | ListAgentConnectionsResponse200 | None:
     """ list Agent Connections
@@ -279,14 +310,18 @@ async def asyncio(
     its one-use invitation. Connected means a real challenge was received and a reply sent by the
     current bound credential was received back. Invitations expire after 15 minutes. Reconnection
     preserves the address and revokes previous credentials. Status responses contain no credentials.
-    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
-    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission.
+    Runtime credentials allow address-scoped mail operations, own-address note reads and writes, reads
+    of other organization agents' AGENT_WORKING, AGENT_RUNTIME and AGENT_INFO notes, exact-address self-
+    disconnect and self-rename, network discovery when can_view is enabled, and recipient-bound network
+    contact admission. Hidden connections are left out unless include_hidden=true, which returns them
+    with hidden, hidden_reason and hidden_at set. Hiding is display only: a hidden agent stays
+    connected, keeps its credential, and still receives mail and wakes.
 
     Args:
         limit (int | Unset):  Default: 50.
-        cursor (str | Unset):
+        cursor (UUID | Unset):
         owner (ListAgentConnectionsOwner | Unset):
+        include_hidden (ListAgentConnectionsIncludeHidden | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -302,5 +337,6 @@ async def asyncio(
 limit=limit,
 cursor=cursor,
 owner=owner,
+include_hidden=include_hidden,
 
     )).parsed

@@ -123,7 +123,12 @@ jobs:
           TAG: sdk-python/v${{ steps.version.outputs.current }}
           VERSION: ${{ steps.version.outputs.current }}
         run: |
+          prerelease_flags=()
+          if [[ "$VERSION" == *[a-z]* ]]; then
+            prerelease_flags=(--prerelease --latest=false)
+          fi
           gh release create "$TAG" \
             --target "$GITHUB_SHA" \
             --title "Python SDK v$VERSION" \
-            --generate-notes
+            --generate-notes \
+            "${prerelease_flags[@]}"

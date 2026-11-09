@@ -11,6 +11,7 @@ from ... import errors
 from ...models.error_response import ErrorResponse
 from ...models.pull_webhook_input import PullWebhookInput
 from ...models.pull_webhook_response import PullWebhookResponse
+from ...types import UNSET, Unset
 from typing import cast
 from uuid import UUID
 
@@ -20,9 +21,13 @@ def _get_kwargs(
     id: UUID,
     *,
     body: PullWebhookInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -134,6 +139,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: PullWebhookInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | PullWebhookResponse]:
     """ Receive a pending webhook event without a public endpoint
@@ -148,6 +154,7 @@ def sync_detailed(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (PullWebhookInput):
 
     Raises:
@@ -162,6 +169,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         id=id,
 body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -176,6 +184,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: PullWebhookInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | PullWebhookResponse | None:
     """ Receive a pending webhook event without a public endpoint
@@ -190,6 +199,7 @@ def sync(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (PullWebhookInput):
 
     Raises:
@@ -205,6 +215,7 @@ def sync(
         id=id,
 client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -213,6 +224,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: PullWebhookInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | PullWebhookResponse]:
     """ Receive a pending webhook event without a public endpoint
@@ -227,6 +239,7 @@ async def asyncio_detailed(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (PullWebhookInput):
 
     Raises:
@@ -241,6 +254,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         id=id,
 body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -255,6 +269,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: PullWebhookInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | PullWebhookResponse | None:
     """ Receive a pending webhook event without a public endpoint
@@ -269,6 +284,7 @@ async def asyncio(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (PullWebhookInput):
 
     Raises:
@@ -284,5 +300,6 @@ async def asyncio(
         id=id,
 client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

@@ -11,7 +11,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.list_agent_connections_response_200_data_item import ListAgentConnectionsResponse200DataItem
+  from ..models.agent_connection import AgentConnection
   from ..models.list_agent_connections_response_200_meta import ListAgentConnectionsResponse200Meta
 
 
@@ -27,13 +27,13 @@ class ListAgentConnectionsResponse200:
     """
         Attributes:
             success (bool):
-            data (list[ListAgentConnectionsResponse200DataItem]):
-            meta (ListAgentConnectionsResponse200Meta | Unset):
+            data (list[AgentConnection]):
+            meta (ListAgentConnectionsResponse200Meta):
      """
 
     success: bool
-    data: list[ListAgentConnectionsResponse200DataItem]
-    meta: ListAgentConnectionsResponse200Meta | Unset = UNSET
+    data: list[AgentConnection]
+    meta: ListAgentConnectionsResponse200Meta
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -41,7 +41,7 @@ class ListAgentConnectionsResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.list_agent_connections_response_200_data_item import ListAgentConnectionsResponse200DataItem # noqa: PLC0415
+        from ..models.agent_connection import AgentConnection # noqa: PLC0415
         from ..models.list_agent_connections_response_200_meta import ListAgentConnectionsResponse200Meta # noqa: PLC0415
         success = self.success
 
@@ -52,9 +52,7 @@ class ListAgentConnectionsResponse200:
 
 
 
-        meta: dict[str, Any] | Unset = UNSET
-        if not isinstance(self.meta, Unset):
-            meta = self.meta.to_dict()
+        meta = self.meta.to_dict()
 
 
         field_dict: dict[str, Any] = {}
@@ -62,9 +60,8 @@ class ListAgentConnectionsResponse200:
         field_dict.update({
             "success": success,
             "data": data,
+            "meta": meta,
         })
-        if meta is not UNSET:
-            field_dict["meta"] = meta
 
         return field_dict
 
@@ -72,7 +69,7 @@ class ListAgentConnectionsResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.list_agent_connections_response_200_data_item import ListAgentConnectionsResponse200DataItem # noqa: PLC0415
+        from ..models.agent_connection import AgentConnection # noqa: PLC0415
         from ..models.list_agent_connections_response_200_meta import ListAgentConnectionsResponse200Meta # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
@@ -80,19 +77,14 @@ class ListAgentConnectionsResponse200:
         data = []
         _data = d.pop("data")
         for data_item_data in (_data):
-            data_item = ListAgentConnectionsResponse200DataItem.from_dict(data_item_data)
+            data_item = AgentConnection.from_dict(data_item_data)
 
 
 
             data.append(data_item)
 
 
-        _meta = d.pop("meta", UNSET)
-        meta: ListAgentConnectionsResponse200Meta | Unset
-        if isinstance(_meta,  Unset):
-            meta = UNSET
-        else:
-            meta = ListAgentConnectionsResponse200Meta.from_dict(_meta)
+        meta = ListAgentConnectionsResponse200Meta.from_dict(d.pop("meta"))
 
 
 

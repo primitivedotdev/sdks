@@ -2,11 +2,9 @@
 //
 // The `./parser` barrel also re-exports `sanitizeHtml`, which pulls in
 // `isomorphic-dompurify`. That module runs `purify.sanitize.bind(purify)`
-// at import time and crashes on DOM-less runtimes (e.g. Cloudflare
-// Workers), where `createDOMPurify()` returns a stub without `.sanitize`.
+// at import time and crashes on DOM-less edge runtimes, where `createDOMPurify()` returns a stub without `.sanitize`.
 //
-// Consumers that only need address parsing (e.g. core-api / send-mail
-// Workers) should import from `@primitivedotdev/sdk/parser/address` to
+// Consumers that only need address parsing should import from `@primitivedotdev/sdk/parser/address` to
 // avoid dragging dompurify into their bundle.
 export type {
   ParsedAddress,

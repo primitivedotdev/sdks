@@ -913,13 +913,13 @@ describe("output", () => {
     });
   });
 
-  it("names the payments command for a server-classified payment request", async () => {
+  it("names the contacts command for a server-classified contact request", async () => {
     const id = "6f1e2d3c-4b5a-4968-8776-655443322110";
     const inbox = new FakeInbox();
     inbox.add({ id, created_at: "2026-09-18T00:00:00.000Z" });
     inbox.detailOverride[id] = {
       interaction_hint: "card",
-      interaction_kind: "x402.payment/1",
+      interaction_kind: "primitive.contact/1",
       interaction_candidate: true,
     };
     const result = await findNextAwaiting({
@@ -931,13 +931,12 @@ describe("output", () => {
     const json = toJson(result, "primitive");
     expect(json.interaction).toMatchObject({
       hint: "card",
-      kind: "x402.payment/1",
-      category: "payment",
+      kind: "primitive.contact/1",
+      category: "contact",
       plain_reply_completes: false,
     });
     expect(json.next_actions.map((action) => action.command)).toEqual([
-      `primitive payments challenge-from-email --id ${id}`,
-      `primitive payments pay-email --in-reply-to ${id}`,
+      `primitive contacts accept --id ${id}`,
     ]);
     // reply_command is kept for compatibility.
     expect(json.reply_command).toBe(`primitive reply --id ${id}`);
@@ -946,12 +945,36 @@ describe("output", () => {
       .split("\n")
       .find((row) => row.startsWith("  how to answer:"));
     expect(line).toBe(
-      `  how to answer: Payment interaction (x402.payment/1). If it requests payment, review it with primitive payments challenge-from-email --id ${id} and pay with primitive payments pay-email --in-reply-to ${id}. A plain reply does not pay or decline it.`,
+      `  how to answer: Contact interaction (primitive.contact/1). If it is a contact request, accept it under the owner's policy with primitive contacts accept --id ${id}. A plain reply does not accept it.`,
     );
     // The line sits above the conversation, which is sender text.
     expect(text.indexOf("how to answer:")).toBeLessThan(
       text.indexOf("Conversation ("),
     );
+  });
+
+  it("treats an interaction this CLI no longer answers as unsupported", async () => {
+    const id = "6f1e2d3c-4b5a-4968-8776-655443322111";
+    const inbox = new FakeInbox();
+    inbox.add({ id, created_at: "2026-09-18T00:00:00.000Z" });
+    inbox.detailOverride[id] = {
+      interaction_hint: "card",
+      interaction_kind: "example.invoice/1",
+      interaction_candidate: true,
+    };
+    const result = await findNextAwaiting({
+      apiClient,
+      includeAutomated: false,
+      api: inbox.api(),
+    });
+    if (result.outcome !== "email") throw new Error("expected email");
+    const json = toJson(result, "primitive");
+    expect(json.interaction).toMatchObject({
+      kind: "example.invoice/1",
+      category: "unsupported",
+      plain_reply_completes: false,
+    });
+    expect(json.next_actions).toEqual([]);
   });
 
   it("ends with the interaction's command, not an unconditional reply", async () => {
@@ -976,23 +999,16 @@ describe("output", () => {
     expect(
       await footer({
         interaction_hint: "card",
-        interaction_kind: "x402.payment/1",
+        interaction_kind: "primitive.contact/1",
       }),
     ).toEqual([
       "",
       "Answer with:",
-      `  primitive payments challenge-from-email --id ${id}`,
-      `  primitive payments pay-email --in-reply-to ${id}`,
+      `  primitive contacts accept --id ${id}`,
       "A plain reply does not complete it. Optional, to also write to the sender:",
       `  primitive reply --id ${id} --body "..."`,
       "Then run `primitive inbox next` again.",
     ]);
-    expect(
-      await footer({
-        interaction_hint: "card",
-        interaction_kind: "primitive.contact/1",
-      }),
-    ).toContain(`  primitive contacts accept --id ${id}`);
     for (const fields of [
       { interaction_hint: "status", interaction_kind: "ack/1", fyi: true },
       { interaction_hint: "status", interaction_kind: "read/1" },

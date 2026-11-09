@@ -38,7 +38,18 @@ class CreateEndpointInput:
             is_route_target (bool | Unset): Create this endpoint as a route-target: reachable only via an
                 explicit recipient route, never a domain's default destination, and
                 exempt from the one-endpoint-per-domain rule.
-            name (str | Unset): Stable account-scoped name, required for kind=pull.
+            name (str | Unset): Stable name within the credential scope, required for kind=pull. Only connected-agent
+                credentials can create pull destinations, and each receives only its assigned address.
+            takeover (bool | Unset): When the domain (or, with no domain_id, the organization's fallback slot) already has
+                an active endpoint: false (the default) answers 409 conflict with details.holder naming it; true retires that
+                endpoint in the same request, after the checks deleting it would need. Route targets and pull destinations never
+                hold the slot. A plan limit (one fallback webhook on the free plan, Power for per-domain webhooks) is checked
+                first, and takeover lifts only the fallback limit the holder itself would count against.
+            owner_key_id (UUID | Unset): Make this webhook owned by an API key of the organization instead of by the
+                organization. It receives the mail recipient routes send to it and interaction events for addresses the key
+                reads, each checked against the key: only mail the key can read is sent, and nothing while the key is revoked or
+                suspended. It is never a domain or organization default: it is created as a route target, and is_route_target
+                false or takeover is refused. Not a connected agent key or a Function key.
      """
 
     kind: CreateEndpointInputKind | Unset = CreateEndpointInputKind.HTTP
@@ -49,6 +60,8 @@ class CreateEndpointInput:
     rules: CreateEndpointInputRules | Unset = UNSET
     is_route_target: bool | Unset = UNSET
     name: str | Unset = UNSET
+    takeover: bool | Unset = UNSET
+    owner_key_id: UUID | Unset = UNSET
 
 
 
@@ -85,6 +98,12 @@ class CreateEndpointInput:
 
         name = self.name
 
+        takeover = self.takeover
+
+        owner_key_id: str | Unset = UNSET
+        if not isinstance(self.owner_key_id, Unset):
+            owner_key_id = str(self.owner_key_id)
+
 
         field_dict: dict[str, Any] = {}
 
@@ -106,6 +125,10 @@ class CreateEndpointInput:
             field_dict["is_route_target"] = is_route_target
         if name is not UNSET:
             field_dict["name"] = name
+        if takeover is not UNSET:
+            field_dict["takeover"] = takeover
+        if owner_key_id is not UNSET:
+            field_dict["owner_key_id"] = owner_key_id
 
         return field_dict
 
@@ -173,6 +196,18 @@ class CreateEndpointInput:
 
         name = d.pop("name", UNSET)
 
+        takeover = d.pop("takeover", UNSET)
+
+        _owner_key_id = d.pop("owner_key_id", UNSET)
+        owner_key_id: UUID | Unset
+        if isinstance(_owner_key_id,  Unset):
+            owner_key_id = UNSET
+        else:
+            owner_key_id = UUID(_owner_key_id)
+
+
+
+
         create_endpoint_input = cls(
             kind=kind,
             url=url,
@@ -182,6 +217,8 @@ class CreateEndpointInput:
             rules=rules,
             is_route_target=is_route_target,
             name=name,
+            takeover=takeover,
+            owner_key_id=owner_key_id,
         )
 
         return create_endpoint_input

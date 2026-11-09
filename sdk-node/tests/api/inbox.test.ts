@@ -163,6 +163,62 @@ describe("client.inbox", () => {
     expect(replyUrl).toBe(`/v1/emails/${SUMMARY.id}/reply`);
   });
 
+  it("waitForNext and stream carry the full server row", async () => {
+    // Fields the camelCase mapping does not name must still reach the caller
+    // under their API names.
+    const row = {
+      ...SUMMARY,
+      snippet: "Hi there, a quick question",
+      from_header_email: "alice@example.com",
+      from_verified: true,
+      copies: [
+        { id: SUMMARY.id, recipient: "agent@brave-crow.primitive.email" },
+        {
+          id: "22222222-2222-4222-8222-222222222222",
+          recipient: "ops@brave-crow.primitive.email",
+        },
+      ],
+      sent_email_id: "33333333-3333-4333-8333-333333333333",
+      automated: false,
+    };
+    const client = new PrimitiveClient({
+      apiKey: "prim_k",
+      apiBaseUrl: BASE,
+      fetch: vi.fn<typeof fetch>(async () =>
+        listResponse([row], "cur-1|id1"),
+      ) as typeof fetch,
+    });
+
+    const waited = await client.inbox.waitForNext({ since: "c|i" });
+    const controller = new AbortController();
+    let streamed: InboundEmail | undefined;
+    for await (const email of client.inbox.stream({
+      signal: controller.signal,
+    })) {
+      streamed = email;
+      controller.abort();
+      break;
+    }
+
+    for (const email of [waited, streamed]) {
+      expect(email?.snippet).toBe(row.snippet);
+      expect(email?.from_header_email).toBe("alice@example.com");
+      expect(email?.from_verified).toBe(true);
+      expect(email?.copies).toEqual(row.copies);
+      expect(email?.sent_email_id).toBe(row.sent_email_id);
+      expect(email?.automated).toBe(false);
+      expect(email?.sender).toBe("alice@example.com");
+      // The existing camelCase fields keep their values.
+      expect(email?.from).toBe("alice@example.com");
+      expect(email?.to).toBe("agent@brave-crow.primitive.email");
+      expect(email?.messageId).toBe("<m@example.com>");
+      expect(email?.spamScore).toBe(0.1);
+      expect(email?.threadId).toBeNull();
+      expect(email?.cursor).toBe("cur-1|id1");
+      expect(typeof email?.reply).toBe("function");
+    }
+  });
+
   it("stream throws if the API returns emails without a continuation cursor", async () => {
     const client = new PrimitiveClient({
       apiKey: "prim_k",

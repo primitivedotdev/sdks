@@ -30,9 +30,9 @@ class OrgSecretsSetCommand extends Command {
   static summary = "Set a global secret shared across all functions";
 
   static examples = [
-    "<%= config.bin %> org secrets set --key STRIPE_KEY --value sk_live_...",
-    "<%= config.bin %> org secrets set --key OPENAI_KEY --value-from-env OPENAI_KEY",
-    "printf '%s' \"$OPENAI_KEY\" | <%= config.bin %> org secrets set --key OPENAI_KEY --stdin",
+    "<%= config.bin %> org secrets set --key MY_API_KEY --value <secret-value>",
+    "<%= config.bin %> org secrets set --key MY_API_KEY --value-from-env MY_API_KEY",
+    "printf '%s' \"$MY_API_KEY\" | <%= config.bin %> org secrets set --key MY_API_KEY --stdin",
   ];
 
   static flags = {
@@ -58,7 +58,7 @@ class OrgSecretsSetCommand extends Command {
     }),
     "value-from-env": Flags.string({
       description:
-        "Environment variable to read as the secret value. Example: --value-from-env OPENAI_KEY reads process.env.OPENAI_KEY.",
+        "Environment variable to read as the secret value. Example: --value-from-env MY_API_KEY reads process.env.MY_API_KEY.",
     }),
     "value-file": Flags.string({
       description:

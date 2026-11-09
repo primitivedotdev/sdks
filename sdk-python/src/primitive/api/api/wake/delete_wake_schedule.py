@@ -80,6 +80,8 @@ def sync_detailed(
 ) -> Response[DeleteWakeScheduleResponse200 | ErrorResponse]:
     """ Delete a wake schedule
 
+     Delete a wake schedule
+
     Args:
         id (UUID):
 
@@ -111,6 +113,8 @@ def sync(
 ) -> DeleteWakeScheduleResponse200 | ErrorResponse | None:
     """ Delete a wake schedule
 
+     Delete a wake schedule
+
     Args:
         id (UUID):
 
@@ -136,6 +140,8 @@ async def asyncio_detailed(
 
 ) -> Response[DeleteWakeScheduleResponse200 | ErrorResponse]:
     """ Delete a wake schedule
+
+     Delete a wake schedule
 
     Args:
         id (UUID):
@@ -167,6 +173,8 @@ async def asyncio(
 
 ) -> DeleteWakeScheduleResponse200 | ErrorResponse | None:
     """ Delete a wake schedule
+
+     Delete a wake schedule
 
     Args:
         id (UUID):

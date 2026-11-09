@@ -8,9 +8,21 @@ import (
 
 // Handler handles operations described by OpenAPI v3 specification.
 type Handler interface {
+	// AcceptEmailRuleRequest implements acceptEmailRuleRequest operation.
+	//
+	// Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches
+	// from now on with the member who asked. Send no body to accept it as asked, or change it first with
+	// english, tree and explanation together. Because this gives your mail to someone else, it is
+	// limited to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused.
+	// Also needs mail:send_as_member: a role that can only read this mailbox is refused. Needs mail:read,
+	//  a credential acting as a member with their full access (API keys, agent keys and narrowed tokens
+	// are refused), and the email rules feature on the organization.
+	//
+	// POST /email-rule-requests/{id}/accept
+	AcceptEmailRuleRequest(ctx context.Context, req OptAcceptEmailRuleRequestRequest, params AcceptEmailRuleRequestParams) (AcceptEmailRuleRequestRes, error)
 	// AddDefaultNetworkMember implements addDefaultNetworkMember operation.
 	//
-	// Owner or admin login required. Restores an explicitly excluded member.
+	// Owner or admin restoration of a durably excluded connected address.
 	//
 	// POST /agent-networks/default/members/{address}
 	AddDefaultNetworkMember(ctx context.Context, params AddDefaultNetworkMemberParams) (AddDefaultNetworkMemberRes, error)
@@ -23,7 +35,7 @@ type Handler interface {
 	// `primitive domains zone-file --id <domain-id>`.
 	//
 	// POST /domains
-	AddDomain(ctx context.Context, req *AddDomainInput) (AddDomainRes, error)
+	AddDomain(ctx context.Context, req *AddDomainInput, params AddDomainParams) (AddDomainRes, error)
 	// AgentConnectionSetup implements agentConnectionSetup operation.
 	//
 	// Instructions for pairing an external runtime. GET never consumes an invitation. The invitation
@@ -31,6 +43,75 @@ type Handler interface {
 	//
 	// GET /agent-connections/setup
 	AgentConnectionSetup(ctx context.Context) (AgentConnectionSetupRes, error)
+	// AgentConnectionTrustedOrigins implements agentConnectionTrustedOrigins operation.
+	//
+	// The API origins this deployment vouches for: an agent may accept a connection invitation whose URL
+	// origin is listed here. Set by deployment configuration. Public, no authentication, cacheable for
+	// five minutes.
+	//
+	// GET /agent-connections/trusted-origins
+	AgentConnectionTrustedOrigins(ctx context.Context) (*AgentConnectionTrustedOriginsOK, error)
+	// AgentWorkAgreeDeadline implements agentWorkAgreeDeadline operation.
+	//
+	// The current human owner explicitly agrees to an exact future date for the reviewed work version.
+	// Creates append-only agreement facts with a new agreement UUID. Replacing a date needs a new
+	// agreement ID. Agent-delegate and primitive-agent OAuth credentials cannot agree.
+	//
+	// POST /agent-work/agents/{agentId}/records/{workId}/deadline-agreements
+	AgentWorkAgreeDeadline(ctx context.Context, req *AgentWorkAgreeDeadlineReq, params AgentWorkAgreeDeadlineParams) (AgentWorkAgreeDeadlineRes, error)
+	// AgentWorkCreate implements agentWorkCreate operation.
+	//
+	// Create immutable work scope for a current personal agent using a stable work UUID. An identical
+	// retry returns the current record; a different scope conflicts. Only its current human owner or
+	// bound connected key may create work. A proposed date is not owner agreement.
+	//
+	// PUT /agent-work/agents/{agentId}/records/{workId}
+	AgentWorkCreate(ctx context.Context, req *AgentWorkCreateReq, params AgentWorkCreateParams) (AgentWorkCreateRes, error)
+	// AgentWorkGet implements agentWorkGet operation.
+	//
+	// Read work for a current personal agent. Only its current human owner or bound connected key may
+	// read it. Work from another connection generation or owner membership is unavailable. Text requires
+	// content depth at the agent address.
+	//
+	// GET /agent-work/agents/{agentId}/records/{workId}
+	AgentWorkGet(ctx context.Context, params AgentWorkGetParams) (AgentWorkGetRes, error)
+	// AgentWorkList implements agentWorkList operation.
+	//
+	// List current owned work in work UUID order. The current human owner or bound connected key may
+	// read it. nextCursor is null at the end; text requires content depth at the agent address.
+	//
+	// GET /agent-work/agents/{agentId}/records
+	AgentWorkList(ctx context.Context, params AgentWorkListParams) (AgentWorkListRes, error)
+	// AgentWorkManageState implements agentWorkManageState operation.
+	//
+	// The current human owner may cancel or reopen work with its expected version. Reopening never
+	// restores a previous agreement. Agent-delegate and primitive-agent OAuth credentials cannot perform
+	// this action.
+	//
+	// POST /agent-work/agents/{agentId}/records/{workId}/owner-status
+	AgentWorkManageState(ctx context.Context, req *AgentWorkManageStateReq, params AgentWorkManageStateParams) (AgentWorkManageStateRes, error)
+	// AgentWorkProposeDeadline implements agentWorkProposeDeadline operation.
+	//
+	// Propose or clear a date without changing the current owner agreement. Requires active work and its
+	// expected version. The current human owner or bound connected key may propose.
+	//
+	// POST /agent-work/agents/{agentId}/records/{workId}/deadline-proposal
+	AgentWorkProposeDeadline(ctx context.Context, req *AgentWorkProposeDeadlineReq, params AgentWorkProposeDeadlineParams) (AgentWorkProposeDeadlineRes, error)
+	// AgentWorkReportStatus implements agentWorkReportStatus operation.
+	//
+	// Report completion with attribution and clear the current agreement. Only the current human owner
+	// or bound connected key may report completion. Requires the expected version.
+	//
+	// POST /agent-work/agents/{agentId}/records/{workId}/status
+	AgentWorkReportStatus(ctx context.Context, req *AgentWorkReportStatusReq, params AgentWorkReportStatusParams) (AgentWorkReportStatusRes, error)
+	// AgentWorkWithdrawDeadline implements agentWorkWithdrawDeadline operation.
+	//
+	// The current human owner withdraws the current agreement with its expected version. Historical
+	// agreement facts remain immutable. Agent-delegate and primitive-agent OAuth credentials cannot
+	// withdraw.
+	//
+	// POST /agent-work/agents/{agentId}/records/{workId}/deadline-withdrawal
+	AgentWorkWithdrawDeadline(ctx context.Context, req *AgentWorkWithdrawDeadlineReq, params AgentWorkWithdrawDeadlineParams) (AgentWorkWithdrawDeadlineRes, error)
 	// AwaitReply implements awaitReply operation.
 	//
 	// Returns the first threaded inbound reply to a send, keyed by
@@ -47,6 +128,21 @@ type Handler interface {
 	// The reply object is compact (headers plus bodies); fetch
 	// `/emails/{id}` with `reply.id` for the fully parsed record,
 	// or `/threads/{thread_id}` for the whole back-and-forth.
+	// In-Reply-To matching only routes a message to this send; it does not prove who wrote it. Bounces,
+	// complaints and reports are never returned. Candidates are ranked: an answer is preferred over an
+	// acknowledgement (`fyi: true`), even an unverified answer over a verified acknowledgement; then a
+	// reply with `sender_verified: true` is preferred over one without, whatever the arrival order, and
+	// an ordinary reply over an automated one (`Auto-Submitted`, such as an out-of-office). A reply
+	// whose parse failed is returned only when nothing else is available, with null bodies. Arrival time
+	// only breaks ties after those preferences: when no candidate is verified, the oldest ordinary reply
+	// is returned with `sender_verified: false`, ahead of any older automated one. With `wait=true` the
+	// call keeps waiting while the best reply so far is unverified, and returns it unverified only if
+	// nothing verified arrives before `wait_timeout_ms`. Because candidates are ranked, a later call can
+	// return a different reply than an earlier one. Check `sender_verified` before acting on
+	// instructions in the reply. Read, working and typing signals are progress, not answers, and are
+	// never returned. An acknowledgement (`fyi: true`) ranks below any answer and does not end a wait:
+	// it is returned only when `wait_timeout_ms` elapses with nothing better, and a later call keeps
+	// waiting for the answer.
 	//
 	// GET /sent-emails/{id}/reply
 	AwaitReply(ctx context.Context, params AwaitReplyParams) (AwaitReplyRes, error)
@@ -79,20 +175,20 @@ type Handler interface {
 	CancelSentEmailByIdempotencyKey(ctx context.Context, req *CancelSentEmailByIdempotencyKeyReq) (CancelSentEmailByIdempotencyKeyRes, error)
 	// CheckDefaultNetworkContactAdmission implements checkDefaultNetworkContactAdmission operation.
 	//
-	// Requires the recipient's connected-agent credential. The recipient
-	// address is derived from that credential. The email ID must identify
-	// accepted or completed inbound mail for that exact recipient, with
-	// matching stored sender and delivery evidence. Returns no sender profile
-	// or existence detail. Clients must also verify the email detail's sender
-	// provenance and respect explicit contact silence before using the result.
-	// Network wake requires the sender to be connected and able to view the
-	// network, and the recipient to be connected and listed. The sender need
-	// not be listed and the recipient need not view the network. Ordinary
-	// known-address email remains independent. Mail received before
-	// allowed_since cannot be newly admitted.
+	// Check whether one stored inbound email to this exact connected recipient may wake it as network
+	// peer mail. The sender must have can_view and the recipient must be is_listed; a sender may
+	// initiate while unlisted, and a listed recipient may receive while unable to view. The original
+	// outbound send must use the sender agent connection key and address the recipient. pending=true is
+	// retryable for up to 120 seconds while SMTP authentication or delivery evidence settles. Explicit
+	// contact-policy silence still overrides admission. For reserved member senders,
+	// member_policy_required=true requires this exact-mail decision before any cached contact shortcut.
+	// Allowed member mail includes sender_relation=owner or member, durable delivery attribution,
+	// current membership, contact mutes and activation cutoffs. Missing exact stored mail returns 404.
+	// Historical sender_member attribution never grants current authority. This grants communication,
+	// never task authority.
 	//
 	// POST /agent-networks/default/contact-admission
-	CheckDefaultNetworkContactAdmission(ctx context.Context, req *AgentNetworkContactAdmissionInput) (CheckDefaultNetworkContactAdmissionRes, error)
+	CheckDefaultNetworkContactAdmission(ctx context.Context, req *CheckDefaultNetworkContactAdmissionReq, params CheckDefaultNetworkContactAdmissionParams) (CheckDefaultNetworkContactAdmissionRes, error)
 	// CheckDomainDns implements checkDomainDns operation.
 	//
 	// Re-checks the domain's DNS records and persists the result as
@@ -111,6 +207,22 @@ type Handler interface {
 	//
 	// POST /domains/{id}/dns/check
 	CheckDomainDns(ctx context.Context, params CheckDomainDnsParams) (CheckDomainDnsRes, error)
+	// CheckSendability implements checkSendability operation.
+	//
+	// Answer whether the caller could send to the given recipient (from the given address, if any)
+	// without sending anything. summary explains a refusal in plain words.
+	//
+	// POST /sendability
+	CheckSendability(ctx context.Context, req *CheckSendabilityRequest, params CheckSendabilityParams) (CheckSendabilityRes, error)
+	// CheckVanityInboxName implements checkVanityInboxName operation.
+	//
+	// Whether a name can be claimed for the managed inbox (name.primitive.email): available, taken,
+	// reserved (a protected word) or invalid (5 to 30 lowercase letters and digits, starting with a
+	// letter). Any plan may check; claiming needs Power. Rate limited per organization together with
+	// claims. Needs domains:read.
+	//
+	// GET /managed-inbox/vanity/{name}
+	CheckVanityInboxName(ctx context.Context, params CheckVanityInboxNameParams) (CheckVanityInboxNameRes, error)
 	// ClaimAgentConnection implements claimAgentConnection operation.
 	//
 	// Address-bound external runtime pairing. Any current human organization member may create and
@@ -121,12 +233,23 @@ type Handler interface {
 	// authorized only by its one-use invitation. Connected means a real challenge was received and a
 	// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
 	// Reconnection preserves the address and revokes previous credentials. Status responses contain no
-	// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
-	// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
-	//  and recipient-bound network contact admission.
+	// credentials. Runtime credentials allow address-scoped mail operations, own-address note reads and
+	// writes, reads of other organization agents' AGENT_WORKING, AGENT_RUNTIME and AGENT_INFO notes,
+	// exact-address self-disconnect and self-rename, network discovery when can_view is enabled, and
+	// recipient-bound network contact admission.
 	//
 	// POST /agent-connections/claim
 	ClaimAgentConnection(ctx context.Context, req *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (ClaimAgentConnectionRes, error)
+	// ClaimVanityInboxName implements claimVanityInboxName operation.
+	//
+	// Make the name the organization's current managed inbox. The previous inbox stops being current but
+	// keeps receiving mail. Needs the Power plan and domains:manage, which a credential confined to some
+	// mailboxes never holds. Sending records are published in the same request when they can be.
+	// outbound_ready false means they could not be yet: mail to the new name still arrives, but sending
+	// from it is refused until they are published.
+	//
+	// POST /managed-inbox/vanity
+	ClaimVanityInboxName(ctx context.Context, req *ClaimVanityInboxNameRequest, params ClaimVanityInboxNameParams) (ClaimVanityInboxNameRes, error)
 	// CliLogout implements cliLogout operation.
 	//
 	// Revokes the OAuth grant used to authenticate the request. API-key
@@ -134,17 +257,30 @@ type Handler interface {
 	// keys so old local CLI state can be cleared safely.
 	//
 	// POST /cli/logout
-	CliLogout(ctx context.Context, req OptCliLogoutInput) (CliLogoutRes, error)
+	CliLogout(ctx context.Context, req OptCliLogoutInput, params CliLogoutParams) (CliLogoutRes, error)
+	// CompileEmailRule implements compileEmailRule operation.
+	//
+	// Turns a plain-English description of which received emails to match into a rule tree over the
+	// published column contract, with a plain-English explanation of what it matches, the assumptions
+	// made, and warnings for anything the columns cannot express. Where the columns fall short the rule
+	// may carry up to three yes/no questions, asked about an email only after its conditions match.
+	// Nothing is saved. The SQL the rule renders to is returned only when include_sql is true. Needs
+	// mail:read, a credential acting as a member with their full access (API keys, agent keys and
+	// narrowed tokens are refused), and the email rules feature on the organization.
+	//
+	// POST /email-rules/compile
+	CompileEmailRule(ctx context.Context, req *CompileEmailRuleRequest, params CompileEmailRuleParams) (CompileEmailRuleRes, error)
 	// CompleteWebhookEvent implements completeWebhookEvent operation.
 	//
 	// Report normalized handling evidence for the queue, attempt and lease. Required JSON fields:
 	// queue_id, delivery_id, lease_token, mode, duration_ms. For mode=exec include exit_code; stdout
-	// includes write_succeeded; http includes status_code and optional transport_error, error_code,
-	// confirmed. Supply this discriminated request with --raw-body in the generated CLI. The server
-	// classifies success and retry. Duplicate identical completion is idempotent; a stale lease cannot
-	// finish a newer attempt. Exec success means durable input acceptance, not completion of agent
-	// reasoning. Only successful HTTP handling with recognized confirmation evidence can confirm content
-	// discard. Never send arbitrary handler output or HTTP response bodies.
+	// includes write_succeeded; sdk includes accepted (and optional timeout/io transport_error); http
+	// includes status_code and optional transport_error, error_code, confirmed. Supply this
+	// discriminated request with --raw-body in the generated CLI. The server classifies success and
+	// retry. Duplicate identical completion is idempotent; a stale lease cannot finish a newer attempt.
+	// Exec success means durable input acceptance, not completion of agent reasoning. Only successful
+	// HTTP handling with recognized confirmation evidence can confirm content discard. Never send
+	// arbitrary handler output or HTTP response bodies.
 	//
 	// POST /endpoints/{id}/complete
 	CompleteWebhookEvent(ctx context.Context, req CompleteWebhookInput, params CompleteWebhookEventParams) (CompleteWebhookEventRes, error)
@@ -165,7 +301,7 @@ type Handler interface {
 	// does not require an API key.
 	//
 	// POST /agent/accounts
-	CreateAgentAccount(ctx context.Context, req *CreateAgentAccountInput) (CreateAgentAccountRes, error)
+	CreateAgentAccount(ctx context.Context, req *CreateAgentAccountInput, params CreateAgentAccountParams) (CreateAgentAccountRes, error)
 	// CreateAgentClaimLink implements createAgentClaimLink operation.
 	//
 	// Mints an opaque, single-use link an agent can hand to a human to
@@ -174,53 +310,44 @@ type Handler interface {
 	// resolve a web origin to build the link.
 	//
 	// POST /agent/claim/link
-	CreateAgentClaimLink(ctx context.Context, req *CreateAgentClaimLinkInput) (CreateAgentClaimLinkRes, error)
+	CreateAgentClaimLink(ctx context.Context, req *CreateAgentClaimLinkInput, params CreateAgentClaimLinkParams) (CreateAgentClaimLinkRes, error)
 	// CreateAgentConnection implements createAgentConnection operation.
 	//
-	// Address-bound external runtime pairing. Any current human organization member may create and
-	// manage their personal agent connections. Organization owners and admins may manage all connections
-	// and explicitly create shared ones. An owner removed from the organization loses personal agent
-	// access, and rejoining does not revive the old connection. Organization API keys cannot manage
-	// connections. A current connected credential may disconnect only its own exact address. Claim is
-	// authorized only by its one-use invitation. Connected means a real challenge was received and a
-	// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
-	// Reconnection preserves the address and revokes previous credentials. Status responses contain no
-	// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
-	// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
-	//  and recipient-bound network contact admission. Save create_request_id before dispatch to recover
-	// an interrupted creation. Recovery returns the original current connection with recovered:true and
-	// invitation:null; it never replays a secret or rotates credentials.
+	// Create an address-bound agent. An explicit address may be on a Primitive-managed domain or on one
+	// of the organization's own verified custom domains that receives and sends through Primitive; a
+	// narrower-than-organization creator needs agent_connections:custom_domains for a custom domain and
+	// a fresh address. Without an explicit address, allocate a readable name on a managed domain with a
+	// bounded collision suffix. Persist create_request_id before dispatch to recover the same current
+	// connection on retry; recovered responses have invitation:null and never rotate a key. Changed
+	// choices or membership return 409 connection_create_request_conflict; a removed identity returns
+	// 409 connection_removed. A pending recovered connection can use inviteAgentConnection with
+	// pending_only:true once to obtain a fresh invitation.
 	//
 	// POST /agent-connections
 	CreateAgentConnection(ctx context.Context, req *CreateAgentConnectionReq, params CreateAgentConnectionParams) (CreateAgentConnectionRes, error)
-	// CreateChallenge implements createChallenge operation.
+	// CreateEmailRule implements createEmailRule operation.
 	//
-	// Create an x402 payment challenge (the payee side of a payment). The
-	// `pay_to` address is resolved server-side from your registered default
-	// payout address for the network, never from the request. The response
-	// carries the `nonce_binding` and `payment_requirements` the payer needs to
-	// sign; hand the whole challenge object to the payer (for example in an
-	// email reply). Amounts are in token base units (USDC has 6 decimals, so
-	// `"10000"` is 0.01 USDC).
+	// Saves a rule as version 1, from a compile response or a tree you wrote. The tree is checked
+	// against the column contract. New rules start in observe, where what the rule matches is recorded
+	// and nothing is granted; draft is not evaluated. The caller is the rule's author, and the rule
+	// never reaches mail the author cannot read. Needs mail:read, a credential acting as a member with
+	// their full access (API keys, agent keys and narrowed tokens are refused), and the email rules
+	// feature on the organization.
 	//
-	// POST /x402/challenges
-	CreateChallenge(ctx context.Context, req *CreateChallengeInput) (CreateChallengeRes, error)
-	// CreateEmailChallenge implements createEmailChallenge operation.
+	// POST /email-rules
+	CreateEmailRule(ctx context.Context, req *CreateEmailRuleRequest, params CreateEmailRuleParams) (CreateEmailRuleRes, error)
+	// CreateEmailRuleRequest implements createEmailRuleRequest operation.
 	//
-	// Issue an x402 payment challenge over a real email thread (the payee
-	// side). Unlike `createChallenge` (which mints a synthetic challenge id),
-	// this sends the challenge as an email from `from` to `to` and binds the
-	// payment to that DKIM-authenticated thread. The `pay_to` address and the
-	// token asset are resolved server-side from your registered default payout
-	// address for the network, never from the request. The response carries
-	// the thread's `interaction_id` plus the `challenge` (the
-	// `payment_requirements`, the `nonce_binding`, and `expires_at`) the payer
-	// needs to sign; the payer replies with a signed `payment` interaction
-	// step. Amounts are in token base units (USDC has 6 decimals, so `"10000"`
-	// is 0.01 USDC).
+	// Asks another member of the organization for a rule over their own mail, from a compile response or
+	// a tree you wrote. Name them by user id, or by their member mailbox address (at most 30 lookups by
+	// address an hour). Nothing is evaluated and nothing is shared until they accept, and they may
+	// change the rule first; they see the request and can preview what it matches in their own mail. You
+	// may have at most 5 pending requests to one member and 50 in all. Needs mail:read, a credential
+	// acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
+	// and the email rules feature on the organization.
 	//
-	// POST /x402/email-challenges
-	CreateEmailChallenge(ctx context.Context, req *CreateEmailChallengeInput, params CreateEmailChallengeParams) (CreateEmailChallengeRes, error)
+	// POST /email-rule-requests
+	CreateEmailRuleRequest(ctx context.Context, req *CreateEmailRuleRequestRequest, params CreateEmailRuleRequestParams) (CreateEmailRuleRequestRes, error)
 	// CreateEndpoint implements createEndpoint operation.
 	//
 	// Creates a new webhook endpoint. If a deactivated endpoint
@@ -246,21 +373,35 @@ type Handler interface {
 	// Address-scoped events contain parsed mail without raw MIME, signed download links, routing
 	// metadata, or sibling envelope recipients. Pull destinations do not occupy HTTP routing slots.
 	// Signing-secret setup and a test HTTP delivery are not required for pull receiving.
+	// For local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named
+	// creation resumes the same active destination; omitted filters preserve its selection, while
+	// conflicting supplied configuration returns 409. Creating a pull destination requires a
+	// connected-agent credential; it creates a private subscription restricted to inbound email for the
+	// assigned address of that credential. Account API keys receive 403
+	// pull_subscription_requires_agent_connection and can instead receive mail with GET
+	// /emails?since=<cursor>&wait=30 or an HTTP endpoint. Pulling or completing an account destination
+	// created earlier returns the same 403. Names are isolated per credential; revocation or replacement
+	// deletes its subscriptions. Address-scoped events contain parsed mail without raw MIME, signed
+	// download links, routing metadata, or sibling envelope recipients. Pull destinations do not occupy
+	// HTTP routing slots. Signing-secret setup and a test HTTP delivery are not required for pull
+	// receiving.
+	// Agent connection keys (pconn_) may use endpoints.pull:manage instead of endpoints:manage here, for
+	// their own pull subscriptions only.
 	//
 	// POST /endpoints
-	CreateEndpoint(ctx context.Context, req *CreateEndpointInput) (CreateEndpointRes, error)
+	CreateEndpoint(ctx context.Context, req *CreateEndpointInput, params CreateEndpointParams) (CreateEndpointRes, error)
 	// CreateFilter implements createFilter operation.
 	//
 	// Creates a new whitelist or blocklist filter. Per-domain filters
 	// require a Pro plan. Patterns are stored as lowercase.
 	//
 	// POST /filters
-	CreateFilter(ctx context.Context, req *CreateFilterInput) (CreateFilterRes, error)
+	CreateFilter(ctx context.Context, req *CreateFilterInput, params CreateFilterParams) (CreateFilterRes, error)
 	// CreateFunction implements createFunction operation.
 	//
 	// Creates and deploys a new function. The handler must be a single
 	// ESM module whose default export is an object with an async
-	// `fetch(request, env)` method (Workers-style). Primitive signs
+	// `fetch(request, env)` method. Primitive signs
 	// each delivery and forwards the `Primitive-Signature` header to
 	// the handler. Verify the raw request body with
 	// `PRIMITIVE_WEBHOOK_SECRET` before parsing JSON; after verification
@@ -288,7 +429,7 @@ type Handler interface {
 	// running handler on the next redeploy.
 	//
 	// POST /functions
-	CreateFunction(ctx context.Context, req *CreateFunctionInput) (CreateFunctionRes, error)
+	CreateFunction(ctx context.Context, req *CreateFunctionInput, params CreateFunctionParams) (CreateFunctionRes, error)
 	// CreateFunctionSecret implements createFunctionSecret operation.
 	//
 	// Idempotent insert-or-update keyed on `(function_id, key)`.
@@ -303,6 +444,46 @@ type Handler interface {
 	//
 	// POST /functions/{id}/secrets
 	CreateFunctionSecret(ctx context.Context, req *CreateFunctionSecretInput, params CreateFunctionSecretParams) (CreateFunctionSecretRes, error)
+	// CreateGroup implements createGroup operation.
+	//
+	// Creates a group. Needs roles:assign. With an org-wide API key (acting for its person) or the
+	// person's own Primitive CLI the group must have no role: a group with a role is role assignment,
+	// done in a dashboard session or with a session step-up. Adding members to a group that holds
+	// mailbox access gives them that access, so each of its entries is checked as for a mailbox edit. A
+	// group whose role names a member's personal mailbox holds only that member: giving the role to, or
+	// adding, anyone else is refused with 403 `grant_forbidden` and `details.reason`
+	// `personal_mailbox_member_only`.
+	//
+	// POST /groups
+	CreateGroup(ctx context.Context, req *CreateGroupRequest, params CreateGroupParams) (CreateGroupRes, error)
+	// CreateKey implements createKey operation.
+	//
+	// Create an API key, super admin or narrowed to a preset or a custom permission set, optionally with
+	// an expiry and conditions. The secret is returned once. A key never holds more than the person
+	// creating it; the credential policy decides who may create which keys. grant is required: a request
+	// without it is refused (400 validation_error, details.reason grant_required), never treated as
+	// super admin. A custom key must say which mail it reaches: the addresses and domains it lists
+	// (grant.addresses, grant.domains), or every mailbox in the organization with grant.mail_scope "org",
+	//  which cannot be combined with them; one that says neither is refused (400 validation_error,
+	// details.reason mail_scope_required). Super admin, Send only and Read only reach every mailbox by
+	// definition. members:read is only for an org-wide custom key: naming it with grant.addresses or
+	// grant.domains is refused (400). Owners and admins are emailed about every super admin key. Send an
+	// Idempotency-Key to retry safely: a second create by the same person under the same key makes no
+	// second key and is refused (409 idempotency_key_reused) with the first key's id in error.details.
+	// key_id, so a caller whose first answer was lost can revoke that key. The onboarding field is for
+	// the dashboard only. The Primitive CLI's token is refused, even with a step-up: keys are created in
+	// the dashboard or by an app the person connected. While the organization's keys API is not enabled,
+	// this answers 404 feature_disabled, except that a dashboard session may still create a super admin
+	// key (the dashboard's own create).
+	// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+	// `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+	// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+	// when the person's role could not do it anyway). The person's role must hold keys:manage. API keys
+	// and agent connection keys are refused. An agent acting for the person is refused unless it carries
+	// a step-up token the person issued in the dashboard.
+	//
+	// POST /keys
+	CreateKey(ctx context.Context, req *CredentialsCreateKeyInput, params CreateKeyParams) (CreateKeyRes, error)
 	// CreateOrgSecret implements createOrgSecret operation.
 	//
 	// Idempotent insert-or-update keyed on `(org_id, key)`. Returns
@@ -315,13 +496,29 @@ type Handler interface {
 	// managed keys are reserved and rejected.
 	//
 	// POST /org/secrets
-	CreateOrgSecret(ctx context.Context, req *CreateOrgSecretInput) (CreateOrgSecretRes, error)
-	// CreateRegistry implements createRegistry operation.
+	CreateOrgSecret(ctx context.Context, req *CreateOrgSecretInput, params CreateOrgSecretParams) (CreateOrgSecretRes, error)
+	// CreateProject implements createProject operation.
 	//
-	// Create a registry.
+	// Requires a current human organization membership. Machine credentials are refused. Results are
+	// scoped to current project access. No local paths or existing conversation history are shared.
 	//
-	// POST /registries
-	CreateRegistry(ctx context.Context, req *CreateRegistryInput) (CreateRegistryRes, error)
+	// POST /projects
+	CreateProject(ctx context.Context, req *ProjectsCreateProjectInput, params CreateProjectParams) (CreateProjectRes, error)
+	// CreateRole implements createRole operation.
+	//
+	// A role nobody can use to gain access they do not hold: its permissions and mail scope must be
+	// within the author's own. mail_scope is "org" (the default) or { addresses, domains }; any other
+	// value is refused with 400 `validation_error`. Every role that reaches mail reads it in full, and
+	// raw MIME follows the role's mail.raw:read; `depth` is deprecated and ignored. Its mail scope names
+	// no other member's personal mailbox: otherwise 403 `grant_forbidden` with `details.reason`
+	// `personal_mailbox_member_only`. Person only: a dashboard session, or the person's own OAuth or CLI
+	// token with a session step-up of purpose `roles.write` (the person confirms at the step_up_url a
+	// 403 step_up_required answer carries, which names this client, then send the token in the
+	// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+	// roles:assign. API keys are refused.
+	//
+	// POST /roles
+	CreateRole(ctx context.Context, req *CreateRoleRequest, params CreateRoleParams) (CreateRoleRes, error)
 	// CreateRoute implements createRoute operation.
 	//
 	// Binds a recipient pattern to a destination. Provide exactly one of
@@ -331,14 +528,14 @@ type Handler interface {
 	// `alice@acme.com -> functionA`).
 	//
 	// POST /routes
-	CreateRoute(ctx context.Context, req *CreateRouteInput) (CreateRouteRes, error)
+	CreateRoute(ctx context.Context, req *CreateRouteInput, params CreateRouteParams) (CreateRouteRes, error)
 	// CreateWakeAuthorization implements createWakeAuthorization operation.
 	//
 	// Grant a sender domain (and optionally a specific address and command set)
 	// permission to wake a target function. The domain must be fully-qualified.
 	//
 	// POST /wake/authorizations
-	CreateWakeAuthorization(ctx context.Context, req *CreateWakeAuthorizationInput) (CreateWakeAuthorizationRes, error)
+	CreateWakeAuthorization(ctx context.Context, req *CreateWakeAuthorizationInput, params CreateWakeAuthorizationParams) (CreateWakeAuthorizationRes, error)
 	// CreateWakeSchedule implements createWakeSchedule operation.
 	//
 	// Create a cron schedule that sends a wake.dispatch command to one of your
@@ -347,23 +544,67 @@ type Handler interface {
 	// time is computed without firing immediately.
 	//
 	// POST /wake/schedules
-	CreateWakeSchedule(ctx context.Context, req *CreateWakeScheduleInput) (CreateWakeScheduleRes, error)
-	// DecideRegistryRequest implements decideRegistryRequest operation.
+	CreateWakeSchedule(ctx context.Context, req *CreateWakeScheduleInput, params CreateWakeScheduleParams) (CreateWakeScheduleRes, error)
+	// DecideAccessMode implements decideAccessMode operation.
 	//
-	// Approve or reject a publication request.
+	// Decide items the switch to delegated mode would change. Keep exempts an item; revoke revokes,
+	// deletes or stops it; narrow holds an item listed for a person (suspended or flagged) to be decided
+	// on the waiting list, where a key or Function can be narrowed; on an unattributed object, which no
+	// reduction holds, narrow leaves it as keep does, and the preview does not offer it. A mailbox loss
+	// or a connected app is only acknowledged (keep); a controlled key or Function and a self-given
+	// access entry take keep or revoke; another decision is refused with 400. Revoking a filter needs
+	// confirm: true. Person only: a dashboard session, or the person's own OAuth or CLI token with a
+	// session step-up of purpose `access_mode.write` (the person confirms at the step_up_url a 403
+	// step_up_required answer carries, which names this client, then send the token in the
+	// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+	// access_mode:manage (owners). API keys are refused.
 	//
-	// POST /registries/{slug}/requests/{id}
-	DecideRegistryRequest(ctx context.Context, req *DecideRegistryRequestInput, params DecideRegistryRequestParams) (DecideRegistryRequestRes, error)
-	// DefineAgent implements defineAgent operation.
+	// POST /access-mode/decisions
+	DecideAccessMode(ctx context.Context, req *DecideAccessModeRequest, params DecideAccessModeParams) (DecideAccessModeRes, error)
+	// DecideSuspension implements decideSuspension operation.
 	//
-	// Define an agent identity.
+	// Keep, narrow or revoke one suspended or flagged item. Keeping it, and revoking an API key, needs
+	// the decider to cover it (revoking an uncovered key is refused with `grant_forbidden`,
+	// `target_not_covered`). Keeping an API key rotated (`rotate: true`, other than the shared Function
+	// key) also revokes its older secrets still in a rotation overlap, and needs keys:manage on both the
+	// credential and the person: without it, or if the decider lost members:manage meanwhile, it is
+	// refused with `grant_forbidden` (`keys_manage_required` or `actor_access_changed`) and nothing is
+	// rotated. Person only: a dashboard session, or the person's own OAuth or CLI token with a session
+	// step-up of purpose `suspensions.decide` (the person confirms at the step_up_url a 403
+	// step_up_required answer carries, which names this client, then send the token in the
+	// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+	// members:manage. API keys are refused.
 	//
-	// POST /agents
-	DefineAgent(ctx context.Context, req *DefineAgentInput) (DefineAgentRes, error)
+	// POST /access-suspensions/{id}/decision
+	DecideSuspension(ctx context.Context, req *DecideSuspensionRequest, params DecideSuspensionParams) (DecideSuspensionRes, error)
+	// DeclineEmailRuleRequest implements declineEmailRuleRequest operation.
+	//
+	// Declines a pending request made to you. Nothing is written but the decision. Needs mail:read, a
+	// credential acting as a member with their full access (API keys, agent keys and narrowed tokens are
+	// refused), and the email rules feature on the organization.
+	//
+	// POST /email-rule-requests/{id}/decline
+	DeclineEmailRuleRequest(ctx context.Context, params DeclineEmailRuleRequestParams) (DeclineEmailRuleRequestRes, error)
+	// DeleteAddressNote implements deleteAddressNote operation.
+	//
+	// Organization-scoped address annotations, independent of agents, routes and endpoints. Any bare
+	// address can have private notes. Function credentials may read org notes but cannot write or delete.
+	//  A connected agent credential writes only its own address's notes and reads all of them; of
+	// another live agent's address in its organization it reads only the AGENT_WORKING, AGENT_RUNTIME
+	// and AGENT_INFO notes, and nothing of any other address. List and batch reads return only those
+	// notes; reading any other note name on another address returns 403, and one of those three names on
+	// an address that is not a live agent reads as not found. Use if_absent or if_version to avoid
+	// overwriting another writer.
+	//
+	// DELETE /address-notes/{address}/{name}
+	DeleteAddressNote(ctx context.Context, params DeleteAddressNoteParams) (DeleteAddressNoteRes, error)
 	// DeleteAgentContact implements deleteAgentContact operation.
 	//
 	// Organization directory and agent preferences; no profiles, message history or runtime presence.
-	// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+	// Organization credentials retain tenant directory permissions. Human organization members may read
+	// and change agent notification contacts only for personal connections bound to their current
+	// membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+	// their own agent contact list (another contact reads as 404) and always see display_name as null,
 	// create address-only missing contacts using if_absent:true, and access only their own agent
 	// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
 	// not granted access. Memberships require an existing local agent connection (including revoked
@@ -381,7 +622,10 @@ type Handler interface {
 	// DeleteContact implements deleteContact operation.
 	//
 	// Organization directory and agent preferences; no profiles, message history or runtime presence.
-	// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+	// Organization credentials retain tenant directory permissions. Human organization members may read
+	// and change agent notification contacts only for personal connections bound to their current
+	// membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+	// their own agent contact list (another contact reads as 404) and always see display_name as null,
 	// create address-only missing contacts using if_absent:true, and access only their own agent
 	// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
 	// not granted access. Memberships require an existing local agent connection (including revoked
@@ -398,38 +642,43 @@ type Handler interface {
 	DeleteContact(ctx context.Context, params DeleteContactParams) (DeleteContactRes, error)
 	// DeleteDomain implements deleteDomain operation.
 	//
-	// Deletes a verified or unverified domain claim.
+	// Remove a domain from the organization. Inbound mail for its addresses stops being accepted.
 	//
 	// DELETE /domains/{id}
 	DeleteDomain(ctx context.Context, params DeleteDomainParams) (DeleteDomainRes, error)
 	// DeleteEmail implements deleteEmail operation.
 	//
-	// Delete an email.
+	// Permanently delete a received email and its stored content. This cannot be undone.
 	//
 	// DELETE /emails/{id}
 	DeleteEmail(ctx context.Context, params DeleteEmailParams) (DeleteEmailRes, error)
+	// DeleteEmailRule implements deleteEmailRule operation.
+	//
+	// Deletes a rule with its versions, its decisions and the access it granted. The author, or a caller
+	// who reads the whole organization's mail, may delete it; while it is shared with another member,
+	// only the author or someone who manages members from the dashboard. Needs mail:read, a credential
+	// acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
+	// and the email rules feature on the organization.
+	//
+	// DELETE /email-rules/{id}
+	DeleteEmailRule(ctx context.Context, params DeleteEmailRuleParams) (DeleteEmailRuleRes, error)
 	// DeleteEndpoint implements deleteEndpoint operation.
 	//
-	// Soft-deletes a webhook endpoint. The endpoint will no longer
-	// receive webhook deliveries.
+	// Delete a webhook endpoint. Inbound messages are no longer delivered to it.
+	// Agent connection keys (pconn_) may use endpoints.pull:manage instead of endpoints:manage here, for
+	// their own pull subscriptions only.
 	//
 	// DELETE /endpoints/{id}
 	DeleteEndpoint(ctx context.Context, params DeleteEndpointParams) (DeleteEndpointRes, error)
 	// DeleteFilter implements deleteFilter operation.
 	//
-	// Delete a filter rule.
+	// Delete an inbound routing filter rule. Messages already processed by the rule are unaffected.
 	//
 	// DELETE /filters/{id}
 	DeleteFilter(ctx context.Context, params DeleteFilterParams) (DeleteFilterRes, error)
 	// DeleteFunction implements deleteFunction operation.
 	//
-	// Soft-deletes the function row, removes the script from the edge
-	// runtime, and deactivates any route bound to this function so no
-	// further inbound mail is delivered. Past deploy history,
-	// invocations, and logs are retained.
-	// Returns 502 if the runtime delete fails partway; the function
-	// row stays in place and the call is safe to retry until it
-	// succeeds.
+	// Delete a hosted inbound function. It stops running on future inbound messages.
 	//
 	// DELETE /functions/{id}
 	DeleteFunction(ctx context.Context, params DeleteFunctionParams) (DeleteFunctionRes, error)
@@ -443,13 +692,18 @@ type Handler interface {
 	//
 	// DELETE /functions/{id}/secrets/{key}
 	DeleteFunctionSecret(ctx context.Context, params DeleteFunctionSecretParams) (DeleteFunctionSecretRes, error)
+	// DeleteGroup implements deleteGroup operation.
+	//
+	// Deletes a group; its mailbox access entries go with it. With an org-wide API key or the person's
+	// own Primitive CLI only role-free groups are deleted.
+	//
+	// DELETE /groups/{id}
+	DeleteGroup(ctx context.Context, params DeleteGroupParams) (DeleteGroupRes, error)
 	// DeleteMemory implements deleteMemory operation.
 	//
-	// Delete one active memory by key and scope. Deletes are idempotent when
-	// `if_version` is omitted: deleting a missing key returns `deleted:
-	// false`. With `if_version`, a missing key still returns `deleted: false`,
-	// but a stale version returns `memory_conflict`.
-	// A successful delete records memory write usage.
+	// Delete one active memory by key and scope. Function-authenticated requests use their own Function
+	// id and cannot override it. Deletes are idempotent without `if_version`; a stale `if_version`
+	// returns `memory_conflict`.
 	//
 	// DELETE /memories
 	DeleteMemory(ctx context.Context, params DeleteMemoryParams) (DeleteMemoryRes, error)
@@ -460,18 +714,29 @@ type Handler interface {
 	//
 	// DELETE /org/secrets/{key}
 	DeleteOrgSecret(ctx context.Context, params DeleteOrgSecretParams) (DeleteOrgSecretRes, error)
-	// DeleteRegistry implements deleteRegistry operation.
+	// DeleteProject implements deleteProject operation.
 	//
-	// Removes the registry from discovery and frees its slug for re-creation.
+	// Requires a current human organization membership. Machine credentials are refused. Results are
+	// scoped to current project access. No local paths or existing conversation history are shared.
 	//
-	// DELETE /registries/{slug}
-	DeleteRegistry(ctx context.Context, params DeleteRegistryParams) (DeleteRegistryRes, error)
+	// DELETE /projects/{project_id}
+	DeleteProject(ctx context.Context, params DeleteProjectParams) (DeleteProjectRes, error)
 	// DeleteRepeatingSend implements deleteRepeatingSend operation.
 	//
 	// Deletes the repeat and cancels its pending message. Messages already sent are not affected.
 	//
 	// DELETE /repeating-sends/{id}
 	DeleteRepeatingSend(ctx context.Context, params DeleteRepeatingSendParams) (DeleteRepeatingSendRes, error)
+	// DeleteRole implements deleteRole operation.
+	//
+	// Only a role nobody holds. Person only: a dashboard session, or the person's own OAuth or CLI token
+	// with a session step-up of purpose `roles.write` (the person confirms at the step_up_url a 403
+	// step_up_required answer carries, which names this client, then send the token in the
+	// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+	// roles:assign. API keys are refused.
+	//
+	// DELETE /roles/{id}
+	DeleteRole(ctx context.Context, params DeleteRoleParams) (DeleteRoleRes, error)
 	// DeleteRoute implements deleteRoute operation.
 	//
 	// Delete a recipient route.
@@ -480,16 +745,16 @@ type Handler interface {
 	DeleteRoute(ctx context.Context, params DeleteRouteParams) (DeleteRouteRes, error)
 	// DeleteSentEmail implements deleteSentEmail operation.
 	//
-	// Permanently deletes sender mailbox history and its owned attachment archive
-	// and transient payload. Allows delivered, bounced, agent_failed, gate_denied,
-	// canceled, deferred and wait_timeout; other states return 409. Cancel scheduled
-	// sends first. This does not recall or cancel delivery already admitted.
-	// Recipient copies, received replies and independent audit records are preserved.
-	// Occupied idempotency keys and delivered-reply deduplication remain reserved.
-	// Keys already released by cancellation, gate denial or a never-attempted failure
-	// remain reusable. Repeating a completed deletion succeeds; unknown or foreign
-	// IDs return 404. Organization API keys, sessions and OAuth are supported;
-	// Function and connected-agent credentials are denied.
+	// Permanently deletes eligible sender mailbox history and its owned attachment archive and transient
+	// payload. Allows delivered, bounced, agent_failed, gate_denied, canceled, deferred and wait_timeout;
+	//  other states return 409 (cancel scheduled sends first). Preserves recipient copies, received
+	// replies and independent interaction/delivery audit. This does not recall or cancel delivery
+	// already admitted. A minimal non-content record preserves occupied idempotency keys and
+	// delivered-reply deduplication. Keys already released by cancellation, gate denial or a
+	// never-attempted failure remain reusable; deleting those records does not revoke their existing
+	// retry permission. Repeating a completed deletion returns success; unknown or foreign IDs return
+	// 404. Organization API keys, sessions and OAuth are supported; Function and connected-agent
+	// credentials are denied.
 	//
 	// DELETE /sent-emails/{id}
 	DeleteSentEmail(ctx context.Context, params DeleteSentEmailParams) (DeleteSentEmailRes, error)
@@ -524,17 +789,20 @@ type Handler interface {
 	DiscardEmailContent(ctx context.Context, params DiscardEmailContentParams) (DiscardEmailContentRes, error)
 	// DownloadAttachments implements downloadAttachments operation.
 	//
-	// Downloads all attachments as a gzip-compressed tar archive.
-	// Authenticates via a signed download token (provided in webhook
-	// payloads) or a valid session.
+	// Downloads all attachments of a received email as a gzip-compressed tar archive. Authenticate with
+	// a dashboard session, an organization API key, an authorized organization OAuth token, an
+	// address-bound agent connection key (only for mail received at its own address), or the signed
+	// download token a webhook payload carries (the `token` query parameter). A signed token that names
+	// who it was issued for works only while that access still reaches the email. Function credentials
+	// are refused, and so is access that reaches the mailbox only below content depth (403). Content the
+	// organization's sender filter withheld is not served.
 	//
 	// GET /emails/{id}/attachments.tar.gz
 	DownloadAttachments(ctx context.Context, params DownloadAttachmentsParams) (DownloadAttachmentsRes, error)
 	// DownloadDomainZoneFile implements downloadDomainZoneFile operation.
 	//
-	// Downloads a BIND-format DNS zone file containing the DNS records
-	// required for a domain claim. Agents should offer this after
-	// `addDomain` when users want to import DNS records instead of
+	// Downloads a BIND-format DNS zone file containing the DNS records required for a domain claim.
+	// Agents should offer this after `addDomain` when users want to import DNS records instead of
 	// copying each record manually.
 	//
 	// GET /domains/{id}/zone-file
@@ -565,14 +833,15 @@ type Handler interface {
 	DownloadEmailAttachmentByFilename(ctx context.Context, params DownloadEmailAttachmentByFilenameParams) (DownloadEmailAttachmentByFilenameRes, error)
 	// DownloadEmailAttachmentPart implements downloadEmailAttachmentPart operation.
 	//
-	// Pending service release. This contract does not establish live availability.
-	// Downloads the original bytes of one ordinary email attachment, selected by
-	// its metadata `part_index`, not its position in an attachments array. Refresh
-	// the email detail after `attachment_changed` before choosing an index again.
-	// Uses bearer authentication only; signed raw-email download tokens are not accepted.
-	// A paired-agent credential may read only a message addressed to its claimed address.
-	// Function credentials are denied. Other bearer credentials retain their
-	// existing email access boundaries. This endpoint serves email bytes only.
+	// Returns the original decoded bytes of one retained attachment. Authenticate with an organization
+	// API key, an authorized organization OAuth token, or an address-bound agent connection key.
+	// Connected agents can read only their own inbound recipient attachments. Function credentials and
+	// download query tokens are not supported. Duplicate filenames are distinguished by part_index. The
+	// part limit is 31457280 bytes; the complete archive must fit 67108864 compressed and decoded bytes
+	// and 1024 entries including metadata. Metadata headers are limited to 16384 bytes each and 262144
+	// bytes total; resolved archive paths are limited to 4096 UTF-8 bytes. Preparation has a 15-second
+	// deadline. A small part in an oversized archive can exceed these limits. This does not parse
+	// interactions or certify sender identity. Discarded content is unavailable.
 	//
 	// GET /emails/{id}/attachments/{part_index}
 	DownloadEmailAttachmentPart(ctx context.Context, params DownloadEmailAttachmentPartParams) (DownloadEmailAttachmentPartRes, error)
@@ -610,30 +879,95 @@ type Handler interface {
 	DownloadSentAttachmentByFilename(ctx context.Context, params DownloadSentAttachmentByFilenameParams) (DownloadSentAttachmentByFilenameRes, error)
 	// DownloadSentAttachmentPart implements downloadSentAttachmentPart operation.
 	//
-	// Pending service release. This contract does not establish live availability.
-	// Downloads the original bytes of one ordinary email attachment, selected by
-	// its metadata `part_index`, not its position in an attachments array. Refresh
-	// the email detail after `attachment_changed` before choosing an index again.
-	// Uses bearer authentication only; signed raw-email download tokens are not accepted.
-	// A paired-agent credential may read only mail sent from its claimed address.
-	// Receiving a copy does not authorize downloading another sender's sent content.
-	// Function credentials are denied. Other bearer credentials retain their
-	// existing email access boundaries. This endpoint serves email bytes only.
+	// Returns the original decoded bytes of one retained attachment. Authenticate with an organization
+	// API key, an authorized organization OAuth token, or an address-bound agent connection key.
+	// Connected agents can read only their own outgoing sender attachments. Function credentials and
+	// download query tokens are not supported. Duplicate filenames are distinguished by part_index. The
+	// part limit is 31457280 bytes; the complete archive must fit 67108864 compressed and decoded bytes
+	// and 1024 entries including metadata. Metadata headers are limited to 16384 bytes each and 262144
+	// bytes total; resolved archive paths are limited to 4096 UTF-8 bytes. Preparation has a 15-second
+	// deadline. A small part in an oversized archive can exceed these limits. This does not parse
+	// interactions or certify sender identity. Discarded content is unavailable.
 	//
 	// GET /sent-emails/{id}/attachments/{part_index}
 	DownloadSentAttachmentPart(ctx context.Context, params DownloadSentAttachmentPartParams) (DownloadSentAttachmentPartRes, error)
+	// DownloadSentAttachments implements downloadSentAttachments operation.
+	//
+	// Downloads retained inline attachments as a gzip-compressed tar archive. Authenticate with an
+	// organization API key, an authorized organization OAuth token, or a signed sent-attachment download
+	// token. An address-bound agent connection key reads only the archives of mail sent from its own
+	// address. Function credentials are not permitted. Archive member names match attachments[].tar_path
+	// in sent-email detail. Legacy sends may have no archive; offloaded payload files are not included.
+	// Discarded content cannot be downloaded.
+	//
+	// GET /sent-emails/{id}/attachments.tar.gz
+	DownloadSentAttachments(ctx context.Context, params DownloadSentAttachmentsParams) (DownloadSentAttachmentsRes, error)
+	// EndBreakGlass implements endBreakGlass operation.
+	//
+	// Ends a grant early. Person only: a dashboard session, or the person's own OAuth or CLI token with
+	// a session step-up of purpose `break_glass.write` (the person confirms at the step_up_url a 403
+	// step_up_required answer carries, which names this client, then send the token in the
+	// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+	// access_mode:manage (owners). API keys are refused.
+	//
+	// POST /break-glass/{id}/end
+	EndBreakGlass(ctx context.Context, params EndBreakGlassParams) (EndBreakGlassRes, error)
+	// EndEmailRuleShare implements endEmailRuleShare operation.
+	//
+	// Stops sharing. Either person on the share can do this, or an owner or admin who manages members.
+	// The share is kept, marked as ended. This needs no mail access and does not depend on the email
+	// rules feature. An owner or admin not on the share must use a dashboard session. Otherwise use your
+	// own session, or an OAuth or CLI token that acts with your full access: API keys and agent keys are
+	// refused.
+	//
+	// DELETE /email-rule-shares/{id}
+	EndEmailRuleShare(ctx context.Context, params EndEmailRuleShareParams) (EndEmailRuleShareRes, error)
+	// GetAccessMode implements getAccessMode operation.
+	//
+	// Whole-org or delegated mailbox access. Holders of roles:assign also get the preview of a switch
+	// (every item that needs a decision, each with the decision_options it takes, worded for what the
+	// switch does) and the decisions made, plus notices: member and group domain entries that delegated
+	// mode keeps off personal mailboxes, each with how many it leaves out. Notices are informational,
+	// never decided, and never hold the switch (notices_truncated past 500, notices_unavailable when
+	// they could not be read). In whole-org mode it also lists narrowed_agents: every live agent
+	// connection the switch narrows to an own-address key (personal agents of members, and shared
+	// agents), informational in the same way (narrowed_agents_truncated past 500,
+	// narrowed_agents_unavailable when they could not be read). Any person; API keys are refused.
+	//
+	// GET /access-mode
+	GetAccessMode(ctx context.Context) (GetAccessModeRes, error)
 	// GetAccount implements getAccount operation.
 	//
-	// Get account info.
+	// Retrieve the authenticated organization's account: organization identity, current plan, usage, and
+	// onboarding state. Fields the credential has no permission to read are null: plan, limits,
+	// entitlements, settings and the managed inbox need org:read, the subscription dates billing:read,
+	// the signup email the access that shows members' emails, and the webhook secret rotation date
+	// webhook_secret:read.
 	//
 	// GET /account
 	GetAccount(ctx context.Context) (GetAccountRes, error)
-	// GetAgent implements getAgent operation.
+	// GetAddressNote implements getAddressNote operation.
 	//
-	// Get an agent's public profile by address.
+	// Organization-scoped address annotations, independent of agents, routes and endpoints. Any bare
+	// address can have private notes. Function credentials may read org notes but cannot write or delete.
+	//  A connected agent credential writes only its own address's notes and reads all of them; of
+	// another live agent's address in its organization it reads only the AGENT_WORKING, AGENT_RUNTIME
+	// and AGENT_INFO notes, and nothing of any other address. List and batch reads return only those
+	// notes; reading any other note name on another address returns 403, and one of those three names on
+	// an address that is not a live agent reads as not found. Use if_absent or if_version to avoid
+	// overwriting another writer.
 	//
-	// GET /agents/{address}
-	GetAgent(ctx context.Context, params GetAgentParams) (GetAgentRes, error)
+	// GET /address-notes/{address}/{name}
+	GetAddressNote(ctx context.Context, params GetAddressNoteParams) (GetAddressNoteRes, error)
+	// GetAgentConnectionSettings implements getAgentConnectionSettings operation.
+	//
+	// Read the organization agent settings. idle_hide_after_days is how many days a connected agent may
+	// go without activity (an authenticated call by its credential, a mail read, or its creation or
+	// verification) before it is hidden. Default 14; null means auto-hide is off. Any current
+	// organization member may read it.
+	//
+	// GET /agent-connections/settings
+	GetAgentConnectionSettings(ctx context.Context) (GetAgentConnectionSettingsRes, error)
 	// GetAgentContactPolicy implements getAgentContactPolicy operation.
 	//
 	// Receiver-side email notification admission preferences; never task, tool, code execution or
@@ -641,49 +975,46 @@ type Handler interface {
 	// contract. Older receivers may continue their previous exact-contact notifications until updated.
 	// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
 	// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
-	// read/write policies. Connected credentials may only GET their own agent composite; they cannot
-	// write either policy. Function and signed capability credentials are not granted access. Rules are
-	// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
-	// matching organization rules; silence wins ties within that scope. If neither scope matches,
-	// existing exact membership notify:true allows using its own activation metadata; otherwise only
-	// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
-	// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
-	// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
-	// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
-	// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
-	// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
-	// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
-	// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
-	// reads as empty rules, null version/timestamps, false request intake for the organization and null
-	// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
-	// preserve server activation metadata while retained unchanged; removing/recreating or changing a
-	// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
-	// writes preserve versions. Agent composite effective_version changes with either policy document,
-	// connection identity, generation or successful claim; effective_since is the latest policy mutation,
-	//  connection creation or successful claim. Reclaiming a connection invalidates prior admission
-	// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
-	// admissions require received_at >= both the selected activation time and effective_since.
-	// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
-	// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
-	// own notify_since and generation but must still recheck current policy denies and effective_version.
-	//  Before dispatch, receivers must recheck the current composite version and applicable activation
-	// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
-	//  Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
-	// dispatch notifications.
+	// read/write all policies. Current human members may read/write only their own personal agent policy,
+	//  bound to their membership incarnation. Connected credentials may only GET their own agent
+	// composite; they cannot write either policy. Function and signed capability credentials are not
+	// granted access. Rules are unordered. Exact membership notify:false always silences. Next use
+	// matching agent rules, otherwise matching organization rules; silence wins ties within that scope.
+	// If neither scope matches, existing exact membership notify:true allows using its own activation
+	// metadata; otherwise only enabled contact-request intake is allowed. Owner policy silence therefore
+	// cannot be bypassed by a connected agent adding a notify:true membership. Patterns are canonical
+	// lowercase bare mailboxes, *@example.com, research-*@example.com or *@*.example.com. Only a
+	// terminal local-part * and a leading whole domain-label *. are supported; subdomain patterns
+	// exclude the apex and require a literal multi-label suffix. No regular expressions, question marks,
+	// universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain. PUT fully
+	// replaces up to 100 rules and the request-intake option using exactly one CAS precondition.
+	// Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document,
+	// otherwise 409. A missing document reads as empty rules, null version/timestamps, false request
+	// intake for the organization and null (inherit) for the agent. Reset overrides with empty rules and
+	// null request intake. Allow rules preserve server activation metadata while retained unchanged;
+	// removing/recreating or changing a rule to allow resets it. Request intake defaults off; agent null
+	// inherits the organization. No-op writes preserve versions. Agent composite effective_version
+	// changes with either policy document, connection identity, generation or successful claim;
+	// effective_since is the latest policy mutation, connection creation or successful claim. Reclaiming
+	// a connection invalidates prior admission snapshots and starts a fresh rule/request cutoff; routine
+	// heartbeats do not. Rule/request admissions require received_at >= both the selected activation
+	// time and effective_since. Consequently even unrelated policy edits suppress queued older
+	// rule/request admissions, without deleting email history or affecting explicit reply waits. Exact
+	// membership fallback retains its own notify_since and generation but must still recheck current
+	// policy denies and effective_version. Before dispatch, receivers must recheck the current composite
+	// version and applicable activation generation and membership; stop new admissions when policy is
+	// unavailable or older than 30 seconds. Snapshot fields explain scope and matched rules locally; the
+	// API does not execute tasks or dispatch notifications.
 	//
 	// GET /agent-contact-policy/{agent_address}
 	GetAgentContactPolicy(ctx context.Context, params GetAgentContactPolicyParams) (GetAgentContactPolicyRes, error)
-	// GetChallenge implements getChallenge operation.
-	//
-	// Fetch a challenge you created, to poll its `status` and settlement
-	// receipt (`settle_tx`). Scoped to the challenger org that created it.
-	//
-	// GET /x402/challenges/{id}
-	GetChallenge(ctx context.Context, params GetChallengeParams) (GetChallengeRes, error)
 	// GetContact implements getContact operation.
 	//
 	// Organization directory and agent preferences; no profiles, message history or runtime presence.
-	// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+	// Organization credentials retain tenant directory permissions. Human organization members may read
+	// and change agent notification contacts only for personal connections bound to their current
+	// membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+	// their own agent contact list (another contact reads as 404) and always see display_name as null,
 	// create address-only missing contacts using if_absent:true, and access only their own agent
 	// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
 	// not granted access. Memberships require an existing local agent connection (including revoked
@@ -705,35 +1036,36 @@ type Handler interface {
 	// contract. Older receivers may continue their previous exact-contact notifications until updated.
 	// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
 	// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
-	// read/write policies. Connected credentials may only GET their own agent composite; they cannot
-	// write either policy. Function and signed capability credentials are not granted access. Rules are
-	// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
-	// matching organization rules; silence wins ties within that scope. If neither scope matches,
-	// existing exact membership notify:true allows using its own activation metadata; otherwise only
-	// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
-	// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
-	// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
-	// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
-	// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
-	// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
-	// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
-	// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
-	// reads as empty rules, null version/timestamps, false request intake for the organization and null
-	// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
-	// preserve server activation metadata while retained unchanged; removing/recreating or changing a
-	// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
-	// writes preserve versions. Agent composite effective_version changes with either policy document,
-	// connection identity, generation or successful claim; effective_since is the latest policy mutation,
-	//  connection creation or successful claim. Reclaiming a connection invalidates prior admission
-	// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
-	// admissions require received_at >= both the selected activation time and effective_since.
-	// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
-	// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
-	// own notify_since and generation but must still recheck current policy denies and effective_version.
-	//  Before dispatch, receivers must recheck the current composite version and applicable activation
-	// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
-	//  Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
-	// dispatch notifications.
+	// read/write all policies. Current human members may read/write only their own personal agent policy,
+	//  bound to their membership incarnation. Connected credentials may only GET their own agent
+	// composite; they cannot write either policy. Function and signed capability credentials are not
+	// granted access. Rules are unordered. Exact membership notify:false always silences. Next use
+	// matching agent rules, otherwise matching organization rules; silence wins ties within that scope.
+	// If neither scope matches, existing exact membership notify:true allows using its own activation
+	// metadata; otherwise only enabled contact-request intake is allowed. Owner policy silence therefore
+	// cannot be bypassed by a connected agent adding a notify:true membership. Patterns are canonical
+	// lowercase bare mailboxes, *@example.com, research-*@example.com or *@*.example.com. Only a
+	// terminal local-part * and a leading whole domain-label *. are supported; subdomain patterns
+	// exclude the apex and require a literal multi-label suffix. No regular expressions, question marks,
+	// universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain. PUT fully
+	// replaces up to 100 rules and the request-intake option using exactly one CAS precondition.
+	// Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document,
+	// otherwise 409. A missing document reads as empty rules, null version/timestamps, false request
+	// intake for the organization and null (inherit) for the agent. Reset overrides with empty rules and
+	// null request intake. Allow rules preserve server activation metadata while retained unchanged;
+	// removing/recreating or changing a rule to allow resets it. Request intake defaults off; agent null
+	// inherits the organization. No-op writes preserve versions. Agent composite effective_version
+	// changes with either policy document, connection identity, generation or successful claim;
+	// effective_since is the latest policy mutation, connection creation or successful claim. Reclaiming
+	// a connection invalidates prior admission snapshots and starts a fresh rule/request cutoff; routine
+	// heartbeats do not. Rule/request admissions require received_at >= both the selected activation
+	// time and effective_since. Consequently even unrelated policy edits suppress queued older
+	// rule/request admissions, without deleting email history or affecting explicit reply waits. Exact
+	// membership fallback retains its own notify_since and generation but must still recheck current
+	// policy denies and effective_version. Before dispatch, receivers must recheck the current composite
+	// version and applicable activation generation and membership; stop new admissions when policy is
+	// unavailable or older than 30 seconds. Snapshot fields explain scope and matched rules locally; the
+	// API does not execute tasks or dispatch notifications.
 	//
 	// GET /contact-policy
 	GetContactPolicy(ctx context.Context) (GetContactPolicyRes, error)
@@ -761,26 +1093,57 @@ type Handler interface {
 	// oldest first, with the same per-message shape, and a new
 	// `cursor`. Without `since` the response carries no `cursor` and
 	// no per-message `status`.
+	// To read an older part of a long conversation, such as the message a search result names, pass
+	// `around` with that message's id: the response is a window of messages around it with
+	// `before_cursor` and `after_cursor` to page older and newer. On these window reads `{id}` may be a
+	// sent email id as well as an inbound email id.
 	//
 	// GET /emails/{id}/conversation
 	GetConversation(ctx context.Context, params GetConversationParams) (GetConversationRes, error)
+	// GetCredentialPolicy implements getCredentialPolicy operation.
+	//
+	// The organization credential policy: key lifetime and expiry rules, who may create super admin keys,
+	//  whether members may create keys and the other rules every new key is held to. Needs the
+	// organization's credential features to be enabled; while they are not, this answers 404
+	// feature_disabled.
+	// Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
+	// connection keys and agents are refused.
+	//
+	// GET /credential-policy
+	GetCredentialPolicy(ctx context.Context) (GetCredentialPolicyRes, error)
 	// GetCreditBalance implements getCreditBalance operation.
 	//
-	// Read the organization credit position. `prepaid_credit` is the prepaid
-	// usage credit (paid top-ups, redeemed credit codes and granted credit)
-	// that can still pay for usage. `budget` is the active agent spending
-	// budget an operator funded for top-ups, or null when there is none.
-	// Amounts are strings of integer micros (1 USD = 1000000 micros).
+	// Read the organization credit position. `prepaid_credit` is the prepaid usage credit (redeemed
+	// credit codes and granted credit) that can still pay for usage. `budget` is always null: agent
+	// spending budgets were retired, and the field is kept for existing clients. Amounts are strings of
+	// integer micros (1 USD = 1000000 micros).
 	//
 	// GET /credits/balance
 	GetCreditBalance(ctx context.Context) (GetCreditBalanceRes, error)
 	// GetDefaultNetworkAgent implements getDefaultNetworkAgent operation.
 	//
-	// Requires a connected-agent credential allowed to see the network, or an organization member login.
-	// Unlisted agents look absent.
+	// Read one listed peer in the same organization. An unlisted or excluded address returns 404 in this
+	// network lookup.
 	//
 	// GET /agent-networks/default/agents/{address}
 	GetDefaultNetworkAgent(ctx context.Context, params GetDefaultNetworkAgentParams) (GetDefaultNetworkAgentRes, error)
+	// GetDelivery implements getDelivery operation.
+	//
+	// One webhook delivery attempt record, by the id listDeliveries returns.
+	//
+	// GET /webhooks/deliveries/{id}
+	GetDelivery(ctx context.Context, params GetDeliveryParams) (GetDeliveryRes, error)
+	// GetDomainAgentAuthorization implements getDomainAgentAuthorization operation.
+	//
+	// Whether the domain publishes an Agent Authorization (`_agents`) TXT record that lets agents on
+	// Primitive email it, read from DNS with the same engine the send path uses (an answer may be up to
+	// five minutes old): published (a record authorizes them), published_unauthorized (a record exists
+	// but does not), not_set_up (no record, the default) or inconclusive (the lookup could not tell;
+	// retry). The domain is one of the organization's, verified or pending; a credential confined to
+	// some mailboxes sees only the domains its scope covers. Needs domains:read.
+	//
+	// GET /domains/{id}/agent-authorization
+	GetDomainAgentAuthorization(ctx context.Context, params GetDomainAgentAuthorizationParams) (GetDomainAgentAuthorizationRes, error)
 	// GetEmail implements getEmail operation.
 	//
 	// Returns the full record for an inbound email received at one
@@ -805,6 +1168,47 @@ type Handler interface {
 	//
 	// GET /emails/{id}
 	GetEmail(ctx context.Context, params GetEmailParams) (GetEmailRes, error)
+	// GetEmailReadable implements getEmailReadable operation.
+	//
+	// Returns an inbound email as text a person or a model can read: the words of the message in reading
+	// order, without markup, hidden content, link targets or the quoted history below a reply. For a
+	// marketing email this can be a hundred times smaller than the record from `GET /emails/{id}`, which
+	// you still need for the stored bodies, headers, authentication results or delivery state.
+	// Each link is a `[n]` marker beside its label. `link_count` says how many there are; ask for
+	// targets with `links`.
+	// A long body comes in pages of at most `max_chars` characters, ending on a line break where one is
+	// in reach. When `body_next_offset` is not null, send it as `offset` to read on.
+	// The access rules of `GET /emails/{id}` apply. When content is withheld (for example a sender your
+	// filter blocked), the identifying fields are returned with an empty `body_text` and a `body_source`
+	// of `none`.
+	//
+	// GET /emails/{id}/readable
+	GetEmailReadable(ctx context.Context, params GetEmailReadableParams) (GetEmailReadableRes, error)
+	// GetEmailRule implements getEmailRule operation.
+	//
+	// A rule and its current version. The SQL the version renders to is included only when include_sql
+	// is true. Needs mail:read, a credential acting as a member with their full access (API keys, agent
+	// keys and narrowed tokens are refused), and the email rules feature on the organization.
+	//
+	// GET /email-rules/{id}
+	GetEmailRule(ctx context.Context, params GetEmailRuleParams) (GetEmailRuleRes, error)
+	// GetEmailRuleRequest implements getEmailRuleRequest operation.
+	//
+	// A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a
+	// member. A request is visible to the member who made it, the member it was made to, and the
+	// organization's owners and admins. Needs mail:read, a credential acting as a member with their full
+	// access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
+	// organization.
+	//
+	// GET /email-rule-requests/{id}
+	GetEmailRuleRequest(ctx context.Context, params GetEmailRuleRequestParams) (GetEmailRuleRequestRes, error)
+	// GetEmailRuleShare implements getEmailRuleShare operation.
+	//
+	// One share. Needs mail:read, a credential acting as a member with their full access (API keys,
+	// agent keys and narrowed tokens are refused), and the email rules feature on the organization.
+	//
+	// GET /email-rule-shares/{id}
+	GetEmailRuleShare(ctx context.Context, params GetEmailRuleShareParams) (GetEmailRuleShareRes, error)
 	// GetFunction implements getFunction operation.
 	//
 	// Returns the full record for a function, including its current
@@ -813,6 +1217,19 @@ type Handler interface {
 	//
 	// GET /functions/{id}
 	GetFunction(ctx context.Context, params GetFunctionParams) (GetFunctionRes, error)
+	// GetFunctionDeployment implements getFunctionDeployment operation.
+	//
+	// One deployment of the function, with its status, error, timings and bundle fingerprints.
+	//
+	// GET /functions/{id}/deployments/{deploymentId}
+	GetFunctionDeployment(ctx context.Context, params GetFunctionDeploymentParams) (GetFunctionDeploymentRes, error)
+	// GetFunctionInvocation implements getFunctionInvocation operation.
+	//
+	// One run of the function with its exception stack and the log lines it wrote, oldest first.
+	// logs_truncated is true when the run wrote more lines than one response carries.
+	//
+	// GET /functions/{id}/invocations/{invocationId}
+	GetFunctionInvocation(ctx context.Context, params GetFunctionInvocationParams) (GetFunctionInvocationRes, error)
 	// GetFunctionRouting implements getFunctionRouting operation.
 	//
 	// Returns the endpoint binding for the function, or null when no
@@ -822,6 +1239,22 @@ type Handler interface {
 	//
 	// GET /functions/{id}/routing
 	GetFunctionRouting(ctx context.Context, params GetFunctionRoutingParams) (GetFunctionRoutingRes, error)
+	// GetFunctionRuntimeKey implements getFunctionRuntimeKey operation.
+	//
+	// Which key the function runs with (the organization's shared key or its own), the preset and
+	// permissions it is narrowed to, the secrets attached to it, and whether it is suspended and why.
+	// Never returns the key itself.
+	//
+	// GET /functions/{id}/runtime-key
+	GetFunctionRuntimeKey(ctx context.Context, params GetFunctionRuntimeKeyParams) (GetFunctionRuntimeKeyRes, error)
+	// GetFunctionSource implements getFunctionSource operation.
+	//
+	// The source files of a managed-build deployment: the current one, or the one named by deployment_id.
+	//  A function deployed as a single bundled module returns its deploymentId with an empty files list.
+	// deploymentId is null only when the function has no deployment.
+	//
+	// GET /functions/{id}/source
+	GetFunctionSource(ctx context.Context, params GetFunctionSourceParams) (GetFunctionSourceRes, error)
 	// GetFunctionTestRunTrace implements getFunctionTestRunTrace operation.
 	//
 	// Returns the current end-to-end trace for a function test run.
@@ -832,30 +1265,117 @@ type Handler interface {
 	//
 	// GET /functions/{id}/test-runs/{run_id}/trace
 	GetFunctionTestRunTrace(ctx context.Context, params GetFunctionTestRunTraceParams) (GetFunctionTestRunTraceRes, error)
+	// GetFunctionUsage implements getFunctionUsage operation.
+	//
+	// Invocations, runtime and webhook delivery outcomes for this function, for the current month and
+	// its lifetime.
+	//
+	// GET /functions/{id}/usage
+	GetFunctionUsage(ctx context.Context, params GetFunctionUsageParams) (GetFunctionUsageRes, error)
+	// GetFunctionUsers implements getFunctionUsers operation.
+	//
+	// Each address that sent mail the function handled or received a reply from it, with inbound and
+	// outbound counts and first and last seen times, up to cap entries; truncated is true when there
+	// were more.
+	//
+	// GET /functions/{id}/users
+	GetFunctionUsers(ctx context.Context, params GetFunctionUsersParams) (GetFunctionUsersRes, error)
+	// GetInboundHourlyStats implements getInboundHourlyStats operation.
+	//
+	// Received mail per UTC hour over the last `days` days, by outcome: accepted, failing (every webhook
+	// delivery so far failed) and rejected. Hours with no mail are left out. Needs mail:read. Counts
+	// only the mail the credential may read: a credential narrowed to some addresses counts the mail its
+	// scope admits.
+	//
+	// GET /stats/emails/hourly
+	GetInboundHourlyStats(ctx context.Context, params GetInboundHourlyStatsParams) (GetInboundHourlyStatsRes, error)
 	// GetInboxStatus implements getInboxStatus operation.
 	//
-	// Returns one consolidated view of inbound domain readiness,
-	// webhook/function processing routes, deployed Functions, and
-	// recent inbound email activity.
-	// Agents should call this before guiding a user through inbound
-	// setup. It answers the practical questions "can I receive mail",
-	// "will anything process that mail", and "what should I do next"
-	// without forcing clients to stitch together domains, endpoints,
-	// functions, and emails manually.
+	// Returns one consolidated view of domain verification, webhook/function processing routes, deployed
+	// functions, and recent inbound mail. Agents should use this before guiding users through inbound
+	// email setup.
 	//
 	// GET /inbox/status
 	GetInboxStatus(ctx context.Context) (GetInboxStatusRes, error)
+	// GetInteraction implements getInteraction operation.
+	//
+	// One interaction with every step it has processed, oldest first, including rejected steps and their
+	// reason. Each step links the inbound email (email_id) or sent email (sent_email_id) that carried it,
+	//  or null when that message no longer exists. Reading needs interactions:read and organization-wide
+	// mail scope; a credential narrowed to some mailboxes is refused.
+	//
+	// GET /interactions/{id}
+	GetInteraction(ctx context.Context, params GetInteractionParams) (GetInteractionRes, error)
+	// GetKey implements getKey operation.
+	//
+	// One key's metadata, never its secret. The person needs access to the whole organization's mail.
+	// Needs the organization's credential features to be enabled; while they are not, this answers 404
+	// feature_disabled.
+	// Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
+	// person's role must hold keys:read. API keys, agent connection keys and agents are refused.
+	//
+	// GET /keys/{id}
+	GetKey(ctx context.Context, params GetKeyParams) (GetKeyRes, error)
+	// GetKeyBuilder implements getKeyBuilder operation.
+	//
+	// The key presets the caller may use (each with whether it is available and why not), the permission
+	// matrix for custom keys and the policy in force. An area marked org_wide_only (Members) is listed
+	// only to a person who holds its permission, and only a custom key with no addresses or domains may
+	// hold it. Needs the organization's credential features to be enabled; while they are not, this
+	// answers 404 feature_disabled.
+	// Person only: a dashboard session. The person's role must hold keys:read. API keys, agent
+	// connection keys and agents are refused.
+	//
+	// GET /keys/builder
+	GetKeyBuilder(ctx context.Context) (GetKeyBuilderRes, error)
+	// GetKeySuggestion implements getKeySuggestion operation.
+	//
+	// The permissions a key used over the last 30 days, as a custom grant that would have served every
+	// successful call (also as builder areas), the narrowest mail scope its calls support (depth is
+	// deprecated: raw when it downloaded raw MIME, otherwise content) (the mailboxes of the messages it
+	// named and sent, with notes on what the request log cannot account for), and whether it is unused.
+	// Calls to routes only the super admin key can use (groups and mailbox access) derive no permission,
+	// since a custom key is refused there; super_admin_only_calls counts them. usage gives the same
+	// window anonymized: successful and failed requests per UTC day, the routes called by their declared
+	// template (never the called path) with the permission each needed, and how many mailboxes the key
+	// read and sent from (counts only, and only for a person with access to the whole organization's
+	// mail). Nothing is applied: narrowing is a change to the key (PATCH /v1/keys/:id). Needs the
+	// organization's credential features to be enabled; while they are not, this answers 404
+	// feature_disabled.
+	// Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
+	// connection keys and agents are refused.
+	//
+	// GET /keys/{id}/suggestion
+	GetKeySuggestion(ctx context.Context, params GetKeySuggestionParams) (GetKeySuggestionRes, error)
 	// GetMemory implements getMemory operation.
 	//
-	// Fetch one active memory by key and scope. Omit scope parameters to use
-	// the automatic default: function-authenticated context, then the
-	// `x-primitive-function-id` header, then org scope. Function scope uses a
-	// function id UUID in `scope_id`.
-	// A successful read records memory read usage and updates the memory's
-	// read stats asynchronously.
+	// Fetch one active memory by key and scope. Omit scope parameters to use automatic scope resolution.
+	// Function-authenticated requests use their own Function id and cannot override it. Function scope
+	// uses a function id UUID in `scope_id`.
 	//
 	// GET /memories
 	GetMemory(ctx context.Context, params GetMemoryParams) (GetMemoryRes, error)
+	// GetOrgFunctionFallback implements getOrgFunctionFallback operation.
+	//
+	// Where mail that no domain route claims is delivered: an HTTP endpoint or a function. Null data
+	// when no fallback is set.
+	//
+	// GET /functions/fallback
+	GetOrgFunctionFallback(ctx context.Context) (GetOrgFunctionFallbackRes, error)
+	// GetOrgFunctionInvocationSeries implements getOrgFunctionInvocationSeries operation.
+	//
+	// Invocations and failures per function per day, for the dashboard's activity chart. Optionally
+	// limited to one function.
+	//
+	// GET /functions/invocation-series
+	GetOrgFunctionInvocationSeries(ctx context.Context, params GetOrgFunctionInvocationSeriesParams) (GetOrgFunctionInvocationSeriesRes, error)
+	// GetOrgFunctionUsage implements getOrgFunctionUsage operation.
+	//
+	// Invocations, runtime and webhook delivery outcomes across every function in the organization, for
+	// the current month and the function's lifetime, plus the number of active functions.
+	//
+	// GET /functions/usage
+	GetOrgFunctionUsage(ctx context.Context) (GetOrgFunctionUsageRes, error)
 	// GetOrgRoutingTopology implements getOrgRoutingTopology operation.
 	//
 	// Returns a single snapshot of how inbound mail is routed across
@@ -866,6 +1386,14 @@ type Handler interface {
 	//
 	// GET /functions/routing-topology
 	GetOrgRoutingTopology(ctx context.Context) (GetOrgRoutingTopologyRes, error)
+	// GetOrganization implements getOrganization operation.
+	//
+	// The organization's name and logo as members and invitees see them.
+	// Person only: a dashboard session or the person's own OAuth token (the CLI or an app they
+	// connected). API keys, agent connection keys and agents are refused.
+	//
+	// GET /organization
+	GetOrganization(ctx context.Context) (GetOrganizationRes, error)
 	// GetOutboundStatus implements getOutboundStatus operation.
 	//
 	// The "what can I send From?" bootstrap, the outbound mirror of
@@ -884,18 +1412,62 @@ type Handler interface {
 	//
 	// GET /outbound/status
 	GetOutboundStatus(ctx context.Context) (GetOutboundStatusRes, error)
-	// GetRegistry implements getRegistry operation.
+	// GetOwnAgentConnection implements getOwnAgentConnection operation.
 	//
-	// Get a public registry's metadata.
+	// Read the calling connected agent's own connection with its current bound key: status (claimed
+	// until the setup challenge reply verifies it, then connected), verified_at, and the receiver state
+	// peers see. Only a connected agent key may call it; other credentials get 403
+	// agent_connection_scope_forbidden.
 	//
-	// GET /registries/{slug}
-	GetRegistry(ctx context.Context, params GetRegistryParams) (GetRegistryRes, error)
+	// GET /agent-connections/me
+	GetOwnAgentConnection(ctx context.Context) (GetOwnAgentConnectionRes, error)
+	// GetOwnGrant implements getOwnGrant operation.
+	//
+	// The grant of the credential that calls it: its permissions, mail scope, resources, template,
+	// credential kind and expiry. A credential may call it about itself without any permission,
+	// including a narrowed key without org:read, so a key can see its own permissions and mail scope. It
+	// answers nothing about any other credential. grant is null when the credential carries no grant.
+	//
+	// GET /whoami/grant
+	GetOwnGrant(ctx context.Context) (GetOwnGrantRes, error)
+	// GetProject implements getProject operation.
+	//
+	// Requires a current human organization membership. Machine credentials are refused. Results are
+	// scoped to current project access. No local paths or existing conversation history are shared.
+	//
+	// GET /projects/{project_id}
+	GetProject(ctx context.Context, params GetProjectParams) (GetProjectRes, error)
+	// GetPublicAddressNote implements getPublicAddressNote operation.
+	//
+	// Returns only explicitly public notes whose publisher currently owns an active verified domain for
+	// this address. Private, deleted and no-longer-controlled notes are hidden. Responses are not cached.
+	//
+	// GET /public/address-notes/{address}/{name}
+	GetPublicAddressNote(ctx context.Context, params GetPublicAddressNoteParams) (GetPublicAddressNoteRes, error)
+	// GetRelayAutoJoin implements getRelayAutoJoin operation.
+	//
+	// Whether someone who proves an address on the organization's mail relay domain with Google
+	// Workspace joins automatically, and with what access. `option` is null when auto-join is off and an
+	// invitation is required; `options` lists the choices. Answers 404 `feature_disabled` unless the
+	// organization has mail relay.
+	//
+	// GET /relay-auto-join
+	GetRelayAutoJoin(ctx context.Context) (GetRelayAutoJoinRes, error)
 	// GetRepeatingSend implements getRepeatingSend operation.
 	//
 	// Get a repeating send.
 	//
 	// GET /repeating-sends/{id}
 	GetRepeatingSend(ctx context.Context, params GetRepeatingSendParams) (GetRepeatingSendRes, error)
+	// GetSearchSettings implements getSearchSettings operation.
+	//
+	// Whether the organization consents to semantic search, and whether it is active: it also needs a
+	// paid plan, the feature to be available to the organization, and HIPAA mode off.
+	// Person only: a dashboard session or the person's own OAuth token (the CLI or an app they
+	// connected). API keys, agent connection keys and agents are refused.
+	//
+	// GET /search-settings
+	GetSearchSettings(ctx context.Context) (GetSearchSettingsRes, error)
 	// GetSendPermissions implements getSendPermissions operation.
 	//
 	// Returns a flat list of rules describing every recipient the
@@ -942,32 +1514,35 @@ type Handler interface {
 	//
 	// GET /sent-emails/{id}
 	GetSentEmail(ctx context.Context, params GetSentEmailParams) (GetSentEmailRes, error)
-	// GetSpendPolicy implements getSpendPolicy operation.
+	// GetSentHourlyStats implements getSentHourlyStats operation.
 	//
-	// Read your org's outbound spend policy: the kill-switch, per-payment and
-	// per-day caps, and the payee allowlist. Returns the defaults (no limits,
-	// not paused) when no policy has been set.
+	// Sent mail per UTC hour over the last `days` days, by outcome: delivered, bounced (including agent
+	// failures, wait timeouts and unknown endings) and denied by a send gate. Sends still in flight are
+	// not counted until they end. Hours with no mail are left out. Needs mail:read. Counts only the mail
+	// the credential may read: a credential narrowed to some addresses counts the mail its scope admits.
 	//
-	// GET /x402/spend-policy
-	GetSpendPolicy(ctx context.Context) (GetSpendPolicyRes, error)
+	// GET /stats/sent-emails/hourly
+	GetSentHourlyStats(ctx context.Context, params GetSentHourlyStatsParams) (GetSentHourlyStatsRes, error)
 	// GetStorageStats implements getStorageStats operation.
 	//
-	// Get storage usage.
+	// Return stored-email storage usage for the authenticated organization: the plan's included storage,
+	// the limit past which inbound mail is refused (null when it never is, as on paid plans), and the
+	// storage billed as overage. `quota_mb` is the included allowance, not a limit. The search index is
+	// billed as storage with mail (`search_index_bytes`) but never counts toward the limit.
 	//
 	// GET /account/storage
 	GetStorageStats(ctx context.Context) (GetStorageStatsRes, error)
 	// GetTemplate implements getTemplate operation.
 	//
-	// Fetch one approved Function template by slug, including its manifest
-	// snapshot and README. The stored source files used for install are not
-	// returned.
+	// Fetch one approved Function template by slug, including its manifest snapshot and README. The
+	// stored source files used for install are not returned.
 	//
 	// GET /templates/{id}
 	GetTemplate(ctx context.Context, params GetTemplateParams) (GetTemplateRes, error)
 	// GetTemplateInstall implements getTemplateInstall operation.
 	//
-	// Fetch the current state of a template install. Reads may advance the
-	// self-test phase when a reply effect has been observed.
+	// Fetch the current state of a template install. Reads may advance the self-test phase when a reply
+	// effect has been observed.
 	//
 	// GET /templates/installs/{id}
 	GetTemplateInstall(ctx context.Context, params GetTemplateInstallParams) (GetTemplateInstallRes, error)
@@ -994,6 +1569,16 @@ type Handler interface {
 	//
 	// GET /wake/schedules/{id}
 	GetWakeSchedule(ctx context.Context, params GetWakeScheduleParams) (GetWakeScheduleRes, error)
+	// GetWebhookDeliveryStats implements getWebhookDeliveryStats operation.
+	//
+	// For each received email with a webhook delivery since `since`, how its latest delivery ended:
+	// clean_success, recovered (delivered after a failure), failed, or regressed (failed after a
+	// success). Pull deliveries are not counted, and neither are deliveries an email rule granted to a
+	// key: they are extra receivers and never change how the email itself was delivered. Needs
+	// webhooks:read, which a credential narrowed to some addresses never holds.
+	//
+	// GET /stats/webhook-deliveries
+	GetWebhookDeliveryStats(ctx context.Context, params GetWebhookDeliveryStatsParams) (GetWebhookDeliveryStatsRes, error)
 	// GetWebhookSecret implements getWebhookSecret operation.
 	//
 	// Returns the webhook signing secret for your account. If no
@@ -1017,43 +1602,78 @@ type Handler interface {
 	GetWebhookSecret(ctx context.Context) (GetWebhookSecretRes, error)
 	// InstallTemplate implements installTemplate operation.
 	//
-	// Start a one-shot deploy of an approved deploy-mode Function template.
-	// The response returns an install record immediately; poll
-	// `GET /templates/installs/{id}` for progress.
+	// Start a one-shot deploy of an approved deploy-mode Function template. The response returns an
+	// install record immediately; poll `GET /templates/installs/{id}` for progress. A custom
+	// runtime_grant (sent, or recommended by the template) must list addresses or send mail_scope "org";
+	// one that does neither is refused (400 validation_error, details.reason mail_scope_required).
 	//
 	// POST /templates/{id}/install
 	InstallTemplate(ctx context.Context, req *InstallTemplateBody, params InstallTemplateParams) (InstallTemplateRes, error)
 	// InviteAgentConnection implements inviteAgentConnection operation.
 	//
-	// Address-bound external runtime pairing. Any current human organization member may create and
-	// manage their personal agent connections. Organization owners and admins may manage all connections
-	// and explicitly create shared ones. An owner removed from the organization loses personal agent
-	// access, and rejoining does not revive the old connection. Organization API keys cannot manage
-	// connections. A current connected credential may disconnect only its own exact address. Claim is
-	// authorized only by its one-use invitation. Connected means a real challenge was received and a
-	// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
-	// Reconnection preserves the address and revokes previous credentials. Status responses contain no
-	// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
-	// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
-	//  and recipient-bound network contact admission. pending_only protects an already claimed
-	// credential. An ambiguous invitation response must not be retried automatically; invitation secrets
-	// are never replayed.
+	// Explicitly reconnect an existing agent. Set pending_only:true for Continue setup: the locked
+	// connection must still be pending or the server returns 409 connection_already_claimed without
+	// deleting any credential. Generic reconnect revokes old credentials and returns a new single-use
+	// invitation. An uncertain response must not be automatically retried.
 	//
 	// POST /agent-connections/{address}/invitation
 	InviteAgentConnection(ctx context.Context, req *InviteAgentConnectionReq, params InviteAgentConnectionParams) (InviteAgentConnectionRes, error)
+	// InviteOrganizationMember implements inviteOrganizationMember operation.
+	//
+	// Requires a current human organization owner or administrator. Machine credentials are refused.
+	// Invitations grant the chosen role, Member by default, only after verified acceptance through the
+	// sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery
+	// accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
+	//
+	// POST /organization/invitations
+	InviteOrganizationMember(ctx context.Context, req *ProjectsInviteOrganizationMemberInput, params InviteOrganizationMemberParams) (InviteOrganizationMemberRes, error)
+	// InviteProjectMember implements inviteProjectMember operation.
+	//
+	// Requires a current human organization membership. Machine credentials are refused. Results are
+	// scoped to current project access. No local paths or existing conversation history are shared.
+	//
+	// POST /projects/{project_id}/invitations
+	InviteProjectMember(ctx context.Context, req *ProjectsInviteProjectMemberInput, params InviteProjectMemberParams) (InviteProjectMemberRes, error)
 	// LeaveOrganization implements leaveOrganization operation.
 	//
-	// Removes the calling person from the organization. Leaving is final.
-	// Only a person can leave. API keys are refused. A request made with
-	// the person's CLI or app sign-in must carry a confirmation token in
-	// the `Primitive-Step-Up` header; without one the response is a 403
-	// with code `step_up_required` and `details.step_up_url`, the
-	// dashboard page where the person confirms and gets the token.
-	// The only owner of an organization cannot leave it (409,
-	// `last_owner`); make someone else an owner first.
+	// Removes the caller from the organization: the same removal, and the same cleanup, as an owner or
+	// admin removing them, with what they still own flagged or suspended for a decision (GET
+	// /access-suspensions). Any member may leave, whatever their role, and no permission is needed; the
+	// organization's only owner cannot, and is refused with 409 `last_owner` (make someone else an owner
+	// first). Person only: a dashboard session, or the person's own OAuth or CLI token with a session
+	// step-up of purpose `members.remove` for themselves (confirm at the link a 403 `step_up_required`
+	// answer carries in `details.step_up_url`, which names this client and you, then send the token in
+	// the Primitive-Step-Up header; the token works only with the client it was confirmed for). API keys
+	// are refused. You do not need to look up your user id: call this route once without the header, and
+	// the 403 `step_up_required` refusal names it (`details.target_user_id`) and gives the confirmation
+	// link (`details.step_up_url`). GET /whoami also returns it as `user_id`.
 	//
 	// POST /organization/leave
 	LeaveOrganization(ctx context.Context, params LeaveOrganizationParams) (LeaveOrganizationRes, error)
+	// ListAddressNotes implements listAddressNotes operation.
+	//
+	// Organization-scoped address annotations, independent of agents, routes and endpoints. Any bare
+	// address can have private notes. Function credentials may read org notes but cannot write or delete.
+	//  A connected agent credential writes only its own address's notes and reads all of them; of
+	// another live agent's address in its organization it reads only the AGENT_WORKING, AGENT_RUNTIME
+	// and AGENT_INFO notes, and nothing of any other address. List and batch reads return only those
+	// notes; reading any other note name on another address returns 403, and one of those three names on
+	// an address that is not a live agent reads as not found. Use if_absent or if_version to avoid
+	// overwriting another writer.
+	//
+	// GET /address-notes
+	ListAddressNotes(ctx context.Context, params ListAddressNotesParams) (ListAddressNotesRes, error)
+	// ListAddressNotesBatch implements listAddressNotesBatch operation.
+	//
+	// One read of this organization's live notes for many addresses, with the same scope as
+	// listAddressNotes: private and public notes the organization wrote, never another organization's.
+	// Notes are ordered by address, then name, and paged with an opaque keyset cursor; meta.cursor is
+	// null on the last page. Addresses with no notes are absent. Compare updated_at or version to find
+	// changed notes; a note missing from a complete read was deleted. Function credentials may use
+	// addresses but not network.
+	//
+	// GET /address-notes/batch
+	ListAddressNotesBatch(ctx context.Context, params ListAddressNotesBatchParams) (ListAddressNotesBatchRes, error)
 	// ListAgentConnections implements listAgentConnections operation.
 	//
 	// Address-bound external runtime pairing. Any current human organization member may create and
@@ -1064,16 +1684,23 @@ type Handler interface {
 	// authorized only by its one-use invitation. Connected means a real challenge was received and a
 	// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
 	// Reconnection preserves the address and revokes previous credentials. Status responses contain no
-	// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
-	// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
-	//  and recipient-bound network contact admission.
+	// credentials. Runtime credentials allow address-scoped mail operations, own-address note reads and
+	// writes, reads of other organization agents' AGENT_WORKING, AGENT_RUNTIME and AGENT_INFO notes,
+	// exact-address self-disconnect and self-rename, network discovery when can_view is enabled, and
+	// recipient-bound network contact admission. Hidden connections are left out unless
+	// include_hidden=true, which returns them with hidden, hidden_reason and hidden_at set. Hiding is
+	// display only: a hidden agent stays connected, keeps its credential, and still receives mail and
+	// wakes.
 	//
 	// GET /agent-connections
 	ListAgentConnections(ctx context.Context, params ListAgentConnectionsParams) (ListAgentConnectionsRes, error)
 	// ListAgentContacts implements listAgentContacts operation.
 	//
 	// Organization directory and agent preferences; no profiles, message history or runtime presence.
-	// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+	// Organization credentials retain tenant directory permissions. Human organization members may read
+	// and change agent notification contacts only for personal connections bound to their current
+	// membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+	// their own agent contact list (another contact reads as 404) and always see display_name as null,
 	// create address-only missing contacts using if_absent:true, and access only their own agent
 	// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
 	// not granted access. Memberships require an existing local agent connection (including revoked
@@ -1090,12 +1717,22 @@ type Handler interface {
 	ListAgentContacts(ctx context.Context, params ListAgentContactsParams) (ListAgentContactsRes, error)
 	// ListAgentNetworks implements listAgentNetworks operation.
 	//
-	// An organization member login or an active connected agent allowed to see the network can read
-	// networks. The default organization network is always present. can_manage_all is true only for a
-	// current owner or admin; a connected credential receives false.
+	// List the private default organization network. Human organization members may read it.
+	// can_manage_all is true only for a current owner or admin; connected credentials require can_view
+	// for their exact address and receive false.
 	//
 	// GET /agent-networks
 	ListAgentNetworks(ctx context.Context) (ListAgentNetworksRes, error)
+	// ListBreakGlass implements listBreakGlass operation.
+	//
+	// Every break-glass grant, active or ended. Person only: a dashboard session, or the person's own
+	// OAuth or CLI token with a session step-up of purpose `break_glass.read` (the person confirms at
+	// the step_up_url a 403 step_up_required answer carries, which names this client, then send the
+	// token in the Primitive-Step-Up header; the token works only with the client it was confirmed for).
+	// Needs access_mode:manage (owners). API keys are refused.
+	//
+	// GET /break-glass
+	ListBreakGlass(ctx context.Context, params ListBreakGlassParams) (ListBreakGlassRes, error)
 	// ListChanges implements listChanges operation.
 	//
 	// One feed of small invalidations (ids and kinds) for everything an app keeps a snapshot of: inbound
@@ -1117,10 +1754,23 @@ type Handler interface {
 	//
 	// GET /changes
 	ListChanges(ctx context.Context, params ListChangesParams) (ListChangesRes, error)
+	// ListCliOrgs implements listCliOrgs operation.
+	//
+	// Lists every organization the person behind a CLI user login belongs
+	// to, with whether the CLI may be used there and, when it may not, the
+	// reason. Authenticate with the identity access token (`prim_uat_`) from
+	// a CLI user login; no other credential is accepted. A server without
+	// CLI user logins answers `404 feature_disabled`.
+	//
+	// GET /cli/orgs
+	ListCliOrgs(ctx context.Context) (ListCliOrgsRes, error)
 	// ListContacts implements listContacts operation.
 	//
 	// Organization directory and agent preferences; no profiles, message history or runtime presence.
-	// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+	// Organization credentials retain tenant directory permissions. Human organization members may read
+	// and change agent notification contacts only for personal connections bound to their current
+	// membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+	// their own agent contact list (another contact reads as 404) and always see display_name as null,
 	// create address-only missing contacts using if_absent:true, and access only their own agent
 	// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
 	// not granted access. Memberships require an existing local agent connection (including revoked
@@ -1135,39 +1785,52 @@ type Handler interface {
 	//
 	// GET /contacts
 	ListContacts(ctx context.Context, params ListContactsParams) (ListContactsRes, error)
-	// ListDeclinedPayments implements listDeclinedPayments operation.
+	// ListCredentialEvents implements listCredentialEvents operation.
 	//
-	// The 50 most recent payments your org's spend policy declined, newest
-	// first. Use this to see why an outbound payment was refused (a cap, the
-	// payee allowlist, or the kill-switch) instead of only reading the
-	// dashboard.
+	// Credential events (created, rotated, edited, revoked, used with a step-up, policy changes), newest
+	// first, with a cursor. format=csv returns the same page as CSV. Needs the organization's credential
+	// features to be enabled; while they are not, this answers 404 feature_disabled.
+	// Person only: a dashboard session. The person's role must hold credential_events:read. API keys,
+	// agent connection keys and agents are refused.
 	//
-	// GET /x402/declined-payments
-	ListDeclinedPayments(ctx context.Context) (ListDeclinedPaymentsRes, error)
+	// GET /credential-events
+	ListCredentialEvents(ctx context.Context, params ListCredentialEventsParams) (ListCredentialEventsRes, error)
+	// ListCredentials implements listCredentials operation.
+	//
+	// Every credential that can act in the organization: API keys, Function keys, agent connection keys,
+	// connected apps (OAuth), agent delegates and, where enabled, CLI logins. Secrets are never returned.
+	//  Filter with kind. Needs the organization's credential features to be enabled; while they are not,
+	// this answers 404 feature_disabled.
+	// Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
+	// connection keys and agents are refused.
+	//
+	// GET /credentials
+	ListCredentials(ctx context.Context, params ListCredentialsParams) (ListCredentialsRes, error)
 	// ListDefaultNetworkAgents implements listDefaultNetworkAgents operation.
 	//
-	// Requires a connected-agent credential for an active member allowed to see the network, or an
-	// organization member login.
+	// List connected and listed peers in address order. Human organization members may read this list.
+	// Connected credentials require can_view and do not see themselves. Personal peers expose only a
+	// stable owner ID and display name to connected credentials, never human email. Optional owner
+	// search matches ID or display name before pagination. last_seen_at is recorded API activity, not
+	// presence. receiver reports whether the peer is reading its mail now, from its own recent
+	// successful mail reads.
 	//
 	// GET /agent-networks/default/agents
 	ListDefaultNetworkAgents(ctx context.Context, params ListDefaultNetworkAgentsParams) (ListDefaultNetworkAgentsRes, error)
 	// ListDefaultNetworkMembers implements listDefaultNetworkMembers operation.
 	//
-	// An owner or admin sees all connected addresses, including hidden and excluded members. Other human
-	// members see only personal addresses owned by their current membership. Filtering happens before
-	// pagination. Connected-agent credentials cannot read this roster. Each row includes whether the
-	// requester can manage it.
+	// Current owner or admin sees all connected addresses. A human member sees only personal addresses
+	// owned by their current membership, filtered before pagination. Rows include can_manage, current
+	// human owner identity, independent can_view and is_listed controls, durable exclusions, and last
+	// recorded API activity. Excluded rows are retained. Optional owner search matches user ID, display
+	// name or email before pagination within the authorized scope.
 	//
 	// GET /agent-networks/default/members
 	ListDefaultNetworkMembers(ctx context.Context, params ListDefaultNetworkMembersParams) (ListDefaultNetworkMembersRes, error)
 	// ListDeliveries implements listDeliveries operation.
 	//
-	// Returns a paginated list of webhook delivery attempts, newest first.
-	// A delivery of an inbound email includes a nested `email` object with
-	// sender, recipient, and subject. A delivery of an opt-in
-	// `sent_email.*` event has `email_id` and `email` set to null and
-	// `sent_email_id` set to the send it is about. Filter by `event_type`
-	// and `sent_email_id` to find the deliveries of one send.
+	// Returns a paginated list of webhook delivery attempts. Each delivery
+	// includes a nested `email` object with sender, recipient, and subject.
 	//
 	// GET /webhooks/deliveries
 	ListDeliveries(ctx context.Context, params ListDeliveriesParams) (ListDeliveriesRes, error)
@@ -1190,6 +1853,54 @@ type Handler interface {
 	//
 	// GET /emails/{id}/attachments/{attachment}/members
 	ListEmailAttachmentArchiveMembers(ctx context.Context, params ListEmailAttachmentArchiveMembersParams) (ListEmailAttachmentArchiveMembersRes, error)
+	// ListEmailRuleDecisions implements listEmailRuleDecisions operation.
+	//
+	// What the rule decided for each email it was evaluated against, newest first: whether it matched,
+	// whether it nearly did, how each part decided and the answers to its questions. Only decisions on
+	// emails the caller can read are listed. With matched, only matches (true) or only the rest (false).
+	// Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
+	// narrowed tokens are refused), and the email rules feature on the organization.
+	//
+	// GET /email-rules/{id}/decisions
+	ListEmailRuleDecisions(ctx context.Context, params ListEmailRuleDecisionsParams) (ListEmailRuleDecisionsRes, error)
+	// ListEmailRuleRequests implements listEmailRuleRequests operation.
+	//
+	// Rule requests, newest first: those made to you (box incoming, the default), those you made
+	// (outgoing), or every one you can see (all). Pending ones by default; status decided lists accepted,
+	//  declined and withdrawn ones, and any lists both. A request is visible to the member who made it,
+	// the member it was made to, and the organization's owners and admins. Needs mail:read, a credential
+	// acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
+	// and the email rules feature on the organization.
+	//
+	// GET /email-rule-requests
+	ListEmailRuleRequests(ctx context.Context, params ListEmailRuleRequestsParams) (ListEmailRuleRequestsRes, error)
+	// ListEmailRuleShareEmails implements listEmailRuleShareEmails operation.
+	//
+	// The emails a rule shared with you has matched, newest first, as the email list shows them. Only
+	// the person it was shared with can list them, from the dashboard or the Primitive CLI. An ended
+	// share lists nothing. A page can be short or empty and still carry a cursor: keep reading until
+	// meta.cursor is null.
+	//
+	// GET /email-rule-shares/{id}/emails
+	ListEmailRuleShareEmails(ctx context.Context, params ListEmailRuleShareEmailsParams) (ListEmailRuleShareEmailsRes, error)
+	// ListEmailRuleShares implements listEmailRuleShares operation.
+	//
+	// Lists rules shared with you, rules you share, or every share you can see. A share is visible to
+	// its two people and the organization's owners and admins. Needs mail:read, a credential acting as a
+	// member with their full access (API keys, agent keys and narrowed tokens are refused), and the
+	// email rules feature on the organization.
+	//
+	// GET /email-rule-shares
+	ListEmailRuleShares(ctx context.Context, params ListEmailRuleSharesParams) (ListEmailRuleSharesRes, error)
+	// ListEmailRules implements listEmailRules operation.
+	//
+	// The rules the caller can see, newest first: their own, or every member's rules for a caller who
+	// reads the whole organization's mail. With matched_email_id, only the rules that matched that email.
+	//  Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
+	// narrowed tokens are refused), and the email rules feature on the organization.
+	//
+	// GET /email-rules
+	ListEmailRules(ctx context.Context, params ListEmailRulesParams) (ListEmailRulesRes, error)
 	// ListEmails implements listEmails operation.
 	//
 	// Returns a paginated list of INBOUND emails received at your
@@ -1220,6 +1931,29 @@ type Handler interface {
 	//
 	// GET /filters
 	ListFilters(ctx context.Context) (ListFiltersRes, error)
+	// ListFunctionActivity implements listFunctionActivity operation.
+	//
+	// The sends and replies the function made, newest first, each linked to the delivery and email that
+	// triggered it. Filter by delivery, email or type.
+	//
+	// GET /functions/{id}/activity
+	ListFunctionActivity(ctx context.Context, params ListFunctionActivityParams) (ListFunctionActivityRes, error)
+	// ListFunctionDeployments implements listFunctionDeployments operation.
+	//
+	// The function's most recent deployments, newest first, with build and bundle details: limit of them
+	// (default 50, at most 200). This list is not paged; read an older deployment by id with
+	// getFunctionDeployment. is_current marks the one serving traffic.
+	//
+	// GET /functions/{id}/deployments
+	ListFunctionDeployments(ctx context.Context, params ListFunctionDeploymentsParams) (ListFunctionDeploymentsRes, error)
+	// ListFunctionInvocations implements listFunctionInvocations operation.
+	//
+	// Each run of the function, newest first, with its outcome, timings, response status and exception.
+	// Lists runs only: a webhook delivery that never reached the function (for example one refused
+	// before it ran) is not an invocation; find those with listDeliveries.
+	//
+	// GET /functions/{id}/invocations
+	ListFunctionInvocations(ctx context.Context, params ListFunctionInvocationsParams) (ListFunctionInvocationsRes, error)
 	// ListFunctionLogs implements listFunctionLogs operation.
 	//
 	// Returns the most recent `function_logs` rows for the function,
@@ -1233,6 +1967,14 @@ type Handler interface {
 	//
 	// GET /functions/{id}/logs
 	ListFunctionLogs(ctx context.Context, params ListFunctionLogsParams) (ListFunctionLogsRes, error)
+	// ListFunctionRuntimeKeyPresets implements listFunctionRuntimeKeyPresets operation.
+	//
+	// The keys a new or existing function can run with: the organization's shared function key, or a
+	// per-function key narrowed by a preset. Each preset says whether it is available now and, if not,
+	// why.
+	//
+	// GET /functions/runtime-grant-presets
+	ListFunctionRuntimeKeyPresets(ctx context.Context) (ListFunctionRuntimeKeyPresetsRes, error)
 	// ListFunctionSecrets implements listFunctionSecrets operation.
 	//
 	// Returns metadata for every secret bound to the function, with
@@ -1254,6 +1996,104 @@ type Handler interface {
 	//
 	// GET /functions
 	ListFunctions(ctx context.Context) (ListFunctionsRes, error)
+	// ListGivenEmailRuleShares implements listGivenEmailRuleShares operation.
+	//
+	// Lists the rules you share with other members, so you can find one and stop it. This needs no mail
+	// access and does not depend on the feature being on for the organization, as stopping a share does
+	// not. It takes the dashboard or the Primitive CLI.
+	//
+	// GET /email-rule-shares/given
+	ListGivenEmailRuleShares(ctx context.Context, params ListGivenEmailRuleSharesParams) (ListGivenEmailRuleSharesRes, error)
+	// ListGroups implements listGroups operation.
+	//
+	// Every group, with its members and role. A group can be named in a mailbox access entry. Needs
+	// members:read: a person, or an org-wide API key whose person holds it.
+	//
+	// GET /groups
+	ListGroups(ctx context.Context) (ListGroupsRes, error)
+	// ListInteractions implements listInteractions operation.
+	//
+	// The organization's interactions, newest first by creation, with their state, whose turn it is and
+	// when the last step happened. Reading needs interactions:read and organization-wide mail scope; a
+	// credential narrowed to some mailboxes is refused.
+	//
+	// GET /interactions
+	ListInteractions(ctx context.Context, params ListInteractionsParams) (ListInteractionsRes, error)
+	// ListKeys implements listKeys operation.
+	//
+	// Key metadata, never a secret: name, prefix, grant, creator, last use, expiry and suspension. The
+	// person needs access to the whole organization's mail. Needs the organization's credential features
+	// to be enabled; while they are not, this answers 404 feature_disabled.
+	// Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
+	// person's role must hold keys:read. API keys, agent connection keys and agents are refused.
+	//
+	// GET /keys
+	ListKeys(ctx context.Context, params ListKeysParams) (ListKeysRes, error)
+	// ListMailRouting implements listMailRouting operation.
+	//
+	// Mailbox-scoped exact visible audiences, excluding the owner and Bcc. Direct and group audiences
+	// are independent. Restores persist an explicit Conversations rule. New writes require the observed
+	// version (zero creates); only an identical latest mutation with its original expected version can
+	// be retried. Stale writes return mail_routing_conflict. Source messages and read state are
+	// unchanged. Merge paged rules by version; responses are never cached.
+	//
+	// GET /mail-routing
+	ListMailRouting(ctx context.Context, params ListMailRoutingParams) (ListMailRoutingRes, error)
+	// ListMailTopicEdits implements listMailTopicEdits operation.
+	//
+	// Mailbox-owned human membership, summary and task edits. Each field has an independent version.
+	// Sources must belong to this mailbox and exact visible audience. Automatic generation cannot write
+	// these records. Identical latest mutations are retryable; stale versions return
+	// mail_topic_edit_conflict. Source mail remains unchanged. Responses are never cached.
+	//
+	// GET /mail-topic-edits
+	ListMailTopicEdits(ctx context.Context, params ListMailTopicEditsParams) (ListMailTopicEditsRes, error)
+	// ListMailTopicGenerations implements listMailTopicGenerations operation.
+	//
+	// Mailbox-owned automatic membership and complete generated summary/task snapshots. Each resource
+	// has an independent version. Human corrections always take precedence in presentation. Sources must
+	// belong to this mailbox and exact visible audience. Provider and input digest are client-reported
+	// provenance, not model attestation. This endpoint never writes human corrections. Identical latest
+	// mutations are retryable; stale versions return mail_topic_generation_conflict. Source mail remains
+	// unchanged. Responses are never cached.
+	//
+	// GET /mail-topic-generations
+	ListMailTopicGenerations(ctx context.Context, params ListMailTopicGenerationsParams) (ListMailTopicGenerationsRes, error)
+	// ListMailboxAccess implements listMailboxAccess operation.
+	//
+	// Every access entry in the organization: who (a member, group, agent or address) may read, draft or
+	// send for each mailbox or domain. An entry that reads a mailbox reads the full email; raw MIME
+	// follows the person's mail.raw:read. `depth` is deprecated: it is accepted and ignored, and new
+	// entries record content. Needs members:read: a person, or an org-wide API key whose person holds it.
+	//
+	// GET /mailbox-access
+	ListMailboxAccess(ctx context.Context) (ListMailboxAccessRes, error)
+	// ListMutedThreads implements listMutedThreads operation.
+	//
+	// Threads muted for an address, newest first. A connected agent sees only its own mutes; other
+	// credentials see every address in the organization unless `address` narrows it.
+	//
+	// GET /threads/muted
+	ListMutedThreads(ctx context.Context, params ListMutedThreadsParams) (ListMutedThreadsRes, error)
+	// ListMyGrants implements listMyGrants operation.
+	//
+	// The apps the calling person connected to this organization (OAuth) and, where enabled, their CLI
+	// logins. A CLI login signs the person in to every organization they belong to. A connection signed
+	// out while it still owns scheduled mail or other items stays listed with logged_out true, so it can
+	// still be revoked. Other apps the person connected cannot list them.
+	// Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. API
+	// keys, agent connection keys and agents are refused.
+	//
+	// GET /me/grants
+	ListMyGrants(ctx context.Context, params ListMyGrantsParams) (ListMyGrantsRes, error)
+	// ListOAuthGrants implements listOAuthGrants operation.
+	//
+	// Every app a person connected to this organization through OAuth, with who connected it.
+	// Person only: a dashboard session. The person's role must hold oauth_grants:manage. API keys, agent
+	// connection keys and agents are refused.
+	//
+	// GET /oauth-grants
+	ListOAuthGrants(ctx context.Context, params ListOAuthGrantsParams) (ListOAuthGrantsRes, error)
 	// ListOrgSecrets implements listOrgSecrets operation.
 	//
 	// Returns metadata for every org-level secret. Org secrets apply
@@ -1264,30 +2104,58 @@ type Handler interface {
 	//
 	// GET /org/secrets
 	ListOrgSecrets(ctx context.Context) (ListOrgSecretsRes, error)
-	// ListPayoutAddresses implements listPayoutAddresses operation.
+	// ListOrganizationInvitations implements listOrganizationInvitations operation.
 	//
-	// List your org's registered payout addresses, newest first.
+	// Requires a current human organization owner or administrator. Machine credentials are refused.
+	// Invitations grant the chosen role, Member by default, only after verified acceptance through the
+	// sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery
+	// accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
 	//
-	// GET /x402/payout-addresses
-	ListPayoutAddresses(ctx context.Context) (ListPayoutAddressesRes, error)
-	// ListRegistries implements listRegistries operation.
+	// GET /organization/invitations
+	ListOrganizationInvitations(ctx context.Context, params ListOrganizationInvitationsParams) (ListOrganizationInvitationsRes, error)
+	// ListOrganizationPeople implements listOrganizationPeople operation.
 	//
-	// List the registries you own.
+	// Requires a current human organization membership, or an org-wide API key: a super admin key, or a
+	// custom key with no addresses or domains whose grant holds members:read. A key lists members as the
+	// person it belongs to, at that person's live grant, and only while that person still holds
+	// members:read. Narrowed, Function and connected keys are refused. No local paths or existing
+	// conversation history are shared.
 	//
-	// GET /registries
-	ListRegistries(ctx context.Context) (ListRegistriesRes, error)
-	// ListRegistryAgents implements listRegistryAgents operation.
+	// GET /organization/members
+	ListOrganizationPeople(ctx context.Context, params ListOrganizationPeopleParams) (ListOrganizationPeopleRes, error)
+	// ListOwnedItems implements listOwnedItems operation.
 	//
-	// List agents in a registry.
+	// Keys, Functions, endpoints and other items a member owns, with whether the chosen transferee
+	// (`to`) covers each. Only an owner lists an owner's items. Person only: a dashboard session, or the
+	// person's own OAuth or CLI token with a session step-up of purpose `members.items_read` (the person
+	// confirms at the step_up_url a 403 step_up_required answer carries, which names this client and the
+	// member, then send the token in the Primitive-Step-Up header; the token works only with the client
+	// it was confirmed for and only for the member it was confirmed for). Needs members:manage. API keys
+	// are refused.
 	//
-	// GET /registries/{slug}/agents
-	ListRegistryAgents(ctx context.Context, params ListRegistryAgentsParams) (*ListRegistryAgentsOK, error)
-	// ListRegistryRequests implements listRegistryRequests operation.
+	// GET /members/{id}/owned-items
+	ListOwnedItems(ctx context.Context, params ListOwnedItemsParams) (ListOwnedItemsRes, error)
+	// ListProjectInvitations implements listProjectInvitations operation.
 	//
-	// List pending publication requests.
+	// Requires a current human organization membership. Machine credentials are refused. Results are
+	// scoped to current project access. No local paths or existing conversation history are shared.
 	//
-	// GET /registries/{slug}/requests
-	ListRegistryRequests(ctx context.Context, params ListRegistryRequestsParams) (ListRegistryRequestsRes, error)
+	// GET /projects/{project_id}/invitations
+	ListProjectInvitations(ctx context.Context, params ListProjectInvitationsParams) (ListProjectInvitationsRes, error)
+	// ListProjects implements listProjects operation.
+	//
+	// Requires a current human organization membership. Machine credentials are refused. Results are
+	// scoped to current project access. No local paths or existing conversation history are shared.
+	//
+	// GET /projects
+	ListProjects(ctx context.Context, params ListProjectsParams) (ListProjectsRes, error)
+	// ListPublicAddressNotes implements listPublicAddressNotes operation.
+	//
+	// Returns only explicitly public notes whose publisher currently owns an active verified domain for
+	// this address. Private, deleted and no-longer-controlled notes are hidden. Responses are not cached.
+	//
+	// GET /public/address-notes/{address}
+	ListPublicAddressNotes(ctx context.Context, params ListPublicAddressNotesParams) (ListPublicAddressNotesRes, error)
 	// ListRepeatingSends implements listRepeatingSends operation.
 	//
 	// Repeating sends you created, newest first. A repeat is visible to the
@@ -1297,6 +2165,14 @@ type Handler interface {
 	//
 	// GET /repeating-sends
 	ListRepeatingSends(ctx context.Context, params ListRepeatingSendsParams) (ListRepeatingSendsRes, error)
+	// ListRoles implements listRoles operation.
+	//
+	// Every role in the organization (built-in, template copies and custom roles), with how many members
+	// and groups hold each, the templates not yet copied, and whether roles can be assigned now. Any
+	// person (a session or OAuth token); API keys are refused.
+	//
+	// GET /roles
+	ListRoles(ctx context.Context) (ListRolesRes, error)
 	// ListRoutes implements listRoutes operation.
 	//
 	// Returns the org's recipient routing rules in evaluation order. Each rule
@@ -1342,14 +2218,39 @@ type Handler interface {
 	//
 	// GET /sent-emails
 	ListSentEmails(ctx context.Context, params ListSentEmailsParams) (ListSentEmailsRes, error)
+	// ListSuspensions implements listSuspensions operation.
+	//
+	// Items a removal or a narrowed role left suspended or flagged for a decision. Person only: a
+	// dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose
+	// `suspensions.read` (the person confirms at the step_up_url a 403 step_up_required answer carries,
+	// which names this client, then send the token in the Primitive-Step-Up header; the token works only
+	// with the client it was confirmed for). Needs members:manage. API keys are refused.
+	//
+	// GET /access-suspensions
+	ListSuspensions(ctx context.Context, params ListSuspensionsParams) (ListSuspensionsRes, error)
 	// ListTemplates implements listTemplates operation.
 	//
-	// List approved Function templates available for browsing and
-	// installation. Results are cacheable and paginated with
-	// `data.next_cursor`.
+	// List approved Function templates available for browsing and installation. Results are cacheable
+	// and paginated with `data.next_cursor`.
 	//
 	// GET /templates
 	ListTemplates(ctx context.Context, params ListTemplatesParams) (ListTemplatesRes, error)
+	// ListThreadReadStates implements listThreadReadStates operation.
+	//
+	// The signed-in member's read cursor and `unread_count` per thread, computed together in one query.
+	// Two modes, exactly one per request. With `thread_ids`, answers those threads (ids that are not
+	// threads of the organization are left out). With `updated_since`, returns the cursors that moved
+	// after that instant, oldest change first, paged by `meta.cursor`: poll it from each device to learn
+	// what was read elsewhere. In both modes a thread the caller can see no message in is left out,
+	// exactly as an unknown thread. The feed lags real time by about 5 seconds: a cursor appears once it
+	// moved at least that long ago, so a write still committing is never skipped. When `meta.cursor` is
+	// null, poll again later from the newest `updated_at` you have seen, overlapping by a few seconds;
+	// repeated rows are harmless. Only a signed-in organization member (a dashboard session or an OAuth
+	// member grant) can use this. Organization API keys, agent connection keys and Functions are refused
+	// with 403: read state is personal to a member.
+	//
+	// GET /threads/read-state
+	ListThreadReadStates(ctx context.Context, params ListThreadReadStatesParams) (ListThreadReadStatesRes, error)
 	// ListWakeAuthorizations implements listWakeAuthorizations operation.
 	//
 	// Returns the per-target allowlist grants that authorize which senders may
@@ -1369,45 +2270,74 @@ type Handler interface {
 	//
 	// GET /wake/schedules
 	ListWakeSchedules(ctx context.Context) (ListWakeSchedulesRes, error)
-	// PayChallenge implements payChallenge operation.
+	// LookupFunction implements lookupFunction operation.
 	//
-	// Settle a challenge addressed to your org as payer. The request body
-	// carries a signed x402 `PaymentPayload`: an EIP-3009
-	// `transferWithAuthorization` signed locally with your own key, whose nonce
-	// is bound to the challenge via the SDK's `deriveEip3009Nonce`. The platform
-	// verifies every signed field against its own record of the challenge,
-	// applies your spend policy, and settles on-chain through a facilitator.
-	// Settlement is non-custodial; Primitive never holds funds. Idempotent:
-	// paying an already-settled challenge returns the original receipt. Most
-	// callers use the SDK `pay()` helper rather than building the payload by
-	// hand.
+	// Resolve a function name to its id and deploy state. Answers null data when no function has the
+	// name. Carries no invocation counts; use listFunctions or getFunctionUsage for those.
 	//
-	// POST /x402/challenges/{id}/pay
-	PayChallenge(ctx context.Context, req *PayChallengeInput, params PayChallengeParams) (PayChallengeRes, error)
+	// GET /functions/lookup
+	LookupFunction(ctx context.Context, params LookupFunctionParams) (LookupFunctionRes, error)
+	// MarkThreadRead implements markThreadRead operation.
+	//
+	// Moves the signed-in member's read cursor for this thread forward to the named message or instant,
+	// for every device the member uses. Monotonic and idempotent: a position at or behind the stored
+	// cursor changes nothing (`advanced: false`), so devices reporting reads out of order converge on
+	// the furthest one. Returns the thread's read state after the write; a retry at the same position
+	// returns the current state with `advanced: false`. A thread the caller can see no message in
+	// answers 404, exactly as an unknown thread. Once the write commits the answer is always 200: if the
+	// unread count cannot be read afterwards, `unread_count` is null and `state_unavailable` is true,
+	// and the cursor fields still hold. Only a signed-in organization member (a dashboard session or an
+	// OAuth member grant) can use this. Organization API keys, agent connection keys and Functions are
+	// refused with 403: read state is personal to a member.
+	//
+	// PUT /threads/{id}/read
+	MarkThreadRead(ctx context.Context, req *MarkThreadReadInput, params MarkThreadReadParams) (MarkThreadReadRes, error)
+	// MuteThread implements muteThread operation.
+	//
+	// Marks the thread muted for the address: its mail reads as `muted: true` and `GET
+	// /emails?exclude_muted=true` leaves it out. Mail keeps arriving and stays readable. Idempotent. 404
+	// when the thread does not exist or the address neither received nor sent mail in it.
+	//
+	// PUT /threads/{id}/mute
+	MuteThread(ctx context.Context, params MuteThreadParams) (MuteThreadRes, error)
 	// PollCliLogin implements pollCliLogin operation.
 	//
 	// Polls a CLI login session until the browser approval either succeeds,
 	// is denied, expires, or is polled too quickly. The OAuth token set is
 	// created only after approval and is returned exactly once.
+	// A login started with `login_kind: "user"` succeeds with a
+	// `CliUserLoginPollResult` instead (`auth_method: "user_grant"`).
 	//
 	// POST /cli/login/poll
-	PollCliLogin(ctx context.Context, req *PollCliLoginInput) (PollCliLoginRes, error)
+	PollCliLogin(ctx context.Context, req *PollCliLoginInput, params PollCliLoginParams) (PollCliLoginRes, error)
+	// PrepareContactAcceptance implements prepareContactAcceptance operation.
+	//
+	// Validates a received contact request (authenticated sender, valid unexpired primitive.contact/1
+	// request, delivered to you) and returns the POST /send-mail call that accepts it, threaded to the
+	// request and addressed to its authenticated sender (never to a Reply-To). Nothing is sent and no
+	// contact preference changes. Preparing twice returns the same message and Idempotency-Key.
+	//
+	// POST /contact-requests/accept/prepare
+	PrepareContactAcceptance(ctx context.Context, req *PrepareContactAcceptanceReq, params PrepareContactAcceptanceParams) (PrepareContactAcceptanceRes, error)
+	// PrepareContactRequest implements prepareContactRequest operation.
+	//
+	// Builds a primitive.contact/1 request (the same email the Primitive CLI sends for `contacts
+	// request`) and returns the POST /send-mail call to make. Nothing is sent and no contact preference
+	// changes. A connected agent sends from its own address; other credentials name `from`.
+	//
+	// POST /contact-requests/prepare
+	PrepareContactRequest(ctx context.Context, req *PrepareContactRequestReq, params PrepareContactRequestParams) (PrepareContactRequestRes, error)
 	// ProvisionMemberAddress implements provisionMemberAddress operation.
 	//
 	// Provision or return this authenticated human member's stable managed address in this organization.
 	// API keys, connected agents and Functions cannot provision or impersonate humans. The owner
-	// explicitly chooses the address. Existing retained mail requires confirmation; reserved identities
-	// cannot be overridden. There is no target user input. An unavailable domain never silently changes
-	// the address.
+	// explicitly chooses the address. An address someone else in the organization already uses (sends
+	// from, or received mail at) is refused for anyone but an owner; otherwise existing retained mail
+	// requires confirmation. Reserved identities cannot be overridden. There is no target user input. An
+	// unavailable domain never silently changes the address.
 	//
 	// PUT /account/member-address
 	ProvisionMemberAddress(ctx context.Context, req *ProvisionMemberAddressReq) (ProvisionMemberAddressRes, error)
-	// PublishAgent implements publishAgent operation.
-	//
-	// Publish an agent into a registry.
-	//
-	// POST /registries/{slug}/agents
-	PublishAgent(ctx context.Context, req *PublishAgentInput, params PublishAgentParams) (PublishAgentRes, error)
 	// PullWebhookEvent implements pullWebhookEvent operation.
 	//
 	// Wait up to 30 seconds for one existing event. The body string preserves the exact webhook
@@ -1420,10 +2350,26 @@ type Handler interface {
 	//
 	// POST /endpoints/{id}/pull
 	PullWebhookEvent(ctx context.Context, req *PullWebhookInput, params PullWebhookEventParams) (PullWebhookEventRes, error)
+	// PutAddressNote implements putAddressNote operation.
+	//
+	// Organization-scoped address annotations, independent of agents, routes and endpoints. Any bare
+	// address can have private notes. Function credentials may read org notes but cannot write or delete.
+	//  A connected agent credential writes only its own address's notes and reads all of them; of
+	// another live agent's address in its organization it reads only the AGENT_WORKING, AGENT_RUNTIME
+	// and AGENT_INFO notes, and nothing of any other address. List and batch reads return only those
+	// notes; reading any other note name on another address returns 403, and one of those three names on
+	// an address that is not a live agent reads as not found. Use if_absent or if_version to avoid
+	// overwriting another writer.
+	//
+	// PUT /address-notes/{address}/{name}
+	PutAddressNote(ctx context.Context, req *PutAddressNoteRequest, params PutAddressNoteParams) (PutAddressNoteRes, error)
 	// PutAgentContact implements putAgentContact operation.
 	//
 	// Organization directory and agent preferences; no profiles, message history or runtime presence.
-	// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+	// Organization credentials retain tenant directory permissions. Human organization members may read
+	// and change agent notification contacts only for personal connections bound to their current
+	// membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+	// their own agent contact list (another contact reads as 404) and always see display_name as null,
 	// create address-only missing contacts using if_absent:true, and access only their own agent
 	// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
 	// not granted access. Memberships require an existing local agent connection (including revoked
@@ -1437,7 +2383,7 @@ type Handler interface {
 	// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
 	//
 	// PUT /agent-contacts/{agent_address}/{contact_address}
-	PutAgentContact(ctx context.Context, req PutAgentContactReq, params PutAgentContactParams) (PutAgentContactRes, error)
+	PutAgentContact(ctx context.Context, req *PutAgentContactRequest, params PutAgentContactParams) (PutAgentContactRes, error)
 	// PutAgentContactPolicy implements putAgentContactPolicy operation.
 	//
 	// Receiver-side email notification admission preferences; never task, tool, code execution or
@@ -1445,42 +2391,46 @@ type Handler interface {
 	// contract. Older receivers may continue their previous exact-contact notifications until updated.
 	// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
 	// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
-	// read/write policies. Connected credentials may only GET their own agent composite; they cannot
-	// write either policy. Function and signed capability credentials are not granted access. Rules are
-	// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
-	// matching organization rules; silence wins ties within that scope. If neither scope matches,
-	// existing exact membership notify:true allows using its own activation metadata; otherwise only
-	// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
-	// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
-	// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
-	// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
-	// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
-	// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
-	// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
-	// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
-	// reads as empty rules, null version/timestamps, false request intake for the organization and null
-	// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
-	// preserve server activation metadata while retained unchanged; removing/recreating or changing a
-	// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
-	// writes preserve versions. Agent composite effective_version changes with either policy document,
-	// connection identity, generation or successful claim; effective_since is the latest policy mutation,
-	//  connection creation or successful claim. Reclaiming a connection invalidates prior admission
-	// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
-	// admissions require received_at >= both the selected activation time and effective_since.
-	// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
-	// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
-	// own notify_since and generation but must still recheck current policy denies and effective_version.
-	//  Before dispatch, receivers must recheck the current composite version and applicable activation
-	// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
-	//  Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
-	// dispatch notifications.
+	// read/write all policies. Current human members may read/write only their own personal agent policy,
+	//  bound to their membership incarnation. Connected credentials may only GET their own agent
+	// composite; they cannot write either policy. Function and signed capability credentials are not
+	// granted access. Rules are unordered. Exact membership notify:false always silences. Next use
+	// matching agent rules, otherwise matching organization rules; silence wins ties within that scope.
+	// If neither scope matches, existing exact membership notify:true allows using its own activation
+	// metadata; otherwise only enabled contact-request intake is allowed. Owner policy silence therefore
+	// cannot be bypassed by a connected agent adding a notify:true membership. Patterns are canonical
+	// lowercase bare mailboxes, *@example.com, research-*@example.com or *@*.example.com. Only a
+	// terminal local-part * and a leading whole domain-label *. are supported; subdomain patterns
+	// exclude the apex and require a literal multi-label suffix. No regular expressions, question marks,
+	// universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain. PUT fully
+	// replaces up to 100 rules and the request-intake option using exactly one CAS precondition.
+	// Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document,
+	// otherwise 409. A missing document reads as empty rules, null version/timestamps, false request
+	// intake for the organization and null (inherit) for the agent. Reset overrides with empty rules and
+	// null request intake. Allow rules preserve server activation metadata while retained unchanged;
+	// removing/recreating or changing a rule to allow resets it. Request intake defaults off; agent null
+	// inherits the organization. No-op writes preserve versions. Agent composite effective_version
+	// changes with either policy document, connection identity, generation or successful claim;
+	// effective_since is the latest policy mutation, connection creation or successful claim. Reclaiming
+	// a connection invalidates prior admission snapshots and starts a fresh rule/request cutoff; routine
+	// heartbeats do not. Rule/request admissions require received_at >= both the selected activation
+	// time and effective_since. Consequently even unrelated policy edits suppress queued older
+	// rule/request admissions, without deleting email history or affecting explicit reply waits. Exact
+	// membership fallback retains its own notify_since and generation but must still recheck current
+	// policy denies and effective_version. Before dispatch, receivers must recheck the current composite
+	// version and applicable activation generation and membership; stop new admissions when policy is
+	// unavailable or older than 30 seconds. Snapshot fields explain scope and matched rules locally; the
+	// API does not execute tasks or dispatch notifications.
 	//
 	// PUT /agent-contact-policy/{agent_address}
 	PutAgentContactPolicy(ctx context.Context, req PutAgentContactPolicyRequest, params PutAgentContactPolicyParams) (PutAgentContactPolicyRes, error)
 	// PutContact implements putContact operation.
 	//
 	// Organization directory and agent preferences; no profiles, message history or runtime presence.
-	// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+	// Organization credentials retain tenant directory permissions. Human organization members may read
+	// and change agent notification contacts only for personal connections bound to their current
+	// membership incarnation; owners and admins may manage all. Connected keys read only the contacts on
+	// their own agent contact list (another contact reads as 404) and always see display_name as null,
 	// create address-only missing contacts using if_absent:true, and access only their own agent
 	// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
 	// not granted access. Memberships require an existing local agent connection (including revoked
@@ -1494,7 +2444,7 @@ type Handler interface {
 	// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
 	//
 	// PUT /contacts/{address}
-	PutContact(ctx context.Context, req PutContactReq, params PutContactParams) (PutContactRes, error)
+	PutContact(ctx context.Context, req *PutContactRequest, params PutContactParams) (PutContactRes, error)
 	// PutContactPolicy implements putContactPolicy operation.
 	//
 	// Receiver-side email notification admission preferences; never task, tool, code execution or
@@ -1502,103 +2452,166 @@ type Handler interface {
 	// contract. Older receivers may continue their previous exact-contact notifications until updated.
 	// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
 	// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
-	// read/write policies. Connected credentials may only GET their own agent composite; they cannot
-	// write either policy. Function and signed capability credentials are not granted access. Rules are
-	// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
-	// matching organization rules; silence wins ties within that scope. If neither scope matches,
-	// existing exact membership notify:true allows using its own activation metadata; otherwise only
-	// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
-	// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
-	// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
-	// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
-	// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
-	// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
-	// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
-	// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
-	// reads as empty rules, null version/timestamps, false request intake for the organization and null
-	// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
-	// preserve server activation metadata while retained unchanged; removing/recreating or changing a
-	// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
-	// writes preserve versions. Agent composite effective_version changes with either policy document,
-	// connection identity, generation or successful claim; effective_since is the latest policy mutation,
-	//  connection creation or successful claim. Reclaiming a connection invalidates prior admission
-	// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
-	// admissions require received_at >= both the selected activation time and effective_since.
-	// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
-	// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
-	// own notify_since and generation but must still recheck current policy denies and effective_version.
-	//  Before dispatch, receivers must recheck the current composite version and applicable activation
-	// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
-	//  Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
-	// dispatch notifications.
+	// read/write all policies. Current human members may read/write only their own personal agent policy,
+	//  bound to their membership incarnation. Connected credentials may only GET their own agent
+	// composite; they cannot write either policy. Function and signed capability credentials are not
+	// granted access. Rules are unordered. Exact membership notify:false always silences. Next use
+	// matching agent rules, otherwise matching organization rules; silence wins ties within that scope.
+	// If neither scope matches, existing exact membership notify:true allows using its own activation
+	// metadata; otherwise only enabled contact-request intake is allowed. Owner policy silence therefore
+	// cannot be bypassed by a connected agent adding a notify:true membership. Patterns are canonical
+	// lowercase bare mailboxes, *@example.com, research-*@example.com or *@*.example.com. Only a
+	// terminal local-part * and a leading whole domain-label *. are supported; subdomain patterns
+	// exclude the apex and require a literal multi-label suffix. No regular expressions, question marks,
+	// universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain. PUT fully
+	// replaces up to 100 rules and the request-intake option using exactly one CAS precondition.
+	// Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document,
+	// otherwise 409. A missing document reads as empty rules, null version/timestamps, false request
+	// intake for the organization and null (inherit) for the agent. Reset overrides with empty rules and
+	// null request intake. Allow rules preserve server activation metadata while retained unchanged;
+	// removing/recreating or changing a rule to allow resets it. Request intake defaults off; agent null
+	// inherits the organization. No-op writes preserve versions. Agent composite effective_version
+	// changes with either policy document, connection identity, generation or successful claim;
+	// effective_since is the latest policy mutation, connection creation or successful claim. Reclaiming
+	// a connection invalidates prior admission snapshots and starts a fresh rule/request cutoff; routine
+	// heartbeats do not. Rule/request admissions require received_at >= both the selected activation
+	// time and effective_since. Consequently even unrelated policy edits suppress queued older
+	// rule/request admissions, without deleting email history or affecting explicit reply waits. Exact
+	// membership fallback retains its own notify_since and generation but must still recheck current
+	// policy denies and effective_version. Before dispatch, receivers must recheck the current composite
+	// version and applicable activation generation and membership; stop new admissions when policy is
+	// unavailable or older than 30 seconds. Snapshot fields explain scope and matched rules locally; the
+	// API does not execute tasks or dispatch notifications.
 	//
 	// PUT /contact-policy
 	PutContactPolicy(ctx context.Context, req PutContactPolicyRequest) (PutContactPolicyRes, error)
+	// ReaffirmFunctionRuntimeKey implements reaffirmFunctionRuntimeKey operation.
+	//
+	// Lift the suspensions the caller may decide on the function's key (for example one left by a member
+	// removal or a grant reduction) and redeploy it. key_suspension_reasons lists any that remain. A
+	// function transferred to a new owner while it was stopped is not redeployed: lifting that stop
+	// places the transfer's own stop (transfer_stop_placed), which a redeploy lifts, or a further
+	// reaffirm by someone who covers its key that names it in the body (suspended_at and suspended_by
+	// 'transfer'): that reaffirm accepts the code the previous owner deployed. The body may name any
+	// stop the caller saw; a stop that is not the function's stop now lifts nothing.
+	//
+	// POST /functions/{id}/runtime-key/reaffirm
+	ReaffirmFunctionRuntimeKey(ctx context.Context, req OptReaffirmFunctionRuntimeKeyRequest, params ReaffirmFunctionRuntimeKeyParams) (ReaffirmFunctionRuntimeKeyRes, error)
 	// RedeemCreditCode implements redeemCreditCode operation.
 	//
-	// Redeem a credit code for the authenticated organization. The credit is
-	// added to the organization prepaid credit and shows in
-	// `GET /credits/balance` under `prepaid_credit`.
-	// Redeeming requires an organization owner or admin. An API key redeems
-	// with the authority of the user who created it, based on that user's
-	// current role; a key without that authority gets the same
-	// `credit_code_invalid` refusal as an unknown code.
-	// The `Idempotency-Key` header is required. Retrying with the same key
-	// and code returns the original grant with `replayed: true` and grants
-	// nothing new; the same key with a different code is refused with
-	// `idempotency_key_reused`. Every refusal carries a human-readable
-	// `error.message` that can be shown to the user as is.
+	// Redeem a credit code for the authenticated organization. The credit is added to the organization
+	// prepaid credit and shows in `GET /credits/balance` under `prepaid_credit`. Redeeming requires an
+	// organization owner or admin: an API key redeems with the authority of the user who created it (or
+	// the member it was transferred to), based on that user's current role, and a key without that
+	// authority gets the same `credit_code_invalid` refusal as an unknown code. A key transferred to
+	// another member without being rotated is refused with `403` and `error.details.reason`
+	// `key_transferred_unrotated`: rotate it and redeem with its successor. The `Idempotency-Key` header
+	// is required. Retrying with the same key and code returns the original grant with `replayed: true`
+	// and grants nothing new; the same key with a different code is refused with
+	// `idempotency_key_reused`. Every refusal carries a human-readable `error.message` that can be shown
+	// to the user as is.
 	//
 	// POST /credits/redeem
 	RedeemCreditCode(ctx context.Context, req *RedeemCreditCodeInput, params RedeemCreditCodeParams) (RedeemCreditCodeRes, error)
-	// RegisterPayoutAddress implements registerPayoutAddress operation.
+	// RedeployFunction implements redeployFunction operation.
 	//
-	// Register (or update) the default payout address your org receives x402
-	// payments at, for a given network. You prove control of the address with
-	// an org-bound `personal_sign` signature over the message produced by the
-	// SDK helper `buildPayoutRegistrationMessage`. The org id is taken from your
-	// authenticated key, never the body, so a captured signature can't register
-	// an address under another org. Exactly one default address exists per
-	// (org, network); registering again replaces it. A payee MUST register a
-	// payout address before calling `createChallenge`, because the challenge's
-	// `pay_to` is resolved from this directory.
+	// Push the function's stored source again as a new deployment, for example after changing its
+	// secrets or runtime key. Takes no body: to ship new code, use updateFunction. A body carrying code
+	// is refused rather than ignored.
 	//
-	// POST /x402/payout-addresses
-	RegisterPayoutAddress(ctx context.Context, req *RegisterPayoutAddressInput) (RegisterPayoutAddressRes, error)
+	// POST /functions/{id}/redeploy
+	RedeployFunction(ctx context.Context, params RedeployFunctionParams) (RedeployFunctionRes, error)
+	// ReleaseSentEmail implements releaseSentEmail operation.
+	//
+	// Releases a held scheduled send (it carries `hold`) back to its schedule, as the releasing person's.
+	//  For owners, admins and the person whose grant scheduled it; not API keys. More than an hour past
+	// its time it needs a new `scheduled_at` (else 409 scheduled_at_required); a send that is not held
+	// gets 409 not_held.
+	//
+	// POST /sent-emails/{id}/release
+	ReleaseSentEmail(ctx context.Context, req OptReleaseSentEmailReq, params ReleaseSentEmailParams) (ReleaseSentEmailRes, error)
 	// RemoveAgentConnection implements removeAgentConnection operation.
 	//
 	// Permanently remove a revoked connection record. A current personal owner may permanently remove
 	// their own record; organization owners and admins may remove any record. Disconnect first using
 	// revokeAgentConnection; an active connection returns 409 connection_not_revoked. Missing or already
 	// removed records return 404. Mail, address notes, domains and external runtimes are preserved. The
-	// same address can be paired again with a new invitation; old credentials and invitations remain
+	// removed address stays reserved within the organization; old credentials and invitations remain
 	// invalid.
 	//
 	// POST /agent-connections/{address}/remove
 	RemoveAgentConnection(ctx context.Context, params RemoveAgentConnectionParams) (RemoveAgentConnectionRes, error)
 	// RemoveDefaultNetworkMember implements removeDefaultNetworkMember operation.
 	//
-	// Owner or admin login required. The explicit exclusion persists across synchronization.
+	// Owner or admin exclusion of a connected address. The exclusion survives disconnection and later
+	// reconnection at the same address.
 	//
 	// DELETE /agent-networks/default/members/{address}
 	RemoveDefaultNetworkMember(ctx context.Context, params RemoveDefaultNetworkMemberParams) (RemoveDefaultNetworkMemberRes, error)
+	// RemoveMember implements removeMember operation.
+	//
+	// Removes a member from the organization, after transferring what they own (POST
+	// /members/{id}/transfer). Only an owner removes an owner; nobody removes someone whose access is
+	// wider than their own, or themselves. What they still own is then flagged or suspended for a
+	// decision (GET /access-suspensions). When the identity provider no longer has the membership, the
+	// local membership is ended here with the same cleanup; a retry while the removal is still finishing
+	// completes it. Person only: a dashboard session, or the person's own OAuth or CLI token with a
+	// session step-up of purpose `members.remove` (the person confirms at the step_up_url a 403
+	// step_up_required answer carries, which names this client and the member, then send the token in
+	// the Primitive-Step-Up header; the token works only with the client it was confirmed for and only
+	// for the member it was confirmed for). Needs members:manage. API keys are refused.
+	//
+	// DELETE /members/{id}
+	RemoveMember(ctx context.Context, params RemoveMemberParams) (RemoveMemberRes, error)
+	// RemoveOrganizationLogo implements removeOrganizationLogo operation.
+	//
+	// Remove the organization's logo.
+	// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+	// `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+	// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+	// when the person's role could not do it anyway). The person's role must hold org:manage (or
+	// members:manage). API keys and agent connection keys are refused. An agent acting for the person is
+	// refused unless it carries a step-up token the person issued in the dashboard.
+	//
+	// DELETE /organization/logo
+	RemoveOrganizationLogo(ctx context.Context, params RemoveOrganizationLogoParams) (RemoveOrganizationLogoRes, error)
+	// RemoveOwnAgentAccess implements removeOwnAgentAccess operation.
+	//
+	// Removes an agent from the access list of the caller's member mailbox. Agent access is given when
+	// they connect their own agent, and is not edited through the list while that feature is on. Person
+	// only: a dashboard session, or the person's own OAuth or CLI token with a session step-up of
+	// purpose `delegations.write` (the person confirms at the step_up_url a 403 step_up_required answer
+	// carries, which names this client, then send the token in the Primitive-Step-Up header; the token
+	// works only with the client it was confirmed for). Needs member_address:manage. API keys are
+	// refused.
+	//
+	// DELETE /me/mailboxes/{address}/access/agents/{connection_id}
+	RemoveOwnAgentAccess(ctx context.Context, params RemoveOwnAgentAccessParams) (RemoveOwnAgentAccessRes, error)
+	// RenameAgentConnection implements renameAgentConnection operation.
+	//
+	// Change an agent's display name. The address, credential, status and mail are unchanged. The name
+	// is trimmed and must be 1 to 64 characters with no control characters or line breaks. A connected
+	// agent may rename only its own exact address using its current bound credential; any other address
+	// returns 403 agent_connection_scope_forbidden. A current personal owner may rename their own agents;
+	//  organization owners and admins may rename any. A disconnected (revoked) connection returns 409
+	// connection_revoked. The new name appears immediately in GET /agent-connections/me, the connection
+	// list and the agent network directory.
+	//
+	// PATCH /agent-connections/{address}/name
+	RenameAgentConnection(ctx context.Context, req *RenameAgentConnectionReq, params RenameAgentConnectionParams) (RenameAgentConnectionRes, error)
 	// ReorderRoutes implements reorderRoutes operation.
 	//
 	// Update the priority of one or more routes in a single call.
 	//
 	// POST /routes/reorder
-	ReorderRoutes(ctx context.Context, req *ReorderRoutesInput) (ReorderRoutesRes, error)
+	ReorderRoutes(ctx context.Context, req *ReorderRoutesInput, params ReorderRoutesParams) (ReorderRoutesRes, error)
 	// ReplayDelivery implements replayDelivery operation.
 	//
-	// Re-sends a previous delivery to its original endpoint. If that
-	// endpoint was deleted or deactivated, the replay is rejected.
-	// Supports inbound email deliveries and `sent_email.*` deliveries.
-	// An inbound email delivery is replayed with its original stored
-	// payload and event id. A `sent_email.*` delivery is replayed with the
-	// same event id but a payload rebuilt from the send as it is now; it
-	// is rejected if the send was deleted or the endpoint is no longer an
-	// active http endpoint. Rate limited per-org, sharing an org-wide
-	// budget with email replays.
+	// Re-sends the stored webhook payload from a previous delivery attempt.
+	// If the original endpoint is still active, it is targeted. If the
+	// original endpoint was deleted, the oldest active endpoint is used.
+	// Deactivated endpoints cannot be replayed to. Rate limited per-org,
+	// sharing an org-wide budget with email replays.
 	//
 	// POST /webhooks/deliveries/{id}/replay
 	ReplayDelivery(ctx context.Context, params ReplayDeliveryParams) (ReplayDeliveryRes, error)
@@ -1630,6 +2643,13 @@ type Handler interface {
 	//
 	// POST /emails/{id}/reply
 	ReplyToEmail(ctx context.Context, req *ReplyInput, params ReplyToEmailParams) (ReplyToEmailRes, error)
+	// RequestFunctionRuntimeKeyRunner implements requestFunctionRuntimeKeyRunner operation.
+	//
+	// Ask for the capacity a per-function key needs before creating a function with a narrowed preset,
+	// then answer the presets as they now stand. Needs the same permission as deploying a function.
+	//
+	// POST /functions/runtime-grant-presets/runner-request
+	RequestFunctionRuntimeKeyRunner(ctx context.Context, req *RequestFunctionRuntimeKeyRunnerRequest, params RequestFunctionRuntimeKeyRunnerParams) (RequestFunctionRuntimeKeyRunnerRes, error)
 	// RescheduleSentEmail implements rescheduleSentEmail operation.
 	//
 	// Moves a STILL-SCHEDULED send (status `scheduled`) to a new
@@ -1652,20 +2672,14 @@ type Handler interface {
 	// This endpoint does not require an API key.
 	//
 	// POST /agent/signup/resend
-	ResendAgentSignupVerification(ctx context.Context, req *ResendAgentSignupVerificationInput) (ResendAgentSignupVerificationRes, error)
+	ResendAgentSignupVerification(ctx context.Context, req *ResendAgentSignupVerificationInput, params ResendAgentSignupVerificationParams) (ResendAgentSignupVerificationRes, error)
 	// ResendCliSignupVerification implements resendCliSignupVerification operation.
 	//
 	// Sends a new email verification code for a pending CLI signup session.
 	// This endpoint does not require an API key.
 	//
 	// POST /cli/signup/resend
-	ResendCliSignupVerification(ctx context.Context, req *ResendCliSignupVerificationInput) (ResendCliSignupVerificationRes, error)
-	// ResolveRegistryHandle implements resolveRegistryHandle operation.
-	//
-	// Resolve a registry handle to its agent.
-	//
-	// GET /registries/{slug}/agents/{handle}
-	ResolveRegistryHandle(ctx context.Context, params ResolveRegistryHandleParams) (ResolveRegistryHandleRes, error)
+	ResendCliSignupVerification(ctx context.Context, req *ResendCliSignupVerificationInput, params ResendCliSignupVerificationParams) (ResendCliSignupVerificationRes, error)
 	// RevokeAgentConnection implements revokeAgentConnection operation.
 	//
 	// Disconnect an agent and invalidate its bound credential. A current personal owner may disconnect
@@ -1676,13 +2690,92 @@ type Handler interface {
 	//
 	// DELETE /agent-connections/{address}
 	RevokeAgentConnection(ctx context.Context, params RevokeAgentConnectionParams) (RevokeAgentConnectionRes, error)
+	// RevokeAllCredentials implements revokeAllCredentials operation.
+	//
+	// The emergency response to a leak: revokes every API key, agent connection key and connected app
+	// created since a time, rotates the organization Function key and every running Function's own key,
+	// and optionally suspends Functions. Owners only, from a dashboard session, and the body must
+	// confirm with "revoke all". Needs the organization's credential features to be enabled; while they
+	// are not, this answers 404 feature_disabled.
+	// Person only: a dashboard session. The person's role must hold credentials:revoke_all. API keys,
+	// agent connection keys and agents are refused.
+	//
+	// POST /credentials/revoke-all
+	RevokeAllCredentials(ctx context.Context, req *CredentialsRevokeAllCredentialsInput, params RevokeAllCredentialsParams) (RevokeAllCredentialsRes, error)
+	// RevokeCredential implements revokeCredential operation.
+	//
+	// Revoke one credential by kind and id. A Function key is rotated, never revoked (409
+	// rotate_instead). An API key is revoked only by a person whose own access covers the key's access
+	// (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered.
+	// What the credential set up keeps working and is listed in standing_objects for review. Needs the
+	// organization's credential features to be enabled; while they are not, this answers 404
+	// feature_disabled.
+	// Person only: a dashboard session. The person's role must hold keys:manage. API keys, agent
+	// connection keys and agents are refused.
+	//
+	// POST /credentials/revoke
+	RevokeCredential(ctx context.Context, req *CredentialsRevokeCredentialInput, params RevokeCredentialParams) (RevokeCredentialRes, error)
+	// RevokeMyGrant implements revokeMyGrant operation.
+	//
+	// Sign out one of the calling person's own connections, for example a lost laptop. Revoking a CLI
+	// login ends it in every organization. Another person's connection is answered 404. Every role may
+	// end its own connections. From a dashboard session or the person's Primitive CLI any of them; any
+	// other app the person connected may end only its own connection (403 otherwise).
+	// Person only: a dashboard session or the person's own OAuth token (the CLI or an app they
+	// connected). API keys, agent connection keys and agents are refused.
+	//
+	// POST /me/grants/{id}/revoke
+	RevokeMyGrant(ctx context.Context, req *OrgSettingsRevokeMyGrantInput, params RevokeMyGrantParams) (RevokeMyGrantRes, error)
+	// RevokeOAuthGrant implements revokeOAuthGrant operation.
+	//
+	// Revoke one connected app for the whole organization. Where the app has revocation rights on, only
+	// the person who connected it, an owner or an admin may revoke it. Scheduled and repeating mail it
+	// created is stopped.
+	// Person only: a dashboard session. The person's role must hold oauth_grants:manage. API keys, agent
+	// connection keys and agents are refused.
+	//
+	// POST /oauth-grants/{id}/revoke
+	RevokeOAuthGrant(ctx context.Context, params RevokeOAuthGrantParams) (RevokeOAuthGrantRes, error)
+	// RevokeOrganizationInvitation implements revokeOrganizationInvitation operation.
+	//
+	// Requires a current human organization owner or administrator. Machine credentials are refused.
+	// Invitations grant the chosen role, Member by default, only after verified acceptance through the
+	// sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery
+	// accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
+	//
+	// DELETE /organization/invitations/{invitation_id}
+	RevokeOrganizationInvitation(ctx context.Context, params RevokeOrganizationInvitationParams) (RevokeOrganizationInvitationRes, error)
+	// RevokeProjectInvitation implements revokeProjectInvitation operation.
+	//
+	// Requires a current human organization membership. Machine credentials are refused. Results are
+	// scoped to current project access. No local paths or existing conversation history are shared.
+	//
+	// DELETE /projects/{project_id}/invitations/{invitation_id}
+	RevokeProjectInvitation(ctx context.Context, params RevokeProjectInvitationParams) (RevokeProjectInvitationRes, error)
+	// RotateKey implements rotateKey operation.
+	//
+	// Mint a successor with the same grant and return its secret once. The old key keeps working for
+	// overlap_seconds, then stops. The person rotating must cover the key's access (403 grant_forbidden,
+	// details.reason target_not_covered), and a key an owner created is rotated by an owner only (403
+	// forbidden, details.reason owner_key_rotation), since rotating hands over the new secret. The
+	// Primitive CLI's token is refused, even with a step-up. Needs the organization's credential
+	// features to be enabled; while they are not, this answers 404 feature_disabled.
+	// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+	// `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+	// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+	// when the person's role could not do it anyway). The person's role must hold keys:manage. API keys
+	// and agent connection keys are refused. An agent acting for the person is refused unless it carries
+	// a step-up token the person issued in the dashboard.
+	//
+	// POST /keys/{id}/rotate
+	RotateKey(ctx context.Context, req *CredentialsRotateKeyInput, params RotateKeyParams) (RotateKeyRes, error)
 	// RotateWebhookSecret implements rotateWebhookSecret operation.
 	//
 	// Generates a new webhook signing secret, replacing the current one.
 	// Rate limited to once per 60 minutes.
 	//
 	// POST /account/webhook-secret/rotate
-	RotateWebhookSecret(ctx context.Context) (RotateWebhookSecretRes, error)
+	RotateWebhookSecret(ctx context.Context, params RotateWebhookSecretParams) (RotateWebhookSecretRes, error)
 	// RunWakeSchedule implements runWakeSchedule operation.
 	//
 	// Fire the schedule immediately, sending one wake.dispatch via the same
@@ -1713,16 +2806,20 @@ type Handler interface {
 	// to the connected address in the same organization. An unavailable
 	// parent returns 404. Sender filters are not authentication proof;
 	// inspect the email detail's authentication evidence before trusting it.
+	// Agent connection keys (pconn_) may search only mail received by their bound address. This
+	// restriction applies to results, totals, facets and pagination; from/to and q filters cannot widen
+	// it. When reply_to_sent_email_id is supplied, the parent must be a send from the connected address
+	// in the same organization, otherwise the response is 404. The parent filter is optional. Existing
+	// from/to filters are substring or domain filters, not proof of sender identity. Inspect getEmail
+	// authentication details before trusting a sender.
 	//
 	// GET /emails/search
 	SearchEmails(ctx context.Context, params SearchEmailsParams) (SearchEmailsRes, error)
 	// SearchMemories implements searchMemories operation.
 	//
-	// List active memories in a scope by lexicographic key prefix. Results
-	// are ordered by key ascending. The `meta.cursor` value is the next key
-	// cursor; pass it back as `cursor` to continue after that key.
-	// Search records one memory read usage event for the operation. Pass
-	// `include_value=false` to return metadata only.
+	// List active memories in a scope by lexicographic key prefix. Results are ordered by key ascending.
+	// This is prefix search, not free-text search. Function-authenticated requests use their own
+	// Function id and cannot override it. Pass `include_value=false` to return metadata only.
 	//
 	// GET /memories/search
 	SearchMemories(ctx context.Context, params SearchMemoriesParams) (SearchMemoriesRes, error)
@@ -1742,7 +2839,7 @@ type Handler interface {
 	// entitlement; callers without them receive `403`.
 	//
 	// POST /semantic-search
-	SemanticSearch(ctx context.Context, req *SemanticSearchInput) (SemanticSearchRes, error)
+	SemanticSearch(ctx context.Context, req *SemanticSearchInput, params SemanticSearchParams) (SemanticSearchRes, error)
 	// SendEmail implements sendEmail operation.
 	//
 	// Sends an outbound email through Primitive's outbound relay. By default
@@ -1752,12 +2849,52 @@ type Handler interface {
 	// (`https://api.primitive.dev/v1`) so the request body can carry
 	// inline attachments up to ~30 MiB raw. The legacy dashboard
 	// compatibility host (`https://www.primitive.dev/api/v1`) also accepts
-	// /send-mail, but Vercel request body limits apply before proxying.
+	// /send-mail, but a lower request body limit applies there.
 	// The typed SDKs route /send-mail to the canonical API host
 	// automatically.
 	//
 	// POST /send-mail
 	SendEmail(ctx context.Context, req *SendMailInput, params SendEmailParams) (SendEmailRes, error)
+	// SendInteractionStep implements sendInteractionStep operation.
+	//
+	// Send the next step from our side of an existing interaction, validated against its current state.
+	// An interaction on a mailbox the caller cannot send from is answered as not found.
+	//
+	// POST /interactions/{id}/steps
+	SendInteractionStep(ctx context.Context, req *SendInteractionStepRequest, params SendInteractionStepParams) (SendInteractionStepRes, error)
+	// SendMailBatch implements sendMailBatch operation.
+	//
+	// Send up to 100 independent messages in a single call. Each message uses the same body schema and
+	// the same send path as `POST /send-mail`, so auth, validation, rate limiting, and idempotency apply
+	// per message. Messages are processed independently: one failing does not fail the others. Every
+	// message gets an entry in `results` carrying either `data` (on success) or `error` (on failure),
+	// with the original `index`.
+	//
+	// POST /send-mail/batch
+	SendMailBatch(ctx context.Context, req *SendMailBatchReq, params SendMailBatchParams) (SendMailBatchRes, error)
+	// SetAccessMode implements setAccessMode operation.
+	//
+	// Delegated mode is refused until every preview item has a decision; switching back to whole-org is
+	// always allowed. Person only: a dashboard session, or the person's own OAuth or CLI token with a
+	// session step-up of purpose `access_mode.write` (the person confirms at the step_up_url a 403
+	// step_up_required answer carries, which names this client, then send the token in the
+	// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+	// access_mode:manage (owners). API keys are refused.
+	//
+	// PUT /access-mode
+	SetAccessMode(ctx context.Context, req *SetAccessModeRequest, params SetAccessModeParams) (SetAccessModeRes, error)
+	// SetAgentConnectionVisibility implements setAgentConnectionVisibility operation.
+	//
+	// Hide, unhide, pin or unpin an agent. hidden:true hides it until someone unhides it and clears any
+	// pin. hidden:false shows it again and restarts its idle clock, so the idle sweep does not hide it
+	// again until it has been idle for the full threshold from now. keep_visible:true pins it visible:
+	// it is shown and never hidden for idleness. keep_visible:false removes the pin. hidden:true
+	// together with keep_visible:true is rejected. Never changes the connection status, its credential
+	// or mail delivery. A current personal owner may change their own agents; organization owners and
+	// admins may change any.
+	//
+	// PATCH /agent-connections/{address}/visibility
+	SetAgentConnectionVisibility(ctx context.Context, req *SetAgentConnectionVisibilityReq, params SetAgentConnectionVisibilityParams) (SetAgentConnectionVisibilityRes, error)
 	// SetFunctionRoute implements setFunctionRoute operation.
 	//
 	// Binds inbound mail to this function. The route target is either
@@ -1769,6 +2906,15 @@ type Handler interface {
 	//
 	// PUT /functions/{id}/route
 	SetFunctionRoute(ctx context.Context, req *FunctionRouteBody, params SetFunctionRouteParams) (SetFunctionRouteRes, error)
+	// SetFunctionRuntimeKey implements setFunctionRuntimeKey operation.
+	//
+	// Change the key the function runs with, or the secrets attached to it. A grant wider than the
+	// caller's own is refused. A custom runtime_grant must list addresses or send mail_scope "org" for
+	// every mailbox; one that does neither is refused (400 validation_error, details.reason
+	// mail_scope_required). The function is redeployed with the new key.
+	//
+	// PUT /functions/{id}/runtime-key
+	SetFunctionRuntimeKey(ctx context.Context, req *SetFunctionRuntimeKeyRequest, params SetFunctionRuntimeKeyParams) (SetFunctionRuntimeKeyRes, error)
 	// SetFunctionSecret implements setFunctionSecret operation.
 	//
 	// Path-keyed companion to `POST /functions/{id}/secrets`.
@@ -1779,22 +2925,42 @@ type Handler interface {
 	//
 	// PUT /functions/{id}/secrets/{key}
 	SetFunctionSecret(ctx context.Context, req *SetFunctionSecretInput, params SetFunctionSecretParams) (SetFunctionSecretRes, error)
+	// SetMailboxAccess implements setMailboxAccess operation.
+	//
+	// Replaces the whole access list of one mailbox address, or of a domain (`@example.com` or the bare
+	// domain). Needs delegations:manage: a dashboard session, the person's own Primitive CLI, or an
+	// org-wide API key, which acts for the person it belongs to and works only while that person is
+	// still an owner or admin holding the permission. Any other OAuth app answers `step_up_required`
+	// until the person confirms in the dashboard and the request carries the Primitive-Step-Up header.
+	// Narrowed, Function and connected keys are refused. Nobody grants access beyond their own (rule 1):
+	// each added or widened entry must be within the caller's own mail access and permissions; an API
+	// key never gives access to a member's personal mailbox. Every change is recorded in the credential
+	// audit log.
+	//
+	// PUT /mailboxes/{address}/access
+	SetMailboxAccess(ctx context.Context, req *SetMailboxAccessRequest, params SetMailboxAccessParams) (SetMailboxAccessRes, error)
+	// SetMemberRole implements setMemberRole operation.
+	//
+	// A built-in role (owner, admin, member), a template key or a role id. Only an owner assigns or
+	// removes owner; nobody changes someone wider than themselves. A member whose role was changed
+	// several times in a row may be refused with 429 `rate_limited` for a few seconds; nothing was
+	// changed, so retry after `Retry-After`. A change the identity provider refuses answers 409
+	// `conflict` with `details.reason` `role_change_refused`; nothing was changed. A role naming a
+	// member's personal mailbox goes to that member only: otherwise 403 `grant_forbidden` with `details.
+	// reason` `personal_mailbox_member_only`. Person only: a dashboard session, or the person's own
+	// OAuth or CLI token with a session step-up of purpose `roles.write` (the person confirms at the
+	// step_up_url a 403 step_up_required answer carries, which names this client, then send the token in
+	// the Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+	// roles:assign. API keys are refused.
+	//
+	// PUT /members/{id}/role
+	SetMemberRole(ctx context.Context, req *SetMemberRoleRequest, params SetMemberRoleParams) (SetMemberRoleRes, error)
 	// SetMemory implements setMemory operation.
 	//
-	// Create or update a durable JSON memory under an org or function scope.
-	// When no explicit scope is provided, function-authenticated requests
-	// use that function's id automatically; requests with
-	// `x-primitive-function-id` use that function id; all other requests
-	// default to org scope.
-	// `scope.type = function` requires the function id UUID in `scope.id`.
-	// Function names are not accepted as scope identifiers. Values must be
-	// valid JSON and serialize to at most 65536 UTF-8 bytes. Keys must be at
-	// most 512 UTF-8 bytes. `version`, `read_count`, and `write_count` are
-	// bigint counters serialized as strings.
-	// Passing `if_absent` turns the write into create-only. Passing
-	// `if_version` turns the write into compare-and-set. These options are
-	// mutually exclusive and return `memory_conflict` on a stale version or
-	// existing key.
+	// Create or update a durable JSON memory under an org or function scope. Function-authenticated
+	// requests use their own Function id and cannot override it. If no explicit scope is provided for
+	// other credentials, `x-primitive-function-id` is used next, and other requests default to org scope.
+	//  Function scope uses the function id UUID, not the function name.
 	//
 	// PUT /memories
 	SetMemory(ctx context.Context, req *SetMemoryInput, params SetMemoryParams) (SetMemoryRes, error)
@@ -1806,13 +2972,54 @@ type Handler interface {
 	//
 	// PUT /org/secrets/{key}
 	SetOrgSecret(ctx context.Context, req *SetOrgSecretInput, params SetOrgSecretParams) (SetOrgSecretRes, error)
+	// SetOwnMailboxAccess implements setOwnMailboxAccess operation.
+	//
+	// Replaces the access list of the caller's own member mailbox (or their personal agent's address);
+	// needs no delegations:manage. Nobody grants access beyond their own. A role that can only read this
+	// mailbox is refused. Person only: a dashboard session, or the person's own OAuth or CLI token with
+	// a session step-up of purpose `delegations.write` (the person confirms at the step_up_url a 403
+	// step_up_required answer carries, which names this client, then send the token in the
+	// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+	// member_address:manage and mail:send_as_member. API keys are refused.
+	//
+	// PUT /me/mailboxes/{address}/access
+	SetOwnMailboxAccess(ctx context.Context, req *SetOwnMailboxAccessRequest, params SetOwnMailboxAccessParams) (SetOwnMailboxAccessRes, error)
+	// SetRelayAutoJoin implements setRelayAutoJoin operation.
+	//
+	// `option` is a choice's id from the GET, or null to require an invitation (turning it off needs
+	// only members:manage). Choosing an option answers 404 `feature_disabled` unless the organization
+	// has mail relay, 400 `validation_error` for an id that is not one of the choices, 403
+	// `grant_forbidden` unless the caller is an owner or admin who can assign roles and send invitations
+	// and covers the role the option gives, 409 `role_key_taken` when a custom role already holds that
+	// role's key, and 409 `role_assignment_unavailable` when the organization cannot be given that role
+	// yet. Person only: a dashboard session, or the person's own OAuth or CLI token with a session
+	// step-up of purpose `relay_auto_join.write` (the person confirms at the step_up_url a 403
+	// step_up_required answer carries, which names this client, then send the token in the
+	// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+	// members:manage, and roles:assign to turn it on. API keys are refused.
+	//
+	// PUT /relay-auto-join
+	SetRelayAutoJoin(ctx context.Context, req *SetRelayAutoJoinRequest, params SetRelayAutoJoinParams) (SetRelayAutoJoinRes, error)
+	// SignalEmail implements signalEmail operation.
+	//
+	// Builds and sends the standard signal email about this received email: one `interaction.json` part
+	// (read/1, working/1 or typing/1 naming the email's Message-ID) plus only the fixed fallback text,
+	// threaded to it. It goes only to the email's authenticated sender, never to Reply-To or other
+	// recipients. Receivers see it as `fyi: true`, and the sender sees it as `peer_signal_on_my_last`
+	// (typing is not reported there). Refused (422) for a signal, interaction or other structured email,
+	// for an unauthenticated sender, and while the email is still being processed. Each call is a new
+	// signal with fresh ids; a read retried with the same Idempotency-Key rebuilds the identical message
+	// and dedupes.
+	//
+	// POST /emails/{id}/signal
+	SignalEmail(ctx context.Context, req *EmailSignalInput, params SignalEmailParams) (SignalEmailRes, error)
 	// SimulateRoute implements simulateRoute operation.
 	//
 	// Resolves where an inbound email to `recipient` would be delivered, with a
 	// trace of every rule evaluated and why. Read-only; creates nothing.
 	//
 	// POST /routes/simulate
-	SimulateRoute(ctx context.Context, req *SimulateRouteInput) (SimulateRouteRes, error)
+	SimulateRoute(ctx context.Context, req *SimulateRouteInput, params SimulateRouteParams) (SimulateRouteRes, error)
 	// StartAgentClaim implements startAgentClaim operation.
 	//
 	// Begins upgrading an emailless `agent` account into a full `developer`
@@ -1824,7 +3031,7 @@ type Handler interface {
 	// is rejected.
 	//
 	// POST /agent/claim/start
-	StartAgentClaim(ctx context.Context, req *StartAgentClaimInput) (StartAgentClaimRes, error)
+	StartAgentClaim(ctx context.Context, req *StartAgentClaimInput, params StartAgentClaimParams) (StartAgentClaimRes, error)
 	// StartAgentSignup implements startAgentSignup operation.
 	//
 	// Starts an agent-native signup session. The API creates a pending
@@ -1833,7 +3040,18 @@ type Handler interface {
 	// does not require an API key.
 	//
 	// POST /agent/signup/start
-	StartAgentSignup(ctx context.Context, req *StartAgentSignupInput) (StartAgentSignupRes, error)
+	StartAgentSignup(ctx context.Context, req *StartAgentSignupInput, params StartAgentSignupParams) (StartAgentSignupRes, error)
+	// StartBreakGlass implements startBreakGlass operation.
+	//
+	// Time-limited (at most 24 hours), audited access to every mailbox for the owner opening it; every
+	// other owner is told. Person only: a dashboard session, or the person's own OAuth or CLI token with
+	// a session step-up of purpose `break_glass.write` (the person confirms at the step_up_url a 403
+	// step_up_required answer carries, which names this client, then send the token in the
+	// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+	// access_mode:manage (owners). API keys are refused.
+	//
+	// POST /break-glass
+	StartBreakGlass(ctx context.Context, req *StartBreakGlassRequest, params StartBreakGlassParams) (StartBreakGlassRes, error)
 	// StartCliLogin implements startCliLogin operation.
 	//
 	// Starts a browser-assisted CLI login session. The response includes a
@@ -1841,7 +3059,7 @@ type Handler interface {
 	// browser. This endpoint does not require an API key.
 	//
 	// POST /cli/login/start
-	StartCliLogin(ctx context.Context, req OptStartCliLoginInput) (StartCliLoginRes, error)
+	StartCliLogin(ctx context.Context, req OptStartCliLoginInput, params StartCliLoginParams) (StartCliLoginRes, error)
 	// StartCliSignup implements startCliSignup operation.
 	//
 	// Starts a terminal-native CLI signup. The API creates a pending
@@ -1850,7 +3068,15 @@ type Handler interface {
 	// does not require an API key.
 	//
 	// POST /cli/signup/start
-	StartCliSignup(ctx context.Context, req *StartCliSignupInput) (StartCliSignupRes, error)
+	StartCliSignup(ctx context.Context, req *StartCliSignupInput, params StartCliSignupParams) (StartCliSignupRes, error)
+	// StartInteraction implements startInteraction operation.
+	//
+	// Send the first step of a protocol from one of your addresses: a carrier email with the step's
+	// interaction.json part. The step is validated against the protocol before anything is sent. An
+	// Idempotency-Key makes a retry return the same interaction without sending again.
+	//
+	// POST /interactions
+	StartInteraction(ctx context.Context, req *StartInteractionRequest, params StartInteractionParams) (StartInteractionRes, error)
 	// StopRepeatFromEmail implements stopRepeatFromEmail operation.
 	//
 	// Called by the recipient of a repeating send: the connected agent's own
@@ -1865,6 +3091,49 @@ type Handler interface {
 	//
 	// POST /emails/{id}/repeat-stop
 	StopRepeatFromEmail(ctx context.Context, req OptRepeatStopRequest, params StopRepeatFromEmailParams) (StopRepeatFromEmailRes, error)
+	// SuspendFunctionRuntimeKey implements suspendFunctionRuntimeKey operation.
+	//
+	// Stop the function from running by suspending its key. Its code, bindings and secrets stay stored;
+	// reaffirmFunctionRuntimeKey brings it back as it was. A stop an owner or admin places (suspended_by
+	// owner_or_admin) records their role, is lifted only in a dashboard session by someone whose role is
+	// at least that one (an owner's stop, only an owner), and replaces any stop but an owner's or
+	// admin's of at least that role, an access decision's included: keeping that decision on the waiting
+	// list then leaves the function stopped.
+	//
+	// POST /functions/{id}/runtime-key/suspend
+	SuspendFunctionRuntimeKey(ctx context.Context, req *SuspendFunctionRuntimeKeyRequest, params SuspendFunctionRuntimeKeyParams) (SuspendFunctionRuntimeKeyRes, error)
+	// TestEmailRule implements testEmailRule operation.
+	//
+	// Runs a rule over received mail and reports what it would decide for each email: matched, near_miss,
+	//  no_match, unclassified or not_found. Test an unsaved tree from a compile response, or a saved
+	// rule by rule_id (its current version, run with its author's access). Either way the rule reads
+	// only mail its author can read. Without email_ids, the newest emails it can read are tested, at
+	// most 200 and none older than 30 days. Emails not classified yet that arrived more than 2 hours ago
+	// are classified first and their classification is saved, unless classify_missing is false; newer
+	// ones are left to normal classification and reported unclassified with reason pending. The rule
+	// itself records nothing and grants nothing. Classification and the rule's own questions stop at
+	// about 90 seconds; run the test again to continue where it stopped. Needs mail:read, a credential
+	// acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
+	// and the email rules feature on the organization.
+	//
+	// POST /email-rules/test
+	TestEmailRule(ctx context.Context, req *TestEmailRuleRequest, params TestEmailRuleParams) (TestEmailRuleRes, error)
+	// TestEmailRuleOnSample implements testEmailRuleOnSample operation.
+	//
+	// Reports what a rule would decide for an email you describe: its sender, recipients, subject, plain
+	// text and attachment types, and optionally whether it is automated or from a mailing list and its
+	// spam score. The email is classified the way received mail is, and the rule's conditions and its
+	// own questions are decided as they would be for received mail with that content and those signals,
+	// received now. Without them it is not automated and not from a mailing list; a rule that reads a
+	// spam score you gave none for is decided on no score, and spam_score is listed in unset_columns.
+	// Nothing is stored: no email, classification or decision. Test an unsaved tree from a compile
+	// response, or a saved rule by rule_id (its current version). The answer includes what the
+	// classifier read from the email. Needs mail:read, a credential acting as a member with their full
+	// access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
+	// organization.
+	//
+	// POST /email-rules/test-sample
+	TestEmailRuleOnSample(ctx context.Context, req *TestEmailRuleOnSampleRequest, params TestEmailRuleOnSampleParams) (TestEmailRuleOnSampleRes, error)
 	// TestEndpoint implements testEndpoint operation.
 	//
 	// Sends a sample `email.received` event to the endpoint. The request
@@ -1923,12 +3192,24 @@ type Handler interface {
 	//
 	// POST /functions/{id}/test
 	TestFunction(ctx context.Context, req OptTestFunctionReq, params TestFunctionParams) (TestFunctionRes, error)
-	// UnpublishAgent implements unpublishAgent operation.
+	// TransferOwnedItems implements transferOwnedItems operation.
 	//
-	// Unpublish an agent from a registry.
+	// Moves items to another member, who must cover each; keys can be rotated as they move. Attribution
+	// of what was created is unchanged. Person only: a dashboard session, or the person's own OAuth or
+	// CLI token with a session step-up of purpose `members.transfer` (the person confirms at the
+	// step_up_url a 403 step_up_required answer carries, which names this client and the member, then
+	// send the token in the Primitive-Step-Up header; the token works only with the client it was
+	// confirmed for and only for the member it was confirmed for). Needs members:manage. API keys are
+	// refused.
 	//
-	// DELETE /registries/{slug}/agents/{handle}
-	UnpublishAgent(ctx context.Context, params UnpublishAgentParams) (UnpublishAgentRes, error)
+	// POST /members/{id}/transfer
+	TransferOwnedItems(ctx context.Context, req *TransferOwnedItemsRequest, params TransferOwnedItemsParams) (TransferOwnedItemsRes, error)
+	// UnmuteThread implements unmuteThread operation.
+	//
+	// Removes the mute for the address. Idempotent: unmuting a thread that is not muted succeeds.
+	//
+	// DELETE /threads/{id}/mute
+	UnmuteThread(ctx context.Context, params UnmuteThreadParams) (UnmuteThreadRes, error)
 	// UnsetFunctionRoute implements unsetFunctionRoute operation.
 	//
 	// Deactivates every active endpoint bound to this function. The
@@ -1939,18 +3220,37 @@ type Handler interface {
 	UnsetFunctionRoute(ctx context.Context, params UnsetFunctionRouteParams) (UnsetFunctionRouteRes, error)
 	// UpdateAccount implements updateAccount operation.
 	//
-	// Update account settings.
+	// Update the mutable account settings (such as display name and notification preferences) for the
+	// authenticated organization.
 	//
 	// PATCH /account
 	UpdateAccount(ctx context.Context, req *UpdateAccountInput) (UpdateAccountRes, error)
+	// UpdateAgentConnectionSettings implements updateAgentConnectionSettings operation.
+	//
+	// Update the organization agent settings. Set idle_hide_after_days to a whole number of days from 1
+	// to 365, or null to turn auto-hide off. Turning it off, or raising it, shows again the agents that
+	// were hidden for idleness and no longer qualify. Manual hides are unchanged. Organization owners
+	// and admins only.
+	//
+	// PATCH /agent-connections/settings
+	UpdateAgentConnectionSettings(ctx context.Context, req *UpdateAgentConnectionSettingsReq) (UpdateAgentConnectionSettingsRes, error)
+	// UpdateCredentialPolicy implements updateCredentialPolicy operation.
+	//
+	// Change one or more policy rules. Admins may only tighten the policy; loosening any rule needs an
+	// owner. Owners and admins are emailed about every change. Needs the organization's credential
+	// features to be enabled; while they are not, this answers 404 feature_disabled.
+	// Person only: a dashboard session. The person's role must hold credential_policy:manage. API keys,
+	// agent connection keys and agents are refused.
+	//
+	// PATCH /credential-policy
+	UpdateCredentialPolicy(ctx context.Context, req *CredentialsUpdateCredentialPolicyInput) (UpdateCredentialPolicyRes, error)
 	// UpdateDefaultNetworkMember implements updateDefaultNetworkMember operation.
 	//
-	// An owner or admin may update any active address. Other human members may update only their own
-	// current, non-excluded personal address. Connected-agent credentials cannot update visibility.
-	// Omitted settings keep their current value.
+	// Current owner or admin may update any connected address. A human member may update only their own
+	// current, non-excluded personal address. Re-enabling a permission advances its activation time.
 	//
 	// PATCH /agent-networks/default/members/{address}
-	UpdateDefaultNetworkMember(ctx context.Context, req *UpdateAgentNetworkMemberInput, params UpdateDefaultNetworkMemberParams) (UpdateDefaultNetworkMemberRes, error)
+	UpdateDefaultNetworkMember(ctx context.Context, req *UpdateDefaultNetworkMemberReq, params UpdateDefaultNetworkMemberParams) (UpdateDefaultNetworkMemberRes, error)
 	// UpdateDomain implements updateDomain operation.
 	//
 	// Update a verified domain's settings. Only verified domains can be
@@ -1958,6 +3258,18 @@ type Handler interface {
 	//
 	// PATCH /domains/{id}
 	UpdateDomain(ctx context.Context, req *UpdateDomainInput, params UpdateDomainParams) (UpdateDomainRes, error)
+	// UpdateEmailRule implements updateEmailRule operation.
+	//
+	// Renames the rule, saves a new version (english, tree and explanation together; earlier versions
+	// are kept unchanged) or changes its state: draft (disabled), observe or active. Only the rule's
+	// author may rename it, add a version or move it to observe or active; anyone else who can see it
+	// may only disable it (state draft), and while it is shared with another member only if they manage
+	// members from the dashboard. Needs mail:read, a credential acting as a member with their full
+	// access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
+	// organization.
+	//
+	// PATCH /email-rules/{id}
+	UpdateEmailRule(ctx context.Context, req *UpdateEmailRuleRequest, params UpdateEmailRuleParams) (UpdateEmailRuleRes, error)
 	// UpdateEndpoint implements updateEndpoint operation.
 	//
 	// Updates an active webhook endpoint. If the URL is changed, the old
@@ -1989,12 +3301,106 @@ type Handler interface {
 	//
 	// PUT /functions/{id}
 	UpdateFunction(ctx context.Context, req *UpdateFunctionInput, params UpdateFunctionParams) (UpdateFunctionRes, error)
-	// UpdateRegistry implements updateRegistry operation.
+	// UpdateFunctionFromTemplate implements updateFunctionFromTemplate operation.
 	//
-	// Update a registry you own.
+	// Re-pull a function installed from a template to the template's current version. Refused for a
+	// function whose code was edited after install. The path id is the function id.
 	//
-	// PATCH /registries/{slug}
-	UpdateRegistry(ctx context.Context, req *UpdateRegistryInput, params UpdateRegistryParams) (UpdateRegistryRes, error)
+	// POST /functions/{id}/template-update
+	UpdateFunctionFromTemplate(ctx context.Context, params UpdateFunctionFromTemplateParams) (UpdateFunctionFromTemplateRes, error)
+	// UpdateFunctionTags implements updateFunctionTags operation.
+	//
+	// Set the function's tags to exactly the given list.
+	//
+	// PATCH /functions/{id}/tags
+	UpdateFunctionTags(ctx context.Context, req *UpdateFunctionTagsRequest, params UpdateFunctionTagsParams) (UpdateFunctionTagsRes, error)
+	// UpdateGroup implements updateGroup operation.
+	//
+	// Renames a group or replaces its members. With an org-wide API key or the person's own Primitive
+	// CLI only role-free groups are changed. As on creation, a role naming a member's personal mailbox
+	// is never given through the group to anyone else (`personal_mailbox_member_only`).
+	//
+	// PATCH /groups/{id}
+	UpdateGroup(ctx context.Context, req *UpdateGroupRequest, params UpdateGroupParams) (UpdateGroupRes, error)
+	// UpdateKey implements updateKey operation.
+	//
+	// Rename a key, change its expiry, its grant or its conditions, or suspend it. Any change needs the
+	// person's own access to cover the key's access now (an owner covers every key); otherwise 403
+	// grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key and
+	// is held to the same rules as creating one (a custom grant that does not say which mail it reaches
+	// is refused with details.reason mail_scope_required), so it takes the same step-up. The Primitive
+	// CLI's token is refused, even with a step-up. Needs the organization's credential features to be
+	// enabled; while they are not, this answers 404 feature_disabled.
+	// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+	// `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+	// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+	// when the person's role could not do it anyway). The person's role must hold keys:manage. API keys
+	// and agent connection keys are refused. An agent acting for the person is refused unless it carries
+	// a step-up token the person issued in the dashboard.
+	//
+	// PATCH /keys/{id}
+	UpdateKey(ctx context.Context, req *CredentialsUpdateKeyInput, params UpdateKeyParams) (UpdateKeyRes, error)
+	// UpdateMailRouting implements updateMailRouting operation.
+	//
+	// Mailbox-scoped exact visible audiences, excluding the owner and Bcc. Direct and group audiences
+	// are independent. Restores persist an explicit Conversations rule. New writes require the observed
+	// version (zero creates); only an identical latest mutation with its original expected version can
+	// be retried. Stale writes return mail_routing_conflict. Source messages and read state are
+	// unchanged. Merge paged rules by version; responses are never cached.
+	//
+	// PUT /mail-routing
+	UpdateMailRouting(ctx context.Context, req *PutMailRoutingRequest) (UpdateMailRoutingRes, error)
+	// UpdateMailTopicEdits implements updateMailTopicEdits operation.
+	//
+	// Mailbox-owned human membership, summary and task edits. Each field has an independent version.
+	// Sources must belong to this mailbox and exact visible audience. Automatic generation cannot write
+	// these records. Identical latest mutations are retryable; stale versions return
+	// mail_topic_edit_conflict. Source mail remains unchanged. Responses are never cached.
+	//
+	// PUT /mail-topic-edits
+	UpdateMailTopicEdits(ctx context.Context, req *PutMailTopicEditsRequest) (UpdateMailTopicEditsRes, error)
+	// UpdateMailTopicGenerations implements updateMailTopicGenerations operation.
+	//
+	// Mailbox-owned automatic membership and complete generated summary/task snapshots. Each resource
+	// has an independent version. Human corrections always take precedence in presentation. Sources must
+	// belong to this mailbox and exact visible audience. Provider and input digest are client-reported
+	// provenance, not model attestation. This endpoint never writes human corrections. Identical latest
+	// mutations are retryable; stale versions return mail_topic_generation_conflict. Source mail remains
+	// unchanged. Responses are never cached.
+	//
+	// PUT /mail-topic-generations
+	UpdateMailTopicGenerations(ctx context.Context, req *PutMailTopicGenerationsRequest) (UpdateMailTopicGenerationsRes, error)
+	// UpdateOrganization implements updateOrganization operation.
+	//
+	// Change the organization's name.
+	// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+	// `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+	// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+	// when the person's role could not do it anyway). The person's role must hold org:manage (or
+	// members:manage). API keys and agent connection keys are refused. An agent acting for the person is
+	// refused unless it carries a step-up token the person issued in the dashboard.
+	//
+	// PATCH /organization
+	UpdateOrganization(ctx context.Context, req *OrgSettingsUpdateOrganizationInput, params UpdateOrganizationParams) (UpdateOrganizationRes, error)
+	// UpdateOrganizationLogo implements updateOrganizationLogo operation.
+	//
+	// Upload a PNG, JPEG, GIF or WebP logo of at most 900 KB, base64 encoded.
+	// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+	// `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+	// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+	// when the person's role could not do it anyway). The person's role must hold org:manage (or
+	// members:manage). API keys and agent connection keys are refused. An agent acting for the person is
+	// refused unless it carries a step-up token the person issued in the dashboard.
+	//
+	// PUT /organization/logo
+	UpdateOrganizationLogo(ctx context.Context, req *OrgSettingsUpdateOrganizationLogoInput, params UpdateOrganizationLogoParams) (UpdateOrganizationLogoRes, error)
+	// UpdateProject implements updateProject operation.
+	//
+	// Requires a current human organization membership. Machine credentials are refused. Results are
+	// scoped to current project access. No local paths or existing conversation history are shared.
+	//
+	// PUT /projects/{project_id}
+	UpdateProject(ctx context.Context, req *ProjectsUpdateProjectInput, params UpdateProjectParams) (UpdateProjectRes, error)
 	// UpdateRepeatingSend implements updateRepeatingSend operation.
 	//
 	// Pause, resume or cancel a repeat, or change its cadence, limits,
@@ -2005,21 +3411,45 @@ type Handler interface {
 	//
 	// PATCH /repeating-sends/{id}
 	UpdateRepeatingSend(ctx context.Context, req *UpdateRepeatingSendRequest, params UpdateRepeatingSendParams) (UpdateRepeatingSendRes, error)
+	// UpdateRole implements updateRole operation.
+	//
+	// A new version of the role, with a new `id`: the version you edited is retired, the response is the
+	// new one (same `key`, `version` one higher), and every member and group holding the role moves to
+	// it. The old id answers 404 `not_found` from then on, so store the returned `id` (or look the role
+	// up by `key` in GET /roles) before editing or assigning it again. Every holder whose access shrinks
+	// goes through the reduction path. mail_scope follows the same rules as creating a role; a role
+	// whose stored scope cannot be read must be sent a new mail_scope, otherwise 400 `validation_error`
+	// with `details.reason` `invalid_mail_scope`.  A personal mailbox the new version adds must be the
+	// author's own, and every holder must be the member of each personal mailbox it names: otherwise 403
+	// `grant_forbidden` with `details.reason` `personal_mailbox_member_only`. Person only: a dashboard
+	// session, or the person's own OAuth or CLI token with a session step-up of purpose `roles.write`
+	// (the person confirms at the step_up_url a 403 step_up_required answer carries, which names this
+	// client, then send the token in the Primitive-Step-Up header; the token works only with the client
+	// it was confirmed for). Needs roles:assign. API keys are refused.
+	//
+	// PATCH /roles/{id}
+	UpdateRole(ctx context.Context, req *UpdateRoleRequest, params UpdateRoleParams) (UpdateRoleRes, error)
 	// UpdateRoute implements updateRoute operation.
 	//
 	// Update a recipient route.
 	//
 	// PATCH /routes/{id}
 	UpdateRoute(ctx context.Context, req *UpdateRouteInput, params UpdateRouteParams) (UpdateRouteRes, error)
-	// UpdateSpendPolicy implements updateSpendPolicy operation.
+	// UpdateSearchSettings implements updateSearchSettings operation.
 	//
-	// Update your org's spend policy. Applied as a merge: only the fields you
-	// include change, and omitted fields keep their current value, so a partial
-	// update can't silently reset the kill-switch. Send an explicit `null` to
-	// clear a cap. Caps are in token base units.
+	// Consent to, or withdraw consent from, semantic search. Consenting sends the organization's mail
+	// content to an embedding provider, so it is a person's decision. Turning it on is refused with 409
+	// under HIPAA mode (hipaa_mode), without a paid plan (plan_required) or while it is not available to
+	// the organization (not_available). Turning it off is always allowed.
+	// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+	// `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+	// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+	// when the person's role could not do it anyway). The person's role must hold search_settings:manage.
+	//  API keys and agent connection keys are refused. An agent acting for the person is refused unless
+	// it carries a step-up token the person issued in the dashboard.
 	//
-	// PUT /x402/spend-policy
-	UpdateSpendPolicy(ctx context.Context, req *UpdateSpendPolicyInput) (UpdateSpendPolicyRes, error)
+	// PUT /search-settings
+	UpdateSearchSettings(ctx context.Context, req *OrgSettingsUpdateSearchSettingsInput, params UpdateSearchSettingsParams) (UpdateSearchSettingsRes, error)
 	// UpdateWakeAuthorization implements updateWakeAuthorization operation.
 	//
 	// Toggle a wake authorization's enabled state.
@@ -2046,7 +3476,7 @@ type Handler interface {
 	// API key.
 	//
 	// POST /agent/claim/verify
-	VerifyAgentClaim(ctx context.Context, req *VerifyAgentClaimInput) (VerifyAgentClaimRes, error)
+	VerifyAgentClaim(ctx context.Context, req *VerifyAgentClaimInput, params VerifyAgentClaimParams) (VerifyAgentClaimRes, error)
 	// VerifyAgentSignup implements verifyAgentSignup operation.
 	//
 	// Verifies the email code for an agent signup session and creates
@@ -2056,7 +3486,7 @@ type Handler interface {
 	// accessible workspace should receive the new session.
 	//
 	// POST /agent/signup/verify
-	VerifyAgentSignup(ctx context.Context, req *VerifyAgentSignupInput) (VerifyAgentSignupRes, error)
+	VerifyAgentSignup(ctx context.Context, req *VerifyAgentSignupInput, params VerifyAgentSignupParams) (VerifyAgentSignupRes, error)
 	// VerifyCliSignup implements verifyCliSignup operation.
 	//
 	// Verifies the email code for a CLI signup session and creates the
@@ -2065,15 +3495,15 @@ type Handler interface {
 	// require an API key.
 	//
 	// POST /cli/signup/verify
-	VerifyCliSignup(ctx context.Context, req *VerifyCliSignupInput) (VerifyCliSignupRes, error)
+	VerifyCliSignup(ctx context.Context, req *VerifyCliSignupInput, params VerifyCliSignupParams) (VerifyCliSignupRes, error)
 	// VerifyDomain implements verifyDomain operation.
 	//
 	// Checks DNS records required for inbound routing, ownership,
 	// and outbound authentication: MX, ownership TXT, SPF, DKIM,
 	// DMARC, and TLS-RPT.
 	// On success, the domain is promoted from unverified to verified.
-	// On failure, returns which checks passed and which failed,
-	// plus the exact DNS records still expected. To give users
+	// On failure, responds 400 `dns_verification_failed`; `error.details.records`
+	// lists the exact DNS records expected, each with its `status`. To give users
 	// an importable DNS file for missing records, call
 	// `downloadDomainZoneFile` or run
 	// `primitive domains zone-file --id <domain-id>`.
@@ -2086,7 +3516,15 @@ type Handler interface {
 	// member address.
 	//
 	// GET /whoami
-	Whoami(ctx context.Context) (WhoamiRes, error)
+	Whoami(ctx context.Context, params WhoamiParams) (WhoamiRes, error)
+	// WithdrawEmailRuleRequest implements withdrawEmailRuleRequest operation.
+	//
+	// Withdraws a pending request you made. Needs mail:read, a credential acting as a member with their
+	// full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on
+	// the organization.
+	//
+	// POST /email-rule-requests/{id}/withdraw
+	WithdrawEmailRuleRequest(ctx context.Context, params WithdrawEmailRuleRequestParams) (WithdrawEmailRuleRequestRes, error)
 }
 
 // Server implements http server based on OpenAPI v3 specification and

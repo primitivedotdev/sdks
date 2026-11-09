@@ -21,8 +21,7 @@ T = TypeVar("T", bound="SentEmailSummaryAttachmentsItem")
 
 @_attrs_define
 class SentEmailSummaryAttachmentsItem:
-    """ Metadata for one submitted inline attachment.
-
+    """ 
         Attributes:
             filename (None | str):
             content_type (str):

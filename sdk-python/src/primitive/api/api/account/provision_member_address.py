@@ -49,6 +49,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_200
 
+    if response.status_code == 400:
+        response_400 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_400
+
     if response.status_code == 401:
         response_401 = ErrorResponse.from_dict(response.json())
 
@@ -63,12 +70,26 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_403
 
+    if response.status_code == 404:
+        response_404 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_404
+
     if response.status_code == 409:
         response_409 = ErrorResponse.from_dict(response.json())
 
 
 
         return response_409
+
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_429
 
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
@@ -95,9 +116,10 @@ def sync_detailed(
 
      Provision or return this authenticated human member's stable managed address in this organization.
     API keys, connected agents and Functions cannot provision or impersonate humans. The owner
-    explicitly chooses the address. Existing retained mail requires confirmation; reserved identities
-    cannot be overridden. There is no target user input. An unavailable domain never silently changes
-    the address.
+    explicitly chooses the address. An address someone else in the organization already uses (sends
+    from, or received mail at) is refused for anyone but an owner; otherwise existing retained mail
+    requires confirmation. Reserved identities cannot be overridden. There is no target user input. An
+    unavailable domain never silently changes the address.
 
     Args:
         body (ProvisionMemberAddressBody):
@@ -132,9 +154,10 @@ def sync(
 
      Provision or return this authenticated human member's stable managed address in this organization.
     API keys, connected agents and Functions cannot provision or impersonate humans. The owner
-    explicitly chooses the address. Existing retained mail requires confirmation; reserved identities
-    cannot be overridden. There is no target user input. An unavailable domain never silently changes
-    the address.
+    explicitly chooses the address. An address someone else in the organization already uses (sends
+    from, or received mail at) is refused for anyone but an owner; otherwise existing retained mail
+    requires confirmation. Reserved identities cannot be overridden. There is no target user input. An
+    unavailable domain never silently changes the address.
 
     Args:
         body (ProvisionMemberAddressBody):
@@ -164,9 +187,10 @@ async def asyncio_detailed(
 
      Provision or return this authenticated human member's stable managed address in this organization.
     API keys, connected agents and Functions cannot provision or impersonate humans. The owner
-    explicitly chooses the address. Existing retained mail requires confirmation; reserved identities
-    cannot be overridden. There is no target user input. An unavailable domain never silently changes
-    the address.
+    explicitly chooses the address. An address someone else in the organization already uses (sends
+    from, or received mail at) is refused for anyone but an owner; otherwise existing retained mail
+    requires confirmation. Reserved identities cannot be overridden. There is no target user input. An
+    unavailable domain never silently changes the address.
 
     Args:
         body (ProvisionMemberAddressBody):
@@ -201,9 +225,10 @@ async def asyncio(
 
      Provision or return this authenticated human member's stable managed address in this organization.
     API keys, connected agents and Functions cannot provision or impersonate humans. The owner
-    explicitly chooses the address. Existing retained mail requires confirmation; reserved identities
-    cannot be overridden. There is no target user input. An unavailable domain never silently changes
-    the address.
+    explicitly chooses the address. An address someone else in the organization already uses (sends
+    from, or received mail at) is refused for anyone but an owner; otherwise existing retained mail
+    requires confirmation. Reserved identities cannot be overridden. There is no target user input. An
+    unavailable domain never silently changes the address.
 
     Args:
         body (ProvisionMemberAddressBody):

@@ -4,11 +4,6 @@ from dataclasses import dataclass
 from typing import Literal, NotRequired, TypeAlias, TypedDict
 
 from ._compat import StrEnum
-from .events import (
-    InteractionX402Event,
-    PaymentFailedEvent,
-    PaymentSettledEvent,
-)
 from .models_generated import (
     AuthConfidence as GeneratedAuthConfidence,
 )
@@ -50,6 +45,9 @@ from .models_generated import (
 )
 from .models_generated import (
     EmailRelay as GeneratedEmailRelay,
+)
+from .models_generated import (
+    EmailUnderstanding as GeneratedEmailUnderstanding,
 )
 from .models_generated import (
     ForwardAnalysis as GeneratedForwardAnalysis,
@@ -100,6 +98,12 @@ from .models_generated import (
     RawContentInline as GeneratedRawContentInline,
 )
 from .models_generated import (
+    RoutingDecision as GeneratedRoutingDecision,
+)
+from .models_generated import (
+    SenderAnalysis as GeneratedSenderAnalysis,
+)
+from .models_generated import (
     Smtp as GeneratedSmtp,
 )
 from .models_generated import (
@@ -107,6 +111,15 @@ from .models_generated import (
 )
 from .models_generated import (
     SpfResult as GeneratedSpfResult,
+)
+from .models_generated import (
+    UnderstandingFact as GeneratedUnderstandingFact,
+)
+from .models_generated import (
+    UnderstandingRule as GeneratedUnderstandingRule,
+)
+from .models_generated import (
+    UnderstandingRuleQuestion as GeneratedUnderstandingRuleQuestion,
 )
 from .models_generated import (
     WebhookAttachment as GeneratedWebhookAttachment,
@@ -157,6 +170,12 @@ ForwardOriginalSender = GeneratedForwardOriginalSender
 ForwardVerification = GeneratedForwardVerification
 EmailAuth = GeneratedEmailAuth
 EmailRelay = GeneratedEmailRelay
+SenderAnalysis = GeneratedSenderAnalysis
+EmailUnderstanding = GeneratedEmailUnderstanding
+UnderstandingFact = GeneratedUnderstandingFact
+UnderstandingRule = GeneratedUnderstandingRule
+UnderstandingRuleQuestion = GeneratedUnderstandingRuleQuestion
+RoutingDecision = GeneratedRoutingDecision
 DkimSignature = GeneratedDkimSignature
 
 
@@ -262,8 +281,5 @@ KnownWebhookEvent: TypeAlias = (
     | SentEmailRollupResultEvent
     | SentEmailLegacyMessageResultEvent
     | SentEmailCompletedEvent
-    | PaymentSettledEvent
-    | PaymentFailedEvent
-    | InteractionX402Event
 )
 WebhookEvent: TypeAlias = KnownWebhookEvent | UnknownEvent

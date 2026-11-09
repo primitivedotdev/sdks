@@ -178,11 +178,11 @@ describe("signWebhookPayload", () => {
     expect(result1.header).not.toBe(result2.header);
   });
 
-  it("uses {timestamp}.{body} format for signing (Stripe-style)", () => {
+  it("uses {timestamp}.{body} format for signing", () => {
     const timestamp = 1734567890;
     const { header } = signWebhookPayload(rawBody, secret, timestamp);
 
-    // Manually compute expected signature using Stripe-style format
+    // Manually compute expected signature using the timestamped format
     const signedPayload = `${timestamp}.${rawBody}`;
     const hmac = crypto.createHmac("sha256", secret);
     hmac.update(signedPayload);
@@ -976,13 +976,13 @@ describe("customer implementation example", () => {
   };
   const rawBody = JSON.stringify(payload);
 
-  it("customers can verify signature using Stripe-style format", () => {
+  it("customers can verify signature using the timestamped format", () => {
     const { v1, timestamp } = signWebhookPayload(rawBody, secret);
 
     // Customer receives:
     // - Primitive-Signature: t={timestamp},v1={hex}
 
-    // Customer computes their own HMAC using Stripe-style format
+    // Customer computes their own HMAC using the timestamped format
     const signedPayload = `${timestamp}.${rawBody}`;
     const hmac = crypto.createHmac("sha256", secret);
     hmac.update(signedPayload);

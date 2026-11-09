@@ -93,6 +93,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_402
 
+    if response.status_code == 403:
+        response_403 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_403
+
     if response.status_code == 404:
         response_404 = ErrorResponse.from_dict(response.json())
 
@@ -133,13 +140,9 @@ def sync_detailed(
 ) -> Response[ErrorResponse | GetMemoryResponse200]:
     """ Get a memory
 
-     Fetch one active memory by key and scope. Omit scope parameters to use
-    the automatic default: function-authenticated context, then the
-    `x-primitive-function-id` header, then org scope. Function scope uses a
-    function id UUID in `scope_id`.
-
-    A successful read records memory read usage and updates the memory's
-    read stats asynchronously.
+     Fetch one active memory by key and scope. Omit scope parameters to use automatic scope resolution.
+    Function-authenticated requests use their own Function id and cannot override it. Function scope
+    uses a function id UUID in `scope_id`.
 
     Args:
         key (str):
@@ -181,13 +184,9 @@ def sync(
 ) -> ErrorResponse | GetMemoryResponse200 | None:
     """ Get a memory
 
-     Fetch one active memory by key and scope. Omit scope parameters to use
-    the automatic default: function-authenticated context, then the
-    `x-primitive-function-id` header, then org scope. Function scope uses a
-    function id UUID in `scope_id`.
-
-    A successful read records memory read usage and updates the memory's
-    read stats asynchronously.
+     Fetch one active memory by key and scope. Omit scope parameters to use automatic scope resolution.
+    Function-authenticated requests use their own Function id and cannot override it. Function scope
+    uses a function id UUID in `scope_id`.
 
     Args:
         key (str):
@@ -224,13 +223,9 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | GetMemoryResponse200]:
     """ Get a memory
 
-     Fetch one active memory by key and scope. Omit scope parameters to use
-    the automatic default: function-authenticated context, then the
-    `x-primitive-function-id` header, then org scope. Function scope uses a
-    function id UUID in `scope_id`.
-
-    A successful read records memory read usage and updates the memory's
-    read stats asynchronously.
+     Fetch one active memory by key and scope. Omit scope parameters to use automatic scope resolution.
+    Function-authenticated requests use their own Function id and cannot override it. Function scope
+    uses a function id UUID in `scope_id`.
 
     Args:
         key (str):
@@ -272,13 +267,9 @@ async def asyncio(
 ) -> ErrorResponse | GetMemoryResponse200 | None:
     """ Get a memory
 
-     Fetch one active memory by key and scope. Omit scope parameters to use
-    the automatic default: function-authenticated context, then the
-    `x-primitive-function-id` header, then org scope. Function scope uses a
-    function id UUID in `scope_id`.
-
-    A successful read records memory read usage and updates the memory's
-    read stats asynchronously.
+     Fetch one active memory by key and scope. Omit scope parameters to use automatic scope resolution.
+    Function-authenticated requests use their own Function id and cannot override it. Function scope
+    uses a function id UUID in `scope_id`.
 
     Args:
         key (str):

@@ -9,7 +9,6 @@ export default defineConfig({
     "src/contract/index.ts",
     "src/parser/index.ts",
     "src/parser/address.ts",
-    "src/x402/index.ts",
     "src/payloads/index.ts",
     "src/interactions/index.ts",
   ],

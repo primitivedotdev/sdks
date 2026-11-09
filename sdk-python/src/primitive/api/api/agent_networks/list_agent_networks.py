@@ -41,6 +41,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_200
 
+    if response.status_code == 400:
+        response_400 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_400
+
     if response.status_code == 401:
         response_401 = ErrorResponse.from_dict(response.json())
 
@@ -54,6 +61,27 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
 
         return response_403
+
+    if response.status_code == 404:
+        response_404 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_404
+
+    if response.status_code == 409:
+        response_409 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_409
+
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_429
 
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
@@ -75,11 +103,11 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | ListAgentNetworksResponse200]:
-    """ List your organization's agent networks
+    """ list Agent Networks
 
-     An organization member login or an active connected agent allowed to see the network can read
-    networks. The default organization network is always present. can_manage_all is true only for a
-    current owner or admin; a connected credential receives false.
+     List the private default organization network. Human organization members may read it.
+    can_manage_all is true only for a current owner or admin; connected credentials require can_view for
+    their exact address and receive false.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -105,11 +133,11 @@ def sync(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | ListAgentNetworksResponse200 | None:
-    """ List your organization's agent networks
+    """ list Agent Networks
 
-     An organization member login or an active connected agent allowed to see the network can read
-    networks. The default organization network is always present. can_manage_all is true only for a
-    current owner or admin; a connected credential receives false.
+     List the private default organization network. Human organization members may read it.
+    can_manage_all is true only for a current owner or admin; connected credentials require can_view for
+    their exact address and receive false.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -130,11 +158,11 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | ListAgentNetworksResponse200]:
-    """ List your organization's agent networks
+    """ list Agent Networks
 
-     An organization member login or an active connected agent allowed to see the network can read
-    networks. The default organization network is always present. can_manage_all is true only for a
-    current owner or admin; a connected credential receives false.
+     List the private default organization network. Human organization members may read it.
+    can_manage_all is true only for a current owner or admin; connected credentials require can_view for
+    their exact address and receive false.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -160,11 +188,11 @@ async def asyncio(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | ListAgentNetworksResponse200 | None:
-    """ List your organization's agent networks
+    """ list Agent Networks
 
-     An organization member login or an active connected agent allowed to see the network can read
-    networks. The default organization network is always present. can_manage_all is true only for a
-    current owner or admin; a connected credential receives false.
+     List the private default organization network. Human organization members may read it.
+    can_manage_all is true only for a current owner or admin; connected credentials require can_view for
+    their exact address and receive false.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

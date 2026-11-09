@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from typing import cast
+from uuid import UUID
 
 
 
@@ -21,17 +22,15 @@ T = TypeVar("T", bound="EmailDetailSenderMemberType0")
 
 @_attrs_define
 class EmailDetailSenderMemberType0:
-    """ Verified human authorship, projected only within the member organization. Historical attribution is not current
-    sending or owner authority.
-
+    """ 
         Attributes:
             address (str):
-            user_id (str):
+            user_id (UUID):
             name (None | str):
      """
 
     address: str
-    user_id: str
+    user_id: UUID
     name: None | str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -42,7 +41,7 @@ class EmailDetailSenderMemberType0:
     def to_dict(self) -> dict[str, Any]:
         address = self.address
 
-        user_id = self.user_id
+        user_id = str(self.user_id)
 
         name: None | str
         name = self.name
@@ -65,7 +64,10 @@ class EmailDetailSenderMemberType0:
         d = dict(src_dict)
         address = d.pop("address")
 
-        user_id = d.pop("user_id")
+        user_id = UUID(d.pop("user_id"))
+
+
+
 
         def _parse_name(data: object) -> None | str:
             if data is None:

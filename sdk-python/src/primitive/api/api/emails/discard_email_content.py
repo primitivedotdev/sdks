@@ -10,6 +10,7 @@ from ... import errors
 
 from ...models.discard_email_content_response_200 import DiscardEmailContentResponse200
 from ...models.error_response import ErrorResponse
+from ...types import UNSET, Unset
 from typing import cast
 from uuid import UUID
 
@@ -17,9 +18,15 @@ from uuid import UUID
 
 def _get_kwargs(
     id: UUID,
+    *,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
-    
+    headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
+
 
     
 
@@ -31,6 +38,7 @@ def _get_kwargs(
     }
 
 
+    _kwargs["headers"] = headers
     return _kwargs
 
 
@@ -104,6 +112,7 @@ def sync_detailed(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[DiscardEmailContentResponse200 | ErrorResponse]:
     """ Discard email content
@@ -124,6 +133,7 @@ def sync_detailed(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -136,6 +146,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         id=id,
+idempotency_key=idempotency_key,
 
     )
 
@@ -149,6 +160,7 @@ def sync(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> DiscardEmailContentResponse200 | ErrorResponse | None:
     """ Discard email content
@@ -169,6 +181,7 @@ def sync(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -182,6 +195,7 @@ def sync(
     return sync_detailed(
         id=id,
 client=client,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -189,6 +203,7 @@ async def asyncio_detailed(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[DiscardEmailContentResponse200 | ErrorResponse]:
     """ Discard email content
@@ -209,6 +224,7 @@ async def asyncio_detailed(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -221,6 +237,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         id=id,
+idempotency_key=idempotency_key,
 
     )
 
@@ -234,6 +251,7 @@ async def asyncio(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> DiscardEmailContentResponse200 | ErrorResponse | None:
     """ Discard email content
@@ -254,6 +272,7 @@ async def asyncio(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -267,5 +286,6 @@ async def asyncio(
     return (await asyncio_detailed(
         id=id,
 client=client,
+idempotency_key=idempotency_key,
 
     )).parsed

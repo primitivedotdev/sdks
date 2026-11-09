@@ -24,10 +24,9 @@ const bundled = {
   // this, every CLI command would fail at startup with a missing-
   // module error on the api-core specifier.
   //
-  // @primitivedotdev/sdk is bundled too: the payments commands use its
-  // x402 client + signer, and the tarball-isolation check forbids the SDK
-  // as a runtime dependency. viem (the SDK's and our own crypto dep) stays
-  // external and is declared as a runtime dependency.
+  // @primitivedotdev/sdk is bundled too: the commands use its webhook,
+  // interaction and parser helpers, and the tarball-isolation check forbids
+  // the SDK as a runtime dependency.
   alwaysBundle: ["@primitivedotdev/api-core", "@primitivedotdev/sdk"],
 };
 
@@ -42,6 +41,7 @@ export default defineConfig([
       "oclif/receiver-heal": "src/oclif/receiver-heal.ts",
       "oclif/auto-signals": "src/oclif/auto-signals.ts",
       "oclif/auto-signal-worker": "src/oclif/auto-signal-worker.ts",
+      "oclif/global-org-flag": "src/oclif/global-org-flag.ts",
     },
     format: ["esm"],
     // Keep `.js` so the bin and oclif config keep resolving the

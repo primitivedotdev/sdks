@@ -33,12 +33,17 @@ class EmailSearchMeta:
             total_unavailable (bool | Unset): Present and `true` when a count was requested but did not fit the search time
                 budget. The page in `data` and `meta.cursor` are still returned (the page may itself be partial, see `partial`);
                 only `meta.total` is missing (null). Retry with narrower filters, or use `count=false` and `meta.cursor`.
+            facets_unavailable (bool | Unset): Present and `true` when facets were requested but did not fit the search time
+                budget. The page in `data` is still returned (it may itself be partial, see `partial`) and the top-level
+                `facets` object is omitted.
             partial (bool | Unset): Present and `true` when the page stopped at the search time bound before it filled. This
                 happens when the filters reject most of what the text matches, for example a one-letter `prefix` search with a
                 `from` that matches little or nothing. `data` then holds fewer than `limit` results, possibly none, and
                 `meta.cursor` continues the search after the last email examined. Every result returned is correct and in order;
                 keep following `meta.cursor` until it is null to read the rest. A page shorter than `limit` is therefore not the
                 end of the results: only a null `meta.cursor` is.
+            facets_capped (bool | Unset): Present and `true` when the search matched more than 1,000 emails, so `facets`
+                aggregate only the most recent 1,000 matches, in the same way `total_capped` marks a capped `total`.
      """
 
     total: int | None
@@ -47,7 +52,9 @@ class EmailSearchMeta:
     cursor: None | str
     sort: EmailSearchMetaSort
     total_unavailable: bool | Unset = UNSET
+    facets_unavailable: bool | Unset = UNSET
     partial: bool | Unset = UNSET
+    facets_capped: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -69,7 +76,11 @@ class EmailSearchMeta:
 
         total_unavailable = self.total_unavailable
 
+        facets_unavailable = self.facets_unavailable
+
         partial = self.partial
+
+        facets_capped = self.facets_capped
 
 
         field_dict: dict[str, Any] = {}
@@ -83,8 +94,12 @@ class EmailSearchMeta:
         })
         if total_unavailable is not UNSET:
             field_dict["total_unavailable"] = total_unavailable
+        if facets_unavailable is not UNSET:
+            field_dict["facets_unavailable"] = facets_unavailable
         if partial is not UNSET:
             field_dict["partial"] = partial
+        if facets_capped is not UNSET:
+            field_dict["facets_capped"] = facets_capped
 
         return field_dict
 
@@ -120,7 +135,11 @@ class EmailSearchMeta:
 
         total_unavailable = d.pop("total_unavailable", UNSET)
 
+        facets_unavailable = d.pop("facets_unavailable", UNSET)
+
         partial = d.pop("partial", UNSET)
+
+        facets_capped = d.pop("facets_capped", UNSET)
 
         email_search_meta = cls(
             total=total,
@@ -129,7 +148,9 @@ class EmailSearchMeta:
             cursor=cursor,
             sort=sort,
             total_unavailable=total_unavailable,
+            facets_unavailable=facets_unavailable,
             partial=partial,
+            facets_capped=facets_capped,
         )
 
 

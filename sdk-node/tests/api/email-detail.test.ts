@@ -36,6 +36,10 @@ const SAMPLE: EmailDetail = {
   smtp_mail_from: "alice@example.com",
   smtp_rcpt_to: ["support@example.com"],
   from_header: "Alice <alice@example.com>",
+  from_header_email: "alice@example.com",
+  from_name: "Alice",
+  from_verified: true,
+  snippet: "Hi there",
   content_discarded_at: null,
   content_discarded_by_delivery_id: null,
   from_email: "alice@example.com",
@@ -114,13 +118,14 @@ describe("EmailDetail type contract", () => {
   });
 
   it("surfaces thread_id, parsed, and auth (webhook-parity shape)", () => {
-    // parsed and auth are required (non-optional) on EmailDetail, so
-    // they're accessed without `?.`; the chaining below is only on
+    // auth is required (non-optional) on EmailDetail, so it is accessed
+    // without `?.`. parsed is required but nullable (null when the content is
+    // withheld from the credential); the other chaining is only on
     // genuinely nullable/empty-able nested fields (cc, the signatures
     // array element).
     expect(SAMPLE.thread_id).toBe("44444444-4444-4444-4444-444444444444");
-    expect(SAMPLE.parsed.status).toBe("complete");
-    expect(SAMPLE.parsed.cc?.[0]?.address).toBe("cc@example.com");
+    expect(SAMPLE.parsed?.status).toBe("complete");
+    expect(SAMPLE.parsed?.cc?.[0]?.address).toBe("cc@example.com");
     expect(SAMPLE.auth.spf).toBe("pass");
     expect(SAMPLE.auth.dkimSignatures[0]?.result).toBe("pass");
   });
@@ -136,9 +141,8 @@ describe("EmailDetail type contract", () => {
     expect(SAMPLE.automated_reasons).toEqual(["list_unsubscribe", "list_id"]);
   });
 
-  it("types from_name as an optional, nullable string", () => {
-    // SAMPLE omits from_name, as responses from servers without the field do.
-    expect(SAMPLE.from_name).toBeUndefined();
+  it("types from_name as a required, nullable string", () => {
+    expect(SAMPLE.from_name).toBe("Alice");
     const withNull: EmailDetail = { ...SAMPLE, from_name: null };
     expect(withNull.from_name).toBeNull();
     const named: EmailDetail = {
@@ -146,7 +150,7 @@ describe("EmailDetail type contract", () => {
       from_header: "=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>",
       from_name: "Dana R\u00faiz",
     };
-    const name: string | null | undefined = named.from_name;
+    const name: string | null = named.from_name;
     expect(name).toBe("Dana R\u00faiz");
   });
 

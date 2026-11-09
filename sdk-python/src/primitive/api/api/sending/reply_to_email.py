@@ -11,6 +11,7 @@ from ... import errors
 from ...models.error_response import ErrorResponse
 from ...models.reply_input import ReplyInput
 from ...models.reply_to_email_response_200 import ReplyToEmailResponse200
+from ...types import UNSET, Unset
 from typing import cast
 from uuid import UUID
 
@@ -20,9 +21,13 @@ def _get_kwargs(
     id: UUID,
     *,
     body: ReplyInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -128,6 +133,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_503
 
+    if response.status_code == 504:
+        response_504 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_504
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -148,6 +160,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: ReplyInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ReplyToEmailResponse200]:
     """ Reply to an inbound email
@@ -169,6 +182,7 @@ def sync_detailed(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (ReplyInput): Body shape for `/emails/{id}/reply`. Intentionally narrow:
             recipients (`to`), subject, and threading headers
             (`in_reply_to`, `references`) are derived server-side from
@@ -193,6 +207,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         id=id,
 body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -207,6 +222,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: ReplyInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | ReplyToEmailResponse200 | None:
     """ Reply to an inbound email
@@ -228,6 +244,7 @@ def sync(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (ReplyInput): Body shape for `/emails/{id}/reply`. Intentionally narrow:
             recipients (`to`), subject, and threading headers
             (`in_reply_to`, `references`) are derived server-side from
@@ -253,6 +270,7 @@ def sync(
         id=id,
 client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -261,6 +279,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: ReplyInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ReplyToEmailResponse200]:
     """ Reply to an inbound email
@@ -282,6 +301,7 @@ async def asyncio_detailed(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (ReplyInput): Body shape for `/emails/{id}/reply`. Intentionally narrow:
             recipients (`to`), subject, and threading headers
             (`in_reply_to`, `references`) are derived server-side from
@@ -306,6 +326,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         id=id,
 body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -320,6 +341,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: ReplyInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | ReplyToEmailResponse200 | None:
     """ Reply to an inbound email
@@ -341,6 +363,7 @@ async def asyncio(
 
     Args:
         id (UUID):
+        idempotency_key (str | Unset):
         body (ReplyInput): Body shape for `/emails/{id}/reply`. Intentionally narrow:
             recipients (`to`), subject, and threading headers
             (`in_reply_to`, `references`) are derived server-side from
@@ -366,5 +389,6 @@ async def asyncio(
         id=id,
 client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

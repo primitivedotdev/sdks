@@ -11,8 +11,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.function_route_body_target_type_0 import FunctionRouteBodyTargetType0
-  from ..models.function_route_body_target_type_1 import FunctionRouteBodyTargetType1
+  from ..models.function_route_body_target import FunctionRouteBodyTarget
 
 
 
@@ -29,11 +28,11 @@ class FunctionRouteBody:
     deactivate any conflicting binding before installing this one.
 
         Attributes:
-            target (FunctionRouteBodyTargetType0 | FunctionRouteBodyTargetType1):
+            target (FunctionRouteBodyTarget):
             takeover (bool | Unset): When true, deactivate any conflicting binding before installing this one.
      """
 
-    target: FunctionRouteBodyTargetType0 | FunctionRouteBodyTargetType1
+    target: FunctionRouteBodyTarget
     takeover: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -42,14 +41,8 @@ class FunctionRouteBody:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.function_route_body_target_type_0 import FunctionRouteBodyTargetType0 # noqa: PLC0415
-        from ..models.function_route_body_target_type_1 import FunctionRouteBodyTargetType1 # noqa: PLC0415
-        target: dict[str, Any]
-        if isinstance(self.target, FunctionRouteBodyTargetType0):
-            target = self.target.to_dict()
-        else:
-            target = self.target.to_dict()
-
+        from ..models.function_route_body_target import FunctionRouteBodyTarget # noqa: PLC0415
+        target = self.target.to_dict()
 
         takeover = self.takeover
 
@@ -68,29 +61,11 @@ class FunctionRouteBody:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.function_route_body_target_type_0 import FunctionRouteBodyTargetType0 # noqa: PLC0415
-        from ..models.function_route_body_target_type_1 import FunctionRouteBodyTargetType1 # noqa: PLC0415
+        from ..models.function_route_body_target import FunctionRouteBodyTarget # noqa: PLC0415
         d = dict(src_dict)
-        def _parse_target(data: object) -> FunctionRouteBodyTargetType0 | FunctionRouteBodyTargetType1:
-            try:
-                if not isinstance(data, dict):
-                    raise TypeError()
-                target_type_0 = FunctionRouteBodyTargetType0.from_dict(data)
+        target = FunctionRouteBodyTarget.from_dict(d.pop("target"))
 
 
-
-                return target_type_0
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            if not isinstance(data, dict):
-                raise TypeError()
-            target_type_1 = FunctionRouteBodyTargetType1.from_dict(data)
-
-
-
-            return target_type_1
-
-        target = _parse_target(d.pop("target"))
 
 
         takeover = d.pop("takeover", UNSET)

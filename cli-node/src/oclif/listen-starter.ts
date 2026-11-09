@@ -97,7 +97,7 @@ def create_client():
 def process_event(event_id, event_type, body, reply_text):
     event = primitive.parse_webhook_event(json.loads(body), event_type=event_type)
     if not primitive.is_email_received_event(event):
-        # Payment, interaction and future events do not require email lookups.
+        # Interaction and future events do not require email lookups.
         print(event_id, event_type, flush=True)
         return
     email = primitive.normalize_received_email(event)

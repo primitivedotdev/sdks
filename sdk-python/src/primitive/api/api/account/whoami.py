@@ -10,22 +10,38 @@ from ... import errors
 
 from ...models.error_response import ErrorResponse
 from ...models.whoami_response_200 import WhoamiResponse200
+from ...types import UNSET, Unset
 from typing import cast
 
 
 
 def _get_kwargs(
-    
+    *,
+    include: str | Unset = UNSET,
+    check: str | Unset = UNSET,
+    resource: str | Unset = UNSET,
+
 ) -> dict[str, Any]:
     
 
     
 
-    
+    params: dict[str, Any] = {}
+
+    params["include"] = include
+
+    params["check"] = check
+
+    params["resource"] = resource
+
+
+    params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
+
 
     _kwargs: dict[str, Any] = {
         "method": "get",
         "url": "/whoami",
+        "params": params,
     }
 
 
@@ -41,6 +57,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_200
 
+    if response.status_code == 400:
+        response_400 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_400
+
     if response.status_code == 401:
         response_401 = ErrorResponse.from_dict(response.json())
 
@@ -54,6 +77,20 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
 
         return response_403
+
+    if response.status_code == 409:
+        response_409 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_409
+
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_429
 
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
@@ -73,12 +110,20 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
+    include: str | Unset = UNSET,
+    check: str | Unset = UNSET,
+    resource: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | WhoamiResponse200]:
     """ Get current caller identity
 
      Current authenticated identity. member_address is null for machine credentials or an unavailable
     member address.
+
+    Args:
+        include (str | Unset):
+        check (str | Unset):
+        resource (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -90,7 +135,10 @@ def sync_detailed(
 
 
     kwargs = _get_kwargs(
-        
+        include=include,
+check=check,
+resource=resource,
+
     )
 
     response = client.get_httpx_client().request(
@@ -102,12 +150,20 @@ def sync_detailed(
 def sync(
     *,
     client: AuthenticatedClient | Client,
+    include: str | Unset = UNSET,
+    check: str | Unset = UNSET,
+    resource: str | Unset = UNSET,
 
 ) -> ErrorResponse | WhoamiResponse200 | None:
     """ Get current caller identity
 
      Current authenticated identity. member_address is null for machine credentials or an unavailable
     member address.
+
+    Args:
+        include (str | Unset):
+        check (str | Unset):
+        resource (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -120,18 +176,29 @@ def sync(
 
     return sync_detailed(
         client=client,
+include=include,
+check=check,
+resource=resource,
 
     ).parsed
 
 async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
+    include: str | Unset = UNSET,
+    check: str | Unset = UNSET,
+    resource: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | WhoamiResponse200]:
     """ Get current caller identity
 
      Current authenticated identity. member_address is null for machine credentials or an unavailable
     member address.
+
+    Args:
+        include (str | Unset):
+        check (str | Unset):
+        resource (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -143,7 +210,10 @@ async def asyncio_detailed(
 
 
     kwargs = _get_kwargs(
-        
+        include=include,
+check=check,
+resource=resource,
+
     )
 
     response = await client.get_async_httpx_client().request(
@@ -155,12 +225,20 @@ async def asyncio_detailed(
 async def asyncio(
     *,
     client: AuthenticatedClient | Client,
+    include: str | Unset = UNSET,
+    check: str | Unset = UNSET,
+    resource: str | Unset = UNSET,
 
 ) -> ErrorResponse | WhoamiResponse200 | None:
     """ Get current caller identity
 
      Current authenticated identity. member_address is null for machine credentials or an unavailable
     member address.
+
+    Args:
+        include (str | Unset):
+        check (str | Unset):
+        resource (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -173,5 +251,8 @@ async def asyncio(
 
     return (await asyncio_detailed(
         client=client,
+include=include,
+check=check,
+resource=resource,
 
     )).parsed

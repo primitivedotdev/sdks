@@ -8,8 +8,8 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.claim_agent_connection_body_capabilities_item import ClaimAgentConnectionBodyCapabilitiesItem
 from typing import cast
-from typing import Literal, cast
 
 
 
@@ -25,11 +25,11 @@ class ClaimAgentConnectionBody:
     """
         Attributes:
             token (str):
-            capabilities (list[Literal['primitive.presence/1']] | Unset):
+            capabilities (list[ClaimAgentConnectionBodyCapabilitiesItem] | Unset):
      """
 
     token: str
-    capabilities: list[Literal['primitive.presence/1']] | Unset = UNSET
+    capabilities: list[ClaimAgentConnectionBodyCapabilitiesItem] | Unset = UNSET
 
 
 
@@ -38,9 +38,12 @@ class ClaimAgentConnectionBody:
     def to_dict(self) -> dict[str, Any]:
         token = self.token
 
-        capabilities: list[Literal['primitive.presence/1']] | Unset = UNSET
+        capabilities: list[str] | Unset = UNSET
         if not isinstance(self.capabilities, Unset):
-            capabilities = self.capabilities
+            capabilities = []
+            for capabilities_item_data in self.capabilities:
+                capabilities_item = capabilities_item_data.value
+                capabilities.append(capabilities_item)
 
 
 
@@ -63,13 +66,14 @@ class ClaimAgentConnectionBody:
         token = d.pop("token")
 
         _capabilities = d.pop("capabilities", UNSET)
-        capabilities: list[Literal['primitive.presence/1']] | Unset = UNSET
+        capabilities: list[ClaimAgentConnectionBodyCapabilitiesItem] | Unset = UNSET
         if _capabilities is not UNSET:
             capabilities = []
             for capabilities_item_data in _capabilities:
-                capabilities_item = cast(Literal['primitive.presence/1'] , capabilities_item_data)
-                if capabilities_item != 'primitive.presence/1':
-                    raise ValueError(f"capabilities_item must match const 'primitive.presence/1', got '{capabilities_item}'")
+                capabilities_item = ClaimAgentConnectionBodyCapabilitiesItem(capabilities_item_data)
+
+
+
                 capabilities.append(capabilities_item)
 
 

@@ -80,6 +80,8 @@ def sync_detailed(
 ) -> Response[DeleteWakeAuthorizationResponse200 | ErrorResponse]:
     """ Delete a wake authorization
 
+     Delete a wake authorization
+
     Args:
         id (UUID):
 
@@ -111,6 +113,8 @@ def sync(
 ) -> DeleteWakeAuthorizationResponse200 | ErrorResponse | None:
     """ Delete a wake authorization
 
+     Delete a wake authorization
+
     Args:
         id (UUID):
 
@@ -136,6 +140,8 @@ async def asyncio_detailed(
 
 ) -> Response[DeleteWakeAuthorizationResponse200 | ErrorResponse]:
     """ Delete a wake authorization
+
+     Delete a wake authorization
 
     Args:
         id (UUID):
@@ -167,6 +173,8 @@ async def asyncio(
 
 ) -> DeleteWakeAuthorizationResponse200 | ErrorResponse | None:
     """ Delete a wake authorization
+
+     Delete a wake authorization
 
     Args:
         id (UUID):

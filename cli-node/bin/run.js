@@ -72,5 +72,19 @@ const { writeRootAuthContextIfNeeded } = await import(
 );
 await writeRootAuthContextIfNeeded();
 
+// `--org <org>` works on every command: take it out of argv before oclif
+// parses the command, and pass it on as PRIMITIVE_CLI_ORG. Applied last, so
+// the detached receiver and signal workers started above never inherit it.
+{
+  const { applyGlobalOrgFlag } = await import(
+    "../dist/oclif/global-org-flag.js"
+  );
+  const orgFlagError = applyGlobalOrgFlag();
+  if (orgFlagError) {
+    process.stderr.write(`${orgFlagError}\n`);
+    process.exit(2);
+  }
+}
+
 const { execute } = await import("@oclif/core");
 await execute({ dir: import.meta.url });

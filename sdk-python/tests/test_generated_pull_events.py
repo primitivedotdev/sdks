@@ -117,6 +117,7 @@ def test_pull_preserves_exact_body_headers_and_nullable_delivery(empty: bool) ->
     else:
         assert result.data.delivery is not None
         assert result.data.delivery.event_id == EVENT_ID
+        assert result.data.delivery.body is not None
         assert result.data.delivery.body.encode("utf-8") == raw_body.encode("utf-8")
         assert result.data.delivery.headers.to_dict() == headers
         assert result.data.last_gap_reason is None

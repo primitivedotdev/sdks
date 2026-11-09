@@ -14,6 +14,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.domain_dns_record import DomainDnsRecord
+  from ..models.unverified_domain_dkim import UnverifiedDomainDkim
 
 
 
@@ -33,7 +34,10 @@ class UnverifiedDomain:
             verified (bool):
             verification_token (str): Add this value as a TXT record to verify ownership
             created_at (datetime.datetime):
-            dns_records (list[DomainDnsRecord] | Unset): Exact DNS records to publish for this pending domain claim.
+            dns_records (list[DomainDnsRecord] | Unset): Exact DNS records to publish for a pending domain claim or
+                verification attempt.
+            dkim (UnverifiedDomainDkim | Unset): The DKIM key to publish for this domain, once it is ready. Absent while the
+                key is still being prepared.
      """
 
     id: UUID
@@ -43,6 +47,7 @@ class UnverifiedDomain:
     verification_token: str
     created_at: datetime.datetime
     dns_records: list[DomainDnsRecord] | Unset = UNSET
+    dkim: UnverifiedDomainDkim | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -51,6 +56,7 @@ class UnverifiedDomain:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.domain_dns_record import DomainDnsRecord # noqa: PLC0415
+        from ..models.unverified_domain_dkim import UnverifiedDomainDkim # noqa: PLC0415
         id = str(self.id)
 
         org_id = str(self.org_id)
@@ -72,6 +78,10 @@ class UnverifiedDomain:
 
 
 
+        dkim: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.dkim, Unset):
+            dkim = self.dkim.to_dict()
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -85,6 +95,8 @@ class UnverifiedDomain:
         })
         if dns_records is not UNSET:
             field_dict["dns_records"] = dns_records
+        if dkim is not UNSET:
+            field_dict["dkim"] = dkim
 
         return field_dict
 
@@ -93,6 +105,7 @@ class UnverifiedDomain:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.domain_dns_record import DomainDnsRecord # noqa: PLC0415
+        from ..models.unverified_domain_dkim import UnverifiedDomainDkim # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -127,6 +140,16 @@ class UnverifiedDomain:
                 dns_records.append(dns_records_item)
 
 
+        _dkim = d.pop("dkim", UNSET)
+        dkim: UnverifiedDomainDkim | Unset
+        if isinstance(_dkim,  Unset):
+            dkim = UNSET
+        else:
+            dkim = UnverifiedDomainDkim.from_dict(_dkim)
+
+
+
+
         unverified_domain = cls(
             id=id,
             org_id=org_id,
@@ -135,6 +158,7 @@ class UnverifiedDomain:
             verification_token=verification_token,
             created_at=created_at,
             dns_records=dns_records,
+            dkim=dkim,
         )
 
 

@@ -96,6 +96,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_413
 
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_429
+
     if response.status_code == 502:
         response_502 = ErrorResponse.from_dict(response.json())
 
@@ -129,20 +136,20 @@ def sync_detailed(
     id: UUID,
     part_index: int,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | File]:
     """ Download one sent email attachment
 
-     Pending service release. This contract does not establish live availability.
-    Downloads the original bytes of one ordinary email attachment, selected by
-    its metadata `part_index`, not its position in an attachments array. Refresh
-    the email detail after `attachment_changed` before choosing an index again.
-    Uses bearer authentication only; signed raw-email download tokens are not accepted.
-    A paired-agent credential may read only mail sent from its claimed address.
-    Receiving a copy does not authorize downloading another sender's sent content.
-    Function credentials are denied. Other bearer credentials retain their
-    existing email access boundaries. This endpoint serves email bytes only.
+     Returns the original decoded bytes of one retained attachment. Authenticate with an organization API
+    key, an authorized organization OAuth token, or an address-bound agent connection key. Connected
+    agents can read only their own outgoing sender attachments. Function credentials and download query
+    tokens are not supported. Duplicate filenames are distinguished by part_index. The part limit is
+    31457280 bytes; the complete archive must fit 67108864 compressed and decoded bytes and 1024 entries
+    including metadata. Metadata headers are limited to 16384 bytes each and 262144 bytes total;
+    resolved archive paths are limited to 4096 UTF-8 bytes. Preparation has a 15-second deadline. A
+    small part in an oversized archive can exceed these limits. This does not parse interactions or
+    certify sender identity. Discarded content is unavailable.
 
     Args:
         id (UUID):
@@ -173,20 +180,20 @@ def sync(
     id: UUID,
     part_index: int,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | File | None:
     """ Download one sent email attachment
 
-     Pending service release. This contract does not establish live availability.
-    Downloads the original bytes of one ordinary email attachment, selected by
-    its metadata `part_index`, not its position in an attachments array. Refresh
-    the email detail after `attachment_changed` before choosing an index again.
-    Uses bearer authentication only; signed raw-email download tokens are not accepted.
-    A paired-agent credential may read only mail sent from its claimed address.
-    Receiving a copy does not authorize downloading another sender's sent content.
-    Function credentials are denied. Other bearer credentials retain their
-    existing email access boundaries. This endpoint serves email bytes only.
+     Returns the original decoded bytes of one retained attachment. Authenticate with an organization API
+    key, an authorized organization OAuth token, or an address-bound agent connection key. Connected
+    agents can read only their own outgoing sender attachments. Function credentials and download query
+    tokens are not supported. Duplicate filenames are distinguished by part_index. The part limit is
+    31457280 bytes; the complete archive must fit 67108864 compressed and decoded bytes and 1024 entries
+    including metadata. Metadata headers are limited to 16384 bytes each and 262144 bytes total;
+    resolved archive paths are limited to 4096 UTF-8 bytes. Preparation has a 15-second deadline. A
+    small part in an oversized archive can exceed these limits. This does not parse interactions or
+    certify sender identity. Discarded content is unavailable.
 
     Args:
         id (UUID):
@@ -212,20 +219,20 @@ async def asyncio_detailed(
     id: UUID,
     part_index: int,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | File]:
     """ Download one sent email attachment
 
-     Pending service release. This contract does not establish live availability.
-    Downloads the original bytes of one ordinary email attachment, selected by
-    its metadata `part_index`, not its position in an attachments array. Refresh
-    the email detail after `attachment_changed` before choosing an index again.
-    Uses bearer authentication only; signed raw-email download tokens are not accepted.
-    A paired-agent credential may read only mail sent from its claimed address.
-    Receiving a copy does not authorize downloading another sender's sent content.
-    Function credentials are denied. Other bearer credentials retain their
-    existing email access boundaries. This endpoint serves email bytes only.
+     Returns the original decoded bytes of one retained attachment. Authenticate with an organization API
+    key, an authorized organization OAuth token, or an address-bound agent connection key. Connected
+    agents can read only their own outgoing sender attachments. Function credentials and download query
+    tokens are not supported. Duplicate filenames are distinguished by part_index. The part limit is
+    31457280 bytes; the complete archive must fit 67108864 compressed and decoded bytes and 1024 entries
+    including metadata. Metadata headers are limited to 16384 bytes each and 262144 bytes total;
+    resolved archive paths are limited to 4096 UTF-8 bytes. Preparation has a 15-second deadline. A
+    small part in an oversized archive can exceed these limits. This does not parse interactions or
+    certify sender identity. Discarded content is unavailable.
 
     Args:
         id (UUID):
@@ -256,20 +263,20 @@ async def asyncio(
     id: UUID,
     part_index: int,
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | File | None:
     """ Download one sent email attachment
 
-     Pending service release. This contract does not establish live availability.
-    Downloads the original bytes of one ordinary email attachment, selected by
-    its metadata `part_index`, not its position in an attachments array. Refresh
-    the email detail after `attachment_changed` before choosing an index again.
-    Uses bearer authentication only; signed raw-email download tokens are not accepted.
-    A paired-agent credential may read only mail sent from its claimed address.
-    Receiving a copy does not authorize downloading another sender's sent content.
-    Function credentials are denied. Other bearer credentials retain their
-    existing email access boundaries. This endpoint serves email bytes only.
+     Returns the original decoded bytes of one retained attachment. Authenticate with an organization API
+    key, an authorized organization OAuth token, or an address-bound agent connection key. Connected
+    agents can read only their own outgoing sender attachments. Function credentials and download query
+    tokens are not supported. Duplicate filenames are distinguished by part_index. The part limit is
+    31457280 bytes; the complete archive must fit 67108864 compressed and decoded bytes and 1024 entries
+    including metadata. Metadata headers are limited to 16384 bytes each and 262144 bytes total;
+    resolved archive paths are limited to 4096 UTF-8 bytes. Preparation has a 15-second deadline. A
+    small part in an oversized archive can exceed these limits. This does not parse interactions or
+    certify sender identity. Discarded content is unavailable.
 
     Args:
         id (UUID):

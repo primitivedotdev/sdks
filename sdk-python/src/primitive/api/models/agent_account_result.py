@@ -34,6 +34,7 @@ class AgentAccountResult:
             plan (AgentAccountResultPlan):
             limits (PlanLimits): Plan-derived quota limits for an account.
             upgrade (AgentAccountUpgradeHint): In-band pointer to the upgrade path for an agent account.
+            funding (None): Retired. Always null.
      """
 
     api_key: str
@@ -42,6 +43,7 @@ class AgentAccountResult:
     plan: AgentAccountResultPlan
     limits: PlanLimits
     upgrade: AgentAccountUpgradeHint
+    funding: None
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -64,6 +66,8 @@ class AgentAccountResult:
 
         upgrade = self.upgrade.to_dict()
 
+        funding = self.funding
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -74,6 +78,7 @@ class AgentAccountResult:
             "plan": plan,
             "limits": limits,
             "upgrade": upgrade,
+            "funding": funding,
         })
 
         return field_dict
@@ -115,6 +120,8 @@ class AgentAccountResult:
 
 
 
+        funding = d.pop("funding")
+
         agent_account_result = cls(
             api_key=api_key,
             org_id=org_id,
@@ -122,6 +129,7 @@ class AgentAccountResult:
             plan=plan,
             limits=limits,
             upgrade=upgrade,
+            funding=funding,
         )
 
 

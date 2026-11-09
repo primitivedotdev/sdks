@@ -432,13 +432,6 @@ const SUCCESS_ARGV: Record<string, string[]> = {
   "network:peers": [],
   "network:remove": ["peer@example.com"],
   "network:set": ["peer@example.com"],
-  "payments:pay": [],
-  "payments:pay-email": [
-    "--in-reply-to",
-    "00000000-0000-4000-8000-000000000001",
-  ],
-  "payments:pay-email-step": [],
-  "payments:register-payout-address": [],
   search: ["invoice"],
   "semantic-search": ["invoice"],
   signal: ["ack", "--id", "00000000-0000-4000-8000-000000000001"],

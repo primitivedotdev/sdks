@@ -108,10 +108,9 @@ def sync_detailed(
 ) -> Response[ErrorResponse | File]:
     """ Download domain DNS zone file
 
-     Downloads a BIND-format DNS zone file containing the DNS records
-    required for a domain claim. Agents should offer this after
-    `addDomain` when users want to import DNS records instead of
-    copying each record manually.
+     Downloads a BIND-format DNS zone file containing the DNS records required for a domain claim. Agents
+    should offer this after `addDomain` when users want to import DNS records instead of copying each
+    record manually.
 
     Args:
         id (UUID):
@@ -147,10 +146,9 @@ def sync(
 ) -> ErrorResponse | File | None:
     """ Download domain DNS zone file
 
-     Downloads a BIND-format DNS zone file containing the DNS records
-    required for a domain claim. Agents should offer this after
-    `addDomain` when users want to import DNS records instead of
-    copying each record manually.
+     Downloads a BIND-format DNS zone file containing the DNS records required for a domain claim. Agents
+    should offer this after `addDomain` when users want to import DNS records instead of copying each
+    record manually.
 
     Args:
         id (UUID):
@@ -181,10 +179,9 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | File]:
     """ Download domain DNS zone file
 
-     Downloads a BIND-format DNS zone file containing the DNS records
-    required for a domain claim. Agents should offer this after
-    `addDomain` when users want to import DNS records instead of
-    copying each record manually.
+     Downloads a BIND-format DNS zone file containing the DNS records required for a domain claim. Agents
+    should offer this after `addDomain` when users want to import DNS records instead of copying each
+    record manually.
 
     Args:
         id (UUID):
@@ -220,10 +217,9 @@ async def asyncio(
 ) -> ErrorResponse | File | None:
     """ Download domain DNS zone file
 
-     Downloads a BIND-format DNS zone file containing the DNS records
-    required for a domain claim. Agents should offer this after
-    `addDomain` when users want to import DNS records instead of
-    copying each record manually.
+     Downloads a BIND-format DNS zone file containing the DNS records required for a domain claim. Agents
+    should offer this after `addDomain` when users want to import DNS records instead of copying each
+    record manually.
 
     Args:
         id (UUID):

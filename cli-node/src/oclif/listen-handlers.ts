@@ -3,11 +3,15 @@ import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { performance } from "node:perf_hooks";
 import type { Readable, Writable } from "node:stream";
+import { ListenStateError } from "./listen-state.js";
 import type {
   ListenDelivery,
   ListenHandler,
   ListenHandlerResult,
 } from "./listen-types.js";
+
+/** A delivery whose body the API sent, rather than withheld. */
+type ReadableDelivery = ListenDelivery & { body: string };
 
 const HANDLER_TIMEOUT_MS = 30_000;
 const MAX_RESPONSE_BYTES = 1024 * 1024;
@@ -186,7 +190,7 @@ async function reapChild(
 
 async function execute(
   command: string,
-  delivery: ListenDelivery,
+  delivery: ReadableDelivery,
   stderr: Writable,
   signal: AbortSignal,
 ): Promise<number | null> {
@@ -270,7 +274,7 @@ class ForwardFailure extends Error {
 
 async function forward(
   target: string,
-  delivery: ListenDelivery,
+  delivery: ReadableDelivery,
   signal: AbortSignal,
 ): Promise<{ status: number; confirmed: boolean; errorCode?: string }> {
   signal.throwIfAborted();
@@ -361,12 +365,26 @@ function jsonLine(body: string): string {
   }
 }
 
+/**
+ * The API withholds an event's body from a credential that cannot read the
+ * mail it carries. Such an event is never handed on as if it were the event:
+ * listening stops with an explanation and the delivery stays uncompleted.
+ */
+export function readableDelivery(delivery: ListenDelivery): ReadableDelivery {
+  if (delivery.body === null)
+    throw new ListenStateError(
+      "The API withheld this event's content from the listening credential; the delivery remains uncompleted. Listen with a credential that can read this mail.",
+    );
+  return { ...delivery, body: delivery.body };
+}
+
 export function createListenHandler(
   options: ListenHandlerOptions = {},
 ): ListenHandler {
   validateListenHandlerOptions(options);
-  return async (delivery, signal): Promise<ListenHandlerResult> => {
+  return async (received, signal): Promise<ListenHandlerResult> => {
     signal.throwIfAborted();
+    const delivery = readableDelivery(received);
     const start = performance.now();
     const work = new AbortController();
     let timedOut = false;

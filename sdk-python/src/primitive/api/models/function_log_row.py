@@ -36,9 +36,8 @@ class FunctionLogRow:
             level (FunctionLogRowLevel): Severity. `log` is the runtime's default for unannotated
                 `console.log` calls; the other levels match standard
                 `console.*` methods.
-            message (str): The textual message body. The runtime stringifies non-string
-                arguments before persisting, so this is always a plain
-                string.
+            message (None | str): The textual message body. Null for a caller whose credential does not reach mail content,
+                since a function handling mail can log text from it.
             ts (datetime.datetime): When the handler emitted this line. Newest-first ordering
                 on this column drives pagination; clock is the runtime's,
                 not the gateway's.
@@ -51,7 +50,7 @@ class FunctionLogRow:
     id: UUID
     function_id: UUID
     level: FunctionLogRowLevel
-    message: str
+    message: None | str
     ts: datetime.datetime
     metadata: FunctionLogRowMetadataType0 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -68,6 +67,7 @@ class FunctionLogRow:
 
         level = self.level.value
 
+        message: None | str
         message = self.message
 
         ts = self.ts.isoformat()
@@ -116,7 +116,13 @@ class FunctionLogRow:
 
 
 
-        message = d.pop("message")
+        def _parse_message(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        message = _parse_message(d.pop("message"))
+
 
         ts = datetime.datetime.fromisoformat(d.pop("ts"))
 

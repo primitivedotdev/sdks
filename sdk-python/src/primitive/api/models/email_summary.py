@@ -10,6 +10,9 @@ from ..types import UNSET, Unset
 
 from ..models.email_status import EmailStatus
 from ..models.email_summary_awaiting import EmailSummaryAwaiting
+from ..models.email_summary_parse_status_type_1 import EmailSummaryParseStatusType1
+from ..models.email_summary_parse_status_type_2_type_1 import EmailSummaryParseStatusType2Type1
+from ..models.email_summary_parse_status_type_3_type_1 import EmailSummaryParseStatusType3Type1
 from ..models.email_summary_truncated_fields_item import EmailSummaryTruncatedFieldsItem
 from ..models.email_webhook_status_type_1 import EmailWebhookStatusType1
 from ..models.email_webhook_status_type_2_type_1 import EmailWebhookStatusType2Type1
@@ -21,11 +24,13 @@ import datetime
 if TYPE_CHECKING:
   from ..models.email_summary_attachments_item import EmailSummaryAttachmentsItem
   from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
+  from ..models.email_summary_copies_item import EmailSummaryCopiesItem
+  from ..models.email_summary_delivery_report_type_0 import EmailSummaryDeliveryReportType0
   from ..models.email_summary_relay_type_0 import EmailSummaryRelayType0
   from ..models.email_summary_repeat_type_0 import EmailSummaryRepeatType0
   from ..models.email_summary_sender_member_type_0 import EmailSummarySenderMemberType0
   from ..models.included_message_headers import IncludedMessageHeaders
-  from ..models.presence_control_type_0 import PresenceControlType0
+  from ..models.presence_control import PresenceControl
 
 
 
@@ -132,6 +137,22 @@ class EmailSummary:
                 `list_unsubscribe`, `list_id`, `auto_response_suppress`,
                 `failed_recipients`, `report`. Treat an unfamiliar value as a
                 reason added after your client was built.
+            from_verified (bool | None): True when the From header address, `from_header_email`, passed DMARC for its domain
+                on arrival (aligned SPF or DKIM); decided once, at receipt. It is about the From header, never the envelope:
+                `sender`, the `from` parameter and `from:` term, and the change feed's `address` match the envelope sender,
+                which can differ. It proves the domain, not the mailbox. False with no From header address, when authentication
+                failed or was not attempted (a delivery between Primitive mailboxes counts only when it passed DMARC too), and
+                for mail stored before the verdict was recorded. Null on sent rows in search results. Not a spam or safety
+                judgement.
+            from_header_email (None | str): The From header address, lowercased, that `from_verified` is about; null when
+                the message had none. Unlike `sender` it is never the envelope address.
+            snippet (None | str): A plain-text preview of `body_text` (never `body_html`), computed once when the message is
+                stored: quoted replies (an "On ... wrote:" line, an "Original Message" separator, a From/Sent header block, `>`
+                lines) and a `-- ` signature are cut off, whitespace is collapsed to single spaces, and the result is at most
+                200 characters. A message with no text body, or with nothing left once quotes and the signature are cut (a
+                quote-only reply), has no snippet. It is not a summary and may end mid-word; read the full body from the detail
+                endpoint. Null wherever the detail endpoint would not show the body: no text body, content not yet available or
+                discarded, a failed parse, or a sender-blocked rejection.
             message_id (None | str | Unset):
             domain_id (None | Unset | UUID):
             org_id (None | Unset | UUID):
@@ -164,7 +185,7 @@ class EmailSummary:
             thread_id (None | Unset | UUID): Conversation thread this message belongs to. Fetch
                 `/threads/{thread_id}` for the full ordered thread. NULL on
                 messages received before threading was enabled.
-            presence_control (None | PresenceControlType0 | Unset):
+            presence_control (None | PresenceControl | Unset):
             automation_headers (EmailSummaryAutomationHeadersType0 | None | Unset): What the message declared about being
                 automated, verbatim:
                 `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
@@ -172,20 +193,10 @@ class EmailSummary:
                 declared none, and on messages received before these headers
                 were captured, so a null value is not evidence that a person
                 sent the message.
-            from_verified (bool | None | Unset): True when the From header address, `from_header_email`, passed DMARC for
-                its domain on arrival (aligned SPF or DKIM); decided once, at receipt. It is about the From header, never the
-                envelope: `sender`, the `from` parameter and `from:` term, and the change feed's `address` match the envelope
-                sender, which can differ. It proves the domain, not the mailbox. False with no From header address, when
-                authentication failed or was not attempted (a delivery between Primitive mailboxes counts only when it passed
-                DMARC too), and for mail stored before the verdict was recorded. Null on sent rows in search results. Not a spam
-                or safety judgement.
-            from_header_email (None | str | Unset): The From header address, lowercased, that `from_verified` is about; null
-                when the message had none. Unlike `sender` it is never the envelope address.
             repeat (EmailSummaryRepeatType0 | None | Unset): Set when Primitive sent this message as part of a repeating
                 send. Resolved from Primitive's own records, never from the message content. Null on every other message and on
                 servers that predate repeating sends.
-            sender_member (EmailSummarySenderMemberType0 | None | Unset): Verified human authorship, projected only within
-                the member organization. Historical attribution is not current sending or owner authority.
+            sender_member (EmailSummarySenderMemberType0 | None | Unset):
             fyi (bool | Unset): True when the email is an informational signal (an acknowledgement, read, working or typing
                 signal) and nothing else, so it needs no answer, not even another informational reply. Never true for mail from
                 the reader's owner. Older servers omit it.
@@ -196,10 +207,9 @@ class EmailSummary:
                 header is never used, so an unsigned or forged message is always `none`. `status`: a pure status signal (`read`,
                 `working`, `typing`, or an `ack` in the strict signal shape), shown as a property of the message it is about
                 rather than as a row. `card`: an interaction that renders as its own timeline item (for example `ack-request`,
-                `x402.payment`, `wake.dispatch`, `primitive.contact`, `repeat.tick`, `repeat.stop`). `none`: ordinary mail,
-                including any interaction kind not listed. `pending`: the email has not finished processing; read it again
-                later. Email processed before the field existed is `none`. Treat an unfamiliar value as `none`. Older servers
-                omit it.
+                `wake.dispatch`, `primitive.contact`, `repeat.tick`, `repeat.stop`). `none`: ordinary mail, including any
+                interaction kind not listed. `pending`: the email has not finished processing; read it again later. Email
+                processed before the field existed is `none`. Treat an unfamiliar value as `none`. Older servers omit it.
             interaction_kind (None | str | Unset): The `<protocol>/<version>` that `interaction_hint` was decided from (for
                 example `repeat.tick/1` or `read/1`) when `interaction_hint` is `status` or `card`; null otherwise.
             interaction_candidate (bool | Unset): UNVERIFIED early signal for the `pending` window: true when the raw
@@ -210,15 +220,55 @@ class EmailSummary:
                 anything other than `pending`.
             relay (EmailSummaryRelayType0 | None | Unset): Set when the message reached Primitive through a Primitive mail
                 relay. Null for other mail. The field may be absent; treat a missing value the same as null.
-            from_name (None | str | Unset): Display name from the `From:` header, decoded for display:
-                RFC 2047 encoded words are decoded in their declared charset
-                and folded lines are joined (e.g. `Dana Rúiz` for
-                `=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>`). Null when
-                the header carries no display name, and may be absent; treat
-                a missing value the same as null.
+            from_name (None | str | Unset): Display name from the `From:` header, decoded for display: RFC 2047 encoded
+                words are decoded in their declared charset and folded lines are joined (e.g. `Dana Rúiz` for
+                `=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>`). Null when the header carries no display name. For display
+                only: identify the sender by `from_email`, never by this name, which the sender chooses freely.
+            from_header (None | str | Unset): Raw `From:` header from the message body, including any
+                display name (e.g. `"Alice Example" <alice@example.com>`).
+                Use this when you need the display name for rendering.
 
-                For display only: the sender chooses this name freely, so
-                identify the sender by `from_email`, never by this name.
+                For the bare email address (display name stripped), use
+                `from_email`. The display name in this raw value may be RFC 2047 encoded (`=?UTF-8?Q?...?=`); use `from_name`
+                for the decoded name. Present on `GET /emails` rows and on the messages `GET /changes` inlines; search results
+                do not carry it.
+            from_email (str | Unset): Bare email address parsed from the `From:` header, with
+                display name stripped (e.g. `alice@example.com`). Falls
+                back to `sender` (the SMTP envelope MAIL FROM) when the
+                `From:` header cannot be parsed.
+
+                **This is the canonical "who sent this email" field for
+                most use cases**, including comparing against allowlists,
+                routing replies, or displaying the sender to a user. Use
+                `from_header` when you specifically need the display name,
+                or `sender`/`smtp_mail_from` when you need the SMTP
+                envelope value (e.g. to follow a bounce). Present on `GET /emails` rows and on the messages `GET /changes`
+                inlines; search results do not carry it.
+            to_email (str | Unset): Parsed to address (same as recipient). Present on `GET /emails` rows and on the messages
+                `GET /changes` inlines; search results do not carry it.
+            from_known_address (bool | Unset): True when the inbound's sender address has a matching grant
+                in the org's known-send-addresses list. Advisory: a true
+                value does not by itself guarantee that a reply will be
+                accepted by send-mail's gates; the per-send check at send
+                time remains authoritative.
+            in_reply_to (list[str] | None | Unset): Message-IDs from the `In-Reply-To` header, as `parsed.in_reply_to` on
+                GET /emails/{id}. Lets a client attach a reply to its conversation from the list alone, including while
+                `thread_id` is still null because the message has not finished processing. Null when the header was absent, and
+                wherever `snippet` is null because the content is withheld: content not yet available, a failed parse, mail
+                pending sender authentication, or a sender-blocked rejection.
+            references (list[str] | None | Unset): Message-IDs from the `References` header, oldest first, as
+                `parsed.references` on GET /emails/{id}, shortened to at most 20 entries on the list: a longer chain keeps its
+                first entry (the thread root) and the 19 most recent. Read GET /emails/{id} for the full chain. Null when the
+                header was absent, and wherever `snippet` is null because the content is withheld: content not yet available, a
+                failed parse, mail pending sender authentication, or a sender-blocked rejection.
+            parse_status (EmailSummaryParseStatusType1 | EmailSummaryParseStatusType2Type1 |
+                EmailSummaryParseStatusType3Type1 | None | Unset): Parsing state on inbox, history, arrival and detail reads.
+                Failed is terminal and differs from valid empty content (complete). Null covers legacy rows. Optional on shared
+                summaries for compatibility with older payloads and other summary endpoints.
+            delivery_report (EmailSummaryDeliveryReportType0 | None | Unset): Classified inbound delivery notification, or
+                null. The linked sent_email_id is resolved within the receiving organization; null means uncorrelated. This is a
+                reported outcome, not a rewrite of the original send status. Transient reports may still be retried. Optional
+                for older payloads and other summary endpoints.
             body_text (None | str | Unset): With `include=body_text`: the plain-text body, cut as `truncated_fields` says.
             body_html (None | str | Unset): With `include=body_html`: the HTML body, cut as `truncated_fields` says.
             headers (IncludedMessageHeaders | None | Unset): With `include=headers`: stored addressing and threading
@@ -228,6 +278,16 @@ class EmailSummary:
             truncated (bool | Unset): With `include`: true when a body on this row was cut or left out.
             truncated_fields (list[EmailSummaryTruncatedFieldsItem] | Unset): With `include`: the body fields on this row
                 that were cut or left out.
+            muted (bool | Unset): True when the reader's address muted this email's thread with `PUT /threads/{id}/mute`.
+                For a connected agent the reader is its own address; for other credentials it is the address the email was
+                delivered to.
+            copies (list[EmailSummaryCopiesItem] | Unset): With `group=message`: every inbound copy of this message you can
+                read, in arrival order, this row included. At most 50; past that, the ones listed are your own mailboxes' copies
+                first, then the earliest.
+            copies_truncated (bool | Unset): With `group=message`: present when `copies` may not list every copy you can
+                read.
+            sent_email_id (UUID | Unset): With `group=message`: the send of this message, when you can read it (under a
+                connected agent key, only its own sends).
      """
 
     id: UUID
@@ -243,6 +303,9 @@ class EmailSummary:
     awaiting: EmailSummaryAwaiting
     automated: bool
     automated_reasons: list[str]
+    from_verified: bool | None
+    from_header_email: None | str
+    snippet: None | str
     message_id: None | str | Unset = UNSET
     domain_id: None | Unset | UUID = UNSET
     org_id: None | Unset | UUID = UNSET
@@ -251,10 +314,8 @@ class EmailSummary:
     raw_size_bytes: int | None | Unset = UNSET
     webhook_status: EmailWebhookStatusType1 | EmailWebhookStatusType2Type1 | EmailWebhookStatusType3Type1 | None | Unset = UNSET
     thread_id: None | Unset | UUID = UNSET
-    presence_control: None | PresenceControlType0 | Unset = UNSET
+    presence_control: None | PresenceControl | Unset = UNSET
     automation_headers: EmailSummaryAutomationHeadersType0 | None | Unset = UNSET
-    from_verified: bool | None | Unset = UNSET
-    from_header_email: None | str | Unset = UNSET
     repeat: EmailSummaryRepeatType0 | None | Unset = UNSET
     sender_member: EmailSummarySenderMemberType0 | None | Unset = UNSET
     fyi: bool | Unset = UNSET
@@ -263,12 +324,24 @@ class EmailSummary:
     interaction_candidate: bool | Unset = UNSET
     relay: EmailSummaryRelayType0 | None | Unset = UNSET
     from_name: None | str | Unset = UNSET
+    from_header: None | str | Unset = UNSET
+    from_email: str | Unset = UNSET
+    to_email: str | Unset = UNSET
+    from_known_address: bool | Unset = UNSET
+    in_reply_to: list[str] | None | Unset = UNSET
+    references: list[str] | None | Unset = UNSET
+    parse_status: EmailSummaryParseStatusType1 | EmailSummaryParseStatusType2Type1 | EmailSummaryParseStatusType3Type1 | None | Unset = UNSET
+    delivery_report: EmailSummaryDeliveryReportType0 | None | Unset = UNSET
     body_text: None | str | Unset = UNSET
     body_html: None | str | Unset = UNSET
     headers: IncludedMessageHeaders | None | Unset = UNSET
     attachments: list[EmailSummaryAttachmentsItem] | Unset = UNSET
     truncated: bool | Unset = UNSET
     truncated_fields: list[EmailSummaryTruncatedFieldsItem] | Unset = UNSET
+    muted: bool | Unset = UNSET
+    copies: list[EmailSummaryCopiesItem] | Unset = UNSET
+    copies_truncated: bool | Unset = UNSET
+    sent_email_id: UUID | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -278,11 +351,13 @@ class EmailSummary:
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_summary_attachments_item import EmailSummaryAttachmentsItem # noqa: PLC0415
         from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0 # noqa: PLC0415
+        from ..models.email_summary_copies_item import EmailSummaryCopiesItem # noqa: PLC0415
+        from ..models.email_summary_delivery_report_type_0 import EmailSummaryDeliveryReportType0 # noqa: PLC0415
         from ..models.email_summary_relay_type_0 import EmailSummaryRelayType0 # noqa: PLC0415
         from ..models.email_summary_repeat_type_0 import EmailSummaryRepeatType0 # noqa: PLC0415
         from ..models.email_summary_sender_member_type_0 import EmailSummarySenderMemberType0 # noqa: PLC0415
         from ..models.included_message_headers import IncludedMessageHeaders # noqa: PLC0415
-        from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
+        from ..models.presence_control import PresenceControl # noqa: PLC0415
         id = str(self.id)
 
         status = self.status.value
@@ -314,6 +389,15 @@ class EmailSummary:
         automated_reasons = self.automated_reasons
 
 
+
+        from_verified: bool | None
+        from_verified = self.from_verified
+
+        from_header_email: None | str
+        from_header_email = self.from_header_email
+
+        snippet: None | str
+        snippet = self.snippet
 
         message_id: None | str | Unset
         if isinstance(self.message_id, Unset):
@@ -378,7 +462,7 @@ class EmailSummary:
         presence_control: dict[str, Any] | None | Unset
         if isinstance(self.presence_control, Unset):
             presence_control = UNSET
-        elif isinstance(self.presence_control, PresenceControlType0):
+        elif isinstance(self.presence_control, PresenceControl):
             presence_control = self.presence_control.to_dict()
         else:
             presence_control = self.presence_control
@@ -390,18 +474,6 @@ class EmailSummary:
             automation_headers = self.automation_headers.to_dict()
         else:
             automation_headers = self.automation_headers
-
-        from_verified: bool | None | Unset
-        if isinstance(self.from_verified, Unset):
-            from_verified = UNSET
-        else:
-            from_verified = self.from_verified
-
-        from_header_email: None | str | Unset
-        if isinstance(self.from_header_email, Unset):
-            from_header_email = UNSET
-        else:
-            from_header_email = self.from_header_email
 
         repeat: dict[str, Any] | None | Unset
         if isinstance(self.repeat, Unset):
@@ -445,6 +517,58 @@ class EmailSummary:
         else:
             from_name = self.from_name
 
+        from_header: None | str | Unset
+        if isinstance(self.from_header, Unset):
+            from_header = UNSET
+        else:
+            from_header = self.from_header
+
+        from_email = self.from_email
+
+        to_email = self.to_email
+
+        from_known_address = self.from_known_address
+
+        in_reply_to: list[str] | None | Unset
+        if isinstance(self.in_reply_to, Unset):
+            in_reply_to = UNSET
+        elif isinstance(self.in_reply_to, list):
+            in_reply_to = self.in_reply_to
+
+
+        else:
+            in_reply_to = self.in_reply_to
+
+        references: list[str] | None | Unset
+        if isinstance(self.references, Unset):
+            references = UNSET
+        elif isinstance(self.references, list):
+            references = self.references
+
+
+        else:
+            references = self.references
+
+        parse_status: None | str | Unset
+        if isinstance(self.parse_status, Unset):
+            parse_status = UNSET
+        elif isinstance(self.parse_status, EmailSummaryParseStatusType1):
+            parse_status = self.parse_status.value
+        elif isinstance(self.parse_status, EmailSummaryParseStatusType2Type1):
+            parse_status = self.parse_status.value
+        elif isinstance(self.parse_status, EmailSummaryParseStatusType3Type1):
+            parse_status = self.parse_status.value
+        else:
+            parse_status = self.parse_status
+
+        delivery_report: dict[str, Any] | None | Unset
+        if isinstance(self.delivery_report, Unset):
+            delivery_report = UNSET
+        elif isinstance(self.delivery_report, EmailSummaryDeliveryReportType0):
+            delivery_report = self.delivery_report.to_dict()
+        else:
+            delivery_report = self.delivery_report
+
         body_text: None | str | Unset
         if isinstance(self.body_text, Unset):
             body_text = UNSET
@@ -485,6 +609,23 @@ class EmailSummary:
 
 
 
+        muted = self.muted
+
+        copies: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.copies, Unset):
+            copies = []
+            for copies_item_data in self.copies:
+                copies_item = copies_item_data.to_dict()
+                copies.append(copies_item)
+
+
+
+        copies_truncated = self.copies_truncated
+
+        sent_email_id: str | Unset = UNSET
+        if not isinstance(self.sent_email_id, Unset):
+            sent_email_id = str(self.sent_email_id)
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -502,6 +643,9 @@ class EmailSummary:
             "awaiting": awaiting,
             "automated": automated,
             "automated_reasons": automated_reasons,
+            "from_verified": from_verified,
+            "from_header_email": from_header_email,
+            "snippet": snippet,
         })
         if message_id is not UNSET:
             field_dict["message_id"] = message_id
@@ -523,10 +667,6 @@ class EmailSummary:
             field_dict["presence_control"] = presence_control
         if automation_headers is not UNSET:
             field_dict["automation_headers"] = automation_headers
-        if from_verified is not UNSET:
-            field_dict["from_verified"] = from_verified
-        if from_header_email is not UNSET:
-            field_dict["from_header_email"] = from_header_email
         if repeat is not UNSET:
             field_dict["repeat"] = repeat
         if sender_member is not UNSET:
@@ -543,6 +683,22 @@ class EmailSummary:
             field_dict["relay"] = relay
         if from_name is not UNSET:
             field_dict["from_name"] = from_name
+        if from_header is not UNSET:
+            field_dict["from_header"] = from_header
+        if from_email is not UNSET:
+            field_dict["from_email"] = from_email
+        if to_email is not UNSET:
+            field_dict["to_email"] = to_email
+        if from_known_address is not UNSET:
+            field_dict["from_known_address"] = from_known_address
+        if in_reply_to is not UNSET:
+            field_dict["in_reply_to"] = in_reply_to
+        if references is not UNSET:
+            field_dict["references"] = references
+        if parse_status is not UNSET:
+            field_dict["parse_status"] = parse_status
+        if delivery_report is not UNSET:
+            field_dict["delivery_report"] = delivery_report
         if body_text is not UNSET:
             field_dict["body_text"] = body_text
         if body_html is not UNSET:
@@ -555,6 +711,14 @@ class EmailSummary:
             field_dict["truncated"] = truncated
         if truncated_fields is not UNSET:
             field_dict["truncated_fields"] = truncated_fields
+        if muted is not UNSET:
+            field_dict["muted"] = muted
+        if copies is not UNSET:
+            field_dict["copies"] = copies
+        if copies_truncated is not UNSET:
+            field_dict["copies_truncated"] = copies_truncated
+        if sent_email_id is not UNSET:
+            field_dict["sent_email_id"] = sent_email_id
 
         return field_dict
 
@@ -564,11 +728,13 @@ class EmailSummary:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_summary_attachments_item import EmailSummaryAttachmentsItem # noqa: PLC0415
         from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0 # noqa: PLC0415
+        from ..models.email_summary_copies_item import EmailSummaryCopiesItem # noqa: PLC0415
+        from ..models.email_summary_delivery_report_type_0 import EmailSummaryDeliveryReportType0 # noqa: PLC0415
         from ..models.email_summary_relay_type_0 import EmailSummaryRelayType0 # noqa: PLC0415
         from ..models.email_summary_repeat_type_0 import EmailSummaryRepeatType0 # noqa: PLC0415
         from ..models.email_summary_sender_member_type_0 import EmailSummarySenderMemberType0 # noqa: PLC0415
         from ..models.included_message_headers import IncludedMessageHeaders # noqa: PLC0415
-        from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
+        from ..models.presence_control import PresenceControl # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -626,6 +792,30 @@ class EmailSummary:
         automated = d.pop("automated")
 
         automated_reasons = cast(list[str], d.pop("automated_reasons"))
+
+
+        def _parse_from_verified(data: object) -> bool | None:
+            if data is None:
+                return data
+            return cast(bool | None, data)
+
+        from_verified = _parse_from_verified(d.pop("from_verified"))
+
+
+        def _parse_from_header_email(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        from_header_email = _parse_from_header_email(d.pop("from_header_email"))
+
+
+        def _parse_snippet(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        snippet = _parse_snippet(d.pop("snippet"))
 
 
         def _parse_message_id(data: object) -> None | str | Unset:
@@ -768,7 +958,7 @@ class EmailSummary:
         thread_id = _parse_thread_id(d.pop("thread_id", UNSET))
 
 
-        def _parse_presence_control(data: object) -> None | PresenceControlType0 | Unset:
+        def _parse_presence_control(data: object) -> None | PresenceControl | Unset:
             if data is None:
                 return data
             if isinstance(data, Unset):
@@ -776,14 +966,14 @@ class EmailSummary:
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                componentsschemas_presence_control_type_0 = PresenceControlType0.from_dict(data)
+                presence_control_type_1 = PresenceControl.from_dict(data)
 
 
 
-                return componentsschemas_presence_control_type_0
+                return presence_control_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(None | PresenceControlType0 | Unset, data)
+            return cast(None | PresenceControl | Unset, data)
 
         presence_control = _parse_presence_control(d.pop("presence_control", UNSET))
 
@@ -806,26 +996,6 @@ class EmailSummary:
             return cast(EmailSummaryAutomationHeadersType0 | None | Unset, data)
 
         automation_headers = _parse_automation_headers(d.pop("automation_headers", UNSET))
-
-
-        def _parse_from_verified(data: object) -> bool | None | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            return cast(bool | None | Unset, data)
-
-        from_verified = _parse_from_verified(d.pop("from_verified", UNSET))
-
-
-        def _parse_from_header_email(data: object) -> None | str | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            return cast(None | str | Unset, data)
-
-        from_header_email = _parse_from_header_email(d.pop("from_header_email", UNSET))
 
 
         def _parse_repeat(data: object) -> EmailSummaryRepeatType0 | None | Unset:
@@ -914,6 +1084,118 @@ class EmailSummary:
         from_name = _parse_from_name(d.pop("from_name", UNSET))
 
 
+        def _parse_from_header(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        from_header = _parse_from_header(d.pop("from_header", UNSET))
+
+
+        from_email = d.pop("from_email", UNSET)
+
+        to_email = d.pop("to_email", UNSET)
+
+        from_known_address = d.pop("from_known_address", UNSET)
+
+        def _parse_in_reply_to(data: object) -> list[str] | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                in_reply_to_type_0 = cast(list[str], data)
+
+                return in_reply_to_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[str] | None | Unset, data)
+
+        in_reply_to = _parse_in_reply_to(d.pop("in_reply_to", UNSET))
+
+
+        def _parse_references(data: object) -> list[str] | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                references_type_0 = cast(list[str], data)
+
+                return references_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[str] | None | Unset, data)
+
+        references = _parse_references(d.pop("references", UNSET))
+
+
+        def _parse_parse_status(data: object) -> EmailSummaryParseStatusType1 | EmailSummaryParseStatusType2Type1 | EmailSummaryParseStatusType3Type1 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                parse_status_type_1 = EmailSummaryParseStatusType1(data)
+
+
+
+                return parse_status_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                parse_status_type_2_type_1 = EmailSummaryParseStatusType2Type1(data)
+
+
+
+                return parse_status_type_2_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                parse_status_type_3_type_1 = EmailSummaryParseStatusType3Type1(data)
+
+
+
+                return parse_status_type_3_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailSummaryParseStatusType1 | EmailSummaryParseStatusType2Type1 | EmailSummaryParseStatusType3Type1 | None | Unset, data)
+
+        parse_status = _parse_parse_status(d.pop("parse_status", UNSET))
+
+
+        def _parse_delivery_report(data: object) -> EmailSummaryDeliveryReportType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                delivery_report_type_0 = EmailSummaryDeliveryReportType0.from_dict(data)
+
+
+
+                return delivery_report_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailSummaryDeliveryReportType0 | None | Unset, data)
+
+        delivery_report = _parse_delivery_report(d.pop("delivery_report", UNSET))
+
+
         def _parse_body_text(data: object) -> None | str | Unset:
             if data is None:
                 return data
@@ -980,6 +1262,32 @@ class EmailSummary:
                 truncated_fields.append(truncated_fields_item)
 
 
+        muted = d.pop("muted", UNSET)
+
+        _copies = d.pop("copies", UNSET)
+        copies: list[EmailSummaryCopiesItem] | Unset = UNSET
+        if _copies is not UNSET:
+            copies = []
+            for copies_item_data in _copies:
+                copies_item = EmailSummaryCopiesItem.from_dict(copies_item_data)
+
+
+
+                copies.append(copies_item)
+
+
+        copies_truncated = d.pop("copies_truncated", UNSET)
+
+        _sent_email_id = d.pop("sent_email_id", UNSET)
+        sent_email_id: UUID | Unset
+        if isinstance(_sent_email_id,  Unset):
+            sent_email_id = UNSET
+        else:
+            sent_email_id = UUID(_sent_email_id)
+
+
+
+
         email_summary = cls(
             id=id,
             status=status,
@@ -994,6 +1302,9 @@ class EmailSummary:
             awaiting=awaiting,
             automated=automated,
             automated_reasons=automated_reasons,
+            from_verified=from_verified,
+            from_header_email=from_header_email,
+            snippet=snippet,
             message_id=message_id,
             domain_id=domain_id,
             org_id=org_id,
@@ -1004,8 +1315,6 @@ class EmailSummary:
             thread_id=thread_id,
             presence_control=presence_control,
             automation_headers=automation_headers,
-            from_verified=from_verified,
-            from_header_email=from_header_email,
             repeat=repeat,
             sender_member=sender_member,
             fyi=fyi,
@@ -1014,12 +1323,24 @@ class EmailSummary:
             interaction_candidate=interaction_candidate,
             relay=relay,
             from_name=from_name,
+            from_header=from_header,
+            from_email=from_email,
+            to_email=to_email,
+            from_known_address=from_known_address,
+            in_reply_to=in_reply_to,
+            references=references,
+            parse_status=parse_status,
+            delivery_report=delivery_report,
             body_text=body_text,
             body_html=body_html,
             headers=headers,
             attachments=attachments,
             truncated=truncated,
             truncated_fields=truncated_fields,
+            muted=muted,
+            copies=copies,
+            copies_truncated=copies_truncated,
+            sent_email_id=sent_email_id,
         )
 
 

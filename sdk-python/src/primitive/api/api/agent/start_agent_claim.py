@@ -11,6 +11,7 @@ from ... import errors
 from ...models.error_response import ErrorResponse
 from ...models.start_agent_claim_input import StartAgentClaimInput
 from ...models.start_agent_claim_response_200 import StartAgentClaimResponse200
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -18,9 +19,13 @@ from typing import cast
 def _get_kwargs(
     *,
     body: StartAgentClaimInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -103,6 +108,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: StartAgentClaimInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | StartAgentClaimResponse200]:
     """ Start an agent account email claim
@@ -116,6 +122,7 @@ def sync_detailed(
     is rejected.
 
     Args:
+        idempotency_key (str | Unset):
         body (StartAgentClaimInput):
 
     Raises:
@@ -129,6 +136,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -142,6 +150,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: StartAgentClaimInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | StartAgentClaimResponse200 | None:
     """ Start an agent account email claim
@@ -155,6 +164,7 @@ def sync(
     is rejected.
 
     Args:
+        idempotency_key (str | Unset):
         body (StartAgentClaimInput):
 
     Raises:
@@ -169,6 +179,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -176,6 +187,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: StartAgentClaimInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | StartAgentClaimResponse200]:
     """ Start an agent account email claim
@@ -189,6 +201,7 @@ async def asyncio_detailed(
     is rejected.
 
     Args:
+        idempotency_key (str | Unset):
         body (StartAgentClaimInput):
 
     Raises:
@@ -202,6 +215,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -215,6 +229,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: StartAgentClaimInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | StartAgentClaimResponse200 | None:
     """ Start an agent account email claim
@@ -228,6 +243,7 @@ async def asyncio(
     is rejected.
 
     Args:
+        idempotency_key (str | Unset):
         body (StartAgentClaimInput):
 
     Raises:
@@ -242,5 +258,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed
