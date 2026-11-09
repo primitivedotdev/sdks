@@ -45,8 +45,8 @@ importers:
         specifier: ^4.0.5
         version: 4.0.5(supports-color@8.1.1)
       viem:
-        specifier: ^2.57.14
-        version: 2.57.14(typescript@5.9.3)
+        specifier: ^2.57.16
+        version: 2.57.16(typescript@5.9.3)
       ws:
         specifier: ^8.22.1
         version: 8.22.1
@@ -127,8 +127,8 @@ importers:
         specifier: ^13.15.35
         version: 13.15.35
       viem:
-        specifier: ^2.57.14
-        version: 2.57.14(typescript@5.9.3)
+        specifier: ^2.57.16
+        version: 2.57.16(typescript@5.9.3)
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.6.5
@@ -2435,11 +2435,14 @@ packages:
     resolution: {integrity: sha512-u4J1hr6Y+C/hit34GwL3eIcUf3wngT8TlYUjK7tk0jxydKLAq3sYvifjdTDA6U3KCKRcQCQDGf/srjxfZF3l7g==}
     engines: {node: '>=18.12.0'}
 
-  viem@2.57.14:
-    resolution: {integrity: sha512-ctaSyx3I24va98H2PYz8C30FKXXo8Th/H6Wrn7za7N+RuPQHiL09zFedX6GZDCtz73YFLrf7YeVOgU5CUVByng==}
+  viem@2.57.16:
+    resolution: {integrity: sha512-+4uaUw3NfkqjaqsZp8Zci94K33oc9rv7mIUgvPduJxsY/tI0ASi2YkaXoUVSBGfdIw/QPWuVnIf9LTFf35IoMg==}
     peerDependencies:
+      mppx: '>=0.17.0'
       typescript: '>=5.0.4'
     peerDependenciesMeta:
+      mppx:
+        optional: true
       typescript:
         optional: true
 
@@ -4825,7 +4828,7 @@ snapshots:
 
   verkit@0.5.0: {}
 
-  viem@2.57.14(typescript@5.9.3):
+  viem@2.57.16(typescript@5.9.3):
     dependencies:
       '@noble/curves': 1.9.1
       '@noble/hashes': 1.8.0
