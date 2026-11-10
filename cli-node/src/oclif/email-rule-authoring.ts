@@ -12,6 +12,11 @@
 // on stdout keeps the API's shape; under --json the report is left out and
 // the document gains `error` and `exit_code` when the exit code is not 0.
 //
+// create-email-rule and update-email-rule exit 0 whatever their answer's
+// expectations_check says, unless --fail-on-expectations asks otherwise: then
+// 1 when one failed, and 3 when none failed but one is undecided or the
+// expectations this write sent were not checked, so test the rule to decide.
+//
 // This module does not import api-command.ts, which imports it.
 
 import { readFileSync } from "node:fs";
@@ -57,6 +62,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function errorDetail(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+/** `count` and the word for it: "1 expectation", "2 expectations". */
+function plural(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
 }
 
 function checkEmailId(id: string, label: string): string {
@@ -552,8 +562,6 @@ export function expectationsOutcome(
     expectations.counts?.undecided ?? 0,
     undecided.length,
   );
-  const plural = (count: number, one: string, many: string) =>
-    `${count} ${count === 1 ? one : many}`;
   const why = (list: typeof undecided) =>
     list.map(({ id, reason }) => `${id} (${reason.why})`).join(", ");
   if (failedCount > 0)
@@ -629,22 +637,102 @@ function expectationsCheckLine(
   return `Expectations on ${on}: ${parts.length > 0 ? parts.join(", ") : "not passed"}.${rest}`;
 }
 
+/** The flag that makes a rule write's exit code follow its expectations_check. */
+export const FAIL_ON_EXPECTATIONS_FLAG = "fail-on-expectations";
+
+/**
+ * The exit code and --json `error` of a rule write under
+ * --fail-on-expectations: 1 when an expectation failed; 3 when none failed but
+ * one is undecided, or when expectations this write sent were not checked.
+ * Read from the failed and undecided lists, not `passed`, which a write
+ * answers as null when nothing failed and something is undecided.
+ */
+function writtenExpectationsOutcome(
+  check: unknown,
+  sentExpectations: boolean,
+  ruleId: string,
+): Pick<OperationReport, "exitCode" | "error"> {
+  const test = `\`primitive email-rules test-email-rule --rule-id ${ruleId}\``;
+  if (!isRecord(check)) {
+    if (!sentExpectations) return {};
+    return {
+      exitCode: EXIT_EXPECTATION_UNDECIDED,
+      error: {
+        code: "expectations_unchecked",
+        message: `The expectations this write sent were not checked on it. Test them with ${test}.`,
+      },
+    };
+  }
+  const failed = Array.isArray(check.failed) ? check.failed : [];
+  const undecided = Array.isArray(check.undecided) ? check.undecided : [];
+  if (failed.length > 0)
+    return {
+      exitCode: EXIT_EXPECTATION_FAILED,
+      error: {
+        code: "expectations_failed",
+        message: `${plural(failed.length, "expectation", "expectations")} failed on this write: ${failed.join(", ")}.`,
+      },
+    };
+  if (undecided.length > 0)
+    return {
+      exitCode: EXIT_EXPECTATION_UNDECIDED,
+      error: {
+        code: "expectations_undecided",
+        message: `${plural(undecided.length, "expectation is", "expectations are")} undecided on this write, which judges them without classifying mail or asking the rule's questions: ${undecided.join(", ")}. Test them with ${test}.`,
+      },
+    };
+  // Fail closed: a check that names nothing failed or undecided yet is not a pass.
+  if (check.passed === false)
+    return {
+      exitCode: EXIT_EXPECTATION_FAILED,
+      error: {
+        code: "expectations_failed",
+        message: "The write's expectations check did not pass.",
+      },
+    };
+  return {};
+}
+
 /** The stderr report of a rule written by create-email-rule or update-email-rule. */
 export function writtenEmailRuleReport(
   data: unknown,
-  request: { body: unknown },
+  request: { body: unknown; flags?: Record<string, unknown> },
 ): OperationReport {
   if (!isRecord(data)) return { lines: [] };
   const rule = data as Partial<EmailRuleWritten>;
   const ruleId = typeof rule.id === "string" ? rule.id : "<rule-id>";
   const lines = scopeWarningLines(rule.scope_warnings);
+  const sentExpectations =
+    isRecord(request.body) && isRecord(request.body.expectations);
   const checked = expectationsCheckLine(rule.expectations_check, ruleId);
   if (checked) lines.push(checked);
-  else if (isRecord(request.body) && isRecord(request.body.expectations))
+  else if (sentExpectations)
     lines.push(
       `Expectations were not checked on this write. Test them with \`primitive email-rules test-email-rule --rule-id ${ruleId}\`.`,
     );
-  return { lines };
+  if (request.flags?.[FAIL_ON_EXPECTATIONS_FLAG] !== true) return { lines };
+  return {
+    lines,
+    ...writtenExpectationsOutcome(
+      rule.expectations_check,
+      sentExpectations,
+      ruleId,
+    ),
+  };
+}
+
+/**
+ * A rule write's exit code when its report cannot be built: under
+ * --fail-on-expectations, 1 for a check that is there and did not pass.
+ */
+function writtenFallbackExitCode(
+  data: unknown,
+  flags: Record<string, unknown>,
+): number | undefined {
+  if (flags[FAIL_ON_EXPECTATIONS_FLAG] !== true) return undefined;
+  const check = (data as { expectations_check?: { passed?: unknown } } | null)
+    ?.expectations_check;
+  return check && check.passed !== true ? EXIT_EXPECTATION_FAILED : undefined;
 }
 
 // get-email-rule-scope
@@ -744,9 +832,14 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
         description:
           'A JSON file holding the emails the rule must match and must not, such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}. Sets expectations, over any in --body-file or --raw-body; the answer judges them in expectations_check.',
       }),
+      [FAIL_ON_EXPECTATIONS_FLAG]: Flags.boolean({
+        description:
+          "Exit 1 when an expectation in the answer's expectations_check failed, and 3 when none failed but one is undecided or the expectations this write sent were not checked (test the rule to decide). Without it the command exits 0 whatever the check says.",
+      }),
     },
     bodyFields: expectationsBodyFields(false),
     bodyProperties: ["expectations"],
+    fallbackExitCode: writtenFallbackExitCode,
     report: writtenEmailRuleReport,
   },
   updateEmailRule: {
@@ -755,9 +848,14 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
         description:
           'A JSON file holding the emails the rule must match and must not, such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}, replacing its saved expectations; a file holding null removes them. Sets expectations, over any in --body-file or --raw-body; the answer judges them in expectations_check.',
       }),
+      [FAIL_ON_EXPECTATIONS_FLAG]: Flags.boolean({
+        description:
+          "Exit 1 when an expectation in the answer's expectations_check failed, and 3 when none failed but one is undecided or the expectations this write sent were not checked (test the rule to decide). Without it the command exits 0 whatever the check says.",
+      }),
     },
     bodyFields: expectationsBodyFields(true),
     bodyProperties: ["expectations"],
+    fallbackExitCode: writtenFallbackExitCode,
     report: writtenEmailRuleReport,
   },
   getEmailRuleScope: {

@@ -2161,12 +2161,16 @@ export function createOperationCommand(
               parsedFlags,
               operation.sdkName,
             ),
+            flags: parsedFlags,
           });
         } catch (error) {
           reportError = error instanceof Error ? error.message : String(error);
           let fallback: number | undefined;
           try {
-            fallback = extension?.fallbackExitCode?.(envelope?.data);
+            fallback = extension?.fallbackExitCode?.(
+              envelope?.data,
+              parsedFlags,
+            );
           } catch {
             fallback = 1;
           }
