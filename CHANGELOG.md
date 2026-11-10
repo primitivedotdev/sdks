@@ -446,6 +446,10 @@ parsers.
   token and sends the request again, as `primitive keys` does; under
   `--json` or without a terminal it prints the link and how to rerun.
   `endpoints create` and `endpoints update` take them as well.
+- `emails wait --since` and `emails watch --since` also take a duration
+  ago, such as `15m` or `2h`. `emails wait` says in its help, and in its
+  timeout message, that without `--since` or `--include-existing` it counts
+  only mail received after it started.
 - Generated commands for the new operations, except `createKey`, `rotateKey`,
   `updateKey` and `revokeCredential`, which the `primitive keys` commands
   cover instead.

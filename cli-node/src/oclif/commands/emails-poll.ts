@@ -81,14 +81,6 @@ function combineQ(
   return parts.length > 0 ? parts.join(" ") : undefined;
 }
 
-export function normalizeIsoDate(value: string, label: string): string {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    throw new Error(`${label} must be a valid date or ISO-8601 timestamp.`);
-  }
-  return parsed.toISOString();
-}
-
 export function filtersFromFlags(
   flags: EmailPollFilterFlags,
 ): EmailPollFilters {
@@ -116,12 +108,53 @@ export function filtersFromFlags(
   };
 }
 
-export function sinceFromFlags(flags: {
-  "include-existing"?: boolean;
-  since?: string;
-}): string | undefined {
-  if (flags.since) return normalizeIsoDate(flags.since, "--since");
-  return flags["include-existing"] ? undefined : new Date().toISOString();
+const SINCE_DURATION = /^(\d+)\s*(s|m|h|d)$/i;
+const SINCE_UNIT_MS: Record<string, number> = {
+  s: 1000,
+  m: 60_000,
+  h: 3_600_000,
+  d: 86_400_000,
+};
+
+/** How --since reads: a date or timestamp, or a duration ago (`15m`). */
+export const SINCE_VALUE_HELP =
+  "an ISO-8601 timestamp or date, or a duration ago such as 30s, 15m, 2h or 1d";
+
+/**
+ * Read --since: an ISO-8601 timestamp or date, or a duration before `now`
+ * (`30s`, `15m`, `2h`, `1d`).
+ */
+export function parseSince(value: string, now = Date.now()): string {
+  // A bare number reads as a year or a month to Date ("5" is May 2001), so
+  // it is almost always a duration missing its unit.
+  if (/^\s*\d+\s*$/.test(value)) {
+    throw new Error(
+      `--since needs a unit on a duration, for example ${value.trim()}m; it takes ${SINCE_VALUE_HELP}.`,
+    );
+  }
+  const duration = SINCE_DURATION.exec(value.trim());
+  const unit = duration
+    ? SINCE_UNIT_MS[(duration[2] as string).toLowerCase()]
+    : undefined;
+  const parsed =
+    duration && unit !== undefined
+      ? new Date(now - Number(duration[1]) * unit)
+      : new Date(value);
+  if (Number.isNaN(parsed.getTime()) || parsed.getTime() < 0) {
+    throw new Error(`--since must be ${SINCE_VALUE_HELP}.`);
+  }
+  return parsed.toISOString();
+}
+
+export function sinceFromFlags(
+  flags: {
+    "include-existing"?: boolean;
+    since?: string;
+  },
+  now = Date.now(),
+): string | undefined {
+  if (flags.since) return parseSince(flags.since, now);
+  return flags["include-existing"] ? undefined : new Date(now).toISOString();
 }
 
 export function buildEmailSearchQuery(params: {

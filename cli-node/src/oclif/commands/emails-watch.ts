@@ -28,6 +28,7 @@ import {
   fetchEmailSearchPage,
   filtersFromFlags,
   MAX_EMAIL_POLL_PAGE_SIZE,
+  SINCE_VALUE_HELP,
   sinceFromFlags,
   sleep,
 } from "./emails-poll.js";
@@ -114,7 +115,7 @@ class EmailsWatchCommand extends Command {
       min: 1,
     }),
     since: Flags.string({
-      description: "Only show emails received on or after this date/time",
+      description: `Only show emails received on or after this time: ${SINCE_VALUE_HELP}`,
     }),
     "spam-score-gte": Flags.integer({
       description:
