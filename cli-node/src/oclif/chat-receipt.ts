@@ -8,6 +8,7 @@ import {
   readFileSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
@@ -178,15 +179,22 @@ export function anyUnfinishedLegacyChatReceipt(
   }
   return names.some((name) => {
     if (!name.endsWith(".json")) return false;
+    const path = join(directory, name);
     try {
-      const data = parseReceipt(readFileSync(join(directory, name), "utf8"));
+      const data = parseReceipt(readFileSync(path, "utf8"));
       return (
         !data.completed &&
         data.from_rule === undefined &&
         now - Date.parse(data.sent_at) <= LEGACY_CHAT_RECEIPT_WINDOW_MS
       );
     } catch {
-      return true;
+      // Unreadable: counted while recently written, so one damaged file
+      // does not keep the check running for good.
+      try {
+        return now - statSync(path).mtimeMs <= LEGACY_CHAT_RECEIPT_WINDOW_MS;
+      } catch {
+        return false;
+      }
     }
   });
 }

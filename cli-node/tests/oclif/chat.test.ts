@@ -872,6 +872,66 @@ describe("chat command", () => {
       expect(mocks.sendEmail).toHaveBeenCalledTimes(2);
     });
 
+    it("names a recorded send and its own key", async () => {
+      personAuth();
+      await leaveLegacyChat();
+      // The earlier version recorded the send, then waited for a reply.
+      const directory = join(testConfigDir(), "chat-receipts");
+      for (const name of readdirSync(directory)) {
+        const path = join(directory, name);
+        const data = JSON.parse(readFileSync(path, "utf8"));
+        data.sent = sentEmail({
+          id: "sent-old",
+          client_idempotency_key: "old-key",
+        });
+        writeFileSync(path, JSON.stringify(data));
+      }
+      mocks.pickDefaultFromAddress.mockResolvedValue("dana@yuuja.example");
+      mocks.legacyDefaultFromAddress.mockResolvedValue({
+        kind: "addresses",
+        addresses: ["agent@sender.example"],
+      });
+      const stopped = await stoppedBy(
+        runChatCommand(["help@agent.example", "hello", "--json"]),
+      );
+      expect(stopped?.oclif?.exit).toBe(4);
+      expect(stopped?.message).toBe(
+        "A chat with this message to help@agent.example from agent@sender.example, started by an earlier version of this CLI, is unfinished: it was sent (id sent-old). To resume it and wait for its reply rather than send it again, rerun with --from agent@sender.example. Rerunning with --from dana@yuuja.example sends a second copy.",
+      );
+      expect(JSON.parse(stopped?.stdout ?? "{}").idempotency_key).toBe(
+        "old-key",
+      );
+    });
+
+    it("stops as uncertain when the old default's lookup is refused but this run would send", async () => {
+      personAuth();
+      await leaveLegacyChat();
+      mocks.pickDefaultFromAddress.mockResolvedValue("dana@yuuja.example");
+      mocks.legacyDefaultFromAddress.mockResolvedValue({
+        kind: "unauthorized",
+      });
+      const stopped = await stoppedBy(
+        runChatCommand(["help@agent.example", "hello", "--json"]),
+      );
+      expect(stopped?.oclif?.exit).toBe(4);
+      expect(mocks.sendEmail).toHaveBeenCalledOnce();
+    });
+
+    it("stops looking once the earlier version's chat is more than a day old", async () => {
+      personAuth();
+      vi.useFakeTimers({ toFake: ["Date"] });
+      try {
+        await leaveLegacyChat();
+        vi.setSystemTime(Date.now() + 25 * 60 * 60 * 1000);
+        mocks.pickDefaultFromAddress.mockResolvedValue("dana@yuuja.example");
+        await runChatCommand(["help@agent.example", "another", "--json"]);
+        expect(mocks.legacyDefaultFromAddress).not.toHaveBeenCalled();
+        expect(mocks.sendEmail).toHaveBeenCalledTimes(2);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("asks nothing when only this version's receipts are unfinished, or --from is given", async () => {
       personAuth();
       mocks.sendEmail.mockRejectedValueOnce(new Error("lost response"));
