@@ -86,10 +86,11 @@ function formatValidationIssue(
   switch (error.keyword) {
     case "required": {
       const missing = String(error.params.missingProperty ?? "unknown");
-      const prefix = field === "payload" ? "payload" : field;
+      const missingField =
+        field === "payload" ? missing : `${field}.${missing}`;
       return {
-        field: prefix === "payload" ? missing : `${prefix}.${missing}`,
-        message: `Missing required field: ${missing}`,
+        field: missingField,
+        message: `Missing required field: ${missingField}`,
         suggestion: `Add the required field "${missing}" to the webhook payload.`,
       };
     }

@@ -64,7 +64,7 @@ def _format_validation_issue(error: Any) -> tuple[str, str, str]:
 
     if validator == "required":
         missing = _missing_required_property(error)
-        message = f"Missing required field: {missing}"
+        message = f"Missing required field: {field}"
         suggestion = f'Add the required field "{missing}" to the webhook payload.'
         return field, message, suggestion
 

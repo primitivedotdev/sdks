@@ -77,6 +77,12 @@ func TestValidateEmailReceivedEventReportsNestedFieldPath(t *testing.T) {
 	if validationErr.Field != "email.id" {
 		t.Fatalf("expected enriched required field path, got %q", validationErr.Field)
 	}
+	if validationErr.Message() != "Missing required field: email.id" {
+		t.Fatalf("expected the message to name the full path, got %q", validationErr.Message())
+	}
+	if validationErr.Suggestion() != `Add the required field "id" to the webhook payload.` {
+		t.Fatalf("unexpected suggestion %q", validationErr.Suggestion())
+	}
 	if len(validationErr.ValidationErrors) == 0 || validationErr.ValidationErrors[0].Path != "email.id" {
 		t.Fatalf("expected validation issue path to include missing field, got %#v", validationErr.ValidationErrors)
 	}

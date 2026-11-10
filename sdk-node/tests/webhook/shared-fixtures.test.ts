@@ -52,6 +52,8 @@ describe("shared compatibility fixtures", () => {
           valid: boolean;
           id?: string;
           error_code?: string;
+          field?: string;
+          message?: string;
           relay?: EmailRelay | null;
           automated?: boolean | null;
           automated_reasons?: string[] | null;
@@ -118,6 +120,16 @@ describe("shared compatibility fixtures", () => {
           expect(safeResult.error.code, testCase.name).toBe(
             testCase.expected.error_code,
           );
+          if (testCase.expected.field !== undefined) {
+            expect(safeResult.error.field, testCase.name).toBe(
+              testCase.expected.field,
+            );
+          }
+          if (testCase.expected.message !== undefined) {
+            expect(safeResult.error.message, testCase.name).toBe(
+              testCase.expected.message,
+            );
+          }
         }
       }
     }

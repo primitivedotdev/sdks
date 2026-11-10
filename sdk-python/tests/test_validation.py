@@ -459,7 +459,7 @@ def test_format_validation_issue_appends_required_field_to_nested_path() -> None
         StubValidationError("required", "'id' is a required property", ["email"])
     )
     assert field == "email.id"
-    assert message == "Missing required field: id"
+    assert message == "Missing required field: email.id"
     assert suggestion == 'Add the required field "id" to the webhook payload.'
 
 

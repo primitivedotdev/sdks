@@ -127,6 +127,12 @@ def test_shared_webhook_validation_cases() -> None:
             safe_result = safe_validate_email_received_event(case["payload"])
             assert safe_result.success is False
             assert safe_result.error.code == case["expected"]["error_code"]
+            if "field" in case["expected"]:
+                assert safe_result.error.field == case["expected"]["field"], case["name"]
+            if "message" in case["expected"]:
+                assert safe_result.error.args[0] == case["expected"]["message"], case[
+                    "name"
+                ]
 
 
 def test_shared_signing_vectors() -> None:

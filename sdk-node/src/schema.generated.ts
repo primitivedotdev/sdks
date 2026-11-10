@@ -165,23 +165,30 @@ export const emailReceivedEventJsonSchema = {
             "content": {
               "type": "object",
               "if": {
-                "properties": {
-                  "raw": {
-                    "type": "null"
-                  }
-                }
+                "required": [
+                  "raw"
+                ]
               },
               "then": {
-                "properties": {
-                  "download": {
-                    "type": "null"
+                "if": {
+                  "properties": {
+                    "raw": {
+                      "type": "null"
+                    }
                   }
-                }
-              },
-              "else": {
-                "properties": {
-                  "download": {
-                    "type": "object"
+                },
+                "then": {
+                  "properties": {
+                    "download": {
+                      "type": "null"
+                    }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "download": {
+                      "type": "object"
+                    }
                   }
                 }
               },
