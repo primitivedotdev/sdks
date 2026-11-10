@@ -621,6 +621,45 @@ describe("generated commands with --json", () => {
     expect(templates.cursor?.description).not.toContain("--envelope");
   });
 
+  it("takes the only path parameter as the first argument", async () => {
+    const ruleId = "00000000-0000-4000-8000-0000000000aa";
+    responder = () =>
+      jsonResponse(200, { success: true, data: { id: ruleId } });
+    for (const argv of [[ruleId], ["--id", ruleId], [ruleId, "--id", ruleId]]) {
+      fetchCalls = [];
+      const result = await runMerged("email-rules:get-email-rule", [
+        ...argv,
+        "--json",
+      ]);
+      expect(result.exitCode, result.merged).toBe(0);
+      expect(fetchCalls.map((call) => call.url.pathname)).toEqual([
+        `/v1/email-rules/${ruleId}`,
+      ]);
+    }
+    const both = await runMerged("email-rules:get-email-rule", [
+      ruleId,
+      "--id",
+      "00000000-0000-4000-8000-0000000000bb",
+      "--json",
+    ]);
+    expect(both.exitCode).toBe(2);
+    expect(
+      (parseOne(both.merged) as { error: { message: string } }).error.message,
+    ).toContain("not both with different values");
+    const none = await runMerged("email-rules:get-email-rule", ["--json"]);
+    expect(none.exitCode).toBe(2);
+    expect(
+      (parseOne(none.merged) as { error: { message: string } }).error.message,
+    ).toBe("Missing the id: pass it as the first argument or with --id.");
+    // A renamed path flag names its argument the same way.
+    const results = COMMANDS[
+      "email-rules:list-email-rule-results"
+    ] as unknown as {
+      args: Record<string, unknown>;
+    };
+    expect(Object.keys(results.args)).toEqual(["email-id"]);
+  });
+
   it("pages memories search: the cursor on stderr, or in the envelope", async () => {
     responder = () =>
       jsonResponse(200, {
@@ -1164,6 +1203,25 @@ describe("collaboration commands with --json", () => {
     delete process.env.PRIMITIVE_API_KEY;
     delete process.env.PRIMITIVE_API_BASE_URL;
     process.env.PRIMITIVE_AGENT_PROFILE = "work";
+  });
+
+  it("emails get takes the id as its first argument too", async () => {
+    responder = mailApi;
+    const result = await runMerged("emails:get", [
+      emailId,
+      "--context",
+      "--json",
+    ]);
+    const document = expectOneDocument(result);
+    expect(result.exitCode, JSON.stringify(document)).toBe(0);
+    expect(document.envelope).toMatchObject({ email_id: emailId });
+    const missing = await runMerged("emails:get", ["--json"]);
+    expect(missing.exitCode).toBe(2);
+    expect(expectOneDocument(missing)).toMatchObject({
+      error: {
+        message: "Missing the id: pass it as the first argument or with --id.",
+      },
+    });
   });
 
   it("emails get --context prints the envelope as one document", async () => {

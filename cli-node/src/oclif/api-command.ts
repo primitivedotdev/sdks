@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import { Command, Errors, Flags } from "@oclif/core";
+import { Args, Command, Errors, Flags } from "@oclif/core";
 import type {
   AgentSignupVerifyResult,
   ErrorResponse,
@@ -197,6 +197,25 @@ export const OPERATION_PATH_FLAGS: Record<
     id: { flag: "email-id", description: EMAIL_ID_NOT_SENT },
   },
 };
+
+/** End a description with a full stop when it has no closing punctuation. */
+function sentence(text: string): string {
+  const trimmed = text.trim();
+  return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+/**
+ * The path parameter a command also takes as its first argument: the only
+ * one, when the operation has exactly one (`emails get <id>`). Its flag stays
+ * and is no longer required on its own.
+ */
+export function positionalPathParameter(
+  operation: Pick<PrimitiveOperationManifest, "pathParams">,
+): PrimitiveParameterManifest | undefined {
+  return operation.pathParams.length === 1
+    ? operation.pathParams[0]
+    : undefined;
+}
 
 /** The flag a path or query parameter is read from. */
 export function parameterFlagName(
@@ -1042,11 +1061,14 @@ function buildFlags(operation: PrimitiveOperationManifest): {
     });
   }
 
+  const positional = positionalPathParameter(operation);
   for (const parameter of [...operation.pathParams, ...operation.queryParams]) {
     const override = OPERATION_PATH_FLAGS[operation.sdkName]?.[parameter.name];
     flags[parameterFlagName(operation.sdkName, parameter.name)] =
       flagForParameter(
-        parameter,
+        parameter === positional
+          ? { ...parameter, required: false }
+          : parameter,
         override ?? pagingFlagOverride(operation, parameter),
       );
   }
@@ -1485,21 +1507,59 @@ export function createOperationCommand(
     : descriptionWithSchema;
 
   const flagNames = Object.keys(flags);
+  const positional = positionalPathParameter(operation);
+  const positionalFlag = positional
+    ? parameterFlagName(operation.sdkName, positional.name)
+    : undefined;
   class OperationCommand extends Command {
     static description = fullDescription;
 
     static flags = flags as never;
 
+    // The only path parameter can come first, as an argument, or as its flag.
+    static args = (
+      positional && positionalFlag
+        ? {
+            [positionalFlag]: Args.string({
+              description: `${sentence(OPERATION_PATH_FLAGS[operation.sdkName]?.[positional.name]?.description ?? positional.description ?? positional.name)} The same as --${positionalFlag}; give one of the two.`,
+              required: false,
+            }),
+          }
+        : {}
+    ) as never;
+
     static summary =
       operation.summary ?? `${operation.method} ${operation.path}`;
 
     async run(): Promise<void> {
-      const { flags } = await this.parse(OperationCommand as never).catch(
+      const { args, flags } = await this.parse(OperationCommand as never).catch(
         (error: unknown) => {
           throw withFlagSuggestion(error, flagNames);
         },
       );
       const parsedFlags = flags as Record<string, unknown>;
+      if (positionalFlag) {
+        const fromArgument = (args as Record<string, unknown>)[positionalFlag];
+        const fromFlag = parsedFlags[positionalFlag];
+        if (
+          fromArgument !== undefined &&
+          fromFlag !== undefined &&
+          String(fromArgument) !== String(fromFlag)
+        ) {
+          throw new Errors.CLIError(
+            `Give the ${positionalFlag} once: as the first argument or with --${positionalFlag}, not both with different values.`,
+            { exit: 2 },
+          );
+        }
+        const value = fromFlag ?? fromArgument;
+        if (value === undefined || value === "") {
+          throw new Errors.CLIError(
+            `Missing the ${positionalFlag}: pass it as the first argument or with --${positionalFlag}.`,
+            { exit: 2 },
+          );
+        }
+        parsedFlags[positionalFlag] = value;
+      }
       const headers = collectHeaderFlags(parsedFlags, headerFlagToName);
       if (
         [
