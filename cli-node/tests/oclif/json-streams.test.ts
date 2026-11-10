@@ -664,6 +664,82 @@ describe("generated commands with --json", () => {
     expect(odd.stderr).toContain('"a\\nb"');
   });
 
+  it("sends --step-up-token as the Primitive-Step-Up header on webhook writes", async () => {
+    responder = () => jsonResponse(201, { success: true, data: { id: "e1" } });
+    for (const flag of ["--step-up-token", "--primitive-step-up"]) {
+      fetchCalls = [];
+      const result = await runMerged("endpoints:create", [
+        "--url",
+        "https://example.com/hook",
+        flag,
+        "tok-1",
+      ]);
+      expect(result.exitCode).toBe(0);
+      const sent = new Headers(fetchCalls[0]?.init?.headers);
+      expect(sent.get("Primitive-Step-Up")).toBe("tok-1");
+    }
+    fetchCalls = [];
+    await runMerged("endpoints:create", ["--url", "https://example.com/hook"]);
+    expect(
+      new Headers(fetchCalls[0]?.init?.headers).has("Primitive-Step-Up"),
+    ).toBe(false);
+  });
+
+  it("prints the approval link and how to rerun when a webhook write needs approval", async () => {
+    const url = "https://app.example.test/app/settings/step-up?purpose=x";
+    responder = () =>
+      jsonResponse(403, {
+        success: false,
+        error: {
+          code: "step_up_required",
+          message: "Approve this in the browser.",
+          details: { step_up_url: url },
+        },
+      });
+    const result = await runMerged("endpoints:create", [
+      "--url",
+      "https://example.com/hook",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(fetchCalls).toHaveLength(1);
+    expect(result.stderr).toContain(
+      `Approve this request in your browser: ${url}`,
+    );
+    expect(result.stderr).toContain("--step-up-token <token from the page>");
+    const json = await runMerged("endpoints:create", [
+      "--url",
+      "https://example.com/hook",
+      "--json",
+    ]);
+    expect(json.stderr).toBe("");
+    const document = parseOne(json.merged) as { warnings?: string[] };
+    expect(document).toMatchObject({
+      error: { code: "step_up_required" },
+      exit_code: 1,
+    });
+    expect(document.warnings?.join("\n")).toContain(
+      "--step-up-token <token from the page>",
+    );
+  });
+
+  it("offers --step-up-token on every generated operation that takes the approval header", () => {
+    for (const operation of operationManifest) {
+      const declared = operation.headerParams.some(
+        (p) => p.name === "Primitive-Step-Up",
+      );
+      if (!declared) continue;
+      const command = COMMANDS[
+        `${operation.tagCommand}:${operation.command}`
+      ] as unknown as Runnable | undefined;
+      if (!command) continue;
+      const flags = command.flags as Record<string, { aliases?: string[] }>;
+      expect(flags["step-up-token"]?.aliases, operation.sdkName).toEqual([
+        "primitive-step-up",
+      ]);
+      expect(flags.browser, operation.sdkName).toBeDefined();
+    }
+  });
+
   it("keeps the data-only output and stderr cursor without --json", async () => {
     responder = () =>
       jsonResponse(200, {

@@ -439,6 +439,13 @@ parsers.
 - `memories search` can page: it prints `next cursor:` on stderr when there
   is another page, and takes `--envelope` to print `meta.cursor` with the
   data.
+- A generated command whose operation can ask for browser approval takes
+  `--step-up-token` (the `Primitive-Step-Up` header; `--primitive-step-up`
+  still works) and `--no-browser`. When the server asks for approval, it
+  prints the approval link, opens it where it can, waits for the one-time
+  token and sends the request again, as `primitive keys` does; under
+  `--json` or without a terminal it prints the link and how to rerun.
+  `endpoints create` and `endpoints update` take them as well.
 - Generated commands for the new operations, except `createKey`, `rotateKey`,
   `updateKey` and `revokeCredential`, which the `primitive keys` commands
   cover instead.

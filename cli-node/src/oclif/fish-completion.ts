@@ -6,8 +6,14 @@ import {
   headerFlagName,
   OPERATION_PATH_FLAGS,
   parameterFlagName,
+  takesStepUp,
 } from "./api-command.js";
 import { cliOperationManifest } from "./cli-operations.js";
+import {
+  BROWSER_FLAG_DESCRIPTION,
+  STEP_UP_HEADER,
+  STEP_UP_TOKEN_FLAG_DESCRIPTION,
+} from "./step-up-approval.js";
 
 type OpenApiTag = {
   description?: string;
@@ -110,8 +116,20 @@ export function renderFishCompletion(binName: string): string {
         );
       }
       for (const parameter of operation.headerParams) {
+        if (parameter.name === STEP_UP_HEADER) continue;
         lines.push(
           `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l '${fishEscape(headerFlagName(parameter.name))}' -r -d '${fishEscape(parameter.description ?? parameter.name)}'`,
+        );
+      }
+      if (takesStepUp(operation)) {
+        const condition = operationCondition(operation).replace(
+          BIN_PLACEHOLDER,
+          binName,
+        );
+        lines.push(
+          `complete -c ${binName} -n '${condition}' -l 'step-up-token' -r -d '${fishEscape(STEP_UP_TOKEN_FLAG_DESCRIPTION)}'`,
+          `complete -c ${binName} -n '${condition}' -l 'browser' -d '${fishEscape(BROWSER_FLAG_DESCRIPTION)}'`,
+          `complete -c ${binName} -n '${condition}' -l 'no-browser' -d '${fishEscape(BROWSER_FLAG_DESCRIPTION)}'`,
         );
       }
 

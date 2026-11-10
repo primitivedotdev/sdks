@@ -61,6 +61,14 @@ import {
   replyStateSurfaceForOperation,
 } from "./reply-state.js";
 import { sentListOtherSendersNote } from "./sent-list-labels.js";
+import {
+  approveThenRerunHint,
+  BROWSER_FLAG_DESCRIPTION,
+  STEP_UP_HEADER,
+  STEP_UP_TOKEN_FLAG_DESCRIPTION,
+  terminalApprovalIo,
+  withApproval,
+} from "./step-up-approval.js";
 import { parseRetryAfter } from "./transient-retry.js";
 
 type OperationName = keyof typeof operations;
@@ -137,6 +145,25 @@ export function collectHeaderFlags(
 
 function flagDescription(parameter: PrimitiveParameterManifest): string {
   return parameter.description ?? parameter.name;
+}
+
+// Operations the server may ask a person to approve in the browser although
+// the published spec does not list the Primitive-Step-Up header for them:
+// creating a webhook, and changing one. The header is sent only with a token
+// the person passes or pastes from the approval page.
+export const STEP_UP_OPERATIONS: ReadonlySet<string> = new Set([
+  "createEndpoint",
+  "updateEndpoint",
+]);
+
+/** Whether an operation takes the browser approval token. */
+export function takesStepUp(
+  operation: Pick<PrimitiveOperationManifest, "headerParams" | "sdkName">,
+): boolean {
+  return (
+    STEP_UP_OPERATIONS.has(operation.sdkName) ||
+    operation.headerParams.some((p) => p.name === STEP_UP_HEADER)
+  );
 }
 
 /** A path or query flag a command names or describes differently from the spec. */
@@ -1076,7 +1103,31 @@ function buildFlags(operation: PrimitiveOperationManifest): {
   // Idempotency-Key on send-email. A name already taken by another flag
   // keeps its existing meaning.
   const headerFlagToName = new Map<string, string>();
+  // An operation the person may be asked to approve in the browser takes
+  // the approval token as --step-up-token (--primitive-step-up, the
+  // header's own flag name, still works), and --no-browser.
+  if (takesStepUp(operation)) {
+    // Flags taken already would mean the spec added a field of that name;
+    // refuse to build rather than send it with a default value.
+    for (const name of ["step-up-token", "browser"]) {
+      if (flags[name] !== undefined)
+        throw new Error(
+          `${operation.sdkName}: --${name} is both a parameter and the approval flag`,
+        );
+    }
+    flags["step-up-token"] = Flags.string({
+      description: STEP_UP_TOKEN_FLAG_DESCRIPTION,
+      aliases: [headerFlagName(STEP_UP_HEADER)],
+    });
+    flags.browser = Flags.boolean({
+      allowNo: true,
+      default: true,
+      description: BROWSER_FLAG_DESCRIPTION,
+    });
+    headerFlagToName.set("step-up-token", STEP_UP_HEADER);
+  }
   for (const parameter of operation.headerParams) {
+    if (parameter.name === STEP_UP_HEADER) continue;
     const name = headerFlagName(parameter.name);
     if (RESERVED_FLAG_NAMES.has(name)) continue;
     if (flags[name] !== undefined) continue;
@@ -1570,11 +1621,14 @@ export function createOperationCommand(
         // And for `from_verified`, a trust filter: rows without the
         // requested value are refused, never printed.
         const fromVerified = fromVerifiedExpectation(operation.sdkName, query);
-        const callOperation = () =>
-          operationFn({
+        const callOperation = (stepUpToken?: string) => {
+          const sent = stepUpToken
+            ? { ...headers, [STEP_UP_HEADER]: stepUpToken }
+            : headers;
+          return operationFn({
             body,
             client: apiClient.client,
-            ...(Object.keys(headers).length > 0 ? { headers } : {}),
+            ...(Object.keys(sent).length > 0 ? { headers: sent } : {}),
             parseAs: operation.binaryResponse ? "blob" : "auto",
             path: collectValues(
               operation.pathParams,
@@ -1584,21 +1638,52 @@ export function createOperationCommand(
             query,
             responseStyle: "fields",
           });
+        };
         // Attachment content can be briefly not ready after an email
         // arrives. Wait for it rather than making the caller poll. The
         // note goes to stderr: stdout carries only the downloaded bytes.
-        const result = ATTACHMENT_WAIT_OPERATIONS.has(operation.sdkName)
-          ? await withAttachmentWait(callOperation, {
-              wait: parsedFlags.wait !== false,
-              errorCode: (error) =>
-                extractErrorCode(extractErrorPayload(error)),
-              onFirstWait: () => {
-                process.stderr.write(
-                  `Attachment content is not ready yet; waiting up to ${ATTACHMENT_WAIT_MAX_MS / 1000}s. Pass --no-wait to return immediately.\n`,
-                );
-              },
-            })
-          : await callOperation();
+        // An operation the person may be asked to approve: on
+        // step_up_required, show the link, wait for the token and send it
+        // once more. The token from --step-up-token is sent from the start.
+        let stepUpUrl: string | undefined;
+        const callWithApproval = async () => {
+          const approved = await withApproval(
+            async (token) => {
+              const attempt = await callOperation(token);
+              return {
+                ok: !attempt.error,
+                payload: attempt.error
+                  ? extractErrorPayload(attempt.error)
+                  : undefined,
+                attempt,
+              };
+            },
+            terminalApprovalIo({
+              stepUpToken:
+                typeof parsedFlags["step-up-token"] === "string"
+                  ? (parsedFlags["step-up-token"] as string)
+                  : undefined,
+              openBrowser: parsedFlags.browser !== false,
+              json: parsedFlags.json === true,
+            }),
+          );
+          stepUpUrl = approved.stepUpUrl;
+          return approved.attempt;
+        };
+        const result = takesStepUp(operation)
+          ? await callWithApproval()
+          : ATTACHMENT_WAIT_OPERATIONS.has(operation.sdkName)
+            ? await withAttachmentWait(callOperation, {
+                wait: parsedFlags.wait !== false,
+                errorCode: (error) =>
+                  extractErrorCode(extractErrorPayload(error)),
+                onFirstWait: () => {
+                  process.stderr.write(
+                    `Attachment content is not ready yet; waiting up to ${ATTACHMENT_WAIT_MAX_MS / 1000}s. Pass --no-wait to return immediately.\n`,
+                  );
+                },
+              })
+            : await callOperation();
 
         if (result.error) {
           const errorPayload = extractErrorPayload(result.error);
@@ -1611,6 +1696,7 @@ export function createOperationCommand(
           if (operationErrorHint) {
             process.stderr.write(`${operationErrorHint}\n`);
           }
+          if (stepUpUrl) process.stderr.write(approveThenRerunHint(stepUpUrl));
           if (replyStateSurface && isAwaitingRejectedError(errorPayload)) {
             process.stderr.write(
               `${awaitingRejectedError(replyStateSurface).message}\n`,
