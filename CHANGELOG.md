@@ -348,10 +348,11 @@ downgrading, or sign in again afterwards.
   `primitive keys create`, `rotate`, `update` and `revoke`, alongside `keys
   list` and the new `keys get`. Listing and showing a key never print a
   secret.
-- Creating, rotating and changing a key need the person's approval in the
-  browser. The command prints the approval link, opens it where it can, and
-  waits for the one-time token the page shows. A script approves first and
-  passes the token with `--step-up-token`.
+- Creating, rotating and changing a key run directly from the person's own
+  login. If the organization requires approval, the command prints the
+  approval link, opens it where it can, and waits for the one-time token the
+  page shows. In a script it prints the link and exits: approve, then run
+  it again with `--step-up-token`.
 - A key never holds more than the person's own access, and the
   organization's credential policy applies. `keys create` has no default
   grant: it needs `--preset`, or `--permission` with the mail the key
