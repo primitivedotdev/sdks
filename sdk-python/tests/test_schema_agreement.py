@@ -1,8 +1,12 @@
-"""The exported schema must describe exactly what the SDK accepts.
+"""The exported schema and the SDK give the same verdict on the shared payloads.
 
-A payload that passes ``email_received_event_json_schema`` must pass
-``validate_email_received_event`` and ``receive``, and a payload the schema
-refuses must be refused by both.
+For every payload in the shared webhook fixtures,
+``email_received_event_json_schema``, checked with the SDK's format checker,
+accepts it exactly when ``validate_email_received_event`` and ``receive`` do.
+The schema check runs first, so whatever it refuses the SDK refuses too. The
+Pydantic models can still refuse a few values the schema allows, such as
+``2025-02-30T12:00:00Z``, a tab between date and time, or the URL
+``https://``, so this pins the shared payloads rather than every input.
 """
 
 from __future__ import annotations
@@ -13,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from jsonschema import Draft7Validator, FormatChecker
+from jsonschema import Draft7Validator
 
 from primitive import (
     PRIMITIVE_SIGNATURE_HEADER,
@@ -24,6 +28,7 @@ from primitive import (
     sign_webhook_payload,
     validate_email_received_event,
 )
+from primitive._formats import webhook_format_checker
 
 SECRET = "whsec_schema_agreement"
 PAYLOAD_FILES = ("valid-email-received.json", "address-scoped-email.json")
@@ -57,8 +62,10 @@ def _payloads() -> list[tuple[str, Any]]:
 
 
 PAYLOADS = _payloads()
+# The SDK's own format checker, which checks date-time and uri as the Node
+# validator does.
 SCHEMA = Draft7Validator(
-    email_received_event_json_schema, format_checker=FormatChecker()
+    email_received_event_json_schema, format_checker=webhook_format_checker()
 )
 
 

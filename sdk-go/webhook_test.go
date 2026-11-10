@@ -451,17 +451,55 @@ func TestHandleWebhookEvent(t *testing.T) {
 		t.Fatalf("unexpected unknown event payload: %#v", unknown.Payload)
 	}
 
+	// HandleWebhook validates every email.* body against the email event
+	// schema, as the Node and Python SDKs do, so this incomplete bounce is a
+	// validation failure rather than an unknown event.
 	_, err = HandleWebhook(HandleWebhookOptions{
 		Body:    unknownBody,
 		Headers: map[string]string{"primitive-signature": unknownSigned.Header},
 		Secret:  "test-webhook-secret",
 	})
-	var payloadErr *PrimitiveWebhookError
-	if !errors.As(err, &payloadErr) {
-		t.Fatalf("expected PrimitiveWebhookError for unknown event, got %v", err)
+	var validationErr *WebhookValidationError
+	if !errors.As(err, &validationErr) {
+		t.Fatalf("expected WebhookValidationError for an incomplete email.bounced body, got %v", err)
 	}
-	if payloadErr.Code() != "PAYLOAD_UNKNOWN_EVENT" {
-		t.Fatalf("unexpected error code: %s", payloadErr.Code())
+	if validationErr.Code() != "SCHEMA_VALIDATION_FAILED" {
+		t.Fatalf("unexpected error code: %s", validationErr.Code())
+	}
+}
+
+func TestHandleWebhookAcceptsEveryEmailEventType(t *testing.T) {
+	payload := loadJSONFixture(t, "webhook", "valid-email-received.json")
+	for _, eventType := range EmailEventTypes {
+		payload["event"] = eventType
+		body, err := json.Marshal(payload)
+		if err != nil {
+			t.Fatalf("marshal %s payload: %v", eventType, err)
+		}
+		signed, err := SignWebhookPayload(body, "test-webhook-secret")
+		if err != nil {
+			t.Fatalf("SignWebhookPayload returned error: %v", err)
+		}
+		options := HandleWebhookOptions{
+			Body:    body,
+			Headers: map[string]string{PrimitiveSignatureHeader: signed.Header, WebhookEventHeader: eventType},
+			Secret:  "test-webhook-secret",
+		}
+
+		event, err := HandleWebhook(options)
+		if err != nil {
+			t.Fatalf("HandleWebhook(%s) returned error: %v", eventType, err)
+		}
+		if event.Event != eventType {
+			t.Fatalf("HandleWebhook(%s) returned event %q", eventType, event.Event)
+		}
+		email, err := Receive(options)
+		if err != nil {
+			t.Fatalf("Receive(%s) returned error: %v", eventType, err)
+		}
+		if email.Raw.Event != eventType || email.ID != event.Email.ID {
+			t.Fatalf("Receive(%s) returned %q for email %q", eventType, email.Raw.Event, email.ID)
+		}
 	}
 }
 
@@ -656,5 +694,46 @@ func TestEmailContentValueConstructionRemainsCompatible(t *testing.T) {
 	data, err = json.Marshal(decoded)
 	if err != nil || string(data) != `{"raw":null,"download":null}` {
 		t.Fatalf("restricted content widened: %s, %v", data, err)
+	}
+}
+
+func TestHandleWebhookDecidesByTheEventHeader(t *testing.T) {
+	payload := loadJSONFixture(t, "webhook", "valid-email-received.json")
+	cases := []struct {
+		name, bodyEvent, header, wantEvent, wantCode string
+	}{
+		{name: "header names an email event", bodyEvent: "email.bounced", header: "email.received", wantEvent: "email.bounced"},
+		{name: "body event without a header", bodyEvent: "email.bounced", wantEvent: "email.bounced"},
+		{name: "header names a sent_email event", bodyEvent: "email.received", header: "sent_email.completed", wantCode: "SCHEMA_VALIDATION_FAILED"},
+		{name: "header names an interaction event", bodyEvent: "email.received", header: "interaction.ack.acked", wantCode: "PAYLOAD_UNKNOWN_EVENT"},
+	}
+	for _, testCase := range cases {
+		payload["event"] = testCase.bodyEvent
+		body, err := json.Marshal(payload)
+		if err != nil {
+			t.Fatalf("%s: marshal payload: %v", testCase.name, err)
+		}
+		signed, err := SignWebhookPayload(body, "test-webhook-secret")
+		if err != nil {
+			t.Fatalf("%s: SignWebhookPayload returned error: %v", testCase.name, err)
+		}
+		headers := map[string]string{PrimitiveSignatureHeader: signed.Header}
+		if testCase.header != "" {
+			headers[WebhookEventHeader] = testCase.header
+		}
+
+		event, err := HandleWebhook(HandleWebhookOptions{Body: body, Headers: headers, Secret: "test-webhook-secret"})
+		if testCase.wantCode != "" {
+			if code, _ := webhookErrorCode(err); code != testCase.wantCode {
+				t.Fatalf("%s: got error %v, want %s", testCase.name, err, testCase.wantCode)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("%s: HandleWebhook returned error: %v", testCase.name, err)
+		}
+		if event.Event != testCase.wantEvent {
+			t.Fatalf("%s: got event %q, want the body's %q", testCase.name, event.Event, testCase.wantEvent)
+		}
 	}
 }

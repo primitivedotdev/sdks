@@ -319,6 +319,16 @@ func HandleWebhookEvent(options HandleWebhookOptions) (WebhookEvent, error) {
 	return ParseWebhookEvent(parsed, getHeaderValue(options.Headers, WebhookEventHeader))
 }
 
+// HandleWebhook verifies a delivery and returns its body as an
+// EmailReceivedEvent. It decides by the event type in the X-Webhook-Event
+// header, or by the body's event field when the header is absent; the header
+// is not covered by the signature. For an email.* type it validates the signed
+// body against EmailReceivedEventJSONSchema and returns it, so bounces and
+// reports come back as well as received mail, each with the body's own Event.
+// Any other type is refused, with PAYLOAD_UNKNOWN_EVENT or, for a sent_email.*
+// type, with a validation error when the body does not match that schema; use
+// HandleWebhookEvent for those. The Node and Python SDKs instead validate
+// every body against the email event schema, whatever the header says.
 func HandleWebhook(options HandleWebhookOptions) (*EmailReceivedEvent, error) {
 	event, err := HandleWebhookEvent(options)
 	if err != nil {
@@ -330,14 +340,19 @@ func HandleWebhook(options HandleWebhookOptions) (*EmailReceivedEvent, error) {
 		return &typed, nil
 	case *EmailReceivedEvent:
 		return typed, nil
-	default:
-		return nil, NewWebhookPayloadError(
-			"PAYLOAD_UNKNOWN_EVENT",
-			fmt.Sprintf("HandleWebhook only supports email.received events, got %q", event.GetEvent()),
-			"Use HandleWebhookEvent or ParseWebhookEvent to handle unknown events gracefully.",
-			nil,
-		)
+	case UnknownEvent:
+		// ParseWebhookEvent types only email.received. The other email.*
+		// events share its payload, and the schema decides which are valid.
+		if strings.HasPrefix(typed.Event, "email.") {
+			return ValidateEmailReceivedEvent(typed.Payload)
+		}
 	}
+	return nil, NewWebhookPayloadError(
+		"PAYLOAD_UNKNOWN_EVENT",
+		fmt.Sprintf("HandleWebhook only supports email events, got %q", event.GetEvent()),
+		"Use HandleWebhookEvent or ParseWebhookEvent to handle unknown events gracefully.",
+		nil,
+	)
 }
 
 func ConfirmedHeaders() map[string]string {

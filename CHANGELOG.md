@@ -172,6 +172,40 @@ shapes. Among them: `MemoryScopeType0` and `MemoryScopeType1` are
 `InboxStatusFunctionSummary` and `InboxStatusRecentEmailSummary` are
 `InboxStatusEndpoints`, `InboxStatusFunctions` and `InboxStatusRecentEmails`.
 
+#### Webhook events and validation
+
+- Go `HandleWebhook` and `Receive` return bounces and reports as well as
+  received mail. They decide by the event type in the `X-Webhook-Event`
+  header, or the body's `event` without it: for an `email.*` type they
+  validate the signed body against the email event schema and return it.
+  Before, they refused every type but `email.received` with
+  `PAYLOAD_UNKNOWN_EVENT`. A handler written for received mail now also gets
+  `email.bounced`, `email.tls_report`, `email.dmarc_report` and
+  `email.dmarc_failure`: check `email.Raw.Event` from `Receive`, or
+  `event.Event` from `HandleWebhook`, and skip the types it does not handle.
+  An `email.*` body that does not match the schema is a
+  `SCHEMA_VALIDATION_FAILED` error. The Node and Python SDKs validate the body
+  against the email event schema whatever the header says.
+- Python checks `date-time` values in email and sent_email events, and `uri`
+  values in email events, with the patterns the Node validator uses instead of
+  jsonschema's optional format packages, so a bad
+  `email.content.download.expires_at` or `url` is refused at the schema
+  check. Python now refuses these values, which the Node SDK already refused
+  and the Python models accepted: a lowercase `t` between date and time, a
+  time without seconds, a unix timestamp string, and a URL with a space, a
+  non-ASCII character, a `%zz` escape or a trailing newline. The Python models
+  can still refuse a few values the schema allows, for example
+  `2025-02-30T12:00:00Z`, a tab between date and time, or the URL `https://`.
+- The message of a missing-field validation error names the field's full
+  path in all three SDKs, for example `Missing required field:
+  email.content.raw` instead of `Missing required field: raw`. Code that
+  matches on the message text needs updating; `field` and `suggestion` are
+  unchanged.
+- Node and Go report a payload without `email.content.raw` as missing
+  `email.content.raw`, as Python already did, rather than as an error on
+  `email.content.download` or `email.content`. The email event schema accepts
+  and refuses the same payloads as before.
+
 ### Additions
 
 #### Conversation sync helper
@@ -424,17 +458,6 @@ parsers.
   without a rule id. Given a rule id (`MatchedRulesFor(ruleID)` in Go) they
   keep only that rule's entries. Node also exports the helper and the
   understanding types from `@primitivedotdev/sdk/api`.
-
-#### Webhook validation errors
-
-- The message of a missing-field validation error names the field's full
-  path in all three SDKs, for example `Missing required field:
-  email.content.raw` instead of `Missing required field: raw`. `field` and
-  `suggestion` are unchanged.
-- Node and Go report a payload without `email.content.raw` as missing
-  `email.content.raw`, as Python already did, rather than as an error on
-  `email.content.download` or `email.content`. The email event schema accepts
-  and refuses the same payloads as before.
 
 #### CLI
 
