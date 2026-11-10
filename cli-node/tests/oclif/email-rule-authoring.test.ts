@@ -852,7 +852,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
         error: {
           code: "expectations_not_passed",
           message:
-            "The answer's expectations did not all pass; read expectations in the answer.",
+            "The answer's expectations did not all pass; read their result in the answer.",
         },
         exit_code: 1,
         warnings: [stderrLines(result)[0]],
@@ -1214,7 +1214,7 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
       ]);
     });
 
-    it("exits 3 when none failed and one is undecided, as a write answers it with passed null", async () => {
+    it("exits 3 when none failed and one is undecided, with passed null", async () => {
       const data = check({
         passed: null,
         decided: false,
@@ -1317,6 +1317,110 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
         sent(),
       ]);
       expect(result.exitCode).toBe(0);
+    });
+
+    it("exits 3 when none failed and one is undecided, with passed false", async () => {
+      answer(check({ passed: false, failed: [], undecided: [D] }));
+      const result = await run("email-rules:update-email-rule", [
+        RULE,
+        "--expectations-file",
+        sent(),
+        "--fail-on-expectations",
+      ]);
+      expect(result.exitCode, result.stderr).toBe(3);
+    });
+
+    it("exits 1 for any other check that did not pass", async () => {
+      for (const fields of [
+        { passed: null, failed: [], undecided: [] },
+        { passed: false, failed: [], undecided: [] },
+        { failed: [], undecided: [] },
+        { passed: null, failed: "x", undecided: "y" },
+      ]) {
+        answer(check(fields));
+        const result = await run("email-rules:update-email-rule", [
+          RULE,
+          "--expectations-file",
+          sent(),
+          "--fail-on-expectations",
+          "--json",
+        ]);
+        expect(result.exitCode, JSON.stringify(fields)).toBe(1);
+        expect(JSON.parse(result.merged).error?.code).toBe(
+          "expectations_failed",
+        );
+      }
+    });
+
+    it("exits 0 on create with no expectations, and on update with a null file", async () => {
+      answer(written);
+      const created = await run("email-rules:create-email-rule", [
+        "--raw-body",
+        JSON.stringify({ tree, name: "n", english: "e" }),
+        "--fail-on-expectations",
+      ]);
+      expect(created.exitCode, created.stderr).toBe(0);
+      answer(written);
+      const cleared = await run("email-rules:update-email-rule", [
+        RULE,
+        "--expectations-file",
+        tempFile("null.json", "null"),
+        "--fail-on-expectations",
+      ]);
+      expect(cleared.exitCode, cleared.stderr).toBe(0);
+    });
+
+    it("prints the data alone under --json when every one passed", async () => {
+      const data = check({
+        passed: true,
+        decided: true,
+        failed: [],
+        undecided: [],
+      });
+      answer(data);
+      const result = await run("email-rules:update-email-rule", [
+        RULE,
+        "--expectations-file",
+        sent(),
+        "--fail-on-expectations",
+        "--json",
+      ]);
+      expect(result.exitCode).toBe(0);
+      expect(JSON.parse(result.merged)).toEqual(data);
+    });
+
+    it("fails closed when the report cannot be built, and only with the flag", async () => {
+      const extension = OPERATION_EXTENSIONS.updateEmailRule;
+      if (!extension) throw new Error("updateEmailRule has no extension");
+      const report = extension.report;
+      extension.report = () => {
+        throw new Error("bad answer");
+      };
+      try {
+        const exitFor = async (data: unknown, flag: boolean) => {
+          answer(data);
+          const result = await run("email-rules:update-email-rule", [
+            RULE,
+            "--expectations-file",
+            sent(),
+            ...(flag ? ["--fail-on-expectations"] : []),
+          ]);
+          return result.exitCode;
+        };
+        const failed = check({ passed: false, failed: [B], undecided: [] });
+        expect(await exitFor(failed, true)).toBe(1);
+        expect(await exitFor(failed, false)).toBe(0);
+        // No check, though the write sent expectations: not checked, so test the rule.
+        expect(await exitFor(written, true)).toBe(3);
+        expect(
+          await exitFor(
+            check({ passed: true, failed: [], undecided: [] }),
+            true,
+          ),
+        ).toBe(0);
+      } finally {
+        extension.report = report;
+      }
     });
 
     it("is a flag on create and update", () => {

@@ -45,7 +45,7 @@ export type OperationExtension = {
    */
   fallbackExitCode?: (
     data: unknown,
-    flags: Record<string, unknown>,
+    request: { body: unknown; flags: Record<string, unknown> },
   ) => number | undefined;
   /**
    * Read the answer's data, given the request body and path that were sent

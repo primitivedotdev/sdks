@@ -2167,10 +2167,10 @@ export function createOperationCommand(
           reportError = error instanceof Error ? error.message : String(error);
           let fallback: number | undefined;
           try {
-            fallback = extension?.fallbackExitCode?.(
-              envelope?.data,
-              parsedFlags,
-            );
+            fallback = extension?.fallbackExitCode?.(envelope?.data, {
+              body,
+              flags: parsedFlags,
+            });
           } catch {
             fallback = 1;
           }
@@ -2181,7 +2181,7 @@ export function createOperationCommand(
               error: {
                 code: "expectations_not_passed",
                 message:
-                  "The answer's expectations did not all pass; read expectations in the answer.",
+                  "The answer's expectations did not all pass; read their result in the answer.",
               },
             };
         }

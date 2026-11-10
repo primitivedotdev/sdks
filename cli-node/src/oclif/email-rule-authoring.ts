@@ -296,9 +296,10 @@ export function formatFact(
 }
 
 export function scopeWarningLine(warning: EmailRuleScopeWarning): string {
-  const message = warning.message?.trim()
-    ? withCliCommands(warning.message.trim())
-    : undefined;
+  const message =
+    typeof warning.message === "string" && warning.message.trim()
+      ? withCliCommands(warning.message.trim())
+      : undefined;
   if (!message) return `Scope warning: ${warning.name} (${warning.reason})`;
   return message.includes(warning.name)
     ? `Scope warning: ${message}`
@@ -644,8 +645,9 @@ export const FAIL_ON_EXPECTATIONS_FLAG = "fail-on-expectations";
  * The exit code and --json `error` of a rule write under
  * --fail-on-expectations: 1 when an expectation failed; 3 when none failed but
  * one is undecided, or when expectations this write sent were not checked.
- * Read from the failed and undecided lists, not `passed`, which a write
- * answers as null when nothing failed and something is undecided.
+ * Read from the failed and undecided lists first, since a write may answer
+ * `passed` as false or as null when nothing failed and something is
+ * undecided; any other check that did not pass exits 1.
  */
 function writtenExpectationsOutcome(
   check: unknown,
@@ -681,8 +683,8 @@ function writtenExpectationsOutcome(
         message: `${plural(undecided.length, "expectation is", "expectations are")} undecided on this write, which judges them without classifying mail or asking the rule's questions: ${undecided.join(", ")}. Test them with ${test}.`,
       },
     };
-  // Fail closed: a check that names nothing failed or undecided yet is not a pass.
-  if (check.passed === false)
+  // Fail closed: a check that names nothing failed or undecided yet did not pass.
+  if (check.passed !== true)
     return {
       exitCode: EXIT_EXPECTATION_FAILED,
       error: {
@@ -722,17 +724,21 @@ export function writtenEmailRuleReport(
 }
 
 /**
- * A rule write's exit code when its report cannot be built: under
- * --fail-on-expectations, 1 for a check that is there and did not pass.
+ * A rule write's exit code when its report cannot be built, under
+ * --fail-on-expectations: 1 for a check that is there and did not pass, and 3
+ * when there is none but the write sent expectations.
  */
 function writtenFallbackExitCode(
   data: unknown,
-  flags: Record<string, unknown>,
+  request: { body: unknown; flags: Record<string, unknown> },
 ): number | undefined {
-  if (flags[FAIL_ON_EXPECTATIONS_FLAG] !== true) return undefined;
-  const check = (data as { expectations_check?: { passed?: unknown } } | null)
-    ?.expectations_check;
-  return check && check.passed !== true ? EXIT_EXPECTATION_FAILED : undefined;
+  if (request.flags[FAIL_ON_EXPECTATIONS_FLAG] !== true) return undefined;
+  const check = isRecord(data) ? data.expectations_check : undefined;
+  if (isRecord(check))
+    return check.passed !== true ? EXIT_EXPECTATION_FAILED : undefined;
+  return isRecord(request.body) && isRecord(request.body.expectations)
+    ? EXIT_EXPECTATION_UNDECIDED
+    : undefined;
 }
 
 // get-email-rule-scope
