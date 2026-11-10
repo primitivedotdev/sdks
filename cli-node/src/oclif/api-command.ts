@@ -8,6 +8,7 @@ import type {
 } from "@primitivedotdev/api-core";
 import { operations } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "./api-client.js";
+import { cliCommandLines } from "./api-path-commands.js";
 import {
   ATTACHMENT_WAIT_FLAG_DESCRIPTION,
   ATTACHMENT_WAIT_MAX_MS,
@@ -859,7 +860,12 @@ export function writeErrorWithHints(
   payload: unknown,
   response?: Response,
 ): void {
-  process.stderr.write(`${formatErrorPayload(payload)}\n`);
+  const formatted = formatErrorPayload(payload);
+  process.stderr.write(`${formatted}\n`);
+  // A route the error names, given as the command that calls it.
+  for (const line of cliCommandLines(formatted)) {
+    process.stderr.write(`${line}\n`);
+  }
   const code = extractErrorCode(payload);
   if (
     response?.status === 429 ||

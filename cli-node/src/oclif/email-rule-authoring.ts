@@ -23,6 +23,7 @@ import type {
   ListEmailRuleResultsResult,
   TestEmailRuleResult,
 } from "@primitivedotdev/api-core";
+import { withCliCommands } from "./api-path-commands.js";
 import type {
   ExtensionBodyField,
   OperationExtension,
@@ -285,7 +286,9 @@ export function formatFact(
 }
 
 export function scopeWarningLine(warning: EmailRuleScopeWarning): string {
-  const message = warning.message?.trim();
+  const message = warning.message?.trim()
+    ? withCliCommands(warning.message.trim())
+    : undefined;
   if (!message) return `Scope warning: ${warning.name} (${warning.reason})`;
   return message.includes(warning.name)
     ? `Scope warning: ${message}`
