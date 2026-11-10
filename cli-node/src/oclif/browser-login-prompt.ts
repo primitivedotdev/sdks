@@ -1,4 +1,7 @@
 import { spawn } from "node:child_process";
+import { win32 } from "node:path";
+
+const { join } = win32;
 
 export type BrowserLoginStart = {
   user_code: string;
@@ -17,14 +20,47 @@ type Input = {
   setRawMode?: (mode: boolean) => unknown;
 };
 
+/**
+ * The program and arguments that open `url` in the default browser. On
+ * Windows the link goes to the URL protocol handler directly: through `cmd
+ * /c start` an unquoted `&` would end the command, cutting a link such as an
+ * approval page's `?purpose=...&client=...` short.
+ */
+export function browserCommand(
+  url: string,
+  platform: NodeJS.Platform = process.platform,
+): { command: string; args: string[] } {
+  if (platform === "darwin") return { command: "open", args: [url] };
+  if (platform === "win32")
+    return {
+      // By full path, so a rundll32 in the working directory is never run.
+      command: join(
+        process.env.SystemRoot ?? "C:\\Windows",
+        "System32",
+        "rundll32.exe",
+      ),
+      args: ["url.dll,FileProtocolHandler", url],
+    };
+  return { command: "xdg-open", args: [url] };
+}
+
+/** The link as an http or https URL, or null for anything else (a path, file:, a share). */
+export function browsableUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:"
+      ? parsed.href
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Open an http or https link in the default browser; anything else is left to the printed link. */
 export function openBrowser(url: string): void {
-  const command =
-    process.platform === "darwin"
-      ? "open"
-      : process.platform === "win32"
-        ? "cmd"
-        : "xdg-open";
-  const args = process.platform === "win32" ? ["/c", "start", "", url] : [url];
+  const link = browsableUrl(url);
+  if (!link) return;
+  const { command, args } = browserCommand(link);
   const child = spawn(command, args, { detached: true, stdio: "ignore" });
   child.on("error", () => undefined);
   child.unref();
