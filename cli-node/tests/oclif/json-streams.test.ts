@@ -621,6 +621,49 @@ describe("generated commands with --json", () => {
     expect(templates.cursor?.description).not.toContain("--envelope");
   });
 
+  it("pages memories search: the cursor on stderr, or in the envelope", async () => {
+    responder = () =>
+      jsonResponse(200, {
+        success: true,
+        data: [{ key: "a" }],
+        meta: { cursor: "a" },
+      });
+    const bare = await runMerged("memories:search", []);
+    expect(bare.exitCode).toBe(0);
+    expect(JSON.parse(bare.stdout)).toEqual([{ key: "a" }]);
+    expect(bare.stderr).toBe("next cursor: a\n");
+    const json = await runMerged("memories:search", ["--json"]);
+    expect(json.stderr).toBe("");
+    expect(parseOne(json.merged)).toEqual([{ key: "a" }]);
+    const enveloped = await runMerged("memories:search", [
+      "--json",
+      "--envelope",
+    ]);
+    expect(parseOne(enveloped.merged)).toEqual({
+      success: true,
+      data: [{ key: "a" }],
+      meta: { cursor: "a" },
+    });
+    const plainEnvelope = await runMerged("memories:search", ["--envelope"]);
+    expect(JSON.parse(plainEnvelope.stdout)).toMatchObject({
+      meta: { cursor: "a" },
+    });
+    expect(plainEnvelope.stderr).toBe("next cursor: a\n");
+    responder = () =>
+      jsonResponse(200, { success: true, data: [], meta: { cursor: null } });
+    const last = await runMerged("memories:search", []);
+    expect(last.stderr).toBe("");
+    responder = () =>
+      jsonResponse(200, {
+        success: true,
+        data: [{ key: "a\nb" }],
+        meta: { cursor: "a\nb" },
+      });
+    const odd = await runMerged("memories:search", []);
+    expect(odd.stderr.split("\n").filter(Boolean)).toHaveLength(1);
+    expect(odd.stderr).toContain('"a\\nb"');
+  });
+
   it("keeps the data-only output and stderr cursor without --json", async () => {
     responder = () =>
       jsonResponse(200, {
