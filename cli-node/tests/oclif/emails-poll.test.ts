@@ -6,7 +6,7 @@ import {
   cursorFromAcceptedRows,
   cursorFromRows,
   filtersFromFlags,
-  normalizeIsoDate,
+  parseSince,
   sinceFromFlags,
 } from "../../src/oclif/commands/emails-poll.js";
 
@@ -171,9 +171,32 @@ describe("flag normalization", () => {
   });
 
   it("normalizes since and respects include-existing", () => {
-    expect(normalizeIsoDate("2026-05-08", "--since")).toBe(
-      "2026-05-08T00:00:00.000Z",
-    );
+    expect(parseSince("2026-05-08")).toBe("2026-05-08T00:00:00.000Z");
     expect(sinceFromFlags({ "include-existing": true })).toBeUndefined();
+  });
+
+  it("reads --since as a timestamp or as a duration ago", () => {
+    const now = Date.parse("2026-11-10T12:00:00.000Z");
+    expect(parseSince("30s", now)).toBe("2026-11-10T11:59:30.000Z");
+    expect(parseSince("15m", now)).toBe("2026-11-10T11:45:00.000Z");
+    expect(parseSince("2H", now)).toBe("2026-11-10T10:00:00.000Z");
+    expect(parseSince("1d", now)).toBe("2026-11-09T12:00:00.000Z");
+    expect(parseSince("2026-11-10T08:00:00Z", now)).toBe(
+      "2026-11-10T08:00:00.000Z",
+    );
+    expect(() => parseSince("99999999999d", now)).toThrow("--since must be");
+    // Far enough back to land before 1970.
+    expect(() => parseSince("30000d", now)).toThrow("--since must be");
+    expect(() => parseSince("5", now)).toThrow(
+      "--since needs a unit on a duration, for example 5m;",
+    );
+    expect(() => parseSince("15 minutes", now)).toThrow(
+      "--since must be an ISO-8601 timestamp or date, or a duration ago such as 30s, 15m, 2h or 1d.",
+    );
+    // Without --since or --include-existing the window starts now.
+    expect(sinceFromFlags({}, now)).toBe("2026-11-10T12:00:00.000Z");
+    expect(sinceFromFlags({ since: "15m" }, now)).toBe(
+      "2026-11-10T11:45:00.000Z",
+    );
   });
 });

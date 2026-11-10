@@ -172,11 +172,51 @@ describe("emails wait --json", () => {
     expect(JSON.parse(result.stdout[1] as string)).toEqual({
       error: {
         code: "wait_timeout",
-        message: "Timed out waiting for 2 matching emails; received 1.",
+        message:
+          "Timed out waiting for 2 matching emails; received 1. Only mail received after the wait started was counted; to include mail that already arrived, run it again with --since (for example --since 15m) or --include-existing.",
       },
       exit_code: 1,
       matched: 1,
     });
+  });
+
+  it("looks back with --since, and then drops the forward-only hint", async () => {
+    mocks.searchEmails.mockResolvedValue(page([]));
+    const before = Date.now();
+    const result = await runWait([
+      "--json",
+      "--since",
+      "15m",
+      "--timeout",
+      "1",
+      "--interval",
+      "1",
+    ]);
+    const after = Date.now();
+    const call = mocks.searchEmails.mock.calls[0] as
+      | [{ query: { date_from: string } }]
+      | undefined;
+    const since = Date.parse(call?.[0].query.date_from ?? "");
+    // Fifteen minutes before the moment the command ran.
+    expect(since).toBeGreaterThanOrEqual(before - 15 * 60_000);
+    expect(since).toBeLessThanOrEqual(after - 15 * 60_000);
+    expect(JSON.parse(result.stdout[0] as string).error.message).toBe(
+      "Timed out waiting for 1 matching email; received 0.",
+    );
+  });
+
+  it("says in its help that only new mail counts unless told otherwise", () => {
+    const command = COMMANDS["emails:wait"] as unknown as {
+      description: string;
+      flags: Record<string, { description?: string }>;
+    };
+    expect(command.description).toContain(
+      "only mail received after the\n  wait starts counts by default",
+    );
+    expect(command.flags.since?.description).toContain("15m");
+    expect(command.flags.since?.description).toContain(
+      "including ones that arrived before the wait started",
+    );
   });
 
   it("keeps the plain-text timeout on stderr without --json", async () => {

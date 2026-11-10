@@ -34,6 +34,7 @@ import {
   fetchEmailSearchPage,
   filtersFromFlags,
   MAX_EMAIL_POLL_PAGE_SIZE,
+  SINCE_VALUE_HELP,
   sinceFromFlags,
   sleep,
 } from "./emails-poll.js";
@@ -47,6 +48,12 @@ function cliError(message: string): Errors.CLIError {
 class EmailsWaitCommand extends Command {
   static description =
     `Wait until matching inbound emails arrive, printing each match as it is found.
+
+  Except in a connected agent's exact-parent wait, only mail received after the
+  wait starts counts by default: an email that arrived before you ran the
+  command is not matched. To include it, pass --since with a time before it
+  arrived (for example --since 15m) or --include-existing. Starting the wait
+  before the mail is sent also works.
 
   Connected agents require --reply-to-sent-email-id and an exact peer --from.
   The receiving address is derived from the existing sent email; optional --to
@@ -66,9 +73,11 @@ class EmailsWaitCommand extends Command {
   network error during the wait is retried with backoff until --timeout,
   with one note on stderr per retry.`;
 
-  static summary = "Wait for matching inbound emails";
+  static summary =
+    "Wait for matching inbound emails. By default only mail that arrives after it starts counts; --since 15m or --include-existing also matches earlier mail";
 
   static examples = [
+    "<%= config.bin %> emails wait --to test@example.com --subject invoice --since 15m",
     "<%= config.bin %> emails wait --reply-to-sent-email-id <sent-id> --from peer@example.com",
     "<%= config.bin %> emails wait --to test@example.com",
     "<%= config.bin %> emails wait --subject verify --number 5 --timeout 120",
@@ -116,7 +125,7 @@ class EmailsWaitCommand extends Command {
     }),
     "include-existing": Flags.boolean({
       description:
-        "Start from existing matching emails; this is the default for connected exact-parent waits",
+        "Also match emails that arrived before the wait started, however old; this is the default for connected exact-parent waits. To look back a set time instead, use --since",
     }),
     interval: Flags.integer({
       default: DEFAULT_EMAIL_POLL_INTERVAL_SECONDS,
@@ -148,7 +157,8 @@ class EmailsWaitCommand extends Command {
         "Filter to inbound emails that are threaded replies to a specific outbound send (UUID from a /v1/send-mail response). Combine with --to and --since for the strictest version of the wait-for-reply pattern.",
     }),
     since: Flags.string({
-      description: "Only match emails received on or after this date/time",
+      summary: "Include mail since: a timestamp, or a duration ago like 15m",
+      description: `Match emails received on or after this time, including ones that arrived before the wait started: ${SINCE_VALUE_HELP}. Without --since or --include-existing, only mail received after the wait starts counts, except in a connected exact-parent wait`,
     }),
     "spam-score-gte": Flags.integer({
       description:
@@ -325,7 +335,11 @@ class EmailsWaitCommand extends Command {
       await sleep(flags.interval * 1000);
     }
 
-    const message = `Timed out waiting for ${flags.number} matching email${flags.number === 1 ? "" : "s"}; received ${matched}.`;
+    // A wait that started from now cannot see mail that came earlier; say so,
+    // or "received 0" reads as the mail never arriving.
+    const forwardOnly =
+      !connected && !flags.since && !flags["include-existing"];
+    const message = `Timed out waiting for ${flags.number} matching email${flags.number === 1 ? "" : "s"}; received ${matched}.${forwardOnly ? " Only mail received after the wait started was counted; to include mail that already arrived, run it again with --since (for example --since 15m) or --include-existing." : ""}`;
     this.timedOut = { matched, message };
     process.stderr.write(`${message}\n`);
     process.exitCode = 1;
