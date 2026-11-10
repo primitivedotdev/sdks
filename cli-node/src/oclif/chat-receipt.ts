@@ -24,6 +24,12 @@ type ReceiptData = {
   reply?: { emailId: string; requestId: string };
   idempotency_key?: string;
   send_attempted?: boolean;
+  /**
+   * Set on every receipt this version writes. A receipt without it was
+   * written by a version that defaulted --from to agent@ at the first active
+   * domain, which the legacy check in chat looks for.
+   */
+  from_rule?: "per_credential";
 };
 export type ChatReceipt = { path: string; data: ReceiptData };
 
@@ -147,10 +153,11 @@ export function hasUnfinishedChatReceipt(
 }
 
 /**
- * Whether any chat this CLI started is still unfinished, read from the saved
- * receipts alone. A cheap first test before asking the API anything.
+ * Whether a chat an earlier version of this CLI started is still unfinished:
+ * an unfinished receipt without `from_rule`. Read from the saved receipts
+ * alone, as a cheap first test before asking the API anything.
  */
-export function anyUnfinishedChatReceipt(configDir: string): boolean {
+export function anyUnfinishedLegacyChatReceipt(configDir: string): boolean {
   const directory = join(configDir, "chat-receipts");
   let names: string[];
   try {
@@ -161,12 +168,48 @@ export function anyUnfinishedChatReceipt(configDir: string): boolean {
   return names.some((name) => {
     if (!name.endsWith(".json")) return false;
     try {
-      return !parseReceipt(readFileSync(join(directory, name), "utf8"))
-        .completed;
+      const data = parseReceipt(readFileSync(join(directory, name), "utf8"));
+      return !data.completed && data.from_rule === undefined;
     } catch {
-      return true;
+      return false;
     }
   });
+}
+
+/**
+ * The unfinished receipt filed under `scope`, or null when there is none or
+ * it is finished: whether its send was recorded, when it started, and its
+ * idempotency key when it kept one. An unreadable receipt counts as
+ * unfinished with nothing recorded.
+ */
+export function loadUnfinishedChatReceipt(
+  configDir: string,
+  scope: string,
+): { sent: boolean; sentAtIso?: string; idempotencyKey?: string } | null {
+  const path = join(
+    configDir,
+    "chat-receipts",
+    `${chatRequestHash(scope)}.json`,
+  );
+  let raw: string;
+  try {
+    raw = readFileSync(path, "utf8");
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "ENOENT"
+      ? null
+      : { sent: false };
+  }
+  try {
+    const data = parseReceipt(raw);
+    if (data.completed) return null;
+    return {
+      sent: data.sent !== null,
+      sentAtIso: data.sent_at,
+      ...(data.idempotency_key ? { idempotencyKey: data.idempotency_key } : {}),
+    };
+  } catch {
+    return { sent: false };
+  }
 }
 
 /** Caller holds the request/parent lock until completion. Unknown POSTs never retry. */
@@ -223,6 +266,7 @@ export function beginChatReceipt(
       sent_at: new Date().toISOString(),
       sent: null,
       completed: false,
+      from_rule: "per_credential",
       ...(options.connected
         ? {
             idempotency_key: `primitive-chat-${randomUUID()}`,

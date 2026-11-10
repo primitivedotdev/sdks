@@ -3,6 +3,7 @@ import type {
   EmailDetail,
   EmailDetailReply,
   GetEmailResponse,
+  PrimitiveApiClient,
   SearchEmailsResponse,
   SendMailResult,
 } from "@primitivedotdev/api-core";
@@ -22,6 +23,7 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { readAttachmentFiles } from "../attachments.js";
+import type { ResolvedCliAuth } from "../auth.js";
 import {
   type HaltedAutoWorking,
   haltAutoWorking,
@@ -34,12 +36,13 @@ import {
   ChatLockContentionError,
 } from "../chat-lock.js";
 import {
-  anyUnfinishedChatReceipt,
+  anyUnfinishedLegacyChatReceipt,
   beginChatReceipt,
   type ChatReceipt,
   chatCredentialIdentity,
   chatRequestHash,
   hasUnfinishedChatReceipt,
+  loadUnfinishedChatReceipt,
   saveChatReceipt,
   UncertainChatSendError,
 } from "../chat-receipt.js";
@@ -1571,6 +1574,82 @@ class ChatCommand extends Command {
     }
   }
 
+  /**
+   * Earlier versions defaulted --from to agent@ at the first active domain,
+   * and the From is part of a chat's receipt key. Before a new message goes
+   * out under a defaulted From, look for one of their unfinished chats of
+   * this same message from that old default, and stop as uncertain rather
+   * than send it a second time. Only receipts those versions wrote are read
+   * (see anyUnfinishedLegacyChatReceipt), so this costs nothing once they are
+   * gone. The old default is worked out from the organization's domains as
+   * they are now, so a chat from a first active domain that has since changed
+   * is not found.
+   */
+  private async stopForLegacyChat(params: {
+    apiClient: PrimitiveApiClient;
+    auth: ResolvedCliAuth;
+    recipient: string;
+    message: string;
+    subjects: string[];
+    inReplyTo: string | undefined;
+    attachments: ReturnType<typeof readAttachmentFiles>;
+    newFrom: string | undefined;
+  }): Promise<void> {
+    const { configDir } = this.config;
+    if (!anyUnfinishedLegacyChatReceipt(configDir)) return;
+    const legacy = await legacyDefaultFromAddress(params.apiClient);
+    if (legacy.kind === "none") return;
+    // Uncertain, never not sent: a script must not read the stop as leave
+    // to send the message again.
+    if (legacy.kind === "unknown")
+      throw new UncertainChatSendError(
+        "Could not check whether a chat an earlier version of this CLI left unfinished is this message, so nothing was sent. Retry once the API answers. Passing --from skips this check and, if an earlier version already sent this message, sends a second copy.",
+      );
+    if (
+      params.newFrom !== undefined &&
+      legacy.address.toLowerCase() === params.newFrom.toLowerCase()
+    )
+      return;
+    for (const subject of new Set(params.subjects)) {
+      const found = loadUnfinishedChatReceipt(
+        configDir,
+        chatRequestHash({
+          api: params.auth.apiBaseUrl,
+          account:
+            params.auth.credentials?.org_id ??
+            chatCredentialIdentity(params.auth.apiKey, params.auth.apiBaseUrl),
+          from: legacy.address,
+          recipient: params.recipient,
+          subject,
+          message: params.message,
+          parent: params.inReplyTo,
+          attachments: params.attachments,
+        }),
+      );
+      if (!found) continue;
+      // The key that chat's send carried, so the uncertain answer names how
+      // to reconcile it.
+      this.chatProgress.idempotencyKey =
+        found.idempotencyKey ??
+        deriveSendIdempotencyKey("send", {
+          from: legacy.address,
+          to: params.recipient,
+          subject,
+          body_text: params.message,
+          ...(params.inReplyTo !== undefined
+            ? { in_reply_to: params.inReplyTo }
+            : {}),
+          ...(params.attachments !== undefined
+            ? { attachments: params.attachments }
+            : {}),
+        });
+      throw new UncertainChatSendError(
+        `A chat with this message to ${params.recipient} from ${legacy.address}, started by an earlier version of this CLI, is unfinished: ${found.sent ? "it was sent" : "its outcome is unknown"}. To resume it rather than send it again, rerun with --from ${legacy.address}.${params.newFrom !== undefined ? ` Rerunning with --from ${params.newFrom} sends a second copy.` : ""}`,
+        found.sentAtIso ? { sentAtIso: found.sentAtIso } : undefined,
+      );
+    }
+  }
+
   private reportAwaitingReply(
     context: ChatBaseContext,
     options: {
@@ -1765,12 +1844,41 @@ class ChatCommand extends Command {
           parentReply = replyContext.parentReply;
           subject = derivedReplySubject(replyContext.parentReply);
         } else {
-          from =
-            selectedFrom ??
-            (await pickDefaultFromAddress(apiClient, authFailureContext, {
-              to: args.recipient,
-            }));
           subject = flags.subject ?? deriveChatSubject(message);
+          if (selectedFrom !== undefined) {
+            from = selectedFrom;
+          } else {
+            // A refusal of the new default waits until the legacy check has
+            // run: the credentials it refuses (an organization-wide key, a
+            // person with no member address to send from) are the ones the
+            // old agent@ default served.
+            let defaulted: string | undefined;
+            let refusal: unknown;
+            try {
+              defaulted = await pickDefaultFromAddress(
+                apiClient,
+                authFailureContext,
+                { to: args.recipient },
+              );
+            } catch (error) {
+              refusal = error;
+            }
+            await this.stopForLegacyChat({
+              apiClient,
+              auth,
+              recipient: args.recipient,
+              message,
+              subjects:
+                flags.subject === undefined
+                  ? [subject, deriveSubject(message)]
+                  : [subject],
+              inReplyTo: flags["in-reply-to"],
+              attachments,
+              newFrom: defaulted,
+            });
+            if (refusal !== undefined) throw refusal;
+            from = defaulted as string;
+          }
         }
 
         const hashFor = (value: string, fromAddress: string = from) =>
@@ -1797,39 +1905,6 @@ class ChatCommand extends Command {
             hasUnfinishedChatReceipt(this.config.configDir, hashFor(previous))
           )
             subject = previous;
-        }
-        // Earlier versions defaulted --from to agent@ at the first active
-        // domain, and the From is part of the receipt key. If one of them
-        // left this same chat unfinished, stop rather than send it a second
-        // time from the new default, and let the caller choose the From.
-        if (
-          flags.from === undefined &&
-          !auth.connectedAgent &&
-          anyUnfinishedChatReceipt(this.config.configDir)
-        ) {
-          const legacy = await legacyDefaultFromAddress(apiClient);
-          // Reported as uncertain, never as not sent: a script must not read
-          // either stop as leave to send the message again.
-          if (legacy.kind === "unknown")
-            throw new UncertainChatSendError(
-              `Could not check whether an earlier version of this CLI left this chat unfinished under its old default From, so it was not sent. Rerun with --from ${from} to send it from ${from}, or retry once the API answers.`,
-            );
-          const subjects = new Set([subject]);
-          if (!parentReply && flags.subject === undefined)
-            subjects.add(deriveSubject(message));
-          if (
-            legacy.kind === "address" &&
-            legacy.address.toLowerCase() !== from.toLowerCase() &&
-            [...subjects].some((value) =>
-              hasUnfinishedChatReceipt(
-                this.config.configDir,
-                hashFor(value, legacy.address),
-              ),
-            )
-          )
-            throw new UncertainChatSendError(
-              `An earlier version of this CLI started this chat from ${legacy.address} and did not finish it, so it may already have been sent. To resume it rather than send it again, rerun with --from ${legacy.address}. To send it as a new message from ${from}, rerun with --from ${from}.`,
-            );
         }
         const requestHash = hashFor(subject);
         const scope = parentReply

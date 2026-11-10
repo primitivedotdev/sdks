@@ -1,13 +1,14 @@
 import {
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { ux } from "@oclif/core";
+import { Errors, ux } from "@oclif/core";
 import type {
   EmailDetail,
   EmailSearchResult,
@@ -732,62 +733,148 @@ describe("chat command", () => {
     expect(mocks.sendEmail.mock.calls[0][0].body.subject).toBe(message);
   });
 
-  it("stops, rather than send again, a chat an earlier version left unfinished from its agent@ default", async () => {
-    mocks.createAuthenticatedCliApiClient.mockResolvedValue({
-      apiClient: { client: {} },
-      auth: {
-        apiKey: ["prim", "test"].join("_"),
-        apiBaseUrl: "https://api.primitive.dev/v1",
-        credentials: { org_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" },
-      },
-      baseUrlOverridden: false,
+  describe("a chat an earlier version left unfinished from its agent@ default", () => {
+    const personAuth = () =>
+      mocks.createAuthenticatedCliApiClient.mockResolvedValue({
+        apiClient: { client: {} },
+        auth: {
+          apiKey: ["prim", "test"].join("_"),
+          apiBaseUrl: "https://api.primitive.dev/v1",
+          credentials: { org_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" },
+        },
+        baseUrlOverridden: false,
+      });
+    /** Leave "hello" unfinished from agent@sender.example, as an earlier version would have. */
+    async function leaveLegacyChat(message = "hello") {
+      mocks.sendEmail.mockRejectedValueOnce(new Error("lost response"));
+      await expect(
+        runChatCommand([
+          "help@agent.example",
+          message,
+          "--from",
+          "agent@sender.example",
+          "--json",
+        ]),
+      ).rejects.toThrow("lost response");
+      process.exitCode = undefined;
+      // Receipts this version writes are marked; an earlier version's were not.
+      const directory = join(testConfigDir(), "chat-receipts");
+      for (const name of readdirSync(directory)) {
+        const path = join(directory, name);
+        const data = JSON.parse(readFileSync(path, "utf8"));
+        delete data.from_rule;
+        writeFileSync(path, JSON.stringify(data));
+      }
+    }
+    const stoppedBy = (run: Promise<unknown>) =>
+      run.then(
+        () => null,
+        (error: { message: string; oclif?: { exit?: number } }) => error,
+      );
+
+    it("stops as uncertain, rather than send it again from the new default", async () => {
+      personAuth();
+      await leaveLegacyChat();
+      mocks.pickDefaultFromAddress.mockResolvedValue("dana@yuuja.example");
+      mocks.legacyDefaultFromAddress.mockResolvedValue({
+        kind: "address",
+        address: "agent@sender.example",
+      });
+
+      const stopped = await stoppedBy(
+        runChatCommand(["help@agent.example", "hello", "--json"]),
+      );
+      expect(stopped?.oclif?.exit).toBe(4);
+      expect(stopped?.message).toBe(
+        "A chat with this message to help@agent.example from agent@sender.example, started by an earlier version of this CLI, is unfinished: its outcome is unknown. To resume it rather than send it again, rerun with --from agent@sender.example. Rerunning with --from dana@yuuja.example sends a second copy.",
+      );
+      expect(mocks.sendEmail).toHaveBeenCalledOnce();
+
+      // Another message is not held up by it, and goes out from the new default.
+      await runChatCommand(["help@agent.example", "something else", "--json"]);
+      expect(mocks.sendEmail).toHaveBeenCalledTimes(2);
+      expect(mocks.sendEmail.mock.calls[1][0].body.from).toBe(
+        "dana@yuuja.example",
+      );
     });
-    // An earlier version defaulted to agent@, and its send's outcome was lost.
-    mocks.sendEmail.mockRejectedValueOnce(new Error("lost response"));
-    await expect(
-      runChatCommand([
+
+    it("stops as uncertain for a credential the new default refuses, before its refusal", async () => {
+      personAuth();
+      await leaveLegacyChat();
+      mocks.pickDefaultFromAddress.mockRejectedValue(
+        new Errors.CLIError("This credential may send from any address", {
+          exit: 1,
+        }),
+      );
+      mocks.legacyDefaultFromAddress.mockResolvedValue({
+        kind: "address",
+        address: "agent@sender.example",
+      });
+
+      const stopped = await stoppedBy(
+        runChatCommand(["help@agent.example", "hello", "--json"]),
+      );
+      expect(stopped?.oclif?.exit).toBe(4);
+      expect(stopped?.message).toContain(
+        "To resume it rather than send it again, rerun with --from agent@sender.example.",
+      );
+      // A different message gets the refusal itself.
+      const refused = await stoppedBy(
+        runChatCommand(["help@agent.example", "another", "--json"]),
+      );
+      expect(refused?.message).toContain(
+        "This credential may send from any address",
+      );
+      expect(mocks.sendEmail).toHaveBeenCalledOnce();
+    });
+
+    it("stops as uncertain when the old default cannot be read, and sends when it equals the new one", async () => {
+      personAuth();
+      await leaveLegacyChat();
+      mocks.pickDefaultFromAddress.mockResolvedValue("dana@yuuja.example");
+      mocks.legacyDefaultFromAddress.mockResolvedValueOnce({ kind: "unknown" });
+      const unknown = await stoppedBy(
+        runChatCommand(["help@agent.example", "hello", "--json"]),
+      );
+      expect(unknown?.oclif?.exit).toBe(4);
+      expect(unknown?.message).toContain("Retry once the API answers.");
+      expect(mocks.sendEmail).toHaveBeenCalledOnce();
+
+      mocks.legacyDefaultFromAddress.mockResolvedValueOnce({
+        kind: "address",
+        address: "dana@yuuja.example",
+      });
+      await runChatCommand(["help@agent.example", "hello", "--json"]);
+      expect(mocks.sendEmail).toHaveBeenCalledTimes(2);
+    });
+
+    it("asks nothing when only this version's receipts are unfinished, or --from is given", async () => {
+      personAuth();
+      mocks.sendEmail.mockRejectedValueOnce(new Error("lost response"));
+      await expect(
+        runChatCommand([
+          "help@agent.example",
+          "hello",
+          "--from",
+          "agent@sender.example",
+          "--json",
+        ]),
+      ).rejects.toThrow("lost response");
+      process.exitCode = undefined;
+      mocks.pickDefaultFromAddress.mockResolvedValue("dana@yuuja.example");
+      await runChatCommand(["help@agent.example", "another", "--json"]);
+      expect(mocks.legacyDefaultFromAddress).not.toHaveBeenCalled();
+
+      await leaveLegacyChat("third");
+      await runChatCommand([
         "help@agent.example",
-        "hello",
+        "fourth",
         "--from",
-        "agent@sender.example",
+        "dana@yuuja.example",
         "--json",
-      ]),
-    ).rejects.toThrow("lost response");
-    process.exitCode = undefined;
-    mocks.pickDefaultFromAddress.mockResolvedValue("dana@yuuja.example");
-    mocks.legacyDefaultFromAddress.mockResolvedValue({
-      kind: "address",
-      address: "agent@sender.example",
+      ]);
+      expect(mocks.legacyDefaultFromAddress).not.toHaveBeenCalled();
     });
-
-    // Reported as uncertain (exit 4), never as not sent.
-    const stopped = await runChatCommand([
-      "help@agent.example",
-      "hello",
-      "--json",
-    ]).catch((error: { message: string; oclif?: { exit?: number } }) => error);
-    expect((stopped as { oclif?: { exit?: number } }).oclif?.exit).toBe(4);
-    expect((stopped as { message: string }).message).toBe(
-      "An earlier version of this CLI started this chat from agent@sender.example and did not finish it, so it may already have been sent. To resume it rather than send it again, rerun with --from agent@sender.example. To send it as a new message from dana@yuuja.example, rerun with --from dana@yuuja.example.",
-    );
-    expect(mocks.sendEmail).toHaveBeenCalledOnce();
-
-    // When the old default cannot be read, it does not send either.
-    mocks.legacyDefaultFromAddress.mockResolvedValueOnce({ kind: "unknown" });
-    const unknown = await runChatCommand([
-      "help@agent.example",
-      "hello",
-      "--json",
-    ]).catch((error: { message: string; oclif?: { exit?: number } }) => error);
-    expect((unknown as { oclif?: { exit?: number } }).oclif?.exit).toBe(4);
-    expect(mocks.sendEmail).toHaveBeenCalledOnce();
-
-    // Another message is not held up by it.
-    await runChatCommand(["help@agent.example", "something else", "--json"]);
-    expect(mocks.sendEmail).toHaveBeenCalledTimes(2);
-    expect(mocks.sendEmail.mock.calls[1][0].body.from).toBe(
-      "dana@yuuja.example",
-    );
   });
 
   it("does not send before authenticated readiness", async () => {
