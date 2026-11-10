@@ -119,21 +119,32 @@ export function formatMailboxAccess(list: MailboxAccessList): string {
   return list.entries.map((entry) => JSON.stringify(entry)).join("\n");
 }
 
+// Terminal control characters (C0 and DEL), built from code points so the
+// pattern holds no literal control character. A member's name is theirs to
+// write, so one holding a line break or an escape code cannot fake a line.
+const CONTROL_CHARACTERS = new RegExp(
+  `[${String.fromCharCode(0)}-${String.fromCharCode(31)}${String.fromCharCode(127)}]`,
+  "g",
+);
+
+function printable(text: string): string {
+  return text.replace(CONTROL_CHARACTERS, " ");
+}
+
 export function formatMembers(
   list: ProjectsListOrganizationPeopleResult,
 ): string {
   if (list.items.length === 0) return "No members.";
   return list.items
     .map((person) => {
-      const role =
-        person.role_name && person.role_name !== person.role
-          ? `${person.role_name} (${person.role})`
-          : person.role;
+      // role_name is the label the dashboard shows ("Admin", or a template
+      // or custom role such as "Finance reviewer (custom)").
+      const role = printable(person.role_name || person.role);
       const agents =
         person.agents.length > 0
           ? `  ${person.agents.length} agent${person.agents.length === 1 ? "" : "s"}`
           : "";
-      return `${person.name}  ${person.work_email ?? "no work email"}  ${role}  ${person.user_id}${agents}`;
+      return `${printable(person.name)}  ${person.work_email ?? "no work email"}  ${role}  ${person.user_id}${agents}`;
     })
     .join("\n");
 }
@@ -168,7 +179,7 @@ export class RolesListCommand extends Command {
 
 export class RolesMembersCommand extends Command {
   static description =
-    "List the organization's members with their roles: name, work email, role, user id and how many agents each has. Use it to see who can do what before you ask someone for something, for example before sending an email rule request. With --json, prints the response data, including each member's agents and the next page's cursor.";
+    "List the organization's members with their roles: name, work email, role, user id and how many directory agents each has. Use it to see each member's role before you ask someone for something, for example before sending an email rule request. With --json, prints the response data, including each member's role key, role id, agents and the next page's cursor.";
 
   static summary = "List members and their roles";
 
@@ -181,7 +192,8 @@ export class RolesMembersCommand extends Command {
   static flags = {
     ...SHARED_FLAGS,
     query: Flags.string({
-      description: "Only members whose name or email contains this text.",
+      description:
+        "Only members whose name, or email where you can see it, contains this text.",
     }),
     limit: Flags.integer({
       description: "Members per page, 1 to 100 (default 50).",

@@ -831,7 +831,7 @@ describe("roles commands", () => {
       name: "Alice",
       work_email: "alice@example.com",
       role: "restricted",
-      role_name: "Finance reviewer",
+      role_name: "Finance reviewer (custom)",
       role_id: "22222222-2222-4222-8222-222222222222",
       agents: [{ id: KEY_ID, address: "a@example.com", name: "helper" }],
     };
@@ -841,10 +841,10 @@ describe("roles commands", () => {
         {
           ...person,
           user_id: "33333333-3333-4333-8333-333333333333",
-          name: "Bob",
           work_email: null,
+          name: "Bob\u001b[2J\nfake line",
           role: "admin",
-          role_name: "admin",
+          role_name: "Admin",
           role_id: null,
           agents: [],
         },
@@ -854,8 +854,8 @@ describe("roles commands", () => {
     };
     expect(formatMembers(page as never)).toBe(
       [
-        "Alice  alice@example.com  Finance reviewer (restricted)  11111111-1111-4111-8111-111111111111  1 agent",
-        "Bob  no work email  admin  33333333-3333-4333-8333-333333333333",
+        "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111  1 agent",
+        "Bob [2J fake line  no work email  Admin  33333333-3333-4333-8333-333333333333",
       ].join("\n"),
     );
     const requests = useServer(() =>
@@ -868,7 +868,7 @@ describe("roles commands", () => {
       "10",
     ]);
     expect(plain.exitCode).toBeUndefined();
-    expect(plain.stdout).toContain("Finance reviewer (restricted)");
+    expect(plain.stdout).toContain("Finance reviewer (custom)");
     expect(plain.stderr).toBe(
       "next cursor: 44444444-4444-4444-8444-444444444444\n",
     );
@@ -876,11 +876,37 @@ describe("roles commands", () => {
     expect(url.pathname).toBe("/v1/organization/members");
     expect(url.searchParams.get("query")).toBe("ali");
     expect(url.searchParams.get("limit")).toBe("10");
-    const json = await run(RolesMembersCommand, ["--json"]);
+    const json = await run(RolesMembersCommand, [
+      "--json",
+      "--cursor",
+      "44444444-4444-4444-8444-444444444444",
+    ]);
     expect(json.stderr).toBe("");
     expect(JSON.parse(json.stdout)).toEqual(page);
+    expect(new URL(requests[1]?.url ?? "").searchParams.get("cursor")).toBe(
+      "44444444-4444-4444-8444-444444444444",
+    );
+    expect(formatMembers({ items: [], cursor: null, can_invite: false })).toBe(
+      "No members.",
+    );
     expect(COMMANDS["members:list"]).toBe(RolesMembersCommand);
     expect(COMMANDS["roles:members"]).toBe(RolesMembersCommand);
+  });
+
+  it("roles members prints the server's refusal and exits 1", async () => {
+    useServer(() =>
+      Response.json(
+        {
+          success: false,
+          error: { code: "forbidden", message: "Not a signed-in member" },
+        },
+        { status: 403 },
+      ),
+    );
+    const result = await run(RolesMembersCommand, []);
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("Not a signed-in member");
   });
 
   it("names the built-in roles, operator included, in roles list help", () => {

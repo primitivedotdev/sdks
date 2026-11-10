@@ -463,8 +463,8 @@ parsers.
   With a long-poll `--wait` or a forward `--since`, which read one page,
   `--limit` stays at the cap.
 - `primitive roles members` (also `primitive members list`) lists the
-  organization's members with their roles, so you can see who can do what
-  before asking someone, for example for an email rule. It takes `--query`,
+  organization's members with their roles, so you can see each member's
+  role before asking someone, for example for an email rule. It takes `--query`,
   `--limit`, `--cursor` and `--json`.
 - Generated commands for the new operations, except `createKey`, `rotateKey`,
   `updateKey` and `revokeCredential`, which the `primitive keys` commands
