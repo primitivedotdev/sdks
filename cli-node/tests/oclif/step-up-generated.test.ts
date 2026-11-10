@@ -151,7 +151,7 @@ describe("browser approval on a generated command", () => {
   });
 
   it("sends nothing more when no token is pasted, or one that cannot be sent", async () => {
-    for (const pasted of ["", "tok\nX"]) {
+    for (const pasted of ["", "tok\nX", "tok\u0001X"]) {
       sent = [];
       process.exitCode = undefined;
       terminal.pasted = pasted;
@@ -173,6 +173,12 @@ describe("browser approval on a generated command", () => {
       ]);
       expect(flags.browser, id).toBeDefined();
     }
+  });
+
+  it("drops whitespace around a pasted token, a Windows line ending included", async () => {
+    terminal.pasted = "\t tok-9 \r\n";
+    await run("endpoints:update", UPDATE);
+    expect(sent.map((s) => s.stepUp)).toEqual([null, "tok-9"]);
   });
 
   it("never prompts with a token already given", async () => {

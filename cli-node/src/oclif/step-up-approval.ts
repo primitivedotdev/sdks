@@ -74,6 +74,8 @@ export async function withApproval<R extends ApprovalAttempt>(
   io.write(
     "After you confirm, the page shows a one-time token. Paste it here to finish.\n",
   );
+  // Whitespace around a paste (a trailing line break, a Windows \r) is
+  // dropped; a control character inside the token cannot be sent.
   const token = (await io.prompt("Token: ")).trim();
   if (!token) return { ...first, stepUpUrl };
   if (CONTROL_CHARACTERS.test(token)) {
