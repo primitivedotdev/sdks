@@ -91,11 +91,6 @@ func TestExportedSchemaAgreesWithValidator(t *testing.T) {
 			t.Fatalf("%s: exported schema accepted=%v but ValidateEmailReceivedEvent error=%v", item.name, accepted, err)
 		}
 
-		// HandleWebhook, and so Receive, takes email.received events only and
-		// refuses the other email.* events with PAYLOAD_UNKNOWN_EVENT.
-		if event, _ := item.payload.(map[string]any)["event"].(string); event != string(EventTypeEmailReceived) {
-			continue
-		}
 		body, err := json.Marshal(item.payload)
 		if err != nil {
 			t.Fatalf("%s: encode payload: %v", item.name, err)

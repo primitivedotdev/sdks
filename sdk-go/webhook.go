@@ -319,6 +319,12 @@ func HandleWebhookEvent(options HandleWebhookOptions) (WebhookEvent, error) {
 	return ParseWebhookEvent(parsed, getHeaderValue(options.Headers, WebhookEventHeader))
 }
 
+// HandleWebhook verifies a delivery and returns its body as an
+// EmailReceivedEvent. It takes every email.* event the email event schema
+// lists, such as email.received and email.bounced, validated against
+// EmailReceivedEventJSONSchema, as the Node and Python SDKs do. Other event
+// families are refused with PAYLOAD_UNKNOWN_EVENT; use HandleWebhookEvent for
+// those.
 func HandleWebhook(options HandleWebhookOptions) (*EmailReceivedEvent, error) {
 	event, err := HandleWebhookEvent(options)
 	if err != nil {
@@ -330,14 +336,19 @@ func HandleWebhook(options HandleWebhookOptions) (*EmailReceivedEvent, error) {
 		return &typed, nil
 	case *EmailReceivedEvent:
 		return typed, nil
-	default:
-		return nil, NewWebhookPayloadError(
-			"PAYLOAD_UNKNOWN_EVENT",
-			fmt.Sprintf("HandleWebhook only supports email.received events, got %q", event.GetEvent()),
-			"Use HandleWebhookEvent or ParseWebhookEvent to handle unknown events gracefully.",
-			nil,
-		)
+	case UnknownEvent:
+		// ParseWebhookEvent types only email.received. The other email.*
+		// events share its payload, and the schema decides which are valid.
+		if strings.HasPrefix(typed.Event, "email.") {
+			return ValidateEmailReceivedEvent(typed.Payload)
+		}
 	}
+	return nil, NewWebhookPayloadError(
+		"PAYLOAD_UNKNOWN_EVENT",
+		fmt.Sprintf("HandleWebhook only supports email events, got %q", event.GetEvent()),
+		"Use HandleWebhookEvent or ParseWebhookEvent to handle unknown events gracefully.",
+		nil,
+	)
 }
 
 func ConfirmedHeaders() map[string]string {

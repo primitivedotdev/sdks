@@ -451,17 +451,55 @@ func TestHandleWebhookEvent(t *testing.T) {
 		t.Fatalf("unexpected unknown event payload: %#v", unknown.Payload)
 	}
 
+	// HandleWebhook validates every email.* body against the email event
+	// schema, as the Node and Python SDKs do, so this incomplete bounce is a
+	// validation failure rather than an unknown event.
 	_, err = HandleWebhook(HandleWebhookOptions{
 		Body:    unknownBody,
 		Headers: map[string]string{"primitive-signature": unknownSigned.Header},
 		Secret:  "test-webhook-secret",
 	})
-	var payloadErr *PrimitiveWebhookError
-	if !errors.As(err, &payloadErr) {
-		t.Fatalf("expected PrimitiveWebhookError for unknown event, got %v", err)
+	var validationErr *WebhookValidationError
+	if !errors.As(err, &validationErr) {
+		t.Fatalf("expected WebhookValidationError for an incomplete email.bounced body, got %v", err)
 	}
-	if payloadErr.Code() != "PAYLOAD_UNKNOWN_EVENT" {
-		t.Fatalf("unexpected error code: %s", payloadErr.Code())
+	if validationErr.Code() != "SCHEMA_VALIDATION_FAILED" {
+		t.Fatalf("unexpected error code: %s", validationErr.Code())
+	}
+}
+
+func TestHandleWebhookAcceptsEveryEmailEventType(t *testing.T) {
+	payload := loadJSONFixture(t, "webhook", "valid-email-received.json")
+	for _, eventType := range EmailEventTypes {
+		payload["event"] = eventType
+		body, err := json.Marshal(payload)
+		if err != nil {
+			t.Fatalf("marshal %s payload: %v", eventType, err)
+		}
+		signed, err := SignWebhookPayload(body, "test-webhook-secret")
+		if err != nil {
+			t.Fatalf("SignWebhookPayload returned error: %v", err)
+		}
+		options := HandleWebhookOptions{
+			Body:    body,
+			Headers: map[string]string{PrimitiveSignatureHeader: signed.Header, WebhookEventHeader: eventType},
+			Secret:  "test-webhook-secret",
+		}
+
+		event, err := HandleWebhook(options)
+		if err != nil {
+			t.Fatalf("HandleWebhook(%s) returned error: %v", eventType, err)
+		}
+		if event.Event != eventType {
+			t.Fatalf("HandleWebhook(%s) returned event %q", eventType, event.Event)
+		}
+		email, err := Receive(options)
+		if err != nil {
+			t.Fatalf("Receive(%s) returned error: %v", eventType, err)
+		}
+		if email.Raw.Event != eventType || email.ID != event.Email.ID {
+			t.Fatalf("Receive(%s) returned %q for email %q", eventType, email.Raw.Event, email.ID)
+		}
 	}
 }
 

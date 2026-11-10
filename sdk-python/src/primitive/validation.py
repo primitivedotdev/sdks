@@ -4,16 +4,19 @@ import re
 from dataclasses import dataclass
 from typing import Any, Generic, Literal, TypeVar
 
-from jsonschema import Draft7Validator, FormatChecker
+from jsonschema import Draft7Validator
 from pydantic import ValidationError
 
+from ._formats import webhook_format_checker
 from .errors import ValidationIssue, WebhookValidationError
 from .schema import email_received_event_json_schema
 from .types import EmailReceivedEvent
 
 T = TypeVar("T")
 
-_validator = Draft7Validator(email_received_event_json_schema, format_checker=FormatChecker())
+_validator = Draft7Validator(
+    email_received_event_json_schema, format_checker=webhook_format_checker()
+)
 _REQUIRED_PROPERTY_RE = re.compile(r"'([^']+)' is a required property")
 
 

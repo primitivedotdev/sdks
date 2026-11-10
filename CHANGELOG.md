@@ -425,7 +425,7 @@ parsers.
   keep only that rule's entries. Node also exports the helper and the
   understanding types from `@primitivedotdev/sdk/api`.
 
-#### Webhook validation errors
+#### Webhook validation
 
 - The message of a missing-field validation error names the field's full
   path in all three SDKs, for example `Missing required field:
@@ -435,6 +435,18 @@ parsers.
   `email.content.raw`, as Python already did, rather than as an error on
   `email.content.download` or `email.content`. The email event schema accepts
   and refuses the same payloads as before.
+- Python checks `date-time` and `uri` values in email events with the
+  patterns the Node validator uses, without jsonschema's optional format
+  packages, so a bad `email.content.download.expires_at` or `url` is refused
+  at the schema check. Values the Node SDK already refuses are now refused in
+  Python too, for example a lowercase `t` between date and time, a time
+  without seconds, a unix timestamp string, or a URL with a space or a
+  non-ASCII character.
+- Go `HandleWebhook` and `Receive` take every event type the email event
+  schema lists, such as `email.bounced`, as the Node and Python SDKs do.
+  Before, they refused those events with `PAYLOAD_UNKNOWN_EVENT`; an `email.*`
+  body that does not match the schema is now a `SCHEMA_VALIDATION_FAILED`
+  error.
 
 #### CLI
 

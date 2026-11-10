@@ -1,0 +1,159 @@
+{
+  "description": "Values for the date-time and uri formats in the webhook JSON schemas, with the verdict of the patterns the Node SDK's generated validators use (sdk-node/scripts/validator-ajv.ts). The Node and Python SDKs check these two formats with the same patterns and both run every case. The Go SDK checks formats with its JSON Schema library, which gives a different verdict on some of these values, and does not run them.",
+  "date-time": [
+    {
+      "value": "2025-12-14T12:00:00Z",
+      "valid": true
+    },
+    {
+      "value": "2025-12-14T12:00:00.123Z",
+      "valid": true
+    },
+    {
+      "value": "2025-12-14T12:00:00+05:30",
+      "valid": true
+    },
+    {
+      "value": "2025-12-14T12:00:00-0800",
+      "valid": true
+    },
+    {
+      "value": "2025-12-14 12:00:00Z",
+      "valid": true
+    },
+    {
+      "value": "2025-12-14\t12:00:00Z",
+      "valid": true
+    },
+    {
+      "value": "2025-12-14T12:00:00z",
+      "valid": true
+    },
+    {
+      "value": "2025-12-14t12:00:00Z",
+      "valid": false
+    },
+    {
+      "value": "2025-12-14T12:00:00",
+      "valid": false
+    },
+    {
+      "value": "2025-12-14",
+      "valid": false
+    },
+    {
+      "value": "2025-12-14T12:00Z",
+      "valid": false
+    },
+    {
+      "value": "2025-12-14T24:00:00Z",
+      "valid": false
+    },
+    {
+      "value": "2025-13-14T12:00:00Z",
+      "valid": false
+    },
+    {
+      "value": "2025-02-30T12:00:00Z",
+      "valid": true
+    },
+    {
+      "value": "2025-12-14T12:00:60Z",
+      "valid": false
+    },
+    {
+      "value": "2025-12-14T12:00:00Z\n",
+      "valid": false
+    },
+    {
+      "value": "tomorrow",
+      "valid": false
+    },
+    {
+      "value": "1734177600",
+      "valid": false
+    },
+    {
+      "value": "\uff12\uff10\uff12\uff15-12-14T12:00:00Z",
+      "valid": false
+    },
+    {
+      "value": "2025-12-14T12:00:00+24:00",
+      "valid": false
+    }
+  ],
+  "uri": [
+    {
+      "value": "https://api.primitive.dev/v1/downloads/raw/token123",
+      "valid": true
+    },
+    {
+      "value": "http://localhost:4001/raw/abc",
+      "valid": true
+    },
+    {
+      "value": "HTTPS://EXAMPLE.COM/Path",
+      "valid": true
+    },
+    {
+      "value": "https://example.com/%2F",
+      "valid": true
+    },
+    {
+      "value": "https://",
+      "valid": true
+    },
+    {
+      "value": "mailto:user@example.com",
+      "valid": true
+    },
+    {
+      "value": "ftp://example.com/file",
+      "valid": true
+    },
+    {
+      "value": "urn:isbn:0451450523",
+      "valid": true
+    },
+    {
+      "value": "https://example.com/a b",
+      "valid": false
+    },
+    {
+      "value": "https://exa mple.com/raw",
+      "valid": false
+    },
+    {
+      "value": "https://ex\u00e4mple.com/",
+      "valid": false
+    },
+    {
+      "value": "https://example.com/%zz",
+      "valid": false
+    },
+    {
+      "value": "/relative/path",
+      "valid": false
+    },
+    {
+      "value": "https://example.com/\n",
+      "valid": false
+    },
+    {
+      "value": "https://\u212a.example/",
+      "valid": false
+    },
+    {
+      "value": "https://[::1]:8080/x",
+      "valid": true
+    },
+    {
+      "value": "https://user:pass@example.com/?q=1#frag",
+      "valid": true
+    },
+    {
+      "value": "",
+      "valid": false
+    }
+  ]
+}

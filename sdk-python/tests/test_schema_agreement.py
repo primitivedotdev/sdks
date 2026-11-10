@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from jsonschema import Draft7Validator, FormatChecker
+from jsonschema import Draft7Validator
 
 from primitive import (
     PRIMITIVE_SIGNATURE_HEADER,
@@ -24,6 +24,7 @@ from primitive import (
     sign_webhook_payload,
     validate_email_received_event,
 )
+from primitive._formats import webhook_format_checker
 
 SECRET = "whsec_schema_agreement"
 PAYLOAD_FILES = ("valid-email-received.json", "address-scoped-email.json")
@@ -57,8 +58,10 @@ def _payloads() -> list[tuple[str, Any]]:
 
 
 PAYLOADS = _payloads()
+# The SDK's own format checker, which checks date-time and uri as the Node
+# validator does.
 SCHEMA = Draft7Validator(
-    email_received_event_json_schema, format_checker=FormatChecker()
+    email_received_event_json_schema, format_checker=webhook_format_checker()
 )
 
 
