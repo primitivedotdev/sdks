@@ -759,6 +759,24 @@ describe("generated commands with --json", () => {
     expect(document.meta.cursor).toBeNull();
   });
 
+  it("says when the request budget, not the list's end, stopped paging", async () => {
+    // One row a page with an advancing cursor: 200 rows would take 200 requests.
+    responder = (url) => {
+      const at = Number(url.searchParams.get("cursor") ?? "0");
+      return jsonResponse(200, {
+        success: true,
+        data: [{ id: `e${at}` }],
+        meta: { cursor: String(at + 1) },
+      });
+    };
+    const result = await runMerged("emails:search", ["--limit", "200"]);
+    expect(result.exitCode, result.merged).toBe(0);
+    expect(fetchCalls).toHaveLength(22);
+    expect(result.stderr).toContain(
+      "Stopped after 22 requests with 22 of 200; more may remain. Continue with --cursor 22.",
+    );
+  });
+
   it("pages sent list, whose --wait defaults to 0, and keeps --wait and --since to one page", async () => {
     responder = (url) =>
       jsonResponse(200, {

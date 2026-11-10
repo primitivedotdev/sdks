@@ -1786,6 +1786,8 @@ export function createOperationCommand(
               { exit: 2 },
             );
         }
+        // Set when the request budget ends paging before --limit is reached.
+        let pagingNote: string | undefined;
         const callPaged = async () => {
           const max = pageMaximum ?? wanted;
           const rows: unknown[] = [];
@@ -1795,18 +1797,27 @@ export function createOperationCommand(
             limit: Math.min(max, wanted),
           });
           // Only a null cursor ends a list: a page can come back short, even
-          // empty, with more to read. Bound the requests anyway.
+          // empty, with more to read. Bound the requests anyway, and say so
+          // when the bound is what stopped it.
+          const budget = Math.ceil(wanted / max) + 20;
           for (let requests = 1; ; requests += 1) {
             if (last.error) return last;
             const envelope = last.data as OperationResponseEnvelope;
             const page = Array.isArray(envelope?.data) ? envelope.data : [];
             rows.push(...page);
             const cursor = envelope?.meta?.cursor ?? undefined;
+            const exhausted =
+              Boolean(cursor) &&
+              cursor !== sentCursor &&
+              rows.length < wanted &&
+              requests >= budget;
+            if (exhausted)
+              pagingNote = `Stopped after ${requests} requests with ${rows.length} of ${wanted}; more may remain. Continue with --cursor ${cursor}.`;
             if (
               !cursor ||
               cursor === sentCursor ||
               rows.length >= wanted ||
-              requests >= Math.ceil(wanted / max) + 10
+              exhausted
             ) {
               return {
                 ...last,
@@ -1990,6 +2001,7 @@ export function createOperationCommand(
         if (cursor && !jsonOutput) {
           process.stderr.write(`next cursor: ${cursor}\n`);
         }
+        if (pagingNote && !jsonOutput) process.stderr.write(`${pagingNote}\n`);
         const summary: string[] = [];
 
         // Empty-result hint. When a list-style operation returns
