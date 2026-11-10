@@ -34347,7 +34347,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "listActivityObjects",
         "summary": "List what you created",
-        "description": "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules and rule requests. Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self.",
+        "description": "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules and rule requests. Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self.",
         "tags": [
           "Activity"
         ],
@@ -90670,7 +90670,7 @@ export const openapiDocument: Record<string, unknown> = {
                     "null"
                   ],
                   "format": "date-time",
-                  "description": "When it was deleted, replaced or revoked, when a repeating send stopped, or when a rule request was decided; null otherwise."
+                  "description": "When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request was decided (accepted, declined or withdrawn); null otherwise."
                 },
                 "owned_now": {
                   "type": "string",
@@ -90678,7 +90678,7 @@ export const openapiDocument: Record<string, unknown> = {
                     "you",
                     "someone_else"
                   ],
-                  "description": "you: nobody has taken it over since it was created. someone_else: it was transferred to another person since."
+                  "description": "you: it is still yours: never transferred, or transferred back to you. someone_else: it was transferred and another person holds it now."
                 },
                 "created_through": {
                   "type": "object",
@@ -90688,7 +90688,7 @@ export const openapiDocument: Record<string, unknown> = {
                       "description": "The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves)."
                     },
                     "id": {
-                      "description": "In a person's view, the person's own user id for member, and an API key's id where they may read their keys. Null otherwise, and always null when it is the calling credential itself.",
+                      "description": "In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself.",
                       "type": [
                         "string",
                         "null"

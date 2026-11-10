@@ -54666,11 +54666,11 @@ type ListActivityObjectsResultItemsItem struct {
 	// pending, accepted, declined or withdrawn (rule requests).
 	State     string    `json:"state"`
 	CreatedAt time.Time `json:"created_at"`
-	// When it was deleted, replaced or revoked, when a repeating send stopped, or when a rule request
-	// was decided; null otherwise.
+	// When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped,
+	// or when a rule request was decided (accepted, declined or withdrawn); null otherwise.
 	EndedAt NilDateTime `json:"ended_at"`
-	// You: nobody has taken it over since it was created. someone_else: it was transferred to another
-	// person since.
+	// You: it is still yours: never transferred, or transferred back to you. someone_else: it was
+	// transferred and another person holds it now.
 	OwnedNow       ListActivityObjectsResultItemsItemOwnedNow       `json:"owned_now"`
 	CreatedThrough ListActivityObjectsResultItemsItemCreatedThrough `json:"created_through"`
 }
@@ -54760,7 +54760,8 @@ type ListActivityObjectsResultItemsItemCreatedThrough struct {
 	// agent_delegate or member (the person themselves).
 	Kind string `json:"kind"`
 	// In a person's view, the person's own user id for member, and an API key's id where they may read
-	// their keys. Null otherwise, and always null when it is the calling credential itself.
+	// their keys (for a person limited to their own keys, only a key they still hold). Null otherwise,
+	// and always null in one credential's view, where it is the calling credential itself.
 	ID NilString `json:"id"`
 	// In a person's view, what that credential of theirs is called: an app login by its app, an API key
 	// by its name, an agent's key by its address. Null otherwise, and for the person themselves.
@@ -54797,8 +54798,8 @@ func (s *ListActivityObjectsResultItemsItemCreatedThrough) SetName(val NilString
 	s.Name = val
 }
 
-// You: nobody has taken it over since it was created. someone_else: it was transferred to another
-// person since.
+// You: it is still yours: never transferred, or transferred back to you. someone_else: it was
+// transferred and another person holds it now.
 type ListActivityObjectsResultItemsItemOwnedNow string
 
 const (

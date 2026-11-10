@@ -39,10 +39,10 @@ class ListActivityObjectsResultItemsItem:
                 connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn
                 (rule requests).
             created_at (datetime.datetime):
-            ended_at (datetime.datetime | None): When it was deleted, replaced or revoked, when a repeating send stopped, or
-                when a rule request was decided; null otherwise.
-            owned_now (ListActivityObjectsResultItemsItemOwnedNow): you: nobody has taken it over since it was created.
-                someone_else: it was transferred to another person since.
+            ended_at (datetime.datetime | None): When it was deleted, replaced or revoked, when an API key expired, when a
+                repeating send stopped, or when a rule request was decided (accepted, declined or withdrawn); null otherwise.
+            owned_now (ListActivityObjectsResultItemsItemOwnedNow): you: it is still yours: never transferred, or
+                transferred back to you. someone_else: it was transferred and another person holds it now.
             created_through (ListActivityObjectsResultItemsItemCreatedThrough):
      """
 

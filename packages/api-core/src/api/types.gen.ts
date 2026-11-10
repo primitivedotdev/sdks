@@ -9864,11 +9864,11 @@ export type ListActivityObjectsResult = {
         state: string;
         created_at: string;
         /**
-         * When it was deleted, replaced or revoked, when a repeating send stopped, or when a rule request was decided; null otherwise.
+         * When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request was decided (accepted, declined or withdrawn); null otherwise.
          */
         ended_at: string | null;
         /**
-         * you: nobody has taken it over since it was created. someone_else: it was transferred to another person since.
+         * you: it is still yours: never transferred, or transferred back to you. someone_else: it was transferred and another person holds it now.
          */
         owned_now: 'you' | 'someone_else';
         created_through: {
@@ -9877,7 +9877,7 @@ export type ListActivityObjectsResult = {
              */
             kind: string;
             /**
-             * In a person's view, the person's own user id for member, and an API key's id where they may read their keys. Null otherwise, and always null when it is the calling credential itself.
+             * In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself.
              */
             id: string | null;
             /**
