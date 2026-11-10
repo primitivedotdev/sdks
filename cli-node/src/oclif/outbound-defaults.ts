@@ -143,14 +143,48 @@ export type DefaultFromSource = "agent" | "member_address" | "granted_address";
 
 export type DefaultFrom = { address: string; source: DefaultFromSource };
 
-/** Credential kinds that are a person acting as themself: a CLI login or a dashboard session. */
+/**
+ * Credential kinds the API treats as a person acting as themself: an OAuth
+ * login (the CLI's, or one an agent holds on the person's behalf) or a
+ * dashboard session.
+ */
 const PERSON_CREDENTIAL_KINDS = new Set(["oauth", "member"]);
+
+/**
+ * Key kinds that may default to the one address their grant names. Any
+ * other kind (agent_delegate, staff, internal, signed_token, or one this CLI
+ * does not know) gets no default.
+ */
+const KEY_CREDENTIAL_KINDS = new Set(["org_key", "function_key"]);
+
+/** The permissions that send mail; a grant with none of them cannot send. */
+const SEND_PERMISSIONS = [
+  "mail:send",
+  "mail:send_batch",
+  "mail:reply",
+  "mail:signal",
+  "mail:send_as_member",
+];
 
 type OwnGrant = {
   credential_kind?: string;
+  permissions?: unknown;
   mail_scope?: unknown;
   send_scope?: unknown;
+  scoped_permissions?: unknown;
 };
+
+/** Whether a grant holds any send permission, outright or over a reach of its own. */
+function grantSends(grant: OwnGrant): boolean {
+  const held = Array.isArray(grant.permissions) ? grant.permissions : [];
+  const scoped =
+    grant.scoped_permissions && typeof grant.scoped_permissions === "object"
+      ? Object.keys(grant.scoped_permissions)
+      : [];
+  return SEND_PERMISSIONS.some(
+    (permission) => held.includes(permission) || scoped.includes(permission),
+  );
+}
 
 /** The addresses and whole domains a grant's sending reaches, or null for the whole organization. */
 function grantSendReach(
@@ -208,8 +242,14 @@ async function noDefaultFrom(
   apiClient: PrimitiveApiClient,
   grant: OwnGrant,
   reason: string,
-  exclude?: string,
+  options: { exclude?: string; example?: boolean } = {},
 ): Promise<Errors.CLIError> {
+  if (!grantSends(grant))
+    return new Errors.CLIError(
+      `${reason} This credential cannot send mail from any address.`,
+      { exit: 1 },
+    );
+  const { exclude } = options;
   const reach = grantSendReach(grant);
   const addresses = (reach?.addresses ?? []).filter(
     (address) => address.toLowerCase() !== exclude?.toLowerCase(),
@@ -222,7 +262,12 @@ async function noDefaultFrom(
     parts.push(
       `${addresses.length > 0 ? "Also any" : "Any"} address at: ${domains.join(", ")}.`,
     );
-  const example = addresses[0] ?? (domains[0] ? `you@${domains[0]}` : null);
+  // A placeholder for a domain, never a sendable-looking address; and no
+  // example for a person, whose listed addresses can be their agents'.
+  const example =
+    options.example === false
+      ? null
+      : (addresses[0] ?? (domains[0] ? `<name>@${domains[0]}` : null));
   parts.push(
     example
       ? `Pass the one to use with --from, for example --from ${example}.`
@@ -254,15 +299,18 @@ async function fromRefusal(
   if (!result.error) return null;
   const payload = extractErrorPayload(result.error);
   const code = extractErrorCode(payload);
-  if (code !== "grant_forbidden" && code !== "cannot_send_from_domain")
-    return null;
-  return formatErrorPayload(payload);
-}
-
-/** The first address of a --to value, which may list several. */
-function firstRecipient(to: string | undefined): string | undefined {
-  const first = to?.split(",")[0]?.trim();
-  return first ? first : undefined;
+  const details = (payload as { details?: { rule?: unknown } } | null)?.details;
+  // Only the From refusals: the send's From rule, or a From domain that
+  // cannot send. Any other refusal (of the check itself, say) is not about
+  // the From, so the send decides.
+  const refusesFrom =
+    code === "cannot_send_from_domain" ||
+    (code === "grant_forbidden" && details?.rule === "send_from");
+  if (!refusesFrom) return null;
+  const message = (payload as { message?: unknown } | null)?.message;
+  return typeof message === "string" && message.trim()
+    ? message.trim()
+    : formatErrorPayload(payload);
 }
 
 function unauthorizedRefusal(
@@ -286,10 +334,11 @@ function unauthorizedRefusal(
  *   when the API would let them send from it to this recipient;
  * - a key whose grant sends from exactly one address, and no whole domain,
  *   sends from that address.
- * Anything else, including an organization-wide key and a person with no
- * member address they may send from, gets no default: the command refuses,
- * lists what the credential may send from, and asks for --from. A person is
- * never defaulted to an agent@ or managed-domain address.
+ * Anything else, including an organization-wide key, an agent_delegate and
+ * a person with no member address they may send from, gets no default: the
+ * command refuses, lists what the credential may send from, and asks for
+ * --from. The From is never an address guessed from the organization's
+ * domains, such as agent@ at the first verified one.
  */
 export async function resolveDefaultFrom(
   apiClient: PrimitiveApiClient,
@@ -350,23 +399,30 @@ export async function resolveDefaultFrom(
         apiClient,
         grant,
         `You have no member address of your own to send from, so --from has no default.${claim}`,
+        { example: false },
       );
     }
-    const to = firstRecipient(options.to);
+    const to = options.to?.trim();
     const refused = to ? await fromRefusal(apiClient, member, to) : null;
     if (refused) {
       throw await noDefaultFrom(
         apiClient,
         grant,
-        `Your member address ${member} cannot send this message, so --from has no default: ${refused}`,
-        member,
+        `Your member address ${member} cannot send this message, so --from has no default. ${refused.replace(/\.?$/, ".")}`,
+        { exclude: member, example: false },
       );
     }
     return { address: member, source: "member_address" };
   }
 
   const reach = grantSendReach(grant);
-  if (reach && reach.addresses.length === 1 && reach.domains.length === 0) {
+  if (
+    KEY_CREDENTIAL_KINDS.has(grant.credential_kind ?? "") &&
+    grantSends(grant) &&
+    reach &&
+    reach.addresses.length === 1 &&
+    reach.domains.length === 0
+  ) {
     return { address: reach.addresses[0] as string, source: "granted_address" };
   }
   throw await noDefaultFrom(

@@ -62,12 +62,12 @@ import {
 //   1. `--from` defaults by credential when omitted
 //      (resolveDefaultFrom in outbound-defaults.ts): a connected agent
 //      sends as its agent address, a person's own login as their member
-//      address when the API would let them send from it, and a key
-//      whose grant names exactly one address as that address. Anything
-//      else gets no default: the command lists what the credential may
-//      send from and asks for --from. A person is never defaulted to an
-//      agent@ or managed-domain address, and the From is never guessed
-//      from the organization's domains.
+//      address when the API would let them send from it, and an org or
+//      function key whose grant names exactly one address as that
+//      address. Anything else gets no default: the command lists what
+//      the credential may send from and asks for --from. The From is
+//      never guessed from the organization's domains, as agent@ at the
+//      first verified one used to be.
 //   2. `--subject` defaults to the first non-empty line of the body
 //      (capped). Empty subjects get spam-scored, so we always emit
 //      something. Callers who want full control pass --subject.
@@ -262,6 +262,8 @@ class SendCommand extends Command {
   private sendRequestStarted = false;
   /** Set when --wait-timeout-ms was shortened to the server's limit. */
   private waitNotice: string | null = null;
+  /** The From this send uses, once it is known; null before that. */
+  private resolvedFrom: string | null = null;
 
   async run(): Promise<void> {
     const { flags } = await this.parse(SendCommand);
@@ -279,9 +281,10 @@ class SendCommand extends Command {
               idempotencyKey: this.idempotencyKey,
               noun: "Message",
               requestStarted: this.sendRequestStarted,
-              ...(this.waitNotice
-                ? { extraEnvelopeFields: { wait_notice: this.waitNotice } }
-                : {}),
+              extraEnvelopeFields: {
+                from: this.resolvedFrom,
+                ...(this.waitNotice ? { wait_notice: this.waitNotice } : {}),
+              },
             }),
             null,
             2,
@@ -356,6 +359,7 @@ class SendCommand extends Command {
             })
           : undefined;
       const from = flags.from ?? (defaulted as DefaultFrom).address;
+      this.resolvedFrom = from;
       // Always say which From this send uses, and where a default came from.
       if (!flags.json)
         process.stderr.write(`${fromLine(from, defaulted?.source)}\n`);

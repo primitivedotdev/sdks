@@ -185,7 +185,7 @@ describe("resolveDefaultFrom for a key", () => {
       (caught: Error) => caught,
     )) as Error;
     expect(error.message).toBe(
-      "This credential may send from any address at the organization's sending domains, so --from has no default. Any address at: acme.example, acme-mail.primitive.email. Pass the one to use with --from, for example --from you@acme.example.",
+      "This credential may send from any address at the organization's sending domains, so --from has no default. Any address at: acme.example, acme-mail.primitive.email. Pass the one to use with --from, for example --from <name>@acme.example.",
     );
     expect(error.message).not.toContain("agent@");
     expect(requests.map((request) => request.path)).not.toContain(
@@ -219,7 +219,7 @@ describe("resolveDefaultFrom for a person", () => {
 
       await expect(
         resolveDefaultFrom(client, authContext, {
-          to: "alice@example.com, bob@example.com",
+          to: "alice@example.com",
         }),
       ).resolves.toEqual({
         address: "dana@yuuja.example",
@@ -275,14 +275,8 @@ describe("resolveDefaultFrom for a person", () => {
     const error = (await resolveDefaultFrom(client, authContext, {
       to: "alice@example.com",
     }).catch((caught: Error) => caught)) as Error;
-    expect(error.message).toContain(
-      "Your member address dana@yuuja.example cannot send this message, so --from has no default: ",
-    );
-    expect(error.message).toContain(
-      "yuuja.example is not verified for sending.",
-    );
-    expect(error.message).toContain(
-      "Addresses you may send from: dana@acme.example. Pass the one to use with --from, for example --from dana@acme.example.",
+    expect(error.message).toBe(
+      "Your member address dana@yuuja.example cannot send this message, so --from has no default. yuuja.example is not verified for sending. Addresses you may send from: dana@acme.example. Pass the address to send from with --from <address>.",
     );
   });
 
@@ -297,9 +291,175 @@ describe("resolveDefaultFrom for a person", () => {
       to: "alice@example.com",
     }).catch((caught: Error) => caught)) as Error;
     expect(error.message).toBe(
-      "You have no member address of your own to send from, so --from has no default. To claim one, run `primitive account provision-member-address --address dana@acme.example`. Any address at: acme.example, acme-mail.primitive.email. Pass the one to use with --from, for example --from you@acme.example.",
+      "You have no member address of your own to send from, so --from has no default. To claim one, run `primitive account provision-member-address --address dana@acme.example`. Any address at: acme.example, acme-mail.primitive.email. Pass the address to send from with --from <address>.",
     );
     expect(error.message).not.toContain("agent@");
+  });
+});
+
+describe("resolveDefaultFrom: what is never a default", () => {
+  it("gives an agent_delegate, or any kind it does not know, no default even with one address", async () => {
+    for (const kind of ["agent_delegate", "staff", "something_new"]) {
+      const client = recordingClient({
+        "/whoami/grant": () =>
+          grantWithScope(scope(["dana@yuuja.example"]), kind),
+      }).client;
+      const error = (await resolveDefaultFrom(client, authContext).catch(
+        (caught: Error) => caught,
+      )) as Error;
+      expect(error.message, kind).toContain("--from has no default");
+      expect(error.message, kind).toContain("dana@yuuja.example");
+    }
+  });
+
+  it("says a credential that cannot send cannot send, listing nothing", async () => {
+    const noSend = Response.json({
+      success: true,
+      data: {
+        org_id: ACCOUNT_ID,
+        auth_method: "api_key",
+        key_id: "k1",
+        grant: {
+          credential_kind: "org_key",
+          template: null,
+          permissions: ["mail:read"],
+          mail_scope: scope(["me@example.test"]),
+          resources: null,
+          expires_at: null,
+        },
+      },
+    });
+    const client = recordingClient({ "/whoami/grant": () => noSend }).client;
+    const error = (await resolveDefaultFrom(client, authContext).catch(
+      (caught: Error) => caught,
+    )) as Error;
+    expect(error.message).toBe(
+      "This credential's grant does not name one address to send from, so --from has no default. This credential cannot send mail from any address.",
+    );
+  });
+
+  it("sends a connected agent as its agent address without asking the API", async () => {
+    const { client, requests } = recordingClient({});
+    await expect(
+      resolveDefaultFrom(client, {
+        ...(authContext as object),
+        auth: { connectedAgent: { agentAddress: "bot@agents.example" } },
+      } as never),
+    ).resolves.toEqual({ address: "bot@agents.example", source: "agent" });
+    expect(requests).toEqual([]);
+  });
+
+  it("asks a raw connected-agent key for --from", async () => {
+    const { client } = recordingClient({});
+    await expect(
+      resolveDefaultFrom(client, {
+        ...(authContext as object),
+        auth: { apiKey: ["pconn", "fixture"].join("_") },
+      } as never),
+    ).rejects.toThrow("Connected agents must pass --from");
+  });
+});
+
+describe("resolveDefaultFrom: the person's sendability check", () => {
+  const person = (sendability: () => Response) =>
+    recordingClient({
+      "/whoami/grant": () => grantWithScope("org", "oauth"),
+      "/whoami": () => whoamiWith("dana@yuuja.example"),
+      "/sendability": sendability,
+      "/outbound/status": outboundStatus,
+    });
+
+  it("counts a grant_forbidden only when it is the send's From rule", async () => {
+    const fromRule = person(() =>
+      Response.json(
+        {
+          success: false,
+          error: {
+            code: "grant_forbidden",
+            message:
+              "You can send only from your own addresses: dana@yuuja.example is outside the addresses this credential can send from.",
+            details: { rule: "send_from", reason: "address_not_covered" },
+          },
+        },
+        { status: 403 },
+      ),
+    ).client;
+    await expect(
+      resolveDefaultFrom(fromRule, authContext, { to: "alice@example.com" }),
+    ).rejects.toThrow(
+      "Your member address dana@yuuja.example cannot send this message, so --from has no default. You can send only from your own addresses",
+    );
+
+    const otherRefusal = person(() =>
+      Response.json(
+        {
+          success: false,
+          error: {
+            code: "grant_forbidden",
+            message: "Not allowed",
+            details: { reason: "permission", permission: "account:read" },
+          },
+        },
+        { status: 403 },
+      ),
+    ).client;
+    await expect(
+      pickDefaultFromAddress(otherRefusal, authContext, {
+        to: "alice@example.com",
+      }),
+    ).resolves.toBe("dana@yuuja.example");
+  });
+
+  it("lets the send decide when the check throws", async () => {
+    const client = person(() => {
+      throw new TypeError("network down");
+    }).client;
+    await expect(
+      pickDefaultFromAddress(client, authContext, { to: "alice@example.com" }),
+    ).resolves.toBe("dana@yuuja.example");
+  });
+
+  it("asks about the recipient exactly as given, display name and all", async () => {
+    const { client, requests } = person(sendable);
+    await resolveDefaultFrom(client, authContext, {
+      to: '"Smith, Alice" <alice@example.com>',
+    });
+    expect(
+      requests.find((request) => request.path.endsWith("/sendability"))?.body,
+    ).toEqual({
+      to: '"Smith, Alice" <alice@example.com>',
+      from: "dana@yuuja.example",
+    });
+  });
+
+  it("refuses when whoami fails, and stops on a credential the API does not accept", async () => {
+    const failing = recordingClient({
+      "/whoami/grant": () => grantWithScope("org", "oauth"),
+      "/whoami": () =>
+        Response.json(
+          { success: false, error: { code: "internal_error", message: "x" } },
+          { status: 500 },
+        ),
+    }).client;
+    await expect(resolveDefaultFrom(failing, authContext)).rejects.toThrow(
+      "Could not read your member address, so --from has no default.",
+    );
+
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const unauthorized = recordingClient({
+      "/whoami/grant": () =>
+        Response.json(
+          {
+            success: false,
+            error: { code: "unauthorized", message: "Invalid credential" },
+          },
+          { status: 401 },
+        ),
+    }).client;
+    await expect(resolveDefaultFrom(unauthorized, authContext)).rejects.toThrow(
+      "Cannot send: CLI auth is missing or invalid",
+    );
+    vi.restoreAllMocks();
   });
 });
 

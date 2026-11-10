@@ -671,6 +671,18 @@ describe("send outcomes", () => {
     expect(JSON.parse(json.stdout).from).toBe("dana@yuuja.example");
   });
 
+  it("names the From in the --json envelope when the send throws", async () => {
+    personLogin("dana@yuuja.example");
+    mocks.sendEmail.mockRejectedValue(new TypeError("network down"));
+
+    const result = await run("send", [...noFromArgs, "--json"]);
+
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      outcome: "uncertain",
+      from: "dana@yuuja.example",
+    });
+  });
+
   it("sends nothing for a person with no member address and asks for --from", async () => {
     personLogin(null);
 
