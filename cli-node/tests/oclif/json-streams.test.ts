@@ -438,6 +438,7 @@ const SUCCESS_ARGV: Record<string, string[]> = {
   "contacts:update": ["peer@example.com"],
   "credits:balance": [],
   "credits:redeem": ["LAUNCH50"],
+  "emails:facts": ["00000000-0000-4000-8000-000000000001"],
   "emails:latest": [],
   "functions:routing-topology": [],
   "functions:templates": [],

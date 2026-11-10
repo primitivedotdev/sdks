@@ -95,7 +95,7 @@
         "description": "Check inbound email setup and readiness, and work through mail awaiting your reply. Prefer `primitive inbox setup` for a guided setup path, `primitive inbox status` for the readiness table, and `primitive inbox next` for the oldest email awaiting your reply."
       },
       "emails": {
-        "description": "List, inspect, and wait for received emails. Prefer task aliases like `primitive emails list`, `primitive emails get`, `primitive emails latest`, `primitive emails wait`, and `primitive emails watch`; generated API names remain available for compatibility."
+        "description": "List, inspect, and wait for received emails, and see what the classifier read from one. Prefer task aliases like `primitive emails list`, `primitive emails get`, `primitive emails latest`, `primitive emails facts`, `primitive emails wait`, and `primitive emails watch`; generated API names remain available for compatibility."
       },
       "search": {
         "description": "Cross-corpus semantic search. Prefer `primitive search <query>` for lexical inbound search and `primitive semantic-search <query>` for meaning-aware ranking across inbound and outbound.",

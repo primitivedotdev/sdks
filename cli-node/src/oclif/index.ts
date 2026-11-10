@@ -57,6 +57,7 @@ import {
   EmailsAttachmentCommand,
   EmailsAttachmentMembersCommand,
 } from "./commands/emails-attachment.js";
+import EmailsFactsCommand from "./commands/emails-facts.js";
 import { createEmailsGetCommand } from "./commands/emails-get.js";
 import EmailsLatestCommand from "./commands/emails-latest.js";
 import EmailsWaitCommand from "./commands/emails-wait.js";
@@ -706,6 +707,9 @@ export const COMMANDS: Record<string, typeof Command> = {
   // inside a zip or tar attachment. The generated operations stay available.
   "emails:attachment": EmailsAttachmentCommand,
   "emails:attachment-members": EmailsAttachmentMembersCommand,
+  // `emails:facts` prints what the classifier read from one email, a fact
+  // per line, from the email's rule results (list-email-rule-results).
+  "emails:facts": EmailsFactsCommand,
   // `emails:watch` and unscoped `emails:wait` poll the search API for matching
   // inbound mail. `watch` defaults to a human table; `wait` defaults to JSONL.
   "emails:watch": EmailsWatchCommand,
