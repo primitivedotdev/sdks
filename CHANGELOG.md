@@ -408,6 +408,9 @@ parsers.
   `meta.cursor` says so in its help: `--limit` gives the page cap, and
   `--cursor` says the next cursor is printed on stderr as `next cursor:`
   without `--json`, and comes in `meta.cursor` with `--json --envelope`.
+- `memories search` can page: it prints `next cursor:` on stderr when there
+  is another page, and takes `--envelope` to print `meta.cursor` with the
+  data.
 - Generated commands for the new operations, except `createKey`, `rotateKey`,
   `updateKey` and `revokeCredential`, which the `primitive keys` commands
   cover instead.

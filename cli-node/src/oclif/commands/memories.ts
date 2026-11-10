@@ -551,7 +551,12 @@ class MemoriesSearchCommand extends Command {
       max: 100,
     }),
     cursor: Flags.string({
-      description: "Key cursor from a previous response's meta.cursor.",
+      description:
+        "Key cursor from the previous page. The next page's cursor is meta.cursor, null on the last page: without --json it is printed on stderr as `next cursor: <value>`; with --json, add --envelope to get it.",
+    }),
+    envelope: Flags.boolean({
+      description:
+        "Print the full response envelope, including meta.cursor for the next page. Defaults to printing only the data payload.",
     }),
     "metadata-only": Flags.boolean({
       description: "Omit memory values and return metadata only.",
@@ -600,7 +605,12 @@ class MemoriesSearchCommand extends Command {
         return;
       }
 
-      printData(this, result.data);
+      const envelope = result.data;
+      const cursor = envelope?.meta?.cursor;
+      if (cursor && !flags.json)
+        process.stderr.write(`next cursor: ${cursor}\n`);
+      if (flags.envelope) this.log(JSON.stringify(envelope ?? null, null, 2));
+      else printData(this, result.data);
     });
   }
 }
