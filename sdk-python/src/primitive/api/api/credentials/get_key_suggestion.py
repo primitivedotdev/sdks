@@ -111,7 +111,8 @@ def sync_detailed(
     (never the called path) with the permission each needed, and how many mailboxes the key read and
     sent from (counts only, and only for a person with access to the whole organization's mail). Nothing
     is applied: narrowing is a change to the key (PATCH /v1/keys/:id). Needs the organization's
-    credential features to be enabled; while they are not, this answers 404 feature_disabled.
+    credential features to be enabled; while they are not, this answers 404 feature_disabled, with
+    details.feature naming the feature. Only Primitive turns these on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.
@@ -157,7 +158,8 @@ def sync(
     (never the called path) with the permission each needed, and how many mailboxes the key read and
     sent from (counts only, and only for a person with access to the whole organization's mail). Nothing
     is applied: narrowing is a change to the key (PATCH /v1/keys/:id). Needs the organization's
-    credential features to be enabled; while they are not, this answers 404 feature_disabled.
+    credential features to be enabled; while they are not, this answers 404 feature_disabled, with
+    details.feature naming the feature. Only Primitive turns these on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.
@@ -198,7 +200,8 @@ async def asyncio_detailed(
     (never the called path) with the permission each needed, and how many mailboxes the key read and
     sent from (counts only, and only for a person with access to the whole organization's mail). Nothing
     is applied: narrowing is a change to the key (PATCH /v1/keys/:id). Needs the organization's
-    credential features to be enabled; while they are not, this answers 404 feature_disabled.
+    credential features to be enabled; while they are not, this answers 404 feature_disabled, with
+    details.feature naming the feature. Only Primitive turns these on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.
@@ -244,7 +247,8 @@ async def asyncio(
     (never the called path) with the permission each needed, and how many mailboxes the key read and
     sent from (counts only, and only for a person with access to the whole organization's mail). Nothing
     is applied: narrowing is a change to the key (PATCH /v1/keys/:id). Needs the organization's
-    credential features to be enabled; while they are not, this answers 404 feature_disabled.
+    credential features to be enabled; while they are not, this answers 404 feature_disabled, with
+    details.feature naming the feature. Only Primitive turns these on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.

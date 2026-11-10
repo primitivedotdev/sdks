@@ -27,11 +27,19 @@ class ListEmailRuleScopeOptionsResult:
             reach (ListEmailRuleScopeOptionsResultReach): organization: all of the organization's mail. own: only your own.
                 limited: some inboxes or domains.
             own_mail (bool): Whether a rule over only your own mail would run for you.
-            addresses (list[str]): Inboxes you can read, matching q.
+            addresses (list[str]): Inboxes you can read, matching q. For someone who reads the whole organization, the
+                inboxes known as someone's: member addresses, members' verified work emails at the organization's domains,
+                agents' addresses and inboxes with shared access. Otherwise the inboxes your access lists (search with q for
+                those past the first page). See may_name_unlisted for what else you may name.
             domains (list[str]): Domains you can read, matching q.
             more (bool): More match than are listed.
             own_mail_to_block (bool | Unset): Whether a do_not_share rule over only your own mail would run for you: it
                 covers every own mailbox you read, including ones you could not share.
+            may_name_unlisted (bool | Unset): Whether you may also name an inbox this list never shows, however it is
+                searched (more only says whether a search would show further ones): true when you read the whole organization
+                (any address, such as an inbox at its domains nobody has claimed yet) or read a domain (any address there your
+                access does not leave out). Name it in scope_selection.addresses as you would a listed one. Absent from a server
+                that predates it.
      """
 
     reach: ListEmailRuleScopeOptionsResultReach
@@ -40,6 +48,7 @@ class ListEmailRuleScopeOptionsResult:
     domains: list[str]
     more: bool
     own_mail_to_block: bool | Unset = UNSET
+    may_name_unlisted: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -63,6 +72,8 @@ class ListEmailRuleScopeOptionsResult:
 
         own_mail_to_block = self.own_mail_to_block
 
+        may_name_unlisted = self.may_name_unlisted
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -75,6 +86,8 @@ class ListEmailRuleScopeOptionsResult:
         })
         if own_mail_to_block is not UNSET:
             field_dict["own_mail_to_block"] = own_mail_to_block
+        if may_name_unlisted is not UNSET:
+            field_dict["may_name_unlisted"] = may_name_unlisted
 
         return field_dict
 
@@ -100,6 +113,8 @@ class ListEmailRuleScopeOptionsResult:
 
         own_mail_to_block = d.pop("own_mail_to_block", UNSET)
 
+        may_name_unlisted = d.pop("may_name_unlisted", UNSET)
+
         list_email_rule_scope_options_result = cls(
             reach=reach,
             own_mail=own_mail,
@@ -107,6 +122,7 @@ class ListEmailRuleScopeOptionsResult:
             domains=domains,
             more=more,
             own_mail_to_block=own_mail_to_block,
+            may_name_unlisted=may_name_unlisted,
         )
 
 

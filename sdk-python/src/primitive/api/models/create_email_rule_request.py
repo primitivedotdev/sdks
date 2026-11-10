@@ -38,9 +38,9 @@ class CreateEmailRuleRequest:
                 an email it cannot decide counts as matched. Set when the rule is created; it never changes.
             state (CreateEmailRuleRequestState | Unset): observe (the default) records what the rule would match and grants
                 or blocks nothing; draft is not evaluated.
-            evaluation_scope (CreateEmailRuleRequestEvaluationScope | Unset): author: all mail its author can read.
-                own_mailboxes: mail to their own addresses. selected: what scope_selection names. Never more than the author can
-                read.
+            evaluation_scope (CreateEmailRuleRequestEvaluationScope | Unset): own_mailboxes (the default): mail to your own
+                addresses and agents (for a rule that shares, those you can send from). author: all mail you can read, including
+                inboxes added later. selected: what scope_selection names.
             scope_selection (CreateEmailRuleRequestScopeSelection | Unset): Inboxes, and domains (every address at them the
                 author can read), for a selected rule; each one you can read.
             assumptions (list[str] | Unset): Readings chosen where the description was open to more than one.

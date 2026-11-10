@@ -117,7 +117,8 @@ def sync_detailed(
      Every credential that can act in the organization: API keys, Function keys, agent connection keys,
     connected apps (OAuth), agent delegates and, where enabled, CLI logins. Secrets are never returned.
     Filter with kind. Needs the organization's credential features to be enabled; while they are not,
-    this answers 404 feature_disabled.
+    this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns
+    these on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.
@@ -156,7 +157,8 @@ def sync(
      Every credential that can act in the organization: API keys, Function keys, agent connection keys,
     connected apps (OAuth), agent delegates and, where enabled, CLI logins. Secrets are never returned.
     Filter with kind. Needs the organization's credential features to be enabled; while they are not,
-    this answers 404 feature_disabled.
+    this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns
+    these on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.
@@ -190,7 +192,8 @@ async def asyncio_detailed(
      Every credential that can act in the organization: API keys, Function keys, agent connection keys,
     connected apps (OAuth), agent delegates and, where enabled, CLI logins. Secrets are never returned.
     Filter with kind. Needs the organization's credential features to be enabled; while they are not,
-    this answers 404 feature_disabled.
+    this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns
+    these on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.
@@ -229,7 +232,8 @@ async def asyncio(
      Every credential that can act in the organization: API keys, Function keys, agent connection keys,
     connected apps (OAuth), agent delegates and, where enabled, CLI logins. Secrets are never returned.
     Filter with kind. Needs the organization's credential features to be enabled; while they are not,
-    this answers 404 feature_disabled.
+    this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns
+    these on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.

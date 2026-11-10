@@ -3917,8 +3917,9 @@ type CreateKeyParams struct {
 	// Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a
 	// token issued for MCP, with any API key or agent connection key, and with a dashboard session. The
 	// Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.
-	// reason` `dashboard_only`). The Primitive CLI uses one like any app while the organization's keys
-	// API is on, and is refused the same way while it is off.
+	// reason` `dashboard_only`). The person's own Primitive CLI login needs no token for this purpose
+	// while the organization's keys API is on (a token it sends is still checked); while it is off, a
+	// token it sends is refused the same way.
 	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 }
 
@@ -32188,8 +32189,9 @@ type RotateKeyParams struct {
 	// Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a
 	// token issued for MCP, with any API key or agent connection key, and with a dashboard session. The
 	// Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.
-	// reason` `dashboard_only`). The Primitive CLI uses one like any app while the organization's keys
-	// API is on, and is refused the same way while it is off.
+	// reason` `dashboard_only`). The person's own Primitive CLI login needs no token for this purpose
+	// while the organization's keys API is on (a token it sends is still checked); while it is off, a
+	// token it sends is refused the same way.
 	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 	// Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with
 	// the same key runs the request again. Operations that need a credential refuse a key that is empty,
@@ -39845,8 +39847,9 @@ type UpdateKeyParams struct {
 	// Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a
 	// token issued for MCP, with any API key or agent connection key, and with a dashboard session. The
 	// Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.
-	// reason` `dashboard_only`). The Primitive CLI uses one like any app while the organization's keys
-	// API is on, and is refused the same way while it is off.
+	// reason` `dashboard_only`). The person's own Primitive CLI login needs no token for this purpose
+	// while the organization's keys API is on (a token it sends is still checked); while it is off, a
+	// token it sends is refused the same way.
 	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 }
 

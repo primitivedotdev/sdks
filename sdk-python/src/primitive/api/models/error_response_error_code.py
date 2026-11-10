@@ -297,6 +297,7 @@ class ErrorResponseErrorCode(StrEnum):
     SIGNAL_NOT_ALLOWED = "signal_not_allowed"
     SIGNAL_PARENT_NOT_READY = "signal_parent_not_ready"
     SIGNAL_SENDER_UNAUTHENTICATED = "signal_sender_unauthenticated"
+    SIGNING_SECRET_UNAVAILABLE = "signing_secret_unavailable"
     SIGNUP_FAILED = "signup_failed"
     SIGN_IN_EMAIL_CHANGE_REQUIRED = "sign_in_email_change_required"
     SLOW_DOWN = "slow_down"

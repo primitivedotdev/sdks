@@ -111,7 +111,8 @@ def sync_detailed(
 
      Key metadata, never a secret: name, prefix, grant, creator, last use, expiry and suspension. The
     person needs access to the whole organization's mail. Needs the organization's credential features
-    to be enabled; while they are not, this answers 404 feature_disabled.
+    to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming
+    the feature. Only Primitive turns these on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.
@@ -149,7 +150,8 @@ def sync(
 
      Key metadata, never a secret: name, prefix, grant, creator, last use, expiry and suspension. The
     person needs access to the whole organization's mail. Needs the organization's credential features
-    to be enabled; while they are not, this answers 404 feature_disabled.
+    to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming
+    the feature. Only Primitive turns these on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.
@@ -182,7 +184,8 @@ async def asyncio_detailed(
 
      Key metadata, never a secret: name, prefix, grant, creator, last use, expiry and suspension. The
     person needs access to the whole organization's mail. Needs the organization's credential features
-    to be enabled; while they are not, this answers 404 feature_disabled.
+    to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming
+    the feature. Only Primitive turns these on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.
@@ -220,7 +223,8 @@ async def asyncio(
 
      Key metadata, never a secret: name, prefix, grant, creator, last use, expiry and suspension. The
     person needs access to the whole organization's mail. Needs the organization's credential features
-    to be enabled; while they are not, this answers 404 feature_disabled.
+    to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming
+    the feature. Only Primitive turns these on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.

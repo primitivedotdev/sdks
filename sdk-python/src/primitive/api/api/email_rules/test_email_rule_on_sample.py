@@ -127,9 +127,11 @@ def sync_detailed(
     received now. Without them it is not automated and not from a mailing list; a rule that reads a spam
     score you gave none for is decided on no score, and spam_score is listed in unset_columns. Nothing
     is stored: no email, classification or decision. Test an unsaved tree from a compile response, or a
-    saved rule by rule_id (its current version). The answer includes what the classifier read from the
-    email. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys
-    and narrowed tokens are refused), and the email rules feature on the organization.
+    saved rule by rule_id (its current version); an unsaved tree is run as covering only your own mail
+    unless evaluation_scope names more, as on POST /email-rules/test. The answer includes what the
+    classifier read from the email. Needs mail:read, a credential acting as a member with their full
+    access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
+    organization.
 
     Args:
         idempotency_key (str | Unset):
@@ -172,9 +174,11 @@ def sync(
     received now. Without them it is not automated and not from a mailing list; a rule that reads a spam
     score you gave none for is decided on no score, and spam_score is listed in unset_columns. Nothing
     is stored: no email, classification or decision. Test an unsaved tree from a compile response, or a
-    saved rule by rule_id (its current version). The answer includes what the classifier read from the
-    email. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys
-    and narrowed tokens are refused), and the email rules feature on the organization.
+    saved rule by rule_id (its current version); an unsaved tree is run as covering only your own mail
+    unless evaluation_scope names more, as on POST /email-rules/test. The answer includes what the
+    classifier read from the email. Needs mail:read, a credential acting as a member with their full
+    access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
+    organization.
 
     Args:
         idempotency_key (str | Unset):
@@ -212,9 +216,11 @@ async def asyncio_detailed(
     received now. Without them it is not automated and not from a mailing list; a rule that reads a spam
     score you gave none for is decided on no score, and spam_score is listed in unset_columns. Nothing
     is stored: no email, classification or decision. Test an unsaved tree from a compile response, or a
-    saved rule by rule_id (its current version). The answer includes what the classifier read from the
-    email. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys
-    and narrowed tokens are refused), and the email rules feature on the organization.
+    saved rule by rule_id (its current version); an unsaved tree is run as covering only your own mail
+    unless evaluation_scope names more, as on POST /email-rules/test. The answer includes what the
+    classifier read from the email. Needs mail:read, a credential acting as a member with their full
+    access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
+    organization.
 
     Args:
         idempotency_key (str | Unset):
@@ -257,9 +263,11 @@ async def asyncio(
     received now. Without them it is not automated and not from a mailing list; a rule that reads a spam
     score you gave none for is decided on no score, and spam_score is listed in unset_columns. Nothing
     is stored: no email, classification or decision. Test an unsaved tree from a compile response, or a
-    saved rule by rule_id (its current version). The answer includes what the classifier read from the
-    email. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys
-    and narrowed tokens are refused), and the email rules feature on the organization.
+    saved rule by rule_id (its current version); an unsaved tree is run as covering only your own mail
+    unless evaluation_scope names more, as on POST /email-rules/test. The answer includes what the
+    classifier read from the email. Needs mail:read, a credential acting as a member with their full
+    access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
+    organization.
 
     Args:
         idempotency_key (str | Unset):

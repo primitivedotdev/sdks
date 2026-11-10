@@ -127,17 +127,19 @@ def sync_detailed(
     person's own access to cover the key's access now (an owner covers every key); otherwise 403
     grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key and
     is held to the same rules as creating one (a custom grant that does not say which mail it reaches is
-    refused with details.reason mail_scope_required), so it takes the same step-up. The Primitive CLI
-    takes the same step-up; the Primitive app's token is refused, even with one. Needs the
-    organization's credential features to be enabled; while they are not, this answers 404
-    feature_disabled.
+    refused with details.reason mail_scope_required), so it takes the same step-up. The person's own
+    Primitive CLI login needs no step-up (it acts as the person, held to the same rules); the Primitive
+    app's token is refused, even with one. Needs the organization's credential features to be enabled;
+    while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Only
+    Primitive turns these on.
 
-    Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
-    `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
-    step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when
-    the person's role could not do it anyway). The person's role must hold keys:manage. API keys and
-    agent connection keys are refused. An agent acting for the person is refused unless it carries a
-    step-up token the person issued in the dashboard.
+    Person only: a dashboard session, the person's own Primitive CLI login with no step-up, or the
+    person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up
+    header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the
+    dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could
+    not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are
+    refused. An agent acting for the person is refused unless it carries a step-up token the person
+    issued in the dashboard.
 
     Args:
         id (UUID):
@@ -180,17 +182,19 @@ def sync(
     person's own access to cover the key's access now (an owner covers every key); otherwise 403
     grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key and
     is held to the same rules as creating one (a custom grant that does not say which mail it reaches is
-    refused with details.reason mail_scope_required), so it takes the same step-up. The Primitive CLI
-    takes the same step-up; the Primitive app's token is refused, even with one. Needs the
-    organization's credential features to be enabled; while they are not, this answers 404
-    feature_disabled.
+    refused with details.reason mail_scope_required), so it takes the same step-up. The person's own
+    Primitive CLI login needs no step-up (it acts as the person, held to the same rules); the Primitive
+    app's token is refused, even with one. Needs the organization's credential features to be enabled;
+    while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Only
+    Primitive turns these on.
 
-    Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
-    `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
-    step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when
-    the person's role could not do it anyway). The person's role must hold keys:manage. API keys and
-    agent connection keys are refused. An agent acting for the person is refused unless it carries a
-    step-up token the person issued in the dashboard.
+    Person only: a dashboard session, the person's own Primitive CLI login with no step-up, or the
+    person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up
+    header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the
+    dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could
+    not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are
+    refused. An agent acting for the person is refused unless it carries a step-up token the person
+    issued in the dashboard.
 
     Args:
         id (UUID):
@@ -228,17 +232,19 @@ async def asyncio_detailed(
     person's own access to cover the key's access now (an owner covers every key); otherwise 403
     grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key and
     is held to the same rules as creating one (a custom grant that does not say which mail it reaches is
-    refused with details.reason mail_scope_required), so it takes the same step-up. The Primitive CLI
-    takes the same step-up; the Primitive app's token is refused, even with one. Needs the
-    organization's credential features to be enabled; while they are not, this answers 404
-    feature_disabled.
+    refused with details.reason mail_scope_required), so it takes the same step-up. The person's own
+    Primitive CLI login needs no step-up (it acts as the person, held to the same rules); the Primitive
+    app's token is refused, even with one. Needs the organization's credential features to be enabled;
+    while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Only
+    Primitive turns these on.
 
-    Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
-    `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
-    step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when
-    the person's role could not do it anyway). The person's role must hold keys:manage. API keys and
-    agent connection keys are refused. An agent acting for the person is refused unless it carries a
-    step-up token the person issued in the dashboard.
+    Person only: a dashboard session, the person's own Primitive CLI login with no step-up, or the
+    person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up
+    header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the
+    dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could
+    not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are
+    refused. An agent acting for the person is refused unless it carries a step-up token the person
+    issued in the dashboard.
 
     Args:
         id (UUID):
@@ -281,17 +287,19 @@ async def asyncio(
     person's own access to cover the key's access now (an owner covers every key); otherwise 403
     grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key and
     is held to the same rules as creating one (a custom grant that does not say which mail it reaches is
-    refused with details.reason mail_scope_required), so it takes the same step-up. The Primitive CLI
-    takes the same step-up; the Primitive app's token is refused, even with one. Needs the
-    organization's credential features to be enabled; while they are not, this answers 404
-    feature_disabled.
+    refused with details.reason mail_scope_required), so it takes the same step-up. The person's own
+    Primitive CLI login needs no step-up (it acts as the person, held to the same rules); the Primitive
+    app's token is refused, even with one. Needs the organization's credential features to be enabled;
+    while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Only
+    Primitive turns these on.
 
-    Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
-    `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
-    step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when
-    the person's role could not do it anyway). The person's role must hold keys:manage. API keys and
-    agent connection keys are refused. An agent acting for the person is refused unless it carries a
-    step-up token the person issued in the dashboard.
+    Person only: a dashboard session, the person's own Primitive CLI login with no step-up, or the
+    person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up
+    header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the
+    dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could
+    not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are
+    refused. An agent acting for the person is refused unless it carries a step-up token the person
+    issued in the dashboard.
 
     Args:
         id (UUID):

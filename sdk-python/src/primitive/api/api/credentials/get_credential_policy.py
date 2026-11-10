@@ -101,7 +101,7 @@ def sync_detailed(
      The organization credential policy: key lifetime and expiry rules, who may create super admin keys,
     whether members may create keys and the other rules every new key is held to. Needs the
     organization's credential features to be enabled; while they are not, this answers 404
-    feature_disabled.
+    feature_disabled, with details.feature naming the feature. Only Primitive turns these on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.
@@ -135,7 +135,7 @@ def sync(
      The organization credential policy: key lifetime and expiry rules, who may create super admin keys,
     whether members may create keys and the other rules every new key is held to. Needs the
     organization's credential features to be enabled; while they are not, this answers 404
-    feature_disabled.
+    feature_disabled, with details.feature naming the feature. Only Primitive turns these on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.
@@ -164,7 +164,7 @@ async def asyncio_detailed(
      The organization credential policy: key lifetime and expiry rules, who may create super admin keys,
     whether members may create keys and the other rules every new key is held to. Needs the
     organization's credential features to be enabled; while they are not, this answers 404
-    feature_disabled.
+    feature_disabled, with details.feature naming the feature. Only Primitive turns these on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.
@@ -198,7 +198,7 @@ async def asyncio(
      The organization credential policy: key lifetime and expiry rules, who may create super admin keys,
     whether members may create keys and the other rules every new key is held to. Needs the
     organization's credential features to be enabled; while they are not, this answers 404
-    feature_disabled.
+    feature_disabled, with details.feature naming the feature. Only Primitive turns these on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.

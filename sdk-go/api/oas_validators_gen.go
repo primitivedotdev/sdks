@@ -574,6 +574,42 @@ func (s *AcceptEmailRuleRequestResultRule) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.EvaluationScope.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "evaluation_scope",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.ScopeSelection.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "scope_selection",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.CurrentVersion.Get(); ok {
 			if err := func() error {
 				if err := (validate.Int{
@@ -776,6 +812,20 @@ func (s AcceptEmailRuleRequestResultRuleCurrentTreeVersion) Validate() error {
 	}
 }
 
+func (s AcceptEmailRuleRequestResultRuleEvaluationScope) Validate() error {
+	switch s {
+	case "author":
+		return nil
+	case "own_mailboxes":
+		return nil
+	case "selected":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
 func (s AcceptEmailRuleRequestResultRuleKind) Validate() error {
 	switch s {
 	case "grant":
@@ -786,6 +836,40 @@ func (s AcceptEmailRuleRequestResultRuleKind) Validate() error {
 		// Added to the API after this client was generated.
 		return nil
 	}
+}
+
+func (s *AcceptEmailRuleRequestResultRuleScopeSelection) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Addresses == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "addresses",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Domains == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "domains",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
 }
 
 func (s AcceptEmailRuleRequestResultRuleState) Validate() error {
@@ -10269,6 +10353,42 @@ func (s *CreateEmailRuleResult) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.EvaluationScope.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "evaluation_scope",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.ScopeSelection.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "scope_selection",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.CurrentVersion.Get(); ok {
 			if err := func() error {
 				if err := (validate.Int{
@@ -10471,6 +10591,20 @@ func (s CreateEmailRuleResultCurrentTreeVersion) Validate() error {
 	}
 }
 
+func (s CreateEmailRuleResultEvaluationScope) Validate() error {
+	switch s {
+	case "author":
+		return nil
+	case "own_mailboxes":
+		return nil
+	case "selected":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
 func (s CreateEmailRuleResultKind) Validate() error {
 	switch s {
 	case "grant":
@@ -10481,6 +10615,40 @@ func (s CreateEmailRuleResultKind) Validate() error {
 		// Added to the API after this client was generated.
 		return nil
 	}
+}
+
+func (s *CreateEmailRuleResultScopeSelection) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Addresses == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "addresses",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Domains == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "domains",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
 }
 
 func (s CreateEmailRuleResultState) Validate() error {
@@ -23721,6 +23889,8 @@ func (s ErrorResponseErrorCode) Validate() error {
 		return nil
 	case "signal_sender_unauthenticated":
 		return nil
+	case "signing_secret_unavailable":
+		return nil
 	case "signup_failed":
 		return nil
 	case "standing_owner_revoked":
@@ -27063,6 +27233,42 @@ func (s *GetEmailRuleResult) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.EvaluationScope.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "evaluation_scope",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.ScopeSelection.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "scope_selection",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.CurrentVersion.Get(); ok {
 			if err := func() error {
 				if err := (validate.Int{
@@ -27265,6 +27471,20 @@ func (s GetEmailRuleResultCurrentTreeVersion) Validate() error {
 	}
 }
 
+func (s GetEmailRuleResultEvaluationScope) Validate() error {
+	switch s {
+	case "author":
+		return nil
+	case "own_mailboxes":
+		return nil
+	case "selected":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
 func (s GetEmailRuleResultKind) Validate() error {
 	switch s {
 	case "grant":
@@ -27275,6 +27495,40 @@ func (s GetEmailRuleResultKind) Validate() error {
 		// Added to the API after this client was generated.
 		return nil
 	}
+}
+
+func (s *GetEmailRuleResultScopeSelection) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Addresses == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "addresses",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Domains == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "domains",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
 }
 
 func (s GetEmailRuleResultState) Validate() error {
@@ -37712,6 +37966,42 @@ func (s *ListEmailRulesResultItem) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.EvaluationScope.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "evaluation_scope",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.ScopeSelection.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "scope_selection",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.CurrentVersion.Get(); ok {
 			if err := func() error {
 				if err := (validate.Int{
@@ -37745,6 +38035,20 @@ func (s *ListEmailRulesResultItem) Validate() error {
 	return nil
 }
 
+func (s ListEmailRulesResultItemEvaluationScope) Validate() error {
+	switch s {
+	case "author":
+		return nil
+	case "own_mailboxes":
+		return nil
+	case "selected":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
 func (s ListEmailRulesResultItemKind) Validate() error {
 	switch s {
 	case "grant":
@@ -37755,6 +38059,40 @@ func (s ListEmailRulesResultItemKind) Validate() error {
 		// Added to the API after this client was generated.
 		return nil
 	}
+}
+
+func (s *ListEmailRulesResultItemScopeSelection) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Addresses == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "addresses",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Domains == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "domains",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
 }
 
 func (s ListEmailRulesResultItemState) Validate() error {
@@ -68509,6 +68847,42 @@ func (s *UpdateEmailRuleResult) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.EvaluationScope.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "evaluation_scope",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.ScopeSelection.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "scope_selection",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.CurrentVersion.Get(); ok {
 			if err := func() error {
 				if err := (validate.Int{
@@ -68711,6 +69085,20 @@ func (s UpdateEmailRuleResultCurrentTreeVersion) Validate() error {
 	}
 }
 
+func (s UpdateEmailRuleResultEvaluationScope) Validate() error {
+	switch s {
+	case "author":
+		return nil
+	case "own_mailboxes":
+		return nil
+	case "selected":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
 func (s UpdateEmailRuleResultKind) Validate() error {
 	switch s {
 	case "grant":
@@ -68721,6 +69109,40 @@ func (s UpdateEmailRuleResultKind) Validate() error {
 		// Added to the API after this client was generated.
 		return nil
 	}
+}
+
+func (s *UpdateEmailRuleResultScopeSelection) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Addresses == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "addresses",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Domains == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "domains",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
 }
 
 func (s UpdateEmailRuleResultState) Validate() error {
@@ -72574,6 +72996,19 @@ func (s AcceptEmailRuleRequestResultRuleCurrentTreeVersion) validateKnown() erro
 	}
 }
 
+func (s AcceptEmailRuleRequestResultRuleEvaluationScope) validateKnown() error {
+	switch s {
+	case "author":
+		return nil
+	case "own_mailboxes":
+		return nil
+	case "selected":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s AcceptEmailRuleRequestResultRuleKind) validateKnown() error {
 	switch s {
 	case "grant":
@@ -73459,6 +73894,19 @@ func (s CreateEmailRuleRequestTreeVersion) validateKnown() error {
 func (s CreateEmailRuleResultCurrentTreeVersion) validateKnown() error {
 	switch s {
 	case 1:
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s CreateEmailRuleResultEvaluationScope) validateKnown() error {
+	switch s {
+	case "author":
+		return nil
+	case "own_mailboxes":
+		return nil
+	case "selected":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -75430,6 +75878,8 @@ func (s ErrorResponseErrorCode) validateKnown() error {
 		return nil
 	case "signal_sender_unauthenticated":
 		return nil
+	case "signing_secret_unavailable":
+		return nil
 	case "signup_failed":
 		return nil
 	case "standing_owner_revoked":
@@ -75853,6 +76303,19 @@ func (s GetEmailRuleRequestResultTreeVersion) validateKnown() error {
 func (s GetEmailRuleResultCurrentTreeVersion) validateKnown() error {
 	switch s {
 	case 1:
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s GetEmailRuleResultEvaluationScope) validateKnown() error {
+	switch s {
+	case "author":
+		return nil
+	case "own_mailboxes":
+		return nil
+	case "selected":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -76712,6 +77175,19 @@ func (s ListEmailRuleSharesResultItemRuleState) validateKnown() error {
 func (s ListEmailRuleVersionsResultItemTreeVersion) validateKnown() error {
 	switch s {
 	case 1:
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s ListEmailRulesResultItemEvaluationScope) validateKnown() error {
+	switch s {
+	case "author":
+		return nil
+	case "own_mailboxes":
+		return nil
+	case "selected":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -79452,6 +79928,19 @@ func (s UpdateEmailRuleRequestTreeVersion) validateKnown() error {
 func (s UpdateEmailRuleResultCurrentTreeVersion) validateKnown() error {
 	switch s {
 	case 1:
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s UpdateEmailRuleResultEvaluationScope) validateKnown() error {
+	switch s {
+	case "author":
+		return nil
+	case "own_mailboxes":
+		return nil
+	case "selected":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)

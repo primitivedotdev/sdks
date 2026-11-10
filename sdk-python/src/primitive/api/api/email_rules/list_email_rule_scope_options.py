@@ -110,9 +110,13 @@ def sync_detailed(
     """ List what a rule can cover
 
      How much the caller can read, and the inboxes and domains the caller can read, which is what they
-    may name when a rule runs over selected inboxes and domains. Needs mail:read, a credential acting as
-    a member with their full access (API keys, agent keys and narrowed tokens are refused), and the
-    email rules feature on the organization.
+    may name when a rule runs over selected inboxes and domains. For a caller who reads the whole
+    organization, addresses lists the inboxes known as someone's (member addresses, members' verified
+    work emails at the organization's domains, agents' addresses and inboxes with shared access), not
+    every address that receives mail: may_name_unlisted says when an address that is not listed, such as
+    an inbox nobody has claimed, may be named too. Needs mail:read, a credential acting as a member with
+    their full access (API keys, agent keys and narrowed tokens are refused), and the email rules
+    feature on the organization.
 
     Args:
         q (str | Unset): Only inboxes and domains containing this text.
@@ -146,9 +150,13 @@ def sync(
     """ List what a rule can cover
 
      How much the caller can read, and the inboxes and domains the caller can read, which is what they
-    may name when a rule runs over selected inboxes and domains. Needs mail:read, a credential acting as
-    a member with their full access (API keys, agent keys and narrowed tokens are refused), and the
-    email rules feature on the organization.
+    may name when a rule runs over selected inboxes and domains. For a caller who reads the whole
+    organization, addresses lists the inboxes known as someone's (member addresses, members' verified
+    work emails at the organization's domains, agents' addresses and inboxes with shared access), not
+    every address that receives mail: may_name_unlisted says when an address that is not listed, such as
+    an inbox nobody has claimed, may be named too. Needs mail:read, a credential acting as a member with
+    their full access (API keys, agent keys and narrowed tokens are refused), and the email rules
+    feature on the organization.
 
     Args:
         q (str | Unset): Only inboxes and domains containing this text.
@@ -177,9 +185,13 @@ async def asyncio_detailed(
     """ List what a rule can cover
 
      How much the caller can read, and the inboxes and domains the caller can read, which is what they
-    may name when a rule runs over selected inboxes and domains. Needs mail:read, a credential acting as
-    a member with their full access (API keys, agent keys and narrowed tokens are refused), and the
-    email rules feature on the organization.
+    may name when a rule runs over selected inboxes and domains. For a caller who reads the whole
+    organization, addresses lists the inboxes known as someone's (member addresses, members' verified
+    work emails at the organization's domains, agents' addresses and inboxes with shared access), not
+    every address that receives mail: may_name_unlisted says when an address that is not listed, such as
+    an inbox nobody has claimed, may be named too. Needs mail:read, a credential acting as a member with
+    their full access (API keys, agent keys and narrowed tokens are refused), and the email rules
+    feature on the organization.
 
     Args:
         q (str | Unset): Only inboxes and domains containing this text.
@@ -213,9 +225,13 @@ async def asyncio(
     """ List what a rule can cover
 
      How much the caller can read, and the inboxes and domains the caller can read, which is what they
-    may name when a rule runs over selected inboxes and domains. Needs mail:read, a credential acting as
-    a member with their full access (API keys, agent keys and narrowed tokens are refused), and the
-    email rules feature on the organization.
+    may name when a rule runs over selected inboxes and domains. For a caller who reads the whole
+    organization, addresses lists the inboxes known as someone's (member addresses, members' verified
+    work emails at the organization's domains, agents' addresses and inboxes with shared access), not
+    every address that receives mail: may_name_unlisted says when an address that is not listed, such as
+    an inbox nobody has claimed, may be named too. Needs mail:read, a credential acting as a member with
+    their full access (API keys, agent keys and narrowed tokens are refused), and the email rules
+    feature on the organization.
 
     Args:
         q (str | Unset): Only inboxes and domains containing this text.

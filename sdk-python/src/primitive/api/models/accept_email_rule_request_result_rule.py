@@ -8,6 +8,7 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.accept_email_rule_request_result_rule_evaluation_scope import AcceptEmailRuleRequestResultRuleEvaluationScope
 from ..models.accept_email_rule_request_result_rule_kind import AcceptEmailRuleRequestResultRuleKind
 from ..models.accept_email_rule_request_result_rule_state import AcceptEmailRuleRequestResultRuleState
 from typing import cast
@@ -16,6 +17,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.accept_email_rule_request_result_rule_current_type_0 import AcceptEmailRuleRequestResultRuleCurrentType0
+  from ..models.accept_email_rule_request_result_rule_scope_selection_type_0 import AcceptEmailRuleRequestResultRuleScopeSelectionType0
 
 
 
@@ -42,6 +44,10 @@ class AcceptEmailRuleRequestResultRule:
             current (AcceptEmailRuleRequestResultRuleCurrentType0 | None):
             kind (AcceptEmailRuleRequestResultRuleKind | Unset): do_not_share: the rule blocks sharing of what it matches.
                 Absent (or grant) on a rule that shares what it matches.
+            evaluation_scope (AcceptEmailRuleRequestResultRuleEvaluationScope | Unset): Whose mail the rule runs over, as
+                stored; GET /email-rules/{id}/scope says what that comes to now.
+            scope_selection (AcceptEmailRuleRequestResultRuleScopeSelectionType0 | None | Unset): What a selected rule
+                names; null for any other scope.
      """
 
     id: UUID
@@ -54,6 +60,8 @@ class AcceptEmailRuleRequestResultRule:
     updated_at: datetime.datetime
     current: AcceptEmailRuleRequestResultRuleCurrentType0 | None
     kind: AcceptEmailRuleRequestResultRuleKind | Unset = UNSET
+    evaluation_scope: AcceptEmailRuleRequestResultRuleEvaluationScope | Unset = UNSET
+    scope_selection: AcceptEmailRuleRequestResultRuleScopeSelectionType0 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -62,6 +70,7 @@ class AcceptEmailRuleRequestResultRule:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.accept_email_rule_request_result_rule_current_type_0 import AcceptEmailRuleRequestResultRuleCurrentType0 # noqa: PLC0415
+        from ..models.accept_email_rule_request_result_rule_scope_selection_type_0 import AcceptEmailRuleRequestResultRuleScopeSelectionType0 # noqa: PLC0415
         id = str(self.id)
 
         name = self.name
@@ -90,6 +99,19 @@ class AcceptEmailRuleRequestResultRule:
             kind = self.kind.value
 
 
+        evaluation_scope: str | Unset = UNSET
+        if not isinstance(self.evaluation_scope, Unset):
+            evaluation_scope = self.evaluation_scope.value
+
+
+        scope_selection: dict[str, Any] | None | Unset
+        if isinstance(self.scope_selection, Unset):
+            scope_selection = UNSET
+        elif isinstance(self.scope_selection, AcceptEmailRuleRequestResultRuleScopeSelectionType0):
+            scope_selection = self.scope_selection.to_dict()
+        else:
+            scope_selection = self.scope_selection
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -106,6 +128,10 @@ class AcceptEmailRuleRequestResultRule:
         })
         if kind is not UNSET:
             field_dict["kind"] = kind
+        if evaluation_scope is not UNSET:
+            field_dict["evaluation_scope"] = evaluation_scope
+        if scope_selection is not UNSET:
+            field_dict["scope_selection"] = scope_selection
 
         return field_dict
 
@@ -114,6 +140,7 @@ class AcceptEmailRuleRequestResultRule:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.accept_email_rule_request_result_rule_current_type_0 import AcceptEmailRuleRequestResultRuleCurrentType0 # noqa: PLC0415
+        from ..models.accept_email_rule_request_result_rule_scope_selection_type_0 import AcceptEmailRuleRequestResultRuleScopeSelectionType0 # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -180,6 +207,36 @@ class AcceptEmailRuleRequestResultRule:
 
 
 
+        _evaluation_scope = d.pop("evaluation_scope", UNSET)
+        evaluation_scope: AcceptEmailRuleRequestResultRuleEvaluationScope | Unset
+        if isinstance(_evaluation_scope,  Unset):
+            evaluation_scope = UNSET
+        else:
+            evaluation_scope = AcceptEmailRuleRequestResultRuleEvaluationScope(_evaluation_scope)
+
+
+
+
+        def _parse_scope_selection(data: object) -> AcceptEmailRuleRequestResultRuleScopeSelectionType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                scope_selection_type_0 = AcceptEmailRuleRequestResultRuleScopeSelectionType0.from_dict(data)
+
+
+
+                return scope_selection_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(AcceptEmailRuleRequestResultRuleScopeSelectionType0 | None | Unset, data)
+
+        scope_selection = _parse_scope_selection(d.pop("scope_selection", UNSET))
+
+
         accept_email_rule_request_result_rule = cls(
             id=id,
             name=name,
@@ -191,6 +248,8 @@ class AcceptEmailRuleRequestResultRule:
             updated_at=updated_at,
             current=current,
             kind=kind,
+            evaluation_scope=evaluation_scope,
+            scope_selection=scope_selection,
         )
 
 

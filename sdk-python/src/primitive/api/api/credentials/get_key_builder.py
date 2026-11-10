@@ -102,7 +102,8 @@ def sync_detailed(
     matrix for custom keys and the policy in force. An area marked org_wide_only (Members) is listed
     only to a person who holds its permission, and only a custom key with no addresses or domains may
     hold it. Needs the organization's credential features to be enabled; while they are not, this
-    answers 404 feature_disabled.
+    answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns these
+    on.
 
     Person only: a dashboard session. The person's role must hold keys:read. API keys, agent connection
     keys and agents are refused.
@@ -137,7 +138,8 @@ def sync(
     matrix for custom keys and the policy in force. An area marked org_wide_only (Members) is listed
     only to a person who holds its permission, and only a custom key with no addresses or domains may
     hold it. Needs the organization's credential features to be enabled; while they are not, this
-    answers 404 feature_disabled.
+    answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns these
+    on.
 
     Person only: a dashboard session. The person's role must hold keys:read. API keys, agent connection
     keys and agents are refused.
@@ -167,7 +169,8 @@ async def asyncio_detailed(
     matrix for custom keys and the policy in force. An area marked org_wide_only (Members) is listed
     only to a person who holds its permission, and only a custom key with no addresses or domains may
     hold it. Needs the organization's credential features to be enabled; while they are not, this
-    answers 404 feature_disabled.
+    answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns these
+    on.
 
     Person only: a dashboard session. The person's role must hold keys:read. API keys, agent connection
     keys and agents are refused.
@@ -202,7 +205,8 @@ async def asyncio(
     matrix for custom keys and the policy in force. An area marked org_wide_only (Members) is listed
     only to a person who holds its permission, and only a custom key with no addresses or domains may
     hold it. Needs the organization's credential features to be enabled; while they are not, this
-    answers 404 feature_disabled.
+    answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns these
+    on.
 
     Person only: a dashboard session. The person's role must hold keys:read. API keys, agent connection
     keys and agents are refused.
