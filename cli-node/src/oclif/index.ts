@@ -127,6 +127,7 @@ import {
   RolesGroupsCommand,
   RolesListCommand,
   RolesMailboxAccessCommand,
+  RolesMembersCommand,
 } from "./commands/roles.js";
 import RoutesAddCommand from "./commands/routes-add.js";
 import RoutesListCommand from "./commands/routes-list.js";
@@ -800,6 +801,8 @@ export const COMMANDS: Record<string, typeof Command> = {
   "roles:groups": RolesGroupsCommand,
   "roles:mailbox-access": RolesMailboxAccessCommand,
   "roles:access-mode": RolesAccessModeCommand,
+  "roles:members": RolesMembersCommand,
+  "members:list": RolesMembersCommand,
   "org:secrets:list": OrgSecretsListCommand,
   "org:secrets:set": OrgSecretsSetCommand,
   "org:secrets:remove": OrgSecretsRemoveCommand,
