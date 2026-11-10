@@ -1,5 +1,5 @@
 import { format } from "node:util";
-import type { Command } from "@oclif/core";
+import { type Command, Flags } from "@oclif/core";
 
 /**
  * Parse-safe `--json` output.
@@ -23,6 +23,15 @@ import type { Command } from "@oclif/core";
  * line per result on stdout, and on failure one more JSON line carrying
  * `error` and `exit_code`.
  */
+
+/**
+ * The `--json` flag for a hand-rolled command whose output is already JSON.
+ * Declaring it is enough: the registry guards every command that has it.
+ */
+export const JSON_OUTPUT_FLAG = Flags.boolean({
+  description:
+    "Print exactly one JSON document on stdout, on success and on failure, and nothing on stderr. A failure prints the error with exit_code.",
+});
 
 const GUARDED = Symbol.for("primitive.cli.jsonOutputGuard");
 

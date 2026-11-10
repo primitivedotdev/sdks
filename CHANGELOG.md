@@ -393,6 +393,21 @@ parsers.
 #### CLI
 
 - `primitive billing` opens the dashboard's billing page, or prints its link.
+- More commands take `--json`, which prints exactly one JSON document on
+  stdout, failures included: `routes` (all of them), `org secrets`, `wake
+  authorizations`, `wake dispatches` and `wake schedules`, `functions
+  route-get`, `route-set`, `route-unset`, `routing-topology` and
+  `set-secret`, `memories`, `describe` and `list-operations`. `functions
+  logs` keeps `--jsonl`.
+- `email-rules list-email-rule-results` takes the email's id as `--email-id`,
+  since no other `email-rules` command's `--id` is an email id. `sending
+  reply-to-email`, `sending signal-email` and `repeating-sends
+  stop-repeat-from-email` take `--email-id` too. `--id` keeps working on all
+  four.
+- A list command whose data is an array and whose next cursor is
+  `meta.cursor` says so in its help: `--limit` gives the page cap, and
+  `--cursor` says the next cursor is printed on stderr as `next cursor:`
+  without `--json`, and comes in `meta.cursor` with `--json --envelope`.
 - Generated commands for the new operations, except `createKey`, `rotateKey`,
   `updateKey` and `revokeCredential`, which the `primitive keys` commands
   cover instead.

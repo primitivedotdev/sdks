@@ -139,6 +139,87 @@ function flagDescription(parameter: PrimitiveParameterManifest): string {
   return parameter.description ?? parameter.name;
 }
 
+/** A path or query flag a command names or describes differently from the spec. */
+export type PathFlagOverride = {
+  /** The flag's name, when not the parameter's; the parameter's name stays as an alias. */
+  flag?: string;
+  description?: string;
+};
+
+const EMAIL_ID_NOT_SENT =
+  "The id of the received email (from `primitive emails list`), not a sent email id. --id is accepted too.";
+
+// Path flags renamed where `--id` would name a different resource from the
+// rest of the topic, keyed by operation.sdkName then parameter name. No other
+// email-rules command's --id is an email id (they name a rule, a request or a
+// share), and the sending topic's other ids are sent emails.
+export const OPERATION_PATH_FLAGS: Record<
+  string,
+  Record<string, PathFlagOverride>
+> = {
+  listEmailRuleResults: {
+    id: {
+      flag: "email-id",
+      description:
+        "The id of the email (from `primitive emails list`), not a rule id: lists what every rule you can see decided about this email, and why a rule did not run. --id is accepted too.",
+    },
+  },
+  replyToEmail: { id: { flag: "email-id", description: EMAIL_ID_NOT_SENT } },
+  signalEmail: { id: { flag: "email-id", description: EMAIL_ID_NOT_SENT } },
+  stopRepeatFromEmail: {
+    id: { flag: "email-id", description: EMAIL_ID_NOT_SENT },
+  },
+};
+
+/** The flag a path or query parameter is read from. */
+export function parameterFlagName(
+  sdkName: string | undefined,
+  parameterName: string,
+): string {
+  return (
+    (sdkName
+      ? OPERATION_PATH_FLAGS[sdkName]?.[parameterName]?.flag
+      : undefined) ?? flagName(parameterName)
+  );
+}
+
+/**
+ * Paging help for a list operation whose data is an array and whose next
+ * cursor is meta.cursor: the page cap on --limit, and where the next cursor is
+ * printed, since the --json output of such a list is the data array alone.
+ * The spec's own text is kept. A list that returns its cursor inside the data
+ * (next_cursor) prints it already and is left as the spec describes it.
+ */
+export function pagingFlagOverride(
+  operation: Pick<PrimitiveOperationManifest, "queryParams" | "responseSchema">,
+  parameter: PrimitiveParameterManifest,
+): PathFlagOverride | undefined {
+  if (!operation.queryParams.some((p) => p.name === "cursor")) return undefined;
+  const data = operation.responseSchema as
+    | { type?: unknown }
+    | null
+    | undefined;
+  if (data?.type !== "array") return undefined;
+  const described = flagDescription(parameter).trim().replace(/\.$/, "");
+  if (parameter.name === "cursor") {
+    return {
+      description: `${described}. The next page's cursor is meta.cursor, null on the last page: without --json it is printed on stderr as \`next cursor: <value>\`; with --json, add --envelope to get it, since the bare --json output is the data array alone.`,
+    };
+  }
+  if (parameter.name === "limit" && typeof parameter.maximum === "number") {
+    const cap = described.includes(String(parameter.maximum))
+      ? ""
+      : ` At most ${parameter.maximum} per page;`;
+    return {
+      description: `${described}.${cap} for more, page with --cursor.`.replace(
+        ". for more",
+        ". For more",
+      ),
+    };
+  }
+  return undefined;
+}
+
 type NumericFlagOptions = {
   max?: number;
   min?: number;
@@ -365,10 +446,12 @@ function renderRequestSchemaSummary(
 
 export function flagForParameter(
   parameter: PrimitiveParameterManifest,
+  override?: PathFlagOverride,
 ): unknown {
   const common = {
-    description: flagDescription(parameter),
+    description: override?.description ?? flagDescription(parameter),
     required: parameter.required,
+    ...(override?.flag ? { aliases: [flagName(parameter.name)] } : {}),
   };
 
   if (parameter.type === "boolean") {
@@ -933,7 +1016,12 @@ function buildFlags(operation: PrimitiveOperationManifest): {
   }
 
   for (const parameter of [...operation.pathParams, ...operation.queryParams]) {
-    flags[flagName(parameter.name)] = flagForParameter(parameter);
+    const override = OPERATION_PATH_FLAGS[operation.sdkName]?.[parameter.name];
+    flags[parameterFlagName(operation.sdkName, parameter.name)] =
+      flagForParameter(
+        parameter,
+        override ?? pagingFlagOverride(operation, parameter),
+      );
   }
 
   const bodyFieldFlagToProperty = new Map<string, string>();
@@ -1077,13 +1165,14 @@ async function applyEventTypesFlag(params: {
 function collectValues(
   parameters: PrimitiveParameterManifest[],
   flags: Record<string, unknown>,
+  sdkName?: string,
 ): Record<string, boolean | number | string> {
   const values: Record<string, boolean | number | string> = {};
 
   for (const parameter of parameters) {
     const value = coerceParameterValue(
       parameter,
-      flags[flagName(parameter.name)],
+      flags[parameterFlagName(sdkName, parameter.name)],
     );
     if (value !== undefined) {
       values[parameter.name] = value;
@@ -1461,7 +1550,11 @@ export function createOperationCommand(
         const operationFn = operations[
           operation.sdkName as OperationName
         ] as unknown as OperationExecutor;
-        const query = collectValues(operation.queryParams, parsedFlags);
+        const query = collectValues(
+          operation.queryParams,
+          parsedFlags,
+          operation.sdkName,
+        );
         // Set when this list or search call asked for reply state, so an
         // older server that lacks it fails loudly instead of returning
         // unfiltered mail that looks filtered.
@@ -1483,7 +1576,11 @@ export function createOperationCommand(
             client: apiClient.client,
             ...(Object.keys(headers).length > 0 ? { headers } : {}),
             parseAs: operation.binaryResponse ? "blob" : "auto",
-            path: collectValues(operation.pathParams, parsedFlags),
+            path: collectValues(
+              operation.pathParams,
+              parsedFlags,
+              operation.sdkName,
+            ),
             query,
             responseStyle: "fields",
           });

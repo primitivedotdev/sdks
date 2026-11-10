@@ -9,6 +9,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { JSON_OUTPUT_FLAG } from "../json-output.js";
 
 // `primitive functions:routing-topology` returns the org-wide view of
 // function routing: which active domain has which function bound, the
@@ -26,6 +27,7 @@ class FunctionsRoutingTopologyCommand extends Command {
   static examples = ["<%= config.bin %> functions routing-topology"];
 
   static flags = {
+    json: JSON_OUTPUT_FLAG,
     "api-key": Flags.string({
       description:
         "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",

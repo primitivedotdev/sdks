@@ -6,6 +6,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { JSON_OUTPUT_FLAG } from "../json-output.js";
 import {
   orgSecretsAuthHeaders,
   runOrgSecretsRequest,
@@ -23,6 +24,7 @@ class OrgSecretsListCommand extends Command {
   static examples = ["<%= config.bin %> org secrets list"];
 
   static flags = {
+    json: JSON_OUTPUT_FLAG,
     "api-key": Flags.string({
       description:
         "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",

@@ -22,6 +22,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { JSON_OUTPUT_FLAG } from "../json-output.js";
 
 type AuthHintBase = Omit<
   Parameters<typeof surfaceUnauthorizedHint>[0],
@@ -284,6 +285,7 @@ class MemoriesSetCommand extends Command {
   };
 
   static flags = {
+    json: JSON_OUTPUT_FLAG,
     "api-key": API_KEY_FLAG,
     "api-base-url": API_BASE_URL_FLAG,
     ...SCOPE_FLAGS,
@@ -401,6 +403,7 @@ class MemoriesGetCommand extends Command {
   };
 
   static flags = {
+    json: JSON_OUTPUT_FLAG,
     "api-key": API_KEY_FLAG,
     "api-base-url": API_BASE_URL_FLAG,
     ...SCOPE_FLAGS,
@@ -467,6 +470,7 @@ class MemoriesDeleteCommand extends Command {
   };
 
   static flags = {
+    json: JSON_OUTPUT_FLAG,
     "api-key": API_KEY_FLAG,
     "api-base-url": API_BASE_URL_FLAG,
     ...SCOPE_FLAGS,
@@ -536,6 +540,7 @@ class MemoriesSearchCommand extends Command {
   };
 
   static flags = {
+    json: JSON_OUTPUT_FLAG,
     "api-key": API_KEY_FLAG,
     "api-base-url": API_BASE_URL_FLAG,
     ...SCOPE_FLAGS,

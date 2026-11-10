@@ -9,6 +9,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { JSON_OUTPUT_FLAG } from "../json-output.js";
 
 // `primitive functions:route-get` returns the endpoint binding for a
 // function, or null when no route is currently bound. Pair with
@@ -24,6 +25,7 @@ class FunctionsRouteGetCommand extends Command {
   static examples = ["<%= config.bin %> functions route-get --id <fn-id>"];
 
   static flags = {
+    json: JSON_OUTPUT_FLAG,
     "api-key": Flags.string({
       description:
         "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",

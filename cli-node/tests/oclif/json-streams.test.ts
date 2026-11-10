@@ -378,6 +378,24 @@ describe("--json prints one document on a merged stream", () => {
     for (const id of ["send", "reply", "chat", "chat:reply", "sent:get"]) {
       expect(jsonCommandIds).toContain(id);
     }
+    // Every listing and reading command, hand-rolled ones included.
+    for (const id of [
+      "routes:list",
+      "routes:test",
+      "org:secrets:list",
+      "wake:authorizations:list",
+      "wake:dispatches:list",
+      "wake:schedules:list",
+      "wake:schedules:get",
+      "functions:route-get",
+      "functions:routing-topology",
+      "memories:get",
+      "memories:search",
+      "describe",
+      "list-operations",
+    ]) {
+      expect(jsonCommandIds).toContain(id);
+    }
     expect(jsonCommandIds).not.toContain("listen");
   });
 
@@ -421,10 +439,15 @@ const SUCCESS_ARGV: Record<string, string[]> = {
   "credits:balance": [],
   "credits:redeem": ["LAUNCH50"],
   "emails:latest": [],
+  "functions:routing-topology": [],
   "functions:templates": [],
   "inbox:next": [],
   "inbox:setup": [],
   "inbox:status": [],
+  "list-operations": [],
+  describe: ["emails:list"],
+  "org:secrets:list": [],
+  "routes:list": [],
   "network:add": ["peer@example.com"],
   "network:get": ["peer@example.com"],
   "network:list": [],
@@ -436,6 +459,9 @@ const SUCCESS_ARGV: Record<string, string[]> = {
   "semantic-search": ["invoice"],
   signal: ["ack", "--id", "00000000-0000-4000-8000-000000000001"],
   "signup:status": [],
+  "wake:authorizations:list": [],
+  "wake:dispatches:list": [],
+  "wake:schedules:list": [],
   whoami: [],
 };
 
@@ -556,6 +582,43 @@ describe("generated commands with --json", () => {
       meta: { cursor: "cursor-2" },
     });
     expect(document.summary).toContain("No inbound emails received yet");
+  });
+
+  it("takes the email id of list-email-rule-results as --email-id, and --id still works", async () => {
+    responder = () => jsonResponse(200, { success: true, data: { rules: [] } });
+    const email = "00000000-0000-4000-8000-0000000000e1";
+    for (const flag of ["--email-id", "--id"]) {
+      fetchCalls = [];
+      const result = await runMerged("email-rules:list-email-rule-results", [
+        flag,
+        email,
+        "--json",
+      ]);
+      expect(result.exitCode).toBe(0);
+      expect(fetchCalls.map((call) => call.url.pathname)).toEqual([
+        `/v1/emails/${email}/rule-results`,
+      ]);
+    }
+    const flags = (
+      COMMANDS["email-rules:list-email-rule-results"] as unknown as Runnable
+    ).flags as Record<string, { description?: string; aliases?: string[] }>;
+    expect(flags["email-id"]?.aliases).toEqual(["id"]);
+    expect(flags["email-id"]?.description).toContain("not a rule id");
+  });
+
+  it("says how to page a list: the cap on --limit and where --cursor comes from", () => {
+    const flags = (COMMANDS["emails:list"] as unknown as Runnable)
+      .flags as Record<string, { description?: string }>;
+    expect(flags.limit?.description).toContain("At most 100 per page");
+    expect(flags.limit?.description).toContain("page with --cursor");
+    expect(flags.cursor?.description).toContain("meta.cursor");
+    expect(flags.cursor?.description).toContain("next cursor: <value>");
+    expect(flags.cursor?.description).toContain("--envelope");
+    // A list that returns its cursor in the data keeps the spec's text.
+    const templates = (
+      COMMANDS["templates:list-templates"] as unknown as Runnable
+    ).flags as Record<string, { description?: string }>;
+    expect(templates.cursor?.description).not.toContain("--envelope");
   });
 
   it("keeps the data-only output and stderr cursor without --json", async () => {
