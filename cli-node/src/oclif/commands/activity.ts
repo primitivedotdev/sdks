@@ -1,0 +1,248 @@
+import { Command, Flags } from "@oclif/core";
+import {
+  type ListActivityObjectsResult,
+  listActivityObjects,
+} from "@primitivedotdev/api-core";
+import { createAuthenticatedCliApiClient } from "../api-client.js";
+import {
+  API_BASE_URL_FLAG_DESCRIPTION,
+  extractErrorPayload,
+  surfaceUnauthorizedHint,
+  writeErrorWithHints,
+} from "../api-command.js";
+
+// What you created, read from GET /activity/objects. A key, an app or an agent
+// sees what it created itself; a person signed in with `primitive login` sees
+// what they created through any credential of theirs. Ids, names and states
+// only: never a webhook URL or mail content.
+
+const API_KEY_FLAG = Flags.string({
+  description:
+    "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",
+  env: "PRIMITIVE_API_KEY",
+});
+
+const API_BASE_URL_FLAG = Flags.string({
+  description: API_BASE_URL_FLAG_DESCRIPTION,
+  env: "PRIMITIVE_API_BASE_URL",
+  hidden: true,
+});
+
+/** The most pages `--all` follows before it stops and prints where to resume. */
+export const ALL_PAGES_LIMIT = 50;
+
+type Page = ListActivityObjectsResult;
+export type ActivityItem = Page["items"][number];
+export type WithheldKind = Page["withheld"][number];
+
+type SdkResult = { data?: unknown; error?: unknown; response?: Response };
+
+async function call(
+  request: Promise<SdkResult>,
+): Promise<{ ok: true; data: Page } | { ok: false; payload: unknown }> {
+  try {
+    const result = await request;
+    if (result.error !== undefined || !result.response?.ok) {
+      return {
+        ok: false,
+        payload:
+          result.error === undefined ||
+          result.error === null ||
+          typeof result.error === "string"
+            ? {
+                code: "http_error",
+                message:
+                  (typeof result.error === "string" && result.error.trim()) ||
+                  `HTTP ${result.response?.status ?? ""}`.trim(),
+              }
+            : extractErrorPayload(result.error),
+      };
+    }
+    const data = result.data as { data?: Page } | Page | undefined;
+    return {
+      ok: true,
+      data: ((data as { data?: Page })?.data ?? data) as Page,
+    };
+  } catch (error) {
+    return { ok: false, payload: extractErrorPayload(error) };
+  }
+}
+
+function minute(value: string | null | undefined): string {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toISOString().slice(0, 16).replace("T", " ");
+}
+
+/** The credential an item came through, in words. */
+export function throughLabel(through: ActivityItem["created_through"]): string {
+  if (through.kind === "member") return "you";
+  const kind =
+    through.kind === "org_key"
+      ? "key"
+      : through.kind === "connected_key"
+        ? "agent"
+        : through.kind === "function_key"
+          ? "Function key"
+          : through.kind === "agent_delegate"
+            ? "agent delegate"
+            : "app";
+  return through.name ? `${kind} ${through.name}` : kind;
+}
+
+/** One line per item: kind, state, when it was created, its name, and what it was created through. */
+export function formatActivityRows(
+  covers: string,
+  items: readonly ActivityItem[],
+): string {
+  if (items.length === 0) return "Nothing to show.";
+  const rows = items.map((item) => [
+    item.kind,
+    item.owned_now === "someone_else"
+      ? `${item.state} (transferred)`
+      : item.state,
+    minute(item.created_at),
+    item.name ?? item.id,
+    ...(covers === "you" ? [throughLabel(item.created_through)] : []),
+  ]);
+  const header = [
+    "KIND",
+    "STATE",
+    "CREATED (UTC)",
+    "NAME",
+    ...(covers === "you" ? ["THROUGH"] : []),
+  ];
+  const widths = header.map((h, i) =>
+    Math.max(h.length, ...rows.map((row) => (row[i] ?? "").length)),
+  );
+  const line = (cells: readonly string[]) =>
+    cells
+      .map((cell, i) =>
+        i === cells.length - 1 ? cell : cell.padEnd(widths[i] ?? 0),
+      )
+      .join("  ");
+  return [line(header), ...rows.map(line)].join("\n");
+}
+
+/** What was left out, and why: no counts, only the kinds and what would show them. */
+export function formatWithheld(
+  withheld: readonly WithheldKind[],
+): string | null {
+  if (withheld.length === 0) return null;
+  const parts = withheld.map((w) =>
+    w.reason === "permission_missing" && w.permission
+      ? `${w.kind} (needs ${w.permission})`
+      : w.reason === "mail_scope"
+        ? `${w.kind} (needs access to every mailbox)`
+        : `${w.kind} (not for this credential)`,
+  );
+  return `Not shown: ${parts.join(", ")}.`;
+}
+
+export class ActivityCreatedCommand extends Command {
+  static description =
+    `List what you created, newest first, with where each object stands now: Functions, endpoints, pull subscriptions, routes, filters, wake schedules, repeating and scheduled sends, including ones since disabled, deleted or revoked.
+
+  Signed in with \`primitive login\`, you see what you created through any credential of yours (yourself, this CLI, apps you connected, your API keys while they were yours, your agents), with each item naming the credential, plus your API keys, agents, email rules and rule requests. With an API key or an agent's key, you see what that key created.
+
+  Only ids, names and states are shown, never a webhook URL or mail content. Kinds your access does not let you list are named at the end.`;
+
+  static summary = "List what you created";
+
+  static examples = [
+    "<%= config.bin %> activity created",
+    "<%= config.bin %> activity created --kind endpoint,api_key --state ended",
+    "<%= config.bin %> activity created --all --json",
+  ];
+
+  static flags = {
+    "api-key": API_KEY_FLAG,
+    "api-base-url": API_BASE_URL_FLAG,
+    kind: Flags.string({
+      description:
+        "Only these kinds, comma-separated (for example endpoint,recipient_route,api_key).",
+    }),
+    state: Flags.string({
+      description:
+        "all (default), live, or ended (deleted, replaced, revoked or finished).",
+      options: ["all", "live", "ended"],
+      default: "all",
+    }),
+    limit: Flags.integer({
+      description: "Objects per page, 1 to 200.",
+      min: 1,
+      max: 200,
+      default: 50,
+    }),
+    cursor: Flags.string({
+      description: "Resume from a next_cursor an earlier page printed.",
+    }),
+    all: Flags.boolean({
+      description: `Follow every page (at most ${ALL_PAGES_LIMIT}).`,
+    }),
+    json: Flags.boolean({ description: "Print the answer as JSON." }),
+  };
+
+  async run(): Promise<void> {
+    const { flags } = await this.parse(ActivityCreatedCommand);
+    const auth = await createAuthenticatedCliApiClient({
+      apiKey: flags["api-key"],
+      apiBaseUrl: flags["api-base-url"],
+      configDir: this.config.configDir,
+    });
+    const items: ActivityItem[] = [];
+    let covers = "";
+    let withheld: WithheldKind[] = [];
+    let cursor = flags.cursor;
+    for (let page = 0; page < (flags.all ? ALL_PAGES_LIMIT : 1); page += 1) {
+      const result = await call(
+        listActivityObjects({
+          client: auth.apiClient.client,
+          query: {
+            state: flags.state as "all" | "live" | "ended",
+            limit: flags.limit,
+            ...(flags.kind ? { kind: flags.kind } : {}),
+            ...(cursor ? { cursor } : {}),
+          },
+        }),
+      );
+      if (!result.ok) {
+        if (flags.json)
+          process.stderr.write(`${JSON.stringify(result.payload)}\n`);
+        else writeErrorWithHints(result.payload);
+        surfaceUnauthorizedHint({
+          auth: auth.auth,
+          baseUrlOverridden: auth.baseUrlOverridden,
+          configDir: this.config.configDir,
+          payload: result.payload,
+        });
+        process.exitCode = 1;
+        return;
+      }
+      covers = result.data.covers;
+      withheld = result.data.withheld;
+      items.push(...result.data.items);
+      cursor = result.data.next_cursor ?? undefined;
+      if (!cursor) break;
+    }
+    if (flags.json) {
+      this.log(
+        JSON.stringify(
+          { covers, items, withheld, next_cursor: cursor ?? null },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
+    this.log(formatActivityRows(covers, items));
+    const notShown = formatWithheld(withheld);
+    if (notShown) this.log(`\n${notShown}`);
+    if (cursor)
+      this.log(
+        `\nMore: ${this.config.bin} activity created --cursor ${cursor}`,
+      );
+  }
+}

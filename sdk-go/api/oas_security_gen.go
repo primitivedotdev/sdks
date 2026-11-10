@@ -187,6 +187,7 @@ var operationRolesBearerAuth = map[string][]string{
 	InviteOrganizationMemberOperation:             []string{},
 	InviteProjectMemberOperation:                  []string{},
 	LeaveOrganizationOperation:                    []string{},
+	ListActivityObjectsOperation:                  []string{},
 	ListAddressNotesOperation:                     []string{},
 	ListAddressNotesBatchOperation:                []string{},
 	ListAgentConnectionsOperation:                 []string{},

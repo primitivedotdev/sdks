@@ -54557,6 +54557,437 @@ type LeaveOrganizationUnauthorized ErrorResponseHeaders
 
 func (*LeaveOrganizationUnauthorized) leaveOrganizationRes() {}
 
+type ListActivityObjectsBadRequest ErrorResponse
+
+func (*ListActivityObjectsBadRequest) listActivityObjectsRes() {}
+
+type ListActivityObjectsForbidden ErrorResponse
+
+func (*ListActivityObjectsForbidden) listActivityObjectsRes() {}
+
+// Merged schema.
+type ListActivityObjectsOK struct {
+	Success bool                      `json:"success"`
+	Data    ListActivityObjectsResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListActivityObjectsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListActivityObjectsOK) GetData() ListActivityObjectsResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListActivityObjectsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListActivityObjectsOK) SetData(val ListActivityObjectsResult) {
+	s.Data = val
+}
+
+func (*ListActivityObjectsOK) listActivityObjectsRes() {}
+
+// Ref: #/components/schemas/ListActivityObjectsResult
+type ListActivityObjectsResult struct {
+	// You: what a person created through any credential of theirs (their dashboard session, their own
+	// CLI or app login, apps and agent delegates acting for them, their API keys while theirs, their
+	// personal agents). this_credential: what the calling key, app or agent created itself.
+	Covers string                               `json:"covers"`
+	Items  []ListActivityObjectsResultItemsItem `json:"items"`
+	// Kinds left out because the caller could not list them through their own routes. Nothing is said
+	// about how many there are.
+	Withheld []ListActivityObjectsResultWithheldItem `json:"withheld"`
+	// Pass as cursor to read the next page; null on the last page. A page can hold fewer items than
+	// limit, or none, while next_cursor is set.
+	NextCursor NilString `json:"next_cursor"`
+}
+
+// GetCovers returns the value of Covers.
+func (s *ListActivityObjectsResult) GetCovers() string {
+	return s.Covers
+}
+
+// GetItems returns the value of Items.
+func (s *ListActivityObjectsResult) GetItems() []ListActivityObjectsResultItemsItem {
+	return s.Items
+}
+
+// GetWithheld returns the value of Withheld.
+func (s *ListActivityObjectsResult) GetWithheld() []ListActivityObjectsResultWithheldItem {
+	return s.Withheld
+}
+
+// GetNextCursor returns the value of NextCursor.
+func (s *ListActivityObjectsResult) GetNextCursor() NilString {
+	return s.NextCursor
+}
+
+// SetCovers sets the value of Covers.
+func (s *ListActivityObjectsResult) SetCovers(val string) {
+	s.Covers = val
+}
+
+// SetItems sets the value of Items.
+func (s *ListActivityObjectsResult) SetItems(val []ListActivityObjectsResultItemsItem) {
+	s.Items = val
+}
+
+// SetWithheld sets the value of Withheld.
+func (s *ListActivityObjectsResult) SetWithheld(val []ListActivityObjectsResultWithheldItem) {
+	s.Withheld = val
+}
+
+// SetNextCursor sets the value of NextCursor.
+func (s *ListActivityObjectsResult) SetNextCursor(val NilString) {
+	s.NextCursor = val
+}
+
+type ListActivityObjectsResultItemsItem struct {
+	// One of: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule,
+	// wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule,
+	// email_rule_request.
+	Kind string `json:"kind"`
+	ID   string `json:"id"`
+	// The name the object is known by: an endpoint's display name, a route's or filter's pattern, a
+	// Function's name, a send's From address, a wake schedule's command and the address it wakes, an API
+	// key's name, an agent's address, a rule's or rule request's name. Never a webhook URL and never
+	// mail content.
+	Name NilString `json:"name"`
+	// Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or
+	// disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or
+	// ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API
+	// keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules),
+	// pending, accepted, declined or withdrawn (rule requests).
+	State     string    `json:"state"`
+	CreatedAt time.Time `json:"created_at"`
+	// When it was deleted, replaced or revoked, when a repeating send stopped, or when a rule request
+	// was decided; null otherwise.
+	EndedAt NilDateTime `json:"ended_at"`
+	// You: nobody has taken it over since it was created. someone_else: it was transferred to another
+	// person since.
+	OwnedNow       ListActivityObjectsResultItemsItemOwnedNow       `json:"owned_now"`
+	CreatedThrough ListActivityObjectsResultItemsItemCreatedThrough `json:"created_through"`
+}
+
+// GetKind returns the value of Kind.
+func (s *ListActivityObjectsResultItemsItem) GetKind() string {
+	return s.Kind
+}
+
+// GetID returns the value of ID.
+func (s *ListActivityObjectsResultItemsItem) GetID() string {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *ListActivityObjectsResultItemsItem) GetName() NilString {
+	return s.Name
+}
+
+// GetState returns the value of State.
+func (s *ListActivityObjectsResultItemsItem) GetState() string {
+	return s.State
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *ListActivityObjectsResultItemsItem) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetEndedAt returns the value of EndedAt.
+func (s *ListActivityObjectsResultItemsItem) GetEndedAt() NilDateTime {
+	return s.EndedAt
+}
+
+// GetOwnedNow returns the value of OwnedNow.
+func (s *ListActivityObjectsResultItemsItem) GetOwnedNow() ListActivityObjectsResultItemsItemOwnedNow {
+	return s.OwnedNow
+}
+
+// GetCreatedThrough returns the value of CreatedThrough.
+func (s *ListActivityObjectsResultItemsItem) GetCreatedThrough() ListActivityObjectsResultItemsItemCreatedThrough {
+	return s.CreatedThrough
+}
+
+// SetKind sets the value of Kind.
+func (s *ListActivityObjectsResultItemsItem) SetKind(val string) {
+	s.Kind = val
+}
+
+// SetID sets the value of ID.
+func (s *ListActivityObjectsResultItemsItem) SetID(val string) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *ListActivityObjectsResultItemsItem) SetName(val NilString) {
+	s.Name = val
+}
+
+// SetState sets the value of State.
+func (s *ListActivityObjectsResultItemsItem) SetState(val string) {
+	s.State = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *ListActivityObjectsResultItemsItem) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetEndedAt sets the value of EndedAt.
+func (s *ListActivityObjectsResultItemsItem) SetEndedAt(val NilDateTime) {
+	s.EndedAt = val
+}
+
+// SetOwnedNow sets the value of OwnedNow.
+func (s *ListActivityObjectsResultItemsItem) SetOwnedNow(val ListActivityObjectsResultItemsItemOwnedNow) {
+	s.OwnedNow = val
+}
+
+// SetCreatedThrough sets the value of CreatedThrough.
+func (s *ListActivityObjectsResultItemsItem) SetCreatedThrough(val ListActivityObjectsResultItemsItemCreatedThrough) {
+	s.CreatedThrough = val
+}
+
+type ListActivityObjectsResultItemsItemCreatedThrough struct {
+	// The kind of credential it was created through: org_key, function_key, connected_key, oauth,
+	// agent_delegate or member (the person themselves).
+	Kind string `json:"kind"`
+	// In a person's view, the person's own user id for member, and an API key's id where they may read
+	// their keys. Null otherwise, and always null when it is the calling credential itself.
+	ID NilString `json:"id"`
+	// In a person's view, what that credential of theirs is called: an app login by its app, an API key
+	// by its name, an agent's key by its address. Null otherwise, and for the person themselves.
+	Name NilString `json:"name"`
+}
+
+// GetKind returns the value of Kind.
+func (s *ListActivityObjectsResultItemsItemCreatedThrough) GetKind() string {
+	return s.Kind
+}
+
+// GetID returns the value of ID.
+func (s *ListActivityObjectsResultItemsItemCreatedThrough) GetID() NilString {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *ListActivityObjectsResultItemsItemCreatedThrough) GetName() NilString {
+	return s.Name
+}
+
+// SetKind sets the value of Kind.
+func (s *ListActivityObjectsResultItemsItemCreatedThrough) SetKind(val string) {
+	s.Kind = val
+}
+
+// SetID sets the value of ID.
+func (s *ListActivityObjectsResultItemsItemCreatedThrough) SetID(val NilString) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *ListActivityObjectsResultItemsItemCreatedThrough) SetName(val NilString) {
+	s.Name = val
+}
+
+// You: nobody has taken it over since it was created. someone_else: it was transferred to another
+// person since.
+type ListActivityObjectsResultItemsItemOwnedNow string
+
+const (
+	ListActivityObjectsResultItemsItemOwnedNowYou         ListActivityObjectsResultItemsItemOwnedNow = "you"
+	ListActivityObjectsResultItemsItemOwnedNowSomeoneElse ListActivityObjectsResultItemsItemOwnedNow = "someone_else"
+)
+
+// AllValues returns all ListActivityObjectsResultItemsItemOwnedNow values.
+func (ListActivityObjectsResultItemsItemOwnedNow) AllValues() []ListActivityObjectsResultItemsItemOwnedNow {
+	return []ListActivityObjectsResultItemsItemOwnedNow{
+		ListActivityObjectsResultItemsItemOwnedNowYou,
+		ListActivityObjectsResultItemsItemOwnedNowSomeoneElse,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListActivityObjectsResultItemsItemOwnedNow) MarshalText() ([]byte, error) {
+	switch s {
+	case ListActivityObjectsResultItemsItemOwnedNowYou:
+		return []byte(s), nil
+	case ListActivityObjectsResultItemsItemOwnedNowSomeoneElse:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListActivityObjectsResultItemsItemOwnedNow) UnmarshalText(data []byte) error {
+	switch ListActivityObjectsResultItemsItemOwnedNow(data) {
+	case ListActivityObjectsResultItemsItemOwnedNowYou:
+		*s = ListActivityObjectsResultItemsItemOwnedNowYou
+		return nil
+	case ListActivityObjectsResultItemsItemOwnedNowSomeoneElse:
+		*s = ListActivityObjectsResultItemsItemOwnedNowSomeoneElse
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type ListActivityObjectsResultWithheldItem struct {
+	Kind string `json:"kind"`
+	// Permission_missing: the caller lacks the permission the kind's own list needs (named in
+	// permission). mail_scope: listed only to a caller that reads every mailbox.
+	// not_for_this_credential: this kind of credential never lists them (a person's own kinds asked for
+	// by a key, an app or an agent).
+	Reason     ListActivityObjectsResultWithheldItemReason `json:"reason"`
+	Permission NilString                                   `json:"permission"`
+}
+
+// GetKind returns the value of Kind.
+func (s *ListActivityObjectsResultWithheldItem) GetKind() string {
+	return s.Kind
+}
+
+// GetReason returns the value of Reason.
+func (s *ListActivityObjectsResultWithheldItem) GetReason() ListActivityObjectsResultWithheldItemReason {
+	return s.Reason
+}
+
+// GetPermission returns the value of Permission.
+func (s *ListActivityObjectsResultWithheldItem) GetPermission() NilString {
+	return s.Permission
+}
+
+// SetKind sets the value of Kind.
+func (s *ListActivityObjectsResultWithheldItem) SetKind(val string) {
+	s.Kind = val
+}
+
+// SetReason sets the value of Reason.
+func (s *ListActivityObjectsResultWithheldItem) SetReason(val ListActivityObjectsResultWithheldItemReason) {
+	s.Reason = val
+}
+
+// SetPermission sets the value of Permission.
+func (s *ListActivityObjectsResultWithheldItem) SetPermission(val NilString) {
+	s.Permission = val
+}
+
+// Permission_missing: the caller lacks the permission the kind's own list needs (named in
+// permission). mail_scope: listed only to a caller that reads every mailbox.
+// not_for_this_credential: this kind of credential never lists them (a person's own kinds asked for
+// by a key, an app or an agent).
+type ListActivityObjectsResultWithheldItemReason string
+
+const (
+	ListActivityObjectsResultWithheldItemReasonPermissionMissing    ListActivityObjectsResultWithheldItemReason = "permission_missing"
+	ListActivityObjectsResultWithheldItemReasonMailScope            ListActivityObjectsResultWithheldItemReason = "mail_scope"
+	ListActivityObjectsResultWithheldItemReasonNotForThisCredential ListActivityObjectsResultWithheldItemReason = "not_for_this_credential"
+)
+
+// AllValues returns all ListActivityObjectsResultWithheldItemReason values.
+func (ListActivityObjectsResultWithheldItemReason) AllValues() []ListActivityObjectsResultWithheldItemReason {
+	return []ListActivityObjectsResultWithheldItemReason{
+		ListActivityObjectsResultWithheldItemReasonPermissionMissing,
+		ListActivityObjectsResultWithheldItemReasonMailScope,
+		ListActivityObjectsResultWithheldItemReasonNotForThisCredential,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListActivityObjectsResultWithheldItemReason) MarshalText() ([]byte, error) {
+	switch s {
+	case ListActivityObjectsResultWithheldItemReasonPermissionMissing:
+		return []byte(s), nil
+	case ListActivityObjectsResultWithheldItemReasonMailScope:
+		return []byte(s), nil
+	case ListActivityObjectsResultWithheldItemReasonNotForThisCredential:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListActivityObjectsResultWithheldItemReason) UnmarshalText(data []byte) error {
+	switch ListActivityObjectsResultWithheldItemReason(data) {
+	case ListActivityObjectsResultWithheldItemReasonPermissionMissing:
+		*s = ListActivityObjectsResultWithheldItemReasonPermissionMissing
+		return nil
+	case ListActivityObjectsResultWithheldItemReasonMailScope:
+		*s = ListActivityObjectsResultWithheldItemReasonMailScope
+		return nil
+	case ListActivityObjectsResultWithheldItemReasonNotForThisCredential:
+		*s = ListActivityObjectsResultWithheldItemReasonNotForThisCredential
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type ListActivityObjectsState string
+
+const (
+	ListActivityObjectsStateAll   ListActivityObjectsState = "all"
+	ListActivityObjectsStateLive  ListActivityObjectsState = "live"
+	ListActivityObjectsStateEnded ListActivityObjectsState = "ended"
+)
+
+// AllValues returns all ListActivityObjectsState values.
+func (ListActivityObjectsState) AllValues() []ListActivityObjectsState {
+	return []ListActivityObjectsState{
+		ListActivityObjectsStateAll,
+		ListActivityObjectsStateLive,
+		ListActivityObjectsStateEnded,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListActivityObjectsState) MarshalText() ([]byte, error) {
+	switch s {
+	case ListActivityObjectsStateAll:
+		return []byte(s), nil
+	case ListActivityObjectsStateLive:
+		return []byte(s), nil
+	case ListActivityObjectsStateEnded:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListActivityObjectsState) UnmarshalText(data []byte) error {
+	switch ListActivityObjectsState(data) {
+	case ListActivityObjectsStateAll:
+		*s = ListActivityObjectsStateAll
+		return nil
+	case ListActivityObjectsStateLive:
+		*s = ListActivityObjectsStateLive
+		return nil
+	case ListActivityObjectsStateEnded:
+		*s = ListActivityObjectsStateEnded
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type ListActivityObjectsTooManyRequests ErrorResponseHeaders
+
+func (*ListActivityObjectsTooManyRequests) listActivityObjectsRes() {}
+
+type ListActivityObjectsUnauthorized ErrorResponseHeaders
+
+func (*ListActivityObjectsUnauthorized) listActivityObjectsRes() {}
+
 type ListAddressNotesBadRequest ErrorResponse
 
 func (*ListAddressNotesBadRequest) listAddressNotesRes() {}
@@ -78754,6 +79185,52 @@ func (o OptInviteAgentConnectionOKCacheControl) Get() (v InviteAgentConnectionOK
 
 // Or returns value if set, or given parameter if does not.
 func (o OptInviteAgentConnectionOKCacheControl) Or(d InviteAgentConnectionOKCacheControl) InviteAgentConnectionOKCacheControl {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptListActivityObjectsState returns new OptListActivityObjectsState with value set to v.
+func NewOptListActivityObjectsState(v ListActivityObjectsState) OptListActivityObjectsState {
+	return OptListActivityObjectsState{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListActivityObjectsState is optional ListActivityObjectsState.
+type OptListActivityObjectsState struct {
+	Value ListActivityObjectsState
+	Set   bool
+}
+
+// IsSet returns true if OptListActivityObjectsState was set.
+func (o OptListActivityObjectsState) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListActivityObjectsState) Reset() {
+	var v ListActivityObjectsState
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListActivityObjectsState) SetTo(v ListActivityObjectsState) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListActivityObjectsState) Get() (v ListActivityObjectsState, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListActivityObjectsState) Or(d ListActivityObjectsState) ListActivityObjectsState {
 	if v, ok := o.Get(); ok {
 		return v
 	}

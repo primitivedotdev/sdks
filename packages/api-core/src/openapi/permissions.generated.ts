@@ -13,6 +13,7 @@ export const PERMISSIONS = [
   "account:claim",
   "account:manage",
   "account:read",
+  "activity:read_self",
   "agent_connections:manage",
   "agent_connections:read_self",
   "agent_connections:update",
@@ -512,6 +513,9 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   ],
   "inviteProjectMember": [
     "invitations:manage"
+  ],
+  "listActivityObjects": [
+    "activity:read_self"
   ],
   "listAddressNotes": [
     "notes:read"

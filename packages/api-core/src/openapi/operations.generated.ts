@@ -1058,6 +1058,203 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "list-activity-objects",
+    "description": "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules and rule requests. Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listActivityObjects",
+    "path": "/activity/objects",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "description": "Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request. Defaults to every kind the caller can have created (a person's own kinds only for a person).",
+        "enum": null,
+        "name": "kind",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "all",
+        "description": "all (the default), live (still there, enabled or not) or ended (deleted, replaced or finished).",
+        "enum": [
+          "all",
+          "live",
+          "ended"
+        ],
+        "name": "state",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": 50,
+        "description": "Objects per page, from 1 to 200; defaults to 50.",
+        "enum": null,
+        "maximum": 200,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "next_cursor from the preceding page. Omit for the first page.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "headerParams": [],
+    "permissions": [
+      "activity:read_self"
+    ],
+    "access": null,
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "covers": {
+          "type": "string",
+          "description": "you: what a person created through any credential of theirs (their dashboard session, their own CLI or app login, apps and agent delegates acting for them, their API keys while theirs, their personal agents). this_credential: what the calling key, app or agent created itself."
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "description": "One of: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request."
+              },
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "description": "The name the object is known by: an endpoint's display name, a route's or filter's pattern, a Function's name, a send's From address, a wake schedule's command and the address it wakes, an API key's name, an agent's address, a rule's or rule request's name. Never a webhook URL and never mail content.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "state": {
+                "type": "string",
+                "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests)."
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "ended_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "When it was deleted, replaced or revoked, when a repeating send stopped, or when a rule request was decided; null otherwise."
+              },
+              "owned_now": {
+                "type": "string",
+                "enum": [
+                  "you",
+                  "someone_else"
+                ],
+                "description": "you: nobody has taken it over since it was created. someone_else: it was transferred to another person since."
+              },
+              "created_through": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "description": "The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves)."
+                  },
+                  "id": {
+                    "description": "In a person's view, the person's own user id for member, and an API key's id where they may read their keys. Null otherwise, and always null when it is the calling credential itself.",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "name": {
+                    "description": "In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves.",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "id",
+                  "name"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "id",
+              "name",
+              "state",
+              "created_at",
+              "ended_at",
+              "owned_now",
+              "created_through"
+            ]
+          }
+        },
+        "withheld": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "permission_missing",
+                  "mail_scope",
+                  "not_for_this_credential"
+                ],
+                "description": "permission_missing: the caller lacks the permission the kind's own list needs (named in permission). mail_scope: listed only to a caller that reads every mailbox. not_for_this_credential: this kind of credential never lists them (a person's own kinds asked for by a key, an app or an agent)."
+              },
+              "permission": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "reason",
+              "permission"
+            ]
+          },
+          "description": "Kinds left out because the caller could not list them through their own routes. Nothing is said about how many there are."
+        },
+        "next_cursor": {
+          "description": "Pass as cursor to read the next page; null on the last page. A page can hold fewer items than limit, or none, while next_cursor is set.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "covers",
+        "items",
+        "withheld",
+        "next_cursor"
+      ]
+    },
+    "sdkName": "listActivityObjects",
+    "summary": "List what you created",
+    "tag": "Activity",
+    "tagCommand": "activity"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "delete-address-note",
     "description": "Organization-scoped address annotations, independent of agents, routes and endpoints. Any bare address can have private notes. Function credentials may read org notes but cannot write or delete. A connected agent credential writes only its own address's notes and reads all of them; of another live agent's address in its organization it reads only the AGENT_WORKING, AGENT_RUNTIME and AGENT_INFO notes, and nothing of any other address. List and batch reads return only those notes; reading any other note name on another address returns 403, and one of those three names on an address that is not a live agent reads as not found. Use if_absent or if_version to avoid overwriting another writer.",
     "hasJsonBody": false,

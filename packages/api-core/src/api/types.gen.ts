@@ -9843,6 +9843,66 @@ export type CliOrgList = {
  */
 export type BuiltinRoleKey = 'owner' | 'admin' | 'operator' | 'member';
 
+export type ListActivityObjectsResult = {
+    /**
+     * you: what a person created through any credential of theirs (their dashboard session, their own CLI or app login, apps and agent delegates acting for them, their API keys while theirs, their personal agents). this_credential: what the calling key, app or agent created itself.
+     */
+    covers: string;
+    items: Array<{
+        /**
+         * One of: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request.
+         */
+        kind: string;
+        id: string;
+        /**
+         * The name the object is known by: an endpoint's display name, a route's or filter's pattern, a Function's name, a send's From address, a wake schedule's command and the address it wakes, an API key's name, an agent's address, a rule's or rule request's name. Never a webhook URL and never mail content.
+         */
+        name: string | null;
+        /**
+         * Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests).
+         */
+        state: string;
+        created_at: string;
+        /**
+         * When it was deleted, replaced or revoked, when a repeating send stopped, or when a rule request was decided; null otherwise.
+         */
+        ended_at: string | null;
+        /**
+         * you: nobody has taken it over since it was created. someone_else: it was transferred to another person since.
+         */
+        owned_now: 'you' | 'someone_else';
+        created_through: {
+            /**
+             * The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves).
+             */
+            kind: string;
+            /**
+             * In a person's view, the person's own user id for member, and an API key's id where they may read their keys. Null otherwise, and always null when it is the calling credential itself.
+             */
+            id: string | null;
+            /**
+             * In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves.
+             */
+            name: string | null;
+        };
+    }>;
+    /**
+     * Kinds left out because the caller could not list them through their own routes. Nothing is said about how many there are.
+     */
+    withheld: Array<{
+        kind: string;
+        /**
+         * permission_missing: the caller lacks the permission the kind's own list needs (named in permission). mail_scope: listed only to a caller that reads every mailbox. not_for_this_credential: this kind of credential never lists them (a person's own kinds asked for by a key, an app or an agent).
+         */
+        reason: 'permission_missing' | 'mail_scope' | 'not_for_this_credential';
+        permission: string | null;
+    }>;
+    /**
+     * Pass as cursor to read the next page; null on the last page. A page can hold fewer items than limit, or none, while next_cursor is set.
+     */
+    next_cursor: string | null;
+};
+
 export type StartCliLoginData = {
     body?: StartCliLoginInput;
     headers?: {
@@ -19563,6 +19623,62 @@ export type GetWebhookDeliveryStatsResponses = {
 };
 
 export type GetWebhookDeliveryStatsResponse = GetWebhookDeliveryStatsResponses[keyof GetWebhookDeliveryStatsResponses];
+
+export type ListActivityObjectsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request. Defaults to every kind the caller can have created (a person's own kinds only for a person).
+         */
+        kind?: string;
+        /**
+         * all (the default), live (still there, enabled or not) or ended (deleted, replaced or finished).
+         */
+        state?: 'all' | 'live' | 'ended';
+        /**
+         * Objects per page, from 1 to 200; defaults to 50.
+         */
+        limit?: number;
+        /**
+         * next_cursor from the preceding page. Omit for the first page.
+         */
+        cursor?: string;
+    };
+    url: '/activity/objects';
+};
+
+export type ListActivityObjectsErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type ListActivityObjectsError = ListActivityObjectsErrors[keyof ListActivityObjectsErrors];
+
+export type ListActivityObjectsResponses = {
+    /**
+     * List what you created
+     */
+    200: SuccessEnvelope & {
+        data: ListActivityObjectsResult;
+    };
+};
+
+export type ListActivityObjectsResponse = ListActivityObjectsResponses[keyof ListActivityObjectsResponses];
 
 export type GetEmailRuleVocabularyData = {
     body?: never;

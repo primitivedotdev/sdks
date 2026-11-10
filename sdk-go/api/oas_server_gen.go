@@ -1766,6 +1766,20 @@ type Handler interface {
 	//
 	// POST /organization/leave
 	LeaveOrganization(ctx context.Context, params LeaveOrganizationParams) (LeaveOrganizationRes, error)
+	// ListActivityObjects implements listActivityObjects operation.
+	//
+	// The objects the caller created, newest first, each with where it stands now, including ones since
+	// disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers,
+	//  pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled
+	// sends. An API key, an app or an agent sees what it created itself. A person (a dashboard session,
+	// or their own Primitive CLI or app login) sees what they created through any credential of theirs,
+	// each item naming it, and also their API keys, personal agents, email rules and rule requests. Each
+	// kind is listed only if the caller could list it through that kind's own route; a kind it could not
+	// is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail
+	// content. Needs activity:read_self.
+	//
+	// GET /activity/objects
+	ListActivityObjects(ctx context.Context, params ListActivityObjectsParams) (ListActivityObjectsRes, error)
 	// ListAddressNotes implements listAddressNotes operation.
 	//
 	// Organization-scoped address annotations, independent of agents, routes and endpoints. Any bare
