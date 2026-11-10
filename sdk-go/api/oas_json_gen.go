@@ -127865,8 +127865,10 @@ func (s *ListEmailRuleResultsResultRulesItem) encodeFields(e *jx.Encoder) {
 		s.NotRunReason.Encode(e)
 	}
 	{
-		e.FieldStart("author_left")
-		e.Bool(true)
+		if s.AuthorLeft.Set {
+			e.FieldStart("author_left")
+			s.AuthorLeft.Encode(e)
+		}
 	}
 }
 
@@ -156156,8 +156158,10 @@ func (s *MarkThreadReadResult) encodeFields(e *jx.Encoder) {
 		e.Bool(s.Advanced)
 	}
 	{
-		e.FieldStart("state_unavailable")
-		e.Bool(true)
+		if s.StateUnavailable.Set {
+			e.FieldStart("state_unavailable")
+			s.StateUnavailable.Encode(e)
+		}
 	}
 }
 
@@ -209357,8 +209361,10 @@ func (s *SendMailBatchOKDataResultsItemErrorDetails) encodeFields(e *jx.Encoder)
 		}
 	}
 	{
-		e.FieldStart("deduplicated")
-		e.Bool(true)
+		if s.Deduplicated.Set {
+			e.FieldStart("deduplicated")
+			s.Deduplicated.Encode(e)
+		}
 	}
 	{
 		if s.OriginalSentEmailID.Set {
@@ -210967,8 +210973,10 @@ func (s *SendMailResult) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		e.FieldStart("deduplicated")
-		e.Bool(true)
+		if s.Deduplicated.Set {
+			e.FieldStart("deduplicated")
+			s.Deduplicated.Encode(e)
+		}
 	}
 	{
 		if s.OriginalSentEmailID.Set {
