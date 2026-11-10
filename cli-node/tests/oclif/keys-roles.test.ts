@@ -702,6 +702,101 @@ describe("keys commands", () => {
     expect(result.stderr).toContain(HELD_REQUEST_NOTICE);
   });
 
+  it("update --json prints the key at the top level, as keys get does, with what changed alongside", async () => {
+    const after = keyRow({
+      template: null,
+      permissions: ["mail:read"],
+      mail_scope: "org",
+    });
+    useServer((request) =>
+      request.method === "GET"
+        ? Response.json({ success: true, data: after })
+        : Response.json({
+            success: true,
+            data: { id: KEY_ID, changed: ["name"], warnings: [] },
+          }),
+    );
+    const result = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--name",
+      after.name,
+      "--json",
+    ]);
+    expect(result.exitCode).toBeUndefined();
+    const printed = JSON.parse(result.stdout);
+    expect(printed).toEqual({ ...after, changed: ["name"], warnings: [] });
+    expect(printed.grant.mail_scope).toEqual(after.grant.mail_scope);
+    expect(printed).not.toHaveProperty("key");
+  });
+
+  it("update --json adds the held-request notice when the grant changed, and key_error when the read-back fails", async () => {
+    const before = keyRow({
+      template: null,
+      permissions: ["mail:read", "mail:send"],
+      mail_scope: "org",
+    });
+    const after = keyRow({
+      template: null,
+      permissions: ["mail:read"],
+      mail_scope: "org",
+    });
+    let reads = 0;
+    useServer((request) => {
+      if (request.method !== "GET")
+        return Response.json({
+          success: true,
+          data: { id: KEY_ID, changed: ["grant"], warnings: [] },
+        });
+      reads += 1;
+      return Response.json({
+        success: true,
+        data: reads === 1 ? before : after,
+      });
+    });
+    const narrowed = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--remove",
+      "mail:send",
+      "--json",
+    ]);
+    expect(JSON.parse(narrowed.stdout)).toEqual({
+      ...after,
+      changed: ["grant"],
+      warnings: [],
+      notice: HELD_REQUEST_NOTICE,
+    });
+    // A rename that succeeds but whose read-back is refused.
+    useServer((request) =>
+      request.method === "GET"
+        ? Response.json(
+            {
+              success: false,
+              error: {
+                code: "forbidden",
+                message: "Reading a key needs the whole organization's mail.",
+              },
+            },
+            { status: 403 },
+          )
+        : Response.json({
+            success: true,
+            data: { id: KEY_ID, changed: ["name"], warnings: [] },
+          }),
+    );
+    const renamed = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--name",
+      "x",
+      "--json",
+    ]);
+    expect(renamed.exitCode).toBeUndefined();
+    expect(JSON.parse(renamed.stdout)).toMatchObject({
+      id: KEY_ID,
+      changed: ["name"],
+      key_error: { code: "forbidden" },
+    });
+  });
+
   it("update narrows a key in one request when the server asks for no approval", async () => {
     const sender = keyRow({
       template: null,

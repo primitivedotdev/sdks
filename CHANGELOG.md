@@ -729,6 +729,9 @@ parsers.
 - The email rule list commands fetch a `--limit` above 100 in pages, and
   their `--cursor` help names `meta.cursor`, now that their answers declare
   it.
+- `keys update --json` prints the key at the top level, in the shape
+  `keys get` and `keys create` print, with `changed`, `warnings` and
+  `address_warnings` alongside, instead of nesting it under `key`.
 - `keys revoke` takes `--step-up-token` and `--no-browser`. When the
   server asks for approval, it prints the approval link, opens it where it
   can and waits for the one-time token, as the other `keys` commands do.

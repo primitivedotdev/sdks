@@ -796,7 +796,9 @@ export class KeysUpdateCommand extends Command {
 
   --add and --remove take permissions (repeatable, or comma-separated). --rule sets the email rules the key reaches, replacing the ones it has. Everything else about the key stays as it is.
 
-  The change runs directly; if your organization requires approval, the command prints the approval link and takes --step-up-token, as for a new key. A key never holds more than you do.`;
+  The change runs directly; if your organization requires approval, the command prints the approval link and takes --step-up-token, as for a new key. A key never holds more than you do.
+
+  With --json it prints the key as it is now, in the shape keys get prints, with changed, warnings and address_warnings alongside, and notice when its permissions or mail changed. If the key cannot be read back after the change, key_error says why and only the change's fields are printed.`;
 
   static summary = "Change an API key";
 
@@ -889,18 +891,23 @@ export class KeysUpdateCommand extends Command {
       return;
     }
     const grantChanged = result.data.changed.includes("grant");
-    const after = grantChanged
-      ? await call<KeyView>(
-          getKey({ client: auth.apiClient.client, path: { id: args.id } }),
-        )
-      : null;
+    // The key as it is now, read back so --json prints it in the shape
+    // `keys get` and `keys create` print, with what changed alongside.
+    const after =
+      grantChanged || flags.json
+        ? await call<KeyView>(
+            getKey({ client: auth.apiClient.client, path: { id: args.id } }),
+          )
+        : null;
     if (flags.json) {
       this.log(
         JSON.stringify(
           {
+            ...(after?.ok ? after.data : {}),
             ...result.data,
-            ...(after?.ok ? { key: after.data } : {}),
             ...(grantChanged ? { notice: HELD_REQUEST_NOTICE } : {}),
+            // The change was made; only reading the key back failed.
+            ...(after && !after.ok ? { key_error: after.payload } : {}),
           },
           null,
           2,
