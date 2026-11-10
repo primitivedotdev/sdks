@@ -354,7 +354,12 @@ Go (package `api`):
   `RecipientRoute`, and in Python `CreateRouteResponse201Data` and
   `UpdateRouteResponse200Data`. Read the same route fields from it.
 - Go: `ListEmailRuleShareEmailsConflict` is gone, as the operation no longer
-  answers `409`.
+  answers `409`, and so is the error code `email_rule_not_active`
+  (`ErrorResponseErrorCodeEmailRuleNotActive` in Go,
+  `ErrorResponseErrorCode.EMAIL_RULE_NOT_ACTIVE` in Python).
+- A rule write's `expectations_check.passed` can be null: in Go it is a
+  `NilBool` instead of a `bool` on `EmailRuleWrittenExpectationsCheck`, and
+  in Python `bool | None` on the expectations check models. A null `passed` means none failed but some are undecided.
 
 #### CLI sender default
 
@@ -558,8 +563,7 @@ date-time is kept as null and sorts last. A sync stops with an error after
     `PERMISSIONS` list gains `mail:share_own`. `createRole` and
     `updateRole` refuse a permission whose prerequisite is not in the same
     role, with `400` and `details.reason` `unmet_requirement`.
-  - New error codes: `email_rule_not_active` and
-    `email_rule_request_not_withdrawn`.
+  - New error code: `email_rule_request_not_withdrawn`.
 - Endpoints:
   - Webhook signing: a webhook made as a person's own, or by an API key
     limited to some mailboxes, a third-party app or an agent delegate for
@@ -798,8 +802,9 @@ parsers.
   `--body-file` or `--raw-body`. The exit code follows the expectations the
   answer judged: `expect`, or when none is sent, a saved rule's saved
   expectations. It is 1 when one failed, or when one is undecided and testing
-  again will not decide it (its email cannot be found or read, or cannot be
-  classified), and 3 when the only undecided ones a later test can decide
+  again will not decide it (its email cannot be found or read, cannot be
+  classified, or is `skipped` because it cannot be tested), and 3 when the
+  only undecided ones a later test can decide
   (not classified yet, or a question unanswered). Without `--json` it prints
   a report on stderr after the JSON: the summary's warnings, scope warnings,
   how each condition held and failed, the expectations with why each
