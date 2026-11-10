@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   getEmail: vi.fn(),
   listEmails: vi.fn(),
   pickDefaultFromAddress: vi.fn(),
+  legacyDefaultFromAddress: vi.fn(),
   replyToEmail: vi.fn(),
   searchEmails: vi.fn(),
   sendEmail: vi.fn(),
@@ -74,6 +75,7 @@ vi.mock("../../src/oclif/outbound-defaults.js", async (importOriginal) => {
   return {
     ...actual,
     pickDefaultFromAddress: mocks.pickDefaultFromAddress,
+    legacyDefaultFromAddress: mocks.legacyDefaultFromAddress,
   };
 });
 
@@ -728,6 +730,46 @@ describe("chat command", () => {
     expect(JSON.parse(second.stdout).reply.id).toBe("email-1");
     expect(mocks.sendEmail).toHaveBeenCalledOnce();
     expect(mocks.sendEmail.mock.calls[0][0].body.subject).toBe(message);
+  });
+
+  it("stops, rather than send again, a chat an earlier version left unfinished from its agent@ default", async () => {
+    mocks.createAuthenticatedCliApiClient.mockResolvedValue({
+      apiClient: { client: {} },
+      auth: {
+        apiKey: ["prim", "test"].join("_"),
+        apiBaseUrl: "https://api.primitive.dev/v1",
+        credentials: { org_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" },
+      },
+      baseUrlOverridden: false,
+    });
+    // An earlier version defaulted to agent@, and its send's outcome was lost.
+    mocks.sendEmail.mockRejectedValueOnce(new Error("lost response"));
+    await expect(
+      runChatCommand([
+        "help@agent.example",
+        "hello",
+        "--from",
+        "agent@sender.example",
+        "--json",
+      ]),
+    ).rejects.toThrow("lost response");
+    process.exitCode = undefined;
+    mocks.pickDefaultFromAddress.mockResolvedValue("dana@yuuja.example");
+    mocks.legacyDefaultFromAddress.mockResolvedValue("agent@sender.example");
+
+    await expect(
+      runChatCommand(["help@agent.example", "hello", "--json"]),
+    ).rejects.toThrow(
+      "An earlier version of this CLI started this chat from agent@sender.example and did not finish it, so it may already have been sent. To resume it rather than send it again, rerun with --from agent@sender.example. To send it as a new message from dana@yuuja.example, rerun with --from dana@yuuja.example.",
+    );
+    expect(mocks.sendEmail).toHaveBeenCalledOnce();
+
+    // Another message is not held up by it.
+    await runChatCommand(["help@agent.example", "something else", "--json"]);
+    expect(mocks.sendEmail).toHaveBeenCalledTimes(2);
+    expect(mocks.sendEmail.mock.calls[1][0].body.from).toBe(
+      "dana@yuuja.example",
+    );
   });
 
   it("does not send before authenticated readiness", async () => {

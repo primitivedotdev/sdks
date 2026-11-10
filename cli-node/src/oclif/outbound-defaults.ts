@@ -10,6 +10,7 @@ import {
   checkSendability,
   getOutboundStatus,
   getOwnGrant,
+  listDomains,
   whoami,
 } from "@primitivedotdev/api-core";
 import { parseFromHeader } from "@primitivedotdev/sdk/parser/address";
@@ -467,5 +468,36 @@ export function fromLine(address: string, source?: DefaultFromSource): string {
       return `From: ${address} (the one address this credential may send from).`;
     default:
       return `From: ${address}.`;
+  }
+}
+
+/**
+ * The From that CLI versions before the per-credential default used when
+ * --from was left out: agent@ at the organization's first active domain, or
+ * null when it cannot be read. Only for finding a chat those versions left
+ * unfinished; never sent from by default.
+ */
+export async function legacyDefaultFromAddress(
+  apiClient: PrimitiveApiClient,
+): Promise<string | null> {
+  try {
+    const result = await listDomains({
+      client: apiClient.client,
+      responseStyle: "fields",
+    });
+    if (result.error) return null;
+    const domains = (result.data as { data?: unknown } | undefined)?.data;
+    const first = Array.isArray(domains)
+      ? domains.find(
+          (domain): domain is { domain: string } =>
+            typeof domain === "object" &&
+            domain !== null &&
+            (domain as { is_active?: unknown }).is_active === true &&
+            typeof (domain as { domain?: unknown }).domain === "string",
+        )
+      : undefined;
+    return first ? `agent@${first.domain}` : null;
+  } catch {
+    return null;
   }
 }

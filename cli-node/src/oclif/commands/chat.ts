@@ -34,6 +34,7 @@ import {
   ChatLockContentionError,
 } from "../chat-lock.js";
 import {
+  anyUnfinishedChatReceipt,
   beginChatReceipt,
   type ChatReceipt,
   chatCredentialIdentity,
@@ -58,6 +59,7 @@ import { currentMailSessionKey } from "../mail-session.js";
 import {
   deriveChatSubject,
   deriveSubject,
+  legacyDefaultFromAddress,
   pickDefaultFromAddress,
 } from "../outbound-defaults.js";
 import { warnIfSharedProfile } from "../profile-session-check.js";
@@ -1771,13 +1773,13 @@ class ChatCommand extends Command {
           subject = flags.subject ?? deriveChatSubject(message);
         }
 
-        const hashFor = (value: string) =>
+        const hashFor = (value: string, fromAddress: string = from) =>
           chatRequestHash({
             api: auth.apiBaseUrl,
             account:
               auth.credentials?.org_id ??
               chatCredentialIdentity(auth.apiKey, auth.apiBaseUrl),
-            from,
+            from: fromAddress,
             recipient: args.recipient,
             subject: value,
             message,
@@ -1795,6 +1797,33 @@ class ChatCommand extends Command {
             hasUnfinishedChatReceipt(this.config.configDir, hashFor(previous))
           )
             subject = previous;
+        }
+        // Earlier versions defaulted --from to agent@ at the first active
+        // domain, and the From is part of the receipt key. If one of them
+        // left this same chat unfinished, stop rather than send it a second
+        // time from the new default, and let the caller choose the From.
+        if (
+          flags.from === undefined &&
+          !auth.connectedAgent &&
+          anyUnfinishedChatReceipt(this.config.configDir)
+        ) {
+          const legacyFrom = await legacyDefaultFromAddress(apiClient);
+          const subjects = new Set([subject]);
+          if (!parentReply && flags.subject === undefined)
+            subjects.add(deriveSubject(message));
+          if (
+            legacyFrom &&
+            legacyFrom.toLowerCase() !== from.toLowerCase() &&
+            [...subjects].some((value) =>
+              hasUnfinishedChatReceipt(
+                this.config.configDir,
+                hashFor(value, legacyFrom),
+              ),
+            )
+          )
+            throw cliError(
+              `An earlier version of this CLI started this chat from ${legacyFrom} and did not finish it, so it may already have been sent. To resume it rather than send it again, rerun with --from ${legacyFrom}. To send it as a new message from ${from}, rerun with --from ${from}.`,
+            );
         }
         const requestHash = hashFor(subject);
         const scope = parentReply

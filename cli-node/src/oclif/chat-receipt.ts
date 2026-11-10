@@ -4,6 +4,7 @@ import {
   fsyncSync,
   mkdirSync,
   openSync,
+  readdirSync,
   readFileSync,
   renameSync,
   rmSync,
@@ -143,6 +144,29 @@ export function hasUnfinishedChatReceipt(
   } catch {
     return true;
   }
+}
+
+/**
+ * Whether any chat this CLI started is still unfinished, read from the saved
+ * receipts alone. A cheap first test before asking the API anything.
+ */
+export function anyUnfinishedChatReceipt(configDir: string): boolean {
+  const directory = join(configDir, "chat-receipts");
+  let names: string[];
+  try {
+    names = readdirSync(directory);
+  } catch {
+    return false;
+  }
+  return names.some((name) => {
+    if (!name.endsWith(".json")) return false;
+    try {
+      return !parseReceipt(readFileSync(join(directory, name), "utf8"))
+        .completed;
+    } catch {
+      return true;
+    }
+  });
 }
 
 /** Caller holds the request/parent lock until completion. Unknown POSTs never retry. */
