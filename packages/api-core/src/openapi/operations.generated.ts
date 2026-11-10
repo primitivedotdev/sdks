@@ -38,6 +38,12 @@ export type PrimitiveOperationManifest = {
    */
   permissions: string[] | null;
   /**
+   * Who may call it, from the spec's `x-primitive-person-only.access`:
+   * `session` (a dashboard session only), `session_or_cli`, `person` or
+   * `step_up`. Null when the spec does not restrict it to a person.
+   */
+  access: string | null;
+  /**
    * Resolved JSON Schema for the request body when `hasJsonBody` is
    * true. `$ref`s into the OpenAPI components are inlined.
    */
@@ -70,6 +76,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "account:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -230,6 +237,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "queryParams": [],
     "headerParams": [],
     "permissions": null,
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -511,6 +519,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "org:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -592,6 +601,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "webhook_secret:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -625,6 +635,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "member_address:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -694,6 +705,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "webhook_secret:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -727,6 +739,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "account:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -825,6 +838,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "account:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -988,6 +1002,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "notes:delete"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -1035,6 +1050,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "notes:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -1118,6 +1134,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "queryParams": [],
     "headerParams": [],
     "permissions": null,
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -1200,6 +1217,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "notes:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -1314,6 +1332,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "notes:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -1418,6 +1437,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "headerParams": [],
     "permissions": null,
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -1486,6 +1506,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "notes:write"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -1602,6 +1623,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "permissions": null,
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -1759,6 +1781,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "account:claim"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -1814,6 +1837,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "permissions": null,
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -1882,6 +1906,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "account:claim"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -1942,6 +1967,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "permissions": null,
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -2033,6 +2059,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "account:claim"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -2142,6 +2169,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "permissions": null,
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -2281,6 +2309,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "queryParams": [],
     "headerParams": [],
     "permissions": null,
+    "access": null,
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "agentConnectionSetup",
@@ -2301,6 +2330,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "queryParams": [],
     "headerParams": [],
     "permissions": null,
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -2345,6 +2375,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_connections:update"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -2658,6 +2689,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_connections:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -3140,6 +3172,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_connections:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -3177,6 +3210,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_connections:read_self"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -3457,6 +3491,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_connections:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -3735,6 +3770,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_connections:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -3962,6 +3998,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_connections:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -4003,6 +4040,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_connections:update"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -4241,6 +4279,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_connections:update"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -4465,6 +4504,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_connections:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -4692,6 +4732,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_connections:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -4761,6 +4802,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_networks:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -4905,6 +4947,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_networks:admit"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -4989,6 +5032,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_networks:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -5132,6 +5176,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_networks:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -5211,6 +5256,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_networks:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -5382,6 +5428,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_networks:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -5529,6 +5576,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_networks:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -5570,6 +5618,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_networks:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -5732,6 +5781,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_work:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -5940,6 +5990,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_work:write"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -6152,6 +6203,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_work:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -6347,6 +6399,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_work:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -6550,6 +6603,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_work:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -6755,6 +6809,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_work:write"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -6961,6 +7016,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_work:write"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -7163,6 +7219,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_work:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -7389,6 +7446,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "changes:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -8798,6 +8856,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "credentials:revoke_self"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -8849,6 +8908,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "queryParams": [],
     "headerParams": [],
     "permissions": null,
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -8967,6 +9027,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "permissions": null,
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -9079,6 +9140,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "permissions": null,
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -9145,6 +9207,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "permissions": null,
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -9238,6 +9301,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "permissions": null,
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -9327,6 +9391,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "permissions": null,
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -9467,6 +9532,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_contacts:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -9515,6 +9581,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "contacts:delete"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -9555,6 +9622,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_contact_policy:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -9804,6 +9872,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "contacts:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -9863,6 +9932,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "contacts:policy"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -9996,6 +10066,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_contacts:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -10103,6 +10174,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "contacts:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -10173,6 +10245,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -10271,6 +10344,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:send"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -10394,6 +10468,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "agent_contacts:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -10534,6 +10609,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "contacts:policy"
     ],
+    "access": null,
     "requestSchema": {
       "oneOf": [
         {
@@ -10882,6 +10958,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "contacts:write"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -10984,6 +11061,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "contacts:policy"
     ],
+    "access": null,
     "requestSchema": {
       "oneOf": [
         {
@@ -11206,6 +11284,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "keys:manage"
     ],
+    "access": "step_up",
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -11516,6 +11595,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "credentials:read"
     ],
+    "access": "session",
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -11606,6 +11686,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "keys:read"
     ],
+    "access": "session_or_cli",
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -11736,6 +11817,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "keys:read"
     ],
+    "access": "session",
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -11937,6 +12019,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "credentials:read"
     ],
+    "access": "session",
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -12366,6 +12449,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "credential_events:read"
     ],
+    "access": "session",
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -12507,6 +12591,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "credentials:read"
     ],
+    "access": "session",
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -12888,6 +12973,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "keys:read"
     ],
+    "access": "session_or_cli",
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -13045,6 +13131,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "credentials:revoke_all"
     ],
+    "access": "session",
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -13158,6 +13245,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "keys:manage"
     ],
+    "access": "session_or_cli",
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -13316,6 +13404,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "keys:manage"
     ],
+    "access": "step_up",
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -13387,6 +13476,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "credential_policy:manage"
     ],
+    "access": "session",
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -13535,6 +13625,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "keys:manage"
     ],
+    "access": "step_up",
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -13786,6 +13877,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "credits:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -13911,6 +14003,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "credits:redeem"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -14009,6 +14102,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "domains:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -14207,6 +14301,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "domains:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -14815,6 +14910,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "domains:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -14875,6 +14971,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "domains:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -14936,6 +15033,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "domains:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -14985,6 +15083,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "domains:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadDomainZoneFile",
@@ -15015,6 +15114,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "domains:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -15069,6 +15169,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "domains:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -15397,6 +15498,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "domains:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -15602,6 +15704,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "domains:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -15790,6 +15893,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "mail:read",
       "mail:share_own"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -16542,6 +16646,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "mail:read",
       "members:read"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -16643,6 +16748,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -16785,6 +16891,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -17259,6 +17366,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -17627,6 +17735,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -17873,6 +17982,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -17913,6 +18023,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -17951,6 +18062,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "queryParams": [],
     "headerParams": [],
     "permissions": null,
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -18002,6 +18114,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -18264,6 +18377,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -18510,6 +18624,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -18682,6 +18797,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -18906,6 +19022,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -19131,6 +19248,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -19277,6 +19395,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -19526,6 +19645,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -19839,6 +19959,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -19937,6 +20058,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -20470,6 +20592,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -20729,6 +20852,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -20880,6 +21004,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -21031,6 +21156,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "headerParams": [],
     "permissions": null,
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -21266,6 +21392,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -21958,6 +22085,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -22385,6 +22513,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -22863,6 +22992,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -23109,6 +23239,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:delete"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -23158,6 +23289,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail.state:write"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -23212,6 +23344,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadAttachments",
@@ -23256,6 +23389,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadEmailAttachmentArchiveMember",
@@ -23294,6 +23428,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadEmailAttachmentByFilename",
@@ -23333,6 +23468,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadEmailAttachmentPart",
@@ -23371,6 +23507,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail.raw:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadRawEmail",
@@ -23449,6 +23586,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -23816,6 +23954,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -25024,6 +25163,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -25261,6 +25401,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -25555,6 +25696,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -26181,6 +26323,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "webhooks:replay"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -26442,6 +26585,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -27159,6 +27303,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "endpoints:pull"
     ],
+    "access": null,
     "requestSchema": {
       "oneOf": [
         {
@@ -27441,6 +27586,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "endpoints:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -27855,6 +28001,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "endpoints:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -27896,6 +28043,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "webhooks:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -28188,6 +28336,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "endpoints:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -28220,6 +28369,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "webhooks:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -28523,6 +28673,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "endpoints:pull"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -28674,6 +28825,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "endpoints:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -28722,6 +28874,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "endpoints:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -28780,6 +28933,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "endpoints:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -28918,6 +29072,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "endpoints:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -29317,6 +29472,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "filters:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -29423,6 +29579,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "filters:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -29456,6 +29613,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "filters:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -29535,6 +29693,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "filters:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -29622,6 +29781,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:deploy"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -29846,6 +30006,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "secrets:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -29923,6 +30084,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "secrets:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -30000,6 +30162,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -30048,6 +30211,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "secrets:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteFunctionSecret",
@@ -30078,6 +30242,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "secrets:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteOrgSecret",
@@ -30108,6 +30273,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -30319,6 +30485,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -30460,6 +30627,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -30685,6 +30853,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "oneOf": [
@@ -30809,6 +30978,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -30962,6 +31132,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -31043,6 +31214,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -31656,6 +31828,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -31751,6 +31924,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -31800,6 +31974,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": [
@@ -31870,6 +32045,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -31981,6 +32157,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -32073,6 +32250,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -32360,6 +32538,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -32483,6 +32662,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -32659,6 +32839,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -32868,6 +33049,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -32962,6 +33144,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -33040,6 +33223,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "secrets:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -33112,6 +33296,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -33217,6 +33402,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "secrets:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -33279,6 +33465,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": [
@@ -33369,6 +33556,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:deploy"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -33551,6 +33739,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:deploy"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -33603,6 +33792,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:deploy"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -33691,6 +33881,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "description": "Target for a route binding. Either a specific verified domain\n(scoped) or the org-wide fallback. Pass `takeover: true` to\ndeactivate any conflicting binding before installing this one.\n",
@@ -33904,6 +34095,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:deploy"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -34112,6 +34304,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "secrets:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -34182,6 +34375,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "secrets:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -34260,6 +34454,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:deploy"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -34425,6 +34620,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:deploy"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -34522,6 +34718,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -34565,6 +34762,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:deploy"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -34750,6 +34948,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -34800,6 +34999,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "domains:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -35065,6 +35265,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail_sync:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -35173,6 +35374,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail_sync:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -35452,6 +35654,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail_sync:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -35735,6 +35938,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail_sync:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -35851,6 +36055,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail_sync:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -36305,6 +36510,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail_sync:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -36823,6 +37029,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "interactions:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -37051,6 +37258,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "interactions:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -37202,6 +37410,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "interactions:advance",
       "mail:send"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -37307,6 +37516,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "interactions:send",
       "mail:send"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -37434,6 +37644,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "roles:assign"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -37543,6 +37754,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "roles:assign"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -37581,6 +37793,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "members:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -37651,6 +37864,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "members:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -37809,6 +38023,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "delegations:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -38037,6 +38252,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "roles:assign"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -38167,6 +38383,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "memories:write"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -38259,6 +38476,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "memories:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -38491,6 +38709,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "memories:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -38657,6 +38876,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "memories:write"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -38920,6 +39140,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "queryParams": [],
     "headerParams": [],
     "permissions": null,
+    "access": "person",
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -38964,6 +39185,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "org:read"
     ],
+    "access": "person",
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -39028,6 +39250,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "headerParams": [],
     "permissions": null,
+    "access": "session_or_cli",
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -39164,6 +39387,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "oauth_grants:manage"
     ],
+    "access": "session",
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -39273,6 +39497,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "org:manage"
     ],
+    "access": "step_up",
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -39331,6 +39556,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "permissions": null,
+    "access": "person",
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -39404,6 +39630,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "oauth_grants:manage"
     ],
+    "access": "session",
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -39454,6 +39681,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "org:manage"
     ],
+    "access": "step_up",
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -39519,6 +39747,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "org:manage"
     ],
+    "access": "step_up",
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -39594,6 +39823,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "search_settings:manage"
     ],
+    "access": "step_up",
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -39669,6 +39899,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "invitations:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -39898,6 +40129,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "invitations:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -40111,6 +40343,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "invitations:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -40304,6 +40537,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "projects:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -40687,6 +40921,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "projects:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -40728,6 +40963,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "projects:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -40999,6 +41235,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "invitations:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -41143,6 +41380,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "members:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -41275,6 +41513,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "invitations:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -41403,6 +41642,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "projects:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -41686,6 +41926,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "invitations:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -41793,6 +42034,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "projects:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -42167,6 +42409,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "sent:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -42208,6 +42451,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "sent:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -42435,6 +42679,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "sent:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -42666,6 +42911,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:signal"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -42746,6 +42992,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "sent:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -43026,6 +43273,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "roles:assign"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -43215,6 +43463,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "access_mode:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -43334,6 +43583,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "members:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -43541,6 +43791,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "roles:assign"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -43602,6 +43853,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "access_mode:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -43640,6 +43892,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "members:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -43746,6 +43999,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "members:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -43819,6 +44073,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "permissions": null,
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -43865,6 +44120,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "access_mode:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -43938,6 +44194,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "members:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -43987,6 +44244,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "members:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -44165,6 +44423,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "members:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -44226,6 +44485,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "members:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -44287,6 +44547,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "member_address:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -44437,6 +44698,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "access_mode:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -44517,6 +44779,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "roles:assign"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -44602,6 +44865,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "member_address:manage",
       "mail:send_as_member"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -44822,6 +45086,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "members:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -44916,6 +45181,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "access_mode:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -44999,6 +45265,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "members:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -45189,6 +45456,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "roles:assign"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -45367,6 +45635,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "routes:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -45516,6 +45785,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "routes:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -45549,6 +45819,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "routes:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -45652,6 +45923,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "routes:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -45793,6 +46065,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "routes:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -45953,6 +46226,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "routes:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -46090,6 +46364,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail.search:semantic"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -46380,6 +46655,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -46644,6 +46920,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "sent:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "description": "Full sent-email record, including `body_text` and\n`body_html`. Returned by /sent-emails/{id}.\n",
@@ -47590,6 +47867,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "sent:cancel"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -48564,6 +48842,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:send"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -48627,6 +48906,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "sent:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -48682,6 +48962,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadSentAttachmentArchiveMember",
@@ -48720,6 +49001,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadSentAttachmentByFilename",
@@ -48759,6 +49041,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadSentAttachmentPart",
@@ -48797,6 +49080,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadSentAttachments",
@@ -48819,6 +49103,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "domains:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -48927,6 +49212,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "account:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -49168,6 +49454,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "description": "Full sent-email record, including `body_text` and\n`body_html`. Returned by /sent-emails/{id}.\n",
@@ -50129,6 +50416,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -50307,6 +50595,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -50969,6 +51258,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "sent:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -51941,6 +52231,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:reply"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -52297,6 +52588,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "sent:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -53264,6 +53556,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:send"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -53784,6 +54077,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "mail:send",
       "mail:send_batch"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -54457,6 +54751,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:signal"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -54704,6 +54999,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -54766,6 +55062,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -54825,6 +55122,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "webhooks:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -54884,6 +55182,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "queryParams": [],
     "headerParams": [],
     "permissions": null,
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -55354,6 +55653,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "functions:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -55455,6 +55755,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "templates:install",
       "functions:deploy"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -55642,6 +55943,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "headerParams": [],
     "permissions": null,
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -55779,6 +56081,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "templates:install",
       "functions:deploy"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -55844,6 +56147,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "mail:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -56145,6 +56449,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "threads:mute"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -56230,6 +56535,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "threads:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -56307,6 +56613,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "threads:read"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -56418,6 +56725,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "threads:mute"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -56484,6 +56792,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "threads:mute"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -56543,6 +56852,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "wake:manage",
       "endpoints:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -56668,6 +56978,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "wake:manage",
       "mail:send"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -56817,6 +57128,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "wake:manage",
       "endpoints:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -56858,6 +57170,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "wake:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -56899,6 +57212,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "wake:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -57003,6 +57317,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "wake:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -57090,6 +57405,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "wake:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -57174,6 +57490,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "wake:manage"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -57290,6 +57607,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "wake:manage",
       "mail:send"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -57324,6 +57642,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "wake:manage",
       "endpoints:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -57416,6 +57735,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "wake:manage"
     ],
+    "access": null,
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -57560,6 +57880,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "webhooks:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -57856,6 +58177,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "webhooks:read"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -58050,6 +58372,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "permissions": [
       "webhooks:replay"
     ],
+    "access": null,
     "requestSchema": null,
     "responseSchema": {
       "type": "object",

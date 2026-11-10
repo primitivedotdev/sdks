@@ -46,6 +46,7 @@ type OpenApiOperation = {
   summary?: string;
   tags?: string[];
   "x-primitive-permission"?: string[];
+  "x-primitive-person-only"?: { access?: unknown };
 };
 
 type OpenApiPathItem = {
@@ -91,6 +92,12 @@ type PrimitiveOperationManifest = {
    * `x-primitive-permission`. Null when the spec declares none.
    */
   permissions: string[] | null;
+  /**
+   * Who may call it, from the spec's `x-primitive-person-only.access`:
+   * `session` (a dashboard session only), `session_or_cli`, `person` or
+   * `step_up`. Null when the spec does not restrict it to a person.
+   */
+  access: string | null;
   /**
    * Resolved JSON Schema for the request body when `hasJsonBody` is
    * true. All `$ref` references into `components/schemas` and
@@ -894,6 +901,15 @@ function hasBinaryResponse(doc: Record<string, unknown>, operation: OpenApiOpera
   return false;
 }
 
+function operationAccess(operation: OpenApiOperation): string | null {
+  const access = operation["x-primitive-person-only"]?.access;
+  if (access === undefined) return null;
+  if (typeof access !== "string" || !/^[a-z_]+$/.test(access)) {
+    throw new Error(`${operation.operationId}: x-primitive-person-only access ${JSON.stringify(access)} is not an access mode`);
+  }
+  return access;
+}
+
 function operationPermissions(operation: OpenApiOperation): string[] | null {
   const raw = operation["x-primitive-permission"];
   if (!Array.isArray(raw) || raw.length === 0) return null;
@@ -933,6 +949,7 @@ function buildManifest(doc: Record<string, unknown>): PrimitiveOperationManifest
         queryParams: manifestParameters(parameters, "query"),
         headerParams: manifestParameters(parameters, "header"),
         permissions: operationPermissions(operation),
+        access: operationAccess(operation),
         requestSchema: getRequestSchema(doc, operation),
         responseSchema: getResponseSchema(doc, operation),
         sdkName: operation.operationId,
@@ -1021,6 +1038,12 @@ export type PrimitiveOperationManifest = {
    * \`x-primitive-permission\`. Null when the spec declares none.
    */
   permissions: string[] | null;
+  /**
+   * Who may call it, from the spec's \`x-primitive-person-only.access\`:
+   * \`session\` (a dashboard session only), \`session_or_cli\`, \`person\` or
+   * \`step_up\`. Null when the spec does not restrict it to a person.
+   */
+  access: string | null;
   /**
    * Resolved JSON Schema for the request body when \`hasJsonBody\` is
    * true. \`$ref\`s into the OpenAPI components are inlined.
