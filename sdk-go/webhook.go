@@ -320,11 +320,15 @@ func HandleWebhookEvent(options HandleWebhookOptions) (WebhookEvent, error) {
 }
 
 // HandleWebhook verifies a delivery and returns its body as an
-// EmailReceivedEvent. It takes every email.* event the email event schema
-// lists, such as email.received and email.bounced, validated against
-// EmailReceivedEventJSONSchema, as the Node and Python SDKs do. Other event
-// families are refused with PAYLOAD_UNKNOWN_EVENT; use HandleWebhookEvent for
-// those.
+// EmailReceivedEvent. It decides by the event type in the X-Webhook-Event
+// header, or by the body's event field when the header is absent; the header
+// is not covered by the signature. For an email.* type it validates the signed
+// body against EmailReceivedEventJSONSchema and returns it, so bounces and
+// reports come back as well as received mail, each with the body's own Event.
+// Any other type is refused, with PAYLOAD_UNKNOWN_EVENT or, for a sent_email.*
+// type, with a validation error when the body does not match that schema; use
+// HandleWebhookEvent for those. The Node and Python SDKs instead validate
+// every body against the email event schema, whatever the header says.
 func HandleWebhook(options HandleWebhookOptions) (*EmailReceivedEvent, error) {
 	event, err := HandleWebhookEvent(options)
 	if err != nil {

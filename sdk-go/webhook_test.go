@@ -696,3 +696,44 @@ func TestEmailContentValueConstructionRemainsCompatible(t *testing.T) {
 		t.Fatalf("restricted content widened: %s, %v", data, err)
 	}
 }
+
+func TestHandleWebhookDecidesByTheEventHeader(t *testing.T) {
+	payload := loadJSONFixture(t, "webhook", "valid-email-received.json")
+	cases := []struct {
+		name, bodyEvent, header, wantEvent, wantCode string
+	}{
+		{name: "header names an email event", bodyEvent: "email.bounced", header: "email.received", wantEvent: "email.bounced"},
+		{name: "body event without a header", bodyEvent: "email.bounced", wantEvent: "email.bounced"},
+		{name: "header names a sent_email event", bodyEvent: "email.received", header: "sent_email.completed", wantCode: "SCHEMA_VALIDATION_FAILED"},
+		{name: "header names an interaction event", bodyEvent: "email.received", header: "interaction.ack.acked", wantCode: "PAYLOAD_UNKNOWN_EVENT"},
+	}
+	for _, testCase := range cases {
+		payload["event"] = testCase.bodyEvent
+		body, err := json.Marshal(payload)
+		if err != nil {
+			t.Fatalf("%s: marshal payload: %v", testCase.name, err)
+		}
+		signed, err := SignWebhookPayload(body, "test-webhook-secret")
+		if err != nil {
+			t.Fatalf("%s: SignWebhookPayload returned error: %v", testCase.name, err)
+		}
+		headers := map[string]string{PrimitiveSignatureHeader: signed.Header}
+		if testCase.header != "" {
+			headers[WebhookEventHeader] = testCase.header
+		}
+
+		event, err := HandleWebhook(HandleWebhookOptions{Body: body, Headers: headers, Secret: "test-webhook-secret"})
+		if testCase.wantCode != "" {
+			if code, _ := webhookErrorCode(err); code != testCase.wantCode {
+				t.Fatalf("%s: got error %v, want %s", testCase.name, err, testCase.wantCode)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("%s: HandleWebhook returned error: %v", testCase.name, err)
+		}
+		if event.Event != testCase.wantEvent {
+			t.Fatalf("%s: got event %q, want the body's %q", testCase.name, event.Event, testCase.wantEvent)
+		}
+	}
+}

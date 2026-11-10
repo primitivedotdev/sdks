@@ -10,9 +10,10 @@ from __future__ import annotations
 
 from typing import Any, TypeAlias, TypeGuard
 
-from jsonschema import Draft7Validator, FormatChecker
+from jsonschema import Draft7Validator
 from pydantic import ValidationError
 
+from ._formats import webhook_format_checker
 from .errors import WebhookValidationError
 from .events import SENT_EMAIL_EVENT_TYPES
 from .schema import sent_email_event_json_schema
@@ -68,7 +69,7 @@ def _definition_validator(definition: str | None) -> Draft7Validator:
     schema: dict[str, Any] = dict(sent_email_event_json_schema)
     if definition is not None:
         schema["$ref"] = f"#/definitions/{definition}"
-    return Draft7Validator(schema, format_checker=FormatChecker())
+    return Draft7Validator(schema, format_checker=webhook_format_checker())
 
 
 _ANY_VALIDATOR = _definition_validator(None)

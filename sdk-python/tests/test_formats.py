@@ -35,7 +35,10 @@ CHECKS = {"date-time": is_date_time, "uri": is_uri}
 
 
 def _node_regex(name: str) -> tuple[str, str]:
-    source = (REPO_ROOT / "sdk-node" / "scripts" / "validator-ajv.ts").read_text()
+    path = REPO_ROOT / "sdk-node" / "scripts" / "validator-ajv.ts"
+    if not path.exists():
+        pytest.skip("the Node SDK sources are not in this checkout")
+    source = path.read_text()
     match = re.search(rf"const {name} =\s*/(.+)/([a-z]*);\n", source)
     assert match, f"{name} not found in validator-ajv.ts"
     return match.group(1), match.group(2)

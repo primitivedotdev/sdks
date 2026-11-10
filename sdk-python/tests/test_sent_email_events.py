@@ -226,6 +226,19 @@ def test_reports_the_field_of_the_selected_shape() -> None:
     ).success
 
 
+@pytest.mark.parametrize("value", ["tomorrow", "2025-12-14T12:00Z"])
+def test_refuses_a_bad_date_time_at_the_schema_check(value: str) -> None:
+    # The schema check uses the SDK's own date-time pattern, so it holds without
+    # jsonschema's optional format packages. The model step alone would accept
+    # the second value, a time without seconds.
+    payload = _load_json("sent-email-events", "completed.json")
+    payload["created_at"] = value
+    result = safe_validate_sent_email_event(payload)
+    assert result.success is False
+    assert result.error.field == "created_at"
+    assert result.error.validation_errors[0].validator == "format"
+
+
 def test_handle_webhook_stays_typed_to_email_received() -> None:
     body = _load_text("sent-email-events", "completed.json")
     signed = sign_webhook_payload(body, "whsec_test")

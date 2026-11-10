@@ -1,8 +1,12 @@
-"""The exported schema must describe exactly what the SDK accepts.
+"""The exported schema and the SDK give the same verdict on the shared payloads.
 
-A payload that passes ``email_received_event_json_schema`` must pass
-``validate_email_received_event`` and ``receive``, and a payload the schema
-refuses must be refused by both.
+For every payload in the shared webhook fixtures,
+``email_received_event_json_schema``, checked with the SDK's format checker,
+accepts it exactly when ``validate_email_received_event`` and ``receive`` do.
+The schema check runs first, so whatever it refuses the SDK refuses too. The
+Pydantic models can still refuse a few values the schema allows, such as
+``2025-02-30T12:00:00Z``, a tab between date and time, or the URL
+``https://``, so this pins the shared payloads rather than every input.
 """
 
 from __future__ import annotations

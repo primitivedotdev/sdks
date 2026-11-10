@@ -1,10 +1,10 @@
-"""Format checks for the email event schema.
+"""Format checks for the webhook JSON schemas.
 
 The patterns are the ones the Node SDK's generated validator uses
 (``DATE_TIME_RE`` and ``URI_RE`` in ``sdk-node/scripts/validator-ajv.ts``), so
-the schema check refuses the same ``date-time`` and ``uri`` values in both SDKs
-without jsonschema's optional format packages. A test keeps the two copies in
-step.
+the email and sent_email schema checks refuse the same ``date-time`` and
+``uri`` values in both SDKs without jsonschema's optional format packages. A
+test keeps the two copies in step.
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ def _strings_only(check: Callable[[str], bool]) -> Callable[[object], bool]:
 
 
 def webhook_format_checker() -> FormatChecker:
-    """A format checker for the email event schema: ``date-time`` and ``uri``."""
+    """A format checker for the webhook schemas: ``date-time`` and ``uri``."""
     checker = FormatChecker(formats=())
     checker.checks("date-time")(_strings_only(is_date_time))
     checker.checks("uri")(_strings_only(is_uri))

@@ -59,6 +59,9 @@ type ReceiveRequestOptions struct {
 	ToleranceSeconds *int64
 }
 
+// Receive verifies a delivery with HandleWebhook and normalizes it. It returns
+// bounces and reports as well as received mail; check Raw.Event to tell them
+// apart.
 func Receive(options HandleWebhookOptions) (*ReceivedEmail, error) {
 	event, err := HandleWebhook(options)
 	if err != nil {
