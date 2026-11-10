@@ -29,11 +29,11 @@ import { openBrowser } from "../browser-login-prompt.js";
 
 // Organization API keys from the CLI, for a person signed in with
 // `primitive login`. Listing and reading show metadata only, never a secret.
-// Whenever the server asks the person to approve a key write in the browser,
-// it answers `step_up_required` with a link, the page shows a one-time token,
-// and the request is sent again with it. Creating, rotating and changing a
-// key ask for it; a request the server accepts without approval goes through
-// as it is. A key never holds more than the person who makes it, and the
+// Creating, rotating and changing a key from the person's own login run
+// directly. When the server asks the person to approve one in the browser
+// (an organization that requires it), it answers `step_up_required` with a
+// link, the page shows a one-time token, and the request is sent again with
+// it. A key never holds more than the person who makes it, and the
 // organization's credential policy applies as in the dashboard.
 
 export const STORE_SECRET_NOTICE =
@@ -659,7 +659,7 @@ export class KeysCreateCommand extends Command {
   static description =
     `Create an API key. Say what it can do with --preset or --permission; there is no default.
 
-  You approve each new key in your browser: the command prints the approval link, opens it where it can, and waits for the one-time token the page shows. In a script, approve first and pass that token with --step-up-token. The key never holds more than you do, and your organization's credential policy applies.
+  The key is created directly. If your organization requires approval, the command prints the approval link, opens it where it can, and waits for the one-time token the page shows. In a script it prints the link and exits: approve, then run it again with --step-up-token. The key never holds more than you do, and your organization's credential policy applies.
 
   The secret is printed once, on its own line on stdout (in the JSON with --json). Store it right away: it is not shown again and the CLI does not save it.
 
@@ -780,7 +780,7 @@ export class KeysRotateCommand extends Command {
   static description =
     `Rotate an API key: make a successor with the same permissions and print its secret once. The old key keeps working for the overlap, then stops.
 
-  You approve the rotation in your browser, as for a new key. Store the new secret right away: it is not shown again and the CLI does not save it.`;
+  The rotation runs directly; if your organization requires approval, the command prints the approval link and takes --step-up-token, as for a new key. Store the new secret right away: it is not shown again and the CLI does not save it.`;
 
   static summary = "Rotate an API key";
 
@@ -847,7 +847,7 @@ export class KeysUpdateCommand extends Command {
 
   --add and --remove take permissions (repeatable, or comma-separated). --rule sets the email rules the key reaches, replacing the ones it has. Everything else about the key stays as it is.
 
-  When the server asks for it, you approve the change in your browser, as for a new key. A key never holds more than you do.`;
+  The change runs directly; if your organization requires approval, the command prints the approval link and takes --step-up-token, as for a new key. A key never holds more than you do.`;
 
   static summary = "Change an API key";
 

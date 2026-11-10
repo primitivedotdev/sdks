@@ -214,9 +214,10 @@ to see API keys and their permissions; neither shows a secret.
 .B rotate
 and
 .B update
-need your approval in the browser: the command prints the approval link and
-waits for the one-time token the page shows. A new secret is printed once and
-never saved.
+run directly. If your organization requires approval, the command prints the
+approval link and waits for the one-time token the page shows, or takes it with
+.BR --step-up-token .
+A new secret is printed once and never saved.
 .B primitive keys revoke ID
 revokes a key.
 .B primitive whoami --check PERMISSION

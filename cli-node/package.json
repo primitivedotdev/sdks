@@ -144,7 +144,7 @@
         "description": "Global secrets shared across every function. Use `primitive org secrets list|set|remove`. Changes land in a function on its next redeploy; a function secret of the same name overrides the global."
       },
       "keys": {
-        "description": "Organization API keys: list and show them (metadata only, never secrets), create, rotate and change them after you approve each request in your browser, and revoke them."
+        "description": "Organization API keys: list and show them (metadata only, never secrets), create, rotate and change them (with browser approval where your organization requires it), and revoke them."
       },
       "roles": {
         "description": "Read roles, groups, mailbox access and the access mode. Use `primitive roles list|groups|mailbox-access|access-mode`; generated API names remain available."

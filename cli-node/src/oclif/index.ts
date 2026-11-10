@@ -780,8 +780,8 @@ export const COMMANDS: Record<string, typeof Command> = {
   // `cli list-cli-orgs` authenticates with the login's identity token, which
   // only the hand-rolled `orgs` holds, so the id is served by it.
   "cli:list-cli-orgs": OrgsCommand,
-  // API keys. Writes go through these commands, which handle the browser
-  // approval, not generated ones; see KEY_WRITE_OPERATION_IDS in
+  // API keys. Writes go through these commands, which handle browser approval
+  // when it is required, not generated ones; see KEY_WRITE_OPERATION_IDS in
   // cli-operations.ts.
   "keys:list": KeysListCommand,
   "keys:get": KeysGetCommand,
