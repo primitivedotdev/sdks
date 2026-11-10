@@ -11424,6 +11424,115 @@ func (s *CreateRouteCreated) Validate() error {
 	return nil
 }
 
+func (s *CreateRouteCreatedData) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if value, ok := s.MatchType.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "match_type",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Warnings == nil {
+			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Warnings {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "warnings",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s CreateRouteCreatedDataMatchType) Validate() error {
+	switch s {
+	case "exact":
+		return nil
+	case "wildcard":
+		return nil
+	case "regex":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s *CreateRouteCreatedDataWarningsItem) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Code.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "code",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s CreateRouteCreatedDataWarningsItemCode) Validate() error {
+	switch s {
+	case "endpoint_owner_limited":
+		return nil
+	case "route_owner_limited":
+		return nil
+	case "owner_unchecked":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
 func (s *CreateRouteForbidden) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
@@ -24018,8 +24127,6 @@ func (s ErrorResponseErrorCode) Validate() error {
 		return nil
 	case "email_rule_conflict":
 		return nil
-	case "email_rule_not_active":
-		return nil
 	case "email_rule_not_compiled":
 		return nil
 	case "email_rule_request_limit":
@@ -32008,6 +32115,165 @@ func (s *GetSearchSettingsUnauthorized) Validate() error {
 	return nil
 }
 
+func (s *GetSendFromOK) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Data.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *GetSendFromOKData) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if value, ok := s.DefaultSource.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "default_source",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Addresses == nil {
+			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Addresses {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "addresses",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Domains == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "domains",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *GetSendFromOKDataAddressesItem) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Kind.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s GetSendFromOKDataAddressesItemKind) Validate() error {
+	switch s {
+	case "agent_address":
+		return nil
+	case "member_address":
+		return nil
+	case "granted":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s GetSendFromOKDataDefaultSource) Validate() error {
+	switch s {
+	case "agent_address":
+		return nil
+	case "member_address":
+		return nil
+	case "granted_address":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s *GetSendFromTooManyRequests) Validate() error {
+	alias := (*ErrorResponseHeaders)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *GetSendFromUnauthorized) Validate() error {
+	alias := (*ErrorResponseHeaders)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *GetSendPermissionsOK) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -37130,14 +37396,6 @@ func (s *ListEmailRuleScopeOptionsUnauthorized) Validate() error {
 }
 
 func (s *ListEmailRuleShareEmailsBadRequest) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *ListEmailRuleShareEmailsConflict) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -66178,6 +66436,34 @@ func (s *TestEmailRuleResultCounts) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Skipped.Get(); ok {
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           0,
+					MaxSet:        false,
+					Max:           0,
+					MinExclusive:  false,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(value)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "skipped",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if err := (validate.Int{
 			MinSet:        true,
 			Min:           0,
@@ -66397,6 +66683,8 @@ func (s TestEmailRuleResultExpectationsResultsItemOutcome) Validate() error {
 		return nil
 	case "unclassified":
 		return nil
+	case "skipped":
+		return nil
 	case "not_found":
 		return nil
 	default:
@@ -66584,6 +66872,24 @@ func (s *TestEmailRuleResultResultsItem) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.SkippedReason.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "skipped_reason",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.UnclassifiedReason.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
@@ -66616,6 +66922,8 @@ func (s TestEmailRuleResultResultsItemOutcome) Validate() error {
 	case "no_match":
 		return nil
 	case "unclassified":
+		return nil
+	case "skipped":
 		return nil
 	case "not_found":
 		return nil
@@ -66706,6 +67014,20 @@ func (s TestEmailRuleResultResultsItemQuestionAnswersSource) Validate() error {
 	case "asked_now":
 		return nil
 	case "not_asked":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s TestEmailRuleResultResultsItemSkippedReason) Validate() error {
+	switch s {
+	case "unparsed":
+		return nil
+	case "rejected":
+		return nil
+	case "content_discarded":
 		return nil
 	default:
 		// Added to the API after this client was generated.
@@ -71998,6 +72320,115 @@ func (s *UpdateRouteOK) Validate() error {
 	return nil
 }
 
+func (s *UpdateRouteOKData) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if value, ok := s.MatchType.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "match_type",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Warnings == nil {
+			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Warnings {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "warnings",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s UpdateRouteOKDataMatchType) Validate() error {
+	switch s {
+	case "exact":
+		return nil
+	case "wildcard":
+		return nil
+	case "regex":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s *UpdateRouteOKDataWarningsItem) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Code.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "code",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s UpdateRouteOKDataWarningsItemCode) Validate() error {
+	switch s {
+	case "endpoint_owner_limited":
+		return nil
+	case "route_owner_limited":
+		return nil
+	case "owner_unchecked":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
 func (s *UpdateSearchSettingsBadRequest) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
@@ -73979,6 +74410,32 @@ func (s CreateRoleResultKind) validateKnown() error {
 	}
 }
 
+func (s CreateRouteCreatedDataMatchType) validateKnown() error {
+	switch s {
+	case "exact":
+		return nil
+	case "wildcard":
+		return nil
+	case "regex":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s CreateRouteCreatedDataWarningsItemCode) validateKnown() error {
+	switch s {
+	case "endpoint_owner_limited":
+		return nil
+	case "route_owner_limited":
+		return nil
+	case "owner_unchecked":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s CreateRouteInputMatchType) validateKnown() error {
 	switch s {
 	case "exact":
@@ -75797,8 +76254,6 @@ func (s ErrorResponseErrorCode) validateKnown() error {
 		return nil
 	case "email_rule_conflict":
 		return nil
-	case "email_rule_not_active":
-		return nil
 	case "email_rule_not_compiled":
 		return nil
 	case "email_rule_request_limit":
@@ -76852,6 +77307,32 @@ func (s GetOwnGrantOKDataGrantSendScope1Direction) validateKnown() error {
 func (s GetPublicAddressNoteOKCacheControl) validateKnown() error {
 	switch s {
 	case "no-store":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s GetSendFromOKDataAddressesItemKind) validateKnown() error {
+	switch s {
+	case "agent_address":
+		return nil
+	case "member_address":
+		return nil
+	case "granted":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s GetSendFromOKDataDefaultSource) validateKnown() error {
+	switch s {
+	case "agent_address":
+		return nil
+	case "member_address":
+		return nil
+	case "granted_address":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -79850,6 +80331,8 @@ func (s TestEmailRuleResultExpectationsResultsItemOutcome) validateKnown() error
 		return nil
 	case "unclassified":
 		return nil
+	case "skipped":
+		return nil
 	case "not_found":
 		return nil
 	default:
@@ -79880,6 +80363,8 @@ func (s TestEmailRuleResultResultsItemOutcome) validateKnown() error {
 		return nil
 	case "unclassified":
 		return nil
+	case "skipped":
+		return nil
 	case "not_found":
 		return nil
 	default:
@@ -79894,6 +80379,19 @@ func (s TestEmailRuleResultResultsItemQuestionAnswersSource) validateKnown() err
 	case "asked_now":
 		return nil
 	case "not_asked":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s TestEmailRuleResultResultsItemSkippedReason) validateKnown() error {
+	switch s {
+	case "unparsed":
+		return nil
+	case "rejected":
+		return nil
+	case "content_discarded":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -80134,6 +80632,32 @@ func (s UpdateRouteInputMatchType) validateKnown() error {
 	case "wildcard":
 		return nil
 	case "regex":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s UpdateRouteOKDataMatchType) validateKnown() error {
+	switch s {
+	case "exact":
+		return nil
+	case "wildcard":
+		return nil
+	case "regex":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s UpdateRouteOKDataWarningsItemCode) validateKnown() error {
+	switch s {
+	case "endpoint_owner_limited":
+		return nil
+	case "route_owner_limited":
+		return nil
+	case "owner_unchecked":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)

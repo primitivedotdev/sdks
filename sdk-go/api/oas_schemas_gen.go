@@ -7952,8 +7952,8 @@ func (*CheckEmailRuleRequestTargetOK) checkEmailRuleRequestTargetRes() {}
 type CheckEmailRuleRequestTargetRequest struct {
 	// The member to ask. Give target_user_id or target_email, not both.
 	TargetUserID OptUUID `json:"target_user_id"`
-	// The member to ask, by their member mailbox address. Give target_user_id or target_email, not both.
-	// Counts toward the same 30 lookups by address an hour as asking.
+	// The member to ask, by their member mailbox address or verified work email. Give target_user_id or
+	// target_email, not both. Counts toward the same 30 lookups by address an hour as asking.
 	TargetEmail OptString `json:"target_email"`
 }
 
@@ -12861,9 +12861,9 @@ func (*CreateEmailRuleRequestNotFound) createEmailRuleRequestRes() {}
 type CreateEmailRuleRequestRequest struct {
 	// The member asked for the rule. Give target_user_id or target_email, not both.
 	TargetUserID OptUUID `json:"target_user_id"`
-	// The member asked for the rule, by their member mailbox address. Give target_user_id or
-	// target_email, not both. Looking members up by address is limited to 30 an hour, and unless you can
-	// list members the answer does not say who it was.
+	// The member asked for the rule, by their member mailbox address, or by their verified work email if
+	// you can list members. Give target_user_id or target_email, not both. Looking members up by address
+	// is limited to 30 an hour, and unless you can list members the answer does not say who it was.
 	TargetEmail OptString `json:"target_email"`
 	// A short name for the rule.
 	Name string `json:"name"`
@@ -15208,8 +15208,8 @@ func (*CreateRouteConflict) createRouteRes() {}
 
 // Merged schema.
 type CreateRouteCreated struct {
-	Success bool           `json:"success"`
-	Data    RecipientRoute `json:"data"`
+	Success bool                   `json:"success"`
+	Data    CreateRouteCreatedData `json:"data"`
 }
 
 // GetSuccess returns the value of Success.
@@ -15218,7 +15218,7 @@ func (s *CreateRouteCreated) GetSuccess() bool {
 }
 
 // GetData returns the value of Data.
-func (s *CreateRouteCreated) GetData() RecipientRoute {
+func (s *CreateRouteCreated) GetData() CreateRouteCreatedData {
 	return s.Data
 }
 
@@ -15228,11 +15228,290 @@ func (s *CreateRouteCreated) SetSuccess(val bool) {
 }
 
 // SetData sets the value of Data.
-func (s *CreateRouteCreated) SetData(val RecipientRoute) {
+func (s *CreateRouteCreated) SetData(val CreateRouteCreatedData) {
 	s.Data = val
 }
 
 func (*CreateRouteCreated) createRouteRes() {}
+
+// Merged schema.
+type CreateRouteCreatedData struct {
+	ID    uuid.UUID `json:"id"`
+	OrgID OptUUID   `json:"org_id"`
+	// Domain the route is scoped to; null = org-wide.
+	DomainID  OptNilUUID                         `json:"domain_id"`
+	MatchType OptCreateRouteCreatedDataMatchType `json:"match_type"`
+	// The recipient address pattern (an exact address or a wildcard).
+	Pattern OptString `json:"pattern"`
+	// Normalized pattern used for matching.
+	PatternNorm OptNilString `json:"pattern_norm"`
+	// The endpoint inbound mail matching this rule is delivered to.
+	EndpointID OptUUID `json:"endpoint_id"`
+	// Evaluation order within a scope; lower is checked first.
+	Priority OptInt  `json:"priority"`
+	Enabled  OptBool `json:"enabled"`
+	// How many emails have matched this rule (a bigint, returned as a string).
+	MatchCount    OptString      `json:"match_count"`
+	LastMatchedAt OptNilDateTime `json:"last_matched_at"`
+	CreatedAt     OptDateTime    `json:"created_at"`
+	// What the route may not do as written. endpoint_owner_limited: its endpoint is owned by a key, a
+	// third-party app or agent, or a person limited to some mail, so it delivers only mail for
+	// recipients that owner may receive (for an outbound-only owner, only bounces). route_owner_limited:
+	// the same for the route's own owner. owner_unchecked: that could not be checked just now. Empty
+	// when nothing limits it. Check any recipient with POST /v1/routes/simulate.
+	Warnings []CreateRouteCreatedDataWarningsItem `json:"warnings"`
+}
+
+// GetID returns the value of ID.
+func (s *CreateRouteCreatedData) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetOrgID returns the value of OrgID.
+func (s *CreateRouteCreatedData) GetOrgID() OptUUID {
+	return s.OrgID
+}
+
+// GetDomainID returns the value of DomainID.
+func (s *CreateRouteCreatedData) GetDomainID() OptNilUUID {
+	return s.DomainID
+}
+
+// GetMatchType returns the value of MatchType.
+func (s *CreateRouteCreatedData) GetMatchType() OptCreateRouteCreatedDataMatchType {
+	return s.MatchType
+}
+
+// GetPattern returns the value of Pattern.
+func (s *CreateRouteCreatedData) GetPattern() OptString {
+	return s.Pattern
+}
+
+// GetPatternNorm returns the value of PatternNorm.
+func (s *CreateRouteCreatedData) GetPatternNorm() OptNilString {
+	return s.PatternNorm
+}
+
+// GetEndpointID returns the value of EndpointID.
+func (s *CreateRouteCreatedData) GetEndpointID() OptUUID {
+	return s.EndpointID
+}
+
+// GetPriority returns the value of Priority.
+func (s *CreateRouteCreatedData) GetPriority() OptInt {
+	return s.Priority
+}
+
+// GetEnabled returns the value of Enabled.
+func (s *CreateRouteCreatedData) GetEnabled() OptBool {
+	return s.Enabled
+}
+
+// GetMatchCount returns the value of MatchCount.
+func (s *CreateRouteCreatedData) GetMatchCount() OptString {
+	return s.MatchCount
+}
+
+// GetLastMatchedAt returns the value of LastMatchedAt.
+func (s *CreateRouteCreatedData) GetLastMatchedAt() OptNilDateTime {
+	return s.LastMatchedAt
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *CreateRouteCreatedData) GetCreatedAt() OptDateTime {
+	return s.CreatedAt
+}
+
+// GetWarnings returns the value of Warnings.
+func (s *CreateRouteCreatedData) GetWarnings() []CreateRouteCreatedDataWarningsItem {
+	return s.Warnings
+}
+
+// SetID sets the value of ID.
+func (s *CreateRouteCreatedData) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetOrgID sets the value of OrgID.
+func (s *CreateRouteCreatedData) SetOrgID(val OptUUID) {
+	s.OrgID = val
+}
+
+// SetDomainID sets the value of DomainID.
+func (s *CreateRouteCreatedData) SetDomainID(val OptNilUUID) {
+	s.DomainID = val
+}
+
+// SetMatchType sets the value of MatchType.
+func (s *CreateRouteCreatedData) SetMatchType(val OptCreateRouteCreatedDataMatchType) {
+	s.MatchType = val
+}
+
+// SetPattern sets the value of Pattern.
+func (s *CreateRouteCreatedData) SetPattern(val OptString) {
+	s.Pattern = val
+}
+
+// SetPatternNorm sets the value of PatternNorm.
+func (s *CreateRouteCreatedData) SetPatternNorm(val OptNilString) {
+	s.PatternNorm = val
+}
+
+// SetEndpointID sets the value of EndpointID.
+func (s *CreateRouteCreatedData) SetEndpointID(val OptUUID) {
+	s.EndpointID = val
+}
+
+// SetPriority sets the value of Priority.
+func (s *CreateRouteCreatedData) SetPriority(val OptInt) {
+	s.Priority = val
+}
+
+// SetEnabled sets the value of Enabled.
+func (s *CreateRouteCreatedData) SetEnabled(val OptBool) {
+	s.Enabled = val
+}
+
+// SetMatchCount sets the value of MatchCount.
+func (s *CreateRouteCreatedData) SetMatchCount(val OptString) {
+	s.MatchCount = val
+}
+
+// SetLastMatchedAt sets the value of LastMatchedAt.
+func (s *CreateRouteCreatedData) SetLastMatchedAt(val OptNilDateTime) {
+	s.LastMatchedAt = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *CreateRouteCreatedData) SetCreatedAt(val OptDateTime) {
+	s.CreatedAt = val
+}
+
+// SetWarnings sets the value of Warnings.
+func (s *CreateRouteCreatedData) SetWarnings(val []CreateRouteCreatedDataWarningsItem) {
+	s.Warnings = val
+}
+
+type CreateRouteCreatedDataMatchType string
+
+const (
+	CreateRouteCreatedDataMatchTypeExact    CreateRouteCreatedDataMatchType = "exact"
+	CreateRouteCreatedDataMatchTypeWildcard CreateRouteCreatedDataMatchType = "wildcard"
+	CreateRouteCreatedDataMatchTypeRegex    CreateRouteCreatedDataMatchType = "regex"
+)
+
+// AllValues returns all CreateRouteCreatedDataMatchType values.
+func (CreateRouteCreatedDataMatchType) AllValues() []CreateRouteCreatedDataMatchType {
+	return []CreateRouteCreatedDataMatchType{
+		CreateRouteCreatedDataMatchTypeExact,
+		CreateRouteCreatedDataMatchTypeWildcard,
+		CreateRouteCreatedDataMatchTypeRegex,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CreateRouteCreatedDataMatchType) MarshalText() ([]byte, error) {
+	switch s {
+	case CreateRouteCreatedDataMatchTypeExact:
+		return []byte(s), nil
+	case CreateRouteCreatedDataMatchTypeWildcard:
+		return []byte(s), nil
+	case CreateRouteCreatedDataMatchTypeRegex:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CreateRouteCreatedDataMatchType) UnmarshalText(data []byte) error {
+	switch CreateRouteCreatedDataMatchType(data) {
+	case CreateRouteCreatedDataMatchTypeExact:
+		*s = CreateRouteCreatedDataMatchTypeExact
+		return nil
+	case CreateRouteCreatedDataMatchTypeWildcard:
+		*s = CreateRouteCreatedDataMatchTypeWildcard
+		return nil
+	case CreateRouteCreatedDataMatchTypeRegex:
+		*s = CreateRouteCreatedDataMatchTypeRegex
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type CreateRouteCreatedDataWarningsItem struct {
+	Code    CreateRouteCreatedDataWarningsItemCode `json:"code"`
+	Message string                                 `json:"message"`
+}
+
+// GetCode returns the value of Code.
+func (s *CreateRouteCreatedDataWarningsItem) GetCode() CreateRouteCreatedDataWarningsItemCode {
+	return s.Code
+}
+
+// GetMessage returns the value of Message.
+func (s *CreateRouteCreatedDataWarningsItem) GetMessage() string {
+	return s.Message
+}
+
+// SetCode sets the value of Code.
+func (s *CreateRouteCreatedDataWarningsItem) SetCode(val CreateRouteCreatedDataWarningsItemCode) {
+	s.Code = val
+}
+
+// SetMessage sets the value of Message.
+func (s *CreateRouteCreatedDataWarningsItem) SetMessage(val string) {
+	s.Message = val
+}
+
+type CreateRouteCreatedDataWarningsItemCode string
+
+const (
+	CreateRouteCreatedDataWarningsItemCodeEndpointOwnerLimited CreateRouteCreatedDataWarningsItemCode = "endpoint_owner_limited"
+	CreateRouteCreatedDataWarningsItemCodeRouteOwnerLimited    CreateRouteCreatedDataWarningsItemCode = "route_owner_limited"
+	CreateRouteCreatedDataWarningsItemCodeOwnerUnchecked       CreateRouteCreatedDataWarningsItemCode = "owner_unchecked"
+)
+
+// AllValues returns all CreateRouteCreatedDataWarningsItemCode values.
+func (CreateRouteCreatedDataWarningsItemCode) AllValues() []CreateRouteCreatedDataWarningsItemCode {
+	return []CreateRouteCreatedDataWarningsItemCode{
+		CreateRouteCreatedDataWarningsItemCodeEndpointOwnerLimited,
+		CreateRouteCreatedDataWarningsItemCodeRouteOwnerLimited,
+		CreateRouteCreatedDataWarningsItemCodeOwnerUnchecked,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CreateRouteCreatedDataWarningsItemCode) MarshalText() ([]byte, error) {
+	switch s {
+	case CreateRouteCreatedDataWarningsItemCodeEndpointOwnerLimited:
+		return []byte(s), nil
+	case CreateRouteCreatedDataWarningsItemCodeRouteOwnerLimited:
+		return []byte(s), nil
+	case CreateRouteCreatedDataWarningsItemCodeOwnerUnchecked:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CreateRouteCreatedDataWarningsItemCode) UnmarshalText(data []byte) error {
+	switch CreateRouteCreatedDataWarningsItemCode(data) {
+	case CreateRouteCreatedDataWarningsItemCodeEndpointOwnerLimited:
+		*s = CreateRouteCreatedDataWarningsItemCodeEndpointOwnerLimited
+		return nil
+	case CreateRouteCreatedDataWarningsItemCodeRouteOwnerLimited:
+		*s = CreateRouteCreatedDataWarningsItemCodeRouteOwnerLimited
+		return nil
+	case CreateRouteCreatedDataWarningsItemCodeOwnerUnchecked:
+		*s = CreateRouteCreatedDataWarningsItemCodeOwnerUnchecked
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 type CreateRouteForbidden ErrorResponse
 
@@ -30940,7 +31219,8 @@ type EmailRule struct {
 	ID    uuid.UUID      `json:"id"`
 	Name  string         `json:"name"`
 	State EmailRuleState `json:"state"`
-	// Do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.
+	// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
+	// only for an older core-api: every answer carries it.
 	Kind OptEmailRuleKind `json:"kind"`
 	// Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
 	EvaluationScope OptEmailRuleEvaluationScope `json:"evaluation_scope"`
@@ -31114,7 +31394,8 @@ func (s *EmailRuleEvaluationScope) UnmarshalText(data []byte) error {
 	}
 }
 
-// Do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.
+// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
+// only for an older core-api: every answer carries it.
 type EmailRuleKind string
 
 const (
@@ -31161,7 +31442,8 @@ type EmailRuleRead struct {
 	ID    uuid.UUID          `json:"id"`
 	Name  string             `json:"name"`
 	State EmailRuleReadState `json:"state"`
-	// Do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.
+	// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
+	// only for an older core-api: every answer carries it.
 	Kind OptEmailRuleReadKind `json:"kind"`
 	// Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
 	EvaluationScope OptEmailRuleReadEvaluationScope `json:"evaluation_scope"`
@@ -31384,7 +31666,8 @@ func (s *EmailRuleReadExpectations) SetNoMatch(val []uuid.UUID) {
 	s.NoMatch = val
 }
 
-// Do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.
+// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
+// only for an older core-api: every answer carries it.
 type EmailRuleReadKind string
 
 const (
@@ -32911,7 +33194,8 @@ type EmailRuleWithVersion struct {
 	ID    uuid.UUID                 `json:"id"`
 	Name  string                    `json:"name"`
 	State EmailRuleWithVersionState `json:"state"`
-	// Do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.
+	// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
+	// only for an older core-api: every answer carries it.
 	Kind OptEmailRuleWithVersionKind `json:"kind"`
 	// Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
 	EvaluationScope OptEmailRuleWithVersionEvaluationScope `json:"evaluation_scope"`
@@ -33096,7 +33380,8 @@ func (s *EmailRuleWithVersionEvaluationScope) UnmarshalText(data []byte) error {
 	}
 }
 
-// Do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.
+// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
+// only for an older core-api: every answer carries it.
 type EmailRuleWithVersionKind string
 
 const (
@@ -33191,7 +33476,8 @@ type EmailRuleWritten struct {
 	ID    uuid.UUID             `json:"id"`
 	Name  string                `json:"name"`
 	State EmailRuleWrittenState `json:"state"`
-	// Do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.
+	// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
+	// only for an older core-api: every answer carries it.
 	Kind OptEmailRuleWrittenKind `json:"kind"`
 	// Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
 	EvaluationScope OptEmailRuleWrittenEvaluationScope `json:"evaluation_scope"`
@@ -33210,10 +33496,10 @@ type EmailRuleWritten struct {
 	ScopeWarnings []EmailRuleScopeWarning `json:"scope_warnings"`
 	// After a write that saved a version or changed its expectations, if it has some: them, judged on
 	// that version from stored classifications without asking its questions. Undecided: one that needs
-	// answers not yet kept for that version, is unclassified or not reached, or that its author does not
-	// read. Absent when it could not be judged (the rule changed again, its author cannot be resolved,
-	// your access shows headers only, it could not finish in time, or the check failed). Test by rule_id
-	// for the rest.
+	// answers not yet kept for that version, is unclassified, skipped or not reached, or that its author
+	// does not read. Absent when it could not be judged (the rule changed again, its author cannot be
+	// resolved, your access shows headers only, it could not finish in time, or the check failed). Test
+	// by rule_id for the rest.
 	ExpectationsCheck OptEmailRuleWrittenExpectationsCheck `json:"expectations_check"`
 }
 
@@ -33408,13 +33694,17 @@ func (s *EmailRuleWrittenEvaluationScope) UnmarshalText(data []byte) error {
 
 // After a write that saved a version or changed its expectations, if it has some: them, judged on
 // that version from stored classifications without asking its questions. Undecided: one that needs
-// answers not yet kept for that version, is unclassified or not reached, or that its author does not
-// read. Absent when it could not be judged (the rule changed again, its author cannot be resolved,
-// your access shows headers only, it could not finish in time, or the check failed). Test by rule_id
-// for the rest.
+// answers not yet kept for that version, is unclassified, skipped or not reached, or that its author
+// does not read. Absent when it could not be judged (the rule changed again, its author cannot be
+// resolved, your access shows headers only, it could not finish in time, or the check failed). Test
+// by rule_id for the rest.
 type EmailRuleWrittenExpectationsCheck struct {
-	Version   NilInt      `json:"version"`
-	Passed    bool        `json:"passed"`
+	Version NilInt `json:"version"`
+	// False when any failed, true when every one passed, null when none failed but some are undecided
+	// (not a failure).
+	Passed NilBool `json:"passed"`
+	// Whether every expectation was judged (undecided is empty). Absent from a server that predates it.
+	Decided   OptBool     `json:"decided"`
 	Failed    []uuid.UUID `json:"failed"`
 	Undecided []uuid.UUID `json:"undecided"`
 }
@@ -33425,8 +33715,13 @@ func (s *EmailRuleWrittenExpectationsCheck) GetVersion() NilInt {
 }
 
 // GetPassed returns the value of Passed.
-func (s *EmailRuleWrittenExpectationsCheck) GetPassed() bool {
+func (s *EmailRuleWrittenExpectationsCheck) GetPassed() NilBool {
 	return s.Passed
+}
+
+// GetDecided returns the value of Decided.
+func (s *EmailRuleWrittenExpectationsCheck) GetDecided() OptBool {
+	return s.Decided
 }
 
 // GetFailed returns the value of Failed.
@@ -33445,8 +33740,13 @@ func (s *EmailRuleWrittenExpectationsCheck) SetVersion(val NilInt) {
 }
 
 // SetPassed sets the value of Passed.
-func (s *EmailRuleWrittenExpectationsCheck) SetPassed(val bool) {
+func (s *EmailRuleWrittenExpectationsCheck) SetPassed(val NilBool) {
 	s.Passed = val
+}
+
+// SetDecided sets the value of Decided.
+func (s *EmailRuleWrittenExpectationsCheck) SetDecided(val OptBool) {
+	s.Decided = val
 }
 
 // SetFailed sets the value of Failed.
@@ -33459,7 +33759,8 @@ func (s *EmailRuleWrittenExpectationsCheck) SetUndecided(val []uuid.UUID) {
 	s.Undecided = val
 }
 
-// Do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.
+// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
+// only for an older core-api: every answer carries it.
 type EmailRuleWrittenKind string
 
 const (
@@ -37720,6 +38021,7 @@ func (*ErrorResponse) getOrgFunctionUsageRes()           {}
 func (*ErrorResponse) getOrgRoutingTopologyRes()         {}
 func (*ErrorResponse) getOwnGrantRes()                   {}
 func (*ErrorResponse) getRepeatingSendRes()              {}
+func (*ErrorResponse) getSendFromRes()                   {}
 func (*ErrorResponse) getStorageStatsRes()               {}
 func (*ErrorResponse) getWakeScheduleRes()               {}
 func (*ErrorResponse) getWebhookSecretRes()              {}
@@ -37958,7 +38260,6 @@ const (
 	ErrorResponseErrorCodeEmailRuleAuthorUnresolvable              ErrorResponseErrorCode = "email_rule_author_unresolvable"
 	ErrorResponseErrorCodeEmailRuleCompilerUnavailable             ErrorResponseErrorCode = "email_rule_compiler_unavailable"
 	ErrorResponseErrorCodeEmailRuleConflict                        ErrorResponseErrorCode = "email_rule_conflict"
-	ErrorResponseErrorCodeEmailRuleNotActive                       ErrorResponseErrorCode = "email_rule_not_active"
 	ErrorResponseErrorCodeEmailRuleNotCompiled                     ErrorResponseErrorCode = "email_rule_not_compiled"
 	ErrorResponseErrorCodeEmailRuleRequestLimit                    ErrorResponseErrorCode = "email_rule_request_limit"
 	ErrorResponseErrorCodeEmailRuleRequestNotPending               ErrorResponseErrorCode = "email_rule_request_not_pending"
@@ -38298,7 +38599,6 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeEmailRuleAuthorUnresolvable,
 		ErrorResponseErrorCodeEmailRuleCompilerUnavailable,
 		ErrorResponseErrorCodeEmailRuleConflict,
-		ErrorResponseErrorCodeEmailRuleNotActive,
 		ErrorResponseErrorCodeEmailRuleNotCompiled,
 		ErrorResponseErrorCodeEmailRuleRequestLimit,
 		ErrorResponseErrorCodeEmailRuleRequestNotPending,
@@ -38788,8 +39088,6 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeEmailRuleCompilerUnavailable:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeEmailRuleConflict:
-		return []byte(s), nil
-	case ErrorResponseErrorCodeEmailRuleNotActive:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeEmailRuleNotCompiled:
 		return []byte(s), nil
@@ -39616,9 +39914,6 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeEmailRuleConflict:
 		*s = ErrorResponseErrorCodeEmailRuleConflict
-		return nil
-	case ErrorResponseErrorCodeEmailRuleNotActive:
-		*s = ErrorResponseErrorCodeEmailRuleNotActive
 		return nil
 	case ErrorResponseErrorCodeEmailRuleNotCompiled:
 		*s = ErrorResponseErrorCodeEmailRuleNotCompiled
@@ -52095,6 +52390,233 @@ type GetSearchSettingsUnauthorized ErrorResponseHeaders
 
 func (*GetSearchSettingsUnauthorized) getSearchSettingsRes() {}
 
+type GetSendFromOK struct {
+	Success bool              `json:"success"`
+	Data    GetSendFromOKData `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetSendFromOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetSendFromOK) GetData() GetSendFromOKData {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetSendFromOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetSendFromOK) SetData(val GetSendFromOKData) {
+	s.Data = val
+}
+
+func (*GetSendFromOK) getSendFromRes() {}
+
+type GetSendFromOKData struct {
+	// The From a send that names none should use. Null when there is no single right answer; `reason`
+	// says why.
+	DefaultFrom NilString `json:"default_from"`
+	// Where default_from comes from. Null when default_from is null.
+	DefaultSource NilGetSendFromOKDataDefaultSource `json:"default_source"`
+	// Addresses this credential may send from, each one a send would accept as From for it, recipients
+	// aside.
+	Addresses []GetSendFromOKDataAddressesItem `json:"addresses"`
+	// Domains at which this credential may send from any address, except one reserved to someone else (a
+	// member's own address, or an agent's) or left out of its grant. Never listed for a connected agent.
+	Domains []string `json:"domains"`
+	// Why default_from is null, in plain English. Null when there is a default.
+	Reason NilString `json:"reason"`
+}
+
+// GetDefaultFrom returns the value of DefaultFrom.
+func (s *GetSendFromOKData) GetDefaultFrom() NilString {
+	return s.DefaultFrom
+}
+
+// GetDefaultSource returns the value of DefaultSource.
+func (s *GetSendFromOKData) GetDefaultSource() NilGetSendFromOKDataDefaultSource {
+	return s.DefaultSource
+}
+
+// GetAddresses returns the value of Addresses.
+func (s *GetSendFromOKData) GetAddresses() []GetSendFromOKDataAddressesItem {
+	return s.Addresses
+}
+
+// GetDomains returns the value of Domains.
+func (s *GetSendFromOKData) GetDomains() []string {
+	return s.Domains
+}
+
+// GetReason returns the value of Reason.
+func (s *GetSendFromOKData) GetReason() NilString {
+	return s.Reason
+}
+
+// SetDefaultFrom sets the value of DefaultFrom.
+func (s *GetSendFromOKData) SetDefaultFrom(val NilString) {
+	s.DefaultFrom = val
+}
+
+// SetDefaultSource sets the value of DefaultSource.
+func (s *GetSendFromOKData) SetDefaultSource(val NilGetSendFromOKDataDefaultSource) {
+	s.DefaultSource = val
+}
+
+// SetAddresses sets the value of Addresses.
+func (s *GetSendFromOKData) SetAddresses(val []GetSendFromOKDataAddressesItem) {
+	s.Addresses = val
+}
+
+// SetDomains sets the value of Domains.
+func (s *GetSendFromOKData) SetDomains(val []string) {
+	s.Domains = val
+}
+
+// SetReason sets the value of Reason.
+func (s *GetSendFromOKData) SetReason(val NilString) {
+	s.Reason = val
+}
+
+type GetSendFromOKDataAddressesItem struct {
+	Address string `json:"address"`
+	// Agent_address: this connected agent's own address. member_address: your own member address.
+	// granted: an address this credential's grant names.
+	Kind GetSendFromOKDataAddressesItemKind `json:"kind"`
+}
+
+// GetAddress returns the value of Address.
+func (s *GetSendFromOKDataAddressesItem) GetAddress() string {
+	return s.Address
+}
+
+// GetKind returns the value of Kind.
+func (s *GetSendFromOKDataAddressesItem) GetKind() GetSendFromOKDataAddressesItemKind {
+	return s.Kind
+}
+
+// SetAddress sets the value of Address.
+func (s *GetSendFromOKDataAddressesItem) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetKind sets the value of Kind.
+func (s *GetSendFromOKDataAddressesItem) SetKind(val GetSendFromOKDataAddressesItemKind) {
+	s.Kind = val
+}
+
+// Agent_address: this connected agent's own address. member_address: your own member address.
+// granted: an address this credential's grant names.
+type GetSendFromOKDataAddressesItemKind string
+
+const (
+	GetSendFromOKDataAddressesItemKindAgentAddress  GetSendFromOKDataAddressesItemKind = "agent_address"
+	GetSendFromOKDataAddressesItemKindMemberAddress GetSendFromOKDataAddressesItemKind = "member_address"
+	GetSendFromOKDataAddressesItemKindGranted       GetSendFromOKDataAddressesItemKind = "granted"
+)
+
+// AllValues returns all GetSendFromOKDataAddressesItemKind values.
+func (GetSendFromOKDataAddressesItemKind) AllValues() []GetSendFromOKDataAddressesItemKind {
+	return []GetSendFromOKDataAddressesItemKind{
+		GetSendFromOKDataAddressesItemKindAgentAddress,
+		GetSendFromOKDataAddressesItemKindMemberAddress,
+		GetSendFromOKDataAddressesItemKindGranted,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s GetSendFromOKDataAddressesItemKind) MarshalText() ([]byte, error) {
+	switch s {
+	case GetSendFromOKDataAddressesItemKindAgentAddress:
+		return []byte(s), nil
+	case GetSendFromOKDataAddressesItemKindMemberAddress:
+		return []byte(s), nil
+	case GetSendFromOKDataAddressesItemKindGranted:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *GetSendFromOKDataAddressesItemKind) UnmarshalText(data []byte) error {
+	switch GetSendFromOKDataAddressesItemKind(data) {
+	case GetSendFromOKDataAddressesItemKindAgentAddress:
+		*s = GetSendFromOKDataAddressesItemKindAgentAddress
+		return nil
+	case GetSendFromOKDataAddressesItemKindMemberAddress:
+		*s = GetSendFromOKDataAddressesItemKindMemberAddress
+		return nil
+	case GetSendFromOKDataAddressesItemKindGranted:
+		*s = GetSendFromOKDataAddressesItemKindGranted
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Where default_from comes from. Null when default_from is null.
+type GetSendFromOKDataDefaultSource string
+
+const (
+	GetSendFromOKDataDefaultSourceAgentAddress   GetSendFromOKDataDefaultSource = "agent_address"
+	GetSendFromOKDataDefaultSourceMemberAddress  GetSendFromOKDataDefaultSource = "member_address"
+	GetSendFromOKDataDefaultSourceGrantedAddress GetSendFromOKDataDefaultSource = "granted_address"
+)
+
+// AllValues returns all GetSendFromOKDataDefaultSource values.
+func (GetSendFromOKDataDefaultSource) AllValues() []GetSendFromOKDataDefaultSource {
+	return []GetSendFromOKDataDefaultSource{
+		GetSendFromOKDataDefaultSourceAgentAddress,
+		GetSendFromOKDataDefaultSourceMemberAddress,
+		GetSendFromOKDataDefaultSourceGrantedAddress,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s GetSendFromOKDataDefaultSource) MarshalText() ([]byte, error) {
+	switch s {
+	case GetSendFromOKDataDefaultSourceAgentAddress:
+		return []byte(s), nil
+	case GetSendFromOKDataDefaultSourceMemberAddress:
+		return []byte(s), nil
+	case GetSendFromOKDataDefaultSourceGrantedAddress:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *GetSendFromOKDataDefaultSource) UnmarshalText(data []byte) error {
+	switch GetSendFromOKDataDefaultSource(data) {
+	case GetSendFromOKDataDefaultSourceAgentAddress:
+		*s = GetSendFromOKDataDefaultSourceAgentAddress
+		return nil
+	case GetSendFromOKDataDefaultSourceMemberAddress:
+		*s = GetSendFromOKDataDefaultSourceMemberAddress
+		return nil
+	case GetSendFromOKDataDefaultSourceGrantedAddress:
+		*s = GetSendFromOKDataDefaultSourceGrantedAddress
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type GetSendFromTooManyRequests ErrorResponseHeaders
+
+func (*GetSendFromTooManyRequests) getSendFromRes() {}
+
+type GetSendFromUnauthorized ErrorResponseHeaders
+
+func (*GetSendFromUnauthorized) getSendFromRes() {}
+
 // Merged schema.
 type GetSendPermissionsOK struct {
 	Success bool                 `json:"success"`
@@ -57858,9 +58380,9 @@ type ListEmailRuleResultsResultRulesItem struct {
 	ID    uuid.UUID                                `json:"id"`
 	Name  string                                   `json:"name"`
 	State ListEmailRuleResultsResultRulesItemState `json:"state"`
-	// Do_not_share: the rule blocks sharing of what it matches. While it is active, no rule shares an
-	// email it has matched from then on; anything shared before, including while it was in observe,
-	// stays shared. Absent on a rule that shares what it matches.
+	// Grant: the rule shares what it matches. do_not_share: the rule blocks sharing of what it matches.
+	// While it is active, no rule shares an email it has matched from then on; anything shared before,
+	// including while it was in observe, stays shared.
 	Kind OptListEmailRuleResultsResultRulesItemKind `json:"kind"`
 	// What the rule most recently decided about this email; null when it has not run on it.
 	Decision NilListEmailRuleResultsResultRulesItemDecision `json:"decision"`
@@ -58116,9 +58638,9 @@ func (s *ListEmailRuleResultsResultRulesItemDecisionQuestionAnswersItem) SetErro
 	s.ErrorClass = val
 }
 
-// Do_not_share: the rule blocks sharing of what it matches. While it is active, no rule shares an
-// email it has matched from then on; anything shared before, including while it was in observe,
-// stays shared. Absent on a rule that shares what it matches.
+// Grant: the rule shares what it matches. do_not_share: the rule blocks sharing of what it matches.
+// While it is active, no rule shares an email it has matched from then on; anything shared before,
+// including while it was in observe, stays shared.
 type ListEmailRuleResultsResultRulesItemKind string
 
 const (
@@ -58457,10 +58979,6 @@ type ListEmailRuleShareEmailsBadRequest ErrorResponse
 
 func (*ListEmailRuleShareEmailsBadRequest) listEmailRuleShareEmailsRes() {}
 
-type ListEmailRuleShareEmailsConflict ErrorResponse
-
-func (*ListEmailRuleShareEmailsConflict) listEmailRuleShareEmailsRes() {}
-
 type ListEmailRuleShareEmailsForbidden ErrorResponse
 
 func (*ListEmailRuleShareEmailsForbidden) listEmailRuleShareEmailsRes() {}
@@ -58557,8 +59075,9 @@ type ListEmailRuleShareEmailsResultItem struct {
 	References           OptNilStringArray                                         `json:"references"`
 	Score                OptFloat64                                                `json:"score"`
 	Highlights           OptNilListEmailRuleShareEmailsResultItemHighlights        `json:"highlights"`
-	// When the share's rule first matched this email. The email was shared then or shortly after. Null
-	// if that could not be read.
+	// For the person sharing, when the share handed this email over. For the person it was shared with,
+	// when the share's rule first matched it, which is when it was shared or shortly before. Null if
+	// that could not be read.
 	SharedAt        NilDateTime `json:"shared_at"`
 	AdditionalProps ListEmailRuleShareEmailsResultItemAdditional
 }
@@ -69990,6 +70509,51 @@ func (o NilGetOwnGrantOKDataGrantResources) Or(d GetOwnGrantOKDataGrantResources
 	return d
 }
 
+// NewNilGetSendFromOKDataDefaultSource returns new NilGetSendFromOKDataDefaultSource with value set to v.
+func NewNilGetSendFromOKDataDefaultSource(v GetSendFromOKDataDefaultSource) NilGetSendFromOKDataDefaultSource {
+	return NilGetSendFromOKDataDefaultSource{
+		Value: v,
+	}
+}
+
+// NilGetSendFromOKDataDefaultSource is nullable GetSendFromOKDataDefaultSource.
+type NilGetSendFromOKDataDefaultSource struct {
+	Value GetSendFromOKDataDefaultSource
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilGetSendFromOKDataDefaultSource) SetTo(v GetSendFromOKDataDefaultSource) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilGetSendFromOKDataDefaultSource) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilGetSendFromOKDataDefaultSource) SetToNull() {
+	o.Null = true
+	var v GetSendFromOKDataDefaultSource
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilGetSendFromOKDataDefaultSource) Get() (v GetSendFromOKDataDefaultSource, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilGetSendFromOKDataDefaultSource) Or(d GetSendFromOKDataDefaultSource) GetSendFromOKDataDefaultSource {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilIncludedMessageHeadersAutomation returns new NilIncludedMessageHeadersAutomation with value set to v.
 func NewNilIncludedMessageHeadersAutomation(v IncludedMessageHeadersAutomation) NilIncludedMessageHeadersAutomation {
 	return NilIncludedMessageHeadersAutomation{
@@ -73222,6 +73786,52 @@ func (o OptCreateRoleRequestMailScope1Depth) Get() (v CreateRoleRequestMailScope
 
 // Or returns value if set, or given parameter if does not.
 func (o OptCreateRoleRequestMailScope1Depth) Or(d CreateRoleRequestMailScope1Depth) CreateRoleRequestMailScope1Depth {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptCreateRouteCreatedDataMatchType returns new OptCreateRouteCreatedDataMatchType with value set to v.
+func NewOptCreateRouteCreatedDataMatchType(v CreateRouteCreatedDataMatchType) OptCreateRouteCreatedDataMatchType {
+	return OptCreateRouteCreatedDataMatchType{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCreateRouteCreatedDataMatchType is optional CreateRouteCreatedDataMatchType.
+type OptCreateRouteCreatedDataMatchType struct {
+	Value CreateRouteCreatedDataMatchType
+	Set   bool
+}
+
+// IsSet returns true if OptCreateRouteCreatedDataMatchType was set.
+func (o OptCreateRouteCreatedDataMatchType) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCreateRouteCreatedDataMatchType) Reset() {
+	var v CreateRouteCreatedDataMatchType
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCreateRouteCreatedDataMatchType) SetTo(v CreateRouteCreatedDataMatchType) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCreateRouteCreatedDataMatchType) Get() (v CreateRouteCreatedDataMatchType, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCreateRouteCreatedDataMatchType) Or(d CreateRouteCreatedDataMatchType) CreateRouteCreatedDataMatchType {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -90687,6 +91297,52 @@ func (o OptTestEmailRuleResultResultsItemQuestionAnswersSource) Or(d TestEmailRu
 	return d
 }
 
+// NewOptTestEmailRuleResultResultsItemSkippedReason returns new OptTestEmailRuleResultResultsItemSkippedReason with value set to v.
+func NewOptTestEmailRuleResultResultsItemSkippedReason(v TestEmailRuleResultResultsItemSkippedReason) OptTestEmailRuleResultResultsItemSkippedReason {
+	return OptTestEmailRuleResultResultsItemSkippedReason{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptTestEmailRuleResultResultsItemSkippedReason is optional TestEmailRuleResultResultsItemSkippedReason.
+type OptTestEmailRuleResultResultsItemSkippedReason struct {
+	Value TestEmailRuleResultResultsItemSkippedReason
+	Set   bool
+}
+
+// IsSet returns true if OptTestEmailRuleResultResultsItemSkippedReason was set.
+func (o OptTestEmailRuleResultResultsItemSkippedReason) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptTestEmailRuleResultResultsItemSkippedReason) Reset() {
+	var v TestEmailRuleResultResultsItemSkippedReason
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptTestEmailRuleResultResultsItemSkippedReason) SetTo(v TestEmailRuleResultResultsItemSkippedReason) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptTestEmailRuleResultResultsItemSkippedReason) Get() (v TestEmailRuleResultResultsItemSkippedReason, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptTestEmailRuleResultResultsItemSkippedReason) Or(d TestEmailRuleResultResultsItemSkippedReason) TestEmailRuleResultResultsItemSkippedReason {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptTestEmailRuleResultResultsItemUnclassifiedReason returns new OptTestEmailRuleResultResultsItemUnclassifiedReason with value set to v.
 func NewOptTestEmailRuleResultResultsItemUnclassifiedReason(v TestEmailRuleResultResultsItemUnclassifiedReason) OptTestEmailRuleResultResultsItemUnclassifiedReason {
 	return OptTestEmailRuleResultResultsItemUnclassifiedReason{
@@ -91693,6 +92349,52 @@ func (o OptUpdateRouteInputMatchType) Get() (v UpdateRouteInputMatchType, ok boo
 
 // Or returns value if set, or given parameter if does not.
 func (o OptUpdateRouteInputMatchType) Or(d UpdateRouteInputMatchType) UpdateRouteInputMatchType {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptUpdateRouteOKDataMatchType returns new OptUpdateRouteOKDataMatchType with value set to v.
+func NewOptUpdateRouteOKDataMatchType(v UpdateRouteOKDataMatchType) OptUpdateRouteOKDataMatchType {
+	return OptUpdateRouteOKDataMatchType{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptUpdateRouteOKDataMatchType is optional UpdateRouteOKDataMatchType.
+type OptUpdateRouteOKDataMatchType struct {
+	Value UpdateRouteOKDataMatchType
+	Set   bool
+}
+
+// IsSet returns true if OptUpdateRouteOKDataMatchType was set.
+func (o OptUpdateRouteOKDataMatchType) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptUpdateRouteOKDataMatchType) Reset() {
+	var v UpdateRouteOKDataMatchType
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptUpdateRouteOKDataMatchType) SetTo(v UpdateRouteOKDataMatchType) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptUpdateRouteOKDataMatchType) Get() (v UpdateRouteOKDataMatchType, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptUpdateRouteOKDataMatchType) Or(d UpdateRouteOKDataMatchType) UpdateRouteOKDataMatchType {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -119669,7 +120371,8 @@ func (s *TestEmailRuleResult) SetExpectations(val OptTestEmailRuleResultExpectat
 type TestEmailRuleResultClassification struct {
 	// Emails this test classified and saved.
 	ClassifiedNow int `json:"classified_now"`
-	// Emails left without a classification.
+	// Emails left without a classification (unclassified); a skipped email is counted under skipped
+	// instead.
 	StillUnclassified int `json:"still_unclassified"`
 }
 
@@ -119694,12 +120397,13 @@ func (s *TestEmailRuleResultClassification) SetStillUnclassified(val int) {
 }
 
 type TestEmailRuleResultCounts struct {
-	Emails       int `json:"emails"`
-	Matched      int `json:"matched"`
-	NearMiss     int `json:"near_miss"`
-	NoMatch      int `json:"no_match"`
-	Unclassified int `json:"unclassified"`
-	NotFound     int `json:"not_found"`
+	Emails       int    `json:"emails"`
+	Matched      int    `json:"matched"`
+	NearMiss     int    `json:"near_miss"`
+	NoMatch      int    `json:"no_match"`
+	Unclassified int    `json:"unclassified"`
+	Skipped      OptInt `json:"skipped"`
+	NotFound     int    `json:"not_found"`
 }
 
 // GetEmails returns the value of Emails.
@@ -119725,6 +120429,11 @@ func (s *TestEmailRuleResultCounts) GetNoMatch() int {
 // GetUnclassified returns the value of Unclassified.
 func (s *TestEmailRuleResultCounts) GetUnclassified() int {
 	return s.Unclassified
+}
+
+// GetSkipped returns the value of Skipped.
+func (s *TestEmailRuleResultCounts) GetSkipped() OptInt {
+	return s.Skipped
 }
 
 // GetNotFound returns the value of NotFound.
@@ -119757,6 +120466,11 @@ func (s *TestEmailRuleResultCounts) SetUnclassified(val int) {
 	s.Unclassified = val
 }
 
+// SetSkipped sets the value of Skipped.
+func (s *TestEmailRuleResultCounts) SetSkipped(val OptInt) {
+	s.Skipped = val
+}
+
 // SetNotFound sets the value of NotFound.
 func (s *TestEmailRuleResultCounts) SetNotFound(val int) {
 	s.NotFound = val
@@ -119765,7 +120479,7 @@ func (s *TestEmailRuleResultCounts) SetNotFound(val int) {
 // Present when expect was given, or for a saved rule with saved expectations.
 type TestEmailRuleResultExpectations struct {
 	// Every expectation passed. One undecided is no pass: unclassified or a question unanswered (test
-	// again later), or not found (no such email the rule can read).
+	// again later), skipped (it cannot be tested), or not found (no such email the rule can read).
 	Passed bool                                  `json:"passed"`
 	Counts TestEmailRuleResultExpectationsCounts `json:"counts"`
 	// Match first, then no_match, each in the order given (saved expectations by email id).
@@ -119933,6 +120647,7 @@ const (
 	TestEmailRuleResultExpectationsResultsItemOutcomeNearMiss     TestEmailRuleResultExpectationsResultsItemOutcome = "near_miss"
 	TestEmailRuleResultExpectationsResultsItemOutcomeNoMatch      TestEmailRuleResultExpectationsResultsItemOutcome = "no_match"
 	TestEmailRuleResultExpectationsResultsItemOutcomeUnclassified TestEmailRuleResultExpectationsResultsItemOutcome = "unclassified"
+	TestEmailRuleResultExpectationsResultsItemOutcomeSkipped      TestEmailRuleResultExpectationsResultsItemOutcome = "skipped"
 	TestEmailRuleResultExpectationsResultsItemOutcomeNotFound     TestEmailRuleResultExpectationsResultsItemOutcome = "not_found"
 )
 
@@ -119943,6 +120658,7 @@ func (TestEmailRuleResultExpectationsResultsItemOutcome) AllValues() []TestEmail
 		TestEmailRuleResultExpectationsResultsItemOutcomeNearMiss,
 		TestEmailRuleResultExpectationsResultsItemOutcomeNoMatch,
 		TestEmailRuleResultExpectationsResultsItemOutcomeUnclassified,
+		TestEmailRuleResultExpectationsResultsItemOutcomeSkipped,
 		TestEmailRuleResultExpectationsResultsItemOutcomeNotFound,
 	}
 }
@@ -119957,6 +120673,8 @@ func (s TestEmailRuleResultExpectationsResultsItemOutcome) MarshalText() ([]byte
 	case TestEmailRuleResultExpectationsResultsItemOutcomeNoMatch:
 		return []byte(s), nil
 	case TestEmailRuleResultExpectationsResultsItemOutcomeUnclassified:
+		return []byte(s), nil
+	case TestEmailRuleResultExpectationsResultsItemOutcomeSkipped:
 		return []byte(s), nil
 	case TestEmailRuleResultExpectationsResultsItemOutcomeNotFound:
 		return []byte(s), nil
@@ -119979,6 +120697,9 @@ func (s *TestEmailRuleResultExpectationsResultsItemOutcome) UnmarshalText(data [
 		return nil
 	case TestEmailRuleResultExpectationsResultsItemOutcomeUnclassified:
 		*s = TestEmailRuleResultExpectationsResultsItemOutcomeUnclassified
+		return nil
+	case TestEmailRuleResultExpectationsResultsItemOutcomeSkipped:
+		*s = TestEmailRuleResultExpectationsResultsItemOutcomeSkipped
 		return nil
 	case TestEmailRuleResultExpectationsResultsItemOutcomeNotFound:
 		*s = TestEmailRuleResultExpectationsResultsItemOutcomeNotFound
@@ -120080,8 +120801,9 @@ type TestEmailRuleResultResultsItem struct {
 	EmailID uuid.UUID `json:"email_id"`
 	// Near_miss: Not matched, but nearly: its questions did not all say yes, or it needs several parts
 	// and exactly one failed while at least one part that held is not an exclusion (a top-level not, or
-	// is_false). not_found: no such email, or not one the rule can read (or not settled, held back, or
-	// being removed).
+	// is_false). skipped: an email you can see that cannot be tested; skipped_reason says why.
+	// not_found: no such email, or not one the rule can read (or not settled, or awaiting sender
+	// authentication).
 	Outcome     TestEmailRuleResultResultsItemOutcome `json:"outcome"`
 	ReceivedAt  OptDateTime                           `json:"received_at"`
 	FromAddress OptNilString                          `json:"from_address"`
@@ -120100,6 +120822,12 @@ type TestEmailRuleResultResultsItem struct {
 	// reused because answers are sampled and asking again can differ. asked_now: asked by this test
 	// (always, for an unsaved tree). not_asked: no call could be made; error_class says why.
 	QuestionAnswersSource OptTestEmailRuleResultResultsItemQuestionAnswersSource `json:"question_answers_source"`
+	// Why a skipped email cannot be tested. unparsed: its content failed to parse, so it can never be
+	// classified. rejected: it was rejected and never delivered. content_discarded: its content has been
+	// discarded, or is being. Nothing is classified or asked about it and no stored answers are used, so
+	// it never counts as a pass. The recent window holds only mail that can be tested, apart from
+	// unparsed mail; an email you name is reported as skipped, whichever of these it is.
+	SkippedReason OptTestEmailRuleResultResultsItemSkippedReason `json:"skipped_reason"`
 	// Why an unclassified email has no classification. pending: not reached before the test stopped, or
 	// not classified here (it arrived within the last 2 hours and normal classification has not finished
 	// with it, or classify_missing was false); run the test again later.
@@ -120154,6 +120882,11 @@ func (s *TestEmailRuleResultResultsItem) GetQuestionAnswers() []TestEmailRuleRes
 // GetQuestionAnswersSource returns the value of QuestionAnswersSource.
 func (s *TestEmailRuleResultResultsItem) GetQuestionAnswersSource() OptTestEmailRuleResultResultsItemQuestionAnswersSource {
 	return s.QuestionAnswersSource
+}
+
+// GetSkippedReason returns the value of SkippedReason.
+func (s *TestEmailRuleResultResultsItem) GetSkippedReason() OptTestEmailRuleResultResultsItemSkippedReason {
+	return s.SkippedReason
 }
 
 // GetUnclassifiedReason returns the value of UnclassifiedReason.
@@ -120211,6 +120944,11 @@ func (s *TestEmailRuleResultResultsItem) SetQuestionAnswersSource(val OptTestEma
 	s.QuestionAnswersSource = val
 }
 
+// SetSkippedReason sets the value of SkippedReason.
+func (s *TestEmailRuleResultResultsItem) SetSkippedReason(val OptTestEmailRuleResultResultsItemSkippedReason) {
+	s.SkippedReason = val
+}
+
 // SetUnclassifiedReason sets the value of UnclassifiedReason.
 func (s *TestEmailRuleResultResultsItem) SetUnclassifiedReason(val OptTestEmailRuleResultResultsItemUnclassifiedReason) {
 	s.UnclassifiedReason = val
@@ -120218,8 +120956,9 @@ func (s *TestEmailRuleResultResultsItem) SetUnclassifiedReason(val OptTestEmailR
 
 // Near_miss: Not matched, but nearly: its questions did not all say yes, or it needs several parts
 // and exactly one failed while at least one part that held is not an exclusion (a top-level not, or
-// is_false). not_found: no such email, or not one the rule can read (or not settled, held back, or
-// being removed).
+// is_false). skipped: an email you can see that cannot be tested; skipped_reason says why.
+// not_found: no such email, or not one the rule can read (or not settled, or awaiting sender
+// authentication).
 type TestEmailRuleResultResultsItemOutcome string
 
 const (
@@ -120227,6 +120966,7 @@ const (
 	TestEmailRuleResultResultsItemOutcomeNearMiss     TestEmailRuleResultResultsItemOutcome = "near_miss"
 	TestEmailRuleResultResultsItemOutcomeNoMatch      TestEmailRuleResultResultsItemOutcome = "no_match"
 	TestEmailRuleResultResultsItemOutcomeUnclassified TestEmailRuleResultResultsItemOutcome = "unclassified"
+	TestEmailRuleResultResultsItemOutcomeSkipped      TestEmailRuleResultResultsItemOutcome = "skipped"
 	TestEmailRuleResultResultsItemOutcomeNotFound     TestEmailRuleResultResultsItemOutcome = "not_found"
 )
 
@@ -120237,6 +120977,7 @@ func (TestEmailRuleResultResultsItemOutcome) AllValues() []TestEmailRuleResultRe
 		TestEmailRuleResultResultsItemOutcomeNearMiss,
 		TestEmailRuleResultResultsItemOutcomeNoMatch,
 		TestEmailRuleResultResultsItemOutcomeUnclassified,
+		TestEmailRuleResultResultsItemOutcomeSkipped,
 		TestEmailRuleResultResultsItemOutcomeNotFound,
 	}
 }
@@ -120251,6 +120992,8 @@ func (s TestEmailRuleResultResultsItemOutcome) MarshalText() ([]byte, error) {
 	case TestEmailRuleResultResultsItemOutcomeNoMatch:
 		return []byte(s), nil
 	case TestEmailRuleResultResultsItemOutcomeUnclassified:
+		return []byte(s), nil
+	case TestEmailRuleResultResultsItemOutcomeSkipped:
 		return []byte(s), nil
 	case TestEmailRuleResultResultsItemOutcomeNotFound:
 		return []byte(s), nil
@@ -120273,6 +121016,9 @@ func (s *TestEmailRuleResultResultsItemOutcome) UnmarshalText(data []byte) error
 		return nil
 	case TestEmailRuleResultResultsItemOutcomeUnclassified:
 		*s = TestEmailRuleResultResultsItemOutcomeUnclassified
+		return nil
+	case TestEmailRuleResultResultsItemOutcomeSkipped:
+		*s = TestEmailRuleResultResultsItemOutcomeSkipped
 		return nil
 	case TestEmailRuleResultResultsItemOutcomeNotFound:
 		*s = TestEmailRuleResultResultsItemOutcomeNotFound
@@ -120411,6 +121157,59 @@ func (s *TestEmailRuleResultResultsItemQuestionAnswersSource) UnmarshalText(data
 		return nil
 	case TestEmailRuleResultResultsItemQuestionAnswersSourceNotAsked:
 		*s = TestEmailRuleResultResultsItemQuestionAnswersSourceNotAsked
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Why a skipped email cannot be tested. unparsed: its content failed to parse, so it can never be
+// classified. rejected: it was rejected and never delivered. content_discarded: its content has been
+// discarded, or is being. Nothing is classified or asked about it and no stored answers are used, so
+// it never counts as a pass. The recent window holds only mail that can be tested, apart from
+// unparsed mail; an email you name is reported as skipped, whichever of these it is.
+type TestEmailRuleResultResultsItemSkippedReason string
+
+const (
+	TestEmailRuleResultResultsItemSkippedReasonUnparsed         TestEmailRuleResultResultsItemSkippedReason = "unparsed"
+	TestEmailRuleResultResultsItemSkippedReasonRejected         TestEmailRuleResultResultsItemSkippedReason = "rejected"
+	TestEmailRuleResultResultsItemSkippedReasonContentDiscarded TestEmailRuleResultResultsItemSkippedReason = "content_discarded"
+)
+
+// AllValues returns all TestEmailRuleResultResultsItemSkippedReason values.
+func (TestEmailRuleResultResultsItemSkippedReason) AllValues() []TestEmailRuleResultResultsItemSkippedReason {
+	return []TestEmailRuleResultResultsItemSkippedReason{
+		TestEmailRuleResultResultsItemSkippedReasonUnparsed,
+		TestEmailRuleResultResultsItemSkippedReasonRejected,
+		TestEmailRuleResultResultsItemSkippedReasonContentDiscarded,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s TestEmailRuleResultResultsItemSkippedReason) MarshalText() ([]byte, error) {
+	switch s {
+	case TestEmailRuleResultResultsItemSkippedReasonUnparsed:
+		return []byte(s), nil
+	case TestEmailRuleResultResultsItemSkippedReasonRejected:
+		return []byte(s), nil
+	case TestEmailRuleResultResultsItemSkippedReasonContentDiscarded:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *TestEmailRuleResultResultsItemSkippedReason) UnmarshalText(data []byte) error {
+	switch TestEmailRuleResultResultsItemSkippedReason(data) {
+	case TestEmailRuleResultResultsItemSkippedReasonUnparsed:
+		*s = TestEmailRuleResultResultsItemSkippedReasonUnparsed
+		return nil
+	case TestEmailRuleResultResultsItemSkippedReasonRejected:
+		*s = TestEmailRuleResultResultsItemSkippedReasonRejected
+		return nil
+	case TestEmailRuleResultResultsItemSkippedReasonContentDiscarded:
+		*s = TestEmailRuleResultResultsItemSkippedReasonContentDiscarded
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -126386,8 +127185,8 @@ func (*UpdateRouteNotFound) updateRouteRes() {}
 
 // Merged schema.
 type UpdateRouteOK struct {
-	Success bool           `json:"success"`
-	Data    RecipientRoute `json:"data"`
+	Success bool              `json:"success"`
+	Data    UpdateRouteOKData `json:"data"`
 }
 
 // GetSuccess returns the value of Success.
@@ -126396,7 +127195,7 @@ func (s *UpdateRouteOK) GetSuccess() bool {
 }
 
 // GetData returns the value of Data.
-func (s *UpdateRouteOK) GetData() RecipientRoute {
+func (s *UpdateRouteOK) GetData() UpdateRouteOKData {
 	return s.Data
 }
 
@@ -126406,11 +127205,290 @@ func (s *UpdateRouteOK) SetSuccess(val bool) {
 }
 
 // SetData sets the value of Data.
-func (s *UpdateRouteOK) SetData(val RecipientRoute) {
+func (s *UpdateRouteOK) SetData(val UpdateRouteOKData) {
 	s.Data = val
 }
 
 func (*UpdateRouteOK) updateRouteRes() {}
+
+// Merged schema.
+type UpdateRouteOKData struct {
+	ID    uuid.UUID `json:"id"`
+	OrgID OptUUID   `json:"org_id"`
+	// Domain the route is scoped to; null = org-wide.
+	DomainID  OptNilUUID                    `json:"domain_id"`
+	MatchType OptUpdateRouteOKDataMatchType `json:"match_type"`
+	// The recipient address pattern (an exact address or a wildcard).
+	Pattern OptString `json:"pattern"`
+	// Normalized pattern used for matching.
+	PatternNorm OptNilString `json:"pattern_norm"`
+	// The endpoint inbound mail matching this rule is delivered to.
+	EndpointID OptUUID `json:"endpoint_id"`
+	// Evaluation order within a scope; lower is checked first.
+	Priority OptInt  `json:"priority"`
+	Enabled  OptBool `json:"enabled"`
+	// How many emails have matched this rule (a bigint, returned as a string).
+	MatchCount    OptString      `json:"match_count"`
+	LastMatchedAt OptNilDateTime `json:"last_matched_at"`
+	CreatedAt     OptDateTime    `json:"created_at"`
+	// What the route may not do as written. endpoint_owner_limited: its endpoint is owned by a key, a
+	// third-party app or agent, or a person limited to some mail, so it delivers only mail for
+	// recipients that owner may receive (for an outbound-only owner, only bounces). route_owner_limited:
+	// the same for the route's own owner. owner_unchecked: that could not be checked just now. Empty
+	// when nothing limits it. Check any recipient with POST /v1/routes/simulate.
+	Warnings []UpdateRouteOKDataWarningsItem `json:"warnings"`
+}
+
+// GetID returns the value of ID.
+func (s *UpdateRouteOKData) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetOrgID returns the value of OrgID.
+func (s *UpdateRouteOKData) GetOrgID() OptUUID {
+	return s.OrgID
+}
+
+// GetDomainID returns the value of DomainID.
+func (s *UpdateRouteOKData) GetDomainID() OptNilUUID {
+	return s.DomainID
+}
+
+// GetMatchType returns the value of MatchType.
+func (s *UpdateRouteOKData) GetMatchType() OptUpdateRouteOKDataMatchType {
+	return s.MatchType
+}
+
+// GetPattern returns the value of Pattern.
+func (s *UpdateRouteOKData) GetPattern() OptString {
+	return s.Pattern
+}
+
+// GetPatternNorm returns the value of PatternNorm.
+func (s *UpdateRouteOKData) GetPatternNorm() OptNilString {
+	return s.PatternNorm
+}
+
+// GetEndpointID returns the value of EndpointID.
+func (s *UpdateRouteOKData) GetEndpointID() OptUUID {
+	return s.EndpointID
+}
+
+// GetPriority returns the value of Priority.
+func (s *UpdateRouteOKData) GetPriority() OptInt {
+	return s.Priority
+}
+
+// GetEnabled returns the value of Enabled.
+func (s *UpdateRouteOKData) GetEnabled() OptBool {
+	return s.Enabled
+}
+
+// GetMatchCount returns the value of MatchCount.
+func (s *UpdateRouteOKData) GetMatchCount() OptString {
+	return s.MatchCount
+}
+
+// GetLastMatchedAt returns the value of LastMatchedAt.
+func (s *UpdateRouteOKData) GetLastMatchedAt() OptNilDateTime {
+	return s.LastMatchedAt
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *UpdateRouteOKData) GetCreatedAt() OptDateTime {
+	return s.CreatedAt
+}
+
+// GetWarnings returns the value of Warnings.
+func (s *UpdateRouteOKData) GetWarnings() []UpdateRouteOKDataWarningsItem {
+	return s.Warnings
+}
+
+// SetID sets the value of ID.
+func (s *UpdateRouteOKData) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetOrgID sets the value of OrgID.
+func (s *UpdateRouteOKData) SetOrgID(val OptUUID) {
+	s.OrgID = val
+}
+
+// SetDomainID sets the value of DomainID.
+func (s *UpdateRouteOKData) SetDomainID(val OptNilUUID) {
+	s.DomainID = val
+}
+
+// SetMatchType sets the value of MatchType.
+func (s *UpdateRouteOKData) SetMatchType(val OptUpdateRouteOKDataMatchType) {
+	s.MatchType = val
+}
+
+// SetPattern sets the value of Pattern.
+func (s *UpdateRouteOKData) SetPattern(val OptString) {
+	s.Pattern = val
+}
+
+// SetPatternNorm sets the value of PatternNorm.
+func (s *UpdateRouteOKData) SetPatternNorm(val OptNilString) {
+	s.PatternNorm = val
+}
+
+// SetEndpointID sets the value of EndpointID.
+func (s *UpdateRouteOKData) SetEndpointID(val OptUUID) {
+	s.EndpointID = val
+}
+
+// SetPriority sets the value of Priority.
+func (s *UpdateRouteOKData) SetPriority(val OptInt) {
+	s.Priority = val
+}
+
+// SetEnabled sets the value of Enabled.
+func (s *UpdateRouteOKData) SetEnabled(val OptBool) {
+	s.Enabled = val
+}
+
+// SetMatchCount sets the value of MatchCount.
+func (s *UpdateRouteOKData) SetMatchCount(val OptString) {
+	s.MatchCount = val
+}
+
+// SetLastMatchedAt sets the value of LastMatchedAt.
+func (s *UpdateRouteOKData) SetLastMatchedAt(val OptNilDateTime) {
+	s.LastMatchedAt = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *UpdateRouteOKData) SetCreatedAt(val OptDateTime) {
+	s.CreatedAt = val
+}
+
+// SetWarnings sets the value of Warnings.
+func (s *UpdateRouteOKData) SetWarnings(val []UpdateRouteOKDataWarningsItem) {
+	s.Warnings = val
+}
+
+type UpdateRouteOKDataMatchType string
+
+const (
+	UpdateRouteOKDataMatchTypeExact    UpdateRouteOKDataMatchType = "exact"
+	UpdateRouteOKDataMatchTypeWildcard UpdateRouteOKDataMatchType = "wildcard"
+	UpdateRouteOKDataMatchTypeRegex    UpdateRouteOKDataMatchType = "regex"
+)
+
+// AllValues returns all UpdateRouteOKDataMatchType values.
+func (UpdateRouteOKDataMatchType) AllValues() []UpdateRouteOKDataMatchType {
+	return []UpdateRouteOKDataMatchType{
+		UpdateRouteOKDataMatchTypeExact,
+		UpdateRouteOKDataMatchTypeWildcard,
+		UpdateRouteOKDataMatchTypeRegex,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s UpdateRouteOKDataMatchType) MarshalText() ([]byte, error) {
+	switch s {
+	case UpdateRouteOKDataMatchTypeExact:
+		return []byte(s), nil
+	case UpdateRouteOKDataMatchTypeWildcard:
+		return []byte(s), nil
+	case UpdateRouteOKDataMatchTypeRegex:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *UpdateRouteOKDataMatchType) UnmarshalText(data []byte) error {
+	switch UpdateRouteOKDataMatchType(data) {
+	case UpdateRouteOKDataMatchTypeExact:
+		*s = UpdateRouteOKDataMatchTypeExact
+		return nil
+	case UpdateRouteOKDataMatchTypeWildcard:
+		*s = UpdateRouteOKDataMatchTypeWildcard
+		return nil
+	case UpdateRouteOKDataMatchTypeRegex:
+		*s = UpdateRouteOKDataMatchTypeRegex
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type UpdateRouteOKDataWarningsItem struct {
+	Code    UpdateRouteOKDataWarningsItemCode `json:"code"`
+	Message string                            `json:"message"`
+}
+
+// GetCode returns the value of Code.
+func (s *UpdateRouteOKDataWarningsItem) GetCode() UpdateRouteOKDataWarningsItemCode {
+	return s.Code
+}
+
+// GetMessage returns the value of Message.
+func (s *UpdateRouteOKDataWarningsItem) GetMessage() string {
+	return s.Message
+}
+
+// SetCode sets the value of Code.
+func (s *UpdateRouteOKDataWarningsItem) SetCode(val UpdateRouteOKDataWarningsItemCode) {
+	s.Code = val
+}
+
+// SetMessage sets the value of Message.
+func (s *UpdateRouteOKDataWarningsItem) SetMessage(val string) {
+	s.Message = val
+}
+
+type UpdateRouteOKDataWarningsItemCode string
+
+const (
+	UpdateRouteOKDataWarningsItemCodeEndpointOwnerLimited UpdateRouteOKDataWarningsItemCode = "endpoint_owner_limited"
+	UpdateRouteOKDataWarningsItemCodeRouteOwnerLimited    UpdateRouteOKDataWarningsItemCode = "route_owner_limited"
+	UpdateRouteOKDataWarningsItemCodeOwnerUnchecked       UpdateRouteOKDataWarningsItemCode = "owner_unchecked"
+)
+
+// AllValues returns all UpdateRouteOKDataWarningsItemCode values.
+func (UpdateRouteOKDataWarningsItemCode) AllValues() []UpdateRouteOKDataWarningsItemCode {
+	return []UpdateRouteOKDataWarningsItemCode{
+		UpdateRouteOKDataWarningsItemCodeEndpointOwnerLimited,
+		UpdateRouteOKDataWarningsItemCodeRouteOwnerLimited,
+		UpdateRouteOKDataWarningsItemCodeOwnerUnchecked,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s UpdateRouteOKDataWarningsItemCode) MarshalText() ([]byte, error) {
+	switch s {
+	case UpdateRouteOKDataWarningsItemCodeEndpointOwnerLimited:
+		return []byte(s), nil
+	case UpdateRouteOKDataWarningsItemCodeRouteOwnerLimited:
+		return []byte(s), nil
+	case UpdateRouteOKDataWarningsItemCodeOwnerUnchecked:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *UpdateRouteOKDataWarningsItemCode) UnmarshalText(data []byte) error {
+	switch UpdateRouteOKDataWarningsItemCode(data) {
+	case UpdateRouteOKDataWarningsItemCodeEndpointOwnerLimited:
+		*s = UpdateRouteOKDataWarningsItemCodeEndpointOwnerLimited
+		return nil
+	case UpdateRouteOKDataWarningsItemCodeRouteOwnerLimited:
+		*s = UpdateRouteOKDataWarningsItemCodeRouteOwnerLimited
+		return nil
+	case UpdateRouteOKDataWarningsItemCodeOwnerUnchecked:
+		*s = UpdateRouteOKDataWarningsItemCodeOwnerUnchecked
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 type UpdateSearchSettingsBadRequest ErrorResponse
 

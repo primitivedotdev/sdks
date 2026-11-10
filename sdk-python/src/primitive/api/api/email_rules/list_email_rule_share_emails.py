@@ -84,13 +84,6 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_404
 
-    if response.status_code == 409:
-        response_409 = ErrorResponse.from_dict(response.json())
-
-
-
-        return response_409
-
     if response.status_code == 429:
         response_429 = ErrorResponse.from_dict(response.json())
 
@@ -130,13 +123,13 @@ def sync_detailed(
 ) -> Response[ErrorResponse | ListEmailRuleShareEmailsResponse200]:
     """ List the emails a rule share has given
 
-     The emails a rule share has given, newest first, as the email list shows them, each with shared_at:
-    when the share's rule first matched it. For the person it was shared with: what they can read
-    through it now, so an ended share lists nothing. For the person sharing their mail: everything it
-    has handed over while it ran, including after it ended, so they can see what left their mailbox;
-    while the share's rule is off this answers email_rule_not_active instead. Only those two people can
-    list them, from the dashboard or the Primitive CLI. A page can be short or empty and still carry a
-    cursor: keep reading until meta.cursor is null.
+     The emails a rule share has given, newest first, as the email list shows them, each with shared_at.
+    For the person it was shared with: what they can read through it now, so an ended share lists
+    nothing, and shared_at is when the share's rule first matched the email. For the person sharing
+    their mail: everything it has handed over while it ran, including after it ended and whatever the
+    rule's state now, so they can see what left their mailbox, and shared_at is when it was handed over.
+    Only those two people can list them, from the dashboard or the Primitive CLI. A page can be short or
+    empty and still carry a cursor: keep reading until meta.cursor is null.
 
     Args:
         id (UUID):
@@ -175,13 +168,13 @@ def sync(
 ) -> ErrorResponse | ListEmailRuleShareEmailsResponse200 | None:
     """ List the emails a rule share has given
 
-     The emails a rule share has given, newest first, as the email list shows them, each with shared_at:
-    when the share's rule first matched it. For the person it was shared with: what they can read
-    through it now, so an ended share lists nothing. For the person sharing their mail: everything it
-    has handed over while it ran, including after it ended, so they can see what left their mailbox;
-    while the share's rule is off this answers email_rule_not_active instead. Only those two people can
-    list them, from the dashboard or the Primitive CLI. A page can be short or empty and still carry a
-    cursor: keep reading until meta.cursor is null.
+     The emails a rule share has given, newest first, as the email list shows them, each with shared_at.
+    For the person it was shared with: what they can read through it now, so an ended share lists
+    nothing, and shared_at is when the share's rule first matched the email. For the person sharing
+    their mail: everything it has handed over while it ran, including after it ended and whatever the
+    rule's state now, so they can see what left their mailbox, and shared_at is when it was handed over.
+    Only those two people can list them, from the dashboard or the Primitive CLI. A page can be short or
+    empty and still carry a cursor: keep reading until meta.cursor is null.
 
     Args:
         id (UUID):
@@ -215,13 +208,13 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | ListEmailRuleShareEmailsResponse200]:
     """ List the emails a rule share has given
 
-     The emails a rule share has given, newest first, as the email list shows them, each with shared_at:
-    when the share's rule first matched it. For the person it was shared with: what they can read
-    through it now, so an ended share lists nothing. For the person sharing their mail: everything it
-    has handed over while it ran, including after it ended, so they can see what left their mailbox;
-    while the share's rule is off this answers email_rule_not_active instead. Only those two people can
-    list them, from the dashboard or the Primitive CLI. A page can be short or empty and still carry a
-    cursor: keep reading until meta.cursor is null.
+     The emails a rule share has given, newest first, as the email list shows them, each with shared_at.
+    For the person it was shared with: what they can read through it now, so an ended share lists
+    nothing, and shared_at is when the share's rule first matched the email. For the person sharing
+    their mail: everything it has handed over while it ran, including after it ended and whatever the
+    rule's state now, so they can see what left their mailbox, and shared_at is when it was handed over.
+    Only those two people can list them, from the dashboard or the Primitive CLI. A page can be short or
+    empty and still carry a cursor: keep reading until meta.cursor is null.
 
     Args:
         id (UUID):
@@ -260,13 +253,13 @@ async def asyncio(
 ) -> ErrorResponse | ListEmailRuleShareEmailsResponse200 | None:
     """ List the emails a rule share has given
 
-     The emails a rule share has given, newest first, as the email list shows them, each with shared_at:
-    when the share's rule first matched it. For the person it was shared with: what they can read
-    through it now, so an ended share lists nothing. For the person sharing their mail: everything it
-    has handed over while it ran, including after it ended, so they can see what left their mailbox;
-    while the share's rule is off this answers email_rule_not_active instead. Only those two people can
-    list them, from the dashboard or the Primitive CLI. A page can be short or empty and still carry a
-    cursor: keep reading until meta.cursor is null.
+     The emails a rule share has given, newest first, as the email list shows them, each with shared_at.
+    For the person it was shared with: what they can read through it now, so an ended share lists
+    nothing, and shared_at is when the share's rule first matched the email. For the person sharing
+    their mail: everything it has handed over while it ran, including after it ended and whatever the
+    rule's state now, so they can see what left their mailbox, and shared_at is when it was handed over.
+    Only those two people can list them, from the dashboard or the Primitive CLI. A page can be short or
+    empty and still carry a cursor: keep reading until meta.cursor is null.
 
     Args:
         id (UUID):

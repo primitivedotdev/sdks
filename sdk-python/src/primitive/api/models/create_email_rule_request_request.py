@@ -30,9 +30,9 @@ class CreateEmailRuleRequestRequest:
             english (str): The plain-English description the rule was compiled from.
             tree (EmailRuleTreeInput):
             target_user_id (UUID | Unset): The member asked for the rule. Give target_user_id or target_email, not both.
-            target_email (str | Unset): The member asked for the rule, by their member mailbox address. Give target_user_id
-                or target_email, not both. Looking members up by address is limited to 30 an hour, and unless you can list
-                members the answer does not say who it was.
+            target_email (str | Unset): The member asked for the rule, by their member mailbox address, or by their verified
+                work email if you can list members. Give target_user_id or target_email, not both. Looking members up by address
+                is limited to 30 an hour, and unless you can list members the answer does not say who it was.
             explanation (str | Unset): What the rule matches, in plain English. Left out, the server writes one from the
                 tree.
             assumptions (list[str] | Unset): Readings chosen where the description was open to more than one, as the compile

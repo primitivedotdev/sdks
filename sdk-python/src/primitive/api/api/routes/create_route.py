@@ -112,6 +112,12 @@ def sync_detailed(
     transaction, enabling per-address function routing (e.g.
     `alice@acme.com -> functionA`).
 
+    A route that could never deliver is refused: an exact pattern that the endpoint's owner may not
+    receive, or that the route's own owner may not act on, answers 400 validation_error with
+    details.reason endpoint_owner_access or route_owner_access and details.recipient. A wildcard or
+    regex route to an owned endpoint is written, with warnings saying it delivers only what the owner
+    may receive. A route written disabled is judged when it is turned on.
+
     Args:
         idempotency_key (str | Unset):
         body (CreateRouteInput): Provide exactly one of `endpoint_id` or `function_id`. With
@@ -155,6 +161,12 @@ def sync(
     transaction, enabling per-address function routing (e.g.
     `alice@acme.com -> functionA`).
 
+    A route that could never deliver is refused: an exact pattern that the endpoint's owner may not
+    receive, or that the route's own owner may not act on, answers 400 validation_error with
+    details.reason endpoint_owner_access or route_owner_access and details.recipient. A wildcard or
+    regex route to an owned endpoint is written, with warnings saying it delivers only what the owner
+    may receive. A route written disabled is judged when it is turned on.
+
     Args:
         idempotency_key (str | Unset):
         body (CreateRouteInput): Provide exactly one of `endpoint_id` or `function_id`. With
@@ -192,6 +204,12 @@ async def asyncio_detailed(
     a dedicated route-target endpoint is minted for that function in the same
     transaction, enabling per-address function routing (e.g.
     `alice@acme.com -> functionA`).
+
+    A route that could never deliver is refused: an exact pattern that the endpoint's owner may not
+    receive, or that the route's own owner may not act on, answers 400 validation_error with
+    details.reason endpoint_owner_access or route_owner_access and details.recipient. A wildcard or
+    regex route to an owned endpoint is written, with warnings saying it delivers only what the owner
+    may receive. A route written disabled is judged when it is turned on.
 
     Args:
         idempotency_key (str | Unset):
@@ -235,6 +253,12 @@ async def asyncio(
     a dedicated route-target endpoint is minted for that function in the same
     transaction, enabling per-address function routing (e.g.
     `alice@acme.com -> functionA`).
+
+    A route that could never deliver is refused: an exact pattern that the endpoint's owner may not
+    receive, or that the route's own owner may not act on, answers 400 validation_error with
+    details.reason endpoint_owner_access or route_owner_access and details.recipient. A wildcard or
+    regex route to an owned endpoint is written, with warnings saying it delivers only what the owner
+    may receive. A route written disabled is judged when it is turned on.
 
     Args:
         idempotency_key (str | Unset):

@@ -23,7 +23,8 @@ class TestEmailRuleResultClassification:
     """ 
         Attributes:
             classified_now (int): Emails this test classified and saved.
-            still_unclassified (int): Emails left without a classification.
+            still_unclassified (int): Emails left without a classification (unclassified); a skipped email is counted under
+                skipped instead.
      """
 
     classified_now: int

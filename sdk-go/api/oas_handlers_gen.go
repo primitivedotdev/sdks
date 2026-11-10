@@ -3567,9 +3567,9 @@ func (s *Server) handleCheckDomainDnsRequest(args [1]string, argsEscaped bool, w
 // Says, before you ask, whether a member could accept a rule request now under their role, and if
 // not, which permission their role lacks. Nothing is sent and nothing is recorded. Needs
 // members:read, as listing members and their roles does. At most 60 checks an hour. Name them by
-// user id, or by their member mailbox address (counted with asking: at most 30 lookups by address an
-// hour). Needs mail:read, a member's own credential with their full access (not an API key, agent
-// key or narrowed token), and the email rules feature.
+// user id, or by their member mailbox address or verified work email (counted with asking: at most
+// 30 lookups by address an hour). Needs mail:read, a member's own credential with their full access
+// (not an API key, agent key or narrowed token), and the email rules feature.
 //
 // POST /email-rule-requests/target-check
 func (s *Server) handleCheckEmailRuleRequestTargetRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -5975,15 +5975,15 @@ func (s *Server) handleCreateEmailRuleRequest(args [0]string, argsEscaped bool, 
 // handleCreateEmailRuleRequestRequest handles createEmailRuleRequest operation.
 //
 // Asks another member of the organization for a rule over their own mail, from a compile response or
-// a tree you wrote. Name them by user id, or by their member mailbox address (at most 30 lookups by
-// address an hour). Nothing is evaluated and nothing is shared until they accept, and they may
-// change the rule first; they see the request and can preview what it matches in their own mail. You
-// may have at most 5 pending requests to one member and 50 in all. If you can list members
-// (members:read), the answer also says whether they can accept it under their role
-// (target_can_accept), and if not, why (target_warning); the request is sent either way. To find out
-// before asking, use POST /v1/email-rule-requests/target-check. Needs mail:read, a member's own
-// credential with their full access (not an API key, agent key or narrowed token), and the email
-// rules feature.
+// a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified
+// work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated
+// and nothing is shared until they accept, and they may change the rule first; they see the request
+// and can preview what it matches in their own mail. You may have at most 5 pending requests to one
+// member and 50 in all. If you can list members (members:read), the answer also says whether they
+// can accept it under their role (target_can_accept), and if not, why (target_warning); the request
+// is sent either way. To find out before asking, use POST /v1/email-rule-requests/target-check.
+// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+// narrowed token), and the email rules feature.
 //
 // POST /email-rule-requests
 func (s *Server) handleCreateEmailRuleRequestRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -8162,6 +8162,11 @@ func (s *Server) handleCreateRoleRequest(args [0]string, argsEscaped bool, w htt
 // a dedicated route-target endpoint is minted for that function in the same
 // transaction, enabling per-address function routing (e.g.
 // `alice@acme.com -> functionA`).
+// A route that could never deliver is refused: an exact pattern that the endpoint's owner may not
+// receive, or that the route's own owner may not act on, answers 400 validation_error with details.
+// reason endpoint_owner_access or route_owner_access and details.recipient. A wildcard or regex
+// route to an owned endpoint is written, with warnings saying it delivers only what the owner may
+// receive. A route written disabled is judged when it is turned on.
 //
 // POST /routes
 func (s *Server) handleCreateRouteRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -25674,6 +25679,191 @@ func (s *Server) handleGetSearchSettingsRequest(args [0]string, argsEscaped bool
 	}
 }
 
+// handleGetSendFromRequest handles getSendFrom operation.
+//
+// The From addresses the calling credential may send from with POST /send-mail, and the one a send
+// that names no From should use. Every address listed is one that send would accept as From for this
+// credential, recipients aside. A connected agent's default is its own address. A person's default
+// is their own member address, for a session and for every OAuth login of theirs, an agent's
+// included. Any other credential has a default only when exactly one address and no domain is listed,
+//
+//	and never a person's own member address. When there is no default, `reason` says why. `domains`
+//
+// lists the domains at which the credential may send from any address that is not reserved to
+// someone else or left out of its grant; each is one GET /outbound/status lists as sendable for it.
+// A credential that cannot send new mail, or one in an account where outbound mail is not enabled,
+// gets no addresses and no domains. Every credential may ask about itself, a connected agent's key
+// included, except a Function-bound key limited to its Function's own operations (403
+// function_scope_forbidden). It answers nothing about any other credential.
+//
+// GET /whoami/send-from
+func (s *Server) handleGetSendFromRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getSendFrom"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/whoami/send-from"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), GetSendFromOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: GetSendFromOperation,
+			ID:   "getSendFrom",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, GetSendFromOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+
+	var rawBody []byte
+
+	var response GetSendFromRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    GetSendFromOperation,
+			OperationSummary: "List the addresses this credential can send from",
+			OperationID:      "getSendFrom",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params:           middleware.Parameters{},
+			Raw:              r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = struct{}
+			Response = GetSendFromRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			nil,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.GetSendFrom(ctx)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.GetSendFrom(ctx)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeGetSendFromResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleGetSendPermissionsRequest handles getSendPermissions operation.
 //
 // Returns a flat list of rules describing every recipient the
@@ -32580,13 +32770,15 @@ func (s *Server) handleListEmailRuleScopeOptionsRequest(args [0]string, argsEsca
 
 // handleListEmailRuleShareEmailsRequest handles listEmailRuleShareEmails operation.
 //
-// The emails a rule share has given, newest first, as the email list shows them, each with
-// shared_at: when the share's rule first matched it. For the person it was shared with: what they
-// can read through it now, so an ended share lists nothing. For the person sharing their mail:
-// everything it has handed over while it ran, including after it ended, so they can see what left
-// their mailbox; while the share's rule is off this answers email_rule_not_active instead. Only
-// those two people can list them, from the dashboard or the Primitive CLI. A page can be short or
-// empty and still carry a cursor: keep reading until meta.cursor is null.
+// The emails a rule share has given, newest first, as the email list shows them, each with shared_at.
+//
+//	For the person it was shared with: what they can read through it now, so an ended share lists
+//
+// nothing, and shared_at is when the share's rule first matched the email. For the person sharing
+// their mail: everything it has handed over while it ran, including after it ended and whatever the
+// rule's state now, so they can see what left their mailbox, and shared_at is when it was handed
+// over. Only those two people can list them, from the dashboard or the Primitive CLI. A page can be
+// short or empty and still carry a cursor: keep reading until meta.cursor is null.
 //
 // GET /email-rule-shares/{id}/emails
 func (s *Server) handleListEmailRuleShareEmailsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -54977,13 +55169,13 @@ func (s *Server) handleSuspendFunctionRuntimeKeyRequest(args [1]string, argsEsca
 //
 // Runs a rule over received mail and reports what it would decide for each email (matched, near_miss,
 //
-//	no_match, unclassified or not_found), with a summary: how each top-level condition and question
+//	no_match, unclassified, skipped or not_found), with a summary: how each top-level condition and
 //
-// decided and, when nothing matched, what stopped it. Test an unsaved tree from a compile response,
-// or a saved rule by rule_id (its current version, run with its author's access). The rule reads
-// only mail its author can read and its scope covers; an unsaved tree covers only your own mail
-// unless evaluation_scope names more. Without email_ids, the newest emails it can read are tested,
-// at most 200 and none older than 30 days; expected emails (expect, or a saved rule's saved
+// question decided and, when nothing matched, what stopped it. Test an unsaved tree from a compile
+// response, or a saved rule by rule_id (its current version, run with its author's access). The rule
+// reads only mail its author can read and its scope covers; an unsaved tree covers only your own
+// mail unless evaluation_scope names more. Without email_ids, the newest emails it can read are
+// tested, at most 200 and none older than 30 days; expected emails (expect, or a saved rule's saved
 // expectations) are tested whatever their age. Unclassified emails more than 2 hours old are
 // classified first and their classification saved, unless classify_missing is false; newer ones are
 // reported unclassified, pending. The rule itself records and grants nothing. Classification and the
@@ -60892,7 +61084,11 @@ func (s *Server) handleUpdateRoleRequest(args [1]string, argsEscaped bool, w htt
 
 // handleUpdateRouteRequest handles updateRoute operation.
 //
-// Update a recipient route.
+// A route that could never deliver is refused: an exact pattern that the endpoint's owner may not
+// receive, or that the route's own owner may not act on, answers 400 validation_error with details.
+// reason endpoint_owner_access or route_owner_access and details.recipient. A wildcard or regex
+// route to an owned endpoint is written, with warnings saying it delivers only what the owner may
+// receive. A route written disabled is judged when it is turned on.
 //
 // PATCH /routes/{id}
 func (s *Server) handleUpdateRouteRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {

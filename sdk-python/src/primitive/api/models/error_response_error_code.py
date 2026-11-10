@@ -93,7 +93,6 @@ class ErrorResponseErrorCode(StrEnum):
     EMAIL_RULE_AUTHOR_UNRESOLVABLE = "email_rule_author_unresolvable"
     EMAIL_RULE_COMPILER_UNAVAILABLE = "email_rule_compiler_unavailable"
     EMAIL_RULE_CONFLICT = "email_rule_conflict"
-    EMAIL_RULE_NOT_ACTIVE = "email_rule_not_active"
     EMAIL_RULE_NOT_COMPILED = "email_rule_not_compiled"
     EMAIL_RULE_REQUEST_LIMIT = "email_rule_request_limit"
     EMAIL_RULE_REQUEST_NOT_PENDING = "email_rule_request_not_pending"

@@ -62,8 +62,9 @@ class ListEmailRuleShareEmailsResultItem:
             interaction_hint (ListEmailRuleShareEmailsResultItemInteractionHint):
             interaction_kind (None | str):
             interaction_candidate (bool):
-            shared_at (datetime.datetime | None): When the share's rule first matched this email. The email was shared then
-                or shortly after. Null if that could not be read.
+            shared_at (datetime.datetime | None): For the person sharing, when the share handed this email over. For the
+                person it was shared with, when the share's rule first matched it, which is when it was shared or shortly
+                before. Null if that could not be read.
             delivery_report (ListEmailRuleShareEmailsResultItemDeliveryReportType0 | None | Unset):
             presence_control (ListEmailRuleShareEmailsResultItemPresenceControlType0 | None | Unset):
             sender_member (ListEmailRuleShareEmailsResultItemSenderMemberType0 | None | Unset):

@@ -11,7 +11,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.recipient_route import RecipientRoute
+  from ..models.create_route_response_201_data import CreateRouteResponse201Data
 
 
 
@@ -26,11 +26,11 @@ class CreateRouteResponse201:
     """ 
         Attributes:
             success (bool):
-            data (RecipientRoute | Unset): A recipient routing rule binding an address pattern to one endpoint.
+            data (CreateRouteResponse201Data | Unset):
      """
 
     success: bool
-    data: RecipientRoute | Unset = UNSET
+    data: CreateRouteResponse201Data | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -38,7 +38,7 @@ class CreateRouteResponse201:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.recipient_route import RecipientRoute # noqa: PLC0415
+        from ..models.create_route_response_201_data import CreateRouteResponse201Data # noqa: PLC0415
         success = self.success
 
         data: dict[str, Any] | Unset = UNSET
@@ -60,16 +60,16 @@ class CreateRouteResponse201:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.recipient_route import RecipientRoute # noqa: PLC0415
+        from ..models.create_route_response_201_data import CreateRouteResponse201Data # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 
         _data = d.pop("data", UNSET)
-        data: RecipientRoute | Unset
+        data: CreateRouteResponse201Data | Unset
         if isinstance(_data,  Unset):
             data = UNSET
         else:
-            data = RecipientRoute.from_dict(_data)
+            data = CreateRouteResponse201Data.from_dict(_data)
 
 
 

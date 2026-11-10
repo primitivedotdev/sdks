@@ -346,6 +346,16 @@ Go (package `api`):
   `email.content.download` or `email.content`. The email event schema accepts
   and refuses the same payloads as before.
 
+#### Route write answers and share email refusals
+
+- `createRoute` and `updateRoute` answer `data` as the route plus its
+  `warnings`, so the generated type of `data` is new: in Go
+  `CreateRouteCreatedData` and `UpdateRouteOKData` instead of
+  `RecipientRoute`, and in Python `CreateRouteResponse201Data` and
+  `UpdateRouteResponse200Data`. Read the same route fields from it.
+- Go: `ListEmailRuleShareEmailsConflict` is gone, as the operation no longer
+  answers `409`.
+
 #### CLI sender default
 
 - `send` and `chat` no longer default `--from` to `agent@` at the first
@@ -393,7 +403,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
 
 165 operations, by area:
 
-- Account: `getOwnGrant`.
+- Account: `getOwnGrant`, `getSendFrom` (the addresses a credential may
+  send from, and the one a send that names no From should use).
 - Address notes: `listAddressNotes`, `listAddressNotesBatch`,
   `getAddressNote`, `putAddressNote`, `deleteAddressNote`,
   `listPublicAddressNotes`, `getPublicAddressNote`.
@@ -577,9 +588,25 @@ date-time is kept as null and sorts last. A sync stops with an error after
 - `ErrorResponse.error.details` declares `feature`, `feature_name`,
   `enabled_by` and `contact_email`, which a `feature_disabled` error
   carries.
-- `decideSuspension` declares `502` and `503`, and
-  `listEmailRuleShareEmails` declares `409`; in Go they are typed
+- `decideSuspension` declares `502` and `503`; in Go they are typed
   responses.
+- Email rules:
+  - `testEmailRule` can answer an email `skipped`, with `skipped_reason`
+    (`unparsed`, `rejected` or `content_discarded`), and its `counts`
+    carry `skipped`. A skipped expectation is undecided.
+  - In the `expectations_check` of `createEmailRule` and `updateEmailRule`,
+    `passed` is null when none failed but some are undecided, and `decided`
+    says whether every expectation was judged.
+  - Every rule answer carries `kind` (`grant` or `do_not_share`).
+  - `createEmailRuleRequest` and `checkEmailRuleRequestTarget` take a
+    member's verified work email in `target_email`, for a caller who can
+    list members.
+  - `listEmailRuleShareEmails` no longer answers `409` for a share whose
+    rule is off.
+- Routes: `createRoute` and `updateRoute` answer with `warnings`
+  (`endpoint_owner_limited`, `route_owner_limited`, `owner_unchecked`) and
+  refuse a route that could never deliver with `400` `validation_error`,
+  `details.reason` `endpoint_owner_access` or `route_owner_access`.
 
 #### Node SDK
 

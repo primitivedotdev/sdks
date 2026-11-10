@@ -10,6 +10,7 @@ from ..types import UNSET, Unset
 
 from ..models.test_email_rule_result_results_item_outcome import TestEmailRuleResultResultsItemOutcome
 from ..models.test_email_rule_result_results_item_question_answers_source import TestEmailRuleResultResultsItemQuestionAnswersSource
+from ..models.test_email_rule_result_results_item_skipped_reason import TestEmailRuleResultResultsItemSkippedReason
 from ..models.test_email_rule_result_results_item_unclassified_reason import TestEmailRuleResultResultsItemUnclassifiedReason
 from typing import cast
 from uuid import UUID
@@ -35,8 +36,8 @@ class TestEmailRuleResultResultsItem:
             email_id (UUID):
             outcome (TestEmailRuleResultResultsItemOutcome): near_miss: Not matched, but nearly: its questions did not all
                 say yes, or it needs several parts and exactly one failed while at least one part that held is not an exclusion
-                (a top-level not, or is_false). not_found: no such email, or not one the rule can read (or not settled, held
-                back, or being removed).
+                (a top-level not, or is_false). skipped: an email you can see that cannot be tested; skipped_reason says why.
+                not_found: no such email, or not one the rule can read (or not settled, or awaiting sender authentication).
             received_at (datetime.datetime | Unset):
             from_address (None | str | Unset):
             subject (None | str | Unset):
@@ -53,6 +54,11 @@ class TestEmailRuleResultResultsItem:
                 evaluation or an earlier test) or recorded with its decision, reused because answers are sampled and asking
                 again can differ. asked_now: asked by this test (always, for an unsaved tree). not_asked: no call could be made;
                 error_class says why.
+            skipped_reason (TestEmailRuleResultResultsItemSkippedReason | Unset): Why a skipped email cannot be tested.
+                unparsed: its content failed to parse, so it can never be classified. rejected: it was rejected and never
+                delivered. content_discarded: its content has been discarded, or is being. Nothing is classified or asked about
+                it and no stored answers are used, so it never counts as a pass. The recent window holds only mail that can be
+                tested, apart from unparsed mail; an email you name is reported as skipped, whichever of these it is.
             unclassified_reason (TestEmailRuleResultResultsItemUnclassifiedReason | Unset): Why an unclassified email has no
                 classification. pending: not reached before the test stopped, or not classified here (it arrived within the last
                 2 hours and normal classification has not finished with it, or classify_missing was false); run the test again
@@ -69,6 +75,7 @@ class TestEmailRuleResultResultsItem:
     values: TestEmailRuleResultResultsItemValues | Unset = UNSET
     question_answers: list[TestEmailRuleResultResultsItemQuestionAnswersItem] | Unset = UNSET
     question_answers_source: TestEmailRuleResultResultsItemQuestionAnswersSource | Unset = UNSET
+    skipped_reason: TestEmailRuleResultResultsItemSkippedReason | Unset = UNSET
     unclassified_reason: TestEmailRuleResultResultsItemUnclassifiedReason | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -133,6 +140,11 @@ class TestEmailRuleResultResultsItem:
             question_answers_source = self.question_answers_source.value
 
 
+        skipped_reason: str | Unset = UNSET
+        if not isinstance(self.skipped_reason, Unset):
+            skipped_reason = self.skipped_reason.value
+
+
         unclassified_reason: str | Unset = UNSET
         if not isinstance(self.unclassified_reason, Unset):
             unclassified_reason = self.unclassified_reason.value
@@ -161,6 +173,8 @@ class TestEmailRuleResultResultsItem:
             field_dict["question_answers"] = question_answers
         if question_answers_source is not UNSET:
             field_dict["question_answers_source"] = question_answers_source
+        if skipped_reason is not UNSET:
+            field_dict["skipped_reason"] = skipped_reason
         if unclassified_reason is not UNSET:
             field_dict["unclassified_reason"] = unclassified_reason
 
@@ -261,6 +275,16 @@ class TestEmailRuleResultResultsItem:
 
 
 
+        _skipped_reason = d.pop("skipped_reason", UNSET)
+        skipped_reason: TestEmailRuleResultResultsItemSkippedReason | Unset
+        if isinstance(_skipped_reason,  Unset):
+            skipped_reason = UNSET
+        else:
+            skipped_reason = TestEmailRuleResultResultsItemSkippedReason(_skipped_reason)
+
+
+
+
         _unclassified_reason = d.pop("unclassified_reason", UNSET)
         unclassified_reason: TestEmailRuleResultResultsItemUnclassifiedReason | Unset
         if isinstance(_unclassified_reason,  Unset):
@@ -282,6 +306,7 @@ class TestEmailRuleResultResultsItem:
             values=values,
             question_answers=question_answers,
             question_answers_source=question_answers_source,
+            skipped_reason=skipped_reason,
             unclassified_reason=unclassified_reason,
         )
 
