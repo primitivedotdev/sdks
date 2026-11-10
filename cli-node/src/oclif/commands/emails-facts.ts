@@ -29,7 +29,7 @@ export default class EmailsFactsCommand extends Command {
   static summary = "Show what the classifier read from an email";
 
   static description =
-    `Show what the classifier read from a received email: every fact as email rule conditions read it, one per line with its value and confidence, for example \`is_cold_outreach: true at 0.69\`. A multi fact lists its values, each with its own confidence where there is one, then the fact's confidence: \`topics: [billing 0.91, invoice 0.62] at 0.80\`. A fact the classifier left out reads null.
+    `Show what the classifier read from a received email: every fact as email rule conditions read it, one per line with its value and confidence, for example \`is_cold_outreach: true at 0.69\`. A multi fact lists its values: \`topics: [billing, invoice] at 0.80\`. A fact the classifier left out reads null.
 
 Use it to see why an email rule did or did not match, alongside \`primitive email-rules list-email-rule-results --email-id <id>\`, which this reads. An email with no classification (not classified yet, never to be, or content that cannot be read) prints a message saying so on stderr and nothing on stdout. With --json, prints the classification object, or null when there is none.
 

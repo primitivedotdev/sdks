@@ -55,7 +55,10 @@ import {
   fromVerifiedExpectation,
 } from "./from-verified-filter.js";
 import { writeIdempotentReplayBannerIfReplay } from "./idempotent-replay-banner.js";
-import type { OperationExtension } from "./operation-extension.js";
+import type {
+  OperationExtension,
+  OperationReport,
+} from "./operation-extension.js";
 import { explainPendingMailNotFound } from "./pending-mail-miss.js";
 import {
   assertAwaitingFilterRows,
@@ -1417,7 +1420,7 @@ export const OPERATION_HINTS: Record<string, string> = {
   startAgentSignup:
     "Tip: pass --terms-accepted. Capture the signup_token from the response and feed it to `primitive agent verify-agent-signup --signup-token <token> --verification-code <6-digit-code>` (the verify flag accepts --code as an alias). The high-level `primitive signup <email>` command walks an interactive user through both steps with friendlier prompts.",
   testEmailRule:
-    "Tip: --expect-match and --expect-no-match (or --expect-file) name emails the rule must match and must not. The command exits 1 when an expectation fails, and 3 when none failed but one is undecided (unclassified, a question unanswered, or not found), so test again later. Without --json a readable report follows the JSON on stderr: warnings, how each condition held, the expectations, and the values each email that did not match was compared on.",
+    "Tip: --expect-match and --expect-no-match (or --expect-file) set expect, the emails the rule must match and must not. When no expect is sent, by these flags or in the body, a saved rule's saved expectations are judged instead. The exit code follows whichever expectations the answer judged: 1 when one failed; 1 when one is undecided and testing again will not decide it (its email cannot be found or read, or cannot be classified); 3 when the only undecided ones can be decided later (not classified yet, or a question unanswered), so test again later. Exit 1 also means the request failed. With --json, error.code tells these apart: expectations_failed, expectations_unresolvable, expectations_undecided (exit 3), or the API's own code. Without --json a readable report follows the JSON on stderr: warnings, how each condition held, the expectations, and the values each email that did not match was compared on.",
   verifyAgentSignup:
     "Tip: pass --verification-code <code> (or --code; both work). The response carries OAuth tokens but not your assigned inbox domain; run `primitive domains list` (or `primitive whoami`) after success to see the managed *.primitive.email address that routes to this account.",
 };
@@ -2119,15 +2122,23 @@ export function createOperationCommand(
 
         // An extension's reading of the answer: lines for stderr after the
         // JSON, and an exit code. Under --json the lines are left out, and a
-        // non-zero exit code's reason travels in the document's `error`.
-        const report = extension?.report?.(envelope?.data, {
-          body,
-          path: collectValues(
-            operation.pathParams,
-            parsedFlags,
-            operation.sdkName,
-          ),
-        });
+        // non-zero exit code's reason travels in the document's `error`. Like
+        // a success hook, a report that throws never costs the JSON: one
+        // warning line is printed in its place.
+        let report: OperationReport | undefined;
+        let reportError: string | undefined;
+        try {
+          report = extension?.report?.(envelope?.data, {
+            body,
+            path: collectValues(
+              operation.pathParams,
+              parsedFlags,
+              operation.sdkName,
+            ),
+          });
+        } catch (error) {
+          reportError = error instanceof Error ? error.message : String(error);
+        }
         let printed =
           jsonOutput && withEnvelope
             ? operationJsonDocument(envelope, summary)
@@ -2143,6 +2154,11 @@ export function createOperationCommand(
           printed = { ...printed, error: report.error };
         }
         this.log(JSON.stringify(printed, null, 2));
+        if (reportError !== undefined) {
+          process.stderr.write(
+            `Warning: ${operation.sdkName} succeeded but its report could not be built (${reportError}). The JSON above is the full answer; read it rather than the exit code.\n`,
+          );
+        }
         if (report && !jsonOutput) {
           for (const line of report.lines) process.stderr.write(`${line}\n`);
         }

@@ -5,11 +5,12 @@
 //   primitive email-rules test-email-rule --rule-id <id> \
 //     --expect-match <email-id>,<email-id> --expect-no-match <email-id>
 //
-// A test whose expectations fail exits 1, and one with an expectation the
-// test could not decide yet (unclassified, a question unanswered, or an email
-// it cannot find) exits 3, so a script can rerun it later. The JSON on stdout
-// keeps the API's shape; under --json the report is left out and the document
-// gains `error` and `exit_code` when the exit code is not 0.
+// The exit code follows the expectations the answer judged (expect, or a
+// saved rule's saved expectations): 1 when one failed or is undecided for
+// good (its email cannot be found, read or classified), and 3 when the only
+// undecided ones a later test can decide, so a script can rerun it. The JSON
+// on stdout keeps the API's shape; under --json the report is left out and
+// the document gains `error` and `exit_code` when the exit code is not 0.
 //
 // This module does not import api-command.ts, which imports it.
 
@@ -106,7 +107,7 @@ function assertDisjoint(expectations: Expectations, label: string): void {
 /**
  * Check a JSON value in the shape of a rule's expectations or a test's
  * `expect`: an object with `match` and `no_match`, each a list of email ids,
- * neither required, and no id in both.
+ * at least one id in all, and no id in both. Repeats are removed.
  */
 export function checkExpectations(value: unknown, label: string): Expectations {
   if (!isRecord(value))
@@ -121,8 +122,23 @@ export function checkExpectations(value: unknown, label: string): Expectations {
       );
     if (!Array.isArray(list) || list.some((id) => typeof id !== "string"))
       throw usageError(`${label}: "${key}" must be a list of email ids.`);
-    expectations[key] = (list as string[]).map((id) => checkEmailId(id, label));
+    const ids: string[] = [];
+    const seen = new Set<string>();
+    for (const id of list as string[]) {
+      checkEmailId(id, label);
+      if (seen.has(id.toLowerCase())) continue;
+      seen.add(id.toLowerCase());
+      ids.push(id);
+    }
+    expectations[key] = ids;
   }
+  if (
+    (expectations.match?.length ?? 0) + (expectations.no_match?.length ?? 0) ===
+    0
+  )
+    throw usageError(
+      `${label} needs at least one email id in match or no_match.`,
+    );
   assertDisjoint(expectations, label);
   return expectations;
 }
@@ -232,11 +248,13 @@ type FactValue = {
  * `true at 0.69`, or for a multi fact with per-value confidences
  * `[billing 0.91, invoice 0.62] at 0.80`.
  */
-export function formatFactValue(fact: FactValue): string {
-  const { value } = fact;
+export function formatFactValue(fact: FactValue | null | undefined): string {
+  const value = fact?.value;
   let text: string;
   if (Array.isArray(value)) {
-    const per = fact.value_confidences;
+    const per = isRecord(fact?.value_confidences)
+      ? fact.value_confidences
+      : undefined;
     text = `[${value
       .map((item) => {
         const name = String(item);
@@ -253,13 +271,16 @@ export function formatFactValue(fact: FactValue): string {
   } else {
     text = String(value);
   }
-  return typeof fact.confidence === "number"
+  return typeof fact?.confidence === "number"
     ? `${text} at ${confidence(fact.confidence)}`
     : text;
 }
 
 /** One line for a fact: `is_cold_outreach: true at 0.69`. */
-export function formatFact(name: string, fact: FactValue): string {
+export function formatFact(
+  name: string,
+  fact: FactValue | null | undefined,
+): string {
   return `${name}: ${formatFactValue(fact)}`;
 }
 
@@ -287,13 +308,58 @@ type ExpectationResult = NonNullable<
 >["results"][number];
 type QuestionAnswer = NonNullable<TestResult["question_answers"]>[number];
 
-// Why an expectation is undecided, by the email's outcome: otherwise a
-// question went unanswered.
-const UNDECIDED_NOTES: Record<string, string> = {
-  not_found: "no such email the rule can read",
-  unclassified: "not classified yet; test again later",
+type UndecidedReason = { why: string; resolvable: boolean };
+
+// An unclassified email by unclassified_reason: whether a later test can
+// classify it. An unknown reason is taken as one it cannot.
+const UNCLASSIFIED_REASONS: Record<string, UndecidedReason> = {
+  pending: { why: "not classified yet", resolvable: true },
+  classifier_unavailable: {
+    why: "the classifier was unavailable",
+    resolvable: true,
+  },
+  classification_failed: {
+    why: "its classification failed",
+    resolvable: false,
+  },
+  not_classifiable: { why: "it cannot be classified", resolvable: false },
 };
-const UNANSWERED_NOTE = "a question unanswered; test again later";
+
+function sameId(a: string, b: string): boolean {
+  return a.toLowerCase() === b.toLowerCase();
+}
+
+/**
+ * Why an expectation is undecided, from its email's result, and whether a
+ * later test can decide it: not for an email the rule cannot find or read, or
+ * one that cannot be classified; yes for one not classified yet, or whose
+ * question went unanswered.
+ */
+export function undecidedReason(
+  expectation: Pick<ExpectationResult, "email_id" | "outcome">,
+  results: readonly TestResult[],
+): UndecidedReason {
+  const result = results.find((entry) =>
+    sameId(entry.email_id, expectation.email_id),
+  );
+  const outcome = result?.outcome ?? expectation.outcome;
+  if (outcome === "not_found")
+    return { why: "no such email the rule can read", resolvable: false };
+  if (outcome === "unclassified") {
+    const reason = result?.unclassified_reason;
+    return (
+      (reason ? UNCLASSIFIED_REASONS[reason] : undefined) ?? {
+        why: reason ? `unclassified (${reason})` : "unclassified",
+        resolvable: false,
+      }
+    );
+  }
+  return { why: "a question went unanswered", resolvable: true };
+}
+
+function undecidedNote(reason: UndecidedReason): string {
+  return `${reason.why}; ${reason.resolvable ? "test again later" : "testing again will not decide it"}`;
+}
 
 function answerText(answer: QuestionAnswer): string {
   const verdict =
@@ -341,16 +407,20 @@ function questionLines(
   ];
 }
 
-function expectationLine(result: ExpectationResult): string {
+function expectationLine(
+  result: ExpectationResult,
+  results: readonly TestResult[],
+): string {
   const note =
     result.status === "undecided"
-      ? (UNDECIDED_NOTES[result.outcome] ?? UNANSWERED_NOTE)
+      ? undecidedNote(undecidedReason(result, results))
       : undefined;
   return `  ${result.status}: ${result.email_id} expected ${result.expected}, got ${result.outcome}${note ? ` (${note})` : ""}`;
 }
 
 function expectationsLines(
   expectations: TestEmailRuleResult["expectations"],
+  testResults: readonly TestResult[],
 ): string[] {
   if (!expectations) return [];
   const results = Array.isArray(expectations.results)
@@ -370,7 +440,7 @@ function expectationsLines(
     `Expectations: ${parts.join(", ")}.`,
     ...results
       .filter((result) => result.status !== "passed")
-      .map(expectationLine),
+      .map((result) => expectationLine(result, testResults)),
   ];
 }
 
@@ -384,8 +454,11 @@ const NOT_MATCHED_ORDER: Record<string, number> = {
 function notMatchedLine(result: TestResult): string[] {
   if (result.outcome === "unclassified") {
     const reason = result.unclassified_reason;
-    const note =
-      reason === "pending" ? "pending: test again later" : (reason ?? "");
+    const note = !reason
+      ? ""
+      : UNCLASSIFIED_REASONS[reason]?.resolvable
+        ? `${reason}: test again later`
+        : reason;
     return [`  ${result.email_id} unclassified${note ? ` (${note})` : ""}`];
   }
   if (result.outcome === "not_found") return [`  ${result.email_id} not_found`];
@@ -438,35 +511,56 @@ function notMatchedLines(
 
 /**
  * The exit code a test's expectations call for, and the error a --json
- * document carries with it: 1 when one failed, 3 when none failed but one is
- * undecided, else 0.
+ * document carries with it:
+ * - 1 and `expectations_failed` when one failed;
+ * - else 1 and `expectations_unresolvable` when one is undecided and a later
+ *   test cannot decide it (its email cannot be found or read, or cannot be
+ *   classified);
+ * - else 3 and `expectations_undecided` when one is undecided and a later
+ *   test can decide it;
+ * - else nothing: the exit code stays 0.
  */
 export function expectationsOutcome(
   expectations: TestEmailRuleResult["expectations"],
+  testResults: readonly TestResult[] = [],
 ): Pick<OperationReport, "exitCode" | "error"> {
   if (!expectations) return {};
   const results = Array.isArray(expectations.results)
     ? expectations.results
     : [];
-  const ids = (status: string) =>
-    results
-      .filter((result) => result.status === status)
-      .map((result) => result.email_id);
-  const failed = ids("failed");
-  const undecided = ids("undecided");
+  const failed = results
+    .filter((result) => result.status === "failed")
+    .map((result) => result.email_id);
+  const undecided = results
+    .filter((result) => result.status === "undecided")
+    .map((result) => ({
+      id: result.email_id,
+      reason: undecidedReason(result, testResults),
+    }));
+  const unresolvable = undecided.filter(({ reason }) => !reason.resolvable);
   const failedCount = Math.max(expectations.counts?.failed ?? 0, failed.length);
   const undecidedCount = Math.max(
     expectations.counts?.undecided ?? 0,
     undecided.length,
   );
-  const listed = (list: string[]) =>
-    list.length > 0 ? `: ${list.join(", ")}` : "";
+  const plural = (count: number, one: string, many: string) =>
+    `${count} ${count === 1 ? one : many}`;
+  const why = (list: typeof undecided) =>
+    list.map(({ id, reason }) => `${id} (${reason.why})`).join(", ");
   if (failedCount > 0)
     return {
       exitCode: EXIT_EXPECTATION_FAILED,
       error: {
         code: "expectations_failed",
-        message: `${failedCount} ${failedCount === 1 ? "expectation" : "expectations"} failed${listed(failed)}.`,
+        message: `${plural(failedCount, "expectation", "expectations")} failed${failed.length > 0 ? `: ${failed.join(", ")}` : ""}.`,
+      },
+    };
+  if (unresolvable.length > 0)
+    return {
+      exitCode: EXIT_EXPECTATION_FAILED,
+      error: {
+        code: "expectations_unresolvable",
+        message: `${plural(unresolvable.length, "expectation is", "expectations are")} undecided, and testing again will not decide ${unresolvable.length === 1 ? "it" : "them"}: ${why(unresolvable)}.`,
       },
     };
   if (undecidedCount > 0)
@@ -474,7 +568,7 @@ export function expectationsOutcome(
       exitCode: EXIT_EXPECTATION_UNDECIDED,
       error: {
         code: "expectations_undecided",
-        message: `${undecidedCount} ${undecidedCount === 1 ? "expectation is" : "expectations are"} undecided${listed(undecided)}. Test again later.`,
+        message: `${plural(undecidedCount, "expectation is", "expectations are")} undecided${undecided.length > 0 ? `: ${why(undecided)}` : ""}. Test again later.`,
       },
     };
   return {};
@@ -493,10 +587,10 @@ export function testEmailRuleReport(data: unknown): OperationReport {
     ...scopeWarningLines(result.scope_warnings),
     ...conditionLines(summary),
     ...questionLines(summary, results),
-    ...expectationsLines(result.expectations),
+    ...expectationsLines(result.expectations, results),
     ...notMatchedLines(results, result.expectations),
   ];
-  return { lines, ...expectationsOutcome(result.expectations) };
+  return { lines, ...expectationsOutcome(result.expectations, results) };
 }
 
 // create-email-rule and update-email-rule
@@ -589,16 +683,16 @@ export function versionMovedHint(
     typeof details.current_version === "number"
       ? details.current_version
       : undefined;
-  const read = `Read it again with \`primitive email-rules get-email-rule ${id}\`, reapply your change to what it shows`;
+  const read = `Read it again with \`primitive email-rules get-email-rule ${id}\` and reapply your change to what it shows`;
   return current === undefined
-    ? `Hint: the rule's current version is not the if_version you sent, so nothing was saved. ${read}, and retry with --if-version set to its current_version.`
-    : `Hint: the rule's current version is ${current}, not the if_version you sent, so nothing was saved. ${read}, and retry with --if-version ${current}.`;
+    ? `Hint: the rule's version is not the if_version you sent, so nothing was saved, and its current version could not be read. ${read}.`
+    : `Hint: the rule's current version is ${current}, not the if_version you sent, so nothing was saved. ${read}, then retry with --if-version ${current}.`;
 }
 
 // The flags and reports, by generated operation
 
 const EXPECTATION_FLAG_NOTE =
-  "Replaces any expect in --body-file or --raw-body. The command exits 1 when an expectation fails and 3 when one is undecided (test again later).";
+  "Replaces any expect in --body-file or --raw-body. The exit code follows the answer's expectations; see --help-full.";
 
 export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
   string,

@@ -6,7 +6,10 @@ import type {
   TestEmailRuleResult,
 } from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { OPERATION_ERROR_HINTS } from "../../src/oclif/api-command.js";
+import {
+  OPERATION_ERROR_HINTS,
+  OPERATION_EXTENSIONS,
+} from "../../src/oclif/api-command.js";
 import {
   formatFact,
   NOT_MATCHED_LIST_LIMIT,
@@ -294,6 +297,14 @@ function testResult(
   };
 }
 
+function withResults(
+  extra: TestEmailRuleResult["results"],
+  expectations: TestEmailRuleResult["expectations"],
+): TestEmailRuleResult {
+  const base = testResult(expectations);
+  return { ...base, results: [...base.results, ...extra] };
+}
+
 const FAILED_EXPECTATIONS: TestEmailRuleResult["expectations"] = {
   passed: false,
   counts: { passed: 1, failed: 1, undecided: 1 },
@@ -373,9 +384,14 @@ describe("email-rules test-email-rule: expectations from flags", () => {
     );
     expect(rawBodyOnly).toMatch(/^ {3}tree\b/m);
     expect(rawBodyOnly).not.toMatch(/^ {3}expect\b/m);
-    expect(description).toContain(
-      "The command exits 1 when an expectation fails, and 3 when none failed but one is undecided",
-    );
+    for (const text of [
+      "a saved rule's saved expectations are judged instead",
+      "1 when one is undecided and testing again will not decide it",
+      "3 when the only undecided ones can be decided later",
+      "Exit 1 also means the request failed",
+      "expectations_failed, expectations_unresolvable, expectations_undecided (exit 3)",
+    ])
+      expect(description).toContain(text);
     for (const id of [
       "email-rules:create-email-rule",
       "email-rules:update-email-rule",
@@ -480,12 +496,21 @@ describe("email-rules test-email-rule: expectations from flags", () => {
     expect(calls).toEqual([]);
   });
 
-  it("refuses an --expect-file that is not in the expect shape", async () => {
+  it("refuses an --expect-file that is not in the expect shape with exit 2", async () => {
     for (const [content, message] of [
       ["[]", "must hold a JSON object"],
       [JSON.stringify({ matches: [A] }), 'takes only "match" and "no_match"'],
       [JSON.stringify({ match: A }), '"match" must be a list of email ids'],
-      ["{", "is not valid JSON"],
+      [JSON.stringify({ match: ["x"] }), '"x" is not one'],
+      ["{}", "needs at least one email id in match or no_match"],
+      [
+        JSON.stringify({ match: [], no_match: [] }),
+        "needs at least one email id in match or no_match",
+      ],
+      [
+        JSON.stringify({ match: [A], no_match: [A.toUpperCase()] }),
+        "is expected both to match and not to match",
+      ],
     ] as const) {
       const result = await run("email-rules:test-email-rule", [
         "--rule-id",
@@ -493,10 +518,44 @@ describe("email-rules test-email-rule: expectations from flags", () => {
         "--expect-file",
         tempFile("bad.json", content),
       ]);
-      expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain(message);
+      expect(result.exitCode, content).toBe(2);
+      expect(result.stderr, content).toContain(message);
     }
     expect(calls).toEqual([]);
+  });
+
+  it("refuses an unreadable or invalid JSON --expect-file with exit 1", async () => {
+    for (const [path, message] of [
+      [join(tempHome, "missing.json"), "Could not read --expect-file"],
+      [tempFile("bad.json", "{"), "is not valid JSON"],
+    ] as const) {
+      const result = await run("email-rules:test-email-rule", [
+        "--rule-id",
+        RULE,
+        "--expect-file",
+        path,
+      ]);
+      expect(result.exitCode, path).toBe(1);
+      expect(result.stderr, path).toContain(message);
+    }
+    expect(calls).toEqual([]);
+  });
+
+  it("removes repeated ids from --expect-file", async () => {
+    answer(testResult());
+    await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+      "--expect-file",
+      tempFile(
+        "expect.json",
+        JSON.stringify({ match: [A, B, A.toUpperCase()], no_match: [C, C] }),
+      ),
+    ]);
+    expect(calls[0]?.body).toEqual({
+      rule_id: RULE,
+      expect: { match: [A, B], no_match: [C] },
+    });
   });
 
   it("names the expectation flag when --raw-body is not an object", async () => {
@@ -563,6 +622,235 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
     ]);
     expect(result.exitCode).toBe(3);
     expect(result.stderr).toContain("Expectations: 1 undecided, 1 passed.");
+  });
+
+  it("exits 1 with expectations_unresolvable for an email the rule cannot find", async () => {
+    const data = withResults([{ email_id: E, outcome: "not_found" }], {
+      passed: false,
+      counts: { passed: 1, failed: 0, undecided: 1 },
+      results: [
+        {
+          email_id: A,
+          expected: "match",
+          outcome: "matched",
+          status: "passed",
+        },
+        {
+          email_id: E,
+          expected: "match",
+          outcome: "not_found",
+          status: "undecided",
+        },
+      ],
+    });
+    answer(data);
+    const argv = ["--rule-id", RULE, "--expect-match", `${A},${E}`];
+    const result = await run("email-rules:test-email-rule", argv);
+    expect(result.exitCode).toBe(1);
+    expect(stderrLines(result)).toContain(
+      `  undecided: ${E} expected match, got not_found (no such email the rule can read; testing again will not decide it)`,
+    );
+    const json = await run("email-rules:test-email-rule", [...argv, "--json"]);
+    expect(json.exitCode).toBe(1);
+    expect(json.stderr).toBe("");
+    expect(JSON.parse(json.merged)).toMatchObject({
+      error: {
+        code: "expectations_unresolvable",
+        message: `1 expectation is undecided, and testing again will not decide it: ${E} (no such email the rule can read).`,
+      },
+      exit_code: 1,
+    });
+  });
+
+  it("exits 1 with expectations_unresolvable for an email that cannot be classified", async () => {
+    const data = {
+      ...testResult(UNDECIDED_EXPECTATIONS),
+      results: testResult().results.map((result) =>
+        result.email_id === D
+          ? { ...result, unclassified_reason: "not_classifiable" as const }
+          : result,
+      ),
+    };
+    answer(data);
+    const result = await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+      "--expect-no-match",
+      D,
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(stderrLines(result)).toEqual(
+      expect.arrayContaining([
+        `  undecided: ${D} expected no_match, got unclassified (it cannot be classified; testing again will not decide it)`,
+        `  ${D} unclassified (not_classifiable)`,
+      ]),
+    );
+    const json = await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+      "--json",
+    ]);
+    expect(json.exitCode).toBe(1);
+    expect(JSON.parse(json.merged).error).toEqual({
+      code: "expectations_unresolvable",
+      message: `1 expectation is undecided, and testing again will not decide it: ${D} (it cannot be classified).`,
+    });
+  });
+
+  it("exits 3 only when a later test can decide every undecided one", async () => {
+    const data = {
+      ...testResult({
+        passed: false,
+        counts: { passed: 0, failed: 0, undecided: 2 },
+        results: [
+          {
+            email_id: C,
+            expected: "match",
+            outcome: "near_miss",
+            status: "undecided",
+          },
+          {
+            email_id: D,
+            expected: "no_match",
+            outcome: "unclassified",
+            status: "undecided",
+          },
+        ],
+      }),
+      results: testResult().results.map((result) =>
+        result.email_id === D
+          ? {
+              ...result,
+              unclassified_reason: "classifier_unavailable" as const,
+            }
+          : result,
+      ),
+    };
+    answer(data);
+    const result = await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+    ]);
+    expect(result.exitCode).toBe(3);
+    expect(stderrLines(result)).toEqual(
+      expect.arrayContaining([
+        `  undecided: ${C} expected match, got near_miss (a question went unanswered; test again later)`,
+        `  undecided: ${D} expected no_match, got unclassified (the classifier was unavailable; test again later)`,
+        `  ${D} unclassified (classifier_unavailable: test again later)`,
+      ]),
+    );
+    const json = await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+      "--json",
+    ]);
+    expect(json.exitCode).toBe(3);
+    expect(JSON.parse(json.merged).error).toEqual({
+      code: "expectations_undecided",
+      message: `2 expectations are undecided: ${C} (a question went unanswered), ${D} (the classifier was unavailable). Test again later.`,
+    });
+  });
+
+  it("gives expectations_failed precedence over undecided ones", async () => {
+    answer(
+      withResults([{ email_id: E, outcome: "not_found" }], {
+        passed: false,
+        counts: { passed: 0, failed: 1, undecided: 1 },
+        results: [
+          {
+            email_id: B,
+            expected: "match",
+            outcome: "no_match",
+            status: "failed",
+          },
+          {
+            email_id: E,
+            expected: "no_match",
+            outcome: "not_found",
+            status: "undecided",
+          },
+        ],
+      }),
+    );
+    const result = await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+      "--json",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(JSON.parse(result.merged).error).toEqual({
+      code: "expectations_failed",
+      message: `1 expectation failed: ${B}.`,
+    });
+  });
+
+  it("follows a saved rule's saved expectations when no expect is sent", async () => {
+    answer(testResult(FAILED_EXPECTATIONS));
+    const result = await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+    ]);
+    expect(calls[0]?.body).toEqual({ rule_id: RULE });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain(
+      "Expectations: 1 failed, 1 undecided, 1 passed.",
+    );
+  });
+
+  it("prints a null value as null", async () => {
+    answer({
+      ...testResult(),
+      results: [
+        {
+          email_id: B,
+          outcome: "no_match",
+          values: { is_cold_outreach: null },
+        },
+      ],
+    });
+    const result = await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+    ]);
+    expect(result.exitCode).toBe(0);
+    expect(stderrLines(result)).toContain(
+      `  ${B} no_match: is_cold_outreach: null`,
+    );
+    expect(result.stderr).not.toContain("could not be built");
+  });
+
+  it("keeps the JSON and prints one warning when the report cannot be built", async () => {
+    const extension = OPERATION_EXTENSIONS.testEmailRule;
+    if (!extension) throw new Error("testEmailRule has no extension");
+    const report = extension.report;
+    extension.report = () => {
+      throw new Error("bad answer");
+    };
+    try {
+      const data = testResult(FAILED_EXPECTATIONS);
+      answer(data);
+      const result = await run("email-rules:test-email-rule", [
+        "--rule-id",
+        RULE,
+      ]);
+      expect(result.exitCode).toBe(0);
+      expect(JSON.parse(result.stdout)).toEqual(data);
+      expect(stderrLines(result)).toEqual([
+        "Warning: testEmailRule succeeded but its report could not be built (bad answer). The JSON above is the full answer; read it rather than the exit code.",
+      ]);
+      const json = await run("email-rules:test-email-rule", [
+        "--rule-id",
+        RULE,
+        "--json",
+      ]);
+      expect(json.stderr).toBe("");
+      expect(JSON.parse(json.merged)).toEqual({
+        ...data,
+        warnings: [stderrLines(result)[0]],
+      });
+    } finally {
+      extension.report = report;
+    }
   });
 
   it("exits 0 when every expectation passed, and without expectations", async () => {
@@ -659,7 +947,7 @@ describe("email-rules test-email-rule --json", () => {
       data: { expectations: UNDECIDED_EXPECTATIONS },
       error: {
         code: "expectations_undecided",
-        message: `1 expectation is undecided: ${D}. Test again later.`,
+        message: `1 expectation is undecided: ${D} (not classified yet). Test again later.`,
       },
       exit_code: 3,
     });
@@ -770,6 +1058,29 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
     ]);
     expect(result.exitCode).toBe(2);
     expect(result.stderr).toContain("only update-email-rule takes");
+    expect(calls).toEqual([]);
+  });
+
+  it("refuses a file with no email id on create and update", async () => {
+    for (const [id, argv] of [
+      [
+        "email-rules:create-email-rule",
+        ["--raw-body", JSON.stringify({ tree, name: "n", english: "e" })],
+      ],
+      ["email-rules:update-email-rule", [RULE]],
+    ] as const) {
+      for (const content of ["{}", JSON.stringify({ match: [] })]) {
+        const result = await run(id, [
+          ...argv,
+          "--expectations-file",
+          tempFile("empty.json", content),
+        ]);
+        expect(result.exitCode, `${id} ${content}`).toBe(2);
+        expect(result.stderr).toContain(
+          "needs at least one email id in match or no_match",
+        );
+      }
+    }
     expect(calls).toEqual([]);
   });
 
@@ -894,7 +1205,7 @@ describe("email-rules update-email-rule: 409 version_moved", () => {
       details: { reason: "version_moved", current_version: 7 },
     },
   };
-  const hint = `Hint: the rule's current version is 7, not the if_version you sent, so nothing was saved. Read it again with \`primitive email-rules get-email-rule ${RULE}\`, reapply your change to what it shows, and retry with --if-version 7.`;
+  const hint = `Hint: the rule's current version is 7, not the if_version you sent, so nothing was saved. Read it again with \`primitive email-rules get-email-rule ${RULE}\` and reapply your change to what it shows, then retry with --if-version 7.`;
 
   it("names the current version and how to read the rule again", async () => {
     responder = () => jsonResponse(409, conflict);
@@ -941,14 +1252,30 @@ describe("email-rules update-email-rule: 409 version_moved", () => {
     expect(
       hintFor?.("email_rule_scope_locked", {}, conflict.error, { id: RULE }),
     ).toBeUndefined();
-    expect(
-      hintFor?.(
-        "email_rule_conflict",
-        {},
-        { code: "email_rule_conflict", details: { reason: "version_moved" } },
-        { id: RULE },
-      ),
-    ).toContain("retry with --if-version set to its current_version");
+  });
+
+  it("says the version could not be read when current_version is null", async () => {
+    responder = () =>
+      jsonResponse(409, {
+        success: false,
+        error: {
+          ...conflict.error,
+          details: { reason: "version_moved", current_version: null },
+        },
+      });
+    const result = await run("email-rules:update-email-rule", [
+      RULE,
+      "--if-version",
+      "5",
+      "--name",
+      "renamed",
+    ]);
+    expect(result.exitCode).toBe(1);
+    const last = stderrLines(result).at(-1);
+    expect(last).toBe(
+      `Hint: the rule's version is not the if_version you sent, so nothing was saved, and its current version could not be read. Read it again with \`primitive email-rules get-email-rule ${RULE}\` and reapply your change to what it shows.`,
+    );
+    expect(last).not.toContain("--if-version");
   });
 });
 
@@ -1006,11 +1333,7 @@ describe("emails facts", () => {
     classified_at: "2026-11-10T00:00:00Z",
     facts: {
       is_cold_outreach: { value: true, confidence: 0.69 },
-      topics: {
-        value: ["billing", "invoice"],
-        confidence: 0.8,
-        value_confidences: { billing: 0.91, invoice: 0.62 },
-      },
+      topics: { value: ["billing", "invoice"], confidence: 0.8 },
       sender_role: { value: null, confidence: null },
       language: { value: "en", confidence: 0.99 },
     },
@@ -1046,7 +1369,7 @@ describe("emails facts", () => {
       expect(result.stdout).toBe(
         [
           "is_cold_outreach: true at 0.69",
-          "topics: [billing 0.91, invoice 0.62] at 0.80",
+          "topics: [billing, invoice] at 0.80",
           "sender_role: null",
           "language: en at 0.99",
           "",
