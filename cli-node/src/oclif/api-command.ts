@@ -2138,6 +2138,22 @@ export function createOperationCommand(
           });
         } catch (error) {
           reportError = error instanceof Error ? error.message : String(error);
+          let fallback: number | undefined;
+          try {
+            fallback = extension?.fallbackExitCode?.(envelope?.data);
+          } catch {
+            fallback = 1;
+          }
+          if (fallback)
+            report = {
+              lines: [],
+              exitCode: fallback,
+              error: {
+                code: "expectations_not_passed",
+                message:
+                  "The answer's expectations did not all pass; read expectations in the answer.",
+              },
+            };
         }
         let printed =
           jsonOutput && withEnvelope
@@ -2161,6 +2177,11 @@ export function createOperationCommand(
         }
         if (report && !jsonOutput) {
           for (const line of report.lines) process.stderr.write(`${line}\n`);
+        }
+        if (reportError !== undefined && report?.exitCode && !jsonOutput) {
+          process.stderr.write(
+            `The answer's expectations did not all pass, so the command exits ${report.exitCode}.\n`,
+          );
         }
         if (report?.exitCode) process.exitCode = report.exitCode;
       });

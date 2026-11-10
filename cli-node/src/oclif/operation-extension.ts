@@ -39,6 +39,11 @@ export type OperationExtension = {
    * fields that only --raw-body can carry.
    */
   bodyProperties?: readonly string[];
+  /**
+   * The exit code when report throws, read from the raw answer, so a report
+   * that cannot be built never turns a failing answer into a pass.
+   */
+  fallbackExitCode?: (data: unknown) => number | undefined;
   /** Read the answer's data, given the request body and path that were sent. */
   report?: (
     data: unknown,

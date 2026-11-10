@@ -308,7 +308,12 @@ type ExpectationResult = NonNullable<
 >["results"][number];
 type QuestionAnswer = NonNullable<TestResult["question_answers"]>[number];
 
-type UndecidedReason = { why: string; resolvable: boolean };
+type UndecidedReason = {
+  why: string;
+  resolvable: boolean;
+  /** Unresolvable as far as the answer shows, though a later test might still decide it. */
+  may?: boolean;
+};
 
 // An unclassified email by unclassified_reason: whether a later test can
 // classify it. An unknown reason is taken as one it cannot.
@@ -321,6 +326,7 @@ const UNCLASSIFIED_REASONS: Record<string, UndecidedReason> = {
   classification_failed: {
     why: "its classification failed",
     resolvable: false,
+    may: true,
   },
   not_classifiable: { why: "it cannot be classified", resolvable: false },
 };
@@ -358,7 +364,7 @@ export function undecidedReason(
 }
 
 function undecidedNote(reason: UndecidedReason): string {
-  return `${reason.why}; ${reason.resolvable ? "test again later" : "testing again will not decide it"}`;
+  return `${reason.why}; ${reason.resolvable ? "test again later" : reason.may ? "a later test may not decide it" : "testing again will not decide it"}`;
 }
 
 function answerText(answer: QuestionAnswer): string {
@@ -685,7 +691,7 @@ export function versionMovedHint(
       : undefined;
   const read = `Read it again with \`primitive email-rules get-email-rule ${id}\` and reapply your change to what it shows`;
   return current === undefined
-    ? `Hint: the rule's version is not the if_version you sent, so nothing was saved, and its current version could not be read. ${read}.`
+    ? `Hint: the rule's version is not the if_version you sent, so nothing was saved, and the answer did not give its current version. ${read}.`
     : `Hint: the rule's current version is ${current}, not the if_version you sent, so nothing was saved. ${read}, then retry with --if-version ${current}.`;
 }
 
@@ -718,6 +724,15 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
     },
     bodyFields: expectBodyFields,
     bodyProperties: ["expect"],
+    // Fail closed: expectations that are there and not passed exit 1.
+    fallbackExitCode: (data) => {
+      const expectations = (
+        data as { expectations?: { passed?: unknown } } | null
+      )?.expectations;
+      return expectations && expectations.passed !== true
+        ? EXIT_EXPECTATION_FAILED
+        : undefined;
+    },
     report: testEmailRuleReport,
   },
   createEmailRule: {

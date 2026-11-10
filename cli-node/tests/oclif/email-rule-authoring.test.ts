@@ -833,10 +833,12 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
         "--rule-id",
         RULE,
       ]);
-      expect(result.exitCode).toBe(0);
+      // Fails closed: the expectations did not pass, so it still exits 1.
+      expect(result.exitCode).toBe(1);
       expect(JSON.parse(result.stdout)).toEqual(data);
       expect(stderrLines(result)).toEqual([
         "Warning: testEmailRule succeeded but its report could not be built (bad answer). The JSON above is the full answer; read it rather than the exit code.",
+        "The answer's expectations did not all pass, so the command exits 1.",
       ]);
       const json = await run("email-rules:test-email-rule", [
         "--rule-id",
@@ -844,10 +846,24 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
         "--json",
       ]);
       expect(json.stderr).toBe("");
+      expect(json.exitCode).toBe(1);
       expect(JSON.parse(json.merged)).toEqual({
         ...data,
+        error: {
+          code: "expectations_not_passed",
+          message:
+            "The answer's expectations did not all pass; read expectations in the answer.",
+        },
+        exit_code: 1,
         warnings: [stderrLines(result)[0]],
       });
+      // An answer whose expectations passed keeps exit 0 when the report breaks.
+      answer(testResult(PASSED_EXPECTATIONS));
+      const passed = await run("email-rules:test-email-rule", [
+        "--rule-id",
+        RULE,
+      ]);
+      expect(passed.exitCode).toBe(0);
     } finally {
       extension.report = report;
     }
@@ -1254,7 +1270,7 @@ describe("email-rules update-email-rule: 409 version_moved", () => {
     ).toBeUndefined();
   });
 
-  it("says the version could not be read when current_version is null", async () => {
+  it("says the answer gave no current version when current_version is null", async () => {
     responder = () =>
       jsonResponse(409, {
         success: false,
@@ -1273,7 +1289,7 @@ describe("email-rules update-email-rule: 409 version_moved", () => {
     expect(result.exitCode).toBe(1);
     const last = stderrLines(result).at(-1);
     expect(last).toBe(
-      `Hint: the rule's version is not the if_version you sent, so nothing was saved, and its current version could not be read. Read it again with \`primitive email-rules get-email-rule ${RULE}\` and reapply your change to what it shows.`,
+      `Hint: the rule's version is not the if_version you sent, so nothing was saved, and the answer did not give its current version. Read it again with \`primitive email-rules get-email-rule ${RULE}\` and reapply your change to what it shows.`,
     );
     expect(last).not.toContain("--if-version");
   });
