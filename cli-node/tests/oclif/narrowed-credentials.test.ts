@@ -307,8 +307,13 @@ describe("resolveDefaultFrom: what is never a default", () => {
       const error = (await resolveDefaultFrom(client, authContext).catch(
         (caught: Error) => caught,
       )) as Error;
-      expect(error.message, kind).toContain("--from has no default");
-      expect(error.message, kind).toContain("dana@yuuja.example");
+      expect(error.message, kind).toContain(
+        "Only your own login, a connected agent, or an organization or Function key naming one address has a default From, so --from has no default.",
+      );
+      // Listed, never offered as the example to pass.
+      expect(error.message, kind).not.toContain(
+        "for example --from dana@yuuja.example",
+      );
     }
   });
 
@@ -334,7 +339,7 @@ describe("resolveDefaultFrom: what is never a default", () => {
       (caught: Error) => caught,
     )) as Error;
     expect(error.message).toBe(
-      "This credential's grant does not name one address to send from, so --from has no default. This credential cannot send mail from any address.",
+      "This credential cannot send mail from any address, so --from has no default.",
     );
   });
 

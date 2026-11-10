@@ -267,6 +267,7 @@ class SendCommand extends Command {
 
   async run(): Promise<void> {
     const { flags } = await this.parse(SendCommand);
+    this.resolvedFrom = flags.from ?? null;
     try {
       await this.sendMessage(flags);
     } catch (error) {

@@ -153,7 +153,11 @@ const PERSON_CREDENTIAL_KINDS = new Set(["oauth", "member"]);
 /**
  * Key kinds that may default to the one address their grant names. Any
  * other kind (agent_delegate, staff, internal, signed_token, or one this CLI
- * does not know) gets no default.
+ * does not know) gets no default. agent_delegate is the API's label for an
+ * agent's grant under a person's OAuth; its tokens are answered as `oauth`,
+ * and so default to the person's member address above. Were the API ever to
+ * answer `agent_delegate` itself, whether such an agent may send as the
+ * person is its call, so the CLI asks for --from rather than assume it.
  */
 const KEY_CREDENTIAL_KINDS = new Set(["org_key", "function_key"]);
 
@@ -174,9 +178,13 @@ type OwnGrant = {
   scoped_permissions?: unknown;
 };
 
-/** Whether a grant holds any send permission, outright or over a reach of its own. */
+/**
+ * Whether a grant holds any send permission, outright or over a reach of its
+ * own. A grant described without its permissions is not said to be unable.
+ */
 function grantSends(grant: OwnGrant): boolean {
-  const held = Array.isArray(grant.permissions) ? grant.permissions : [];
+  if (!Array.isArray(grant.permissions)) return true;
+  const held = grant.permissions;
   const scoped =
     grant.scoped_permissions && typeof grant.scoped_permissions === "object"
       ? Object.keys(grant.scoped_permissions)
@@ -246,7 +254,7 @@ async function noDefaultFrom(
 ): Promise<Errors.CLIError> {
   if (!grantSends(grant))
     return new Errors.CLIError(
-      `${reason} This credential cannot send mail from any address.`,
+      "This credential cannot send mail from any address, so --from has no default.",
       { exit: 1 },
     );
   const { exclude } = options;
@@ -425,12 +433,16 @@ export async function resolveDefaultFrom(
   ) {
     return { address: reach.addresses[0] as string, source: "granted_address" };
   }
+  const isKey = KEY_CREDENTIAL_KINDS.has(grant.credential_kind ?? "");
   throw await noDefaultFrom(
     apiClient,
     grant,
-    reach === null
-      ? "This credential may send from any address at the organization's sending domains, so --from has no default."
-      : "This credential's grant does not name one address to send from, so --from has no default.",
+    !isKey
+      ? "Only your own login, a connected agent, or an organization or Function key naming one address has a default From, so --from has no default."
+      : reach === null
+        ? "This credential may send from any address at the organization's sending domains, so --from has no default."
+        : "This credential's grant does not name one address to send from, so --from has no default.",
+    isKey ? {} : { example: false },
   );
 }
 
