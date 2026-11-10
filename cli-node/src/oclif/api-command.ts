@@ -30,6 +30,10 @@ import {
 } from "./automated-filter.js";
 import { requireDefaultLoginProfile } from "./connected-agent-profile.js";
 import {
+  EMAIL_RULE_OPERATION_EXTENSIONS,
+  versionMovedHint,
+} from "./email-rule-authoring.js";
+import {
   bodyHasRules,
   currentEndpointRules,
   EVENT_TYPES_FLAG_DESCRIPTION,
@@ -51,6 +55,10 @@ import {
   fromVerifiedExpectation,
 } from "./from-verified-filter.js";
 import { writeIdempotentReplayBannerIfReplay } from "./idempotent-replay-banner.js";
+import type {
+  OperationExtension,
+  OperationReport,
+} from "./operation-extension.js";
 import { explainPendingMailNotFound } from "./pending-mail-miss.js";
 import {
   assertAwaitingFilterRows,
@@ -487,11 +495,15 @@ function extractBodyFields(
  */
 function renderRequestSchemaSummary(
   schema: Record<string, unknown> | null,
+  setByFlags: readonly string[] = [],
 ): string | null {
   const fields = extractBodyFields(schema);
   if (fields.length === 0) return null;
 
-  const complex = fields.filter((f) => f.kind === "complex");
+  // A complex field a CLI extension's flags set is exposed as flags.
+  const complex = fields.filter(
+    (f) => f.kind === "complex" && !setByFlags.includes(f.name),
+  );
   if (complex.length === 0) return null;
 
   const nameWidth = Math.min(
@@ -1209,6 +1221,17 @@ function buildFlags(operation: PrimitiveOperationManifest): {
     });
   }
 
+  // A flag an extension adds would change meaning if the spec gained a
+  // parameter of the same name; refuse to build rather than guess.
+  const extension = OPERATION_EXTENSIONS[operation.sdkName];
+  for (const [name, flag] of Object.entries(extension?.flags ?? {})) {
+    if (flags[name] !== undefined)
+      throw new Error(
+        `${operation.sdkName}: --${name} is both a generated flag and a CLI extension flag`,
+      );
+    flags[name] = flag;
+  }
+
   return { flags, bodyFieldFlagToProperty, headerFlagToName };
 }
 
@@ -1396,6 +1419,8 @@ export const OPERATION_HINTS: Record<string, string> = {
     "Tip: prefer `primitive memories search [prefix] [--metadata-only] [--function <function-id>]` for the common search path.",
   startAgentSignup:
     "Tip: pass --terms-accepted. Capture the signup_token from the response and feed it to `primitive agent verify-agent-signup --signup-token <token> --verification-code <6-digit-code>` (the verify flag accepts --code as an alias). The high-level `primitive signup <email>` command walks an interactive user through both steps with friendlier prompts.",
+  testEmailRule:
+    "Tip: --expect-match and --expect-no-match (or --expect-file) set expect, the emails the rule must match and must not. When no expect is sent, by these flags or in the body, a saved rule's saved expectations are judged instead. The exit code follows whichever expectations the answer judged: 1 when one failed; 1 when one is undecided and testing again will not decide it (its email cannot be found or read, or cannot be classified); 3 when the only undecided ones can be decided later (not classified yet, or a question unanswered), so test again later. Exit 1 also means the request failed. With --json, error.code tells these apart: expectations_failed, expectations_unresolvable, expectations_undecided (exit 3), or the API's own code. Without --json a readable report follows the JSON on stderr: warnings, how each condition held, the expectations, and the values each email that did not match was compared on.",
   verifyAgentSignup:
     "Tip: pass --verification-code <code> (or --code; both work). The response carries OAuth tokens but not your assigned inbox domain; run `primitive domains list` (or `primitive whoami`) after success to see the managed *.primitive.email address that routes to this account.",
 };
@@ -1436,22 +1461,35 @@ export const OPERATION_EXTRA_BODY_FLAGS: Record<
   },
 };
 
+// CLI additions to generated commands keyed by operation.sdkName: flags that
+// set request body fields, and a stderr report and exit code read from the
+// answer. See operation-extension.ts.
+export const OPERATION_EXTENSIONS: Record<string, OperationExtension> = {
+  ...EMAIL_RULE_OPERATION_EXTENSIONS,
+};
+
 export const MAIL_RELAY_NOT_ENABLED_MESSAGE =
   "Mail relay is not enabled for this account, so the domain was not added. Retry without --mail-relay to point the domain's MX at Primitive directly, or ask Primitive to enable mail relay for your account.";
 export const MAIL_RELAY_UNAVAILABLE_MESSAGE =
   "No mail relay is available on this API server right now, so the domain was not added. Retry later, or retry without --mail-relay to point the domain's MX at Primitive directly.";
 
 // Per-operation error explanations keyed by operation.sdkName. Called
-// with the error code and the request body that was sent; returns a
-// line to print after the error envelope, or undefined for none.
+// with the error code, the request body that was sent, the error payload
+// and the path parameters; returns a line to print after the error
+// envelope, or undefined for none.
 export const OPERATION_ERROR_HINTS: Record<
   string,
   (
     code: string | undefined,
     body: unknown,
     payload?: unknown,
+    path?: Record<string, unknown>,
   ) => string | undefined
 > = {
+  updateEmailRule: (code, _body, payload, path) =>
+    code === "email_rule_conflict"
+      ? versionMovedHint(payload, path?.id)
+      : undefined,
   verifyDomain: (code, _body, payload) =>
     code === "dns_verification_failed"
       ? domainVerificationFailedHint(payload)
@@ -1527,7 +1565,10 @@ export function createOperationCommand(
       ? canonicalizeCliReferences(operation.description)
       : `${operation.method} ${operation.path}`;
   const schemaSummary = operation.hasJsonBody
-    ? renderRequestSchemaSummary(operation.requestSchema)
+    ? renderRequestSchemaSummary(
+        operation.requestSchema,
+        OPERATION_EXTENSIONS[operation.sdkName]?.bodyProperties,
+      )
     : null;
   const hint = OPERATION_HINTS[operation.sdkName];
   const descriptionWithSchema = schemaSummary
@@ -1538,6 +1579,7 @@ export function createOperationCommand(
     : descriptionWithSchema;
 
   const flagNames = Object.keys(flags);
+  const extension = OPERATION_EXTENSIONS[operation.sdkName];
   const positional = positionalPathParameter(operation);
   const positionalFlag = positional
     ? parameterFlagName(operation.sdkName, positional.name)
@@ -1627,6 +1669,13 @@ export function createOperationCommand(
             parsedFlags,
             bodyFieldFlagToProperty,
           );
+          // Fields an extension's flags set, merged like the per-field
+          // flags. Named by the flag that set them in the error below.
+          const extensionFlagFor = new Map<string, string>();
+          for (const field of extension?.bodyFields?.(parsedFlags) ?? []) {
+            overrides[field.property] = field.value;
+            extensionFlagFor.set(field.property, field.flag);
+          }
 
           if (Object.keys(overrides).length > 0) {
             if (explicit === undefined) {
@@ -1651,7 +1700,7 @@ export function createOperationCommand(
                     ? "array"
                     : typeof explicit;
               const overrideFlags = Object.keys(overrides)
-                .map((p) => `--${flagName(p)}`)
+                .map((p) => extensionFlagFor.get(p) ?? `--${flagName(p)}`)
                 .join(", ");
               throw new Errors.CLIError(
                 `--raw-body must be a JSON object when also passing per-field flags (got ${explicitKind}); supplied per-field flags: ${overrideFlags}. Either drop --raw-body and rely on the per-field flags, or move every field into the JSON --raw-body and drop the flags.`,
@@ -1861,6 +1910,7 @@ export function createOperationCommand(
             extractErrorCode(errorPayload),
             body,
             errorPayload,
+            collectValues(operation.pathParams, parsedFlags, operation.sdkName),
           );
           if (operationErrorHint) {
             process.stderr.write(`${operationErrorHint}\n`);
@@ -2070,15 +2120,70 @@ export function createOperationCommand(
           }
         }
 
-        this.log(
-          JSON.stringify(
-            jsonOutput && withEnvelope
-              ? operationJsonDocument(envelope, summary)
-              : operationOutputPayload(envelope, withEnvelope),
-            null,
-            2,
-          ),
-        );
+        // An extension's reading of the answer: lines for stderr after the
+        // JSON, and an exit code. Under --json the lines are left out, and a
+        // non-zero exit code's reason travels in the document's `error`. Like
+        // a success hook, a report that throws never costs the JSON: one
+        // warning line is printed in its place.
+        let report: OperationReport | undefined;
+        let reportError: string | undefined;
+        try {
+          report = extension?.report?.(envelope?.data, {
+            body,
+            path: collectValues(
+              operation.pathParams,
+              parsedFlags,
+              operation.sdkName,
+            ),
+          });
+        } catch (error) {
+          reportError = error instanceof Error ? error.message : String(error);
+          let fallback: number | undefined;
+          try {
+            fallback = extension?.fallbackExitCode?.(envelope?.data);
+          } catch {
+            fallback = 1;
+          }
+          if (fallback)
+            report = {
+              lines: [],
+              exitCode: fallback,
+              error: {
+                code: "expectations_not_passed",
+                message:
+                  "The answer's expectations did not all pass; read expectations in the answer.",
+              },
+            };
+        }
+        let printed =
+          jsonOutput && withEnvelope
+            ? operationJsonDocument(envelope, summary)
+            : operationOutputPayload(envelope, withEnvelope);
+        if (
+          jsonOutput &&
+          report?.exitCode &&
+          report.error &&
+          printed !== null &&
+          typeof printed === "object" &&
+          !Array.isArray(printed)
+        ) {
+          printed = { ...printed, error: report.error };
+        }
+        this.log(JSON.stringify(printed, null, 2));
+        if (reportError !== undefined) {
+          process.stderr.write(
+            `Warning: ${operation.sdkName} succeeded but its report could not be built (${reportError}). The JSON above is the full answer; read it rather than the exit code.\n`,
+          );
+        }
+        if (report && !jsonOutput) {
+          for (const line of report.lines) process.stderr.write(`${line}\n`);
+        }
+        if (reportError !== undefined && report?.exitCode && !jsonOutput) {
+          process.stderr.write(
+            `The answer's expectations did not all pass, so the command exits ${report.exitCode}.\n`,
+          );
+        }
+        if (report?.exitCode) process.exitCode = report.exitCode;
       });
     }
   }

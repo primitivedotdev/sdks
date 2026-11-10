@@ -717,6 +717,38 @@ parsers.
 - `keys revoke` takes `--step-up-token` and `--no-browser`. When the
   server asks for approval, it prints the approval link, opens it where it
   can and waits for the one-time token, as the other `keys` commands do.
+- `email-rules test-email-rule` takes `--expect-match` and `--expect-no-match`,
+  each repeatable and taking a comma list of email ids, or `--expect-file`
+  with a JSON `expect` object. They set the request's `expect`, over any in
+  `--body-file` or `--raw-body`. The exit code follows the expectations the
+  answer judged: `expect`, or when none is sent, a saved rule's saved
+  expectations. It is 1 when one failed, or when one is undecided and testing
+  again will not decide it (its email cannot be found or read, or cannot be
+  classified), and 3 when the only undecided ones a later test can decide
+  (not classified yet, or a question unanswered). Without `--json` it prints
+  a report on stderr after the JSON: the summary's warnings, scope warnings,
+  how each condition held and failed, the expectations with why each
+  undecided one is undecided, and for each email that did not match the
+  values its conditions compared. Under `--json` the report is left out, and
+  when the exit code is not 0 the document carries `exit_code` and an
+  `error` whose `code` is `expectations_failed`, `expectations_unresolvable`
+  or `expectations_undecided` (exit 3). Exit 1 also means the request failed,
+  with the API's own error code; `--json` tells the two apart.
+- `email-rules create-email-rule` and `update-email-rule` take
+  `--expectations-file`, a JSON file with the emails the rule must match and
+  must not; on update, a file holding `null` removes them. Without `--json`
+  they print the `expectations_check` result and the version it ran on.
+- Without `--json`, `email-rules create-email-rule`, `update-email-rule` and
+  `get-email-rule-scope` print each scope warning on stderr, and
+  `get-email-rule-scope` says when the rule reads no mail (`reads_nothing`).
+- When `email-rules update-email-rule --if-version` answers 409 because the
+  rule's version moved, a hint names its current version, when the answer
+  gives one, and says to read the rule again with `primitive email-rules
+  get-email-rule <id>` and reapply the change.
+- `primitive emails facts <id>` prints what the classifier read from a
+  received email, one fact per line with its value and confidence. With
+  `--json` it prints the `classification` object, or null when the email has
+  none.
 - Generated commands for the new operations, except `createKey`, `rotateKey`,
   `updateKey` and `revokeCredential`, which the `primitive keys` commands
   cover instead.
