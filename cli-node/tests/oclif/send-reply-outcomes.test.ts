@@ -8,6 +8,10 @@ const mocks = vi.hoisted(() => ({
   getThread: vi.fn(),
   replyToEmail: vi.fn(),
   sendEmail: vi.fn(),
+  getOwnGrant: vi.fn(),
+  whoami: vi.fn(),
+  checkSendability: vi.fn(),
+  getOutboundStatus: vi.fn(),
   followEmailConversation: vi.fn(),
   isSentSignal: vi.fn((_configDir: string, _sentId?: string | null) => false),
 }));
@@ -21,6 +25,10 @@ vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
     getThread: mocks.getThread,
     replyToEmail: mocks.replyToEmail,
     sendEmail: mocks.sendEmail,
+    getOwnGrant: mocks.getOwnGrant,
+    whoami: mocks.whoami,
+    checkSendability: mocks.checkSendability,
+    getOutboundStatus: mocks.getOutboundStatus,
   };
 });
 
@@ -75,6 +83,7 @@ function apiFailure(status: number | undefined, code = "request_failed") {
 }
 
 type RunResult = {
+  error?: string;
   exitCode: number | string | null | undefined;
   stderr: string;
   stdout: string;
@@ -116,6 +125,7 @@ async function run(
       : (thrown as { oclif?: { exit?: number } }).oclif?.exit;
   process.exitCode = previousExitCode;
   return {
+    error: thrown instanceof Error ? thrown.message : undefined,
     exitCode,
     stderr: stderrChunks.join(""),
     stdout: stdoutChunks.join(""),
@@ -129,6 +139,8 @@ const replyArgs = (...extra: string[]) => [
   "Thanks, got it.",
   ...extra,
 ];
+// Every send names the From it uses on stderr, ahead of its outcome.
+const FROM_LINE = "From: support@example.com.\n";
 const sendArgs = (...extra: string[]) => [
   "--to",
   "alice@example.com",
@@ -615,13 +627,82 @@ describe("reply outcomes", () => {
 });
 
 describe("send outcomes", () => {
+  function personLogin(memberAddress: string | null) {
+    mocks.getOwnGrant.mockResolvedValue({
+      data: {
+        data: {
+          grant: { credential_kind: "oauth", mail_scope: "org" },
+        },
+      },
+    });
+    mocks.whoami.mockResolvedValue({
+      data: {
+        data: {
+          member_address: memberAddress
+            ? { address: memberAddress, name: null }
+            : null,
+          member_address_suggestion: null,
+        },
+      },
+    });
+    mocks.checkSendability.mockResolvedValue({
+      data: { data: { allowed: true, summary: "ok" } },
+    });
+    mocks.getOutboundStatus.mockResolvedValue({
+      data: { data: { sendable_domains: ["acme.example"] } },
+    });
+  }
+  const noFromArgs = ["--to", "alice@example.com", "--body", "Hello"];
+
+  it("sends a person's login from their member address and says so", async () => {
+    personLogin("dana@yuuja.example");
+
+    const result = await run("send", noFromArgs);
+
+    expect(result.exitCode).toBeUndefined();
+    expect(mocks.sendEmail.mock.calls[0]?.[0]?.body?.from).toBe(
+      "dana@yuuja.example",
+    );
+    expect(result.stderr).toBe(
+      "From: dana@yuuja.example (your member address; pass --from to send from another address you may use).\nMessage sent (queued for delivery, id sent-1). Do not resend.\n",
+    );
+    const json = await run("send", [...noFromArgs, "--json"]);
+    expect(json.stderr).toBe("");
+    expect(JSON.parse(json.stdout).from).toBe("dana@yuuja.example");
+  });
+
+  it("names the From in the --json envelope when the send throws", async () => {
+    personLogin("dana@yuuja.example");
+    mocks.sendEmail.mockRejectedValue(new TypeError("network down"));
+
+    const result = await run("send", [...noFromArgs, "--json"]);
+
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      outcome: "uncertain",
+      from: "dana@yuuja.example",
+    });
+  });
+
+  it("sends nothing for a person with no member address and asks for --from", async () => {
+    personLogin(null);
+
+    const result = await run("send", noFromArgs);
+
+    expect(result.exitCode, JSON.stringify(result)).toBe(1);
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+    expect(result.error).toContain(
+      "You have no member address of your own to send from, so --from has no default.",
+    );
+    expect(result.error).not.toContain("agent@");
+  });
+
   it("keeps stdout byte-compatible and summarises the send on stderr", async () => {
     const result = await run("send", sendArgs());
 
     expect(result.exitCode).toBeUndefined();
     expect(result.stdout).toBe(`${JSON.stringify(sendResult(), null, 2)}\n`);
     expect(result.stderr).toBe(
-      "Message sent (queued for delivery, id sent-1). Do not resend.\n",
+      `${FROM_LINE}Message sent (queued for delivery, id sent-1). Do not resend.\n`,
     );
   });
 
@@ -633,7 +714,7 @@ describe("send outcomes", () => {
     const result = await run("send", sendArgs("--wait"));
 
     expect(result.stderr).toBe(
-      "Message sent (delivered, id sent-1). Do not resend.\n",
+      `${FROM_LINE}Message sent (delivered, id sent-1). Do not resend.\n`,
     );
   });
 
@@ -750,7 +831,7 @@ describe("send outcomes", () => {
     expect(result.exitCode).toBeUndefined();
     expect(result.stdout).toBe(`${JSON.stringify(replayed, null, 2)}\n`);
     expect(result.stderr).toBe(
-      "Not sent: identical to sent-1 (status delivered). Pass --idempotency-key with a new key to send again.\n",
+      `${FROM_LINE}Not sent: identical to sent-1 (status delivered). Pass --idempotency-key with a new key to send again.\n`,
     );
   });
 
@@ -766,7 +847,7 @@ describe("send outcomes", () => {
 
     expect(result.exitCode).toBeUndefined();
     expect(result.stderr).toBe(
-      "Not sent: idempotency key the-key-on-record was already used for sent-1 (status delivered). A key you pass never expires. Use a different key only for a different message.\n",
+      `${FROM_LINE}Not sent: idempotency key the-key-on-record was already used for sent-1 (status delivered). A key you pass never expires. Use a different key only for a different message.\n`,
     );
   });
 
@@ -836,7 +917,7 @@ describe("send outcomes", () => {
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toBe(`${JSON.stringify(failed, null, 2)}\n`);
     expect(result.stderr).toBe(
-      "Message not sent: the send record (id sent-1) has status agent_failed. Nothing went out; fix the problem before retrying.\n",
+      `${FROM_LINE}Message not sent: the send record (id sent-1) has status agent_failed. Nothing went out; fix the problem before retrying.\n`,
     );
   });
 

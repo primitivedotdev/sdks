@@ -4,9 +4,11 @@ import {
   fsyncSync,
   mkdirSync,
   openSync,
+  readdirSync,
   readFileSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
@@ -23,6 +25,12 @@ type ReceiptData = {
   reply?: { emailId: string; requestId: string };
   idempotency_key?: string;
   send_attempted?: boolean;
+  /**
+   * Set on every receipt this version writes. A receipt without it was
+   * written by a version that defaulted --from to agent@ at the first active
+   * domain, which the legacy check in chat looks for.
+   */
+  from_rule?: "per_credential";
 };
 export type ChatReceipt = { path: string; data: ReceiptData };
 
@@ -145,6 +153,94 @@ export function hasUnfinishedChatReceipt(
   }
 }
 
+/**
+ * How long after it started an earlier version's unfinished chat is still
+ * looked for. Bounds the legacy check in chat so it ends on its own: past a
+ * day, a retry of that exact chat is not expected.
+ */
+export const LEGACY_CHAT_RECEIPT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Whether a chat an earlier version of this CLI started in the last day is
+ * still unfinished: an unfinished receipt without `from_rule`. An unreadable
+ * receipt counts. Read from the saved receipts alone, as a cheap first test
+ * before asking the API anything.
+ */
+export function anyUnfinishedLegacyChatReceipt(
+  configDir: string,
+  now: number = Date.now(),
+): boolean {
+  const directory = join(configDir, "chat-receipts");
+  let names: string[];
+  try {
+    names = readdirSync(directory);
+  } catch {
+    return false;
+  }
+  return names.some((name) => {
+    if (!name.endsWith(".json")) return false;
+    const path = join(directory, name);
+    try {
+      const data = parseReceipt(readFileSync(path, "utf8"));
+      return (
+        !data.completed &&
+        data.from_rule === undefined &&
+        now - Date.parse(data.sent_at) <= LEGACY_CHAT_RECEIPT_WINDOW_MS
+      );
+    } catch {
+      // Unreadable: counted while recently written, so one damaged file
+      // does not keep the check running for good.
+      try {
+        return now - statSync(path).mtimeMs <= LEGACY_CHAT_RECEIPT_WINDOW_MS;
+      } catch {
+        return false;
+      }
+    }
+  });
+}
+
+/**
+ * The unfinished receipt filed under `scope`, or null when there is none or
+ * it is finished: its recorded send, when it started, its idempotency key
+ * when it kept one, and its path. An unreadable receipt counts as unfinished
+ * with nothing recorded.
+ */
+export function loadUnfinishedChatReceipt(
+  configDir: string,
+  scope: string,
+): {
+  path: string;
+  sent: SendMailResult | null;
+  sentAtIso?: string;
+  idempotencyKey?: string;
+} | null {
+  const path = join(
+    configDir,
+    "chat-receipts",
+    `${chatRequestHash(scope)}.json`,
+  );
+  let raw: string;
+  try {
+    raw = readFileSync(path, "utf8");
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "ENOENT"
+      ? null
+      : { path, sent: null };
+  }
+  try {
+    const data = parseReceipt(raw);
+    if (data.completed) return null;
+    return {
+      path,
+      sent: data.sent,
+      sentAtIso: data.sent_at,
+      ...(data.idempotency_key ? { idempotencyKey: data.idempotency_key } : {}),
+    };
+  } catch {
+    return { path, sent: null };
+  }
+}
+
 /** Caller holds the request/parent lock until completion. Unknown POSTs never retry. */
 export function beginChatReceipt(
   configDir: string,
@@ -199,6 +295,7 @@ export function beginChatReceipt(
       sent_at: new Date().toISOString(),
       sent: null,
       completed: false,
+      from_rule: "per_credential",
       ...(options.connected
         ? {
             idempotency_key: `primitive-chat-${randomUUID()}`,

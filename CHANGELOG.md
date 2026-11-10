@@ -346,6 +346,23 @@ Go (package `api`):
   `email.content.download` or `email.content`. The email event schema accepts
   and refuses the same payloads as before.
 
+#### CLI sender default
+
+- `send` and `chat` no longer default `--from` to `agent@` at the first
+  verified domain for a person or an organization-wide key, so a script that
+  sends with such a key and no `--from` now exits 1 and sends nothing.
+  Without `--from`, a connected agent sends as its agent address; your own
+  login sends as your member address (as `account whoami` reports it) when
+  the API would let you send from it to that recipient; and an organization
+  or Function key whose grant names exactly one address, and no whole domain,
+  sends from that address. Otherwise nothing is sent: the command lists the
+  addresses and domains you may send from and asks for `--from`. `send` names
+  the From it used on stderr, and its `--json` envelope carries `from`.
+  When `chat` is run without `--from` within a day of a chat an earlier
+  version left unfinished under its old `agent@` default, and it is the same
+  message, `chat` stops with outcome `uncertain` (exit 4) instead of sending
+  it again, and names that chat's From and idempotency key.
+
 ### Additions
 
 #### Conversation sync helper

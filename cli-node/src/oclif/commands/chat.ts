@@ -3,6 +3,7 @@ import type {
   EmailDetail,
   EmailDetailReply,
   GetEmailResponse,
+  PrimitiveApiClient,
   SearchEmailsResponse,
   SendMailResult,
 } from "@primitivedotdev/api-core";
@@ -22,6 +23,7 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { readAttachmentFiles } from "../attachments.js";
+import type { ResolvedCliAuth } from "../auth.js";
 import {
   type HaltedAutoWorking,
   haltAutoWorking,
@@ -34,11 +36,13 @@ import {
   ChatLockContentionError,
 } from "../chat-lock.js";
 import {
+  anyUnfinishedLegacyChatReceipt,
   beginChatReceipt,
   type ChatReceipt,
   chatCredentialIdentity,
   chatRequestHash,
   hasUnfinishedChatReceipt,
+  loadUnfinishedChatReceipt,
   saveChatReceipt,
   UncertainChatSendError,
 } from "../chat-receipt.js";
@@ -58,6 +62,7 @@ import { currentMailSessionKey } from "../mail-session.js";
 import {
   deriveChatSubject,
   deriveSubject,
+  legacyDefaultFromAddress,
   pickDefaultFromAddress,
 } from "../outbound-defaults.js";
 import { warnIfSharedProfile } from "../profile-session-check.js";
@@ -1390,7 +1395,7 @@ class ChatCommand extends Command {
     }),
     from: Flags.string({
       description:
-        "Sender address. Defaults to the selected connected profile's pinned address, otherwise agent@<your-first-verified-outbound-domain>. A connected profile rejects another sender.",
+        "Sender address. Defaults to the selected connected profile's pinned address; on your own login, to your member address when you may send from it; with a key whose grant names exactly one address, to that address. Otherwise the command asks for --from. A connected profile rejects another sender.",
     }),
     subject: Flags.string({
       description:
@@ -1569,6 +1574,104 @@ class ChatCommand extends Command {
     }
   }
 
+  /**
+   * Earlier versions defaulted --from to agent@ at the first active domain,
+   * and the From is part of a chat's receipt key. Before a new message goes
+   * out under a defaulted From, look for one of their unfinished chats of
+   * this same message from that old default, and stop as uncertain rather
+   * than send it a second time. Only receipts those versions wrote in the
+   * last day are read (see anyUnfinishedLegacyChatReceipt), so the check
+   * ends on its own.
+   */
+  private async stopForLegacyChat(params: {
+    apiClient: PrimitiveApiClient;
+    auth: ResolvedCliAuth;
+    recipient: string;
+    message: string;
+    subjects: string[];
+    inReplyTo: string | undefined;
+    attachments: ReturnType<typeof readAttachmentFiles>;
+    newFrom: string | undefined;
+  }): Promise<void> {
+    const { configDir } = this.config;
+    if (!anyUnfinishedLegacyChatReceipt(configDir)) return;
+    const legacy = await legacyDefaultFromAddress(params.apiClient);
+    if (legacy.kind === "none") return;
+    // A credential refused here sends nothing only when the new default was
+    // refused too (no newFrom); otherwise a saved login can recover its token
+    // before the send, so the refusal is as good as an unanswered lookup.
+    if (legacy.kind === "unauthorized" && params.newFrom === undefined) return;
+    // Uncertain, never not sent: a script must not read the stop as leave
+    // to send the message again.
+    if (legacy.kind !== "addresses")
+      throw new UncertainChatSendError(
+        "Could not check whether a chat an earlier version of this CLI left unfinished is this message, so nothing was sent. Retry once the API answers. Passing --from skips this check and, if an earlier version already sent this message, may send a second copy.",
+      );
+    const account =
+      params.auth.credentials?.org_id ??
+      chatCredentialIdentity(params.auth.apiKey, params.auth.apiBaseUrl);
+    for (const address of legacy.addresses) {
+      // The receipt key is exact; the main path finds a receipt under the
+      // same From itself.
+      if (address === params.newFrom) continue;
+      for (const subject of new Set(params.subjects)) {
+        const body = {
+          from: address,
+          to: params.recipient,
+          subject,
+          body_text: params.message,
+          ...(params.inReplyTo !== undefined
+            ? { in_reply_to: params.inReplyTo }
+            : {}),
+          ...(params.attachments !== undefined
+            ? { attachments: params.attachments }
+            : {}),
+        };
+        const found = loadUnfinishedChatReceipt(
+          configDir,
+          chatRequestHash({
+            api: params.auth.apiBaseUrl,
+            account,
+            from: address,
+            recipient: params.recipient,
+            subject,
+            message: params.message,
+            parent: params.inReplyTo,
+            attachments: params.attachments,
+          }),
+        );
+        if (!found) continue;
+        const startedAt = found.sentAtIso
+          ? Date.parse(found.sentAtIso)
+          : Number.NaN;
+        // The key that send carried: as recorded, or derived as it was when
+        // the receipt started. Left out when neither is known.
+        const key =
+          found.sent?.client_idempotency_key ??
+          found.idempotencyKey ??
+          (Number.isFinite(startedAt)
+            ? deriveSendIdempotencyKey("send", body, startedAt)
+            : undefined);
+        if (key) this.chatProgress.idempotencyKey = key;
+        // A recorded send can itself be indeterminate.
+        const wentOut =
+          found.sent !== null &&
+          successfulSendOutcome(found.sent) !== "uncertain" &&
+          successfulSendOutcome(found.sent) !== "not_sent";
+        const second =
+          params.newFrom !== undefined
+            ? ` Rerunning with --from ${params.newFrom} ${wentOut ? "sends" : "may send"} a second copy.`
+            : "";
+        throw new UncertainChatSendError(
+          wentOut && found.sent
+            ? `A chat with this message to ${params.recipient} from ${address}, started by an earlier version of this CLI, is unfinished: it was sent (id ${found.sent.id}). To resume it and wait for its reply rather than send it again, rerun with --from ${address}.${second}`
+            : `A chat with this message to ${params.recipient} from ${address}, started by an earlier version of this CLI, is unfinished and its outcome is unknown. Check sent history for it before sending again; if it did not go out, remove its receipt ${found.path} and rerun.${second}`,
+          found.sentAtIso ? { sentAtIso: found.sentAtIso } : undefined,
+        );
+      }
+    }
+  }
+
   private reportAwaitingReply(
     context: ChatBaseContext,
     options: {
@@ -1732,7 +1835,9 @@ class ChatCommand extends Command {
 
               const replyFrom =
                 selectedFrom ??
-                (await pickDefaultFromAddress(apiClient, authFailureContext));
+                (await pickDefaultFromAddress(apiClient, authFailureContext, {
+                  to: args.recipient,
+                }));
               progress?.start(
                 `Finding latest inbound email from ${args.recipient}`,
               );
@@ -1761,19 +1866,50 @@ class ChatCommand extends Command {
           parentReply = replyContext.parentReply;
           subject = derivedReplySubject(replyContext.parentReply);
         } else {
-          from =
-            selectedFrom ??
-            (await pickDefaultFromAddress(apiClient, authFailureContext));
           subject = flags.subject ?? deriveChatSubject(message);
+          if (selectedFrom !== undefined) {
+            from = selectedFrom;
+          } else {
+            // A refusal of the new default waits until the legacy check has
+            // run: the credentials it refuses (an organization-wide key, a
+            // person with no member address to send from) are the ones the
+            // old agent@ default served.
+            let defaulted: string | undefined;
+            let refusal: unknown;
+            try {
+              defaulted = await pickDefaultFromAddress(
+                apiClient,
+                authFailureContext,
+                { to: args.recipient },
+              );
+            } catch (error) {
+              refusal = error;
+            }
+            await this.stopForLegacyChat({
+              apiClient,
+              auth,
+              recipient: args.recipient,
+              message,
+              subjects:
+                flags.subject === undefined
+                  ? [subject, deriveSubject(message)]
+                  : [subject],
+              inReplyTo: flags["in-reply-to"],
+              attachments,
+              newFrom: defaulted,
+            });
+            if (refusal !== undefined) throw refusal;
+            from = defaulted as string;
+          }
         }
 
-        const hashFor = (value: string) =>
+        const hashFor = (value: string, fromAddress: string = from) =>
           chatRequestHash({
             api: auth.apiBaseUrl,
             account:
               auth.credentials?.org_id ??
               chatCredentialIdentity(auth.apiKey, auth.apiBaseUrl),
-            from,
+            from: fromAddress,
             recipient: args.recipient,
             subject: value,
             message,
