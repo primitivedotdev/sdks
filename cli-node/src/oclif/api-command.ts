@@ -171,6 +171,10 @@ export function isDashboardOnly(
   return operation.access === "session";
 }
 
+/** Added to the summary, which is what short help prints. */
+export const DASHBOARD_ONLY_SUMMARY =
+  " (dashboard only: the API refuses the CLI here; use the dashboard)";
+
 export const DASHBOARD_ONLY_NOTE =
   "Dashboard only: the API answers this only in a dashboard session, so the CLI, API keys and agents are refused. Open the dashboard to do it.";
 
@@ -1618,7 +1622,7 @@ export function createOperationCommand(
 
     static summary = `${
       operation.summary ?? `${operation.method} ${operation.path}`
-    }${dashboardOnly ? " (dashboard only)" : ""}`;
+    }${dashboardOnly ? DASHBOARD_ONLY_SUMMARY : ""}`;
 
     async run(): Promise<void> {
       const { args, flags } = await this.parse(OperationCommand as never).catch(

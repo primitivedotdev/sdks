@@ -825,7 +825,9 @@ describe("createOperationCommand description", () => {
     const dashboard = createOperationCommand(
       makeOperation({ access: "session", summary: "List every credential" }),
     ) as unknown as { summary: string; description: string };
-    expect(dashboard.summary).toBe("List every credential (dashboard only)");
+    expect(dashboard.summary).toBe(
+      "List every credential (dashboard only: the API refuses the CLI here; use the dashboard)",
+    );
     expect(dashboard.description.startsWith(DASHBOARD_ONLY_NOTE)).toBe(true);
     const cli = createOperationCommand(
       makeOperation({ access: "session_or_cli", summary: "List keys" }),

@@ -734,8 +734,9 @@ parsers.
   `address_warnings` alongside, instead of nesting it under `key`.
 - Generated commands the API answers only in a dashboard session, such as
   `credentials list-credentials` and `credentials list-credential-events`,
-  say so: their summary ends with `(dashboard only)` and their help starts
-  with a note. The operation manifest (`primitive list-operations`, and
+  say so: their summary, which short help prints, ends with `(dashboard
+  only: the API refuses the CLI here; use the dashboard)`, and their full
+  help starts with a note. The operation manifest (`primitive list-operations`, and
   `operationManifest` from `@primitivedotdev/sdk/openapi`) carries each
   operation's `access`, from the spec's `x-primitive-person-only`, or null;
   code that builds manifest objects by hand must now set it.

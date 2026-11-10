@@ -99,6 +99,13 @@ describe("short command help", () => {
     );
   });
 
+  it("says on the first screen when the API answers a command only in a dashboard session", async () => {
+    const help = oneLine(await commandHelp("credentials:list-credentials"));
+    expect(help).toContain(
+      "(dashboard only: the API refuses the CLI here; use the dashboard)",
+    );
+  });
+
   it("keeps the rules the parser enforces on each flag", async () => {
     const help = await commandHelp("reply");
     expect(help).toMatch(
