@@ -609,7 +609,9 @@ describe("generated commands with --json", () => {
   it("says how to page a list: the cap on --limit and where --cursor comes from", () => {
     const flags = (COMMANDS["emails:list"] as unknown as Runnable)
       .flags as Record<string, { description?: string }>;
-    expect(flags.limit?.description).toContain("At most 100 per page");
+    expect(flags.limit?.description).toContain(
+      "The API returns at most 100 per request; a larger --limit, up to 1000, is fetched in pages of 100",
+    );
     expect(flags.limit?.description).toContain("page with --cursor");
     expect(flags.cursor?.description).toContain("meta.cursor");
     expect(flags.cursor?.description).toContain("next cursor: <value>");
@@ -658,6 +660,159 @@ describe("generated commands with --json", () => {
       args: Record<string, unknown>;
     };
     expect(Object.keys(results.args)).toEqual(["email-id"]);
+  });
+
+  it("fetches a --limit above the API's cap in pages and prints one list", async () => {
+    const rows = Array.from({ length: 250 }, (_, i) => ({ id: `e${i}` }));
+    responder = (url) => {
+      const offset = Number(url.searchParams.get("cursor") ?? "0");
+      const limit = Number(url.searchParams.get("limit"));
+      const page = rows.slice(offset, offset + limit);
+      const next = offset + page.length;
+      return jsonResponse(200, {
+        success: true,
+        data: page,
+        meta: { cursor: next < rows.length ? String(next) : null, limit },
+      });
+    };
+    const result = await runMerged("emails:list", [
+      "--limit",
+      "200",
+      "--json",
+      "--envelope",
+    ]);
+    expect(result.exitCode, result.merged).toBe(0);
+    expect(
+      fetchCalls.map((call) => [
+        call.url.searchParams.get("limit"),
+        call.url.searchParams.get("cursor"),
+      ]),
+    ).toEqual([
+      ["100", null],
+      ["100", "100"],
+    ]);
+    const document = parseOne(result.merged) as {
+      data: Array<{ id: string }>;
+      meta: { cursor: string | null; limit: number };
+    };
+    expect(document.data.map((row) => row.id)).toEqual(
+      rows.slice(0, 200).map((row) => row.id),
+    );
+    expect(document.meta).toMatchObject({ cursor: "200", limit: 200 });
+
+    // A shorter last page asks only for what is left, and stops at the end.
+    fetchCalls = [];
+    const rest = await runMerged("emails:list", [
+      "--limit",
+      "500",
+      "--cursor",
+      "120",
+      "--json",
+    ]);
+    expect(rest.exitCode, rest.merged).toBe(0);
+    expect(
+      fetchCalls.map((call) => [
+        call.url.searchParams.get("limit"),
+        call.url.searchParams.get("cursor"),
+      ]),
+    ).toEqual([
+      ["100", "120"],
+      ["100", "220"],
+    ]);
+    expect((parseOne(rest.merged) as unknown[]).length).toBe(130);
+
+    // At or under the cap it is one request, as before.
+    fetchCalls = [];
+    await runMerged("emails:list", ["--limit", "100", "--json"]);
+    expect(fetchCalls).toHaveLength(1);
+  });
+
+  it("keeps paging past a short or empty page until the cursor is null", async () => {
+    const pages: Record<string, { data: unknown[]; cursor: string | null }> = {
+      start: { data: [{ id: "a" }], cursor: "p2" },
+      p2: { data: [], cursor: "p3" },
+      p3: { data: [{ id: "b" }, { id: "c" }], cursor: null },
+    };
+    responder = (url) => {
+      const page = pages[url.searchParams.get("cursor") ?? "start"];
+      return jsonResponse(200, {
+        success: true,
+        data: page?.data ?? [],
+        meta: { cursor: page?.cursor ?? null },
+      });
+    };
+    const result = await runMerged("emails:search", [
+      "--limit",
+      "300",
+      "--json",
+      "--envelope",
+    ]);
+    expect(result.exitCode, result.merged).toBe(0);
+    expect(
+      fetchCalls.map((call) => call.url.searchParams.get("cursor")),
+    ).toEqual([null, "p2", "p3"]);
+    const document = parseOne(result.merged) as {
+      data: Array<{ id: string }>;
+      meta: { cursor: string | null };
+    };
+    expect(document.data.map((row) => row.id)).toEqual(["a", "b", "c"]);
+    expect(document.meta.cursor).toBeNull();
+  });
+
+  it("pages sent list, whose --wait defaults to 0, and keeps --wait and --since to one page", async () => {
+    responder = (url) =>
+      jsonResponse(200, {
+        success: true,
+        data: Array.from(
+          { length: Number(url.searchParams.get("limit")) },
+          (_, i) => ({ id: `s${i}` }),
+        ),
+        meta: { cursor: url.searchParams.get("cursor") ? null : "next" },
+      });
+    const sent = await runMerged("sent:list", ["--limit", "150", "--json"]);
+    expect(sent.exitCode, sent.merged).toBe(0);
+    expect(
+      fetchCalls.map((call) => call.url.searchParams.get("limit")),
+    ).toEqual(["100", "50"]);
+    expect((parseOne(sent.merged) as unknown[]).length).toBe(150);
+    for (const argv of [
+      ["--wait", "30", "--since", "2026-11-10T00:00:00Z"],
+      ["--since", "2026-11-10T00:00:00Z"],
+    ]) {
+      fetchCalls = [];
+      const refused = await runMerged("emails:list", [
+        ...argv,
+        "--limit",
+        "150",
+        "--json",
+      ]);
+      expect(refused.exitCode).toBe(2);
+      expect(fetchCalls).toHaveLength(0);
+      expect(
+        (parseOne(refused.merged) as { error: { message: string } }).error
+          .message,
+      ).toContain("takes a --limit of at most 100");
+    }
+  });
+
+  it("stops paging at the first error and prints it", async () => {
+    let calls = 0;
+    responder = () => {
+      calls += 1;
+      return calls === 1
+        ? jsonResponse(200, {
+            success: true,
+            data: Array.from({ length: 100 }, (_, i) => ({ id: `e${i}` })),
+            meta: { cursor: "100" },
+          })
+        : serverError(new URL(API_BASE_URL), undefined);
+    };
+    const result = await runMerged("emails:list", ["--limit", "300", "--json"]);
+    expect(result.exitCode).not.toBe(0);
+    expect(calls).toBe(2);
+    expect(parseOne(result.merged)).toMatchObject({
+      error: expect.any(Object),
+    });
   });
 
   it("pages memories search: the cursor on stderr, or in the envelope", async () => {

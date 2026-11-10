@@ -457,6 +457,11 @@ parsers.
   unexpected argument for that command, and a mistyped subcommand as an
   unknown command, instead of as an unknown command with the word joined
   into its name. Under `--json` the error is one JSON document on stdout.
+- On a list that pages with `meta.cursor`, a `--limit` above the API's
+  per-request cap (100 for `emails list`), up to 1000, is fetched in pages
+  and printed as one list, with the last page's cursor in `meta.cursor`.
+  With a long-poll `--wait` or a forward `--since`, which read one page,
+  `--limit` stays at the cap.
 - Generated commands for the new operations, except `createKey`, `rotateKey`,
   `updateKey` and `revokeCredential`, which the `primitive keys` commands
   cover instead.
