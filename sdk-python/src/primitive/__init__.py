@@ -145,6 +145,7 @@ from .types import (
     WebhookEvent,
     WebhookVersion,
 )
+from .understanding import matched_rules
 from .validation import (
     ValidationFailure,
     ValidationResult,
@@ -328,6 +329,7 @@ __all__ = [
     "is_known_webhook_event_type",
     "is_raw_included",
     "is_trusted_sender",
+    "matched_rules",
     "normalize_received_email",
     "parse_header_address",
     "parse_json_body",

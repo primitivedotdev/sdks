@@ -417,6 +417,13 @@ parsers.
   confidence. Rule-granted deliveries also list the matching `rules`. The
   webhook schemas, the Node, Python and Go types and the shared fixtures cover
   the field.
+- `matchedRules(email, ruleId?)` in Node, `matched_rules(email, rule_id=None)`
+  in Python and `EmailAnalysis.MatchedRules()` in Go return the rules that
+  granted a delivery, typed, from either the received email or the event.
+  They return nothing when no rule granted the delivery and skip entries
+  without a rule id. Given a rule id (`MatchedRulesFor(ruleID)` in Go) they
+  keep only that rule's entries. Node also exports the helper and the
+  understanding types from `@primitivedotdev/sdk/api`.
 
 #### Webhook validation errors
 
