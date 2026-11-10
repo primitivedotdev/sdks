@@ -73,12 +73,13 @@ class EmailsWaitCommand extends Command {
   network error during the wait is retried with backoff until --timeout,
   with one note on stderr per retry.`;
 
-  static summary = "Wait for matching inbound emails";
+  static summary =
+    "Wait for matching inbound emails. By default only mail that arrives after it starts counts; --since 15m or --include-existing also matches earlier mail";
 
   static examples = [
+    "<%= config.bin %> emails wait --to test@example.com --subject invoice --since 15m",
     "<%= config.bin %> emails wait --reply-to-sent-email-id <sent-id> --from peer@example.com",
     "<%= config.bin %> emails wait --to test@example.com",
-    "<%= config.bin %> emails wait --to test@example.com --subject invoice --since 15m",
     "<%= config.bin %> emails wait --subject verify --number 5 --timeout 120",
     "<%= config.bin %> emails wait --q 'domain:example.com' --table",
     "<%= config.bin %> emails wait --from peer@example.com --number 3 --json",
@@ -156,6 +157,7 @@ class EmailsWaitCommand extends Command {
         "Filter to inbound emails that are threaded replies to a specific outbound send (UUID from a /v1/send-mail response). Combine with --to and --since for the strictest version of the wait-for-reply pattern.",
     }),
     since: Flags.string({
+      summary: "Include mail since: a timestamp, or a duration ago like 15m",
       description: `Match emails received on or after this time, including ones that arrived before the wait started: ${SINCE_VALUE_HELP}. Without --since or --include-existing, only mail received after the wait starts counts, except in a connected exact-parent wait`,
     }),
     "spam-score-gte": Flags.integer({

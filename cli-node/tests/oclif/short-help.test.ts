@@ -86,6 +86,19 @@ describe("short command help", () => {
       expect(line.length).toBeLessThanOrEqual(100);
   });
 
+  it("says on emails wait's first screen that earlier mail needs --since", async () => {
+    const help = oneLine(await commandHelp("emails:wait"));
+    expect(help).toContain(
+      "By default only mail that arrives after it starts counts; --since 15m or --include-existing also matches earlier mail",
+    );
+    expect(help).toContain(
+      "--since=<value> Include mail since: a timestamp, or a duration ago like 15m",
+    );
+    expect(help).toContain(
+      "$ primitive emails wait --to test@example.com --subject invoice --since 15m",
+    );
+  });
+
   it("keeps the rules the parser enforces on each flag", async () => {
     const help = await commandHelp("reply");
     expect(help).toMatch(
