@@ -65,6 +65,16 @@ import {
 } from "../../src/oclif/pending-mail.js";
 import { readWorkingClaim } from "../../src/oclif/working-claim.js";
 
+// undici links each copy of a Request to its parent's abort signal through a
+// WeakRef, so a copy nothing else holds can be garbage-collected before the
+// deadline fires, and its abort then never arrives: the stalled request hangs
+// until the test times out. The fixtures below keep every request in that
+// chain (the client's and their own copy) here until the test ends.
+const heldRequests: Request[] = [];
+afterEach(() => {
+  heldRequests.length = 0;
+});
+
 const CLI_ROOT = resolve(import.meta.dirname, "../..");
 const emailId = "22222222-2222-4222-8222-222222222222";
 const otherId = "77777777-7777-4777-8777-777777777777";
@@ -511,6 +521,10 @@ describe("email brief", () => {
           const path = new URL(request.url).pathname;
           if (path === claimPath)
             return new Promise<Response>((_resolve, reject) => {
+              heldRequests.push(
+                request,
+                ...(input instanceof Request ? [input] : []),
+              );
               request.signal.addEventListener("abort", () =>
                 reject(request.signal.reason),
               );
