@@ -838,7 +838,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
       expect(JSON.parse(result.stdout)).toEqual(data);
       expect(stderrLines(result)).toEqual([
         "Warning: testEmailRule succeeded but its report could not be built (bad answer). The JSON above is the full answer; read it rather than the exit code.",
-        "The answer's expectations did not all pass, so the command exits 1.",
+        "The answer's expectations were not all shown to pass, so the command exits 1.",
       ]);
       const json = await run("email-rules:test-email-rule", [
         "--rule-id",
@@ -852,7 +852,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
         error: {
           code: "expectations_not_passed",
           message:
-            "The answer's expectations did not all pass; read their result in the answer.",
+            "The answer's expectations were not all shown to pass; read their result in the answer.",
         },
         exit_code: 1,
         warnings: [stderrLines(result)[0]],
@@ -1412,6 +1412,19 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
         expect(await exitFor(failed, false)).toBe(0);
         // No check, though the write sent expectations: not checked, so test the rule.
         expect(await exitFor(written, true)).toBe(3);
+        // Read as the report reads it, lists first, whatever passed says.
+        expect(
+          await exitFor(
+            check({ passed: true, failed: [B], undecided: [] }),
+            true,
+          ),
+        ).toBe(1);
+        expect(
+          await exitFor(
+            check({ passed: true, failed: [], undecided: [D] }),
+            true,
+          ),
+        ).toBe(3);
         expect(
           await exitFor(
             check({ passed: true, failed: [], undecided: [] }),
@@ -1571,6 +1584,27 @@ describe("email-rules get-email-rule-scope", () => {
       "Scope warning: typo.example is none of the organization's domains.",
       "This rule reads no mail now: it cannot run as its author, or everything its scope names is at none of the organization's domains or no longer read.",
     ]);
+  });
+
+  it("names a warning whose message is not text by its name and reason, without breaking the report", async () => {
+    answer({
+      ...scope,
+      reads_nothing: false,
+      scope_warnings: [
+        {
+          name: "typo.example",
+          kind: "domain",
+          reason: "unknown_domain",
+          message: 42,
+        },
+      ],
+    });
+    const result = await run("email-rules:get-email-rule-scope", [RULE]);
+    expect(result.exitCode).toBe(0);
+    expect(stderrLines(result)).toEqual([
+      "Scope warning: typo.example (unknown_domain)",
+    ]);
+    expect(result.stderr).not.toContain("could not be built");
   });
 
   it("prints nothing extra when it reads mail, or under --json", async () => {

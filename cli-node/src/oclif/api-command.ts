@@ -2181,7 +2181,7 @@ export function createOperationCommand(
               error: {
                 code: "expectations_not_passed",
                 message:
-                  "The answer's expectations did not all pass; read their result in the answer.",
+                  "The answer's expectations were not all shown to pass; read their result in the answer.",
               },
             };
         }
@@ -2210,7 +2210,7 @@ export function createOperationCommand(
         }
         if (reportError !== undefined && report?.exitCode && !jsonOutput) {
           process.stderr.write(
-            `The answer's expectations did not all pass, so the command exits ${report.exitCode}.\n`,
+            `The answer's expectations were not all shown to pass, so the command exits ${report.exitCode}.\n`,
           );
         }
         if (report?.exitCode) process.exitCode = report.exitCode;

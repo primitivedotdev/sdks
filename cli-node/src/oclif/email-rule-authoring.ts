@@ -733,12 +733,12 @@ function writtenFallbackExitCode(
   request: { body: unknown; flags: Record<string, unknown> },
 ): number | undefined {
   if (request.flags[FAIL_ON_EXPECTATIONS_FLAG] !== true) return undefined;
-  const check = isRecord(data) ? data.expectations_check : undefined;
-  if (isRecord(check))
-    return check.passed !== true ? EXIT_EXPECTATION_FAILED : undefined;
-  return isRecord(request.body) && isRecord(request.body.expectations)
-    ? EXIT_EXPECTATION_UNDECIDED
-    : undefined;
+  // The same reading as the report's, so the two never disagree.
+  return writtenExpectationsOutcome(
+    isRecord(data) ? data.expectations_check : undefined,
+    isRecord(request.body) && isRecord(request.body.expectations),
+    "<rule-id>",
+  ).exitCode;
 }
 
 // get-email-rule-scope
