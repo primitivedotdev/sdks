@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { createInterface } from "node:readline/promises";
 import { Args, Command, Flags } from "@oclif/core";
 import {
   type CredentialsCreateKeyInput,
@@ -20,12 +19,25 @@ import {
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   API_BASE_URL_FLAG_DESCRIPTION,
-  extractErrorCode,
   extractErrorPayload,
   surfaceUnauthorizedHint,
   writeErrorWithHints,
 } from "../api-command.js";
-import { openBrowser } from "../browser-login-prompt.js";
+import {
+  type ApprovalIo,
+  approveThenRerunHint,
+  BROWSER_FLAG_DESCRIPTION,
+  promptLine,
+  STEP_UP_HEADER,
+  STEP_UP_TOKEN_FLAG_DESCRIPTION,
+  stepUpUrlOf,
+  terminalApprovalIo,
+  withApproval,
+} from "../step-up-approval.js";
+
+// The approval helpers moved to step-up-approval.ts; re-exported for callers
+// that imported them from here.
+export { type ApprovalIo, stepUpUrlOf, withApproval };
 
 // Organization API keys from the CLI, for a person signed in with
 // `primitive login`. Listing and reading show metadata only, never a secret.
@@ -42,7 +54,6 @@ export const STORE_SECRET_NOTICE =
 export const HELD_REQUEST_NOTICE =
   "A request already held open with this key, such as a long poll or a wait, ends once because the key's permissions changed. Run it again to use the new permissions.";
 
-const STEP_UP_HEADER = "Primitive-Step-Up";
 const LIST_PAGE_LIMIT = 50;
 
 const API_KEY_FLAG = Flags.string({
@@ -60,14 +71,12 @@ const API_BASE_URL_FLAG = Flags.string({
 
 const APPROVAL_FLAGS = {
   "step-up-token": Flags.string({
-    description:
-      "One-time token from the approval page, for a request you already approved in the browser. Sent in the Primitive-Step-Up header.",
+    description: STEP_UP_TOKEN_FLAG_DESCRIPTION,
   }),
   browser: Flags.boolean({
     allowNo: true,
     default: true,
-    description:
-      "Open the approval page in your browser. Use --no-browser to only print its link.",
+    description: BROWSER_FLAG_DESCRIPTION,
   }),
 };
 
@@ -112,74 +121,16 @@ async function call<T>(request: Promise<SdkResult>): Promise<Outcome<T>> {
   }
 }
 
-/** The approval link of a `step_up_required` refusal, if that is what it is. */
-export function stepUpUrlOf(payload: unknown): string | undefined {
-  if (extractErrorCode(payload) !== "step_up_required") return undefined;
-  if (!payload || typeof payload !== "object") return undefined;
-  const details = (payload as { details?: unknown }).details;
-  if (!details || typeof details !== "object") return undefined;
-  const url = (details as { step_up_url?: unknown }).step_up_url;
-  return typeof url === "string" && url.length > 0 ? url : undefined;
-}
-
-export type ApprovalIo = {
-  stepUpToken?: string;
-  interactive: boolean;
-  openBrowser: boolean;
-  open: (url: string) => void;
-  prompt: (question: string) => Promise<string>;
-  write: (text: string) => void;
-};
-
-/**
- * Send a request, and when the server asks the person to approve it, show
- * the approval link, open it where possible, wait for the token the page
- * shows, and send the request once more with it. Without a terminal to wait
- * in, the refusal is returned with its link, to rerun with --step-up-token.
- */
-export async function withApproval<T>(
-  attempt: (stepUpToken: string | undefined) => Promise<Outcome<T>>,
-  io: ApprovalIo,
-): Promise<Outcome<T>> {
-  const first = await attempt(io.stepUpToken);
-  if (first.ok) return first;
-  const stepUpUrl = stepUpUrlOf(first.payload);
-  if (!stepUpUrl || io.stepUpToken || !io.interactive) {
-    return { ...first, ...(stepUpUrl ? { stepUpUrl } : {}) };
-  }
-  io.write(`Approve this request in your browser: ${stepUpUrl}\n`);
-  if (io.openBrowser) io.open(stepUpUrl);
-  io.write(
-    "After you confirm, the page shows a one-time token. Paste it here to finish.\n",
-  );
-  const token = (await io.prompt("Token: ")).trim();
-  if (!token) return { ...first, stepUpUrl };
-  return attempt(token);
-}
-
-async function promptLine(question: string): Promise<string> {
-  const rl = createInterface({ input: process.stdin, output: process.stderr });
-  try {
-    return await rl.question(question);
-  } finally {
-    rl.close();
-  }
-}
-
 function approvalIo(flags: {
   "step-up-token"?: string;
   browser: boolean;
   json?: boolean;
 }): ApprovalIo {
-  return {
+  return terminalApprovalIo({
     stepUpToken: flags["step-up-token"],
-    interactive:
-      !flags.json && Boolean(process.stdin.isTTY && process.stderr.isTTY),
     openBrowser: flags.browser,
-    open: openBrowser,
-    prompt: promptLine,
-    write: (text) => process.stderr.write(text),
-  };
+    json: flags.json,
+  });
 }
 
 /** Comma-separated and repeated values, trimmed, without duplicates. */
@@ -527,9 +478,7 @@ function reportKeysError(
     writeErrorWithHints(outcome.payload);
   }
   if (outcome.stepUpUrl) {
-    process.stderr.write(
-      `Approve this request in your browser: ${outcome.stepUpUrl}\nThen run the same command again with --step-up-token <token from the page>.\n`,
-    );
+    process.stderr.write(approveThenRerunHint(outcome.stepUpUrl));
   }
   surfaceUnauthorizedHint({
     auth: auth.auth,
