@@ -29,12 +29,13 @@ export function commandNotFoundMessage(
   for (let end = parts.length - 1; end > 0; end -= 1) {
     const known = parts.slice(0, end).join(":");
     const command = lookup.find(known);
-    if (!command) continue;
+    const topic = lookup.hasSubcommands(known);
+    if (!command && !topic) continue;
     const shown = `primitive ${parts.slice(0, end).join(" ")}`;
     const rest = parts.slice(end).join(" ");
-    // A command that is also a topic: the word was most likely a mistyped
-    // subcommand.
-    if (lookup.hasSubcommands(known)) {
+    // A topic, or a command that is also one: the word was most likely a
+    // mistyped subcommand.
+    if (topic || !command) {
       return {
         code: "command_not_found",
         message: `Unknown command "${typed}". Run "${shown} --help" to see the commands under it.`,

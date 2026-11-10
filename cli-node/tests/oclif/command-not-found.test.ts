@@ -35,12 +35,21 @@ describe("command not found", () => {
     });
   });
 
-  it("treats a word after a command with subcommands as a mistyped subcommand", () => {
+  it("treats a word after a topic or a command with subcommands as a mistyped subcommand", () => {
     expect(commandNotFoundMessage("network:lst", lookup)).toEqual({
       code: "command_not_found",
       message:
         'Unknown command "primitive network lst". Run "primitive network --help" to see the commands under it.',
     });
+    // `emails` is a topic with no command of its own.
+    expect(commandNotFoundMessage("emails:lst", lookup)).toEqual({
+      code: "command_not_found",
+      message:
+        'Unknown command "primitive emails lst". Run "primitive emails --help" to see the commands under it.',
+    });
+    expect(commandNotFoundMessage("emails:get-it:now", lookup).message).toBe(
+      'Unknown command "primitive emails get-it now". Run "primitive emails --help" to see the commands under it.',
+    );
   });
 
   it("shows the spaced form for an id typed with colons on a command that takes an argument", () => {
