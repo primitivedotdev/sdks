@@ -10,6 +10,7 @@ import {
   checkSendability,
   getOutboundStatus,
   getOwnGrant,
+  getSendFrom,
   listDomains,
   whoami,
 } from "@primitivedotdev/api-core";
@@ -338,7 +339,9 @@ function unauthorizedRefusal(
 }
 
 /**
- * The From a send uses when --from is left out, by credential:
+ * The From a send uses when --from is left out. The API answers it where it
+ * can (GET /v1/whoami/send-from); against an API that does not, it is worked
+ * out here the same way, by credential:
  * - a connected agent sends as its own agent address;
  * - a person (a CLI login or a session) sends as their own member address,
  *   when the API would let them send from it to this recipient;
@@ -367,6 +370,8 @@ export async function resolveDefaultFrom(
       { exit: 1 },
     );
   }
+  const answered = await sendFromAnswer(apiClient, authFailureContext);
+  if (answered) return answered;
   const own = await getOwnGrant({
     client: apiClient.client,
     responseStyle: "fields",
@@ -446,6 +451,71 @@ export async function resolveDefaultFrom(
         : "This credential's grant does not name one address to send from, so --from has no default.",
     isKey ? {} : { example: false },
   );
+}
+
+const SEND_FROM_SOURCES: Record<string, DefaultFromSource> = {
+  agent_address: "agent",
+  member_address: "member_address",
+  granted_address: "granted_address",
+};
+
+/**
+ * The default From as the API answers it (GET /v1/whoami/send-from), which
+ * judges every address by the send's own rules: the default, or a refusal
+ * that lists what the credential may send from. Undefined when the API does
+ * not answer it (an older API, or any failure but an unaccepted credential),
+ * so the caller works the default out as before.
+ */
+async function sendFromAnswer(
+  apiClient: PrimitiveApiClient,
+  authFailureContext: AuthFailureContext,
+): Promise<DefaultFrom | undefined> {
+  let result: Awaited<ReturnType<typeof getSendFrom>>;
+  try {
+    result = await getSendFrom({
+      client: apiClient.client,
+      responseStyle: "fields",
+    });
+  } catch {
+    return undefined;
+  }
+  if (result.error) {
+    const errorPayload = extractErrorPayload(result.error);
+    if (extractErrorCode(errorPayload) === API_ERROR_CODES.unauthorized)
+      throw unauthorizedRefusal(errorPayload, authFailureContext);
+    return undefined;
+  }
+  const data = result.data?.data;
+  if (!data || typeof data !== "object") return undefined;
+  const source =
+    typeof data.default_source === "string"
+      ? SEND_FROM_SOURCES[data.default_source]
+      : undefined;
+  if (typeof data.default_from === "string" && data.default_from && source)
+    return { address: data.default_from, source };
+  const addresses = Array.isArray(data.addresses)
+    ? data.addresses
+        .map((entry) => entry?.address)
+        .filter((address): address is string => typeof address === "string")
+    : [];
+  const domains = Array.isArray(data.domains)
+    ? data.domains.filter(
+        (domain): domain is string => typeof domain === "string",
+      )
+    : [];
+  const reason =
+    typeof data.reason === "string" && data.reason.trim()
+      ? data.reason.trim().replace(/\.?$/, ".")
+      : "This credential has no single address to send from.";
+  const parts = [`${reason} --from has no default.`];
+  if (addresses.length > 0)
+    parts.push(`Addresses you may send from: ${addresses.join(", ")}.`);
+  if (domains.length > 0)
+    parts.push(
+      `${addresses.length > 0 ? "Also any" : "Any"} address at: ${domains.join(", ")}.`,
+    );
+  parts.push("Pass the address to send from with --from <address>.");
+  throw new Errors.CLIError(parts.join(" "), { exit: 1 });
 }
 
 /** The address of resolveDefaultFrom. */
