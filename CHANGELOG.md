@@ -26,6 +26,8 @@ What `3.0.0-preview.4` (`3.0.0rc4`) changes from `3.0.0-preview.3`:
   signing secret; and new fields on email rules, endpoints, credentials and
   deliveries. A webhook made as a person's own, or by a key limited to some
   mailboxes, an app or an agent delegate, signs with its own secret.
+  Accepting a rule request needs `mail:share_own`, which the Node
+  `PERMISSIONS` list gains.
 - Python and Go: the Email Rules types are renamed after the API's named
   components. The renames are listed under breaking changes.
 - CLI email rule authoring: `test-email-rule` takes `--expect-match`,
