@@ -479,7 +479,7 @@ async function claimHint(apiClient: PrimitiveApiClient): Promise<string> {
     if (me.error || me.data?.data?.member_address) return "";
     const suggestion = me.data?.data?.member_address_suggestion;
     return suggestion
-      ? ` To claim one, run \`primitive account provision-member-address --address ${suggestion}\`.`
+      ? `You have no member address of your own; to claim one, run \`primitive account provision-member-address --address ${suggestion}\`.`
       : "";
   } catch {
     return "";
@@ -576,8 +576,9 @@ async function sendFromAnswer(
       `${addresses.length > 0 ? "Also any" : "Any"} address at: ${domains.join(", ")}.`,
     );
   if (addresses.length > 0 || domains.length > 0)
-    parts.push("Pass the one to use with --from <address>.");
-  else parts.push((await claimHint(apiClient)).trim());
+    parts.push("Pass the address to use with --from <address>.");
+  // Only a person without a member address gets a suggestion to claim one.
+  parts.push(await claimHint(apiClient));
   throw new Errors.CLIError(parts.filter((part) => part).join(" "), {
     exit: 1,
   });

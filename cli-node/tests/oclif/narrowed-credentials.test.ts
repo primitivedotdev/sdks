@@ -549,7 +549,7 @@ describe("resolveDefaultFrom from the API's own answer", () => {
       }),
     }).client;
     await expect(resolveDefaultFrom(client, authContext)).rejects.toThrow(
-      "This credential may send from more than one address, so there is no default From. Name the address to send from. Addresses you may send from: a@acme.example, b@acme.example. Also any address at: acme.example. Pass the one to use with --from <address>.",
+      "This credential may send from more than one address, so there is no default From. Name the address to send from. Addresses you may send from: a@acme.example, b@acme.example. Also any address at: acme.example. Pass the address to use with --from <address>.",
     );
   });
 
@@ -569,7 +569,7 @@ describe("resolveDefaultFrom from the API's own answer", () => {
         }),
     });
     await expect(resolveDefaultFrom(client, authContext)).rejects.toThrow(
-      /^You have no member address of your own, so there is no default From\. Claim a member address\. To claim one, run `primitive account provision-member-address --address dana@acme\.example`\.$/,
+      /^You have no member address of your own, so there is no default From\. Claim a member address\. You have no member address of your own; to claim one, run `primitive account provision-member-address --address dana@acme\.example`\.$/,
     );
   });
 
