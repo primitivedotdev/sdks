@@ -278,6 +278,11 @@ export function createEmailsGetCommand(base: typeof Command): typeof Command {
   const baseFlags = (base as unknown as { flags: Record<string, unknown> })
     .flags;
   class EmailsGetCommand extends base {
+    // The id argument of the generated command, restated: without it here,
+    // `emails get <id>` is refused as an unexpected argument.
+    static args = (base as unknown as { args?: Record<string, unknown> })
+      .args as never;
+
     static description =
       `${base.description ?? ""}\n\nAdd --context for a trusted envelope followed by the fenced, untrusted sender text: the recommended way for an agent to read one received email. Add --compact for the smallest read: the server's readable text of the email, with links as [n] markers and quoted history, layout and the HTML body left out.`;
     static flags = {
@@ -323,7 +328,7 @@ export function createEmailsGetCommand(base: typeof Command): typeof Command {
           "Note: --brief is now --context; ran it as --context.\n",
         );
       }
-      const { flags } = await this.parse(EmailsGetCommand as never).catch(
+      const { args, flags } = await this.parse(EmailsGetCommand as never).catch(
         (error: unknown) => {
           if (
             error instanceof Error &&
@@ -345,8 +350,23 @@ export function createEmailsGetCommand(base: typeof Command): typeof Command {
         compact?: boolean;
         "no-signal"?: boolean;
       };
+      const idArgument = (args as { id?: unknown }).id;
+      if (
+        typeof parsed.id === "string" &&
+        typeof idArgument === "string" &&
+        parsed.id !== idArgument
+      )
+        throw new Errors.CLIError(
+          "Give the id once: as the first argument or with --id, not both with different values.",
+          { exit: 2 },
+        );
+      if (typeof parsed.id !== "string" && typeof idArgument === "string")
+        parsed.id = idArgument;
       if (typeof parsed.id !== "string")
-        throw new Errors.CLIError("Missing required flag --id.");
+        throw new Errors.CLIError(
+          "Missing the id: pass it as the first argument or with --id.",
+          { exit: 2 },
+        );
       // The API answers a malformed id with a misleading scope error, so
       // reject it here before any request is made.
       if (!EMAIL_ID.test(parsed.id))

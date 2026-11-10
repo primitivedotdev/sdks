@@ -450,6 +450,13 @@ parsers.
   ago, such as `15m` or `2h`. `emails wait` says in its help, and in its
   timeout message, that without `--since` or `--include-existing` it counts
   only mail received after it started.
+- A generated command with exactly one path parameter takes it as its first
+  argument too, so `primitive emails get <id>` and `primitive email-rules
+  get-email-rule <id>` work; the flag (`--id`, `--email-id`) keeps working.
+- A word after a command that takes no arguments is reported as an
+  unexpected argument for that command, and a mistyped subcommand as an
+  unknown command, instead of as an unknown command with the word joined
+  into its name. Under `--json` the error is one JSON document on stdout.
 - Generated commands for the new operations, except `createKey`, `rotateKey`,
   `updateKey` and `revokeCredential`, which the `primitive keys` commands
   cover instead.

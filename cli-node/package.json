@@ -42,6 +42,9 @@
       "identifier": "COMMANDS"
     },
     "dirname": "primitive",
+    "hooks": {
+      "command_not_found": "./dist/oclif/command-not-found.js"
+    },
     "plugins": [
       "@oclif/plugin-help",
       "@oclif/plugin-autocomplete",
