@@ -772,9 +772,13 @@ type AcceptEmailRuleRequestResultRule struct {
 	State AcceptEmailRuleRequestResultRuleState `json:"state"`
 	// Do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares
 	// what it matches.
-	Kind           OptAcceptEmailRuleRequestResultRuleKind `json:"kind"`
-	CurrentVersion NilInt                                  `json:"current_version"`
-	AuthorUserID   uuid.UUID                               `json:"author_user_id"`
+	Kind OptAcceptEmailRuleRequestResultRuleKind `json:"kind"`
+	// Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.
+	EvaluationScope OptAcceptEmailRuleRequestResultRuleEvaluationScope `json:"evaluation_scope"`
+	// What a selected rule names; null for any other scope.
+	ScopeSelection OptNilAcceptEmailRuleRequestResultRuleScopeSelection `json:"scope_selection"`
+	CurrentVersion NilInt                                               `json:"current_version"`
+	AuthorUserID   uuid.UUID                                            `json:"author_user_id"`
 	// Whether the caller wrote the rule (under their current membership). Only the author edits a rule;
 	// anyone else who can see it may only disable or delete it, and while it is shared only if they
 	// manage members.
@@ -802,6 +806,16 @@ func (s *AcceptEmailRuleRequestResultRule) GetState() AcceptEmailRuleRequestResu
 // GetKind returns the value of Kind.
 func (s *AcceptEmailRuleRequestResultRule) GetKind() OptAcceptEmailRuleRequestResultRuleKind {
 	return s.Kind
+}
+
+// GetEvaluationScope returns the value of EvaluationScope.
+func (s *AcceptEmailRuleRequestResultRule) GetEvaluationScope() OptAcceptEmailRuleRequestResultRuleEvaluationScope {
+	return s.EvaluationScope
+}
+
+// GetScopeSelection returns the value of ScopeSelection.
+func (s *AcceptEmailRuleRequestResultRule) GetScopeSelection() OptNilAcceptEmailRuleRequestResultRuleScopeSelection {
+	return s.ScopeSelection
 }
 
 // GetCurrentVersion returns the value of CurrentVersion.
@@ -852,6 +866,16 @@ func (s *AcceptEmailRuleRequestResultRule) SetState(val AcceptEmailRuleRequestRe
 // SetKind sets the value of Kind.
 func (s *AcceptEmailRuleRequestResultRule) SetKind(val OptAcceptEmailRuleRequestResultRuleKind) {
 	s.Kind = val
+}
+
+// SetEvaluationScope sets the value of EvaluationScope.
+func (s *AcceptEmailRuleRequestResultRule) SetEvaluationScope(val OptAcceptEmailRuleRequestResultRuleEvaluationScope) {
+	s.EvaluationScope = val
+}
+
+// SetScopeSelection sets the value of ScopeSelection.
+func (s *AcceptEmailRuleRequestResultRule) SetScopeSelection(val OptNilAcceptEmailRuleRequestResultRuleScopeSelection) {
+	s.ScopeSelection = val
 }
 
 // SetCurrentVersion sets the value of CurrentVersion.
@@ -1106,6 +1130,55 @@ func (s *AcceptEmailRuleRequestResultRuleCurrentTreeWhen) init() AcceptEmailRule
 	return m
 }
 
+// Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.
+type AcceptEmailRuleRequestResultRuleEvaluationScope string
+
+const (
+	AcceptEmailRuleRequestResultRuleEvaluationScopeAuthor       AcceptEmailRuleRequestResultRuleEvaluationScope = "author"
+	AcceptEmailRuleRequestResultRuleEvaluationScopeOwnMailboxes AcceptEmailRuleRequestResultRuleEvaluationScope = "own_mailboxes"
+	AcceptEmailRuleRequestResultRuleEvaluationScopeSelected     AcceptEmailRuleRequestResultRuleEvaluationScope = "selected"
+)
+
+// AllValues returns all AcceptEmailRuleRequestResultRuleEvaluationScope values.
+func (AcceptEmailRuleRequestResultRuleEvaluationScope) AllValues() []AcceptEmailRuleRequestResultRuleEvaluationScope {
+	return []AcceptEmailRuleRequestResultRuleEvaluationScope{
+		AcceptEmailRuleRequestResultRuleEvaluationScopeAuthor,
+		AcceptEmailRuleRequestResultRuleEvaluationScopeOwnMailboxes,
+		AcceptEmailRuleRequestResultRuleEvaluationScopeSelected,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s AcceptEmailRuleRequestResultRuleEvaluationScope) MarshalText() ([]byte, error) {
+	switch s {
+	case AcceptEmailRuleRequestResultRuleEvaluationScopeAuthor:
+		return []byte(s), nil
+	case AcceptEmailRuleRequestResultRuleEvaluationScopeOwnMailboxes:
+		return []byte(s), nil
+	case AcceptEmailRuleRequestResultRuleEvaluationScopeSelected:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *AcceptEmailRuleRequestResultRuleEvaluationScope) UnmarshalText(data []byte) error {
+	switch AcceptEmailRuleRequestResultRuleEvaluationScope(data) {
+	case AcceptEmailRuleRequestResultRuleEvaluationScopeAuthor:
+		*s = AcceptEmailRuleRequestResultRuleEvaluationScopeAuthor
+		return nil
+	case AcceptEmailRuleRequestResultRuleEvaluationScopeOwnMailboxes:
+		*s = AcceptEmailRuleRequestResultRuleEvaluationScopeOwnMailboxes
+		return nil
+	case AcceptEmailRuleRequestResultRuleEvaluationScopeSelected:
+		*s = AcceptEmailRuleRequestResultRuleEvaluationScopeSelected
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares
 // what it matches.
 type AcceptEmailRuleRequestResultRuleKind string
@@ -1147,6 +1220,32 @@ func (s *AcceptEmailRuleRequestResultRuleKind) UnmarshalText(data []byte) error 
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// What a selected rule names; null for any other scope.
+type AcceptEmailRuleRequestResultRuleScopeSelection struct {
+	Addresses []string `json:"addresses"`
+	Domains   []string `json:"domains"`
+}
+
+// GetAddresses returns the value of Addresses.
+func (s *AcceptEmailRuleRequestResultRuleScopeSelection) GetAddresses() []string {
+	return s.Addresses
+}
+
+// GetDomains returns the value of Domains.
+func (s *AcceptEmailRuleRequestResultRuleScopeSelection) GetDomains() []string {
+	return s.Domains
+}
+
+// SetAddresses sets the value of Addresses.
+func (s *AcceptEmailRuleRequestResultRuleScopeSelection) SetAddresses(val []string) {
+	s.Addresses = val
+}
+
+// SetDomains sets the value of Domains.
+func (s *AcceptEmailRuleRequestResultRuleScopeSelection) SetDomains(val []string) {
+	s.Domains = val
 }
 
 type AcceptEmailRuleRequestResultRuleState string
@@ -13857,8 +13956,9 @@ type CreateEmailRuleRequest struct {
 	// Observe (the default) records what the rule would match and grants or blocks nothing; draft is not
 	// evaluated.
 	State OptCreateEmailRuleRequestState `json:"state"`
-	// Author: all mail its author can read. own_mailboxes: mail to their own addresses. selected: what
-	// scope_selection names. Never more than the author can read.
+	// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
+	// you can send from). author: all mail you can read, including inboxes added later. selected: what
+	// scope_selection names.
 	EvaluationScope OptCreateEmailRuleRequestEvaluationScope `json:"evaluation_scope"`
 	// Inboxes, and domains (every address at them the author can read), for a selected rule; each one
 	// you can read.
@@ -14024,8 +14124,9 @@ func (s *CreateEmailRuleRequestCreated) SetData(val CreateEmailRuleRequestResult
 
 func (*CreateEmailRuleRequestCreated) createEmailRuleRequestRes() {}
 
-// Author: all mail its author can read. own_mailboxes: mail to their own addresses. selected: what
-// scope_selection names. Never more than the author can read.
+// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
+// you can send from). author: all mail you can read, including inboxes added later. selected: what
+// scope_selection names.
 type CreateEmailRuleRequestEvaluationScope string
 
 const (
@@ -14994,9 +15095,13 @@ type CreateEmailRuleResult struct {
 	State CreateEmailRuleResultState `json:"state"`
 	// Do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares
 	// what it matches.
-	Kind           OptCreateEmailRuleResultKind `json:"kind"`
-	CurrentVersion NilInt                       `json:"current_version"`
-	AuthorUserID   uuid.UUID                    `json:"author_user_id"`
+	Kind OptCreateEmailRuleResultKind `json:"kind"`
+	// Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.
+	EvaluationScope OptCreateEmailRuleResultEvaluationScope `json:"evaluation_scope"`
+	// What a selected rule names; null for any other scope.
+	ScopeSelection OptNilCreateEmailRuleResultScopeSelection `json:"scope_selection"`
+	CurrentVersion NilInt                                    `json:"current_version"`
+	AuthorUserID   uuid.UUID                                 `json:"author_user_id"`
 	// Whether the caller wrote the rule (under their current membership). Only the author edits a rule;
 	// anyone else who can see it may only disable or delete it, and while it is shared only if they
 	// manage members.
@@ -15024,6 +15129,16 @@ func (s *CreateEmailRuleResult) GetState() CreateEmailRuleResultState {
 // GetKind returns the value of Kind.
 func (s *CreateEmailRuleResult) GetKind() OptCreateEmailRuleResultKind {
 	return s.Kind
+}
+
+// GetEvaluationScope returns the value of EvaluationScope.
+func (s *CreateEmailRuleResult) GetEvaluationScope() OptCreateEmailRuleResultEvaluationScope {
+	return s.EvaluationScope
+}
+
+// GetScopeSelection returns the value of ScopeSelection.
+func (s *CreateEmailRuleResult) GetScopeSelection() OptNilCreateEmailRuleResultScopeSelection {
+	return s.ScopeSelection
 }
 
 // GetCurrentVersion returns the value of CurrentVersion.
@@ -15074,6 +15189,16 @@ func (s *CreateEmailRuleResult) SetState(val CreateEmailRuleResultState) {
 // SetKind sets the value of Kind.
 func (s *CreateEmailRuleResult) SetKind(val OptCreateEmailRuleResultKind) {
 	s.Kind = val
+}
+
+// SetEvaluationScope sets the value of EvaluationScope.
+func (s *CreateEmailRuleResult) SetEvaluationScope(val OptCreateEmailRuleResultEvaluationScope) {
+	s.EvaluationScope = val
+}
+
+// SetScopeSelection sets the value of ScopeSelection.
+func (s *CreateEmailRuleResult) SetScopeSelection(val OptNilCreateEmailRuleResultScopeSelection) {
+	s.ScopeSelection = val
 }
 
 // SetCurrentVersion sets the value of CurrentVersion.
@@ -15328,6 +15453,55 @@ func (s *CreateEmailRuleResultCurrentTreeWhen) init() CreateEmailRuleResultCurre
 	return m
 }
 
+// Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.
+type CreateEmailRuleResultEvaluationScope string
+
+const (
+	CreateEmailRuleResultEvaluationScopeAuthor       CreateEmailRuleResultEvaluationScope = "author"
+	CreateEmailRuleResultEvaluationScopeOwnMailboxes CreateEmailRuleResultEvaluationScope = "own_mailboxes"
+	CreateEmailRuleResultEvaluationScopeSelected     CreateEmailRuleResultEvaluationScope = "selected"
+)
+
+// AllValues returns all CreateEmailRuleResultEvaluationScope values.
+func (CreateEmailRuleResultEvaluationScope) AllValues() []CreateEmailRuleResultEvaluationScope {
+	return []CreateEmailRuleResultEvaluationScope{
+		CreateEmailRuleResultEvaluationScopeAuthor,
+		CreateEmailRuleResultEvaluationScopeOwnMailboxes,
+		CreateEmailRuleResultEvaluationScopeSelected,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CreateEmailRuleResultEvaluationScope) MarshalText() ([]byte, error) {
+	switch s {
+	case CreateEmailRuleResultEvaluationScopeAuthor:
+		return []byte(s), nil
+	case CreateEmailRuleResultEvaluationScopeOwnMailboxes:
+		return []byte(s), nil
+	case CreateEmailRuleResultEvaluationScopeSelected:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CreateEmailRuleResultEvaluationScope) UnmarshalText(data []byte) error {
+	switch CreateEmailRuleResultEvaluationScope(data) {
+	case CreateEmailRuleResultEvaluationScopeAuthor:
+		*s = CreateEmailRuleResultEvaluationScopeAuthor
+		return nil
+	case CreateEmailRuleResultEvaluationScopeOwnMailboxes:
+		*s = CreateEmailRuleResultEvaluationScopeOwnMailboxes
+		return nil
+	case CreateEmailRuleResultEvaluationScopeSelected:
+		*s = CreateEmailRuleResultEvaluationScopeSelected
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares
 // what it matches.
 type CreateEmailRuleResultKind string
@@ -15369,6 +15543,32 @@ func (s *CreateEmailRuleResultKind) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// What a selected rule names; null for any other scope.
+type CreateEmailRuleResultScopeSelection struct {
+	Addresses []string `json:"addresses"`
+	Domains   []string `json:"domains"`
+}
+
+// GetAddresses returns the value of Addresses.
+func (s *CreateEmailRuleResultScopeSelection) GetAddresses() []string {
+	return s.Addresses
+}
+
+// GetDomains returns the value of Domains.
+func (s *CreateEmailRuleResultScopeSelection) GetDomains() []string {
+	return s.Domains
+}
+
+// SetAddresses sets the value of Addresses.
+func (s *CreateEmailRuleResultScopeSelection) SetAddresses(val []string) {
+	s.Addresses = val
+}
+
+// SetDomains sets the value of Domains.
+func (s *CreateEmailRuleResultScopeSelection) SetDomains(val []string) {
+	s.Domains = val
 }
 
 type CreateEmailRuleResultState string
@@ -37457,6 +37657,7 @@ const (
 	ErrorResponseErrorCodeSignalNotAllowed                         ErrorResponseErrorCode = "signal_not_allowed"
 	ErrorResponseErrorCodeSignalParentNotReady                     ErrorResponseErrorCode = "signal_parent_not_ready"
 	ErrorResponseErrorCodeSignalSenderUnauthenticated              ErrorResponseErrorCode = "signal_sender_unauthenticated"
+	ErrorResponseErrorCodeSigningSecretUnavailable                 ErrorResponseErrorCode = "signing_secret_unavailable"
 	ErrorResponseErrorCodeSignupFailed                             ErrorResponseErrorCode = "signup_failed"
 	ErrorResponseErrorCodeStandingOwnerRevoked                     ErrorResponseErrorCode = "standing_owner_revoked"
 	ErrorResponseErrorCodeStepUpInvalid                            ErrorResponseErrorCode = "step_up_invalid"
@@ -37794,6 +37995,7 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeSignalNotAllowed,
 		ErrorResponseErrorCodeSignalParentNotReady,
 		ErrorResponseErrorCodeSignalSenderUnauthenticated,
+		ErrorResponseErrorCodeSigningSecretUnavailable,
 		ErrorResponseErrorCodeSignupFailed,
 		ErrorResponseErrorCodeStandingOwnerRevoked,
 		ErrorResponseErrorCodeStepUpInvalid,
@@ -38438,6 +38640,8 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeSignalParentNotReady:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeSignalSenderUnauthenticated:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSigningSecretUnavailable:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeSignupFailed:
 		return []byte(s), nil
@@ -39417,6 +39621,9 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeSignalSenderUnauthenticated:
 		*s = ErrorResponseErrorCodeSignalSenderUnauthenticated
+		return nil
+	case ErrorResponseErrorCodeSigningSecretUnavailable:
+		*s = ErrorResponseErrorCodeSigningSecretUnavailable
 		return nil
 	case ErrorResponseErrorCodeSignupFailed:
 		*s = ErrorResponseErrorCodeSignupFailed
@@ -45733,9 +45940,13 @@ type GetEmailRuleResult struct {
 	State GetEmailRuleResultState `json:"state"`
 	// Do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares
 	// what it matches.
-	Kind           OptGetEmailRuleResultKind `json:"kind"`
-	CurrentVersion NilInt                    `json:"current_version"`
-	AuthorUserID   uuid.UUID                 `json:"author_user_id"`
+	Kind OptGetEmailRuleResultKind `json:"kind"`
+	// Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.
+	EvaluationScope OptGetEmailRuleResultEvaluationScope `json:"evaluation_scope"`
+	// What a selected rule names; null for any other scope.
+	ScopeSelection OptNilGetEmailRuleResultScopeSelection `json:"scope_selection"`
+	CurrentVersion NilInt                                 `json:"current_version"`
+	AuthorUserID   uuid.UUID                              `json:"author_user_id"`
 	// Whether the caller wrote the rule (under their current membership). Only the author edits a rule;
 	// anyone else who can see it may only disable or delete it, and while it is shared only if they
 	// manage members.
@@ -45763,6 +45974,16 @@ func (s *GetEmailRuleResult) GetState() GetEmailRuleResultState {
 // GetKind returns the value of Kind.
 func (s *GetEmailRuleResult) GetKind() OptGetEmailRuleResultKind {
 	return s.Kind
+}
+
+// GetEvaluationScope returns the value of EvaluationScope.
+func (s *GetEmailRuleResult) GetEvaluationScope() OptGetEmailRuleResultEvaluationScope {
+	return s.EvaluationScope
+}
+
+// GetScopeSelection returns the value of ScopeSelection.
+func (s *GetEmailRuleResult) GetScopeSelection() OptNilGetEmailRuleResultScopeSelection {
+	return s.ScopeSelection
 }
 
 // GetCurrentVersion returns the value of CurrentVersion.
@@ -45813,6 +46034,16 @@ func (s *GetEmailRuleResult) SetState(val GetEmailRuleResultState) {
 // SetKind sets the value of Kind.
 func (s *GetEmailRuleResult) SetKind(val OptGetEmailRuleResultKind) {
 	s.Kind = val
+}
+
+// SetEvaluationScope sets the value of EvaluationScope.
+func (s *GetEmailRuleResult) SetEvaluationScope(val OptGetEmailRuleResultEvaluationScope) {
+	s.EvaluationScope = val
+}
+
+// SetScopeSelection sets the value of ScopeSelection.
+func (s *GetEmailRuleResult) SetScopeSelection(val OptNilGetEmailRuleResultScopeSelection) {
+	s.ScopeSelection = val
 }
 
 // SetCurrentVersion sets the value of CurrentVersion.
@@ -46067,6 +46298,55 @@ func (s *GetEmailRuleResultCurrentTreeWhen) init() GetEmailRuleResultCurrentTree
 	return m
 }
 
+// Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.
+type GetEmailRuleResultEvaluationScope string
+
+const (
+	GetEmailRuleResultEvaluationScopeAuthor       GetEmailRuleResultEvaluationScope = "author"
+	GetEmailRuleResultEvaluationScopeOwnMailboxes GetEmailRuleResultEvaluationScope = "own_mailboxes"
+	GetEmailRuleResultEvaluationScopeSelected     GetEmailRuleResultEvaluationScope = "selected"
+)
+
+// AllValues returns all GetEmailRuleResultEvaluationScope values.
+func (GetEmailRuleResultEvaluationScope) AllValues() []GetEmailRuleResultEvaluationScope {
+	return []GetEmailRuleResultEvaluationScope{
+		GetEmailRuleResultEvaluationScopeAuthor,
+		GetEmailRuleResultEvaluationScopeOwnMailboxes,
+		GetEmailRuleResultEvaluationScopeSelected,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s GetEmailRuleResultEvaluationScope) MarshalText() ([]byte, error) {
+	switch s {
+	case GetEmailRuleResultEvaluationScopeAuthor:
+		return []byte(s), nil
+	case GetEmailRuleResultEvaluationScopeOwnMailboxes:
+		return []byte(s), nil
+	case GetEmailRuleResultEvaluationScopeSelected:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *GetEmailRuleResultEvaluationScope) UnmarshalText(data []byte) error {
+	switch GetEmailRuleResultEvaluationScope(data) {
+	case GetEmailRuleResultEvaluationScopeAuthor:
+		*s = GetEmailRuleResultEvaluationScopeAuthor
+		return nil
+	case GetEmailRuleResultEvaluationScopeOwnMailboxes:
+		*s = GetEmailRuleResultEvaluationScopeOwnMailboxes
+		return nil
+	case GetEmailRuleResultEvaluationScopeSelected:
+		*s = GetEmailRuleResultEvaluationScopeSelected
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares
 // what it matches.
 type GetEmailRuleResultKind string
@@ -46108,6 +46388,32 @@ func (s *GetEmailRuleResultKind) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// What a selected rule names; null for any other scope.
+type GetEmailRuleResultScopeSelection struct {
+	Addresses []string `json:"addresses"`
+	Domains   []string `json:"domains"`
+}
+
+// GetAddresses returns the value of Addresses.
+func (s *GetEmailRuleResultScopeSelection) GetAddresses() []string {
+	return s.Addresses
+}
+
+// GetDomains returns the value of Domains.
+func (s *GetEmailRuleResultScopeSelection) GetDomains() []string {
+	return s.Domains
+}
+
+// SetAddresses sets the value of Addresses.
+func (s *GetEmailRuleResultScopeSelection) SetAddresses(val []string) {
+	s.Addresses = val
+}
+
+// SetDomains sets the value of Domains.
+func (s *GetEmailRuleResultScopeSelection) SetDomains(val []string) {
+	s.Domains = val
 }
 
 type GetEmailRuleResultState string
@@ -58338,12 +58644,21 @@ type ListEmailRuleScopeOptionsResult struct {
 	// Whether a do_not_share rule over only your own mail would run for you: it covers every own mailbox
 	// you read, including ones you could not share.
 	OwnMailToBlock OptBool `json:"own_mail_to_block"`
-	// Inboxes you can read, matching q.
+	// Inboxes you can read, matching q. For someone who reads the whole organization, the inboxes known
+	// as someone's: member addresses, members' verified work emails at the organization's domains,
+	// agents' addresses and inboxes with shared access. Otherwise the inboxes your access lists (search
+	// with q for those past the first page). See may_name_unlisted for what else you may name.
 	Addresses []string `json:"addresses"`
 	// Domains you can read, matching q.
 	Domains []string `json:"domains"`
 	// More match than are listed.
 	More bool `json:"more"`
+	// Whether you may also name an inbox this list never shows, however it is searched (more only says
+	// whether a search would show further ones): true when you read the whole organization (any address,
+	// such as an inbox at its domains nobody has claimed yet) or read a domain (any address there your
+	// access does not leave out). Name it in scope_selection.addresses as you would a listed one. Absent
+	// from a server that predates it.
+	MayNameUnlisted OptBool `json:"may_name_unlisted"`
 }
 
 // GetReach returns the value of Reach.
@@ -58376,6 +58691,11 @@ func (s *ListEmailRuleScopeOptionsResult) GetMore() bool {
 	return s.More
 }
 
+// GetMayNameUnlisted returns the value of MayNameUnlisted.
+func (s *ListEmailRuleScopeOptionsResult) GetMayNameUnlisted() OptBool {
+	return s.MayNameUnlisted
+}
+
 // SetReach sets the value of Reach.
 func (s *ListEmailRuleScopeOptionsResult) SetReach(val ListEmailRuleScopeOptionsResultReach) {
 	s.Reach = val
@@ -58404,6 +58724,11 @@ func (s *ListEmailRuleScopeOptionsResult) SetDomains(val []string) {
 // SetMore sets the value of More.
 func (s *ListEmailRuleScopeOptionsResult) SetMore(val bool) {
 	s.More = val
+}
+
+// SetMayNameUnlisted sets the value of MayNameUnlisted.
+func (s *ListEmailRuleScopeOptionsResult) SetMayNameUnlisted(val OptBool) {
+	s.MayNameUnlisted = val
 }
 
 // Organization: all of the organization's mail. own: only your own. limited: some inboxes or domains.
@@ -60638,9 +60963,13 @@ type ListEmailRulesResultItem struct {
 	State ListEmailRulesResultItemState `json:"state"`
 	// Do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares
 	// what it matches.
-	Kind           OptListEmailRulesResultItemKind `json:"kind"`
-	CurrentVersion NilInt                          `json:"current_version"`
-	AuthorUserID   uuid.UUID                       `json:"author_user_id"`
+	Kind OptListEmailRulesResultItemKind `json:"kind"`
+	// Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.
+	EvaluationScope OptListEmailRulesResultItemEvaluationScope `json:"evaluation_scope"`
+	// What a selected rule names; null for any other scope.
+	ScopeSelection OptNilListEmailRulesResultItemScopeSelection `json:"scope_selection"`
+	CurrentVersion NilInt                                       `json:"current_version"`
+	AuthorUserID   uuid.UUID                                    `json:"author_user_id"`
 	// Whether the caller wrote the rule (under their current membership). Only the author edits a rule;
 	// anyone else who can see it may only disable or delete it, and while it is shared only if they
 	// manage members.
@@ -60667,6 +60996,16 @@ func (s *ListEmailRulesResultItem) GetState() ListEmailRulesResultItemState {
 // GetKind returns the value of Kind.
 func (s *ListEmailRulesResultItem) GetKind() OptListEmailRulesResultItemKind {
 	return s.Kind
+}
+
+// GetEvaluationScope returns the value of EvaluationScope.
+func (s *ListEmailRulesResultItem) GetEvaluationScope() OptListEmailRulesResultItemEvaluationScope {
+	return s.EvaluationScope
+}
+
+// GetScopeSelection returns the value of ScopeSelection.
+func (s *ListEmailRulesResultItem) GetScopeSelection() OptNilListEmailRulesResultItemScopeSelection {
+	return s.ScopeSelection
 }
 
 // GetCurrentVersion returns the value of CurrentVersion.
@@ -60714,6 +61053,16 @@ func (s *ListEmailRulesResultItem) SetKind(val OptListEmailRulesResultItemKind) 
 	s.Kind = val
 }
 
+// SetEvaluationScope sets the value of EvaluationScope.
+func (s *ListEmailRulesResultItem) SetEvaluationScope(val OptListEmailRulesResultItemEvaluationScope) {
+	s.EvaluationScope = val
+}
+
+// SetScopeSelection sets the value of ScopeSelection.
+func (s *ListEmailRulesResultItem) SetScopeSelection(val OptNilListEmailRulesResultItemScopeSelection) {
+	s.ScopeSelection = val
+}
+
 // SetCurrentVersion sets the value of CurrentVersion.
 func (s *ListEmailRulesResultItem) SetCurrentVersion(val NilInt) {
 	s.CurrentVersion = val
@@ -60737,6 +61086,55 @@ func (s *ListEmailRulesResultItem) SetCreatedAt(val time.Time) {
 // SetUpdatedAt sets the value of UpdatedAt.
 func (s *ListEmailRulesResultItem) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
+}
+
+// Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.
+type ListEmailRulesResultItemEvaluationScope string
+
+const (
+	ListEmailRulesResultItemEvaluationScopeAuthor       ListEmailRulesResultItemEvaluationScope = "author"
+	ListEmailRulesResultItemEvaluationScopeOwnMailboxes ListEmailRulesResultItemEvaluationScope = "own_mailboxes"
+	ListEmailRulesResultItemEvaluationScopeSelected     ListEmailRulesResultItemEvaluationScope = "selected"
+)
+
+// AllValues returns all ListEmailRulesResultItemEvaluationScope values.
+func (ListEmailRulesResultItemEvaluationScope) AllValues() []ListEmailRulesResultItemEvaluationScope {
+	return []ListEmailRulesResultItemEvaluationScope{
+		ListEmailRulesResultItemEvaluationScopeAuthor,
+		ListEmailRulesResultItemEvaluationScopeOwnMailboxes,
+		ListEmailRulesResultItemEvaluationScopeSelected,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListEmailRulesResultItemEvaluationScope) MarshalText() ([]byte, error) {
+	switch s {
+	case ListEmailRulesResultItemEvaluationScopeAuthor:
+		return []byte(s), nil
+	case ListEmailRulesResultItemEvaluationScopeOwnMailboxes:
+		return []byte(s), nil
+	case ListEmailRulesResultItemEvaluationScopeSelected:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListEmailRulesResultItemEvaluationScope) UnmarshalText(data []byte) error {
+	switch ListEmailRulesResultItemEvaluationScope(data) {
+	case ListEmailRulesResultItemEvaluationScopeAuthor:
+		*s = ListEmailRulesResultItemEvaluationScopeAuthor
+		return nil
+	case ListEmailRulesResultItemEvaluationScopeOwnMailboxes:
+		*s = ListEmailRulesResultItemEvaluationScopeOwnMailboxes
+		return nil
+	case ListEmailRulesResultItemEvaluationScopeSelected:
+		*s = ListEmailRulesResultItemEvaluationScopeSelected
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares
@@ -60780,6 +61178,32 @@ func (s *ListEmailRulesResultItemKind) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// What a selected rule names; null for any other scope.
+type ListEmailRulesResultItemScopeSelection struct {
+	Addresses []string `json:"addresses"`
+	Domains   []string `json:"domains"`
+}
+
+// GetAddresses returns the value of Addresses.
+func (s *ListEmailRulesResultItemScopeSelection) GetAddresses() []string {
+	return s.Addresses
+}
+
+// GetDomains returns the value of Domains.
+func (s *ListEmailRulesResultItemScopeSelection) GetDomains() []string {
+	return s.Domains
+}
+
+// SetAddresses sets the value of Addresses.
+func (s *ListEmailRulesResultItemScopeSelection) SetAddresses(val []string) {
+	s.Addresses = val
+}
+
+// SetDomains sets the value of Domains.
+func (s *ListEmailRulesResultItemScopeSelection) SetDomains(val []string) {
+	s.Domains = val
 }
 
 type ListEmailRulesResultItemState string
@@ -73156,6 +73580,52 @@ func (o OptAcceptEmailRuleRequestResultRuleCurrentSQL) Or(d AcceptEmailRuleReque
 	return d
 }
 
+// NewOptAcceptEmailRuleRequestResultRuleEvaluationScope returns new OptAcceptEmailRuleRequestResultRuleEvaluationScope with value set to v.
+func NewOptAcceptEmailRuleRequestResultRuleEvaluationScope(v AcceptEmailRuleRequestResultRuleEvaluationScope) OptAcceptEmailRuleRequestResultRuleEvaluationScope {
+	return OptAcceptEmailRuleRequestResultRuleEvaluationScope{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptAcceptEmailRuleRequestResultRuleEvaluationScope is optional AcceptEmailRuleRequestResultRuleEvaluationScope.
+type OptAcceptEmailRuleRequestResultRuleEvaluationScope struct {
+	Value AcceptEmailRuleRequestResultRuleEvaluationScope
+	Set   bool
+}
+
+// IsSet returns true if OptAcceptEmailRuleRequestResultRuleEvaluationScope was set.
+func (o OptAcceptEmailRuleRequestResultRuleEvaluationScope) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptAcceptEmailRuleRequestResultRuleEvaluationScope) Reset() {
+	var v AcceptEmailRuleRequestResultRuleEvaluationScope
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptAcceptEmailRuleRequestResultRuleEvaluationScope) SetTo(v AcceptEmailRuleRequestResultRuleEvaluationScope) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptAcceptEmailRuleRequestResultRuleEvaluationScope) Get() (v AcceptEmailRuleRequestResultRuleEvaluationScope, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptAcceptEmailRuleRequestResultRuleEvaluationScope) Or(d AcceptEmailRuleRequestResultRuleEvaluationScope) AcceptEmailRuleRequestResultRuleEvaluationScope {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptAcceptEmailRuleRequestResultRuleKind returns new OptAcceptEmailRuleRequestResultRuleKind with value set to v.
 func NewOptAcceptEmailRuleRequestResultRuleKind(v AcceptEmailRuleRequestResultRuleKind) OptAcceptEmailRuleRequestResultRuleKind {
 	return OptAcceptEmailRuleRequestResultRuleKind{
@@ -74714,6 +75184,52 @@ func (o OptCreateEmailRuleResultCurrentSQL) Get() (v CreateEmailRuleResultCurren
 
 // Or returns value if set, or given parameter if does not.
 func (o OptCreateEmailRuleResultCurrentSQL) Or(d CreateEmailRuleResultCurrentSQL) CreateEmailRuleResultCurrentSQL {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptCreateEmailRuleResultEvaluationScope returns new OptCreateEmailRuleResultEvaluationScope with value set to v.
+func NewOptCreateEmailRuleResultEvaluationScope(v CreateEmailRuleResultEvaluationScope) OptCreateEmailRuleResultEvaluationScope {
+	return OptCreateEmailRuleResultEvaluationScope{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCreateEmailRuleResultEvaluationScope is optional CreateEmailRuleResultEvaluationScope.
+type OptCreateEmailRuleResultEvaluationScope struct {
+	Value CreateEmailRuleResultEvaluationScope
+	Set   bool
+}
+
+// IsSet returns true if OptCreateEmailRuleResultEvaluationScope was set.
+func (o OptCreateEmailRuleResultEvaluationScope) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCreateEmailRuleResultEvaluationScope) Reset() {
+	var v CreateEmailRuleResultEvaluationScope
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCreateEmailRuleResultEvaluationScope) SetTo(v CreateEmailRuleResultEvaluationScope) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCreateEmailRuleResultEvaluationScope) Get() (v CreateEmailRuleResultEvaluationScope, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCreateEmailRuleResultEvaluationScope) Or(d CreateEmailRuleResultEvaluationScope) CreateEmailRuleResultEvaluationScope {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -78538,6 +79054,52 @@ func (o OptGetEmailRuleResultCurrentSQL) Or(d GetEmailRuleResultCurrentSQL) GetE
 	return d
 }
 
+// NewOptGetEmailRuleResultEvaluationScope returns new OptGetEmailRuleResultEvaluationScope with value set to v.
+func NewOptGetEmailRuleResultEvaluationScope(v GetEmailRuleResultEvaluationScope) OptGetEmailRuleResultEvaluationScope {
+	return OptGetEmailRuleResultEvaluationScope{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptGetEmailRuleResultEvaluationScope is optional GetEmailRuleResultEvaluationScope.
+type OptGetEmailRuleResultEvaluationScope struct {
+	Value GetEmailRuleResultEvaluationScope
+	Set   bool
+}
+
+// IsSet returns true if OptGetEmailRuleResultEvaluationScope was set.
+func (o OptGetEmailRuleResultEvaluationScope) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptGetEmailRuleResultEvaluationScope) Reset() {
+	var v GetEmailRuleResultEvaluationScope
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptGetEmailRuleResultEvaluationScope) SetTo(v GetEmailRuleResultEvaluationScope) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptGetEmailRuleResultEvaluationScope) Get() (v GetEmailRuleResultEvaluationScope, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptGetEmailRuleResultEvaluationScope) Or(d GetEmailRuleResultEvaluationScope) GetEmailRuleResultEvaluationScope {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptGetEmailRuleResultKind returns new OptGetEmailRuleResultKind with value set to v.
 func NewOptGetEmailRuleResultKind(v GetEmailRuleResultKind) OptGetEmailRuleResultKind {
 	return OptGetEmailRuleResultKind{
@@ -80424,6 +80986,52 @@ func (o OptListEmailRuleVersionsResultItemSQL) Or(d ListEmailRuleVersionsResultI
 	return d
 }
 
+// NewOptListEmailRulesResultItemEvaluationScope returns new OptListEmailRulesResultItemEvaluationScope with value set to v.
+func NewOptListEmailRulesResultItemEvaluationScope(v ListEmailRulesResultItemEvaluationScope) OptListEmailRulesResultItemEvaluationScope {
+	return OptListEmailRulesResultItemEvaluationScope{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListEmailRulesResultItemEvaluationScope is optional ListEmailRulesResultItemEvaluationScope.
+type OptListEmailRulesResultItemEvaluationScope struct {
+	Value ListEmailRulesResultItemEvaluationScope
+	Set   bool
+}
+
+// IsSet returns true if OptListEmailRulesResultItemEvaluationScope was set.
+func (o OptListEmailRulesResultItemEvaluationScope) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListEmailRulesResultItemEvaluationScope) Reset() {
+	var v ListEmailRulesResultItemEvaluationScope
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListEmailRulesResultItemEvaluationScope) SetTo(v ListEmailRulesResultItemEvaluationScope) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListEmailRulesResultItemEvaluationScope) Get() (v ListEmailRulesResultItemEvaluationScope, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListEmailRulesResultItemEvaluationScope) Or(d ListEmailRulesResultItemEvaluationScope) ListEmailRulesResultItemEvaluationScope {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptListEmailRulesResultItemKind returns new OptListEmailRulesResultItemKind with value set to v.
 func NewOptListEmailRulesResultItemKind(v ListEmailRulesResultItemKind) OptListEmailRulesResultItemKind {
 	return OptListEmailRulesResultItemKind{
@@ -81758,6 +82366,69 @@ func (o OptMemoryScope) Or(d MemoryScope) MemoryScope {
 	return d
 }
 
+// NewOptNilAcceptEmailRuleRequestResultRuleScopeSelection returns new OptNilAcceptEmailRuleRequestResultRuleScopeSelection with value set to v.
+func NewOptNilAcceptEmailRuleRequestResultRuleScopeSelection(v AcceptEmailRuleRequestResultRuleScopeSelection) OptNilAcceptEmailRuleRequestResultRuleScopeSelection {
+	return OptNilAcceptEmailRuleRequestResultRuleScopeSelection{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilAcceptEmailRuleRequestResultRuleScopeSelection is optional nullable AcceptEmailRuleRequestResultRuleScopeSelection.
+type OptNilAcceptEmailRuleRequestResultRuleScopeSelection struct {
+	Value AcceptEmailRuleRequestResultRuleScopeSelection
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilAcceptEmailRuleRequestResultRuleScopeSelection was set.
+func (o OptNilAcceptEmailRuleRequestResultRuleScopeSelection) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilAcceptEmailRuleRequestResultRuleScopeSelection) Reset() {
+	var v AcceptEmailRuleRequestResultRuleScopeSelection
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilAcceptEmailRuleRequestResultRuleScopeSelection) SetTo(v AcceptEmailRuleRequestResultRuleScopeSelection) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilAcceptEmailRuleRequestResultRuleScopeSelection) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilAcceptEmailRuleRequestResultRuleScopeSelection) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v AcceptEmailRuleRequestResultRuleScopeSelection
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilAcceptEmailRuleRequestResultRuleScopeSelection) Get() (v AcceptEmailRuleRequestResultRuleScopeSelection, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilAcceptEmailRuleRequestResultRuleScopeSelection) Or(d AcceptEmailRuleRequestResultRuleScopeSelection) AcceptEmailRuleRequestResultRuleScopeSelection {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilAddDefaultNetworkMemberOKDataPresence returns new OptNilAddDefaultNetworkMemberOKDataPresence with value set to v.
 func NewOptNilAddDefaultNetworkMemberOKDataPresence(v AddDefaultNetworkMemberOKDataPresence) OptNilAddDefaultNetworkMemberOKDataPresence {
 	return OptNilAddDefaultNetworkMemberOKDataPresence{
@@ -82760,6 +83431,69 @@ func (o OptNilConversationMessageSenderMember) Get() (v ConversationMessageSende
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilConversationMessageSenderMember) Or(d ConversationMessageSenderMember) ConversationMessageSenderMember {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilCreateEmailRuleResultScopeSelection returns new OptNilCreateEmailRuleResultScopeSelection with value set to v.
+func NewOptNilCreateEmailRuleResultScopeSelection(v CreateEmailRuleResultScopeSelection) OptNilCreateEmailRuleResultScopeSelection {
+	return OptNilCreateEmailRuleResultScopeSelection{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilCreateEmailRuleResultScopeSelection is optional nullable CreateEmailRuleResultScopeSelection.
+type OptNilCreateEmailRuleResultScopeSelection struct {
+	Value CreateEmailRuleResultScopeSelection
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilCreateEmailRuleResultScopeSelection was set.
+func (o OptNilCreateEmailRuleResultScopeSelection) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilCreateEmailRuleResultScopeSelection) Reset() {
+	var v CreateEmailRuleResultScopeSelection
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilCreateEmailRuleResultScopeSelection) SetTo(v CreateEmailRuleResultScopeSelection) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilCreateEmailRuleResultScopeSelection) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilCreateEmailRuleResultScopeSelection) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v CreateEmailRuleResultScopeSelection
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilCreateEmailRuleResultScopeSelection) Get() (v CreateEmailRuleResultScopeSelection, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilCreateEmailRuleResultScopeSelection) Or(d CreateEmailRuleResultScopeSelection) CreateEmailRuleResultScopeSelection {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -85034,6 +85768,69 @@ func (o OptNilGetDefaultNetworkAgentOKDataPresence) Or(d GetDefaultNetworkAgentO
 	return d
 }
 
+// NewOptNilGetEmailRuleResultScopeSelection returns new OptNilGetEmailRuleResultScopeSelection with value set to v.
+func NewOptNilGetEmailRuleResultScopeSelection(v GetEmailRuleResultScopeSelection) OptNilGetEmailRuleResultScopeSelection {
+	return OptNilGetEmailRuleResultScopeSelection{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilGetEmailRuleResultScopeSelection is optional nullable GetEmailRuleResultScopeSelection.
+type OptNilGetEmailRuleResultScopeSelection struct {
+	Value GetEmailRuleResultScopeSelection
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilGetEmailRuleResultScopeSelection was set.
+func (o OptNilGetEmailRuleResultScopeSelection) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilGetEmailRuleResultScopeSelection) Reset() {
+	var v GetEmailRuleResultScopeSelection
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilGetEmailRuleResultScopeSelection) SetTo(v GetEmailRuleResultScopeSelection) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilGetEmailRuleResultScopeSelection) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilGetEmailRuleResultScopeSelection) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v GetEmailRuleResultScopeSelection
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilGetEmailRuleResultScopeSelection) Get() (v GetEmailRuleResultScopeSelection, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilGetEmailRuleResultScopeSelection) Or(d GetEmailRuleResultScopeSelection) GetEmailRuleResultScopeSelection {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilGetFunctionRuntimeKeyResultFunctionBoundKey returns new OptNilGetFunctionRuntimeKeyResultFunctionBoundKey with value set to v.
 func NewOptNilGetFunctionRuntimeKeyResultFunctionBoundKey(v GetFunctionRuntimeKeyResultFunctionBoundKey) OptNilGetFunctionRuntimeKeyResultFunctionBoundKey {
 	return OptNilGetFunctionRuntimeKeyResultFunctionBoundKey{
@@ -85910,6 +86707,69 @@ func (o OptNilListEmailRuleShareEmailsResultItemSenderMember) Get() (v ListEmail
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilListEmailRuleShareEmailsResultItemSenderMember) Or(d ListEmailRuleShareEmailsResultItemSenderMember) ListEmailRuleShareEmailsResultItemSenderMember {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilListEmailRulesResultItemScopeSelection returns new OptNilListEmailRulesResultItemScopeSelection with value set to v.
+func NewOptNilListEmailRulesResultItemScopeSelection(v ListEmailRulesResultItemScopeSelection) OptNilListEmailRulesResultItemScopeSelection {
+	return OptNilListEmailRulesResultItemScopeSelection{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilListEmailRulesResultItemScopeSelection is optional nullable ListEmailRulesResultItemScopeSelection.
+type OptNilListEmailRulesResultItemScopeSelection struct {
+	Value ListEmailRulesResultItemScopeSelection
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilListEmailRulesResultItemScopeSelection was set.
+func (o OptNilListEmailRulesResultItemScopeSelection) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilListEmailRulesResultItemScopeSelection) Reset() {
+	var v ListEmailRulesResultItemScopeSelection
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilListEmailRulesResultItemScopeSelection) SetTo(v ListEmailRulesResultItemScopeSelection) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilListEmailRulesResultItemScopeSelection) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilListEmailRulesResultItemScopeSelection) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v ListEmailRulesResultItemScopeSelection
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilListEmailRulesResultItemScopeSelection) Get() (v ListEmailRulesResultItemScopeSelection, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilListEmailRulesResultItemScopeSelection) Or(d ListEmailRulesResultItemScopeSelection) ListEmailRulesResultItemScopeSelection {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -87869,6 +88729,69 @@ func (o OptNilUpdateDefaultNetworkMemberOKDataPresence) Get() (v UpdateDefaultNe
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilUpdateDefaultNetworkMemberOKDataPresence) Or(d UpdateDefaultNetworkMemberOKDataPresence) UpdateDefaultNetworkMemberOKDataPresence {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilUpdateEmailRuleResultScopeSelection returns new OptNilUpdateEmailRuleResultScopeSelection with value set to v.
+func NewOptNilUpdateEmailRuleResultScopeSelection(v UpdateEmailRuleResultScopeSelection) OptNilUpdateEmailRuleResultScopeSelection {
+	return OptNilUpdateEmailRuleResultScopeSelection{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilUpdateEmailRuleResultScopeSelection is optional nullable UpdateEmailRuleResultScopeSelection.
+type OptNilUpdateEmailRuleResultScopeSelection struct {
+	Value UpdateEmailRuleResultScopeSelection
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilUpdateEmailRuleResultScopeSelection was set.
+func (o OptNilUpdateEmailRuleResultScopeSelection) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilUpdateEmailRuleResultScopeSelection) Reset() {
+	var v UpdateEmailRuleResultScopeSelection
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilUpdateEmailRuleResultScopeSelection) SetTo(v UpdateEmailRuleResultScopeSelection) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilUpdateEmailRuleResultScopeSelection) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilUpdateEmailRuleResultScopeSelection) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v UpdateEmailRuleResultScopeSelection
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilUpdateEmailRuleResultScopeSelection) Get() (v UpdateEmailRuleResultScopeSelection, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilUpdateEmailRuleResultScopeSelection) Or(d UpdateEmailRuleResultScopeSelection) UpdateEmailRuleResultScopeSelection {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -92212,6 +93135,52 @@ func (o OptUpdateEmailRuleResultCurrentSQL) Get() (v UpdateEmailRuleResultCurren
 
 // Or returns value if set, or given parameter if does not.
 func (o OptUpdateEmailRuleResultCurrentSQL) Or(d UpdateEmailRuleResultCurrentSQL) UpdateEmailRuleResultCurrentSQL {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptUpdateEmailRuleResultEvaluationScope returns new OptUpdateEmailRuleResultEvaluationScope with value set to v.
+func NewOptUpdateEmailRuleResultEvaluationScope(v UpdateEmailRuleResultEvaluationScope) OptUpdateEmailRuleResultEvaluationScope {
+	return OptUpdateEmailRuleResultEvaluationScope{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptUpdateEmailRuleResultEvaluationScope is optional UpdateEmailRuleResultEvaluationScope.
+type OptUpdateEmailRuleResultEvaluationScope struct {
+	Value UpdateEmailRuleResultEvaluationScope
+	Set   bool
+}
+
+// IsSet returns true if OptUpdateEmailRuleResultEvaluationScope was set.
+func (o OptUpdateEmailRuleResultEvaluationScope) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptUpdateEmailRuleResultEvaluationScope) Reset() {
+	var v UpdateEmailRuleResultEvaluationScope
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptUpdateEmailRuleResultEvaluationScope) SetTo(v UpdateEmailRuleResultEvaluationScope) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptUpdateEmailRuleResultEvaluationScope) Get() (v UpdateEmailRuleResultEvaluationScope, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptUpdateEmailRuleResultEvaluationScope) Or(d UpdateEmailRuleResultEvaluationScope) UpdateEmailRuleResultEvaluationScope {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -119355,8 +120324,9 @@ func (*TestEmailRuleOnSampleOK) testEmailRuleOnSampleRes() {}
 type TestEmailRuleOnSampleRequest struct {
 	// An unsaved rule tree, as POST /email-rules/compile returned it. Give tree or rule_id, not both.
 	Tree OptTestEmailRuleOnSampleRequestTree `json:"tree"`
-	// Author: all mail its author can read. own_mailboxes: mail to their own addresses. selected: what
-	// scope_selection names. Never more than the author can read.
+	// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
+	// you can send from). author: all mail you can read, including inboxes added later. selected: what
+	// scope_selection names.
 	EvaluationScope OptTestEmailRuleOnSampleRequestEvaluationScope `json:"evaluation_scope"`
 	// Inboxes, and domains (every address at them the author can read), for a selected rule; each one
 	// you can read.
@@ -119565,8 +120535,9 @@ func (s *TestEmailRuleOnSampleRequestEmailFrom) SetName(val OptString) {
 	s.Name = val
 }
 
-// Author: all mail its author can read. own_mailboxes: mail to their own addresses. selected: what
-// scope_selection names. Never more than the author can read.
+// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
+// you can send from). author: all mail you can read, including inboxes added later. selected: what
+// scope_selection names.
 type TestEmailRuleOnSampleRequestEvaluationScope string
 
 const (
@@ -120166,8 +121137,9 @@ func (*TestEmailRuleOnSampleUnauthorized) testEmailRuleOnSampleRes() {}
 type TestEmailRuleRequest struct {
 	// An unsaved rule tree, as POST /email-rules/compile returned it. Give tree or rule_id, not both.
 	Tree OptTestEmailRuleRequestTree `json:"tree"`
-	// Author: all mail its author can read. own_mailboxes: mail to their own addresses. selected: what
-	// scope_selection names. Never more than the author can read.
+	// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
+	// you can send from). author: all mail you can read, including inboxes added later. selected: what
+	// scope_selection names.
 	EvaluationScope OptTestEmailRuleRequestEvaluationScope `json:"evaluation_scope"`
 	// Inboxes, and domains (every address at them the author can read), for a selected rule; each one
 	// you can read.
@@ -120256,8 +121228,9 @@ func (s *TestEmailRuleRequest) SetClassifyMissing(val OptBool) {
 	s.ClassifyMissing = val
 }
 
-// Author: all mail its author can read. own_mailboxes: mail to their own addresses. selected: what
-// scope_selection names. Never more than the author can read.
+// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
+// you can send from). author: all mail you can read, including inboxes added later. selected: what
+// scope_selection names.
 type TestEmailRuleRequestEvaluationScope string
 
 const (
@@ -124113,9 +125086,13 @@ type UpdateEmailRuleResult struct {
 	State UpdateEmailRuleResultState `json:"state"`
 	// Do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares
 	// what it matches.
-	Kind           OptUpdateEmailRuleResultKind `json:"kind"`
-	CurrentVersion NilInt                       `json:"current_version"`
-	AuthorUserID   uuid.UUID                    `json:"author_user_id"`
+	Kind OptUpdateEmailRuleResultKind `json:"kind"`
+	// Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.
+	EvaluationScope OptUpdateEmailRuleResultEvaluationScope `json:"evaluation_scope"`
+	// What a selected rule names; null for any other scope.
+	ScopeSelection OptNilUpdateEmailRuleResultScopeSelection `json:"scope_selection"`
+	CurrentVersion NilInt                                    `json:"current_version"`
+	AuthorUserID   uuid.UUID                                 `json:"author_user_id"`
 	// Whether the caller wrote the rule (under their current membership). Only the author edits a rule;
 	// anyone else who can see it may only disable or delete it, and while it is shared only if they
 	// manage members.
@@ -124143,6 +125120,16 @@ func (s *UpdateEmailRuleResult) GetState() UpdateEmailRuleResultState {
 // GetKind returns the value of Kind.
 func (s *UpdateEmailRuleResult) GetKind() OptUpdateEmailRuleResultKind {
 	return s.Kind
+}
+
+// GetEvaluationScope returns the value of EvaluationScope.
+func (s *UpdateEmailRuleResult) GetEvaluationScope() OptUpdateEmailRuleResultEvaluationScope {
+	return s.EvaluationScope
+}
+
+// GetScopeSelection returns the value of ScopeSelection.
+func (s *UpdateEmailRuleResult) GetScopeSelection() OptNilUpdateEmailRuleResultScopeSelection {
+	return s.ScopeSelection
 }
 
 // GetCurrentVersion returns the value of CurrentVersion.
@@ -124193,6 +125180,16 @@ func (s *UpdateEmailRuleResult) SetState(val UpdateEmailRuleResultState) {
 // SetKind sets the value of Kind.
 func (s *UpdateEmailRuleResult) SetKind(val OptUpdateEmailRuleResultKind) {
 	s.Kind = val
+}
+
+// SetEvaluationScope sets the value of EvaluationScope.
+func (s *UpdateEmailRuleResult) SetEvaluationScope(val OptUpdateEmailRuleResultEvaluationScope) {
+	s.EvaluationScope = val
+}
+
+// SetScopeSelection sets the value of ScopeSelection.
+func (s *UpdateEmailRuleResult) SetScopeSelection(val OptNilUpdateEmailRuleResultScopeSelection) {
+	s.ScopeSelection = val
 }
 
 // SetCurrentVersion sets the value of CurrentVersion.
@@ -124447,6 +125444,55 @@ func (s *UpdateEmailRuleResultCurrentTreeWhen) init() UpdateEmailRuleResultCurre
 	return m
 }
 
+// Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.
+type UpdateEmailRuleResultEvaluationScope string
+
+const (
+	UpdateEmailRuleResultEvaluationScopeAuthor       UpdateEmailRuleResultEvaluationScope = "author"
+	UpdateEmailRuleResultEvaluationScopeOwnMailboxes UpdateEmailRuleResultEvaluationScope = "own_mailboxes"
+	UpdateEmailRuleResultEvaluationScopeSelected     UpdateEmailRuleResultEvaluationScope = "selected"
+)
+
+// AllValues returns all UpdateEmailRuleResultEvaluationScope values.
+func (UpdateEmailRuleResultEvaluationScope) AllValues() []UpdateEmailRuleResultEvaluationScope {
+	return []UpdateEmailRuleResultEvaluationScope{
+		UpdateEmailRuleResultEvaluationScopeAuthor,
+		UpdateEmailRuleResultEvaluationScopeOwnMailboxes,
+		UpdateEmailRuleResultEvaluationScopeSelected,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s UpdateEmailRuleResultEvaluationScope) MarshalText() ([]byte, error) {
+	switch s {
+	case UpdateEmailRuleResultEvaluationScopeAuthor:
+		return []byte(s), nil
+	case UpdateEmailRuleResultEvaluationScopeOwnMailboxes:
+		return []byte(s), nil
+	case UpdateEmailRuleResultEvaluationScopeSelected:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *UpdateEmailRuleResultEvaluationScope) UnmarshalText(data []byte) error {
+	switch UpdateEmailRuleResultEvaluationScope(data) {
+	case UpdateEmailRuleResultEvaluationScopeAuthor:
+		*s = UpdateEmailRuleResultEvaluationScopeAuthor
+		return nil
+	case UpdateEmailRuleResultEvaluationScopeOwnMailboxes:
+		*s = UpdateEmailRuleResultEvaluationScopeOwnMailboxes
+		return nil
+	case UpdateEmailRuleResultEvaluationScopeSelected:
+		*s = UpdateEmailRuleResultEvaluationScopeSelected
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares
 // what it matches.
 type UpdateEmailRuleResultKind string
@@ -124488,6 +125534,32 @@ func (s *UpdateEmailRuleResultKind) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// What a selected rule names; null for any other scope.
+type UpdateEmailRuleResultScopeSelection struct {
+	Addresses []string `json:"addresses"`
+	Domains   []string `json:"domains"`
+}
+
+// GetAddresses returns the value of Addresses.
+func (s *UpdateEmailRuleResultScopeSelection) GetAddresses() []string {
+	return s.Addresses
+}
+
+// GetDomains returns the value of Domains.
+func (s *UpdateEmailRuleResultScopeSelection) GetDomains() []string {
+	return s.Domains
+}
+
+// SetAddresses sets the value of Addresses.
+func (s *UpdateEmailRuleResultScopeSelection) SetAddresses(val []string) {
+	s.Addresses = val
+}
+
+// SetDomains sets the value of Domains.
+func (s *UpdateEmailRuleResultScopeSelection) SetDomains(val []string) {
+	s.Domains = val
 }
 
 type UpdateEmailRuleResultState string

@@ -33,9 +33,9 @@ class TestEmailRuleOnSampleRequest:
             email (TestEmailRuleOnSampleRequestEmail): A made-up received email. Nothing about it is stored.
             tree (TestEmailRuleOnSampleRequestTree | Unset): An unsaved rule tree, as POST /email-rules/compile returned it.
                 Give tree or rule_id, not both.
-            evaluation_scope (TestEmailRuleOnSampleRequestEvaluationScope | Unset): author: all mail its author can read.
-                own_mailboxes: mail to their own addresses. selected: what scope_selection names. Never more than the author can
-                read.
+            evaluation_scope (TestEmailRuleOnSampleRequestEvaluationScope | Unset): own_mailboxes (the default): mail to
+                your own addresses and agents (for a rule that shares, those you can send from). author: all mail you can read,
+                including inboxes added later. selected: what scope_selection names.
             scope_selection (TestEmailRuleOnSampleRequestScopeSelection | Unset): Inboxes, and domains (every address at
                 them the author can read), for a selected rule; each one you can read.
             rule_id (UUID | Unset): A saved rule you can see. Its current version is tested.

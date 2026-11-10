@@ -117,7 +117,8 @@ def sync_detailed(
     created since a time, rotates the organization Function key and every running Function's own key,
     and optionally suspends Functions. Owners only, from a dashboard session, and the body must confirm
     with "revoke all". Needs the organization's credential features to be enabled; while they are not,
-    this answers 404 feature_disabled.
+    this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns
+    these on.
 
     Person only: a dashboard session. The person's role must hold credentials:revoke_all. API keys,
     agent connection keys and agents are refused.
@@ -160,7 +161,8 @@ def sync(
     created since a time, rotates the organization Function key and every running Function's own key,
     and optionally suspends Functions. Owners only, from a dashboard session, and the body must confirm
     with "revoke all". Needs the organization's credential features to be enabled; while they are not,
-    this answers 404 feature_disabled.
+    this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns
+    these on.
 
     Person only: a dashboard session. The person's role must hold credentials:revoke_all. API keys,
     agent connection keys and agents are refused.
@@ -198,7 +200,8 @@ async def asyncio_detailed(
     created since a time, rotates the organization Function key and every running Function's own key,
     and optionally suspends Functions. Owners only, from a dashboard session, and the body must confirm
     with "revoke all". Needs the organization's credential features to be enabled; while they are not,
-    this answers 404 feature_disabled.
+    this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns
+    these on.
 
     Person only: a dashboard session. The person's role must hold credentials:revoke_all. API keys,
     agent connection keys and agents are refused.
@@ -241,7 +244,8 @@ async def asyncio(
     created since a time, rotates the organization Function key and every running Function's own key,
     and optionally suspends Functions. Owners only, from a dashboard session, and the body must confirm
     with "revoke all". Needs the organization's credential features to be enabled; while they are not,
-    this answers 404 feature_disabled.
+    this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns
+    these on.
 
     Person only: a dashboard session. The person's role must hold credentials:revoke_all. API keys,
     agent connection keys and agents are refused.

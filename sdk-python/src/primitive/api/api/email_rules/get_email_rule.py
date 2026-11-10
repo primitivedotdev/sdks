@@ -117,9 +117,11 @@ def sync_detailed(
 ) -> Response[ErrorResponse | GetEmailRuleResponse200]:
     """ Read a rule
 
-     A rule and its current version. The SQL the version renders to is included only when include_sql is
-    true. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys
-    and narrowed tokens are refused), and the email rules feature on the organization.
+     A rule, its scope (evaluation_scope, and scope_selection for a selected rule) and its current
+    version. What the scope comes to for its author now is GET /email-rules/{id}/scope. The SQL the
+    version renders to is included only when include_sql is true. Needs mail:read, a credential acting
+    as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the
+    email rules feature on the organization.
 
     Args:
         id (UUID):
@@ -155,9 +157,11 @@ def sync(
 ) -> ErrorResponse | GetEmailRuleResponse200 | None:
     """ Read a rule
 
-     A rule and its current version. The SQL the version renders to is included only when include_sql is
-    true. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys
-    and narrowed tokens are refused), and the email rules feature on the organization.
+     A rule, its scope (evaluation_scope, and scope_selection for a selected rule) and its current
+    version. What the scope comes to for its author now is GET /email-rules/{id}/scope. The SQL the
+    version renders to is included only when include_sql is true. Needs mail:read, a credential acting
+    as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the
+    email rules feature on the organization.
 
     Args:
         id (UUID):
@@ -188,9 +192,11 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | GetEmailRuleResponse200]:
     """ Read a rule
 
-     A rule and its current version. The SQL the version renders to is included only when include_sql is
-    true. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys
-    and narrowed tokens are refused), and the email rules feature on the organization.
+     A rule, its scope (evaluation_scope, and scope_selection for a selected rule) and its current
+    version. What the scope comes to for its author now is GET /email-rules/{id}/scope. The SQL the
+    version renders to is included only when include_sql is true. Needs mail:read, a credential acting
+    as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the
+    email rules feature on the organization.
 
     Args:
         id (UUID):
@@ -226,9 +232,11 @@ async def asyncio(
 ) -> ErrorResponse | GetEmailRuleResponse200 | None:
     """ Read a rule
 
-     A rule and its current version. The SQL the version renders to is included only when include_sql is
-    true. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys
-    and narrowed tokens are refused), and the email rules feature on the organization.
+     A rule, its scope (evaluation_scope, and scope_selection for a selected rule) and its current
+    version. What the scope comes to for its author now is GET /email-rules/{id}/scope. The SQL the
+    version renders to is included only when include_sql is true. Needs mail:read, a credential acting
+    as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the
+    email rules feature on the organization.
 
     Args:
         id (UUID):

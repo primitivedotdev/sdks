@@ -330,12 +330,14 @@ type Handler interface {
 	// Saves a rule as version 1, from a compile response or a tree you wrote. The tree is checked
 	// against the column contract. New rules start in observe, where what the rule matches is recorded
 	// and nothing is granted or blocked; draft is not evaluated. The caller is the rule's author, and
-	// the rule never reaches mail the author cannot read. evaluation_scope (author when omitted) chooses
-	// whose mail it runs over; scope_selection may name only what you can read. kind do_not_share makes
-	// a rule that blocks sharing: it runs before every other rule, and while it is active no rule shares
-	// an email it matches or cannot decide. A key cannot list one (details.reason rule_blocks_sharing on
-	// the key). Needs mail:read, a credential acting as a member with their full access (API keys, agent
-	// keys and narrowed tokens are refused), and the email rules feature on the organization.
+	// the rule never reaches mail the author cannot read. evaluation_scope chooses whose mail it runs
+	// over: own_mailboxes (only your own mail) when omitted, so any other scope (author for all you can
+	// read, or selected) is named; scope_selection may name only what you can read. The answer carries
+	// the scope as stored. kind do_not_share makes a rule that blocks sharing: it runs before every
+	// other rule, and while it is active no rule shares an email it matches or cannot decide. A key
+	// cannot list one (details.reason rule_blocks_sharing on the key). Needs mail:read, a credential
+	// acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
+	// and the email rules feature on the organization.
 	//
 	// POST /email-rules
 	CreateEmailRule(ctx context.Context, req *CreateEmailRuleRequest, params CreateEmailRuleParams) (CreateEmailRuleRes, error)
@@ -474,16 +476,18 @@ type Handler interface {
 	// Idempotency-Key to retry safely: a second create by the same person under the same key makes no
 	// second key and is refused (409 idempotency_key_reused) with the first key's id in error.details.
 	// key_id, so a caller whose first answer was lost can revoke that key. The onboarding field is for
-	// the dashboard only. The Primitive CLI takes the same step-up; the Primitive app's token is refused,
-	//  even with one. While the organization's keys API is not enabled, this answers 404
-	// feature_disabled, except that a dashboard session may still create a super admin key (the
-	// dashboard's own create).
-	// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
-	// `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
-	// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
-	// when the person's role could not do it anyway). The person's role must hold keys:manage. API keys
-	// and agent connection keys are refused. An agent acting for the person is refused unless it carries
-	// a step-up token the person issued in the dashboard.
+	// the dashboard only. The person's own Primitive CLI login needs no step-up (it acts as the person,
+	// held to the same rules); the Primitive app's token is refused, even with one. While the
+	// organization's keys API is not enabled, this answers 404 feature_disabled (details.feature
+	// keys_api; only Primitive turns it on), except that a dashboard session may still create a super
+	// admin key (the dashboard's own create).
+	// Person only: a dashboard session, the person's own Primitive CLI login with no step-up, or the
+	// person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up
+	// header. Without one any other OAuth token is answered 403 step_up_required, whose details carry
+	// the dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client,
+	// could not do it anyway). The person's role must hold keys:manage. API keys and agent connection
+	// keys are refused. An agent acting for the person is refused unless it carries a step-up token the
+	// person issued in the dashboard.
 	//
 	// POST /keys
 	CreateKey(ctx context.Context, req *CredentialsCreateKeyInput, params CreateKeyParams) (CreateKeyRes, error)
@@ -572,11 +576,17 @@ type Handler interface {
 	// key) also revokes its older secrets still in a rotation overlap, and needs keys:manage on both the
 	// credential and the person: without it, or if the decider lost members:manage meanwhile, it is
 	// refused with `grant_forbidden` (`keys_manage_required` or `actor_access_changed`) and nothing is
-	// rotated. Person only: a dashboard session, or the person's own OAuth or CLI token with a session
-	// step-up of purpose `suspensions.decide` (the person confirms at the step_up_url a 403
-	// step_up_required answer carries, which names this client, then send the token in the
-	// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
-	// members:manage. API keys are refused.
+	// rotated. A rule share paused by a role change (`email_rule_share`) takes keep, which leaves it
+	// paused, or revoke, which ends the share and needs confirm: true (the person it was shared with
+	// loses the emails already shared; without it, 409 `confirmation_required`). Neither of the share's
+	// two people may keep it (`grant_forbidden`, `share_decision_forbidden`). Access a person gave on
+	// their own mailbox (`mailbox_access`) takes keep or revoke, and both need delegations:manage;
+	// revoke removes only what that person gave on that mailbox. Nobody the access reaches, nor the
+	// person who gave it, may keep it (`grant_forbidden`, `mailbox_access_decision_forbidden`). Person
+	// only: a dashboard session, or the person's own OAuth or CLI token with a session step-up of
+	// purpose `suspensions.decide` (the person confirms at the step_up_url a 403 step_up_required answer
+	// carries, which names this client, then send the token in the Primitive-Step-Up header; the token
+	// works only with the client it was confirmed for). Needs members:manage. API keys are refused.
 	//
 	// POST /access-suspensions/{id}/decision
 	DecideSuspension(ctx context.Context, req *DecideSuspensionRequest, params DecideSuspensionParams) (DecideSuspensionRes, error)
@@ -1108,7 +1118,7 @@ type Handler interface {
 	// The organization credential policy: key lifetime and expiry rules, who may create super admin keys,
 	//  whether members may create keys and the other rules every new key is held to. Needs the
 	// organization's credential features to be enabled; while they are not, this answers 404
-	// feature_disabled.
+	// feature_disabled, with details.feature naming the feature. Only Primitive turns these on.
 	// Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
 	// connection keys and agents are refused.
 	//
@@ -1189,9 +1199,11 @@ type Handler interface {
 	GetEmailReadable(ctx context.Context, params GetEmailReadableParams) (GetEmailReadableRes, error)
 	// GetEmailRule implements getEmailRule operation.
 	//
-	// A rule and its current version. The SQL the version renders to is included only when include_sql
-	// is true. Needs mail:read, a credential acting as a member with their full access (API keys, agent
-	// keys and narrowed tokens are refused), and the email rules feature on the organization.
+	// A rule, its scope (evaluation_scope, and scope_selection for a selected rule) and its current
+	// version. What the scope comes to for its author now is GET /email-rules/{id}/scope. The SQL the
+	// version renders to is included only when include_sql is true. Needs mail:read, a credential acting
+	// as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the
+	// email rules feature on the organization.
 	//
 	// GET /email-rules/{id}
 	GetEmailRule(ctx context.Context, params GetEmailRuleParams) (GetEmailRuleRes, error)
@@ -1322,7 +1334,7 @@ type Handler interface {
 	//
 	// One key's metadata, never its secret. The person needs access to the whole organization's mail.
 	// Needs the organization's credential features to be enabled; while they are not, this answers 404
-	// feature_disabled.
+	// feature_disabled, with details.feature naming the feature. Only Primitive turns these on.
 	// Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
 	// person's role must hold keys:read. API keys, agent connection keys and agents are refused.
 	//
@@ -1334,7 +1346,8 @@ type Handler interface {
 	// matrix for custom keys and the policy in force. An area marked org_wide_only (Members) is listed
 	// only to a person who holds its permission, and only a custom key with no addresses or domains may
 	// hold it. Needs the organization's credential features to be enabled; while they are not, this
-	// answers 404 feature_disabled.
+	// answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns these
+	// on.
 	// Person only: a dashboard session. The person's role must hold keys:read. API keys, agent
 	// connection keys and agents are refused.
 	//
@@ -1353,7 +1366,7 @@ type Handler interface {
 	// read and sent from (counts only, and only for a person with access to the whole organization's
 	// mail). Nothing is applied: narrowing is a change to the key (PATCH /v1/keys/:id). Needs the
 	// organization's credential features to be enabled; while they are not, this answers 404
-	// feature_disabled.
+	// feature_disabled, with details.feature naming the feature. Only Primitive turns these on.
 	// Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
 	// connection keys and agents are refused.
 	//
@@ -1801,7 +1814,8 @@ type Handler interface {
 	//
 	// Credential events (created, rotated, edited, revoked, used with a step-up, policy changes), newest
 	// first, with a cursor. format=csv returns the same page as CSV. Needs the organization's credential
-	// features to be enabled; while they are not, this answers 404 feature_disabled.
+	// features to be enabled; while they are not, this answers 404 feature_disabled, with details.
+	// feature naming the feature. Only Primitive turns these on.
 	// Person only: a dashboard session. The person's role must hold credential_events:read. API keys,
 	// agent connection keys and agents are refused.
 	//
@@ -1812,7 +1826,8 @@ type Handler interface {
 	// Every credential that can act in the organization: API keys, Function keys, agent connection keys,
 	// connected apps (OAuth), agent delegates and, where enabled, CLI logins. Secrets are never returned.
 	//  Filter with kind. Needs the organization's credential features to be enabled; while they are not,
-	// this answers 404 feature_disabled.
+	// this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns
+	// these on.
 	// Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
 	// connection keys and agents are refused.
 	//
@@ -1902,9 +1917,13 @@ type Handler interface {
 	// ListEmailRuleScopeOptions implements listEmailRuleScopeOptions operation.
 	//
 	// How much the caller can read, and the inboxes and domains the caller can read, which is what they
-	// may name when a rule runs over selected inboxes and domains. Needs mail:read, a credential acting
-	// as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the
-	// email rules feature on the organization.
+	// may name when a rule runs over selected inboxes and domains. For a caller who reads the whole
+	// organization, addresses lists the inboxes known as someone's (member addresses, members' verified
+	// work emails at the organization's domains, agents' addresses and inboxes with shared access), not
+	// every address that receives mail: may_name_unlisted says when an address that is not listed, such
+	// as an inbox nobody has claimed, may be named too. Needs mail:read, a credential acting as a member
+	// with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules
+	// feature on the organization.
 	//
 	// GET /email-rule-scope-options
 	ListEmailRuleScopeOptions(ctx context.Context, params ListEmailRuleScopeOptionsParams) (ListEmailRuleScopeOptionsRes, error)
@@ -1938,8 +1957,9 @@ type Handler interface {
 	// ListEmailRules implements listEmailRules operation.
 	//
 	// The rules the caller can see, newest first: their own, or every member's rules for a caller who
-	// reads the whole organization's mail. With matched_email_id, only the rules that matched that email.
-	//  Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
+	// reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
+	// for a selected rule). With matched_email_id, only the rules that matched that email. Needs
+	// mail:read, a credential acting as a member with their full access (API keys, agent keys and
 	// narrowed tokens are refused), and the email rules feature on the organization.
 	//
 	// GET /email-rules
@@ -2066,7 +2086,8 @@ type Handler interface {
 	//
 	// Key metadata, never a secret: name, prefix, grant, creator, last use, expiry and suspension. The
 	// person needs access to the whole organization's mail. Needs the organization's credential features
-	// to be enabled; while they are not, this answers 404 feature_disabled.
+	// to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming
+	// the feature. Only Primitive turns these on.
 	// Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
 	// person's role must hold keys:read. API keys, agent connection keys and agents are refused.
 	//
@@ -2739,7 +2760,8 @@ type Handler interface {
 	// created since a time, rotates the organization Function key and every running Function's own key,
 	// and optionally suspends Functions. Owners only, from a dashboard session, and the body must
 	// confirm with "revoke all". Needs the organization's credential features to be enabled; while they
-	// are not, this answers 404 feature_disabled.
+	// are not, this answers 404 feature_disabled, with details.feature naming the feature. Only
+	// Primitive turns these on.
 	// Person only: a dashboard session. The person's role must hold credentials:revoke_all. API keys,
 	// agent connection keys and agents are refused.
 	//
@@ -2752,7 +2774,7 @@ type Handler interface {
 	// (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered.
 	// What the credential set up keeps working and is listed in standing_objects for review. Needs the
 	// organization's credential features to be enabled; while they are not, this answers 404
-	// feature_disabled.
+	// feature_disabled, with details.feature naming the feature. Only Primitive turns these on.
 	// Person only: a dashboard session. The person's role must hold keys:manage. API keys, agent
 	// connection keys and agents are refused.
 	//
@@ -2801,15 +2823,17 @@ type Handler interface {
 	// overlap_seconds, then stops. The person rotating must cover the key's access (403 grant_forbidden,
 	// details.reason target_not_covered), and a key an owner created is rotated by an owner only (403
 	// forbidden, details.reason owner_key_rotation), since rotating hands over the new secret. The
-	// Primitive CLI takes the same step-up; the Primitive app's token is refused, even with one. Needs
-	// the organization's credential features to be enabled; while they are not, this answers 404
-	// feature_disabled.
-	// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
-	// `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
-	// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
-	// when the person's role could not do it anyway). The person's role must hold keys:manage. API keys
-	// and agent connection keys are refused. An agent acting for the person is refused unless it carries
-	// a step-up token the person issued in the dashboard.
+	// person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules);
+	// the Primitive app's token is refused, even with one. Needs the organization's credential features
+	// to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming
+	// the feature. Only Primitive turns these on.
+	// Person only: a dashboard session, the person's own Primitive CLI login with no step-up, or the
+	// person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up
+	// header. Without one any other OAuth token is answered 403 step_up_required, whose details carry
+	// the dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client,
+	// could not do it anyway). The person's role must hold keys:manage. API keys and agent connection
+	// keys are refused. An agent acting for the person is refused unless it carries a step-up token the
+	// person issued in the dashboard.
 	//
 	// POST /keys/{id}/rotate
 	RotateKey(ctx context.Context, req *CredentialsRotateKeyInput, params RotateKeyParams) (RotateKeyRes, error)
@@ -3151,14 +3175,15 @@ type Handler interface {
 	// Runs a rule over received mail and reports what it would decide for each email: matched, near_miss,
 	//  no_match, unclassified or not_found. Test an unsaved tree from a compile response, or a saved
 	// rule by rule_id (its current version, run with its author's access). Either way the rule reads
-	// only mail its author can read, and only what its scope covers. Without email_ids, the newest
-	// emails it can read are tested, at most 200 and none older than 30 days. Emails not classified yet
-	// that arrived more than 2 hours ago are classified first and their classification is saved, unless
-	// classify_missing is false; newer ones are left to normal classification and reported unclassified
-	// with reason pending. The rule itself records nothing and grants nothing. Classification and the
-	// rule's own questions stop at about 90 seconds; run the test again to continue where it stopped.
-	// Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
-	// narrowed tokens are refused), and the email rules feature on the organization.
+	// only mail its author can read, and only what its scope covers; an unsaved tree covers only your
+	// own mail unless evaluation_scope names more. Without email_ids, the newest emails it can read are
+	// tested, at most 200 and none older than 30 days. Emails not classified yet that arrived more than
+	// 2 hours ago are classified first and their classification is saved, unless classify_missing is
+	// false; newer ones are left to normal classification and reported unclassified with reason pending.
+	// The rule itself records nothing and grants nothing. Classification and the rule's own questions
+	// stop at about 90 seconds; run the test again to continue where it stopped. Needs mail:read, a
+	// credential acting as a member with their full access (API keys, agent keys and narrowed tokens are
+	// refused), and the email rules feature on the organization.
 	//
 	// POST /email-rules/test
 	TestEmailRule(ctx context.Context, req *TestEmailRuleRequest, params TestEmailRuleParams) (TestEmailRuleRes, error)
@@ -3171,10 +3196,11 @@ type Handler interface {
 	// received now. Without them it is not automated and not from a mailing list; a rule that reads a
 	// spam score you gave none for is decided on no score, and spam_score is listed in unset_columns.
 	// Nothing is stored: no email, classification or decision. Test an unsaved tree from a compile
-	// response, or a saved rule by rule_id (its current version). The answer includes what the
-	// classifier read from the email. Needs mail:read, a credential acting as a member with their full
-	// access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
-	// organization.
+	// response, or a saved rule by rule_id (its current version); an unsaved tree is run as covering
+	// only your own mail unless evaluation_scope names more, as on POST /email-rules/test. The answer
+	// includes what the classifier read from the email. Needs mail:read, a credential acting as a member
+	// with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules
+	// feature on the organization.
 	//
 	// POST /email-rules/test-sample
 	TestEmailRuleOnSample(ctx context.Context, req *TestEmailRuleOnSampleRequest, params TestEmailRuleOnSampleParams) (TestEmailRuleOnSampleRes, error)
@@ -3282,7 +3308,8 @@ type Handler interface {
 	//
 	// Change one or more policy rules. Admins may only tighten the policy; loosening any rule needs an
 	// owner. Owners and admins are emailed about every change. Needs the organization's credential
-	// features to be enabled; while they are not, this answers 404 feature_disabled.
+	// features to be enabled; while they are not, this answers 404 feature_disabled, with details.
+	// feature naming the feature. Only Primitive turns these on.
 	// Person only: a dashboard session. The person's role must hold credential_policy:manage. API keys,
 	// agent connection keys and agents are refused.
 	//
@@ -3375,16 +3402,18 @@ type Handler interface {
 	// person's own access to cover the key's access now (an owner covers every key); otherwise 403
 	// grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key and
 	// is held to the same rules as creating one (a custom grant that does not say which mail it reaches
-	// is refused with details.reason mail_scope_required), so it takes the same step-up. The Primitive
-	// CLI takes the same step-up; the Primitive app's token is refused, even with one. Needs the
-	// organization's credential features to be enabled; while they are not, this answers 404
-	// feature_disabled.
-	// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
-	// `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
-	// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
-	// when the person's role could not do it anyway). The person's role must hold keys:manage. API keys
-	// and agent connection keys are refused. An agent acting for the person is refused unless it carries
-	// a step-up token the person issued in the dashboard.
+	// is refused with details.reason mail_scope_required), so it takes the same step-up. The person's
+	// own Primitive CLI login needs no step-up (it acts as the person, held to the same rules); the
+	// Primitive app's token is refused, even with one. Needs the organization's credential features to
+	// be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the
+	// feature. Only Primitive turns these on.
+	// Person only: a dashboard session, the person's own Primitive CLI login with no step-up, or the
+	// person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up
+	// header. Without one any other OAuth token is answered 403 step_up_required, whose details carry
+	// the dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client,
+	// could not do it anyway). The person's role must hold keys:manage. API keys and agent connection
+	// keys are refused. An agent acting for the person is refused unless it carries a step-up token the
+	// person issued in the dashboard.
 	//
 	// PATCH /keys/{id}
 	UpdateKey(ctx context.Context, req *CredentialsUpdateKeyInput, params UpdateKeyParams) (UpdateKeyRes, error)

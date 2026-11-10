@@ -209,7 +209,11 @@ date-time is kept as null and sorts last. A sync stops with an error after
   what it matches (and any email it cannot decide) from being shared; it is
   set on `createEmailRule` (the CLI's `--kind`), can be tested on an unsaved
   tree with `testEmailRule` and `testEmailRuleOnSample`, and is returned on
-  rules and on `listEmailRuleResults`.
+  rules and on `listEmailRuleResults`. A new rule's `evaluation_scope` is
+  `own_mailboxes` when omitted. Rules, including the one an accepted request
+  writes, carry their `evaluation_scope` and `scope_selection`, and
+  `listEmailRuleScopeOptions` says with `may_name_unlisted` whether you may
+  name an inbox its list does not show.
 - Emails: `getEmailReadable`.
 - Functions: `lookupFunction`, `getOrgFunctionUsage`,
   `getOrgFunctionInvocationSeries`, `getOrgFunctionFallback`,

@@ -123,14 +123,15 @@ def sync_detailed(
      Runs a rule over received mail and reports what it would decide for each email: matched, near_miss,
     no_match, unclassified or not_found. Test an unsaved tree from a compile response, or a saved rule
     by rule_id (its current version, run with its author's access). Either way the rule reads only mail
-    its author can read, and only what its scope covers. Without email_ids, the newest emails it can
-    read are tested, at most 200 and none older than 30 days. Emails not classified yet that arrived
-    more than 2 hours ago are classified first and their classification is saved, unless
-    classify_missing is false; newer ones are left to normal classification and reported unclassified
-    with reason pending. The rule itself records nothing and grants nothing. Classification and the
-    rule's own questions stop at about 90 seconds; run the test again to continue where it stopped.
-    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
-    narrowed tokens are refused), and the email rules feature on the organization.
+    its author can read, and only what its scope covers; an unsaved tree covers only your own mail
+    unless evaluation_scope names more. Without email_ids, the newest emails it can read are tested, at
+    most 200 and none older than 30 days. Emails not classified yet that arrived more than 2 hours ago
+    are classified first and their classification is saved, unless classify_missing is false; newer ones
+    are left to normal classification and reported unclassified with reason pending. The rule itself
+    records nothing and grants nothing. Classification and the rule's own questions stop at about 90
+    seconds; run the test again to continue where it stopped. Needs mail:read, a credential acting as a
+    member with their full access (API keys, agent keys and narrowed tokens are refused), and the email
+    rules feature on the organization.
 
     Args:
         idempotency_key (str | Unset):
@@ -169,14 +170,15 @@ def sync(
      Runs a rule over received mail and reports what it would decide for each email: matched, near_miss,
     no_match, unclassified or not_found. Test an unsaved tree from a compile response, or a saved rule
     by rule_id (its current version, run with its author's access). Either way the rule reads only mail
-    its author can read, and only what its scope covers. Without email_ids, the newest emails it can
-    read are tested, at most 200 and none older than 30 days. Emails not classified yet that arrived
-    more than 2 hours ago are classified first and their classification is saved, unless
-    classify_missing is false; newer ones are left to normal classification and reported unclassified
-    with reason pending. The rule itself records nothing and grants nothing. Classification and the
-    rule's own questions stop at about 90 seconds; run the test again to continue where it stopped.
-    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
-    narrowed tokens are refused), and the email rules feature on the organization.
+    its author can read, and only what its scope covers; an unsaved tree covers only your own mail
+    unless evaluation_scope names more. Without email_ids, the newest emails it can read are tested, at
+    most 200 and none older than 30 days. Emails not classified yet that arrived more than 2 hours ago
+    are classified first and their classification is saved, unless classify_missing is false; newer ones
+    are left to normal classification and reported unclassified with reason pending. The rule itself
+    records nothing and grants nothing. Classification and the rule's own questions stop at about 90
+    seconds; run the test again to continue where it stopped. Needs mail:read, a credential acting as a
+    member with their full access (API keys, agent keys and narrowed tokens are refused), and the email
+    rules feature on the organization.
 
     Args:
         idempotency_key (str | Unset):
@@ -210,14 +212,15 @@ async def asyncio_detailed(
      Runs a rule over received mail and reports what it would decide for each email: matched, near_miss,
     no_match, unclassified or not_found. Test an unsaved tree from a compile response, or a saved rule
     by rule_id (its current version, run with its author's access). Either way the rule reads only mail
-    its author can read, and only what its scope covers. Without email_ids, the newest emails it can
-    read are tested, at most 200 and none older than 30 days. Emails not classified yet that arrived
-    more than 2 hours ago are classified first and their classification is saved, unless
-    classify_missing is false; newer ones are left to normal classification and reported unclassified
-    with reason pending. The rule itself records nothing and grants nothing. Classification and the
-    rule's own questions stop at about 90 seconds; run the test again to continue where it stopped.
-    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
-    narrowed tokens are refused), and the email rules feature on the organization.
+    its author can read, and only what its scope covers; an unsaved tree covers only your own mail
+    unless evaluation_scope names more. Without email_ids, the newest emails it can read are tested, at
+    most 200 and none older than 30 days. Emails not classified yet that arrived more than 2 hours ago
+    are classified first and their classification is saved, unless classify_missing is false; newer ones
+    are left to normal classification and reported unclassified with reason pending. The rule itself
+    records nothing and grants nothing. Classification and the rule's own questions stop at about 90
+    seconds; run the test again to continue where it stopped. Needs mail:read, a credential acting as a
+    member with their full access (API keys, agent keys and narrowed tokens are refused), and the email
+    rules feature on the organization.
 
     Args:
         idempotency_key (str | Unset):
@@ -256,14 +259,15 @@ async def asyncio(
      Runs a rule over received mail and reports what it would decide for each email: matched, near_miss,
     no_match, unclassified or not_found. Test an unsaved tree from a compile response, or a saved rule
     by rule_id (its current version, run with its author's access). Either way the rule reads only mail
-    its author can read, and only what its scope covers. Without email_ids, the newest emails it can
-    read are tested, at most 200 and none older than 30 days. Emails not classified yet that arrived
-    more than 2 hours ago are classified first and their classification is saved, unless
-    classify_missing is false; newer ones are left to normal classification and reported unclassified
-    with reason pending. The rule itself records nothing and grants nothing. Classification and the
-    rule's own questions stop at about 90 seconds; run the test again to continue where it stopped.
-    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
-    narrowed tokens are refused), and the email rules feature on the organization.
+    its author can read, and only what its scope covers; an unsaved tree covers only your own mail
+    unless evaluation_scope names more. Without email_ids, the newest emails it can read are tested, at
+    most 200 and none older than 30 days. Emails not classified yet that arrived more than 2 hours ago
+    are classified first and their classification is saved, unless classify_missing is false; newer ones
+    are left to normal classification and reported unclassified with reason pending. The rule itself
+    records nothing and grants nothing. Classification and the rule's own questions stop at about 90
+    seconds; run the test again to continue where it stopped. Needs mail:read, a credential acting as a
+    member with their full access (API keys, agent keys and narrowed tokens are refused), and the email
+    rules feature on the organization.
 
     Args:
         idempotency_key (str | Unset):

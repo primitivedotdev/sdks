@@ -103,7 +103,7 @@ def sync_detailed(
 
      One key's metadata, never its secret. The person needs access to the whole organization's mail.
     Needs the organization's credential features to be enabled; while they are not, this answers 404
-    feature_disabled.
+    feature_disabled, with details.feature naming the feature. Only Primitive turns these on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.
@@ -141,7 +141,7 @@ def sync(
 
      One key's metadata, never its secret. The person needs access to the whole organization's mail.
     Needs the organization's credential features to be enabled; while they are not, this answers 404
-    feature_disabled.
+    feature_disabled, with details.feature naming the feature. Only Primitive turns these on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.
@@ -174,7 +174,7 @@ async def asyncio_detailed(
 
      One key's metadata, never its secret. The person needs access to the whole organization's mail.
     Needs the organization's credential features to be enabled; while they are not, this answers 404
-    feature_disabled.
+    feature_disabled, with details.feature naming the feature. Only Primitive turns these on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.
@@ -212,7 +212,7 @@ async def asyncio(
 
      One key's metadata, never its secret. The person needs access to the whole organization's mail.
     Needs the organization's credential features to be enabled; while they are not, this answers 404
-    feature_disabled.
+    feature_disabled, with details.feature naming the feature. Only Primitive turns these on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.

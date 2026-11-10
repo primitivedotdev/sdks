@@ -124,7 +124,8 @@ def sync_detailed(
     An API key is revoked only by a person whose own access covers the key's access (an owner covers
     every key); otherwise 403 grant_forbidden, details.reason target_not_covered. What the credential
     set up keeps working and is listed in standing_objects for review. Needs the organization's
-    credential features to be enabled; while they are not, this answers 404 feature_disabled.
+    credential features to be enabled; while they are not, this answers 404 feature_disabled, with
+    details.feature naming the feature. Only Primitive turns these on.
 
     Person only: a dashboard session. The person's role must hold keys:manage. API keys, agent
     connection keys and agents are refused.
@@ -167,7 +168,8 @@ def sync(
     An API key is revoked only by a person whose own access covers the key's access (an owner covers
     every key); otherwise 403 grant_forbidden, details.reason target_not_covered. What the credential
     set up keeps working and is listed in standing_objects for review. Needs the organization's
-    credential features to be enabled; while they are not, this answers 404 feature_disabled.
+    credential features to be enabled; while they are not, this answers 404 feature_disabled, with
+    details.feature naming the feature. Only Primitive turns these on.
 
     Person only: a dashboard session. The person's role must hold keys:manage. API keys, agent
     connection keys and agents are refused.
@@ -205,7 +207,8 @@ async def asyncio_detailed(
     An API key is revoked only by a person whose own access covers the key's access (an owner covers
     every key); otherwise 403 grant_forbidden, details.reason target_not_covered. What the credential
     set up keeps working and is listed in standing_objects for review. Needs the organization's
-    credential features to be enabled; while they are not, this answers 404 feature_disabled.
+    credential features to be enabled; while they are not, this answers 404 feature_disabled, with
+    details.feature naming the feature. Only Primitive turns these on.
 
     Person only: a dashboard session. The person's role must hold keys:manage. API keys, agent
     connection keys and agents are refused.
@@ -248,7 +251,8 @@ async def asyncio(
     An API key is revoked only by a person whose own access covers the key's access (an owner covers
     every key); otherwise 403 grant_forbidden, details.reason target_not_covered. What the credential
     set up keeps working and is listed in standing_objects for review. Needs the organization's
-    credential features to be enabled; while they are not, this answers 404 feature_disabled.
+    credential features to be enabled; while they are not, this answers 404 feature_disabled, with
+    details.feature naming the feature. Only Primitive turns these on.
 
     Person only: a dashboard session. The person's role must hold keys:manage. API keys, agent
     connection keys and agents are refused.
