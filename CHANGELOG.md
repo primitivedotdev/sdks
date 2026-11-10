@@ -135,6 +135,12 @@ their models have the component's own name:
 - `FunctionTestRunInboundEmailType0` is `FunctionTestRunInboundEmail`.
 - `FunctionTestRunDeliveryEndpointType0` is `FunctionTestRunDeliveryEndpoint`.
 
+Generated models take their optional fields in the order the served document
+declares them, so a field the API adds can land between existing ones: pass
+optional fields by keyword, as the README examples do. For example, the email
+rule request models (new in this release) gained `kind` after `explanation`
+between the 3.0.0 previews.
+
 Other generated model names follow the served document's schema names and
 shapes. Among them: `MemoryScopeType0` and `MemoryScopeType1` are
 `MemoryScope`; `CallerIdentity` is `WhoamiResponse200Data`;
