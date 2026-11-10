@@ -78,8 +78,7 @@ function routeTable(): Route[] {
 
 function commandId(operation: PrimitiveOperationManifest): string | undefined {
   // The API refuses the CLI on a dashboard-only operation, so no command calls it.
-  if ((operation as { access?: unknown }).access === "session")
-    return undefined;
+  if (operation.access === "session") return undefined;
   const preferred = PREFERRED_COMMANDS[operation.sdkName];
   if (preferred && knownCommands.has(preferred)) return preferred;
   const generated = `${operation.tagCommand}:${operation.command}`;

@@ -51,6 +51,11 @@ describe("API routes named in server messages", () => {
     expect(commandForRoute("POST", "/v1/organization/leave")).not.toContain(
       "primitive account",
     );
+    // A dashboard-only route has no command: the API refuses the CLI there.
+    expect(
+      commandForRoute("GET", `/v1/keys/${EMAIL}/suggestion`),
+    ).toBeUndefined();
+    expect(commandForRoute("GET", "/v1/credentials")).toBeUndefined();
     expect(commandForRoute("GET", "/v1/no-such-route")).toBeUndefined();
     expect(
       commandForRoute("DELETE", "/v1/email-rule-scope-options"),
