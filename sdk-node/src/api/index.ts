@@ -103,8 +103,16 @@ import {
 // receive in `await req.json()`. Re-exported from `/api` (edge-safe)
 // so scaffolded handlers can type the request body without importing
 // from `@primitivedotdev/sdk` root or `/webhook` (both of which pull
-// node:crypto via the Node-crypto signing helpers).
-export type { EmailReceivedEvent, ValidateEmailAuthResult } from "../types.js";
+// node:crypto via the Node-crypto signing helpers). The understanding
+// types are re-exported for the same reason, for `matchedRules` below.
+export type {
+  EmailReceivedEvent,
+  EmailUnderstanding,
+  UnderstandingFact,
+  UnderstandingRule,
+  UnderstandingRuleQuestion,
+  ValidateEmailAuthResult,
+} from "../types.js";
 // NOTE: the webhook-shaped `EmailAuth` type is deliberately NOT
 // re-exported here. The `export *` from api-core below already exports
 // a generated `EmailAuth` (the REST email-detail auth shape), and an
@@ -142,6 +150,9 @@ export {
   type TrustedSenderResult,
   type TrustReason,
 } from "../webhook/trust.js";
+// The rules that granted a delivery, for a Functions handler reading its
+// event. The module imports only types, so it is safe in edge-style bundles.
+export { matchedRules } from "../webhook/understanding.js";
 
 // Domain is dot-separated labels (each label excludes '.', '@', whitespace) so
 // the quantifiers don't overlap — a plain `[^\s@]+\.[^\s@]+` is a polynomial

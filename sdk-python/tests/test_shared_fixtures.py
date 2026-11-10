@@ -21,6 +21,8 @@ from primitive import (
     handle_webhook,
     is_raw_included,
     is_trusted_sender,
+    matched_rules,
+    normalize_received_email,
     parse_header_address,
     parse_webhook_event,
     safe_validate_email_received_event,
@@ -182,6 +184,28 @@ def test_shared_trust_cases() -> None:
         assert result.trusted is case["expected"]["trusted"], case["name"]
         assert result.retryable is case["expected"]["retryable"], case["name"]
         assert result.reason == case["expected"]["reason"], case["name"]
+
+
+def test_shared_matched_rules_cases() -> None:
+    base_event = _load_json("webhook", "valid-email-received.json")
+    fixtures = _load_json("understanding", "matched-rules.json")["cases"]
+    for case in fixtures:
+        payload = copy.deepcopy(base_event)
+        payload["email"]["analysis"] = case["analysis"]
+        event = validate_email_received_event(payload)
+        rules = case["analysis"].get("understanding", {}).get("rules", [])
+        expected = [
+            next(rule for rule in rules if rule["id"] == rule_id)
+            for rule_id in case["expected_rule_ids"]
+        ]
+        for email in (event, normalize_received_email(event)):
+            matched = matched_rules(email, case.get("rule_id"))
+            assert [rule.id for rule in matched] == case["expected_rule_ids"], case[
+                "name"
+            ]
+            assert [
+                rule.model_dump(mode="json", exclude_unset=True) for rule in matched
+            ] == expected, case["name"]
 
 
 def test_shared_raw_cases() -> None:

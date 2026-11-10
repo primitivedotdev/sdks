@@ -1,0 +1,320 @@
+{
+  "description": "Shared cases for reading the rules that granted a delivery (matchedRules / matched_rules / EmailAnalysis.MatchedRules). Each case replaces email.analysis on test-fixtures/webhook/valid-email-received.json, validates the event, and calls the helper on the event and on the normalized received email, with rule_id when the case sets it. expected_rule_ids lists the ids of the returned rules, in order; each returned rule is the entry from email.analysis.understanding.rules. Entries without a rule id are skipped.",
+  "cases": [
+    {
+      "name": "no_understanding",
+      "analysis": {},
+      "expected_rule_ids": []
+    },
+    {
+      "name": "pending_understanding",
+      "analysis": {
+        "understanding": {
+          "version": 1,
+          "status": "pending"
+        }
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "name": "ready_without_rules",
+      "analysis": {
+        "understanding": {
+          "version": 1,
+          "status": "ready",
+          "classification_id": "6f1d2c3b-4a59-4e6f-8a7b-9c0d1e2f3a4b",
+          "vocabulary": "v1",
+          "classified_at": "2025-12-14T11:59:58.912Z",
+          "facts": {
+            "is_cold_outreach": {
+              "value": true,
+              "confidence": 0.97
+            },
+            "doc_type": {
+              "value": ["correspondence", "resume"],
+              "confidence": 0.88
+            }
+          }
+        }
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "name": "ready_with_empty_rules",
+      "analysis": {
+        "understanding": {
+          "version": 1,
+          "status": "ready",
+          "classification_id": "6f1d2c3b-4a59-4e6f-8a7b-9c0d1e2f3a4b",
+          "vocabulary": "v1",
+          "classified_at": "2025-12-14T11:59:58.912Z",
+          "facts": {
+            "is_cold_outreach": {
+              "value": true,
+              "confidence": 0.97
+            },
+            "doc_type": {
+              "value": ["correspondence", "resume"],
+              "confidence": 0.88
+            }
+          },
+          "rules": []
+        }
+      },
+      "expected_rule_ids": []
+    },
+    {
+      "name": "rule_granted_delivery",
+      "analysis": {
+        "understanding": {
+          "version": 1,
+          "status": "ready",
+          "classification_id": "6f1d2c3b-4a59-4e6f-8a7b-9c0d1e2f3a4b",
+          "vocabulary": "v1",
+          "classified_at": "2025-12-14T11:59:58.912Z",
+          "facts": {
+            "is_cold_outreach": {
+              "value": true,
+              "confidence": 0.97
+            },
+            "doc_type": {
+              "value": ["correspondence", "resume"],
+              "confidence": 0.88
+            }
+          },
+          "rules": [
+            {
+              "id": "3c9e7a1b-2d4f-4b6a-8c0e-1f2a3b4c5d6e",
+              "version": 2,
+              "name": "Internship applicants",
+              "description": "college students looking for internships",
+              "explanation": "Cold outreach that includes a resume, from a college student looking for an internship.",
+              "questions": [
+                {
+                  "question": "Is the sender a college student looking for an internship?",
+                  "answer": true,
+                  "confidence": 0.99
+                }
+              ]
+            },
+            {
+              "id": "4d0f8b2c-3e5a-4c7b-9d1f-2a3b4c5d6e7f",
+              "version": 1,
+              "name": "Invoices from vendors",
+              "explanation": "Invoices sent by vendors."
+            }
+          ]
+        }
+      },
+      "expected_rule_ids": [
+        "3c9e7a1b-2d4f-4b6a-8c0e-1f2a3b4c5d6e",
+        "4d0f8b2c-3e5a-4c7b-9d1f-2a3b4c5d6e7f"
+      ]
+    },
+    {
+      "name": "filtered_to_one_rule",
+      "analysis": {
+        "understanding": {
+          "version": 1,
+          "status": "ready",
+          "classification_id": "6f1d2c3b-4a59-4e6f-8a7b-9c0d1e2f3a4b",
+          "vocabulary": "v1",
+          "classified_at": "2025-12-14T11:59:58.912Z",
+          "facts": {
+            "is_cold_outreach": {
+              "value": true,
+              "confidence": 0.97
+            },
+            "doc_type": {
+              "value": ["correspondence", "resume"],
+              "confidence": 0.88
+            }
+          },
+          "rules": [
+            {
+              "id": "3c9e7a1b-2d4f-4b6a-8c0e-1f2a3b4c5d6e",
+              "version": 2,
+              "name": "Internship applicants",
+              "description": "college students looking for internships",
+              "explanation": "Cold outreach that includes a resume, from a college student looking for an internship.",
+              "questions": [
+                {
+                  "question": "Is the sender a college student looking for an internship?",
+                  "answer": true,
+                  "confidence": 0.99
+                }
+              ]
+            },
+            {
+              "id": "4d0f8b2c-3e5a-4c7b-9d1f-2a3b4c5d6e7f",
+              "version": 1,
+              "name": "Invoices from vendors",
+              "explanation": "Invoices sent by vendors."
+            }
+          ]
+        }
+      },
+      "rule_id": "4d0f8b2c-3e5a-4c7b-9d1f-2a3b4c5d6e7f",
+      "expected_rule_ids": ["4d0f8b2c-3e5a-4c7b-9d1f-2a3b4c5d6e7f"]
+    },
+    {
+      "name": "filtered_to_a_rule_that_did_not_match",
+      "analysis": {
+        "understanding": {
+          "version": 1,
+          "status": "ready",
+          "classification_id": "6f1d2c3b-4a59-4e6f-8a7b-9c0d1e2f3a4b",
+          "vocabulary": "v1",
+          "classified_at": "2025-12-14T11:59:58.912Z",
+          "facts": {
+            "is_cold_outreach": {
+              "value": true,
+              "confidence": 0.97
+            },
+            "doc_type": {
+              "value": ["correspondence", "resume"],
+              "confidence": 0.88
+            }
+          },
+          "rules": [
+            {
+              "id": "3c9e7a1b-2d4f-4b6a-8c0e-1f2a3b4c5d6e",
+              "version": 2,
+              "name": "Internship applicants",
+              "description": "college students looking for internships",
+              "explanation": "Cold outreach that includes a resume, from a college student looking for an internship.",
+              "questions": [
+                {
+                  "question": "Is the sender a college student looking for an internship?",
+                  "answer": true,
+                  "confidence": 0.99
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "rule_id": "4d0f8b2c-3e5a-4c7b-9d1f-2a3b4c5d6e7f",
+      "expected_rule_ids": []
+    },
+    {
+      "name": "entry_without_rule_id_is_skipped",
+      "analysis": {
+        "understanding": {
+          "version": 1,
+          "status": "ready",
+          "classification_id": "6f1d2c3b-4a59-4e6f-8a7b-9c0d1e2f3a4b",
+          "vocabulary": "v1",
+          "classified_at": "2025-12-14T11:59:58.912Z",
+          "facts": {
+            "is_cold_outreach": {
+              "value": true,
+              "confidence": 0.97
+            },
+            "doc_type": {
+              "value": ["correspondence", "resume"],
+              "confidence": 0.88
+            }
+          },
+          "rules": [
+            {
+              "id": "",
+              "name": "Unnamed"
+            },
+            {
+              "id": "3c9e7a1b-2d4f-4b6a-8c0e-1f2a3b4c5d6e",
+              "version": 2,
+              "name": "Internship applicants",
+              "description": "college students looking for internships",
+              "explanation": "Cold outreach that includes a resume, from a college student looking for an internship.",
+              "questions": [
+                {
+                  "question": "Is the sender a college student looking for an internship?",
+                  "answer": true,
+                  "confidence": 0.99
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected_rule_ids": ["3c9e7a1b-2d4f-4b6a-8c0e-1f2a3b4c5d6e"]
+    },
+    {
+      "name": "empty_rule_id_filter_matches_nothing",
+      "analysis": {
+        "understanding": {
+          "version": 1,
+          "status": "ready",
+          "classification_id": "6f1d2c3b-4a59-4e6f-8a7b-9c0d1e2f3a4b",
+          "vocabulary": "v1",
+          "classified_at": "2025-12-14T11:59:58.912Z",
+          "facts": {
+            "is_cold_outreach": {
+              "value": true,
+              "confidence": 0.97
+            },
+            "doc_type": {
+              "value": ["correspondence", "resume"],
+              "confidence": 0.88
+            }
+          },
+          "rules": [
+            {
+              "id": "",
+              "name": "Unnamed"
+            },
+            {
+              "id": "3c9e7a1b-2d4f-4b6a-8c0e-1f2a3b4c5d6e",
+              "version": 2,
+              "name": "Internship applicants",
+              "description": "college students looking for internships",
+              "explanation": "Cold outreach that includes a resume, from a college student looking for an internship.",
+              "questions": [
+                {
+                  "question": "Is the sender a college student looking for an internship?",
+                  "answer": true,
+                  "confidence": 0.99
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "rule_id": "",
+      "expected_rule_ids": []
+    },
+    {
+      "name": "unfamiliar_rule_fields_are_kept",
+      "analysis": {
+        "understanding": {
+          "version": 1,
+          "status": "ready",
+          "classification_id": "6f1d2c3b-4a59-4e6f-8a7b-9c0d1e2f3a4b",
+          "vocabulary": "v1",
+          "classified_at": "2025-12-14T11:59:58.912Z",
+          "facts": {
+            "is_cold_outreach": {
+              "value": true,
+              "confidence": 0.97
+            },
+            "doc_type": {
+              "value": ["correspondence", "resume"],
+              "confidence": 0.88
+            }
+          },
+          "rules": [
+            {
+              "id": "4d0f8b2c-3e5a-4c7b-9d1f-2a3b4c5d6e7f",
+              "version": 1,
+              "name": "Invoices from vendors",
+              "explanation": "Invoices sent by vendors.",
+              "some_future_rule_field": "added later"
+            }
+          ]
+        }
+      },
+      "expected_rule_ids": ["4d0f8b2c-3e5a-4c7b-9d1f-2a3b4c5d6e7f"]
+    }
+  ]
+}

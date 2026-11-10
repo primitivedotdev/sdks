@@ -219,6 +219,8 @@ export {
   type TrustedSenderResult,
   type TrustReason,
 } from "./trust.js";
+// Rules that granted a delivery
+export { matchedRules } from "./understanding.js";
 // Version
 export { WEBHOOK_VERSION } from "./version.js";
 

@@ -258,6 +258,68 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 		}
 	})
 
+	t.Run("matched rules", func(t *testing.T) {
+		fixtures := loadFixtureCases[struct {
+			Cases []struct {
+				Name     string          `json:"name"`
+				Analysis json.RawMessage `json:"analysis"`
+				// RuleID stays a pointer so a case can tell "no filter"
+				// (absent) apart from filtering on an empty id.
+				RuleID          *string  `json:"rule_id"`
+				ExpectedRuleIDs []string `json:"expected_rule_ids"`
+			} `json:"cases"`
+		}](t, "understanding", "matched-rules.json")
+
+		for _, testCase := range fixtures.Cases {
+			payload := loadFixtureCases[map[string]any](t, "webhook", "valid-email-received.json")
+			var analysis map[string]any
+			if err := json.Unmarshal(testCase.Analysis, &analysis); err != nil {
+				t.Fatalf("%s: decode analysis fixture: %v", testCase.Name, err)
+			}
+			payload["email"].(map[string]any)["analysis"] = analysis
+			event, err := ValidateEmailReceivedEvent(payload)
+			if err != nil {
+				t.Fatalf("%s: ValidateEmailReceivedEvent returned error: %v", testCase.Name, err)
+			}
+			email, err := NormalizeReceivedEmail(*event)
+			if err != nil {
+				t.Fatalf("%s: NormalizeReceivedEmail returned error: %v", testCase.Name, err)
+			}
+
+			var fixtureAnalysis EmailAnalysis
+			if err := json.Unmarshal(testCase.Analysis, &fixtureAnalysis); err != nil {
+				t.Fatalf("%s: decode analysis fixture: %v", testCase.Name, err)
+			}
+			var want []UnderstandingRule
+			for _, id := range testCase.ExpectedRuleIDs {
+				for _, rule := range fixtureAnalysis.Understanding.Rules {
+					if rule.ID == id {
+						want = append(want, rule)
+						break
+					}
+				}
+			}
+
+			var ruleID []string
+			if testCase.RuleID != nil {
+				ruleID = []string{*testCase.RuleID}
+			}
+			for shape, analysis := range map[string]EmailAnalysis{"event": event.Email.Analysis, "received email": email.Analysis} {
+				matched := analysis.MatchedRules(ruleID...)
+				ids := make([]string, 0, len(matched))
+				for _, rule := range matched {
+					ids = append(ids, rule.ID)
+				}
+				if !reflect.DeepEqual(ids, testCase.ExpectedRuleIDs) {
+					t.Fatalf("%s (%s): matched rule ids %v, want %v", testCase.Name, shape, ids, testCase.ExpectedRuleIDs)
+				}
+				if !reflect.DeepEqual(matched, want) {
+					t.Fatalf("%s (%s): matched rules %+v, want %+v", testCase.Name, shape, matched, want)
+				}
+			}
+		}
+	})
+
 	t.Run("trust", func(t *testing.T) {
 		baseEvent := loadFixtureCases[EmailReceivedEvent](t, "webhook", "valid-email-received.json")
 		fixtures := loadFixtureCases[struct {

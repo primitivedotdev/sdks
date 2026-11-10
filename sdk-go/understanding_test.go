@@ -122,3 +122,18 @@ func TestEmailReceivedEventDecodesRouting(t *testing.T) {
 		t.Fatalf("Routing = %+v; want nil", withoutRouting.Routing)
 	}
 }
+
+func TestMatchedRulesUsesTheFirstRuleID(t *testing.T) {
+	analysis := EmailAnalysis{Understanding: &EmailUnderstanding{
+		Version: 1,
+		Status:  "ready",
+		Rules:   []UnderstandingRule{{ID: "rule_1"}, {ID: "rule_2"}},
+	}}
+
+	if got := analysis.MatchedRules("rule_2", "rule_1"); !reflect.DeepEqual(got, []UnderstandingRule{{ID: "rule_2"}}) {
+		t.Fatalf("MatchedRules(rule_2, rule_1) = %+v; want only rule_2", got)
+	}
+	if got := (EmailAnalysis{}).MatchedRules(); got != nil {
+		t.Fatalf("MatchedRules without understanding = %+v; want nil", got)
+	}
+}

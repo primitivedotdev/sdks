@@ -12,12 +12,15 @@ import {
   handleWebhook,
   isRawIncluded,
   isTrustedSender,
+  matchedRules,
+  normalizeReceivedEmail,
   PrimitiveWebhookError,
   parseHeaderAddress,
   parseWebhookEvent,
   RawEmailDecodeError,
   type SenderAnalysis,
   safeValidateEmailReceivedEvent,
+  type UnderstandingRule,
   validateEmailAuth,
   validateEmailReceivedEvent,
   verifyRawEmailDownload,
@@ -195,6 +198,41 @@ describe("shared compatibility fixtures", () => {
       expect(result.confidence, testCase.name).toBe(
         testCase.expected.confidence,
       );
+    }
+  });
+
+  it("reads shared matched-rules fixtures from the event and the received email", () => {
+    const baseEvent = loadJson<EmailReceivedEvent>(
+      "webhook",
+      "valid-email-received.json",
+    );
+    const fixtures = loadJson<{
+      cases: Array<{
+        name: string;
+        analysis: EmailReceivedEvent["email"]["analysis"];
+        rule_id?: string;
+        expected_rule_ids: string[];
+      }>;
+    }>("understanding", "matched-rules.json");
+
+    for (const testCase of fixtures.cases) {
+      const input = structuredClone(baseEvent);
+      input.email.analysis = testCase.analysis;
+      const event = validateEmailReceivedEvent(input);
+      const rules: UnderstandingRule[] =
+        testCase.analysis.understanding?.rules ?? [];
+      const expected = testCase.expected_rule_ids.map((id) =>
+        rules.find((rule) => rule.id === id),
+      );
+
+      for (const email of [event, normalizeReceivedEmail(event)]) {
+        const matched = matchedRules(email, testCase.rule_id);
+        expect(
+          matched.map((rule) => rule.id),
+          testCase.name,
+        ).toEqual(testCase.expected_rule_ids);
+        expect(matched, testCase.name).toEqual(expected);
+      }
     }
   });
 

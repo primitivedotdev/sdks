@@ -440,6 +440,18 @@ Parsed events are Pydantic models (`SentEmailAcceptedEvent`, `SentEmailRecipient
 
 For organizations with email rules enabled, `email.received` events carry `email.analysis.understanding` (`EmailUnderstanding`): a `version`, a `status`, and when `ready`, `facts` keyed by name, each with a `value` and `confidence`. Rule-granted deliveries also list the matching `rules`. Treat an unfamiliar `status`, fact name or value as one added after your SDK was built. `email.analysis.sender` (`SenderAnalysis`) is the sender authentication verdict.
 
+`matched_rules(email, rule_id=None)` returns the `UnderstandingRule` entries of a rule-granted delivery. It takes the email `receive(...)` returns or the event `handle_webhook(...)` returns, returns an empty list when no rule granted the delivery, and skips entries without a rule id. With `rule_id` it keeps only that rule's entries.
+
+```python
+import primitive
+from primitive import matched_rules
+
+email = primitive.receive(body=body, headers=headers, secret="whsec_...")
+
+for rule in matched_rules(email):
+    print(rule.id, rule.name, rule.explanation)
+```
+
 The Email Rules operations in `primitive.api.api.email_rules` need a member's own OAuth token that is not narrowed, such as the one `primitive login` stores. API keys and connected agent credentials are refused.
 
 ### Interaction webhook events
