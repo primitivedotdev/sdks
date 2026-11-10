@@ -9,6 +9,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { JSON_OUTPUT_FLAG } from "../json-output.js";
 
 // `primitive routes add` creates a recipient route. Pass --function to route an
 // address to a function (its dedicated route-target endpoint is minted in the
@@ -57,6 +58,7 @@ class RoutesAddCommand extends Command {
   };
 
   static flags = {
+    json: JSON_OUTPUT_FLAG,
     "api-key": Flags.string({
       description:
         "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",

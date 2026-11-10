@@ -9,6 +9,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { JSON_OUTPUT_FLAG } from "../json-output.js";
 
 // `primitive routes update` changes one or more fields of an existing recipient
 // route. Provide at least one field; omitted fields are left unchanged.
@@ -60,6 +61,7 @@ class RoutesUpdateCommand extends Command {
   };
 
   static flags = {
+    json: JSON_OUTPUT_FLAG,
     "api-key": Flags.string({
       description:
         "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",

@@ -9,6 +9,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { JSON_OUTPUT_FLAG } from "../json-output.js";
 
 class WakeSchedulesListCommand extends Command {
   static description = "List the org's wake.dispatch schedules.";
@@ -18,6 +19,7 @@ class WakeSchedulesListCommand extends Command {
   static examples = ["<%= config.bin %> wake schedules list"];
 
   static flags = {
+    json: JSON_OUTPUT_FLAG,
     "api-key": Flags.string({
       description:
         "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",

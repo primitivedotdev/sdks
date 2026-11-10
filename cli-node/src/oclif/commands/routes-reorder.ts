@@ -9,6 +9,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { JSON_OUTPUT_FLAG } from "../json-output.js";
 
 // `primitive routes reorder` updates the priority of one or more routes in a
 // single call. Priority sets evaluation order within a scope (lower is checked
@@ -59,6 +60,7 @@ class RoutesReorderCommand extends Command {
   ];
 
   static flags = {
+    json: JSON_OUTPUT_FLAG,
     "api-key": Flags.string({
       description:
         "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",

@@ -9,6 +9,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { JSON_OUTPUT_FLAG } from "../json-output.js";
 
 class WakeAuthorizationsDeleteCommand extends Command {
   static description = "Delete a wake authorization by id.";
@@ -27,6 +28,7 @@ class WakeAuthorizationsDeleteCommand extends Command {
   };
 
   static flags = {
+    json: JSON_OUTPUT_FLAG,
     "api-key": Flags.string({
       description:
         "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",

@@ -2,7 +2,11 @@ import {
   openapiDocument,
   type PrimitiveOperationManifest,
 } from "@primitivedotdev/api-core";
-import { headerFlagName } from "./api-command.js";
+import {
+  headerFlagName,
+  OPERATION_PATH_FLAGS,
+  parameterFlagName,
+} from "./api-command.js";
 import { cliOperationManifest } from "./cli-operations.js";
 
 type OpenApiTag = {
@@ -102,7 +106,7 @@ export function renderFishCompletion(binName: string): string {
         ...operation.queryParams,
       ]) {
         lines.push(
-          `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l '${fishEscape(parameter.name.replace(/_/g, "-"))}' -r -d '${fishEscape(parameter.description ?? parameter.name)}'`,
+          `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l '${fishEscape(parameterFlagName(operation.sdkName, parameter.name))}' -r -d '${fishEscape(OPERATION_PATH_FLAGS[operation.sdkName]?.[parameter.name]?.description ?? parameter.description ?? parameter.name)}'`,
         );
       }
       for (const parameter of operation.headerParams) {

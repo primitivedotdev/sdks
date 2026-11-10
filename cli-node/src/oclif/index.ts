@@ -184,7 +184,7 @@ import WakeSchedulesRunCommand from "./commands/wake-schedules-run.js";
 import WakeSchedulesUpdateCommand from "./commands/wake-schedules-update.js";
 import WhoamiCommand from "./commands/whoami.js";
 import { renderFishCompletion } from "./fish-completion.js";
-import { guardJsonOutputCommands } from "./json-output.js";
+import { guardJsonOutputCommands, JSON_OUTPUT_FLAG } from "./json-output.js";
 import { readCompletionFunction } from "./shell-completion-script.js";
 
 class ListOperationsCommand extends Command {
@@ -192,6 +192,9 @@ class ListOperationsCommand extends Command {
     "List all generated API operations as JSON. Useful for piping to `jq` to discover available commands, their request/response schemas, and per-field descriptions. For inspecting a single operation in detail, prefer `primitive describe <command-or-operation-name>`.";
 
   static summary = "List all generated API operations (JSON)";
+
+  // Its output is JSON already; the flag is accepted so `--json` is never an error.
+  static flags = { json: JSON_OUTPUT_FLAG };
 
   async run(): Promise<void> {
     this.log(JSON.stringify(cliOperationManifest, null, 2));
@@ -354,6 +357,9 @@ class DescribeCommand extends Command {
     "<%= config.bin %> describe emails:get",
     "<%= config.bin %> describe sent:get",
   ];
+
+  // Its output is JSON already; the flag is accepted so `--json` is never an error.
+  static flags = { json: JSON_OUTPUT_FLAG };
 
   async run(): Promise<void> {
     const { args } = await this.parse(DescribeCommand);

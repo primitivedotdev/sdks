@@ -18,6 +18,7 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import type { ResolvedCliAuth } from "../auth.js";
+import { JSON_OUTPUT_FLAG } from "../json-output.js";
 import {
   resolveSingleSecretValue,
   SINGLE_SECRET_VALUE_SOURCE_DESCRIPTION,
@@ -211,6 +212,7 @@ class FunctionsSetSecretCommand extends Command {
   ];
 
   static flags = {
+    json: JSON_OUTPUT_FLAG,
     "api-key": Flags.string({
       description:
         "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",

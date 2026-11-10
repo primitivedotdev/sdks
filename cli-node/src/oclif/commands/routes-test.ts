@@ -9,6 +9,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { JSON_OUTPUT_FLAG } from "../json-output.js";
 
 // `primitive routes test <recipient>` previews where an inbound email to that
 // address would be delivered, with a trace of every rule evaluated and why.
@@ -35,6 +36,7 @@ class RoutesTestCommand extends Command {
   };
 
   static flags = {
+    json: JSON_OUTPUT_FLAG,
     "api-key": Flags.string({
       description:
         "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",

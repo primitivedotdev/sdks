@@ -9,6 +9,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { JSON_OUTPUT_FLAG } from "../json-output.js";
 
 // `primitive routes list` shows the org's recipient routes in evaluation order.
 
@@ -20,6 +21,7 @@ class RoutesListCommand extends Command {
   static examples = ["<%= config.bin %> routes list"];
 
   static flags = {
+    json: JSON_OUTPUT_FLAG,
     "api-key": Flags.string({
       description:
         "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",

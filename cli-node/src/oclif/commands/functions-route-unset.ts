@@ -9,6 +9,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { JSON_OUTPUT_FLAG } from "../json-output.js";
 
 // `primitive functions:route-unset` deactivates every active endpoint
 // bound to this function. The function stays deployed but stops
@@ -24,6 +25,7 @@ class FunctionsRouteUnsetCommand extends Command {
   static examples = ["<%= config.bin %> functions route-unset --id <fn-id>"];
 
   static flags = {
+    json: JSON_OUTPUT_FLAG,
     "api-key": Flags.string({
       description:
         "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",
