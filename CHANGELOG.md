@@ -732,6 +732,13 @@ parsers.
 - `keys update --json` prints the key at the top level, in the shape
   `keys get` and `keys create` print, with `changed`, `warnings` and
   `address_warnings` alongside, instead of nesting it under `key`.
+- Generated commands the API answers only in a dashboard session, such as
+  `credentials list-credentials` and `credentials list-credential-events`,
+  say so: their summary ends with `(dashboard only)` and their help starts
+  with a note. The operation manifest (`primitive list-operations`, and
+  `operationManifest` from `@primitivedotdev/sdk/openapi`) carries each
+  operation's `access`, from the spec's `x-primitive-person-only`, or null;
+  code that builds manifest objects by hand must now set it.
 - `keys revoke` takes `--step-up-token` and `--no-browser`. When the
   server asks for approval, it prints the approval link, opens it where it
   can and waits for the one-time token, as the other `keys` commands do.

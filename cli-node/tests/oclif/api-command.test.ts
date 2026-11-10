@@ -2,10 +2,14 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Errors } from "@oclif/core";
-import type { PrimitiveOperationManifest } from "@primitivedotdev/api-core";
+import {
+  operationManifest,
+  type PrimitiveOperationManifest,
+} from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createOperationCommand,
+  DASHBOARD_ONLY_NOTE,
   domainVerificationFailedHint,
   EMPTY_RESULT_HINTS,
   extractErrorCode,
@@ -806,6 +810,7 @@ describe("createOperationCommand description", () => {
       queryParams: [],
       headerParams: [],
       permissions: null,
+      access: null,
       requestSchema: null,
       responseSchema: null,
       sdkName: "fakeOp",
@@ -815,6 +820,37 @@ describe("createOperationCommand description", () => {
     };
     return { ...base, ...overrides };
   }
+
+  it("says in its summary and help when the API answers an operation only in a dashboard session", () => {
+    const dashboard = createOperationCommand(
+      makeOperation({ access: "session", summary: "List every credential" }),
+    ) as unknown as { summary: string; description: string };
+    expect(dashboard.summary).toBe("List every credential (dashboard only)");
+    expect(dashboard.description.startsWith(DASHBOARD_ONLY_NOTE)).toBe(true);
+    const cli = createOperationCommand(
+      makeOperation({ access: "session_or_cli", summary: "List keys" }),
+    ) as unknown as { summary: string; description: string };
+    expect(cli.summary).toBe("List keys");
+    expect(cli.description).not.toContain(DASHBOARD_ONLY_NOTE);
+  });
+
+  it("marks the real dashboard-only operations from the spec, and no others", () => {
+    const sessionOnly = operationManifest
+      .filter((operation) => operation.access === "session")
+      .map((operation) => operation.sdkName);
+    expect(sessionOnly).toEqual(
+      expect.arrayContaining(["listCredentials", "listCredentialEvents"]),
+    );
+    expect(sessionOnly).not.toContain("listKeys");
+    expect(
+      operationManifest.find((operation) => operation.sdkName === "listKeys")
+        ?.access,
+    ).toBe("session_or_cli");
+    expect(
+      operationManifest.find((operation) => operation.sdkName === "listEmails")
+        ?.access,
+    ).toBeNull();
+  });
 
   it("appends the hint to the description when sdkName matches OPERATION_HINTS", () => {
     const op = makeOperation({

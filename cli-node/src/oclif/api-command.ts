@@ -161,6 +161,19 @@ function flagDescription(parameter: PrimitiveParameterManifest): string {
 // with a token the person passes or pastes from the approval page.
 export const STEP_UP_OPERATIONS: ReadonlySet<string> = new Set<string>([]);
 
+/**
+ * Whether the API answers an operation only in a dashboard session, so the CLI
+ * is always refused (the spec's x-primitive-person-only access `session`).
+ */
+export function isDashboardOnly(
+  operation: Pick<PrimitiveOperationManifest, "access">,
+): boolean {
+  return operation.access === "session";
+}
+
+export const DASHBOARD_ONLY_NOTE =
+  "Dashboard only: the API answers this only in a dashboard session, so the CLI, API keys and agents are refused. Open the dashboard to do it.";
+
 /** Whether an operation takes the browser approval token. */
 export function takesStepUp(
   operation: Pick<PrimitiveOperationManifest, "headerParams" | "sdkName">,
@@ -1560,10 +1573,12 @@ export function createOperationCommand(
   // Without this, `--help` only said "JSON request body" and agents
   // had to probe the server with malformed payloads to discover
   // required fields. (CLI agent walkthrough surfaced this.)
-  const baseDescription =
+  const dashboardOnly = isDashboardOnly(operation);
+  const baseDescription = `${dashboardOnly ? `${DASHBOARD_ONLY_NOTE}\n\n` : ""}${
     operation.description !== null && operation.description !== undefined
       ? canonicalizeCliReferences(operation.description)
-      : `${operation.method} ${operation.path}`;
+      : `${operation.method} ${operation.path}`
+  }`;
   const schemaSummary = operation.hasJsonBody
     ? renderRequestSchemaSummary(
         operation.requestSchema,
@@ -1601,8 +1616,9 @@ export function createOperationCommand(
         : {}
     ) as never;
 
-    static summary =
-      operation.summary ?? `${operation.method} ${operation.path}`;
+    static summary = `${
+      operation.summary ?? `${operation.method} ${operation.path}`
+    }${dashboardOnly ? " (dashboard only)" : ""}`;
 
     async run(): Promise<void> {
       const { args, flags } = await this.parse(OperationCommand as never).catch(
