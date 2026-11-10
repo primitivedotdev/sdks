@@ -22,8 +22,10 @@ import {
 import { resolveMessageBodies } from "../message-body-sources.js";
 import {
   assertAgentFromAddress,
+  type DefaultFrom,
   deriveSubject,
-  pickDefaultFromAddress,
+  fromLine,
+  resolveDefaultFrom,
 } from "../outbound-defaults.js";
 import { warnIfSharedProfile } from "../profile-session-check.js";
 import {
@@ -57,13 +59,15 @@ import {
 // with two ergonomic defaults that the underlying operation can't
 // express through manifest-driven flag generation alone:
 //
-//   1. `--from` defaults to `agent@<first-verified-domain>` when
-//      omitted. Most agents don't know which domains their org has
-//      verified for outbound; making them list-domains first to
-//      derive a from-address is exactly the kind of email-ops cruft
-//      this command exists to hide. Customers with multiple
-//      domains, or who want a different local-part, pass --from
-//      explicitly.
+//   1. `--from` defaults by credential when omitted
+//      (resolveDefaultFrom in outbound-defaults.ts): a connected agent
+//      sends as its agent address, a person's own login as their member
+//      address when the API would let them send from it, and a key
+//      whose grant names exactly one address as that address. Anything
+//      else gets no default: the command lists what the credential may
+//      send from and asks for --from. A person is never defaulted to an
+//      agent@ or managed-domain address, and the From is never guessed
+//      from the organization's domains.
 //   2. `--subject` defaults to the first non-empty line of the body
 //      (capped). Empty subjects get spam-scored, so we always emit
 //      something. Callers who want full control pass --subject.
@@ -89,7 +93,12 @@ class SendCommand extends Command {
   static description =
     `Send an outbound email. Agent-grade shortcut for \`sending send\` with sensible defaults.
 
-  --from defaults to agent@<your-first-verified-outbound-domain> when omitted.
+  --from defaults by credential when omitted: a connected agent sends as
+  its agent address; your own login sends as your member address (the one
+  \`primitive account whoami\` reports) when you may send from it; a key
+  whose grant names exactly one address sends from that address. Otherwise
+  there is no default: the command lists the addresses you may send from
+  and asks for --from. Without --json, stderr names the From it used.
   --subject defaults to the first line of the body when omitted.
   --attachment attaches a file; repeat it to attach multiple files.
   --header adds a custom header such as "X-Campaign-Id: spring-sale";
@@ -104,12 +113,13 @@ class SendCommand extends Command {
   For the full flag set (custom message-id threading on the wire,
   references arrays, etc.), use \`primitive sending send\`.
 
-  Stdout is the send record as JSON. A one-line outcome summary goes to
-  stderr ("Message sent (queued for delivery, id X). Do not resend.").
+  Stdout is the send record as JSON. Stderr names the From used, then a
+  one-line outcome summary ("Message sent (queued for delivery, id X). Do
+  not resend.").
   A queued status means the message was accepted and is on its way;
   it is not a failure. --json replaces stdout with one envelope
   { outcome, exit_code, outcome_message, sent_email_id, idempotency_key,
-  sent, http_status, error, follow_up_commands } for every outcome,
+  sent, http_status, error, follow_up_commands, from } for every outcome,
   including failures, and leaves stderr empty, so output merged with
   2>&1 still parses. If the outcome is uncertain, reconcile with
   \`primitive sent get --idempotency-key <key>\` before retrying.
@@ -150,7 +160,7 @@ class SendCommand extends Command {
     }),
     from: Flags.string({
       description:
-        "Sender address. Defaults to agent@<your-first-verified-outbound-domain>.",
+        "Sender address. Without it: a connected agent's own address, your member address on your own login, or a key's one granted address; otherwise the command asks for --from.",
     }),
     subject: Flags.string({
       description:
@@ -236,7 +246,7 @@ class SendCommand extends Command {
     }),
     json: Flags.boolean({
       description:
-        "Emit one outcome envelope { outcome, exit_code, outcome_message, sent_email_id, idempotency_key, sent, http_status, error, follow_up_commands } on stdout for every outcome, including failures, with nothing on stderr. Without --json, stdout is the send record as before.",
+        "Emit one outcome envelope { outcome, exit_code, outcome_message, sent_email_id, idempotency_key, sent, http_status, error, follow_up_commands, from } on stdout for every outcome, including failures, with nothing on stderr. Without --json, stdout is the send record as before.",
     }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
@@ -339,9 +349,16 @@ class SendCommand extends Command {
         configDir: this.config.configDir,
       };
       assertAgentFromAddress(flags.from, auth.connectedAgent);
-      const from =
-        flags.from ??
-        (await pickDefaultFromAddress(apiClient, authFailureContext));
+      const defaulted =
+        flags.from === undefined
+          ? await resolveDefaultFrom(apiClient, authFailureContext, {
+              to: flags.to,
+            })
+          : undefined;
+      const from = flags.from ?? (defaulted as DefaultFrom).address;
+      // Always say which From this send uses, and where a default came from.
+      if (!flags.json)
+        process.stderr.write(`${fromLine(from, defaulted?.source)}\n`);
       const subject =
         flags.subject ??
         (bodies.body
@@ -469,9 +486,10 @@ class SendCommand extends Command {
       // is summarised on stderr and in the exit code.
       const outcome = reportSendCommandResult({
         attemptStartedAtIso,
-        ...(this.waitNotice
-          ? { extraEnvelopeFields: { wait_notice: this.waitNotice } }
-          : {}),
+        extraEnvelopeFields: {
+          from,
+          ...(this.waitNotice ? { wait_notice: this.waitNotice } : {}),
+        },
         idempotencyKey,
         idempotencyKeyOrigin:
           flags["idempotency-key"] === undefined ? "cli_derived" : "caller",

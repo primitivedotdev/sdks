@@ -1390,7 +1390,7 @@ class ChatCommand extends Command {
     }),
     from: Flags.string({
       description:
-        "Sender address. Defaults to the selected connected profile's pinned address, otherwise agent@<your-first-verified-outbound-domain>. A connected profile rejects another sender.",
+        "Sender address. Defaults to the selected connected profile's pinned address; on your own login, to your member address when you may send from it; with a key whose grant names exactly one address, to that address. Otherwise the command asks for --from. A connected profile rejects another sender.",
     }),
     subject: Flags.string({
       description:
@@ -1732,7 +1732,9 @@ class ChatCommand extends Command {
 
               const replyFrom =
                 selectedFrom ??
-                (await pickDefaultFromAddress(apiClient, authFailureContext));
+                (await pickDefaultFromAddress(apiClient, authFailureContext, {
+                  to: args.recipient,
+                }));
               progress?.start(
                 `Finding latest inbound email from ${args.recipient}`,
               );
@@ -1763,7 +1765,9 @@ class ChatCommand extends Command {
         } else {
           from =
             selectedFrom ??
-            (await pickDefaultFromAddress(apiClient, authFailureContext));
+            (await pickDefaultFromAddress(apiClient, authFailureContext, {
+              to: args.recipient,
+            }));
           subject = flags.subject ?? deriveChatSubject(message);
         }
 
