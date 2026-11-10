@@ -10,6 +10,7 @@ import {
   checkSendability,
   getOutboundStatus,
   getOwnGrant,
+  getSendFrom,
   listDomains,
   whoami,
 } from "@primitivedotdev/api-core";
@@ -143,7 +144,7 @@ export type AuthFailureContext = {
 /** Where a defaulted From came from, for the line that names it. */
 export type DefaultFromSource = "agent" | "member_address" | "granted_address";
 
-export type DefaultFrom = { address: string; source: DefaultFromSource };
+export type DefaultFrom = { address: string; source?: DefaultFromSource };
 
 /**
  * Credential kinds the API treats as a person acting as themself: an OAuth
@@ -338,8 +339,11 @@ function unauthorizedRefusal(
 }
 
 /**
- * The From a send uses when --from is left out, by credential:
- * - a connected agent sends as its own agent address;
+ * The From a send uses when --from is left out. A connected agent sends as
+ * its own agent address. Otherwise the API answers it (GET /v1/whoami/send-
+ * from), judging every address by the send's own rules: its default, or a
+ * refusal that lists what the credential may send from. Against an API that
+ * does not answer it, it is worked out here, by credential:
  * - a person (a CLI login or a session) sends as their own member address,
  *   when the API would let them send from it to this recipient;
  * - a key whose grant sends from exactly one address, and no whole domain,
@@ -348,12 +352,13 @@ function unauthorizedRefusal(
  * a person with no member address they may send from, gets no default: the
  * command refuses, lists what the credential may send from, and asks for
  * --from. The From is never an address guessed from the organization's
- * domains, such as agent@ at the first verified one.
+ * domains, such as agent@ at the first verified one. A failed answer from an
+ * API that has it refuses rather than fall back.
  */
 export async function resolveDefaultFrom(
   apiClient: PrimitiveApiClient,
   authFailureContext: AuthFailureContext,
-  options: { to?: string } = {},
+  options: { to?: string; purpose?: "send" | "reply" } = {},
 ): Promise<DefaultFrom> {
   if (authFailureContext.auth.connectedAgent) {
     return {
@@ -367,6 +372,12 @@ export async function resolveDefaultFrom(
       { exit: 1 },
     );
   }
+  const answered = await sendFromAnswer(
+    apiClient,
+    authFailureContext,
+    options.purpose ?? "send",
+  );
+  if (answered) return answered;
   const own = await getOwnGrant({
     client: apiClient.client,
     responseStyle: "fields",
@@ -448,11 +459,140 @@ export async function resolveDefaultFrom(
   );
 }
 
+const SEND_FROM_SOURCES: Record<string, DefaultFromSource> = {
+  agent_address: "agent",
+  member_address: "member_address",
+  granted_address: "granted_address",
+};
+
+function errorDetail(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/** The command that claims a member address, when whoami suggests one. */
+async function claimHint(apiClient: PrimitiveApiClient): Promise<string> {
+  try {
+    const me = await whoami({
+      client: apiClient.client,
+      responseStyle: "fields",
+    });
+    if (me.error || me.data?.data?.member_address) return "";
+    const suggestion = me.data?.data?.member_address_suggestion;
+    return suggestion
+      ? `You have no member address of your own; to claim one, run \`primitive account provision-member-address --address ${suggestion}\`.`
+      : "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * The default From as the API answers it (GET /v1/whoami/send-from), which
+ * judges every address by the send's own rules: the default, or a refusal
+ * that lists what the credential may send from. Undefined only where the API
+ * does not have the answer (an older API, a Function-bound key), or for a
+ * reply when it lists nothing (a reply needs no send permission), so the
+ * caller works the default out as before. Any other failure, or an answer it
+ * cannot read, refuses: the CLI never guesses past an answer it could not
+ * read.
+ */
+async function sendFromAnswer(
+  apiClient: PrimitiveApiClient,
+  authFailureContext: AuthFailureContext,
+  purpose: "send" | "reply",
+): Promise<DefaultFrom | undefined> {
+  let result: Awaited<ReturnType<typeof getSendFrom>>;
+  try {
+    result = await getSendFrom({
+      client: apiClient.client,
+      responseStyle: "fields",
+    });
+  } catch (error) {
+    throw new Errors.CLIError(
+      `Could not tell which address this credential may send from (${errorDetail(error)}), so --from has no default. Pass --from <address>.`,
+      { exit: 1 },
+    );
+  }
+  if (result.error) {
+    const errorPayload = extractErrorPayload(result.error);
+    const code = extractErrorCode(errorPayload);
+    if (code === API_ERROR_CODES.unauthorized)
+      throw unauthorizedRefusal(errorPayload, authFailureContext);
+    if (code === "not_found" || code === "function_scope_forbidden")
+      return undefined;
+    throw new Errors.CLIError(
+      `Could not tell which address this credential may send from, so --from has no default. Pass --from <address>. Underlying error: ${formatErrorPayload(errorPayload)}`,
+      { exit: 1 },
+    );
+  }
+  const data = result.data?.data as
+    | {
+        default_from?: unknown;
+        default_source?: unknown;
+        addresses?: unknown;
+        domains?: unknown;
+        reason?: unknown;
+      }
+    | undefined;
+  // An answer it cannot read is not leave to guess: refuse, as for a failure.
+  if (
+    !data ||
+    typeof data !== "object" ||
+    !("default_from" in data) ||
+    !Array.isArray(data.addresses)
+  )
+    throw new Errors.CLIError(
+      "Could not read which address this credential may send from, so --from has no default. Pass --from <address>.",
+      { exit: 1 },
+    );
+  if (typeof data.default_from === "string" && data.default_from) {
+    const source =
+      typeof data.default_source === "string" &&
+      Object.hasOwn(SEND_FROM_SOURCES, data.default_source)
+        ? SEND_FROM_SOURCES[data.default_source]
+        : undefined;
+    return { address: data.default_from, ...(source ? { source } : {}) };
+  }
+  const addresses = data.addresses
+    .map((entry) =>
+      entry && typeof entry === "object"
+        ? (entry as { address?: unknown }).address
+        : undefined,
+    )
+    .filter((address): address is string => typeof address === "string");
+  const domains = Array.isArray(data.domains)
+    ? data.domains.filter(
+        (domain): domain is string => typeof domain === "string",
+      )
+    : [];
+  // A reply needs no send permission: one that lists nothing to send from
+  // still has its own reply rules, as before.
+  if (purpose === "reply" && addresses.length === 0 && domains.length === 0)
+    return undefined;
+  const reason =
+    typeof data.reason === "string" && data.reason.trim()
+      ? data.reason.trim().replace(/\.?$/, ".")
+      : "This credential has no single address to send from, so --from has no default.";
+  const parts = [reason];
+  if (addresses.length > 0)
+    parts.push(`Addresses you may send from: ${addresses.join(", ")}.`);
+  if (domains.length > 0)
+    parts.push(
+      `${addresses.length > 0 ? "Also any" : "Any"} address at: ${domains.join(", ")}.`,
+    );
+  // Only a person without a member address gets a suggestion to claim one.
+  parts.push(await claimHint(apiClient));
+  parts.push("Pass the address to use with --from <address>.");
+  throw new Errors.CLIError(parts.filter((part) => part).join(" "), {
+    exit: 1,
+  });
+}
+
 /** The address of resolveDefaultFrom. */
 export async function pickDefaultFromAddress(
   apiClient: PrimitiveApiClient,
   authFailureContext: AuthFailureContext,
-  options: { to?: string } = {},
+  options: { to?: string; purpose?: "send" | "reply" } = {},
 ): Promise<string> {
   return (await resolveDefaultFrom(apiClient, authFailureContext, options))
     .address;

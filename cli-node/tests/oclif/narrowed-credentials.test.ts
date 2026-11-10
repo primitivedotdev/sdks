@@ -9,16 +9,27 @@ import {
 
 const ACCOUNT_ID = "11111111-1111-4111-8111-111111111111";
 
+/** An API from before GET /v1/whoami/send-from: the route is not there. */
+function noSendFromRoute(): Response {
+  return Response.json(
+    { success: false, error: { code: "not_found", message: "Not found" } },
+    { status: 404 },
+  );
+}
+
 function clientAnswering(
   answer: (path: string) => Response,
 ): PrimitiveApiClient {
   return new PrimitiveApiClient({
     apiKey: ["prim", "test"].join("_"),
     apiBaseUrl: "https://api.example.test/v1",
-    fetch: (async (input: Request | string | URL) =>
-      answer(
-        new URL(input instanceof Request ? input.url : input).pathname,
-      )) as typeof fetch,
+    fetch: (async (input: Request | string | URL) => {
+      const path = new URL(input instanceof Request ? input.url : input)
+        .pathname;
+      return path.endsWith("/whoami/send-from")
+        ? noSendFromRoute()
+        : answer(path);
+    }) as typeof fetch,
   });
 }
 
@@ -116,7 +127,8 @@ function recordingClient(answers: Record<string, () => Response>) {
         body: typeof text === "string" && text ? JSON.parse(text) : null,
       });
       const key = Object.keys(answers).find((suffix) => path.endsWith(suffix));
-      return key ? (answers[key] as () => Response)() : refusal();
+      if (key) return (answers[key] as () => Response)();
+      return path.endsWith("/whoami/send-from") ? noSendFromRoute() : refusal();
     }) as typeof fetch,
   });
   return { client, requests };
@@ -466,6 +478,214 @@ describe("resolveDefaultFrom: the person's sendability check", () => {
       "Cannot send: CLI auth is missing or invalid",
     );
     vi.restoreAllMocks();
+  });
+});
+
+describe("resolveDefaultFrom from the API's own answer", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const answer = (data: Record<string, unknown>) => () =>
+    Response.json({
+      success: true,
+      data: {
+        default_from: null,
+        default_source: null,
+        addresses: [],
+        domains: [],
+        reason: null,
+        ...data,
+      },
+    });
+
+  it.each([
+    ["member_address", "member_address"],
+    ["granted_address", "granted_address"],
+    ["agent_address", "agent"],
+  ])(
+    "uses the default the API names (%s), asking nothing else",
+    async (server, source) => {
+      const { client, requests } = recordingClient({
+        "/whoami/send-from": answer({
+          default_from: "dana@yuuja.example",
+          default_source: server,
+          addresses: [
+            { address: "dana@yuuja.example", kind: "member_address" },
+          ],
+        }),
+      });
+      await expect(
+        resolveDefaultFrom(client, authContext, { to: "alice@example.com" }),
+      ).resolves.toEqual({ address: "dana@yuuja.example", source });
+      expect(requests.map((request) => request.path)).toEqual([
+        "/v1/whoami/send-from",
+      ]);
+    },
+  );
+
+  it("uses a default whose source it does not know, without naming one", async () => {
+    const client = recordingClient({
+      "/whoami/send-from": answer({
+        default_from: "x@acme.example",
+        default_source: "constructor",
+      }),
+    }).client;
+    await expect(resolveDefaultFrom(client, authContext)).resolves.toEqual({
+      address: "x@acme.example",
+    });
+  });
+
+  it("refuses with the API's reason and what it lists when there is no default", async () => {
+    const client = recordingClient({
+      "/whoami/send-from": answer({
+        addresses: [
+          { address: "a@acme.example", kind: "granted" },
+          { address: "b@acme.example", kind: "granted" },
+        ],
+        domains: ["acme.example"],
+        reason:
+          "This credential may send from more than one address, so there is no default From. Name the address to send from.",
+      }),
+    }).client;
+    await expect(resolveDefaultFrom(client, authContext)).rejects.toThrow(
+      "This credential may send from more than one address, so there is no default From. Name the address to send from. Addresses you may send from: a@acme.example, b@acme.example. Also any address at: acme.example. Pass the address to use with --from <address>.",
+    );
+  });
+
+  it("refuses with the reason alone, and a claim hint, when nothing can be sent from", async () => {
+    const { client } = recordingClient({
+      "/whoami/send-from": answer({
+        reason:
+          "You have no member address of your own, so there is no default From. Claim a member address.",
+      }),
+      "/whoami": () =>
+        Response.json({
+          success: true,
+          data: {
+            member_address: null,
+            member_address_suggestion: "dana@acme.example",
+          },
+        }),
+    });
+    await expect(resolveDefaultFrom(client, authContext)).rejects.toThrow(
+      /^You have no member address of your own, so there is no default From\. Claim a member address\. You have no member address of your own; to claim one, run `primitive account provision-member-address --address dana@acme\.example`\. Pass the address to use with --from <address>\.$/,
+    );
+  });
+
+  it("refuses an answer it cannot read, asking nothing else", async () => {
+    for (const data of [{}, { default_from: null }, null]) {
+      const { client, requests } = recordingClient({
+        "/whoami/send-from": () => Response.json({ success: true, data }),
+        "/whoami/grant": () => grantWithScope(scope(["me@example.test"])),
+      });
+      await expect(resolveDefaultFrom(client, authContext)).rejects.toThrow(
+        "Could not read which address this credential may send from, so --from has no default. Pass --from <address>.",
+      );
+      expect(requests.map((request) => request.path)).toEqual([
+        "/v1/whoami/send-from",
+      ]);
+    }
+  });
+
+  it("leaves a reply that lists nothing to its own rules", async () => {
+    const { client } = recordingClient({
+      "/whoami/send-from": answer({
+        reason:
+          "This credential can only reply to mail it received; it cannot send new mail.",
+      }),
+      "/whoami/grant": () =>
+        Response.json({
+          success: true,
+          data: {
+            org_id: ACCOUNT_ID,
+            auth_method: "api_key",
+            key_id: "k1",
+            grant: {
+              credential_kind: "org_key",
+              template: null,
+              permissions: ["mail:reply"],
+              mail_scope: scope(["me@example.test"]),
+              resources: null,
+              expires_at: null,
+            },
+          },
+        }),
+    });
+    await expect(
+      pickDefaultFromAddress(client, authContext, { purpose: "reply" }),
+    ).resolves.toBe("me@example.test");
+    await expect(pickDefaultFromAddress(client, authContext)).rejects.toThrow(
+      "This credential can only reply to mail it received; it cannot send new mail.",
+    );
+  });
+
+  it("works the default out itself only where the API has no answer", async () => {
+    for (const code of ["not_found", "function_scope_forbidden"]) {
+      const { client, requests } = recordingClient({
+        "/whoami/send-from": () =>
+          Response.json(
+            { success: false, error: { code, message: "x" } },
+            { status: code === "not_found" ? 404 : 403 },
+          ),
+        "/whoami/grant": () => grantWithScope(scope(["me@example.test"])),
+      });
+      await expect(resolveDefaultFrom(client, authContext)).resolves.toEqual({
+        address: "me@example.test",
+        source: "granted_address",
+      });
+      expect(requests.map((request) => request.path)).toContain(
+        "/v1/whoami/grant",
+      );
+    }
+  });
+
+  it("refuses, never guessing, when an API that has the answer fails", async () => {
+    const failures: Array<() => Response> = [
+      () =>
+        Response.json(
+          { success: false, error: { code: "internal_error", message: "x" } },
+          { status: 500 },
+        ),
+      () =>
+        Response.json(
+          { success: false, error: { code: "rate_limited", message: "x" } },
+          { status: 429 },
+        ),
+      () => refusal(),
+      () => {
+        throw new TypeError("network down");
+      },
+    ];
+    for (const failure of failures) {
+      const { client, requests } = recordingClient({
+        "/whoami/send-from": failure,
+        "/whoami/grant": () => grantWithScope(scope(["me@example.test"])),
+      });
+      await expect(resolveDefaultFrom(client, authContext)).rejects.toThrow(
+        "Could not tell which address this credential may send from",
+      );
+      expect(requests.map((request) => request.path)).toEqual([
+        "/v1/whoami/send-from",
+      ]);
+    }
+  });
+
+  it("stops on a credential the API does not accept, asking nothing else", async () => {
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const { client, requests } = recordingClient({
+      "/whoami/send-from": () =>
+        Response.json(
+          { success: false, error: { code: "unauthorized", message: "x" } },
+          { status: 401 },
+        ),
+    });
+    await expect(resolveDefaultFrom(client, authContext)).rejects.toThrow(
+      "Cannot send: CLI auth is missing or invalid",
+    );
+    expect(requests.map((request) => request.path)).toEqual([
+      "/v1/whoami/send-from",
+    ]);
   });
 });
 

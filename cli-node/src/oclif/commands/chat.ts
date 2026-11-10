@@ -1837,6 +1837,7 @@ class ChatCommand extends Command {
                 selectedFrom ??
                 (await pickDefaultFromAddress(apiClient, authFailureContext, {
                   to: args.recipient,
+                  purpose: "reply",
                 }));
               progress?.start(
                 `Finding latest inbound email from ${args.recipient}`,
