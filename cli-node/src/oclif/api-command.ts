@@ -217,6 +217,29 @@ export function positionalPathParameter(
     : undefined;
 }
 
+/** The most rows a paged --limit fetches, in pages of the server's own cap. */
+export const PAGED_LIMIT_MAX = 1000;
+
+/**
+ * The server's per-request cap on --limit for a list the CLI can page itself
+ * (array data, a cursor in meta.cursor, a limit with a maximum), else
+ * undefined. A larger --limit, up to PAGED_LIMIT_MAX, is then fetched in
+ * pages of that size.
+ */
+export function pagedLimitMaximum(
+  operation: Pick<
+    PrimitiveOperationManifest,
+    "headerParams" | "queryParams" | "responseSchema" | "sdkName"
+  >,
+): number | undefined {
+  // A browser approval is for one request, so such a list is never paged.
+  if (takesStepUp(operation)) return undefined;
+  const limit = operation.queryParams.find((p) => p.name === "limit");
+  if (!limit || typeof limit.maximum !== "number") return undefined;
+  if (!pagingFlagOverride(operation, limit)) return undefined;
+  return limit.maximum < PAGED_LIMIT_MAX ? limit.maximum : undefined;
+}
+
 /** The flag a path or query parameter is read from. */
 export function parameterFlagName(
   sdkName: string | undefined,
@@ -253,6 +276,14 @@ export function pagingFlagOverride(
     };
   }
   if (parameter.name === "limit" && typeof parameter.maximum === "number") {
+    if (parameter.maximum < PAGED_LIMIT_MAX) {
+      const single = operation.queryParams.some((p) => p.name === "wait")
+        ? " (not with --wait or --since)"
+        : "";
+      return {
+        description: `${described}. The API returns at most ${parameter.maximum} per request; a larger --limit, up to ${PAGED_LIMIT_MAX}, is fetched in pages of ${parameter.maximum}${single}. For more, page with --cursor.`,
+      };
+    }
     const cap = described.includes(String(parameter.maximum))
       ? ""
       : ` At most ${parameter.maximum} per page;`;
@@ -1062,13 +1093,16 @@ function buildFlags(operation: PrimitiveOperationManifest): {
   }
 
   const positional = positionalPathParameter(operation);
+  const pageMaximum = pagedLimitMaximum(operation);
   for (const parameter of [...operation.pathParams, ...operation.queryParams]) {
     const override = OPERATION_PATH_FLAGS[operation.sdkName]?.[parameter.name];
     flags[parameterFlagName(operation.sdkName, parameter.name)] =
       flagForParameter(
         parameter === positional
           ? { ...parameter, required: false }
-          : parameter,
+          : pageMaximum !== undefined && parameter.name === "limit"
+            ? { ...parameter, maximum: PAGED_LIMIT_MAX }
+            : parameter,
         override ?? pagingFlagOverride(operation, parameter),
       );
   }
@@ -1681,7 +1715,10 @@ export function createOperationCommand(
         // And for `from_verified`, a trust filter: rows without the
         // requested value are refused, never printed.
         const fromVerified = fromVerifiedExpectation(operation.sdkName, query);
-        const callOperation = (stepUpToken?: string) => {
+        const callOperation = (
+          stepUpToken?: string,
+          pageQuery: Record<string, unknown> = query,
+        ) => {
           const sent = stepUpToken
             ? { ...headers, [STEP_UP_HEADER]: stepUpToken }
             : headers;
@@ -1695,7 +1732,7 @@ export function createOperationCommand(
               parsedFlags,
               operation.sdkName,
             ),
-            query,
+            query: pageQuery,
             responseStyle: "fields",
           });
         };
@@ -1730,20 +1767,95 @@ export function createOperationCommand(
           stepUpUrl = approved.stepUpUrl;
           return approved.attempt;
         };
-        const result = takesStepUp(operation)
-          ? await callWithApproval()
-          : ATTACHMENT_WAIT_OPERATIONS.has(operation.sdkName)
-            ? await withAttachmentWait(callOperation, {
-                wait: parsedFlags.wait !== false,
-                errorCode: (error) =>
-                  extractErrorCode(extractErrorPayload(error)),
-                onFirstWait: () => {
-                  process.stderr.write(
-                    `Attachment content is not ready yet; waiting up to ${ATTACHMENT_WAIT_MAX_MS / 1000}s. Pass --no-wait to return immediately.\n`,
-                  );
+        // A --limit above the API's per-request cap is fetched in pages of
+        // that cap and printed as one list, with the cursor of the last page.
+        // A long-poll --wait and a forward --since tail stay one request.
+        const pageMaximum = pagedLimitMaximum(operation);
+        const wanted = typeof query.limit === "number" ? query.limit : 0;
+        const paged = pageMaximum !== undefined && wanted > pageMaximum;
+        if (paged) {
+          const single =
+            typeof query.wait === "number" && query.wait > 0
+              ? "--wait"
+              : query.since !== undefined
+                ? "--since"
+                : undefined;
+          if (single)
+            throw new Errors.CLIError(
+              `${single} takes a --limit of at most ${pageMaximum}, since it reads one page; a larger --limit is fetched in several requests.`,
+              { exit: 2 },
+            );
+        }
+        // Set when the request budget ends paging before --limit is reached.
+        let pagingNote: string | undefined;
+        const callPaged = async () => {
+          const max = pageMaximum ?? wanted;
+          const rows: unknown[] = [];
+          let sentCursor = query.cursor;
+          let last = await callOperation(undefined, {
+            ...query,
+            limit: Math.min(max, wanted),
+          });
+          // Only a null cursor ends a list: a page can come back short, even
+          // empty, with more to read. Bound the requests anyway, and say so
+          // when the bound is what stopped it.
+          const budget = Math.ceil(wanted / max) + 20;
+          for (let requests = 1; ; requests += 1) {
+            if (last.error) return last;
+            const envelope = last.data as OperationResponseEnvelope;
+            const page = Array.isArray(envelope?.data) ? envelope.data : [];
+            rows.push(...page);
+            const cursor = envelope?.meta?.cursor ?? undefined;
+            const exhausted =
+              Boolean(cursor) &&
+              cursor !== sentCursor &&
+              rows.length < wanted &&
+              requests >= budget;
+            if (exhausted)
+              pagingNote = `Stopped after ${requests} requests with ${rows.length} of ${wanted}; more may remain. Continue with --cursor ${cursor}.`;
+            if (
+              !cursor ||
+              cursor === sentCursor ||
+              rows.length >= wanted ||
+              exhausted
+            ) {
+              return {
+                ...last,
+                data: {
+                  ...(envelope ?? {}),
+                  data: rows,
+                  meta: {
+                    ...(envelope?.meta ?? {}),
+                    limit: wanted,
+                    cursor: cursor ?? null,
+                  },
                 },
-              })
-            : await callOperation();
+              };
+            }
+            sentCursor = cursor;
+            last = await callOperation(undefined, {
+              ...query,
+              cursor,
+              limit: Math.min(max, wanted - rows.length),
+            });
+          }
+        };
+        const result = paged
+          ? await callPaged()
+          : takesStepUp(operation)
+            ? await callWithApproval()
+            : ATTACHMENT_WAIT_OPERATIONS.has(operation.sdkName)
+              ? await withAttachmentWait(callOperation, {
+                  wait: parsedFlags.wait !== false,
+                  errorCode: (error) =>
+                    extractErrorCode(extractErrorPayload(error)),
+                  onFirstWait: () => {
+                    process.stderr.write(
+                      `Attachment content is not ready yet; waiting up to ${ATTACHMENT_WAIT_MAX_MS / 1000}s. Pass --no-wait to return immediately.\n`,
+                    );
+                  },
+                })
+              : await callOperation();
 
         if (result.error) {
           const errorPayload = extractErrorPayload(result.error);
@@ -1889,6 +2001,7 @@ export function createOperationCommand(
         if (cursor && !jsonOutput) {
           process.stderr.write(`next cursor: ${cursor}\n`);
         }
+        if (pagingNote && !jsonOutput) process.stderr.write(`${pagingNote}\n`);
         const summary: string[] = [];
 
         // Empty-result hint. When a list-style operation returns
