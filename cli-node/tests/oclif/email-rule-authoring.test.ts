@@ -838,7 +838,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
       expect(JSON.parse(result.stdout)).toEqual(data);
       expect(stderrLines(result)).toEqual([
         "Warning: testEmailRule succeeded but its report could not be built (bad answer). The JSON above is the full answer; read it rather than the exit code.",
-        "The answer's expectations did not all pass, so the command exits 1.",
+        "The answer's expectations were not all shown to pass, so the command exits 1.",
       ]);
       const json = await run("email-rules:test-email-rule", [
         "--rule-id",
@@ -852,7 +852,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
         error: {
           code: "expectations_not_passed",
           message:
-            "The answer's expectations did not all pass; read expectations in the answer.",
+            "The answer's expectations were not all shown to pass; read their result in the answer.",
         },
         exit_code: 1,
         warnings: [stderrLines(result)[0]],
@@ -1189,6 +1189,267 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
     expect(JSON.parse(result.merged)).toEqual(data);
   });
 
+  describe("--fail-on-expectations", () => {
+    const sent = () =>
+      tempFile("e.json", JSON.stringify({ match: [B], no_match: [D] }));
+    const check = (fields: Record<string, unknown>) => ({
+      ...written,
+      expectations_check: { version: 4, ...fields },
+    });
+    const TEST = `\`primitive email-rules test-email-rule --rule-id ${RULE}\``;
+
+    it("exits 1 when an expectation failed, with the same report", async () => {
+      answer(
+        check({ passed: false, decided: false, failed: [B], undecided: [D] }),
+      );
+      const result = await run("email-rules:update-email-rule", [
+        RULE,
+        "--expectations-file",
+        sent(),
+        "--fail-on-expectations",
+      ]);
+      expect(result.exitCode).toBe(1);
+      expect(stderrLines(result)).toEqual([
+        `Expectations on version 4: 1 failed (${B}), 1 undecided (${D}). To decide the rest, run ${TEST}.`,
+      ]);
+    });
+
+    it("exits 3 when none failed and one is undecided, with passed null", async () => {
+      const data = check({
+        passed: null,
+        decided: false,
+        failed: [],
+        undecided: [D],
+      });
+      answer(data);
+      const result = await run("email-rules:create-email-rule", [
+        "--raw-body",
+        JSON.stringify({ tree, name: "n", english: "e" }),
+        "--expectations-file",
+        sent(),
+        "--fail-on-expectations",
+        "--json",
+      ]);
+      expect(result.exitCode).toBe(3);
+      expect(result.stderr).toBe("");
+      expect(JSON.parse(result.merged)).toEqual({
+        ...data,
+        error: {
+          code: "expectations_undecided",
+          message: `1 expectation is undecided on this write, which judges them without classifying mail or asking the rule's questions: ${D}. Test them with ${TEST}.`,
+        },
+        exit_code: 3,
+      });
+    });
+
+    it("says why under --json when one failed", async () => {
+      const data = check({
+        passed: false,
+        decided: true,
+        failed: [B, D],
+        undecided: [],
+      });
+      answer(data);
+      const result = await run("email-rules:update-email-rule", [
+        RULE,
+        "--english",
+        "cold outreach from strangers",
+        "--fail-on-expectations",
+        "--json",
+      ]);
+      expect(result.exitCode, result.stderr).toBe(1);
+      expect(JSON.parse(result.merged)).toEqual({
+        ...data,
+        error: {
+          code: "expectations_failed",
+          message: `2 expectations failed on this write: ${B}, ${D}.`,
+        },
+        exit_code: 1,
+      });
+    });
+
+    it("exits 0 when every one passed, and when the write has none to check", async () => {
+      answer(check({ passed: true, decided: true, failed: [], undecided: [] }));
+      const passed = await run("email-rules:update-email-rule", [
+        RULE,
+        "--expectations-file",
+        sent(),
+        "--fail-on-expectations",
+      ]);
+      expect(passed.exitCode, passed.stderr).toBe(0);
+      answer(written);
+      const none = await run("email-rules:update-email-rule", [
+        RULE,
+        "--name",
+        "Renamed",
+        "--fail-on-expectations",
+      ]);
+      expect(none.exitCode, none.stderr).toBe(0);
+      expect(none.stderr).toBe("");
+    });
+
+    it("exits 3 when the expectations it sent were not checked", async () => {
+      answer(written);
+      const result = await run("email-rules:update-email-rule", [
+        RULE,
+        "--expectations-file",
+        sent(),
+        "--fail-on-expectations",
+        "--json",
+      ]);
+      expect(result.exitCode).toBe(3);
+      expect(JSON.parse(result.merged)).toMatchObject({
+        error: {
+          code: "expectations_unchecked",
+          message: `The expectations this write sent were not checked on it. Test them with ${TEST}.`,
+        },
+        exit_code: 3,
+      });
+    });
+
+    it("keeps exit 0 without the flag, whatever the check says", async () => {
+      answer(
+        check({ passed: false, decided: true, failed: [B], undecided: [] }),
+      );
+      const result = await run("email-rules:update-email-rule", [
+        RULE,
+        "--expectations-file",
+        sent(),
+      ]);
+      expect(result.exitCode).toBe(0);
+    });
+
+    it("exits 3 when none failed and one is undecided, with passed false", async () => {
+      answer(check({ passed: false, failed: [], undecided: [D] }));
+      const result = await run("email-rules:update-email-rule", [
+        RULE,
+        "--expectations-file",
+        sent(),
+        "--fail-on-expectations",
+      ]);
+      expect(result.exitCode, result.stderr).toBe(3);
+    });
+
+    it("exits 1 for any other check that did not pass", async () => {
+      for (const fields of [
+        { passed: null, failed: [], undecided: [] },
+        { passed: false, failed: [], undecided: [] },
+        { failed: [], undecided: [] },
+        { passed: null, failed: "x", undecided: "y" },
+      ]) {
+        answer(check(fields));
+        const result = await run("email-rules:update-email-rule", [
+          RULE,
+          "--expectations-file",
+          sent(),
+          "--fail-on-expectations",
+          "--json",
+        ]);
+        expect(result.exitCode, JSON.stringify(fields)).toBe(1);
+        expect(JSON.parse(result.merged).error?.code).toBe(
+          "expectations_failed",
+        );
+      }
+    });
+
+    it("exits 0 on create with no expectations, and on update with a null file", async () => {
+      answer(written);
+      const created = await run("email-rules:create-email-rule", [
+        "--raw-body",
+        JSON.stringify({ tree, name: "n", english: "e" }),
+        "--fail-on-expectations",
+      ]);
+      expect(created.exitCode, created.stderr).toBe(0);
+      answer(written);
+      const cleared = await run("email-rules:update-email-rule", [
+        RULE,
+        "--expectations-file",
+        tempFile("null.json", "null"),
+        "--fail-on-expectations",
+      ]);
+      expect(cleared.exitCode, cleared.stderr).toBe(0);
+    });
+
+    it("prints the data alone under --json when every one passed", async () => {
+      const data = check({
+        passed: true,
+        decided: true,
+        failed: [],
+        undecided: [],
+      });
+      answer(data);
+      const result = await run("email-rules:update-email-rule", [
+        RULE,
+        "--expectations-file",
+        sent(),
+        "--fail-on-expectations",
+        "--json",
+      ]);
+      expect(result.exitCode).toBe(0);
+      expect(JSON.parse(result.merged)).toEqual(data);
+    });
+
+    it("fails closed when the report cannot be built, and only with the flag", async () => {
+      const extension = OPERATION_EXTENSIONS.updateEmailRule;
+      if (!extension) throw new Error("updateEmailRule has no extension");
+      const report = extension.report;
+      extension.report = () => {
+        throw new Error("bad answer");
+      };
+      try {
+        const exitFor = async (data: unknown, flag: boolean) => {
+          answer(data);
+          const result = await run("email-rules:update-email-rule", [
+            RULE,
+            "--expectations-file",
+            sent(),
+            ...(flag ? ["--fail-on-expectations"] : []),
+          ]);
+          return result.exitCode;
+        };
+        const failed = check({ passed: false, failed: [B], undecided: [] });
+        expect(await exitFor(failed, true)).toBe(1);
+        expect(await exitFor(failed, false)).toBe(0);
+        // No check, though the write sent expectations: not checked, so test the rule.
+        expect(await exitFor(written, true)).toBe(3);
+        // Read as the report reads it, lists first, whatever passed says.
+        expect(
+          await exitFor(
+            check({ passed: true, failed: [B], undecided: [] }),
+            true,
+          ),
+        ).toBe(1);
+        expect(
+          await exitFor(
+            check({ passed: true, failed: [], undecided: [D] }),
+            true,
+          ),
+        ).toBe(3);
+        expect(
+          await exitFor(
+            check({ passed: true, failed: [], undecided: [] }),
+            true,
+          ),
+        ).toBe(0);
+      } finally {
+        extension.report = report;
+      }
+    });
+
+    it("is a flag on create and update", () => {
+      for (const id of [
+        "email-rules:create-email-rule",
+        "email-rules:update-email-rule",
+      ]) {
+        const flag = (COMMANDS[id] as unknown as Runnable).flags[
+          "fail-on-expectations"
+        ];
+        expect(flag?.type, id).toBe("boolean");
+        expect(flag?.description, id).toContain("Exit 1 when an expectation");
+      }
+    });
+  });
+
   it("generates --if-version on update and an optional --explanation on rule writes", () => {
     const update = (
       COMMANDS["email-rules:update-email-rule"] as unknown as Runnable
@@ -1323,6 +1584,27 @@ describe("email-rules get-email-rule-scope", () => {
       "Scope warning: typo.example is none of the organization's domains.",
       "This rule reads no mail now: it cannot run as its author, or everything its scope names is at none of the organization's domains or no longer read.",
     ]);
+  });
+
+  it("names a warning whose message is not text by its name and reason, without breaking the report", async () => {
+    answer({
+      ...scope,
+      reads_nothing: false,
+      scope_warnings: [
+        {
+          name: "typo.example",
+          kind: "domain",
+          reason: "unknown_domain",
+          message: 42,
+        },
+      ],
+    });
+    const result = await run("email-rules:get-email-rule-scope", [RULE]);
+    expect(result.exitCode).toBe(0);
+    expect(stderrLines(result)).toEqual([
+      "Scope warning: typo.example (unknown_domain)",
+    ]);
+    expect(result.stderr).not.toContain("could not be built");
   });
 
   it("prints nothing extra when it reads mail, or under --json", async () => {

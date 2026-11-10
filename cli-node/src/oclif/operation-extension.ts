@@ -43,10 +43,20 @@ export type OperationExtension = {
    * The exit code when report throws, read from the raw answer, so a report
    * that cannot be built never turns a failing answer into a pass.
    */
-  fallbackExitCode?: (data: unknown) => number | undefined;
-  /** Read the answer's data, given the request body and path that were sent. */
+  fallbackExitCode?: (
+    data: unknown,
+    request: { body: unknown; flags: Record<string, unknown> },
+  ) => number | undefined;
+  /**
+   * Read the answer's data, given the request body and path that were sent
+   * and the command's parsed flags.
+   */
   report?: (
     data: unknown,
-    request: { body: unknown; path: Record<string, unknown> },
+    request: {
+      body: unknown;
+      path: Record<string, unknown>;
+      flags: Record<string, unknown>;
+    },
   ) => OperationReport;
 };

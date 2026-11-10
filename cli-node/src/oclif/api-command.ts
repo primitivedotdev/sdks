@@ -2161,12 +2161,16 @@ export function createOperationCommand(
               parsedFlags,
               operation.sdkName,
             ),
+            flags: parsedFlags,
           });
         } catch (error) {
           reportError = error instanceof Error ? error.message : String(error);
           let fallback: number | undefined;
           try {
-            fallback = extension?.fallbackExitCode?.(envelope?.data);
+            fallback = extension?.fallbackExitCode?.(envelope?.data, {
+              body,
+              flags: parsedFlags,
+            });
           } catch {
             fallback = 1;
           }
@@ -2177,7 +2181,7 @@ export function createOperationCommand(
               error: {
                 code: "expectations_not_passed",
                 message:
-                  "The answer's expectations did not all pass; read expectations in the answer.",
+                  "The answer's expectations were not all shown to pass; read their result in the answer.",
               },
             };
         }
@@ -2206,7 +2210,7 @@ export function createOperationCommand(
         }
         if (reportError !== undefined && report?.exitCode && !jsonOutput) {
           process.stderr.write(
-            `The answer's expectations did not all pass, so the command exits ${report.exitCode}.\n`,
+            `The answer's expectations were not all shown to pass, so the command exits ${report.exitCode}.\n`,
           );
         }
         if (report?.exitCode) process.exitCode = report.exitCode;

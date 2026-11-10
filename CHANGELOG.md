@@ -769,6 +769,14 @@ parsers.
   `--expectations-file`, a JSON file with the emails the rule must match and
   must not; on update, a file holding `null` removes them. Without `--json`
   they print the `expectations_check` result and the version it ran on.
+  They exit 0 whatever that result says unless given
+  `--fail-on-expectations`: then they exit 1 when an expectation failed, and
+  3 when none failed but one is undecided or the expectations the write sent
+  were not checked, so test the rule to decide. Under `--json`, when the exit
+  code is not 0 the document carries `exit_code` and an `error` whose `code`
+  is `expectations_failed`, `expectations_undecided` or
+  `expectations_unchecked`. Exit 1 also means the request failed, with the
+  API's own error code.
 - Without `--json`, `email-rules create-email-rule`, `update-email-rule` and
   `get-email-rule-scope` print each scope warning on stderr, and
   `get-email-rule-scope` says when the rule reads no mail (`reads_nothing`).
