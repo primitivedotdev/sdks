@@ -163,7 +163,8 @@ try {
   reset();
   result = await cli(sendArgs);
   assert.equal(result.code, 0, result.stderr);
-  assert.equal(result.stderr, "Message sent (queued for delivery, id sent-smoke-1). Do not resend.\n");
+  // The From it used comes first, then the outcome.
+  assert.equal(result.stderr, "From: agent@example.test.\nMessage sent (queued for delivery, id sent-smoke-1). Do not resend.\n");
 
   assert.deepEqual(fixtureErrors, []);
   console.log("Send outcomes: reply/send exit codes, byte-compatible stdout, stderr summaries, replay notice and prior-reply warnings passed.");
