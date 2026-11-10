@@ -16,7 +16,31 @@ the same OpenAPI spec. See `RELEASE.md`.
 OpenAPI document the API serves, and every client is regenerated from it. Most
 of the changes below follow from that document.
 
-Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.2` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.2`), and `3.0.0rc2` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.1` (`3.0.0rc1` on PyPI) and adds managing API keys from the CLI.
+Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.3` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.3`), and `3.0.0rc3` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.2` (`3.0.0rc2`), which added managing API keys from the CLI, and `3.0.0-preview.1` (`3.0.0rc1`).
+
+What `3.0.0-preview.3` (`3.0.0rc3`) changes from `3.0.0-preview.2`:
+
+- Creating, rotating and changing an API key from your own CLI login run
+  directly. If the server asks for approval, the command still prints the
+  approval link and takes `--step-up-token`.
+- More CLI commands take `--json`, among them `routes list`, `org secrets
+  list`, the `wake` commands, `memories` and `describe`.
+- `email-rules list-email-rule-results` takes the email's id as
+  `--email-id`, and so do `reply-to-email`, `signal-email` and
+  `stop-repeat-from-email`; `--id` keeps working.
+- `email-rules create-email-rule` and `test-email-rule` take `--kind`, so
+  `do_not_share` can be set on a `--body-file` or `--raw-body` rule without
+  editing its JSON.
+- Generated list commands that page with `meta.cursor` say in their
+  `--limit` and `--cursor` help how to page, and `memories search` prints
+  its next cursor and takes `--envelope`.
+- Email rules carry their `kind`, `evaluation_scope` and `scope_selection`,
+  and a new rule reads only your own mailboxes unless you choose another
+  scope.
+- `feature_disabled` errors name the feature in `error.details.feature`.
+- Python: the email rule request models gained `kind` before existing
+  optional fields; pass optional fields by keyword. Go: re-encoding a
+  decoded rule result no longer adds `author_left`.
 
 ### Breaking changes
 
@@ -26,7 +50,7 @@ Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The previe
   CLI moves from 1.75.0.
 - The Go module path is `github.com/primitivedotdev/sdks/sdk-go/v3`. Update
   imports from `.../sdk-go/v2` and `.../sdk-go/v2/api`.
-- `primitive functions init` scaffolds projects on `^3.0.0-preview.2` of both
+- `primitive functions init` scaffolds projects on `^3.0.0-preview.3` of both
   `@primitivedotdev/sdk` and `primitive`.
 
 #### Removed code

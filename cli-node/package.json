@@ -1,6 +1,6 @@
 {
   "name": "primitive",
-  "version": "3.0.0-preview.2",
+  "version": "3.0.0-preview.3",
   "publishConfig": {
     "tag": "preview"
   },
