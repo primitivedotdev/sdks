@@ -22,7 +22,7 @@ npm install @primitivedotdev/sdk
 
 Requires Node.js 22 or newer.
 
-To try the 3.0.0 preview: `npm install @primitivedotdev/sdk@preview`.
+To try the 3.0.0 preview: `npm install @primitivedotdev/sdk@preview`. Use it with the preview CLI (`primitive@preview`): until 3.0.0 is the latest release, a plain `npm install @primitivedotdev/sdk` installs 2.x, which does not type `email.analysis.understanding` or export `matchedRules`.
 
 ## Upgrading to 3.0
 
@@ -577,6 +577,8 @@ if (isSentEmailFailedEvent(event) && event.scope === "recipient") {
 `validateSentEmailEvent` / `safeValidateSentEmailEvent` validate an already parsed body, and the schema is exported as `sentEmailEventJsonSchema`. An `email.bounced` event's `email.analysis.bounce` carries `sent_email_id` (the send the bounce belongs to, or null when it could not be linked) and `failed_recipients` (every failed address, up to 100).
 
 ### Email understanding and email rules
+
+These types and helpers are in 3.0.0 and later, not in 2.x; until 3.0.0 is the latest release, install `@primitivedotdev/sdk@preview` to get them.
 
 For organizations with email rules enabled, `email.received` events carry `email.analysis.understanding` (`EmailUnderstanding`): a `version`, a `status`, and when `ready`, `facts` keyed by name, each `{ value, confidence }`. Rule-granted deliveries also list the matching `rules`. Treat an unfamiliar `status`, fact name or value as one added after your SDK was built. `email.analysis.sender` (`SenderAnalysis`) is the sender authentication verdict.
 

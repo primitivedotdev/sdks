@@ -438,6 +438,8 @@ Parsed events are Pydantic models (`SentEmailAcceptedEvent`, `SentEmailRecipient
 
 ### Email understanding and email rules
 
+These types and helpers are in 3.0.0 and later, not in 2.x; until 3.0.0 is the latest release, install the preview (see Installation).
+
 For organizations with email rules enabled, `email.received` events carry `email.analysis.understanding` (`EmailUnderstanding`): a `version`, a `status`, and when `ready`, `facts` keyed by name, each with a `value` and `confidence`. Rule-granted deliveries also list the matching `rules`. Treat an unfamiliar `status`, fact name or value as one added after your SDK was built. `email.analysis.sender` (`SenderAnalysis`) is the sender authentication verdict.
 
 `matched_rules(email, rule_id=None)` returns the `UnderstandingRule` entries of a rule-granted delivery. It takes the email `receive(...)` returns or the event `handle_webhook(...)` returns, returns an empty list when no rule granted the delivery, and skips entries without a rule id. With `rule_id` it keeps only that rule's entries.

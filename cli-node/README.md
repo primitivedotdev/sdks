@@ -268,7 +268,7 @@ Creating, rotating and changing a key run directly. If your organization require
 
 ### Trying the preview
 
-Install the 3.0.0 preview with `npm install -g primitive@preview`. `npm install -g primitive` stays on the latest stable version.
+Install the 3.0.0 preview with `npm install -g primitive@preview`. `npm install -g primitive` stays on the latest stable version. Code that uses the SDK alongside the preview CLI, such as a webhook handler reading `email.analysis.understanding`, needs the preview SDK too: `npm install @primitivedotdev/sdk@preview`, or the Python and Go previews their READMEs name. The 2.x SDK does not type the email rules payload.
 
 ### Downgrading after signing in as yourself
 
