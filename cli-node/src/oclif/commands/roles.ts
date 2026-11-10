@@ -5,8 +5,10 @@ import {
   getAccessMode,
   listGroups,
   listMailboxAccess,
+  listOrganizationPeople,
   listRoles,
   type MailboxAccessList,
+  type ProjectsListOrganizationPeopleResult,
   type RoleList,
 } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
@@ -52,6 +54,7 @@ async function runRead<T>(
     >["apiClient"]["client"],
   ) => Promise<ReadResult>,
   format: (data: T) => string,
+  after?: (data: T) => void,
 ): Promise<void> {
   const { apiClient, auth, baseUrlOverridden } =
     await createAuthenticatedCliApiClient({
@@ -74,6 +77,7 @@ async function runRead<T>(
   }
   const data = (result.data as { data?: T } | undefined)?.data as T;
   command.log(flags.json ? JSON.stringify(data, null, 2) : format(data));
+  if (!flags.json) after?.(data);
 }
 
 export function formatRoles(list: RoleList): string {
@@ -115,6 +119,36 @@ export function formatMailboxAccess(list: MailboxAccessList): string {
   return list.entries.map((entry) => JSON.stringify(entry)).join("\n");
 }
 
+// Terminal control characters (C0 and DEL), built from code points so the
+// pattern holds no literal control character. A member's name is theirs to
+// write, so one holding a line break or an escape code cannot fake a line.
+const CONTROL_CHARACTERS = new RegExp(
+  `[${String.fromCharCode(0)}-${String.fromCharCode(31)}${String.fromCharCode(127)}]`,
+  "g",
+);
+
+function printable(text: string): string {
+  return text.replace(CONTROL_CHARACTERS, " ");
+}
+
+export function formatMembers(
+  list: ProjectsListOrganizationPeopleResult,
+): string {
+  if (list.items.length === 0) return "No members.";
+  return list.items
+    .map((person) => {
+      // role_name is the label the dashboard shows ("Admin", or a template
+      // or custom role such as "Finance reviewer (custom)").
+      const role = printable(person.role_name || person.role);
+      const agents =
+        person.agents.length > 0
+          ? `  ${person.agents.length} agent${person.agents.length === 1 ? "" : "s"}`
+          : "";
+      return `${printable(person.name)}  ${person.work_email ?? "no work email"}  ${role}  ${person.user_id}${agents}`;
+    })
+    .join("\n");
+}
+
 export function formatAccessMode(mode: AccessMode): string {
   return `Access mode: ${mode.mode} (version ${mode.version}${mode.changed_at ? `, changed ${mode.changed_at}` : ""}).`;
 }
@@ -139,6 +173,55 @@ export class RolesListCommand extends Command {
       flags,
       (client) => listRoles({ client, responseStyle: "fields" }),
       formatRoles,
+    );
+  }
+}
+
+export class RolesMembersCommand extends Command {
+  static description =
+    "List the organization's members with their roles: name, work email, role, user id and how many directory agents each has. Use it to see each member's role before you ask someone for something, for example before sending an email rule request. With --json, prints the response data, including each member's role key, role id, agents and the next page's cursor.";
+
+  static summary = "List members and their roles";
+
+  static examples = [
+    "<%= config.bin %> roles members",
+    "<%= config.bin %> roles members --query alice",
+    "<%= config.bin %> members list --json",
+  ];
+
+  static flags = {
+    ...SHARED_FLAGS,
+    query: Flags.string({
+      description:
+        "Only members whose name, or email where you can see it, contains this text.",
+    }),
+    limit: Flags.integer({
+      description: "Members per page, 1 to 100 (default 50).",
+      min: 1,
+      max: 100,
+    }),
+    cursor: Flags.string({
+      description:
+        "The next page's cursor: printed on stderr as `next cursor: <value>`, or `cursor` with --json.",
+    }),
+  };
+
+  async run(): Promise<void> {
+    const { flags } = await this.parse(RolesMembersCommand);
+    const query = {
+      ...(flags.query ? { query: flags.query } : {}),
+      ...(flags.limit ? { limit: flags.limit } : {}),
+      ...(flags.cursor ? { cursor: flags.cursor } : {}),
+    };
+    await runRead<ProjectsListOrganizationPeopleResult>(
+      this,
+      flags,
+      (client) =>
+        listOrganizationPeople({ client, query, responseStyle: "fields" }),
+      formatMembers,
+      (list) => {
+        if (list.cursor) process.stderr.write(`next cursor: ${list.cursor}\n`);
+      },
     );
   }
 }

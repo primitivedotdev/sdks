@@ -36,8 +36,10 @@ import {
 import {
   formatAccessMode,
   formatGroups,
+  formatMembers,
   formatRoles,
   RolesListCommand,
+  RolesMembersCommand,
 } from "../../src/oclif/commands/roles.js";
 import {
   extractGlobalOrgFlag,
@@ -821,6 +823,90 @@ describe("roles commands", () => {
     expect(
       formatAccessMode({ changed_at: null, mode: "whole_org", version: 0 }),
     ).toBe("Access mode: whole_org (version 0).");
+  });
+
+  it("lists members with their roles, and pages with the cursor on stderr", async () => {
+    const person = {
+      user_id: "11111111-1111-4111-8111-111111111111",
+      name: "Alice",
+      work_email: "alice@example.com",
+      role: "restricted",
+      role_name: "Finance reviewer (custom)",
+      role_id: "22222222-2222-4222-8222-222222222222",
+      agents: [{ id: KEY_ID, address: "a@example.com", name: "helper" }],
+    };
+    const page = {
+      items: [
+        person,
+        {
+          ...person,
+          user_id: "33333333-3333-4333-8333-333333333333",
+          work_email: null,
+          name: "Bob\u001b[2J\nfake line",
+          role: "admin",
+          role_name: "Admin",
+          role_id: null,
+          agents: [],
+        },
+      ],
+      cursor: "44444444-4444-4444-8444-444444444444",
+      can_invite: true,
+    };
+    expect(formatMembers(page as never)).toBe(
+      [
+        "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111  1 agent",
+        "Bob [2J fake line  no work email  Admin  33333333-3333-4333-8333-333333333333",
+      ].join("\n"),
+    );
+    const requests = useServer(() =>
+      Response.json({ success: true, data: page }),
+    );
+    const plain = await run(RolesMembersCommand, [
+      "--query",
+      "ali",
+      "--limit",
+      "10",
+    ]);
+    expect(plain.exitCode).toBeUndefined();
+    expect(plain.stdout).toContain("Finance reviewer (custom)");
+    expect(plain.stderr).toBe(
+      "next cursor: 44444444-4444-4444-8444-444444444444\n",
+    );
+    const url = new URL(requests[0]?.url ?? "");
+    expect(url.pathname).toBe("/v1/organization/members");
+    expect(url.searchParams.get("query")).toBe("ali");
+    expect(url.searchParams.get("limit")).toBe("10");
+    const json = await run(RolesMembersCommand, [
+      "--json",
+      "--cursor",
+      "44444444-4444-4444-8444-444444444444",
+    ]);
+    expect(json.stderr).toBe("");
+    expect(JSON.parse(json.stdout)).toEqual(page);
+    expect(new URL(requests[1]?.url ?? "").searchParams.get("cursor")).toBe(
+      "44444444-4444-4444-8444-444444444444",
+    );
+    expect(formatMembers({ items: [], cursor: null, can_invite: false })).toBe(
+      "No members.",
+    );
+    expect(COMMANDS["members:list"]).toBe(RolesMembersCommand);
+    expect(COMMANDS["roles:members"]).toBe(RolesMembersCommand);
+  });
+
+  it("roles members prints the server's refusal and exits 1", async () => {
+    useServer(() =>
+      Response.json(
+        {
+          success: false,
+          error: { code: "forbidden", message: "Not a signed-in member" },
+        },
+        { status: 403 },
+      ),
+    );
+    const result = await run(RolesMembersCommand, []);
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("Not a signed-in member");
   });
 
   it("names the built-in roles, operator included, in roles list help", () => {

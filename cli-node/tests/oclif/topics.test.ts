@@ -19,6 +19,8 @@ const HAND_ROLLED_VISIBLE_TOPICS = new Set([
   // Read-only key and role views over the credentials and roles operations.
   "keys",
   "roles",
+  // `members list`, the same command as `roles members`.
+  "members",
   "network",
   "otp",
   "signin",
