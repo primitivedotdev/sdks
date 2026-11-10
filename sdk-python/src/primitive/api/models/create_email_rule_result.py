@@ -8,6 +8,7 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.create_email_rule_result_kind import CreateEmailRuleResultKind
 from ..models.create_email_rule_result_state import CreateEmailRuleResultState
 from typing import cast
 from uuid import UUID
@@ -39,6 +40,8 @@ class CreateEmailRuleResult:
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
             current (CreateEmailRuleResultCurrentType0 | None):
+            kind (CreateEmailRuleResultKind | Unset): do_not_share: the rule blocks sharing of what it matches. Absent (or
+                grant) on a rule that shares what it matches.
      """
 
     id: UUID
@@ -50,6 +53,7 @@ class CreateEmailRuleResult:
     created_at: datetime.datetime
     updated_at: datetime.datetime
     current: CreateEmailRuleResultCurrentType0 | None
+    kind: CreateEmailRuleResultKind | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -81,6 +85,11 @@ class CreateEmailRuleResult:
         else:
             current = self.current
 
+        kind: str | Unset = UNSET
+        if not isinstance(self.kind, Unset):
+            kind = self.kind.value
+
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -95,6 +104,8 @@ class CreateEmailRuleResult:
             "updated_at": updated_at,
             "current": current,
         })
+        if kind is not UNSET:
+            field_dict["kind"] = kind
 
         return field_dict
 
@@ -159,6 +170,16 @@ class CreateEmailRuleResult:
         current = _parse_current(d.pop("current"))
 
 
+        _kind = d.pop("kind", UNSET)
+        kind: CreateEmailRuleResultKind | Unset
+        if isinstance(_kind,  Unset):
+            kind = UNSET
+        else:
+            kind = CreateEmailRuleResultKind(_kind)
+
+
+
+
         create_email_rule_result = cls(
             id=id,
             name=name,
@@ -169,6 +190,7 @@ class CreateEmailRuleResult:
             created_at=created_at,
             updated_at=updated_at,
             current=current,
+            kind=kind,
         )
 
 

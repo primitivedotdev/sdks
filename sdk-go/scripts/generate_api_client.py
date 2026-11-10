@@ -77,6 +77,55 @@ def tolerate_unknown_enum_values(directory: Path) -> None:
     )
 
 
+# ogen writes a const field's value unconditionally, even when the field is
+# optional and its Opt wrapper is unset, so re-encoding a decoded response
+# would add the field to an object the API sent without it. An optional const
+# field is encoded only when it is set, like any other optional field.
+_ENCODE_FIELDS = re.compile(
+    r"func \(s \*(?P<type>\w+)\) encodeFields\(e \*jx\.Encoder\) \{\n(?P<body>.*?)\n\}\n",
+    re.S,
+)
+_CONST_FIELD = re.compile(
+    r"\t\{\n\t\te\.FieldStart\(\"(?P<json>[^\"]+)\"\)\n\t\te\.(?:Bool|Str|Int|Float64)\([^\n]*\)\n\t\}"
+)
+_STRUCT = re.compile(r"type (?P<type>\w+) struct \{\n(?P<body>.*?)\n\}\n", re.S)
+_OPT_FIELD = re.compile(r"\t(?P<name>\w+) Opt\w+ `json:\"(?P<json>[^\"]+)\"`")
+
+
+def encode_optional_consts_only_when_set(directory: Path) -> None:
+    schemas = (directory / "oas_schemas_gen.go").read_text()
+    optional: dict[str, dict[str, str]] = {}
+    for struct in _STRUCT.finditer(schemas):
+        fields = {m.group("json"): m.group("name") for m in _OPT_FIELD.finditer(struct.group("body"))}
+        if fields:
+            optional[struct.group("type")] = fields
+
+    path = directory / "oas_json_gen.go"
+    text = path.read_text()
+    changed = 0
+
+    def guard(function: re.Match[str]) -> str:
+        nonlocal changed
+        fields = optional.get(function.group("type"), {})
+
+        def one(field: re.Match[str]) -> str:
+            nonlocal changed
+            name = fields.get(field.group("json"))
+            if name is None:
+                return field.group(0)
+            changed += 1
+            return (
+                f"\t{{\n\t\tif s.{name}.Set {{\n\t\t\te.FieldStart(\"{field.group('json')}\")\n"
+                f"\t\t\ts.{name}.Encode(e)\n\t\t}}\n\t}}"
+            )
+
+        body = _CONST_FIELD.sub(one, function.group("body"))
+        return function.group(0).replace(function.group("body"), body)
+
+    path.write_text(_ENCODE_FIELDS.sub(guard, text))
+    print(f"guarded {changed} optional const field encoder(s)")
+
+
 def remove_generated_files() -> None:
     TARGET_PATH.mkdir(parents=True, exist_ok=True)
 
@@ -106,6 +155,7 @@ def main() -> None:
         for source in output_path.glob("*.go"):
             shutil.copy2(source, TARGET_PATH / source.name)
         tolerate_unknown_enum_values(TARGET_PATH)
+        encode_optional_consts_only_when_set(TARGET_PATH)
 
 
 if __name__ == "__main__":

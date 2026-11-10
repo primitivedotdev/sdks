@@ -135,6 +135,12 @@ their models have the component's own name:
 - `FunctionTestRunInboundEmailType0` is `FunctionTestRunInboundEmail`.
 - `FunctionTestRunDeliveryEndpointType0` is `FunctionTestRunDeliveryEndpoint`.
 
+Generated models take their optional fields in the order the served document
+declares them, so a field the API adds can land between existing ones: pass
+optional fields by keyword, as the README examples do. For example, the email
+rule request models (new in this release) gained `kind` after `explanation`
+between the 3.0.0 previews.
+
 Other generated model names follow the served document's schema names and
 shapes. Among them: `MemoryScopeType0` and `MemoryScopeType1` are
 `MemoryScope`; `CallerIdentity` is `WhoamiResponse200Data`;
@@ -198,7 +204,12 @@ date-time is kept as null and sorts last. A sync stops with an error after
   `getEmailRuleScope`, `listEmailRuleScopeOptions`, `listEmailRuleResults`.
   A rule's `evaluation_scope` chooses whose mail it runs over (`author`,
   `own_mailboxes`, or `selected` with `scope_selection` naming addresses and
-  domains), never more than its author can read.
+  domains), never more than its author can read. A rule's `kind` is `grant`
+  (the default) or `do_not_share`, a rule that, while it is active, keeps
+  what it matches (and any email it cannot decide) from being shared; it is
+  set on `createEmailRule` (the CLI's `--kind`), can be tested on an unsaved
+  tree with `testEmailRule` and `testEmailRuleOnSample`, and is returned on
+  rules and on `listEmailRuleResults`.
 - Emails: `getEmailReadable`.
 - Functions: `lookupFunction`, `getOrgFunctionUsage`,
   `getOrgFunctionInvocationSeries`, `getOrgFunctionFallback`,

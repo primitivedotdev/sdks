@@ -556,6 +556,24 @@ func (s *AcceptEmailRuleRequestResultRule) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Kind.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.CurrentVersion.Get(); ok {
 			if err := func() error {
 				if err := (validate.Int{
@@ -751,6 +769,18 @@ func (s *AcceptEmailRuleRequestResultRuleCurrentTree) Validate() error {
 func (s AcceptEmailRuleRequestResultRuleCurrentTreeVersion) Validate() error {
 	switch s {
 	case 1:
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s AcceptEmailRuleRequestResultRuleKind) Validate() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
 		return nil
 	default:
 		// Added to the API after this client was generated.
@@ -9243,6 +9273,24 @@ func (s *CreateEmailRuleRequest) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Kind.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.State.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
@@ -9544,6 +9592,18 @@ func (s *CreateEmailRuleRequestForbidden) Validate() error {
 		return err
 	}
 	return nil
+}
+
+func (s CreateEmailRuleRequestKind) Validate() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
 }
 
 func (s *CreateEmailRuleRequestNotFound) Validate() error {
@@ -10191,6 +10251,24 @@ func (s *CreateEmailRuleResult) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Kind.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.CurrentVersion.Get(); ok {
 			if err := func() error {
 				if err := (validate.Int{
@@ -10386,6 +10464,18 @@ func (s *CreateEmailRuleResultCurrentTree) Validate() error {
 func (s CreateEmailRuleResultCurrentTreeVersion) Validate() error {
 	switch s {
 	case 1:
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s CreateEmailRuleResultKind) Validate() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
 		return nil
 	default:
 		// Added to the API after this client was generated.
@@ -26955,6 +27045,24 @@ func (s *GetEmailRuleResult) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Kind.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.CurrentVersion.Get(); ok {
 			if err := func() error {
 				if err := (validate.Int{
@@ -27150,6 +27258,18 @@ func (s *GetEmailRuleResultCurrentTree) Validate() error {
 func (s GetEmailRuleResultCurrentTreeVersion) Validate() error {
 	switch s {
 	case 1:
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s GetEmailRuleResultKind) Validate() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
 		return nil
 	default:
 		// Added to the API after this client was generated.
@@ -35823,6 +35943,24 @@ func (s *ListEmailRuleResultsResultRulesItem) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Kind.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.Decision.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
@@ -36082,6 +36220,18 @@ func (s *ListEmailRuleResultsResultRulesItemDecisionTree) Validate() error {
 func (s ListEmailRuleResultsResultRulesItemDecisionTreeVersion) Validate() error {
 	switch s {
 	case 1:
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s ListEmailRuleResultsResultRulesItemKind) Validate() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
 		return nil
 	default:
 		// Added to the API after this client was generated.
@@ -37544,6 +37694,24 @@ func (s *ListEmailRulesResultItem) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Kind.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.CurrentVersion.Get(); ok {
 			if err := func() error {
 				if err := (validate.Int{
@@ -37575,6 +37743,18 @@ func (s *ListEmailRulesResultItem) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s ListEmailRulesResultItemKind) Validate() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
 }
 
 func (s ListEmailRulesResultItemState) Validate() error {
@@ -64306,6 +64486,24 @@ func (s *TestEmailRuleOnSampleRequest) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Kind.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if err := s.Email.Validate(); err != nil {
 			return err
 		}
@@ -64642,6 +64840,18 @@ func (s TestEmailRuleOnSampleRequestEvaluationScope) Validate() error {
 	case "own_mailboxes":
 		return nil
 	case "selected":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s TestEmailRuleOnSampleRequestKind) Validate() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
 		return nil
 	default:
 		// Added to the API after this client was generated.
@@ -65200,6 +65410,24 @@ func (s *TestEmailRuleRequest) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Kind.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if s.EmailIds == nil {
 			return nil // optional
 		}
@@ -65231,6 +65459,18 @@ func (s TestEmailRuleRequestEvaluationScope) Validate() error {
 	case "own_mailboxes":
 		return nil
 	case "selected":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s TestEmailRuleRequestKind) Validate() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
 		return nil
 	default:
 		// Added to the API after this client was generated.
@@ -68251,6 +68491,24 @@ func (s *UpdateEmailRuleResult) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Kind.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.CurrentVersion.Get(); ok {
 			if err := func() error {
 				if err := (validate.Int{
@@ -68446,6 +68704,18 @@ func (s *UpdateEmailRuleResultCurrentTree) Validate() error {
 func (s UpdateEmailRuleResultCurrentTreeVersion) Validate() error {
 	switch s {
 	case 1:
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s UpdateEmailRuleResultKind) Validate() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
 		return nil
 	default:
 		// Added to the API after this client was generated.
@@ -72304,6 +72574,17 @@ func (s AcceptEmailRuleRequestResultRuleCurrentTreeVersion) validateKnown() erro
 	}
 }
 
+func (s AcceptEmailRuleRequestResultRuleKind) validateKnown() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s AcceptEmailRuleRequestResultRuleState) validateKnown() error {
 	switch s {
 	case "draft":
@@ -73100,6 +73381,17 @@ func (s CreateEmailRuleRequestEvaluationScope) validateKnown() error {
 	}
 }
 
+func (s CreateEmailRuleRequestKind) validateKnown() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s CreateEmailRuleRequestRequestTreeVersion) validateKnown() error {
 	switch s {
 	case 1:
@@ -73167,6 +73459,17 @@ func (s CreateEmailRuleRequestTreeVersion) validateKnown() error {
 func (s CreateEmailRuleResultCurrentTreeVersion) validateKnown() error {
 	switch s {
 	case 1:
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s CreateEmailRuleResultKind) validateKnown() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -75556,6 +75859,17 @@ func (s GetEmailRuleResultCurrentTreeVersion) validateKnown() error {
 	}
 }
 
+func (s GetEmailRuleResultKind) validateKnown() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s GetEmailRuleResultState) validateKnown() error {
 	switch s {
 	case "draft":
@@ -76204,6 +76518,17 @@ func (s ListEmailRuleResultsResultRulesItemDecisionTreeVersion) validateKnown() 
 	}
 }
 
+func (s ListEmailRuleResultsResultRulesItemKind) validateKnown() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s ListEmailRuleResultsResultRulesItemNotRunReason) validateKnown() error {
 	switch s {
 	case "draft":
@@ -76387,6 +76712,17 @@ func (s ListEmailRuleSharesResultItemRuleState) validateKnown() error {
 func (s ListEmailRuleVersionsResultItemTreeVersion) validateKnown() error {
 	switch s {
 	case 1:
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s ListEmailRulesResultItemKind) validateKnown() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -78867,6 +79203,17 @@ func (s TestEmailRuleOnSampleRequestEvaluationScope) validateKnown() error {
 	}
 }
 
+func (s TestEmailRuleOnSampleRequestKind) validateKnown() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s TestEmailRuleOnSampleRequestTreeVersion) validateKnown() error {
 	switch s {
 	case 1:
@@ -78909,6 +79256,17 @@ func (s TestEmailRuleRequestEvaluationScope) validateKnown() error {
 	case "own_mailboxes":
 		return nil
 	case "selected":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s TestEmailRuleRequestKind) validateKnown() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -79094,6 +79452,17 @@ func (s UpdateEmailRuleRequestTreeVersion) validateKnown() error {
 func (s UpdateEmailRuleResultCurrentTreeVersion) validateKnown() error {
 	switch s {
 	case 1:
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s UpdateEmailRuleResultKind) validateKnown() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)

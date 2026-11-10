@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.test_email_rule_request_evaluation_scope import TestEmailRuleRequestEvaluationScope
+from ..models.test_email_rule_request_kind import TestEmailRuleRequestKind
 from typing import cast
 from uuid import UUID
 
@@ -36,6 +37,8 @@ class TestEmailRuleRequest:
             scope_selection (TestEmailRuleRequestScopeSelection | Unset): Inboxes, and domains (every address at them the
                 author can read), for a selected rule; each one you can read.
             rule_id (UUID | Unset): A saved rule you can see. Its current version is tested, with its author's access.
+            kind (TestEmailRuleRequestKind | Unset): For an unsaved tree: do_not_share tests it as a rule that blocks
+                sharing, so an email it cannot decide counts as matched. A saved rule uses its own.
             email_ids (list[UUID] | Unset): Test exactly these emails. Without it, the newest emails the rule can read are
                 tested, at most 200 and none older than 30 days.
             classify_missing (bool | Unset): Classify emails in the set that have not been classified yet and arrived more
@@ -47,6 +50,7 @@ class TestEmailRuleRequest:
     evaluation_scope: TestEmailRuleRequestEvaluationScope | Unset = UNSET
     scope_selection: TestEmailRuleRequestScopeSelection | Unset = UNSET
     rule_id: UUID | Unset = UNSET
+    kind: TestEmailRuleRequestKind | Unset = UNSET
     email_ids: list[UUID] | Unset = UNSET
     classify_missing: bool | Unset = UNSET
 
@@ -74,6 +78,11 @@ class TestEmailRuleRequest:
         if not isinstance(self.rule_id, Unset):
             rule_id = str(self.rule_id)
 
+        kind: str | Unset = UNSET
+        if not isinstance(self.kind, Unset):
+            kind = self.kind.value
+
+
         email_ids: list[str] | Unset = UNSET
         if not isinstance(self.email_ids, Unset):
             email_ids = []
@@ -98,6 +107,8 @@ class TestEmailRuleRequest:
             field_dict["scope_selection"] = scope_selection
         if rule_id is not UNSET:
             field_dict["rule_id"] = rule_id
+        if kind is not UNSET:
+            field_dict["kind"] = kind
         if email_ids is not UNSET:
             field_dict["email_ids"] = email_ids
         if classify_missing is not UNSET:
@@ -152,6 +163,16 @@ class TestEmailRuleRequest:
 
 
 
+        _kind = d.pop("kind", UNSET)
+        kind: TestEmailRuleRequestKind | Unset
+        if isinstance(_kind,  Unset):
+            kind = UNSET
+        else:
+            kind = TestEmailRuleRequestKind(_kind)
+
+
+
+
         _email_ids = d.pop("email_ids", UNSET)
         email_ids: list[UUID] | Unset = UNSET
         if _email_ids is not UNSET:
@@ -171,6 +192,7 @@ class TestEmailRuleRequest:
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,
             rule_id=rule_id,
+            kind=kind,
             email_ids=email_ids,
             classify_missing=classify_missing,
         )

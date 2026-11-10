@@ -422,11 +422,13 @@ func (UnimplementedHandler) CreateAgentConnection(ctx context.Context, req *Crea
 //
 // Saves a rule as version 1, from a compile response or a tree you wrote. The tree is checked
 // against the column contract. New rules start in observe, where what the rule matches is recorded
-// and nothing is granted; draft is not evaluated. The caller is the rule's author, and the rule
-// never reaches mail the author cannot read. evaluation_scope (author when omitted) chooses whose
-// mail it runs over; scope_selection may name only what you can read. Needs mail:read, a credential
-// acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
-// and the email rules feature on the organization.
+// and nothing is granted or blocked; draft is not evaluated. The caller is the rule's author, and
+// the rule never reaches mail the author cannot read. evaluation_scope (author when omitted) chooses
+// whose mail it runs over; scope_selection may name only what you can read. kind do_not_share makes
+// a rule that blocks sharing: it runs before every other rule, and while it is active no rule shares
+// an email it matches or cannot decide. A key cannot list one (details.reason rule_blocks_sharing on
+// the key). Needs mail:read, a credential acting as a member with their full access (API keys, agent
+// keys and narrowed tokens are refused), and the email rules feature on the organization.
 //
 // POST /email-rules
 func (UnimplementedHandler) CreateEmailRule(ctx context.Context, req *CreateEmailRuleRequest, params CreateEmailRuleParams) (r CreateEmailRuleRes, _ error) {
@@ -2403,11 +2405,13 @@ func (UnimplementedHandler) ListEmailRuleRequests(ctx context.Context, params Li
 //
 // Every rule the caller can see and what it decided about this email: those that matched, those that
 // did not, and those that have not run on it, with what is known about them. A result names the
-// version of the rule that decided and carries that version's conditions and questions. Only a
-// caller who can read the email gets an answer, and a rule the caller cannot see is left out. At
-// most 50 rules are listed, those with a result first; hidden counts the rest. Needs mail:read, a
-// credential acting as a member with their full access (API keys, agent keys and narrowed tokens are
-// refused), and the email rules feature on the organization.
+// version of the rule that decided and carries that version's conditions and questions. A matched
+// rule with kind do_not_share keeps rules from sharing the email while it is active; anything shared
+// before then stays shared. Only a caller who can read the email gets an answer, and a rule the
+// caller cannot see is left out. At most 50 rules are listed, those with a result first; hidden
+// counts the rest. Needs mail:read, a credential acting as a member with their full access (API keys,
+//
+//	agent keys and narrowed tokens are refused), and the email rules feature on the organization.
 //
 // GET /emails/{id}/rule-results
 func (UnimplementedHandler) ListEmailRuleResults(ctx context.Context, params ListEmailRuleResultsParams) (r ListEmailRuleResultsRes, _ error) {
@@ -4216,8 +4220,9 @@ func (UnimplementedHandler) UpdateDomain(ctx context.Context, req *UpdateDomainI
 // see it may only disable it (state draft), and while it is shared with another member only if they
 // manage members from the dashboard. Omit evaluation_scope to keep the current scope. A scope change
 // saves a new version with the same conditions; what was granted stays. A shared rule keeps its
-// scope. Needs mail:read, a credential acting as a member with their full access (API keys, agent
-// keys and narrowed tokens are refused), and the email rules feature on the organization.
+// scope. A rule's kind never changes. Needs mail:read, a credential acting as a member with their
+// full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on
+// the organization.
 //
 // PATCH /email-rules/{id}
 func (UnimplementedHandler) UpdateEmailRule(ctx context.Context, req *UpdateEmailRuleRequest, params UpdateEmailRuleParams) (r UpdateEmailRuleRes, _ error) {

@@ -40,6 +40,8 @@ class GetEmailRuleScopeResult:
             no_longer_readable (GetEmailRuleScopeResultNoLongerReadable): What scope_selection names that its author no
                 longer reads in full.
             stopped_reason (None | str): Why it cannot run now (a reason as on POST /email-rules/test), or null.
+            still_read (list[str] | Unset): Inboxes its author still reads at the domains in no_longer_readable; the rule
+                still covers them.
      """
 
     evaluation_scope: GetEmailRuleScopeResultEvaluationScope
@@ -48,6 +50,7 @@ class GetEmailRuleScopeResult:
     author_reach: GetEmailRuleScopeResultAuthorReachType1 | GetEmailRuleScopeResultAuthorReachType2Type1 | GetEmailRuleScopeResultAuthorReachType3Type1 | None
     no_longer_readable: GetEmailRuleScopeResultNoLongerReadable
     stopped_reason: None | str
+    still_read: list[str] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -82,6 +85,12 @@ class GetEmailRuleScopeResult:
         stopped_reason: None | str
         stopped_reason = self.stopped_reason
 
+        still_read: list[str] | Unset = UNSET
+        if not isinstance(self.still_read, Unset):
+            still_read = self.still_read
+
+
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -93,6 +102,8 @@ class GetEmailRuleScopeResult:
             "no_longer_readable": no_longer_readable,
             "stopped_reason": stopped_reason,
         })
+        if still_read is not UNSET:
+            field_dict["still_read"] = still_read
 
         return field_dict
 
@@ -179,6 +190,9 @@ class GetEmailRuleScopeResult:
         stopped_reason = _parse_stopped_reason(d.pop("stopped_reason"))
 
 
+        still_read = cast(list[str], d.pop("still_read", UNSET))
+
+
         get_email_rule_scope_result = cls(
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,
@@ -186,6 +200,7 @@ class GetEmailRuleScopeResult:
             author_reach=author_reach,
             no_longer_readable=no_longer_readable,
             stopped_reason=stopped_reason,
+            still_read=still_read,
         )
 
 

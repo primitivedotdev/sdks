@@ -34313,7 +34313,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "400": {
-            "description": "validation_error: give exactly one of tree and rule_id, at most 200 email_ids, and a tree that is valid for the column contract. evaluation_scope and scope_selection go only with tree. A saved rule whose current version no longer renders answers details.reason version_not_renderable.",
+            "description": "validation_error: give exactly one of tree and rule_id, at most 200 email_ids, and a tree that is valid for the column contract. evaluation_scope, scope_selection and kind go only with tree. A saved rule whose current version no longer renders answers details.reason version_not_renderable.",
             "content": {
               "application/json": {
                 "schema": {
@@ -34503,7 +34503,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "400": {
-            "description": "validation_error: give exactly one of tree and rule_id (evaluation_scope and scope_selection only with tree), an email with a sender, 1 to 50 To addresses (and up to 50 Cc), and a text body, and a tree that is valid for the column contract and within the size limits for a saved rule. A saved rule whose current version no longer renders answers details.reason version_not_renderable.",
+            "description": "validation_error: give exactly one of tree and rule_id (evaluation_scope, scope_selection and kind only with tree), an email with a sender, 1 to 50 To addresses (and up to 50 Cc), and a text body, and a tree that is valid for the column contract and within the size limits for a saved rule. A saved rule whose current version no longer renders answers details.reason version_not_renderable.",
             "content": {
               "application/json": {
                 "schema": {
@@ -34633,7 +34633,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "createEmailRule",
         "summary": "Create a rule",
-        "description": "Saves a rule as version 1, from a compile response or a tree you wrote. The tree is checked against the column contract. New rules start in observe, where what the rule matches is recorded and nothing is granted; draft is not evaluated. The caller is the rule's author, and the rule never reaches mail the author cannot read. evaluation_scope (author when omitted) chooses whose mail it runs over; scope_selection may name only what you can read. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+        "description": "Saves a rule as version 1, from a compile response or a tree you wrote. The tree is checked against the column contract. New rules start in observe, where what the rule matches is recorded and nothing is granted or blocked; draft is not evaluated. The caller is the rule's author, and the rule never reaches mail the author cannot read. evaluation_scope (author when omitted) chooses whose mail it runs over; scope_selection may name only what you can read. kind do_not_share makes a rule that blocks sharing: it runs before every other rule, and while it is active no rule shares an email it matches or cannot decide. A key cannot list one (details.reason rule_blocks_sharing on the key). Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
         "tags": [
           "Email Rules"
         ],
@@ -35187,7 +35187,7 @@ export const openapiDocument: Record<string, unknown> = {
       "patch": {
         "operationId": "updateEmailRule",
         "summary": "Change a rule",
-        "description": "Renames the rule, saves a new version (english, tree and explanation together; earlier versions are kept unchanged), changes its state (draft, disabled; observe; or active) or changes whose mail it runs over (evaluation_scope, with scope_selection when selected). Only the rule's author may rename it, add a version, change its scope or move it to observe or active; anyone else who can see it may only disable it (state draft), and while it is shared with another member only if they manage members from the dashboard. Omit evaluation_scope to keep the current scope. A scope change saves a new version with the same conditions; what was granted stays. A shared rule keeps its scope. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+        "description": "Renames the rule, saves a new version (english, tree and explanation together; earlier versions are kept unchanged), changes its state (draft, disabled; observe; or active) or changes whose mail it runs over (evaluation_scope, with scope_selection when selected). Only the rule's author may rename it, add a version, change its scope or move it to observe or active; anyone else who can see it may only disable it (state draft), and while it is shared with another member only if they manage members from the dashboard. Omit evaluation_scope to keep the current scope. A scope change saves a new version with the same conditions; what was granted stays. A shared rule keeps its scope. A rule's kind never changes. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
         "tags": [
           "Email Rules"
         ],
@@ -35773,7 +35773,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "listEmailRuleResults",
         "summary": "List every rule's result on an email",
-        "description": "Every rule the caller can see and what it decided about this email: those that matched, those that did not, and those that have not run on it, with what is known about them. A result names the version of the rule that decided and carries that version's conditions and questions. Only a caller who can read the email gets an answer, and a rule the caller cannot see is left out. At most 50 rules are listed, those with a result first; hidden counts the rest. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+        "description": "Every rule the caller can see and what it decided about this email: those that matched, those that did not, and those that have not run on it, with what is known about them. A result names the version of the rule that decided and carries that version's conditions and questions. A matched rule with kind do_not_share keeps rules from sharing the email while it is active; anything shared before then stays shared. Only a caller who can read the email gets an answer, and a rule the caller cannot see is left out. At most 50 rules are listed, those with a result first; hidden counts the rest. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
         "tags": [
           "Email Rules"
         ],
@@ -74126,6 +74126,14 @@ export const openapiDocument: Record<string, unknown> = {
             "type": "string",
             "format": "uuid"
           },
+          "kind": {
+            "description": "For an unsaved tree: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. A saved rule uses its own.",
+            "type": "string",
+            "enum": [
+              "grant",
+              "do_not_share"
+            ]
+          },
           "email_ids": {
             "description": "Test exactly these emails. Without it, the newest emails the rule can read are tested, at most 200 and none older than 30 days.",
             "minItems": 1,
@@ -74486,6 +74494,14 @@ export const openapiDocument: Record<string, unknown> = {
             "type": "string",
             "format": "uuid"
           },
+          "kind": {
+            "description": "For an unsaved tree: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. A saved rule uses its own.",
+            "type": "string",
+            "enum": [
+              "grant",
+              "do_not_share"
+            ]
+          },
           "email": {
             "type": "object",
             "properties": {
@@ -74754,8 +74770,16 @@ export const openapiDocument: Record<string, unknown> = {
             "maxLength": 200,
             "description": "A short name for the rule."
           },
+          "kind": {
+            "description": "grant (the default): what the rule matches can be shared. do_not_share: the rule runs before every other rule, and while it is active no rule shares an email it matches; an email it cannot decide counts as matched. Set when the rule is created; it never changes.",
+            "type": "string",
+            "enum": [
+              "grant",
+              "do_not_share"
+            ]
+          },
           "state": {
-            "description": "observe (the default) records what the rule would match and grants nothing; draft is not evaluated.",
+            "description": "observe (the default) records what the rule would match and grants or blocks nothing; draft is not evaluated.",
             "type": "string",
             "enum": [
               "draft",
@@ -74897,6 +74921,14 @@ export const openapiDocument: Record<string, unknown> = {
               "draft",
               "observe",
               "active"
+            ]
+          },
+          "kind": {
+            "description": "do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.",
+            "type": "string",
+            "enum": [
+              "grant",
+              "do_not_share"
             ]
           },
           "current_version": {
@@ -75060,6 +75092,14 @@ export const openapiDocument: Record<string, unknown> = {
                 "active"
               ]
             },
+            "kind": {
+              "description": "do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.",
+              "type": "string",
+              "enum": [
+                "grant",
+                "do_not_share"
+              ]
+            },
             "current_version": {
               "type": [
                 "integer",
@@ -75112,6 +75152,14 @@ export const openapiDocument: Record<string, unknown> = {
               "draft",
               "observe",
               "active"
+            ]
+          },
+          "kind": {
+            "description": "do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.",
+            "type": "string",
+            "enum": [
+              "grant",
+              "do_not_share"
             ]
           },
           "current_version": {
@@ -75265,7 +75313,7 @@ export const openapiDocument: Record<string, unknown> = {
             "description": "A short name for the rule."
           },
           "state": {
-            "description": "draft disables the rule; observe records decisions; active also grants what it matches. Keys read and receive what a rule granted only while it is active: leaving active pauses that, and returning to active restores reads and the delivery of queued mail not yet skipped.",
+            "description": "draft disables the rule; observe records decisions; active also grants what it matches, or for a do_not_share rule keeps it from being shared. Keys read and receive what a rule granted only while it is active: leaving active pauses that, and returning to active restores reads and the delivery of queued mail not yet skipped.",
             "type": "string",
             "enum": [
               "draft",
@@ -75402,6 +75450,14 @@ export const openapiDocument: Record<string, unknown> = {
               "draft",
               "observe",
               "active"
+            ]
+          },
+          "kind": {
+            "description": "do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.",
+            "type": "string",
+            "enum": [
+              "grant",
+              "do_not_share"
             ]
           },
           "current_version": {
@@ -75635,6 +75691,14 @@ export const openapiDocument: Record<string, unknown> = {
                     "active"
                   ]
                 },
+                "kind": {
+                  "description": "do_not_share: the rule blocks sharing of what it matches. While it is active, no rule shares an email it has matched from then on; anything shared before, including while it was in observe, stays shared. Absent on a rule that shares what it matches.",
+                  "type": "string",
+                  "enum": [
+                    "grant",
+                    "do_not_share"
+                  ]
+                },
                 "decision": {
                   "type": [
                     "object",
@@ -75772,6 +75836,11 @@ export const openapiDocument: Record<string, unknown> = {
                     null
                   ],
                   "description": "What is known about a rule with no result on this email. draft: the rule is a draft now. created_after_email: the rule was created after the email arrived. Null when it has a result, or when nothing is known."
+                },
+                "author_left": {
+                  "description": "On a do-not-share rule whose author is no longer a member of the organization: it blocks nothing now, whatever it decided. Absent otherwise.",
+                  "type": "boolean",
+                  "const": true
                 }
               },
               "required": [
@@ -75975,6 +76044,13 @@ export const openapiDocument: Record<string, unknown> = {
             ],
             "description": "What scope_selection names that its author no longer reads in full."
           },
+          "still_read": {
+            "description": "Inboxes its author still reads at the domains in no_longer_readable; the rule still covers them.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "stopped_reason": {
             "description": "Why it cannot run now (a reason as on POST /email-rules/test), or null.",
             "type": [
@@ -76007,6 +76083,10 @@ export const openapiDocument: Record<string, unknown> = {
           "own_mail": {
             "type": "boolean",
             "description": "Whether a rule over only your own mail would run for you."
+          },
+          "own_mail_to_block": {
+            "description": "Whether a do_not_share rule over only your own mail would run for you: it covers every own mailbox you read, including ones you could not share.",
+            "type": "boolean"
           },
           "addresses": {
             "type": "array",
@@ -77549,6 +77629,14 @@ export const openapiDocument: Record<string, unknown> = {
                   "draft",
                   "observe",
                   "active"
+                ]
+              },
+              "kind": {
+                "description": "do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.",
+                "type": "string",
+                "enum": [
+                  "grant",
+                  "do_not_share"
                 ]
               },
               "current_version": {

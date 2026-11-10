@@ -20,6 +20,7 @@ from .accept_email_rule_request_result_rule_current_type_0_sql import AcceptEmai
 from .accept_email_rule_request_result_rule_current_type_0_tree import AcceptEmailRuleRequestResultRuleCurrentType0Tree
 from .accept_email_rule_request_result_rule_current_type_0_tree_version import AcceptEmailRuleRequestResultRuleCurrentType0TreeVersion
 from .accept_email_rule_request_result_rule_current_type_0_tree_when import AcceptEmailRuleRequestResultRuleCurrentType0TreeWhen
+from .accept_email_rule_request_result_rule_kind import AcceptEmailRuleRequestResultRuleKind
 from .accept_email_rule_request_result_rule_state import AcceptEmailRuleRequestResultRuleState
 from .accept_email_rule_request_result_share import AcceptEmailRuleRequestResultShare
 from .accept_email_rule_request_result_share_beneficiary import AcceptEmailRuleRequestResultShareBeneficiary
@@ -201,6 +202,7 @@ from .create_agent_connection_response_200_data import CreateAgentConnectionResp
 from .create_agent_connection_response_200_data_invitation_type_0 import CreateAgentConnectionResponse200DataInvitationType0
 from .create_email_rule_request import CreateEmailRuleRequest
 from .create_email_rule_request_evaluation_scope import CreateEmailRuleRequestEvaluationScope
+from .create_email_rule_request_kind import CreateEmailRuleRequestKind
 from .create_email_rule_request_request import CreateEmailRuleRequestRequest
 from .create_email_rule_request_request_tree import CreateEmailRuleRequestRequestTree
 from .create_email_rule_request_request_tree_version import CreateEmailRuleRequestRequestTreeVersion
@@ -226,6 +228,7 @@ from .create_email_rule_result_current_type_0_sql import CreateEmailRuleResultCu
 from .create_email_rule_result_current_type_0_tree import CreateEmailRuleResultCurrentType0Tree
 from .create_email_rule_result_current_type_0_tree_version import CreateEmailRuleResultCurrentType0TreeVersion
 from .create_email_rule_result_current_type_0_tree_when import CreateEmailRuleResultCurrentType0TreeWhen
+from .create_email_rule_result_kind import CreateEmailRuleResultKind
 from .create_email_rule_result_state import CreateEmailRuleResultState
 from .create_endpoint_input import CreateEndpointInput
 from .create_endpoint_input_kind import CreateEndpointInputKind
@@ -625,6 +628,7 @@ from .get_email_rule_result_current_type_0_sql import GetEmailRuleResultCurrentT
 from .get_email_rule_result_current_type_0_tree import GetEmailRuleResultCurrentType0Tree
 from .get_email_rule_result_current_type_0_tree_version import GetEmailRuleResultCurrentType0TreeVersion
 from .get_email_rule_result_current_type_0_tree_when import GetEmailRuleResultCurrentType0TreeWhen
+from .get_email_rule_result_kind import GetEmailRuleResultKind
 from .get_email_rule_result_state import GetEmailRuleResultState
 from .get_email_rule_scope_response_200 import GetEmailRuleScopeResponse200
 from .get_email_rule_scope_result import GetEmailRuleScopeResult
@@ -832,6 +836,7 @@ from .list_email_rule_results_result_rules_item_decision_type_0_question_answers
 from .list_email_rule_results_result_rules_item_decision_type_0_tree_type_0 import ListEmailRuleResultsResultRulesItemDecisionType0TreeType0
 from .list_email_rule_results_result_rules_item_decision_type_0_tree_type_0_version import ListEmailRuleResultsResultRulesItemDecisionType0TreeType0Version
 from .list_email_rule_results_result_rules_item_decision_type_0_tree_type_0_when import ListEmailRuleResultsResultRulesItemDecisionType0TreeType0When
+from .list_email_rule_results_result_rules_item_kind import ListEmailRuleResultsResultRulesItemKind
 from .list_email_rule_results_result_rules_item_not_run_reason_type_1 import ListEmailRuleResultsResultRulesItemNotRunReasonType1
 from .list_email_rule_results_result_rules_item_not_run_reason_type_2_type_1 import ListEmailRuleResultsResultRulesItemNotRunReasonType2Type1
 from .list_email_rule_results_result_rules_item_not_run_reason_type_3_type_1 import ListEmailRuleResultsResultRulesItemNotRunReasonType3Type1
@@ -877,6 +882,7 @@ from .list_email_rule_versions_result_item_tree_version import ListEmailRuleVers
 from .list_email_rule_versions_result_item_tree_when import ListEmailRuleVersionsResultItemTreeWhen
 from .list_email_rules_response_200 import ListEmailRulesResponse200
 from .list_email_rules_result_item import ListEmailRulesResultItem
+from .list_email_rules_result_item_kind import ListEmailRulesResultItemKind
 from .list_email_rules_result_item_state import ListEmailRulesResultItemState
 from .list_emails_automated import ListEmailsAutomated
 from .list_emails_awaiting import ListEmailsAwaiting
@@ -1535,6 +1541,7 @@ from .test_email_rule_on_sample_request import TestEmailRuleOnSampleRequest
 from .test_email_rule_on_sample_request_email import TestEmailRuleOnSampleRequestEmail
 from .test_email_rule_on_sample_request_email_from import TestEmailRuleOnSampleRequestEmailFrom
 from .test_email_rule_on_sample_request_evaluation_scope import TestEmailRuleOnSampleRequestEvaluationScope
+from .test_email_rule_on_sample_request_kind import TestEmailRuleOnSampleRequestKind
 from .test_email_rule_on_sample_request_scope_selection import TestEmailRuleOnSampleRequestScopeSelection
 from .test_email_rule_on_sample_request_tree import TestEmailRuleOnSampleRequestTree
 from .test_email_rule_on_sample_request_tree_version import TestEmailRuleOnSampleRequestTreeVersion
@@ -1551,6 +1558,7 @@ from .test_email_rule_on_sample_result_question_answers_item import TestEmailRul
 from .test_email_rule_on_sample_result_rule import TestEmailRuleOnSampleResultRule
 from .test_email_rule_request import TestEmailRuleRequest
 from .test_email_rule_request_evaluation_scope import TestEmailRuleRequestEvaluationScope
+from .test_email_rule_request_kind import TestEmailRuleRequestKind
 from .test_email_rule_request_scope_selection import TestEmailRuleRequestScopeSelection
 from .test_email_rule_request_tree import TestEmailRuleRequestTree
 from .test_email_rule_request_tree_version import TestEmailRuleRequestTreeVersion
@@ -1628,6 +1636,7 @@ from .update_email_rule_result_current_type_0_sql import UpdateEmailRuleResultCu
 from .update_email_rule_result_current_type_0_tree import UpdateEmailRuleResultCurrentType0Tree
 from .update_email_rule_result_current_type_0_tree_version import UpdateEmailRuleResultCurrentType0TreeVersion
 from .update_email_rule_result_current_type_0_tree_when import UpdateEmailRuleResultCurrentType0TreeWhen
+from .update_email_rule_result_kind import UpdateEmailRuleResultKind
 from .update_email_rule_result_state import UpdateEmailRuleResultState
 from .update_endpoint_input import UpdateEndpointInput
 from .update_endpoint_input_rules import UpdateEndpointInputRules
@@ -1727,6 +1736,7 @@ __all__ = (
     "AcceptEmailRuleRequestResultRuleCurrentType0Tree",
     "AcceptEmailRuleRequestResultRuleCurrentType0TreeVersion",
     "AcceptEmailRuleRequestResultRuleCurrentType0TreeWhen",
+    "AcceptEmailRuleRequestResultRuleKind",
     "AcceptEmailRuleRequestResultRuleState",
     "AcceptEmailRuleRequestResultShare",
     "AcceptEmailRuleRequestResultShareBeneficiary",
@@ -1908,6 +1918,7 @@ __all__ = (
     "CreateAgentConnectionResponse200DataInvitationType0",
     "CreateEmailRuleRequest",
     "CreateEmailRuleRequestEvaluationScope",
+    "CreateEmailRuleRequestKind",
     "CreateEmailRuleRequestRequest",
     "CreateEmailRuleRequestRequestTree",
     "CreateEmailRuleRequestRequestTreeVersion",
@@ -1933,6 +1944,7 @@ __all__ = (
     "CreateEmailRuleResultCurrentType0Tree",
     "CreateEmailRuleResultCurrentType0TreeVersion",
     "CreateEmailRuleResultCurrentType0TreeWhen",
+    "CreateEmailRuleResultKind",
     "CreateEmailRuleResultState",
     "CreateEndpointInput",
     "CreateEndpointInputKind",
@@ -2332,6 +2344,7 @@ __all__ = (
     "GetEmailRuleResultCurrentType0Tree",
     "GetEmailRuleResultCurrentType0TreeVersion",
     "GetEmailRuleResultCurrentType0TreeWhen",
+    "GetEmailRuleResultKind",
     "GetEmailRuleResultState",
     "GetEmailRuleScopeResponse200",
     "GetEmailRuleScopeResult",
@@ -2539,6 +2552,7 @@ __all__ = (
     "ListEmailRuleResultsResultRulesItemDecisionType0TreeType0",
     "ListEmailRuleResultsResultRulesItemDecisionType0TreeType0Version",
     "ListEmailRuleResultsResultRulesItemDecisionType0TreeType0When",
+    "ListEmailRuleResultsResultRulesItemKind",
     "ListEmailRuleResultsResultRulesItemNotRunReasonType1",
     "ListEmailRuleResultsResultRulesItemNotRunReasonType2Type1",
     "ListEmailRuleResultsResultRulesItemNotRunReasonType3Type1",
@@ -2578,6 +2592,7 @@ __all__ = (
     "ListEmailRuleSharesResultItemRuleType0State",
     "ListEmailRulesResponse200",
     "ListEmailRulesResultItem",
+    "ListEmailRulesResultItemKind",
     "ListEmailRulesResultItemState",
     "ListEmailRuleVersionsResponse200",
     "ListEmailRuleVersionsResultItem",
@@ -3242,6 +3257,7 @@ __all__ = (
     "TestEmailRuleOnSampleRequestEmail",
     "TestEmailRuleOnSampleRequestEmailFrom",
     "TestEmailRuleOnSampleRequestEvaluationScope",
+    "TestEmailRuleOnSampleRequestKind",
     "TestEmailRuleOnSampleRequestScopeSelection",
     "TestEmailRuleOnSampleRequestTree",
     "TestEmailRuleOnSampleRequestTreeVersion",
@@ -3258,6 +3274,7 @@ __all__ = (
     "TestEmailRuleOnSampleResultRule",
     "TestEmailRuleRequest",
     "TestEmailRuleRequestEvaluationScope",
+    "TestEmailRuleRequestKind",
     "TestEmailRuleRequestScopeSelection",
     "TestEmailRuleRequestTree",
     "TestEmailRuleRequestTreeVersion",
@@ -3337,6 +3354,7 @@ __all__ = (
     "UpdateEmailRuleResultCurrentType0Tree",
     "UpdateEmailRuleResultCurrentType0TreeVersion",
     "UpdateEmailRuleResultCurrentType0TreeWhen",
+    "UpdateEmailRuleResultKind",
     "UpdateEmailRuleResultState",
     "UpdateEndpointInput",
     "UpdateEndpointInputRules",
