@@ -3916,8 +3916,9 @@ type CreateKeyParams struct {
 	// `details.step_up_url` and the request is retried with the token that page shows, in this header.
 	// Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a
 	// token issued for MCP, with any API key or agent connection key, and with a dashboard session. The
-	// Primitive CLI and app are refused for this purpose even with a token (403 `grant_forbidden`,
-	// `details.reason` `dashboard_only`).
+	// Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.
+	// reason` `dashboard_only`). The Primitive CLI uses one like any app while the organization's keys
+	// API is on, and is refused the same way while it is off.
 	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 }
 
@@ -11012,6 +11013,72 @@ func unpackGetEmailRuleRequestParams(packed middleware.Parameters) (params GetEm
 }
 
 func decodeGetEmailRuleRequestParams(args [1]string, argsEscaped bool, r *http.Request) (params GetEmailRuleRequestParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// GetEmailRuleScopeParams is parameters of getEmailRuleScope operation.
+type GetEmailRuleScopeParams struct {
+	// The rule id.
+	ID uuid.UUID
+}
+
+func unpackGetEmailRuleScopeParams(packed middleware.Parameters) (params GetEmailRuleScopeParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeGetEmailRuleScopeParams(args [1]string, argsEscaped bool, r *http.Request) (params GetEmailRuleScopeParams, _ error) {
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]
@@ -18717,6 +18784,164 @@ func decodeListEmailRuleRequestsParams(args [0]string, argsEscaped bool, r *http
 	return params, nil
 }
 
+// ListEmailRuleResultsParams is parameters of listEmailRuleResults operation.
+type ListEmailRuleResultsParams struct {
+	// The email id.
+	ID uuid.UUID
+}
+
+func unpackListEmailRuleResultsParams(packed middleware.Parameters) (params ListEmailRuleResultsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeListEmailRuleResultsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListEmailRuleResultsParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// ListEmailRuleScopeOptionsParams is parameters of listEmailRuleScopeOptions operation.
+type ListEmailRuleScopeOptionsParams struct {
+	// Only inboxes and domains containing this text.
+	Q OptString `json:",omitempty,omitzero"`
+}
+
+func unpackListEmailRuleScopeOptionsParams(packed middleware.Parameters) (params ListEmailRuleScopeOptionsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "q",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Q = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeListEmailRuleScopeOptionsParams(args [0]string, argsEscaped bool, r *http.Request) (params ListEmailRuleScopeOptionsParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode query: q.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "q",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotQVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotQVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Q.SetTo(paramsDotQVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Q.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     200,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "q",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // ListEmailRuleShareEmailsParams is parameters of listEmailRuleShareEmails operation.
 type ListEmailRuleShareEmailsParams struct {
 	// The share id.
@@ -19256,6 +19481,138 @@ func decodeListEmailRuleSharesParams(args [0]string, argsEscaped bool, r *http.R
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "cursor",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// ListEmailRuleVersionsParams is parameters of listEmailRuleVersions operation.
+type ListEmailRuleVersionsParams struct {
+	// The rule id.
+	ID uuid.UUID
+	// The version numbers, comma-separated, at most 100.
+	Versions string
+}
+
+func unpackListEmailRuleVersionsParams(packed middleware.Parameters) (params ListEmailRuleVersionsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "versions",
+			In:   "query",
+		}
+		params.Versions = packed[key].(string)
+	}
+	return params
+}
+
+func decodeListEmailRuleVersionsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListEmailRuleVersionsParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode query: versions.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "versions",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.Versions = c
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     0,
+					MinLengthSet:  false,
+					MaxLength:     0,
+					MaxLengthSet:  false,
+					Email:         false,
+					Hostname:      false,
+					Regex:         regexMap["^[1-9]\\d{0,8}(,[1-9]\\d{0,8}){0,99}$"],
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(params.Versions)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "versions",
 			In:   "query",
 			Err:  err,
 		}
@@ -31830,8 +32187,9 @@ type RotateKeyParams struct {
 	// `details.step_up_url` and the request is retried with the token that page shows, in this header.
 	// Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a
 	// token issued for MCP, with any API key or agent connection key, and with a dashboard session. The
-	// Primitive CLI and app are refused for this purpose even with a token (403 `grant_forbidden`,
-	// `details.reason` `dashboard_only`).
+	// Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.
+	// reason` `dashboard_only`). The Primitive CLI uses one like any app while the organization's keys
+	// API is on, and is refused the same way while it is off.
 	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 	// Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with
 	// the same key runs the request again. Operations that need a credential refuse a key that is empty,
@@ -39486,8 +39844,9 @@ type UpdateKeyParams struct {
 	// `details.step_up_url` and the request is retried with the token that page shows, in this header.
 	// Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a
 	// token issued for MCP, with any API key or agent connection key, and with a dashboard session. The
-	// Primitive CLI and app are refused for this purpose even with a token (403 `grant_forbidden`,
-	// `details.reason` `dashboard_only`).
+	// Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.
+	// reason` `dashboard_only`). The Primitive CLI uses one like any app while the organization's keys
+	// API is on, and is refused the same way while it is off.
 	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 }
 

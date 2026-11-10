@@ -14,6 +14,7 @@ from uuid import UUID
 
 if TYPE_CHECKING:
   from ..models.test_email_rule_on_sample_request_email import TestEmailRuleOnSampleRequestEmail
+  from ..models.test_email_rule_on_sample_request_scope_selection import TestEmailRuleOnSampleRequestScopeSelection
   from ..models.test_email_rule_on_sample_request_tree import TestEmailRuleOnSampleRequestTree
 
 
@@ -31,15 +32,18 @@ class TestEmailRuleOnSampleRequest:
             email (TestEmailRuleOnSampleRequestEmail): A made-up received email. Nothing about it is stored.
             tree (TestEmailRuleOnSampleRequestTree | Unset): An unsaved rule tree, as POST /email-rules/compile returned it.
                 Give tree or rule_id, not both.
-            evaluation_scope (TestEmailRuleOnSampleRequestEvaluationScope | Unset): Whose mail an unsaved tree runs over.
-                author, the default: all the mail you can read. own_mailboxes: only mail to your own addresses. Only with tree:
-                a saved rule uses its own.
+            evaluation_scope (TestEmailRuleOnSampleRequestEvaluationScope | Unset): author: all mail its author can read.
+                own_mailboxes: mail to their own addresses. selected: what scope_selection names. Never more than the author can
+                read.
+            scope_selection (TestEmailRuleOnSampleRequestScopeSelection | Unset): Inboxes, and domains (every address at
+                them the author can read), for a selected rule; each one you can read.
             rule_id (UUID | Unset): A saved rule you can see. Its current version is tested.
      """
 
     email: TestEmailRuleOnSampleRequestEmail
     tree: TestEmailRuleOnSampleRequestTree | Unset = UNSET
     evaluation_scope: TestEmailRuleOnSampleRequestEvaluationScope | Unset = UNSET
+    scope_selection: TestEmailRuleOnSampleRequestScopeSelection | Unset = UNSET
     rule_id: UUID | Unset = UNSET
 
 
@@ -48,6 +52,7 @@ class TestEmailRuleOnSampleRequest:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.test_email_rule_on_sample_request_email import TestEmailRuleOnSampleRequestEmail # noqa: PLC0415
+        from ..models.test_email_rule_on_sample_request_scope_selection import TestEmailRuleOnSampleRequestScopeSelection # noqa: PLC0415
         from ..models.test_email_rule_on_sample_request_tree import TestEmailRuleOnSampleRequestTree # noqa: PLC0415
         email = self.email.to_dict()
 
@@ -59,6 +64,10 @@ class TestEmailRuleOnSampleRequest:
         if not isinstance(self.evaluation_scope, Unset):
             evaluation_scope = self.evaluation_scope.value
 
+
+        scope_selection: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.scope_selection, Unset):
+            scope_selection = self.scope_selection.to_dict()
 
         rule_id: str | Unset = UNSET
         if not isinstance(self.rule_id, Unset):
@@ -74,6 +83,8 @@ class TestEmailRuleOnSampleRequest:
             field_dict["tree"] = tree
         if evaluation_scope is not UNSET:
             field_dict["evaluation_scope"] = evaluation_scope
+        if scope_selection is not UNSET:
+            field_dict["scope_selection"] = scope_selection
         if rule_id is not UNSET:
             field_dict["rule_id"] = rule_id
 
@@ -84,6 +95,7 @@ class TestEmailRuleOnSampleRequest:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.test_email_rule_on_sample_request_email import TestEmailRuleOnSampleRequestEmail # noqa: PLC0415
+        from ..models.test_email_rule_on_sample_request_scope_selection import TestEmailRuleOnSampleRequestScopeSelection # noqa: PLC0415
         from ..models.test_email_rule_on_sample_request_tree import TestEmailRuleOnSampleRequestTree # noqa: PLC0415
         d = dict(src_dict)
         email = TestEmailRuleOnSampleRequestEmail.from_dict(d.pop("email"))
@@ -111,6 +123,16 @@ class TestEmailRuleOnSampleRequest:
 
 
 
+        _scope_selection = d.pop("scope_selection", UNSET)
+        scope_selection: TestEmailRuleOnSampleRequestScopeSelection | Unset
+        if isinstance(_scope_selection,  Unset):
+            scope_selection = UNSET
+        else:
+            scope_selection = TestEmailRuleOnSampleRequestScopeSelection.from_dict(_scope_selection)
+
+
+
+
         _rule_id = d.pop("rule_id", UNSET)
         rule_id: UUID | Unset
         if isinstance(_rule_id,  Unset):
@@ -125,6 +147,7 @@ class TestEmailRuleOnSampleRequest:
             email=email,
             tree=tree,
             evaluation_scope=evaluation_scope,
+            scope_selection=scope_selection,
             rule_id=rule_id,
         )
 

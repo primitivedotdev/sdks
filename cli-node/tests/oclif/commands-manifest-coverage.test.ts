@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { openapiDocument, operationManifest } from "@primitivedotdev/api-core";
 import { describe, expect, it } from "vitest";
-import { DASHBOARD_ONLY_OPERATION_IDS } from "../../src/oclif/cli-operations.js";
+import { KEY_WRITE_OPERATION_IDS } from "../../src/oclif/cli-operations.js";
 import {
   CANONICAL_OPERATION_ALIASES,
   COMMANDS,
@@ -569,12 +569,12 @@ describe("COMMANDS / manifest coverage", () => {
     expect(COMMANDS["endpoints:pull-webhook-event"]).toBeDefined();
     expect(COMMANDS["endpoints:complete-webhook-event"]).toBeDefined();
   });
-  it("registers a command for every operation in the manifest except the dashboard-only ones", () => {
+  it("registers a command for every operation in the manifest except the key writes", () => {
     const missing = operationManifest
       .map((op) => `${op.tagCommand}:${op.command}`)
       .filter((id) => !(id in COMMANDS));
 
-    expect(missing.sort()).toEqual([...DASHBOARD_ONLY_OPERATION_IDS].sort());
+    expect(missing.sort()).toEqual([...KEY_WRITE_OPERATION_IDS].sort());
   });
 
   it("does not declare a pre-built oclif.manifest.json in package files", () => {

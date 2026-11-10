@@ -8,10 +8,12 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.update_email_rule_request_evaluation_scope import UpdateEmailRuleRequestEvaluationScope
 from ..models.update_email_rule_request_state import UpdateEmailRuleRequestState
 from typing import cast
 
 if TYPE_CHECKING:
+  from ..models.update_email_rule_request_scope_selection import UpdateEmailRuleRequestScopeSelection
   from ..models.update_email_rule_request_tree import UpdateEmailRuleRequestTree
 
 
@@ -37,6 +39,11 @@ class UpdateEmailRuleRequest:
             warnings (list[str] | Unset): Parts of the description the rule does not express.
             compiled_by (str | Unset): Who produced the tree, as the caller states it (not verified): the compile response's
                 compiled_by, or member when you wrote or edited it yourself. Defaults to member.
+            evaluation_scope (UpdateEmailRuleRequestEvaluationScope | Unset): author: all mail its author can read.
+                own_mailboxes: mail to their own addresses. selected: what scope_selection names. Never more than the author can
+                read.
+            scope_selection (UpdateEmailRuleRequestScopeSelection | Unset): Inboxes, and domains (every address at them the
+                author can read), for a selected rule; each one you can read.
      """
 
     name: str | Unset = UNSET
@@ -47,12 +54,15 @@ class UpdateEmailRuleRequest:
     assumptions: list[str] | Unset = UNSET
     warnings: list[str] | Unset = UNSET
     compiled_by: str | Unset = UNSET
+    evaluation_scope: UpdateEmailRuleRequestEvaluationScope | Unset = UNSET
+    scope_selection: UpdateEmailRuleRequestScopeSelection | Unset = UNSET
 
 
 
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.update_email_rule_request_scope_selection import UpdateEmailRuleRequestScopeSelection # noqa: PLC0415
         from ..models.update_email_rule_request_tree import UpdateEmailRuleRequestTree # noqa: PLC0415
         name = self.name
 
@@ -83,6 +93,15 @@ class UpdateEmailRuleRequest:
 
         compiled_by = self.compiled_by
 
+        evaluation_scope: str | Unset = UNSET
+        if not isinstance(self.evaluation_scope, Unset):
+            evaluation_scope = self.evaluation_scope.value
+
+
+        scope_selection: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.scope_selection, Unset):
+            scope_selection = self.scope_selection.to_dict()
+
 
         field_dict: dict[str, Any] = {}
 
@@ -104,6 +123,10 @@ class UpdateEmailRuleRequest:
             field_dict["warnings"] = warnings
         if compiled_by is not UNSET:
             field_dict["compiled_by"] = compiled_by
+        if evaluation_scope is not UNSET:
+            field_dict["evaluation_scope"] = evaluation_scope
+        if scope_selection is not UNSET:
+            field_dict["scope_selection"] = scope_selection
 
         return field_dict
 
@@ -111,6 +134,7 @@ class UpdateEmailRuleRequest:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.update_email_rule_request_scope_selection import UpdateEmailRuleRequestScopeSelection # noqa: PLC0415
         from ..models.update_email_rule_request_tree import UpdateEmailRuleRequestTree # noqa: PLC0415
         d = dict(src_dict)
         name = d.pop("name", UNSET)
@@ -147,6 +171,26 @@ class UpdateEmailRuleRequest:
 
         compiled_by = d.pop("compiled_by", UNSET)
 
+        _evaluation_scope = d.pop("evaluation_scope", UNSET)
+        evaluation_scope: UpdateEmailRuleRequestEvaluationScope | Unset
+        if isinstance(_evaluation_scope,  Unset):
+            evaluation_scope = UNSET
+        else:
+            evaluation_scope = UpdateEmailRuleRequestEvaluationScope(_evaluation_scope)
+
+
+
+
+        _scope_selection = d.pop("scope_selection", UNSET)
+        scope_selection: UpdateEmailRuleRequestScopeSelection | Unset
+        if isinstance(_scope_selection,  Unset):
+            scope_selection = UNSET
+        else:
+            scope_selection = UpdateEmailRuleRequestScopeSelection.from_dict(_scope_selection)
+
+
+
+
         update_email_rule_request = cls(
             name=name,
             state=state,
@@ -156,6 +200,8 @@ class UpdateEmailRuleRequest:
             assumptions=assumptions,
             warnings=warnings,
             compiled_by=compiled_by,
+            evaluation_scope=evaluation_scope,
+            scope_selection=scope_selection,
         )
 
         return update_email_rule_request

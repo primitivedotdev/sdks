@@ -8,10 +8,12 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.create_email_rule_request_evaluation_scope import CreateEmailRuleRequestEvaluationScope
 from ..models.create_email_rule_request_state import CreateEmailRuleRequestState
 from typing import cast
 
 if TYPE_CHECKING:
+  from ..models.create_email_rule_request_scope_selection import CreateEmailRuleRequestScopeSelection
   from ..models.create_email_rule_request_tree import CreateEmailRuleRequestTree
 
 
@@ -32,6 +34,11 @@ class CreateEmailRuleRequest:
             explanation (str): What the rule matches, in plain English.
             state (CreateEmailRuleRequestState | Unset): observe (the default) records what the rule would match and grants
                 nothing; draft is not evaluated.
+            evaluation_scope (CreateEmailRuleRequestEvaluationScope | Unset): author: all mail its author can read.
+                own_mailboxes: mail to their own addresses. selected: what scope_selection names. Never more than the author can
+                read.
+            scope_selection (CreateEmailRuleRequestScopeSelection | Unset): Inboxes, and domains (every address at them the
+                author can read), for a selected rule; each one you can read.
             assumptions (list[str] | Unset): Readings chosen where the description was open to more than one.
             warnings (list[str] | Unset): Parts of the description the rule does not express.
             compiled_by (str | Unset): Who produced the tree, as the caller states it (not verified): the compile response's
@@ -43,6 +50,8 @@ class CreateEmailRuleRequest:
     tree: CreateEmailRuleRequestTree
     explanation: str
     state: CreateEmailRuleRequestState | Unset = UNSET
+    evaluation_scope: CreateEmailRuleRequestEvaluationScope | Unset = UNSET
+    scope_selection: CreateEmailRuleRequestScopeSelection | Unset = UNSET
     assumptions: list[str] | Unset = UNSET
     warnings: list[str] | Unset = UNSET
     compiled_by: str | Unset = UNSET
@@ -52,6 +61,7 @@ class CreateEmailRuleRequest:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.create_email_rule_request_scope_selection import CreateEmailRuleRequestScopeSelection # noqa: PLC0415
         from ..models.create_email_rule_request_tree import CreateEmailRuleRequestTree # noqa: PLC0415
         name = self.name
 
@@ -65,6 +75,15 @@ class CreateEmailRuleRequest:
         if not isinstance(self.state, Unset):
             state = self.state.value
 
+
+        evaluation_scope: str | Unset = UNSET
+        if not isinstance(self.evaluation_scope, Unset):
+            evaluation_scope = self.evaluation_scope.value
+
+
+        scope_selection: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.scope_selection, Unset):
+            scope_selection = self.scope_selection.to_dict()
 
         assumptions: list[str] | Unset = UNSET
         if not isinstance(self.assumptions, Unset):
@@ -91,6 +110,10 @@ class CreateEmailRuleRequest:
         })
         if state is not UNSET:
             field_dict["state"] = state
+        if evaluation_scope is not UNSET:
+            field_dict["evaluation_scope"] = evaluation_scope
+        if scope_selection is not UNSET:
+            field_dict["scope_selection"] = scope_selection
         if assumptions is not UNSET:
             field_dict["assumptions"] = assumptions
         if warnings is not UNSET:
@@ -104,6 +127,7 @@ class CreateEmailRuleRequest:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.create_email_rule_request_scope_selection import CreateEmailRuleRequestScopeSelection # noqa: PLC0415
         from ..models.create_email_rule_request_tree import CreateEmailRuleRequestTree # noqa: PLC0415
         d = dict(src_dict)
         name = d.pop("name")
@@ -127,6 +151,26 @@ class CreateEmailRuleRequest:
 
 
 
+        _evaluation_scope = d.pop("evaluation_scope", UNSET)
+        evaluation_scope: CreateEmailRuleRequestEvaluationScope | Unset
+        if isinstance(_evaluation_scope,  Unset):
+            evaluation_scope = UNSET
+        else:
+            evaluation_scope = CreateEmailRuleRequestEvaluationScope(_evaluation_scope)
+
+
+
+
+        _scope_selection = d.pop("scope_selection", UNSET)
+        scope_selection: CreateEmailRuleRequestScopeSelection | Unset
+        if isinstance(_scope_selection,  Unset):
+            scope_selection = UNSET
+        else:
+            scope_selection = CreateEmailRuleRequestScopeSelection.from_dict(_scope_selection)
+
+
+
+
         assumptions = cast(list[str], d.pop("assumptions", UNSET))
 
 
@@ -141,6 +185,8 @@ class CreateEmailRuleRequest:
             tree=tree,
             explanation=explanation,
             state=state,
+            evaluation_scope=evaluation_scope,
+            scope_selection=scope_selection,
             assumptions=assumptions,
             warnings=warnings,
             compiled_by=compiled_by,

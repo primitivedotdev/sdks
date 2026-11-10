@@ -1,6 +1,6 @@
 {
   "name": "primitive",
-  "version": "3.0.0-preview.1",
+  "version": "3.0.0-preview.2",
   "publishConfig": {
     "tag": "preview"
   },
@@ -144,7 +144,7 @@
         "description": "Global secrets shared across every function. Use `primitive org secrets list|set|remove`. Changes land in a function on its next redeploy; a function secret of the same name overrides the global."
       },
       "keys": {
-        "description": "List organization API keys (metadata only, never secrets) with `primitive keys list`. API keys are created, rotated and revoked in the dashboard for now. CLI commands for this are planned."
+        "description": "Organization API keys: list and show them (metadata only, never secrets), create, rotate and change them after you approve each request in your browser, and revoke them."
       },
       "roles": {
         "description": "Read roles, groups, mailbox access and the access mode. Use `primitive roles list|groups|mailbox-access|access-mode`; generated API names remain available."

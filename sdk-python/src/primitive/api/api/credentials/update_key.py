@@ -127,9 +127,10 @@ def sync_detailed(
     person's own access to cover the key's access now (an owner covers every key); otherwise 403
     grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key and
     is held to the same rules as creating one (a custom grant that does not say which mail it reaches is
-    refused with details.reason mail_scope_required), so it takes the same step-up. The Primitive CLI's
-    token is refused, even with a step-up. Needs the organization's credential features to be enabled;
-    while they are not, this answers 404 feature_disabled.
+    refused with details.reason mail_scope_required), so it takes the same step-up. The Primitive CLI
+    takes the same step-up; the Primitive app's token is refused, even with one. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled.
 
     Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
     `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
@@ -179,9 +180,10 @@ def sync(
     person's own access to cover the key's access now (an owner covers every key); otherwise 403
     grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key and
     is held to the same rules as creating one (a custom grant that does not say which mail it reaches is
-    refused with details.reason mail_scope_required), so it takes the same step-up. The Primitive CLI's
-    token is refused, even with a step-up. Needs the organization's credential features to be enabled;
-    while they are not, this answers 404 feature_disabled.
+    refused with details.reason mail_scope_required), so it takes the same step-up. The Primitive CLI
+    takes the same step-up; the Primitive app's token is refused, even with one. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled.
 
     Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
     `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
@@ -226,9 +228,10 @@ async def asyncio_detailed(
     person's own access to cover the key's access now (an owner covers every key); otherwise 403
     grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key and
     is held to the same rules as creating one (a custom grant that does not say which mail it reaches is
-    refused with details.reason mail_scope_required), so it takes the same step-up. The Primitive CLI's
-    token is refused, even with a step-up. Needs the organization's credential features to be enabled;
-    while they are not, this answers 404 feature_disabled.
+    refused with details.reason mail_scope_required), so it takes the same step-up. The Primitive CLI
+    takes the same step-up; the Primitive app's token is refused, even with one. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled.
 
     Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
     `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
@@ -278,9 +281,10 @@ async def asyncio(
     person's own access to cover the key's access now (an owner covers every key); otherwise 403
     grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key and
     is held to the same rules as creating one (a custom grant that does not say which mail it reaches is
-    refused with details.reason mail_scope_required), so it takes the same step-up. The Primitive CLI's
-    token is refused, even with a step-up. Needs the organization's credential features to be enabled;
-    while they are not, this answers 404 feature_disabled.
+    refused with details.reason mail_scope_required), so it takes the same step-up. The Primitive CLI
+    takes the same step-up; the Primitive app's token is refused, even with one. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled.
 
     Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
     `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403

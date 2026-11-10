@@ -330,9 +330,10 @@ type Handler interface {
 	// Saves a rule as version 1, from a compile response or a tree you wrote. The tree is checked
 	// against the column contract. New rules start in observe, where what the rule matches is recorded
 	// and nothing is granted; draft is not evaluated. The caller is the rule's author, and the rule
-	// never reaches mail the author cannot read. Needs mail:read, a credential acting as a member with
-	// their full access (API keys, agent keys and narrowed tokens are refused), and the email rules
-	// feature on the organization.
+	// never reaches mail the author cannot read. evaluation_scope (author when omitted) chooses whose
+	// mail it runs over; scope_selection may name only what you can read. Needs mail:read, a credential
+	// acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
+	// and the email rules feature on the organization.
 	//
 	// POST /email-rules
 	CreateEmailRule(ctx context.Context, req *CreateEmailRuleRequest, params CreateEmailRuleParams) (CreateEmailRuleRes, error)
@@ -471,10 +472,10 @@ type Handler interface {
 	// Idempotency-Key to retry safely: a second create by the same person under the same key makes no
 	// second key and is refused (409 idempotency_key_reused) with the first key's id in error.details.
 	// key_id, so a caller whose first answer was lost can revoke that key. The onboarding field is for
-	// the dashboard only. The Primitive CLI's token is refused, even with a step-up: keys are created in
-	// the dashboard or by an app the person connected. While the organization's keys API is not enabled,
-	// this answers 404 feature_disabled, except that a dashboard session may still create a super admin
-	// key (the dashboard's own create).
+	// the dashboard only. The Primitive CLI takes the same step-up; the Primitive app's token is refused,
+	//  even with one. While the organization's keys API is not enabled, this answers 404
+	// feature_disabled, except that a dashboard session may still create a super admin key (the
+	// dashboard's own create).
 	// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
 	// `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
 	// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
@@ -1202,6 +1203,15 @@ type Handler interface {
 	//
 	// GET /email-rule-requests/{id}
 	GetEmailRuleRequest(ctx context.Context, params GetEmailRuleRequestParams) (GetEmailRuleRequestRes, error)
+	// GetEmailRuleScope implements getEmailRuleScope operation.
+	//
+	// Whose mail the rule runs over, and what that comes to now: a rule never reaches further than what
+	// its author can read when it runs, so what a selected rule names and its author can no longer read
+	// stops matching. Needs mail:read, a credential acting as a member with their full access (API keys,
+	// agent keys and narrowed tokens are refused), and the email rules feature on the organization.
+	//
+	// GET /email-rules/{id}/scope
+	GetEmailRuleScope(ctx context.Context, params GetEmailRuleScopeParams) (GetEmailRuleScopeRes, error)
 	// GetEmailRuleShare implements getEmailRuleShare operation.
 	//
 	// One share. Needs mail:read, a credential acting as a member with their full access (API keys,
@@ -1874,6 +1884,27 @@ type Handler interface {
 	//
 	// GET /email-rule-requests
 	ListEmailRuleRequests(ctx context.Context, params ListEmailRuleRequestsParams) (ListEmailRuleRequestsRes, error)
+	// ListEmailRuleResults implements listEmailRuleResults operation.
+	//
+	// Every rule the caller can see and what it decided about this email: those that matched, those that
+	// did not, and those that have not run on it, with what is known about them. A result names the
+	// version of the rule that decided and carries that version's conditions and questions. Only a
+	// caller who can read the email gets an answer, and a rule the caller cannot see is left out. At
+	// most 50 rules are listed, those with a result first; hidden counts the rest. Needs mail:read, a
+	// credential acting as a member with their full access (API keys, agent keys and narrowed tokens are
+	// refused), and the email rules feature on the organization.
+	//
+	// GET /emails/{id}/rule-results
+	ListEmailRuleResults(ctx context.Context, params ListEmailRuleResultsParams) (ListEmailRuleResultsRes, error)
+	// ListEmailRuleScopeOptions implements listEmailRuleScopeOptions operation.
+	//
+	// How much the caller can read, and the inboxes and domains the caller can read, which is what they
+	// may name when a rule runs over selected inboxes and domains. Needs mail:read, a credential acting
+	// as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the
+	// email rules feature on the organization.
+	//
+	// GET /email-rule-scope-options
+	ListEmailRuleScopeOptions(ctx context.Context, params ListEmailRuleScopeOptionsParams) (ListEmailRuleScopeOptionsRes, error)
 	// ListEmailRuleShareEmails implements listEmailRuleShareEmails operation.
 	//
 	// The emails a rule shared with you has matched, newest first, as the email list shows them. Only
@@ -1892,6 +1923,15 @@ type Handler interface {
 	//
 	// GET /email-rule-shares
 	ListEmailRuleShares(ctx context.Context, params ListEmailRuleSharesParams) (ListEmailRuleSharesRes, error)
+	// ListEmailRuleVersions implements listEmailRuleVersions operation.
+	//
+	// The named versions of a rule, as they were written: what each one's conditions and questions were,
+	// so a decision can be read against the version that made it. Numbers that are not versions of the
+	// rule are left out. Needs mail:read, a credential acting as a member with their full access (API
+	// keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.
+	//
+	// GET /email-rules/{id}/versions
+	ListEmailRuleVersions(ctx context.Context, params ListEmailRuleVersionsParams) (ListEmailRuleVersionsRes, error)
 	// ListEmailRules implements listEmailRules operation.
 	//
 	// The rules the caller can see, newest first: their own, or every member's rules for a caller who
@@ -2758,8 +2798,9 @@ type Handler interface {
 	// overlap_seconds, then stops. The person rotating must cover the key's access (403 grant_forbidden,
 	// details.reason target_not_covered), and a key an owner created is rotated by an owner only (403
 	// forbidden, details.reason owner_key_rotation), since rotating hands over the new secret. The
-	// Primitive CLI's token is refused, even with a step-up. Needs the organization's credential
-	// features to be enabled; while they are not, this answers 404 feature_disabled.
+	// Primitive CLI takes the same step-up; the Primitive app's token is refused, even with one. Needs
+	// the organization's credential features to be enabled; while they are not, this answers 404
+	// feature_disabled.
 	// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
 	// `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
 	// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
@@ -3107,14 +3148,14 @@ type Handler interface {
 	// Runs a rule over received mail and reports what it would decide for each email: matched, near_miss,
 	//  no_match, unclassified or not_found. Test an unsaved tree from a compile response, or a saved
 	// rule by rule_id (its current version, run with its author's access). Either way the rule reads
-	// only mail its author can read. Without email_ids, the newest emails it can read are tested, at
-	// most 200 and none older than 30 days. Emails not classified yet that arrived more than 2 hours ago
-	// are classified first and their classification is saved, unless classify_missing is false; newer
-	// ones are left to normal classification and reported unclassified with reason pending. The rule
-	// itself records nothing and grants nothing. Classification and the rule's own questions stop at
-	// about 90 seconds; run the test again to continue where it stopped. Needs mail:read, a credential
-	// acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
-	// and the email rules feature on the organization.
+	// only mail its author can read, and only what its scope covers. Without email_ids, the newest
+	// emails it can read are tested, at most 200 and none older than 30 days. Emails not classified yet
+	// that arrived more than 2 hours ago are classified first and their classification is saved, unless
+	// classify_missing is false; newer ones are left to normal classification and reported unclassified
+	// with reason pending. The rule itself records nothing and grants nothing. Classification and the
+	// rule's own questions stop at about 90 seconds; run the test again to continue where it stopped.
+	// Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
+	// narrowed tokens are refused), and the email rules feature on the organization.
 	//
 	// POST /email-rules/test
 	TestEmailRule(ctx context.Context, req *TestEmailRuleRequest, params TestEmailRuleParams) (TestEmailRuleRes, error)
@@ -3261,12 +3302,14 @@ type Handler interface {
 	// UpdateEmailRule implements updateEmailRule operation.
 	//
 	// Renames the rule, saves a new version (english, tree and explanation together; earlier versions
-	// are kept unchanged) or changes its state: draft (disabled), observe or active. Only the rule's
-	// author may rename it, add a version or move it to observe or active; anyone else who can see it
-	// may only disable it (state draft), and while it is shared with another member only if they manage
-	// members from the dashboard. Needs mail:read, a credential acting as a member with their full
-	// access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
-	// organization.
+	// are kept unchanged), changes its state (draft, disabled; observe; or active) or changes whose mail
+	// it runs over (evaluation_scope, with scope_selection when selected). Only the rule's author may
+	// rename it, add a version, change its scope or move it to observe or active; anyone else who can
+	// see it may only disable it (state draft), and while it is shared with another member only if they
+	// manage members from the dashboard. Omit evaluation_scope to keep the current scope. A scope change
+	// saves a new version with the same conditions; what was granted stays. A shared rule keeps its
+	// scope. Needs mail:read, a credential acting as a member with their full access (API keys, agent
+	// keys and narrowed tokens are refused), and the email rules feature on the organization.
 	//
 	// PATCH /email-rules/{id}
 	UpdateEmailRule(ctx context.Context, req *UpdateEmailRuleRequest, params UpdateEmailRuleParams) (UpdateEmailRuleRes, error)
@@ -3329,8 +3372,9 @@ type Handler interface {
 	// grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key and
 	// is held to the same rules as creating one (a custom grant that does not say which mail it reaches
 	// is refused with details.reason mail_scope_required), so it takes the same step-up. The Primitive
-	// CLI's token is refused, even with a step-up. Needs the organization's credential features to be
-	// enabled; while they are not, this answers 404 feature_disabled.
+	// CLI takes the same step-up; the Primitive app's token is refused, even with one. Needs the
+	// organization's credential features to be enabled; while they are not, this answers 404
+	// feature_disabled.
 	// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
 	// `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
 	// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden

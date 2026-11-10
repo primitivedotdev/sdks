@@ -99,6 +99,8 @@ class ErrorResponseErrorCode(StrEnum):
     EMAIL_RULE_REQUEST_PARTY_LEFT = "email_rule_request_party_left"
     EMAIL_RULE_REQUEST_PROPOSER_ONLY = "email_rule_request_proposer_only"
     EMAIL_RULE_REQUEST_TARGET_ONLY = "email_rule_request_target_only"
+    EMAIL_RULE_SCOPE_LOCKED = "email_rule_scope_locked"
+    EMAIL_RULE_SCOPE_NOT_READABLE = "email_rule_scope_not_readable"
     EMAIL_RULE_SHARE_ENDED = "email_rule_share_ended"
     EMAIL_RULE_SHARE_LIMIT = "email_rule_share_limit"
     EMBEDDING_PROVIDER_UNAVAILABLE = "embedding_provider_unavailable"

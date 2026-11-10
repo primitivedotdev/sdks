@@ -207,9 +207,18 @@ profile are bound to one organization and refuse a different one.
 .PP
 Run
 .B primitive keys list
-to list API key metadata; it never shows a secret. API keys are created,
-rotated and revoked in the dashboard for now. CLI commands for this are
-planned.
+or
+.B primitive keys get ID
+to see API keys and their permissions; neither shows a secret.
+.BR "primitive keys create" ,
+.B rotate
+and
+.B update
+need your approval in the browser: the command prints the approval link and
+waits for the one-time token the page shows. A new secret is printed once and
+never saved.
+.B primitive keys revoke ID
+revokes a key.
 .B primitive whoami --check PERMISSION
 reports whether the current credential may use a permission.
 .PP

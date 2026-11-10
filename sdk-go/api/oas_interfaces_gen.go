@@ -377,6 +377,10 @@ type GetEmailRuleRes interface {
 	getEmailRuleRes()
 }
 
+type GetEmailRuleScopeRes interface {
+	getEmailRuleScopeRes()
+}
+
 type GetEmailRuleShareRes interface {
 	getEmailRuleShareRes()
 }
@@ -629,12 +633,24 @@ type ListEmailRuleRequestsRes interface {
 	listEmailRuleRequestsRes()
 }
 
+type ListEmailRuleResultsRes interface {
+	listEmailRuleResultsRes()
+}
+
+type ListEmailRuleScopeOptionsRes interface {
+	listEmailRuleScopeOptionsRes()
+}
+
 type ListEmailRuleShareEmailsRes interface {
 	listEmailRuleShareEmailsRes()
 }
 
 type ListEmailRuleSharesRes interface {
 	listEmailRuleSharesRes()
+}
+
+type ListEmailRuleVersionsRes interface {
+	listEmailRuleVersionsRes()
 }
 
 type ListEmailRulesRes interface {

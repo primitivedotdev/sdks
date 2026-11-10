@@ -3,6 +3,7 @@ from enum import StrEnum
 class TestEmailRuleRequestEvaluationScope(StrEnum):
     AUTHOR = "author"
     OWN_MAILBOXES = "own_mailboxes"
+    SELECTED = "selected"
 
     def __str__(self) -> str:
         return str(self.value)

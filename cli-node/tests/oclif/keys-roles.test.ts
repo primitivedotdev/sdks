@@ -16,11 +16,22 @@ import {
 } from "../../src/oclif/api-command.js";
 import {
   cliOperationManifest,
-  DASHBOARD_ONLY_OPERATION_IDS,
+  KEY_WRITE_OPERATION_IDS,
 } from "../../src/oclif/cli-operations.js";
 import {
+  buildCreateGrant,
+  buildUpdatedGrant,
+  formatKeyDetail,
   formatKeyRows,
+  HELD_REQUEST_NOTICE,
+  KeysCreateCommand,
+  KeysGetCommand,
   KeysListCommand,
+  KeysRevokeCommand,
+  KeysUpdateCommand,
+  STORE_SECRET_NOTICE,
+  stepUpUrlOf,
+  withApproval,
 } from "../../src/oclif/commands/keys.js";
 import {
   formatAccessMode,
@@ -131,38 +142,284 @@ describe("the global --org flag", () => {
   });
 });
 
+const RULE_ID = "3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f";
+
+function keyRow(
+  grant: {
+    template: string | null;
+    permissions: string[] | null;
+    mail_scope: unknown;
+  } & Record<string, unknown>,
+  extra: Record<string, unknown> = {},
+) {
+  return {
+    agent_address: null,
+    created_at: "2026-11-01T00:00:00.000Z",
+    created_by_user_id: null,
+    expires_at: null,
+    grant,
+    id: KEY_ID,
+    key_prefix: "prim_ab12cd34...",
+    kind: "org_key" as const,
+    last_used_at: null,
+    name: "ci",
+    suspended: false,
+    ...extra,
+  };
+}
+
+const READER = keyRow({
+  template: null,
+  permissions: ["mail:read"],
+  mail_scope: "org",
+});
+
 describe("keys helpers", () => {
-  it("formats inventory rows", () => {
+  it("formats key rows and one key, with permissions and mail scope", () => {
     expect(formatKeyRows([])).toBe("No API keys.");
     expect(
       formatKeyRows([
-        {
-          actions: ["revoke"],
-          client: null,
-          conditions: null,
-          created_at: null,
-          creator: { email: null, id: null, kind: null, status: "member" },
-          expires_at: null,
-          flags: ["unused_90_days"],
-          grant: {
-            mail_scope: "org",
-            permissions: null,
-            ref: null,
-            resources: null,
-            template: "super_admin",
-            type: "template",
+        keyRow({
+          template: "super_admin",
+          permissions: null,
+          mail_scope: null,
+        }),
+        keyRow(
+          {
+            template: null,
+            permissions: ["mail:read"],
+            mail_scope: { addresses: [], domains: [], rules: [RULE_ID] },
           },
-          id: KEY_ID,
-          kind: "org_key",
-          last_used_at: null,
-          last_used_ip: null,
-          name: "ci",
-          prefix: "prim_ab",
-        },
+          { suspended: true },
+        ),
       ]),
     ).toBe(
-      `${KEY_ID}  prim_ab  ci  super_admin  expires never  last used never [unused_90_days]`,
+      [
+        `${KEY_ID}  prim_ab12cd34...  ci  super admin (every permission)  mail: every mailbox  expires never  last used never`,
+        `${KEY_ID}  prim_ab12cd34...  ci  mail:read  mail: rules ${RULE_ID}  expires never  last used never [suspended]`,
+      ].join("\n"),
     );
+    const detail = formatKeyDetail(
+      keyRow({
+        template: null,
+        permissions: ["mail:read", "mail:send"],
+        mail_scope: { addresses: ["a@example.com"], domains: ["example.org"] },
+      }),
+    );
+    expect(detail).toContain(
+      "Mail:         addresses a@example.com; domains example.org",
+    );
+    expect(detail).toContain("Permissions:\n  mail:read\n  mail:send");
+  });
+
+  it("builds a new key's grant only from an explicit choice", () => {
+    const none = {
+      permissions: [],
+      addresses: [],
+      domains: [],
+      rules: [],
+      allMailboxes: false,
+    };
+    expect(buildCreateGrant(none)).toMatchObject({
+      ok: false,
+      message: expect.stringContaining("no default"),
+    });
+    expect(buildCreateGrant({ ...none, preset: "super_admin" })).toEqual({
+      ok: true,
+      grant: "super_admin",
+    });
+    expect(
+      buildCreateGrant({ ...none, preset: "read_only", rules: [RULE_ID] }).ok,
+    ).toBe(false);
+    expect(
+      buildCreateGrant({
+        ...none,
+        preset: "own_addresses_read_only",
+        rules: [RULE_ID],
+      }),
+    ).toEqual({
+      ok: true,
+      grant: { preset: "own_addresses_read_only", rules: [RULE_ID] },
+    });
+    expect(
+      buildCreateGrant({
+        ...none,
+        permissions: ["mail:read"],
+        rules: [RULE_ID],
+      }),
+    ).toEqual({
+      ok: true,
+      grant: { preset: "custom", permissions: ["mail:read"], rules: [RULE_ID] },
+    });
+    expect(
+      buildCreateGrant({
+        ...none,
+        permissions: ["mail:read"],
+        allMailboxes: true,
+      }),
+    ).toEqual({
+      ok: true,
+      grant: {
+        preset: "custom",
+        permissions: ["mail:read"],
+        mail_scope: "org",
+      },
+    });
+    // Chosen permissions must say which mail they reach, one way only.
+    expect(buildCreateGrant({ ...none, permissions: ["mail:read"] }).ok).toBe(
+      false,
+    );
+    expect(
+      buildCreateGrant({
+        ...none,
+        permissions: ["mail:read"],
+        allMailboxes: true,
+        rules: [RULE_ID],
+      }).ok,
+    ).toBe(false);
+    expect(
+      buildCreateGrant({
+        ...none,
+        preset: "read_only",
+        permissions: ["mail:read"],
+      }).ok,
+    ).toBe(false);
+  });
+
+  it("restates a key's grant with permissions added or removed, and refuses what it cannot restate", () => {
+    expect(
+      buildUpdatedGrant(READER.grant, {
+        add: ["mail:send", "mail:reply"],
+        remove: [],
+      }),
+    ).toEqual({
+      ok: true,
+      grant: {
+        preset: "custom",
+        permissions: ["mail:read", "mail:reply", "mail:send"],
+        mail_scope: "org",
+      },
+      permissions: ["mail:read", "mail:reply", "mail:send"],
+    });
+    const ruled = {
+      template: null,
+      permissions: ["mail:read", "mail:send"],
+      mail_scope: {
+        addresses: ["a@example.com"],
+        domains: [],
+        rules: [RULE_ID],
+        depth: "content",
+      },
+    };
+    expect(
+      buildUpdatedGrant(ruled, {
+        add: [],
+        remove: ["mail:send"],
+        rules: ["9c1d2e3f-4a5b-4c6d-8e7f-0a1b2c3d4e5f"],
+      }),
+    ).toEqual({
+      ok: true,
+      grant: {
+        preset: "custom",
+        permissions: ["mail:read"],
+        addresses: ["a@example.com"],
+        rules: ["9c1d2e3f-4a5b-4c6d-8e7f-0a1b2c3d4e5f"],
+      },
+      permissions: ["mail:read"],
+    });
+    expect(
+      buildUpdatedGrant(
+        { template: "super_admin", permissions: null, mail_scope: null },
+        { add: [], remove: ["mail:send"] },
+      ),
+    ).toMatchObject({
+      ok: false,
+      message: expect.stringContaining("super admin"),
+    });
+    expect(
+      buildUpdatedGrant(READER.grant, { add: [], remove: ["mail:read"] }).ok,
+    ).toBe(false);
+    expect(
+      buildUpdatedGrant(READER.grant, { add: [], remove: [], rules: [RULE_ID] })
+        .ok,
+    ).toBe(false);
+    expect(
+      buildUpdatedGrant(
+        { ...READER.grant, resources: { domain: ["example.com"] } },
+        { add: ["mail:send"], remove: [] },
+      ).ok,
+    ).toBe(false);
+    expect(
+      buildUpdatedGrant(
+        {
+          ...ruled,
+          mail_scope: {
+            addresses: ["a@example.com"],
+            domains: [],
+            exclude: ["b@example.com"],
+          },
+        },
+        { add: ["mail:send"], remove: [] },
+      ).ok,
+    ).toBe(false);
+    expect(
+      buildUpdatedGrant(
+        {
+          ...ruled,
+          mail_scope: { addresses: [], domains: [], rules: [RULE_ID] },
+        },
+        { add: [], remove: [], rules: [] },
+      ).ok,
+    ).toBe(false);
+  });
+
+  it("asks for approval, waits for the token, and sends the request again with it", async () => {
+    const tokens: Array<string | undefined> = [];
+    const opened: string[] = [];
+    const written: string[] = [];
+    const url =
+      "https://app.example.test/app/settings/step-up?purpose=keys.create&client=primitive-cli";
+    const refusal = {
+      code: "step_up_required",
+      message: "Confirm",
+      details: { purpose: "keys.create", step_up_url: url },
+    };
+    const io = {
+      interactive: true,
+      openBrowser: true,
+      open: (u: string) => opened.push(u),
+      prompt: async () => "  pstep_abc  ",
+      write: (t: string) => written.push(t),
+    };
+    const outcome = await withApproval(async (token) => {
+      tokens.push(token);
+      return token
+        ? { ok: true as const, data: "made" }
+        : { ok: false as const, payload: refusal };
+    }, io);
+    expect(outcome).toEqual({ ok: true, data: "made" });
+    expect(tokens).toEqual([undefined, "pstep_abc"]);
+    expect(opened).toEqual([url]);
+    expect(written.join("")).toContain(url);
+    // Without a terminal the refusal comes back with its link, and nothing waits.
+    const quiet = await withApproval(
+      async () => ({ ok: false as const, payload: refusal }),
+      { ...io, interactive: false },
+    );
+    expect(quiet).toMatchObject({ ok: false, stepUpUrl: url });
+    // Any other refusal is returned as it is.
+    expect(
+      await withApproval(
+        async () => ({
+          ok: false as const,
+          payload: { code: "grant_forbidden" },
+        }),
+        io,
+      ),
+    ).toEqual({ ok: false, payload: { code: "grant_forbidden" } });
+    expect(
+      stepUpUrlOf({ code: "grant_forbidden", details: { step_up_url: url } }),
+    ).toBeUndefined();
   });
 
   it("names the missing permission in the grant_forbidden hint", () => {
@@ -223,6 +480,11 @@ describe("keys commands", () => {
   it("are registered", () => {
     for (const id of [
       "keys:list",
+      "keys:get",
+      "keys:create",
+      "keys:rotate",
+      "keys:update",
+      "keys:revoke",
       "orgs",
       "org:use",
       "cli:list-cli-orgs",
@@ -235,14 +497,8 @@ describe("keys commands", () => {
     }
   });
 
-  it("offer no way to create, rotate, update or revoke a key", () => {
-    for (const id of [
-      "keys:create",
-      "keys:rotate",
-      "keys:revoke",
-      "keys:update",
-      ...DASHBOARD_ONLY_OPERATION_IDS,
-    ]) {
+  it("write keys only through the keys commands, never a generated one", () => {
+    for (const id of KEY_WRITE_OPERATION_IDS) {
       expect(COMMANDS[id], id).toBeUndefined();
     }
     for (const operationId of [
@@ -263,32 +519,237 @@ describe("keys commands", () => {
       Object.keys(COMMANDS)
         .filter((id) => id.startsWith("keys:"))
         .sort(),
-    ).toEqual(["keys:list"]);
-    const list = COMMANDS["keys:list"] as unknown as { description: string };
-    expect(list.description).toContain(
-      "API keys are created, rotated and revoked in the dashboard for now.",
-    );
-    expect(list.description).toContain("never a secret");
+    ).toEqual([
+      "keys:create",
+      "keys:get",
+      "keys:list",
+      "keys:revoke",
+      "keys:rotate",
+      "keys:update",
+    ]);
   });
 
-  it("lists keys from the inventory and passes the server's refusal through", async () => {
+  it("list pages through every key and shows permissions and mail scope", async () => {
+    const requests = useServer((request) => {
+      const cursor = new URL(request.url).searchParams.get("cursor");
+      return Response.json({
+        success: true,
+        data: cursor
+          ? { items: [{ ...READER, id: "second" }], next_cursor: null }
+          : { items: [READER], next_cursor: "page-2" },
+      });
+    });
+    const result = await run(KeysListCommand, []);
+    expect(result.exitCode).toBeUndefined();
+    expect(requests.map((r) => new URL(r.url).pathname)).toEqual([
+      "/v1/keys",
+      "/v1/keys",
+    ]);
+    expect(new URL((requests[1] as Request).url).search).toBe("?cursor=page-2");
+    expect(result.stdout).toContain("mail:read  mail: every mailbox");
+    expect(result.stdout).toContain("second  prim_ab12cd34...");
+  });
+
+  it("get prints one key's permissions and scope, and the JSON as returned", async () => {
     const requests = useServer(() =>
+      Response.json({ success: true, data: READER }),
+    );
+    const human = await run(KeysGetCommand, [KEY_ID]);
+    expect(new URL((requests[0] as Request).url).pathname).toBe(
+      `/v1/keys/${KEY_ID}`,
+    );
+    expect(human.stdout).toContain("Permissions:\n  mail:read");
+    expect(human.stdout).toContain("Mail:         every mailbox");
+    const json = await run(KeysGetCommand, [KEY_ID, "--json"]);
+    expect(JSON.parse(json.stdout)).toEqual(READER);
+  });
+
+  it("create refuses without an explicit grant and sends nothing", async () => {
+    const requests = useServer(() => Response.json({}, { status: 500 }));
+    const result = await run(KeysCreateCommand, ["--name", "x"]);
+    expect(String(result.error)).toContain("no default");
+    expect(requests).toHaveLength(0);
+  });
+
+  it("create without a terminal prints the approval link and makes nothing", async () => {
+    const url =
+      "https://app.example.test/app/settings/step-up?purpose=keys.create&client=primitive-cli";
+    useServer(() =>
       Response.json(
         {
           success: false,
           error: {
-            code: "forbidden",
-            message:
-              "Only an organization owner or admin in a dashboard session can do this.",
+            code: "step_up_required",
+            message: "Confirm in the dashboard.",
+            details: { purpose: "keys.create", step_up_url: url },
           },
         },
         { status: 403 },
       ),
     );
-    const result = await run(KeysListCommand, []);
-    expect(new URL((requests[0] as Request).url).search).toBe("?kind=org_key");
+    const result = await run(KeysCreateCommand, [
+      "--preset",
+      "read_only",
+      "--no-browser",
+    ]);
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain("dashboard session");
+    expect(result.stderr).toContain(url);
+    expect(result.stderr).toContain("--step-up-token");
+    expect(result.stdout).toBe("");
+  });
+
+  it("create with an approved token prints the secret alone on stdout and says to store it", async () => {
+    const secret = `prim_${"a".repeat(64)}`;
+    const created = {
+      id: KEY_ID,
+      name: "orders",
+      key: secret,
+      key_prefix: "prim_aaaaaaaa...",
+      grant: {
+        template: null,
+        credential_grant_id: "g",
+        permissions: ["mail:read"],
+        mail_scope: { addresses: [], domains: [], rules: [RULE_ID] },
+        resources: null,
+      },
+      expires_at: null,
+      conditions: null,
+      warnings: [],
+    };
+    const requests = useServer(() =>
+      Response.json({ success: true, data: created }, { status: 201 }),
+    );
+    const result = await run(KeysCreateCommand, [
+      "--name",
+      "orders",
+      "--permission",
+      "mail:read",
+      "--rule",
+      RULE_ID,
+      "--step-up-token",
+      "pstep_x",
+    ]);
+    expect(result.exitCode).toBeUndefined();
+    const request = requests[0] as Request;
+    expect(request.headers.get("Primitive-Step-Up")).toBe("pstep_x");
+    expect(request.headers.get("Idempotency-Key")).toMatch(/^cli-/);
+    expect(await request.json()).toEqual({
+      name: "orders",
+      grant: { preset: "custom", permissions: ["mail:read"], rules: [RULE_ID] },
+    });
+    expect(result.stdout).toBe(`${secret}\n`);
+    expect(result.stderr).toContain(STORE_SECRET_NOTICE);
+    expect(result.stderr).toContain(`Mail: rules ${RULE_ID}`);
+    const json = await run(KeysCreateCommand, [
+      "--preset",
+      "read_only",
+      "--step-up-token",
+      "pstep_y",
+      "--json",
+    ]);
+    expect(JSON.parse(json.stdout)).toMatchObject({
+      key: secret,
+      notice: STORE_SECRET_NOTICE,
+    });
+  });
+
+  it("update adds permissions to a read-only key, guarded by the grant it read, and says what happens to held requests", async () => {
+    const reader = { ...READER, grant: { ...READER.grant, ref: "grant-1" } };
+    const upgraded = {
+      ...READER,
+      grant: {
+        ...READER.grant,
+        permissions: ["mail:read", "mail:reply", "mail:send"],
+      },
+    };
+    let reads = 0;
+    const requests = useServer((request) => {
+      if (request.method === "GET") {
+        reads += 1;
+        return Response.json({
+          success: true,
+          data: reads === 1 ? reader : upgraded,
+        });
+      }
+      return Response.json({
+        success: true,
+        data: { id: KEY_ID, changed: ["grant"], warnings: [] },
+      });
+    });
+    const result = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--add",
+      "mail:send,mail:reply",
+      "--step-up-token",
+      "pstep_z",
+    ]);
+    expect(result.exitCode).toBeUndefined();
+    const patch = requests.find((r) => r.method === "PATCH") as Request;
+    expect(patch.headers.get("Primitive-Step-Up")).toBe("pstep_z");
+    expect(await patch.json()).toEqual({
+      grant: {
+        preset: "custom",
+        permissions: ["mail:read", "mail:reply", "mail:send"],
+        mail_scope: "org",
+      },
+      expected_grant_ref: "grant-1",
+    });
+    expect(result.stdout).toContain(
+      "Permissions: mail:read, mail:reply, mail:send",
+    );
+    expect(result.stderr).toContain(HELD_REQUEST_NOTICE);
+  });
+
+  it("update narrows a key in one request when the server asks for no approval", async () => {
+    const sender = keyRow({
+      template: null,
+      permissions: ["mail:read", "mail:send"],
+      mail_scope: "org",
+    });
+    const requests = useServer((request) =>
+      request.method === "GET"
+        ? Response.json({ success: true, data: sender })
+        : Response.json({
+            success: true,
+            data: { id: KEY_ID, changed: ["grant"], warnings: [] },
+          }),
+    );
+    const result = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--remove",
+      "mail:send",
+      "--no-browser",
+    ]);
+    expect(result.exitCode).toBeUndefined();
+    const patches = requests.filter((r) => r.method === "PATCH");
+    expect(patches).toHaveLength(1);
+    expect((patches[0] as Request).headers.get("Primitive-Step-Up")).toBeNull();
+    expect(await (patches[0] as Request).json()).toEqual({
+      grant: {
+        preset: "custom",
+        permissions: ["mail:read"],
+        mail_scope: "org",
+      },
+    });
+  });
+
+  it("revoke without --yes and without a terminal sends nothing; with --yes it revokes an API key", async () => {
+    const requests = useServer(() =>
+      Response.json({
+        success: true,
+        data: { revoked: 1, kind: "org_key", id: KEY_ID, standing_objects: [] },
+      }),
+    );
+    const refused = await run(KeysRevokeCommand, [KEY_ID]);
+    expect(String(refused.error)).toContain("--yes");
+    expect(requests).toHaveLength(0);
+    const revoked = await run(KeysRevokeCommand, [KEY_ID, "--yes"]);
+    expect(revoked.exitCode).toBeUndefined();
+    expect(await (requests[0] as Request).json()).toEqual({
+      kind: "org_key",
+      id: KEY_ID,
+    });
+    expect(revoked.stdout).toContain(`Revoked key ${KEY_ID}.`);
   });
 });
 

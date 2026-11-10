@@ -75,7 +75,14 @@ import FunctionsTestFunctionCommand from "./commands/functions-test-function.js"
 import InboxNextCommand from "./commands/inbox-next.js";
 import InboxSetupCommand from "./commands/inbox-setup.js";
 import InboxStatusCommand from "./commands/inbox-status.js";
-import { KeysListCommand } from "./commands/keys.js";
+import {
+  KeysCreateCommand,
+  KeysGetCommand,
+  KeysListCommand,
+  KeysRevokeCommand,
+  KeysRotateCommand,
+  KeysUpdateCommand,
+} from "./commands/keys.js";
 import ListenCommand from "./commands/listen.js";
 import ListenInitCommand from "./commands/listen-init.js";
 import ListenPendingCommand from "./commands/listen-pending.js";
@@ -773,9 +780,15 @@ export const COMMANDS: Record<string, typeof Command> = {
   // `cli list-cli-orgs` authenticates with the login's identity token, which
   // only the hand-rolled `orgs` holds, so the id is served by it.
   "cli:list-cli-orgs": OrgsCommand,
-  // API keys: list only. Keys are created, rotated and revoked in the
-  // dashboard; see DASHBOARD_ONLY_OPERATION_IDS in cli-operations.ts.
+  // API keys. Writes go through these commands, which handle the browser
+  // approval, not generated ones; see KEY_WRITE_OPERATION_IDS in
+  // cli-operations.ts.
   "keys:list": KeysListCommand,
+  "keys:get": KeysGetCommand,
+  "keys:create": KeysCreateCommand,
+  "keys:rotate": KeysRotateCommand,
+  "keys:update": KeysUpdateCommand,
+  "keys:revoke": KeysRevokeCommand,
   // Read-only role views.
   "roles:list": RolesListCommand,
   "roles:groups": RolesGroupsCommand,

@@ -271,7 +271,7 @@ export async function checkAccount(
         outcome: {
           status: "fail",
           message: `API rejected the key (${errorBody})`,
-          hint: "Run `primitive whoami` for the full error envelope. If the key was rotated, regenerate it in the dashboard.",
+          hint: "Run `primitive whoami` for the full error envelope. If the key was rotated, use its new secret; if it was revoked, create a key with `primitive keys create` or in the dashboard.",
         },
         account: null,
       };

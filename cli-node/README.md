@@ -250,10 +250,18 @@ Against a server without organization switching, and for logins saved by earlier
 
 ```bash
 primitive keys list
-primitive keys list --json
+primitive keys get <id> --json
+primitive keys create --name orders --permission mail:read --rule <rule-id>
+primitive keys update <id> --add mail:send,mail:reply
+primitive keys rotate <id>
+primitive keys revoke <id>
 ```
 
-`keys list` shows each key's id, prefix, name, grant, expiry and last use. It never shows a secret. API keys are created, rotated and revoked in the dashboard for now. CLI commands for this are planned. `keys list` uses the credential inventory, which the server answers only for an owner or admin in a dashboard session, so from the CLI it shows the server's refusal.
+`keys list` shows each key's id, prefix, name, permissions, the mail it reaches, expiry and last use, and `keys get` shows one key in full. Neither shows a secret. You see your own keys, and every key if your role may read them all.
+
+`keys create` needs you to say what the key can do: a `--preset`, or `--permission` with the mail it reaches (`--address`, `--domain`, `--rule`, each repeatable, or `--all-mailboxes`). There is no default, and a super admin key needs `--preset super_admin`. A key never holds more than you do, and your organization's credential policy applies. `keys update` adds or removes permissions (`--add`, `--remove`) or replaces the key's email rules (`--rule`); the key keeps its id and secret. A request already held open with that key, such as a long poll or a wait, ends once when its permissions change.
+
+Creating, rotating and changing a key need your approval in the browser. The command prints the approval link, opens it where it can, and waits for the one-time token the page shows. In a script, approve first and pass the token with `--step-up-token`. The new secret is printed once, alone on stdout (or in the JSON with `--json`), and the CLI never saves it, so store it right away. `keys revoke` asks for confirmation; pass `--yes` in scripts.
 
 `primitive roles list`, `primitive roles groups`, `primitive roles mailbox-access` and `primitive roles access-mode` read roles, groups, mailbox access and the access mode. Where the server has not enabled them, they print `feature_disabled`. The built-in roles are `owner`, `admin`, `operator` and `member`. `operator` has every permission `admin` has except managing members, changing roles, sending invitations and billing. By default, owners, admins and operators may use the CLI. An organization can open it to every member by setting `cli_access` to `all_members` in its credential policy.
 

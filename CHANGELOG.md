@@ -16,7 +16,7 @@ the same OpenAPI spec. See `RELEASE.md`.
 OpenAPI document the API serves, and every client is regenerated from it. Most
 of the changes below follow from that document.
 
-Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.1` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.1`), and `3.0.0rc1` for `primitivedotdev` on PyPI.
+Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.2` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.2`), and `3.0.0rc2` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.1` (`3.0.0rc1` on PyPI) and adds managing API keys from the CLI.
 
 ### Breaking changes
 
@@ -26,7 +26,7 @@ Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The previe
   CLI moves from 1.75.0.
 - The Go module path is `github.com/primitivedotdev/sdks/sdk-go/v3`. Update
   imports from `.../sdk-go/v2` and `.../sdk-go/v2/api`.
-- `primitive functions init` scaffolds projects on `^3.0.0-preview.1` of both
+- `primitive functions init` scaffolds projects on `^3.0.0-preview.2` of both
   `@primitivedotdev/sdk` and `primitive`.
 
 #### Removed code
@@ -170,7 +170,7 @@ date-time is kept as null and sorts last. A sync stops with an error after
 
 #### New operations
 
-155 operations, by area:
+159 operations, by area:
 
 - Account: `getOwnGrant`.
 - Address notes: `listAddressNotes`, `listAddressNotesBatch`,
@@ -184,6 +184,7 @@ date-time is kept as null and sorts last. A sync stops with an error after
   `agentWorkProposeDeadline`, `agentWorkReportStatus`,
   `agentWorkManageState`, `agentWorkAgreeDeadline`,
   `agentWorkWithdrawDeadline`.
+- CLI: `listCliOrgs`.
 - Contacts: `prepareContactRequest`, `prepareContactAcceptance`.
 - Credentials: `listCredentials`, `revokeCredential`,
   `revokeAllCredentials`, `listCredentialEvents`, `getCredentialPolicy`,
@@ -193,7 +194,11 @@ date-time is kept as null and sorts last. A sync stops with an error after
   `claimVanityInboxName`.
 - Email rules: `compileEmailRule`, `testEmailRule`, `testEmailRuleOnSample`,
   `listEmailRules`, `createEmailRule`, `getEmailRule`, `updateEmailRule`,
-  `deleteEmailRule`, `listEmailRuleDecisions`.
+  `deleteEmailRule`, `listEmailRuleDecisions`, `listEmailRuleVersions`,
+  `getEmailRuleScope`, `listEmailRuleScopeOptions`, `listEmailRuleResults`.
+  A rule's `evaluation_scope` chooses whose mail it runs over (`author`,
+  `own_mailboxes`, or `selected` with `scope_selection` naming addresses and
+  domains), never more than its author can read.
 - Emails: `getEmailReadable`.
 - Functions: `lookupFunction`, `getOrgFunctionUsage`,
   `getOrgFunctionInvocationSeries`, `getOrgFunctionFallback`,
@@ -243,7 +248,7 @@ date-time is kept as null and sorts last. A sync stops with an error after
 
 #### New parameters and fields on existing operations
 
-- `Primitive-Step-Up` is a declared header parameter on the 31 operations that
+- `Primitive-Step-Up` is a declared header parameter on the 33 operations that
   accept a step-up confirmation token, so a client can send the confirmation
   token through the generated call: `headers: { "Primitive-Step-Up": token }`
   in Node, `primitive_step_up=` in Python, and `PrimitiveStepUp` on the
@@ -256,7 +261,7 @@ date-time is kept as null and sorts last. A sync stops with an error after
   `leaveOrganization`, `setAccessMode`, `decideAccessMode`, `listBreakGlass`,
   `startBreakGlass`, `endBreakGlass`, `listOwnedItems`,
   `transferOwnedItems`, `listSuspensions`, `decideSuspension`,
-  `setOwnMailboxAccess` and `removeOwnAgentAccess`.
+  `setOwnMailboxAccess`, `removeOwnAgentAccess` and `setRelayAutoJoin`.
 - The `Idempotency-Key` descriptions say which operations do not perform the
   action again when a request is retried with the same key (`replyToEmail`,
   `startInteraction`, `sendInteractionStep`) and which do not use the key to
@@ -314,8 +319,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
 - `primitive send` without `--from` uses the single address a narrowed grant
   names when the credential cannot list domains. Session enrollment no longer
   needs `domains:read`.
-- `primitive keys list` and `primitive roles list|groups|mailbox-access|access-mode`
-  are read-only views.
+- `primitive roles list|groups|mailbox-access|access-mode` are read-only
+  views.
 - A `403 grant_forbidden` names the missing permission. The CLI prints a hint,
   and the Node, Python and Go SDKs raise a `GrantForbiddenError` that is still
   their ordinary API error type.
@@ -336,6 +341,24 @@ does not revoke the login on the server, so log out with this CLI before
 downgrading, or sign in again afterwards.
 
 - Python and Go SDKs: the built-in role keys, as `BuiltinRoleKey` in both.
+
+#### API keys from the CLI
+
+- A person signed in with `primitive login` can manage API keys from the CLI:
+  `primitive keys create`, `rotate`, `update` and `revoke`, alongside `keys
+  list` and the new `keys get`. Listing and showing a key never print a
+  secret.
+- Creating, rotating and changing a key need the person's approval in the
+  browser. The command prints the approval link, opens it where it can, and
+  waits for the one-time token the page shows. A script approves first and
+  passes the token with `--step-up-token`.
+- A key never holds more than the person's own access, and the
+  organization's credential policy applies. `keys create` has no default
+  grant: it needs `--preset`, or `--permission` with the mail the key
+  reaches (addresses, domains, email rules, or every mailbox).
+- The new secret is printed once, alone on stdout or in the JSON, and the CLI
+  never saves it. `keys revoke` asks for confirmation unless `--yes` is
+  passed.
 
 #### Values the API adds later
 
@@ -359,7 +382,8 @@ parsers.
 
 - `primitive billing` opens the dashboard's billing page, or prints its link.
 - Generated commands for the new operations, except `createKey`, `rotateKey`,
-  `updateKey` and `revokeCredential`, which have no CLI command.
+  `updateKey` and `revokeCredential`, which the `primitive keys` commands
+  cover instead.
 - The generated command for `leaveOrganization` is
   `roles-and-members:leave-organization`, following the operation's tag.
   `account:leave-organization` keeps working as an alias.

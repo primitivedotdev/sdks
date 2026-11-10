@@ -132,8 +132,9 @@ def sync_detailed(
     overlap_seconds, then stops. The person rotating must cover the key's access (403 grant_forbidden,
     details.reason target_not_covered), and a key an owner created is rotated by an owner only (403
     forbidden, details.reason owner_key_rotation), since rotating hands over the new secret. The
-    Primitive CLI's token is refused, even with a step-up. Needs the organization's credential features
-    to be enabled; while they are not, this answers 404 feature_disabled.
+    Primitive CLI takes the same step-up; the Primitive app's token is refused, even with one. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled.
 
     Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
     `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
@@ -186,8 +187,9 @@ def sync(
     overlap_seconds, then stops. The person rotating must cover the key's access (403 grant_forbidden,
     details.reason target_not_covered), and a key an owner created is rotated by an owner only (403
     forbidden, details.reason owner_key_rotation), since rotating hands over the new secret. The
-    Primitive CLI's token is refused, even with a step-up. Needs the organization's credential features
-    to be enabled; while they are not, this answers 404 feature_disabled.
+    Primitive CLI takes the same step-up; the Primitive app's token is refused, even with one. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled.
 
     Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
     `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
@@ -235,8 +237,9 @@ async def asyncio_detailed(
     overlap_seconds, then stops. The person rotating must cover the key's access (403 grant_forbidden,
     details.reason target_not_covered), and a key an owner created is rotated by an owner only (403
     forbidden, details.reason owner_key_rotation), since rotating hands over the new secret. The
-    Primitive CLI's token is refused, even with a step-up. Needs the organization's credential features
-    to be enabled; while they are not, this answers 404 feature_disabled.
+    Primitive CLI takes the same step-up; the Primitive app's token is refused, even with one. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled.
 
     Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
     `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
@@ -289,8 +292,9 @@ async def asyncio(
     overlap_seconds, then stops. The person rotating must cover the key's access (403 grant_forbidden,
     details.reason target_not_covered), and a key an owner created is rotated by an owner only (403
     forbidden, details.reason owner_key_rotation), since rotating hands over the new secret. The
-    Primitive CLI's token is refused, even with a step-up. Needs the organization's credential features
-    to be enabled; while they are not, this answers 404 feature_disabled.
+    Primitive CLI takes the same step-up; the Primitive app's token is refused, even with one. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled.
 
     Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
     `keys.create` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
