@@ -69,6 +69,10 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 					Valid     bool   `json:"valid"`
 					ID        string `json:"id"`
 					ErrorCode string `json:"error_code"`
+					// Field and Message, when set, pin the first issue
+					// the validation error reports.
+					Field   *string `json:"field"`
+					Message *string `json:"message"`
 					// Relay stays raw so a case can tell "not asserted"
 					// (absent) apart from "expect no relay" (JSON null).
 					Relay json.RawMessage `json:"relay"`
@@ -169,6 +173,12 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 			}
 			if validationErr.Code() != testCase.Expected.ErrorCode {
 				t.Fatalf("%s: unexpected error code %q", testCase.Name, validationErr.Code())
+			}
+			if want := testCase.Expected.Field; want != nil && validationErr.Field != *want {
+				t.Fatalf("%s: unexpected error field %q, want %q", testCase.Name, validationErr.Field, *want)
+			}
+			if want := testCase.Expected.Message; want != nil && validationErr.Message() != *want {
+				t.Fatalf("%s: unexpected error message %q, want %q", testCase.Name, validationErr.Message(), *want)
 			}
 		}
 	})

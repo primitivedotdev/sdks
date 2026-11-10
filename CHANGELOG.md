@@ -418,6 +418,17 @@ parsers.
   webhook schemas, the Node, Python and Go types and the shared fixtures cover
   the field.
 
+#### Webhook validation errors
+
+- The message of a missing-field validation error names the field's full
+  path in all three SDKs, for example `Missing required field:
+  email.content.raw` instead of `Missing required field: raw`. `field` and
+  `suggestion` are unchanged.
+- Node and Go report a payload without `email.content.raw` as missing
+  `email.content.raw`, as Python already did, rather than as an error on
+  `email.content.download` or `email.content`. The email event schema accepts
+  and refuses the same payloads as before.
+
 #### CLI
 
 - `primitive billing` opens the dashboard's billing page, or prints its link.

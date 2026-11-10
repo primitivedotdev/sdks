@@ -24,7 +24,7 @@ func formatValidationIssue(issue gojsonschema.ResultError) (string, string, stri
 	switch issue.Type() {
 	case "required":
 		missing := fmt.Sprint(issue.Details()["property"])
-		return field, fmt.Sprintf("Missing required field: %s", missing), fmt.Sprintf("Add the required field \"%s\" to the webhook payload.", missing)
+		return field, fmt.Sprintf("Missing required field: %s", field), fmt.Sprintf("Add the required field \"%s\" to the webhook payload.", missing)
 	case "const":
 		return field, fmt.Sprintf("Invalid value for %s: %s", field, issue.Description()), fmt.Sprintf("Check the value of \"%s\" in the webhook payload.", field)
 	case "invalid_type":

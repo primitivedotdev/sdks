@@ -380,8 +380,38 @@ describe("validation", () => {
     );
 
     expect(() => validateWithMock(validPayload)).toThrowError(
-      /Missing required field: unknown/,
+      /^Missing required field: email\.unknown$/,
     );
+  });
+
+  it("names the full path of a missing nested field in the message", () => {
+    const { raw: _raw, ...contentWithoutRaw } = validPayload.email.content;
+    const result = safeValidateEmailReceivedEvent({
+      ...validPayload,
+      email: { ...validPayload.email, content: contentWithoutRaw },
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.field).toBe("email.content.raw");
+      expect(result.error.message).toBe(
+        "Missing required field: email.content.raw",
+      );
+      expect(result.error.suggestion).toBe(
+        'Add the required field "raw" to the webhook payload.',
+      );
+    }
+  });
+
+  it("names a missing top-level field by its own name", () => {
+    const { id: _id, ...withoutId } = validPayload;
+    const result = safeValidateEmailReceivedEvent(withoutId);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.field).toBe("id");
+      expect(result.error.message).toBe("Missing required field: id");
+    }
   });
 
   it("uses fallback messages when validator errors omit details", async () => {
