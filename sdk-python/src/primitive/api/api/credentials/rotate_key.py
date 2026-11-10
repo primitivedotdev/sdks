@@ -128,22 +128,27 @@ def sync_detailed(
 ) -> Response[ErrorResponse | RotateKeyResponse200]:
     """ Rotate an API key
 
-     Mint a successor with the same grant and return its secret once. The old key keeps working for
-    overlap_seconds, then stops. The person rotating must cover the key's access (403 grant_forbidden,
-    details.reason target_not_covered), and a key an owner created is rotated by an owner only (403
-    forbidden, details.reason owner_key_rotation), since rotating hands over the new secret. The
-    person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules);
-    the Primitive app's token is refused, even with one. Needs the organization's credential features to
-    be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the
-    feature. Only Primitive turns these on.
+     Mint a successor with a new id and the same name, grant, expiry and conditions, and return its
+    secret once. The old key keeps working for overlap_seconds, then stops: 24 hours when
+    overlap_seconds is omitted, at most 7 days, never past its own expires_at, and at once with 0 (which
+    is how to rotate a key whose secret leaked). previous_key_expires_at says when the old key stops.
+    The person rotating must cover the key's access (403 grant_forbidden, details.reason
+    target_not_covered), and a key an owner holds is rotated by an owner only (403 forbidden,
+    details.reason owner_key_rotation), since rotating hands over the new secret. The person's own
+    Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless the
+    organization's credential policy sets cli_writes_require_approval; the Primitive app's token is
+    refused, even with one. Needs the organization's credential features to be enabled; while they are
+    not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive
+    to turn them on.
 
-    Person only: a dashboard session, the person's own Primitive CLI login with no step-up, or the
-    person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up
-    header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the
-    dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could
-    not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are
-    refused. An agent acting for the person is refused unless it carries a step-up token the person
-    issued in the dashboard.
+    Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
+    organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token
+    with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any
+    other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that
+    issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway).
+    The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent
+    acting for the person is refused unless it carries a step-up token the person issued in the
+    dashboard.
 
     Args:
         id (UUID):
@@ -185,22 +190,27 @@ def sync(
 ) -> ErrorResponse | RotateKeyResponse200 | None:
     """ Rotate an API key
 
-     Mint a successor with the same grant and return its secret once. The old key keeps working for
-    overlap_seconds, then stops. The person rotating must cover the key's access (403 grant_forbidden,
-    details.reason target_not_covered), and a key an owner created is rotated by an owner only (403
-    forbidden, details.reason owner_key_rotation), since rotating hands over the new secret. The
-    person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules);
-    the Primitive app's token is refused, even with one. Needs the organization's credential features to
-    be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the
-    feature. Only Primitive turns these on.
+     Mint a successor with a new id and the same name, grant, expiry and conditions, and return its
+    secret once. The old key keeps working for overlap_seconds, then stops: 24 hours when
+    overlap_seconds is omitted, at most 7 days, never past its own expires_at, and at once with 0 (which
+    is how to rotate a key whose secret leaked). previous_key_expires_at says when the old key stops.
+    The person rotating must cover the key's access (403 grant_forbidden, details.reason
+    target_not_covered), and a key an owner holds is rotated by an owner only (403 forbidden,
+    details.reason owner_key_rotation), since rotating hands over the new secret. The person's own
+    Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless the
+    organization's credential policy sets cli_writes_require_approval; the Primitive app's token is
+    refused, even with one. Needs the organization's credential features to be enabled; while they are
+    not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive
+    to turn them on.
 
-    Person only: a dashboard session, the person's own Primitive CLI login with no step-up, or the
-    person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up
-    header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the
-    dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could
-    not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are
-    refused. An agent acting for the person is refused unless it carries a step-up token the person
-    issued in the dashboard.
+    Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
+    organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token
+    with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any
+    other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that
+    issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway).
+    The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent
+    acting for the person is refused unless it carries a step-up token the person issued in the
+    dashboard.
 
     Args:
         id (UUID):
@@ -237,22 +247,27 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | RotateKeyResponse200]:
     """ Rotate an API key
 
-     Mint a successor with the same grant and return its secret once. The old key keeps working for
-    overlap_seconds, then stops. The person rotating must cover the key's access (403 grant_forbidden,
-    details.reason target_not_covered), and a key an owner created is rotated by an owner only (403
-    forbidden, details.reason owner_key_rotation), since rotating hands over the new secret. The
-    person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules);
-    the Primitive app's token is refused, even with one. Needs the organization's credential features to
-    be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the
-    feature. Only Primitive turns these on.
+     Mint a successor with a new id and the same name, grant, expiry and conditions, and return its
+    secret once. The old key keeps working for overlap_seconds, then stops: 24 hours when
+    overlap_seconds is omitted, at most 7 days, never past its own expires_at, and at once with 0 (which
+    is how to rotate a key whose secret leaked). previous_key_expires_at says when the old key stops.
+    The person rotating must cover the key's access (403 grant_forbidden, details.reason
+    target_not_covered), and a key an owner holds is rotated by an owner only (403 forbidden,
+    details.reason owner_key_rotation), since rotating hands over the new secret. The person's own
+    Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless the
+    organization's credential policy sets cli_writes_require_approval; the Primitive app's token is
+    refused, even with one. Needs the organization's credential features to be enabled; while they are
+    not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive
+    to turn them on.
 
-    Person only: a dashboard session, the person's own Primitive CLI login with no step-up, or the
-    person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up
-    header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the
-    dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could
-    not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are
-    refused. An agent acting for the person is refused unless it carries a step-up token the person
-    issued in the dashboard.
+    Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
+    organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token
+    with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any
+    other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that
+    issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway).
+    The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent
+    acting for the person is refused unless it carries a step-up token the person issued in the
+    dashboard.
 
     Args:
         id (UUID):
@@ -294,22 +309,27 @@ async def asyncio(
 ) -> ErrorResponse | RotateKeyResponse200 | None:
     """ Rotate an API key
 
-     Mint a successor with the same grant and return its secret once. The old key keeps working for
-    overlap_seconds, then stops. The person rotating must cover the key's access (403 grant_forbidden,
-    details.reason target_not_covered), and a key an owner created is rotated by an owner only (403
-    forbidden, details.reason owner_key_rotation), since rotating hands over the new secret. The
-    person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules);
-    the Primitive app's token is refused, even with one. Needs the organization's credential features to
-    be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the
-    feature. Only Primitive turns these on.
+     Mint a successor with a new id and the same name, grant, expiry and conditions, and return its
+    secret once. The old key keeps working for overlap_seconds, then stops: 24 hours when
+    overlap_seconds is omitted, at most 7 days, never past its own expires_at, and at once with 0 (which
+    is how to rotate a key whose secret leaked). previous_key_expires_at says when the old key stops.
+    The person rotating must cover the key's access (403 grant_forbidden, details.reason
+    target_not_covered), and a key an owner holds is rotated by an owner only (403 forbidden,
+    details.reason owner_key_rotation), since rotating hands over the new secret. The person's own
+    Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless the
+    organization's credential policy sets cli_writes_require_approval; the Primitive app's token is
+    refused, even with one. Needs the organization's credential features to be enabled; while they are
+    not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive
+    to turn them on.
 
-    Person only: a dashboard session, the person's own Primitive CLI login with no step-up, or the
-    person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up
-    header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the
-    dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could
-    not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are
-    refused. An agent acting for the person is refused unless it carries a step-up token the person
-    issued in the dashboard.
+    Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
+    organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token
+    with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any
+    other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that
+    issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway).
+    The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent
+    acting for the person is refused unless it carries a step-up token the person issued in the
+    dashboard.
 
     Args:
         id (UUID):

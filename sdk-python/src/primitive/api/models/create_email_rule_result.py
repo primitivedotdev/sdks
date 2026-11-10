@@ -16,8 +16,10 @@ from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
-  from ..models.create_email_rule_result_current_type_0 import CreateEmailRuleResultCurrentType0
-  from ..models.create_email_rule_result_scope_selection_type_0 import CreateEmailRuleResultScopeSelectionType0
+  from ..models.create_email_rule_result_expectations_check import CreateEmailRuleResultExpectationsCheck
+  from ..models.email_rule_scope_names import EmailRuleScopeNames
+  from ..models.email_rule_scope_warning import EmailRuleScopeWarning
+  from ..models.email_rule_version import EmailRuleVersion
 
 
 
@@ -36,18 +38,24 @@ class CreateEmailRuleResult:
             state (CreateEmailRuleResultState):
             current_version (int | None):
             author_user_id (UUID):
-            is_author (bool): Whether the caller wrote the rule (under their current membership). Only the author edits a
-                rule; anyone else who can see it may only disable or delete it, and while it is shared only if they manage
-                members.
+            is_author (bool): Whether you are its author, in your current membership. Only its author edits it; others who
+                see it may only disable or delete it (while shared, only if they manage members).
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
-            current (CreateEmailRuleResultCurrentType0 | None):
-            kind (CreateEmailRuleResultKind | Unset): do_not_share: the rule blocks sharing of what it matches. Absent (or
-                grant) on a rule that shares what it matches.
-            evaluation_scope (CreateEmailRuleResultEvaluationScope | Unset): Whose mail the rule runs over, as stored; GET
-                /email-rules/{id}/scope says what that comes to now.
-            scope_selection (CreateEmailRuleResultScopeSelectionType0 | None | Unset): What a selected rule names; null for
-                any other scope.
+            current (EmailRuleVersion | None):
+            kind (CreateEmailRuleResultKind | Unset): do_not_share: it blocks sharing what it matches. Absent (or grant) on
+                a rule that shares.
+            evaluation_scope (CreateEmailRuleResultEvaluationScope | Unset): Whose mail it runs over, as stored (GET /email-
+                rules/{id}/scope: what that is now).
+            scope_selection (EmailRuleScopeNames | None | Unset): What a selected rule names; null for any other scope.
+            scope_warnings (list[EmailRuleScopeWarning] | Unset): Names in scope_selection that match nothing this
+                organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.
+            expectations_check (CreateEmailRuleResultExpectationsCheck | Unset): After a write that saved a version or
+                changed its expectations, if it has some: them, judged on that version from stored classifications without
+                asking its questions. Undecided: one that needs answers not yet kept for that version, is unclassified or not
+                reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its
+                author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed).
+                Test by rule_id for the rest.
      """
 
     id: UUID
@@ -58,10 +66,12 @@ class CreateEmailRuleResult:
     is_author: bool
     created_at: datetime.datetime
     updated_at: datetime.datetime
-    current: CreateEmailRuleResultCurrentType0 | None
+    current: EmailRuleVersion | None
     kind: CreateEmailRuleResultKind | Unset = UNSET
     evaluation_scope: CreateEmailRuleResultEvaluationScope | Unset = UNSET
-    scope_selection: CreateEmailRuleResultScopeSelectionType0 | None | Unset = UNSET
+    scope_selection: EmailRuleScopeNames | None | Unset = UNSET
+    scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
+    expectations_check: CreateEmailRuleResultExpectationsCheck | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -69,8 +79,10 @@ class CreateEmailRuleResult:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.create_email_rule_result_current_type_0 import CreateEmailRuleResultCurrentType0 # noqa: PLC0415
-        from ..models.create_email_rule_result_scope_selection_type_0 import CreateEmailRuleResultScopeSelectionType0 # noqa: PLC0415
+        from ..models.create_email_rule_result_expectations_check import CreateEmailRuleResultExpectationsCheck # noqa: PLC0415
+        from ..models.email_rule_scope_names import EmailRuleScopeNames # noqa: PLC0415
+        from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
+        from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
         id = str(self.id)
 
         name = self.name
@@ -89,7 +101,7 @@ class CreateEmailRuleResult:
         updated_at = self.updated_at.isoformat()
 
         current: dict[str, Any] | None
-        if isinstance(self.current, CreateEmailRuleResultCurrentType0):
+        if isinstance(self.current, EmailRuleVersion):
             current = self.current.to_dict()
         else:
             current = self.current
@@ -107,10 +119,23 @@ class CreateEmailRuleResult:
         scope_selection: dict[str, Any] | None | Unset
         if isinstance(self.scope_selection, Unset):
             scope_selection = UNSET
-        elif isinstance(self.scope_selection, CreateEmailRuleResultScopeSelectionType0):
+        elif isinstance(self.scope_selection, EmailRuleScopeNames):
             scope_selection = self.scope_selection.to_dict()
         else:
             scope_selection = self.scope_selection
+
+        scope_warnings: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.scope_warnings, Unset):
+            scope_warnings = []
+            for scope_warnings_item_data in self.scope_warnings:
+                scope_warnings_item = scope_warnings_item_data.to_dict()
+                scope_warnings.append(scope_warnings_item)
+
+
+
+        expectations_check: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.expectations_check, Unset):
+            expectations_check = self.expectations_check.to_dict()
 
 
         field_dict: dict[str, Any] = {}
@@ -132,6 +157,10 @@ class CreateEmailRuleResult:
             field_dict["evaluation_scope"] = evaluation_scope
         if scope_selection is not UNSET:
             field_dict["scope_selection"] = scope_selection
+        if scope_warnings is not UNSET:
+            field_dict["scope_warnings"] = scope_warnings
+        if expectations_check is not UNSET:
+            field_dict["expectations_check"] = expectations_check
 
         return field_dict
 
@@ -139,8 +168,10 @@ class CreateEmailRuleResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.create_email_rule_result_current_type_0 import CreateEmailRuleResultCurrentType0 # noqa: PLC0415
-        from ..models.create_email_rule_result_scope_selection_type_0 import CreateEmailRuleResultScopeSelectionType0 # noqa: PLC0415
+        from ..models.create_email_rule_result_expectations_check import CreateEmailRuleResultExpectationsCheck # noqa: PLC0415
+        from ..models.email_rule_scope_names import EmailRuleScopeNames # noqa: PLC0415
+        from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
+        from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -179,20 +210,20 @@ class CreateEmailRuleResult:
 
 
 
-        def _parse_current(data: object) -> CreateEmailRuleResultCurrentType0 | None:
+        def _parse_current(data: object) -> EmailRuleVersion | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                current_type_0 = CreateEmailRuleResultCurrentType0.from_dict(data)
+                current_type_1 = EmailRuleVersion.from_dict(data)
 
 
 
-                return current_type_0
+                return current_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(CreateEmailRuleResultCurrentType0 | None, data)
+            return cast(EmailRuleVersion | None, data)
 
         current = _parse_current(d.pop("current"))
 
@@ -217,7 +248,7 @@ class CreateEmailRuleResult:
 
 
 
-        def _parse_scope_selection(data: object) -> CreateEmailRuleResultScopeSelectionType0 | None | Unset:
+        def _parse_scope_selection(data: object) -> EmailRuleScopeNames | None | Unset:
             if data is None:
                 return data
             if isinstance(data, Unset):
@@ -225,16 +256,38 @@ class CreateEmailRuleResult:
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                scope_selection_type_0 = CreateEmailRuleResultScopeSelectionType0.from_dict(data)
+                scope_selection_type_1 = EmailRuleScopeNames.from_dict(data)
 
 
 
-                return scope_selection_type_0
+                return scope_selection_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(CreateEmailRuleResultScopeSelectionType0 | None | Unset, data)
+            return cast(EmailRuleScopeNames | None | Unset, data)
 
         scope_selection = _parse_scope_selection(d.pop("scope_selection", UNSET))
+
+
+        _scope_warnings = d.pop("scope_warnings", UNSET)
+        scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
+        if _scope_warnings is not UNSET:
+            scope_warnings = []
+            for scope_warnings_item_data in _scope_warnings:
+                scope_warnings_item = EmailRuleScopeWarning.from_dict(scope_warnings_item_data)
+
+
+
+                scope_warnings.append(scope_warnings_item)
+
+
+        _expectations_check = d.pop("expectations_check", UNSET)
+        expectations_check: CreateEmailRuleResultExpectationsCheck | Unset
+        if isinstance(_expectations_check,  Unset):
+            expectations_check = UNSET
+        else:
+            expectations_check = CreateEmailRuleResultExpectationsCheck.from_dict(_expectations_check)
+
+
 
 
         create_email_rule_result = cls(
@@ -250,6 +303,8 @@ class CreateEmailRuleResult:
             kind=kind,
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,
+            scope_warnings=scope_warnings,
+            expectations_check=expectations_check,
         )
 
 

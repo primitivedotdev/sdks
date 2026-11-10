@@ -11,6 +11,7 @@ from ... import errors
 from ...models.error_response import ErrorResponse
 from ...models.update_endpoint_input import UpdateEndpointInput
 from ...models.update_endpoint_response_200 import UpdateEndpointResponse200
+from ...types import UNSET, Unset
 from typing import cast
 from uuid import UUID
 
@@ -20,9 +21,13 @@ def _get_kwargs(
     id: UUID,
     *,
     body: UpdateEndpointInput,
+    primitive_step_up: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(primitive_step_up, Unset):
+        headers["Primitive-Step-Up"] = primitive_step_up
+
 
 
     
@@ -65,6 +70,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_401
 
+    if response.status_code == 403:
+        response_403 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_403
+
     if response.status_code == 404:
         response_404 = ErrorResponse.from_dict(response.json())
 
@@ -78,6 +90,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
 
         return response_409
+
+    if response.status_code == 503:
+        response_503 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_503
 
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
@@ -99,13 +118,14 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: UpdateEndpointInput,
+    primitive_step_up: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | UpdateEndpointResponse200]:
     """ Update a webhook endpoint
 
-     Updates an active webhook endpoint. If the URL is changed, the old
-    endpoint is deactivated and a new one is created (or an existing
-    deactivated endpoint with the new URL is reactivated).
+     Updates an active webhook endpoint. Changing the URL keeps the endpoint: its id, recipient routes,
+    signing secret, delivery history and any deliveries still owed to it stay with it, and owed
+    deliveries go to the new URL. Another active endpoint at the new URL is refused.
 
 
     Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint
@@ -114,6 +134,7 @@ def sync_detailed(
 
     Args:
         id (UUID):
+        primitive_step_up (str | Unset):
         body (UpdateEndpointInput):
 
     Raises:
@@ -128,6 +149,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         id=id,
 body=body,
+primitive_step_up=primitive_step_up,
 
     )
 
@@ -142,13 +164,14 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: UpdateEndpointInput,
+    primitive_step_up: str | Unset = UNSET,
 
 ) -> ErrorResponse | UpdateEndpointResponse200 | None:
     """ Update a webhook endpoint
 
-     Updates an active webhook endpoint. If the URL is changed, the old
-    endpoint is deactivated and a new one is created (or an existing
-    deactivated endpoint with the new URL is reactivated).
+     Updates an active webhook endpoint. Changing the URL keeps the endpoint: its id, recipient routes,
+    signing secret, delivery history and any deliveries still owed to it stay with it, and owed
+    deliveries go to the new URL. Another active endpoint at the new URL is refused.
 
 
     Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint
@@ -157,6 +180,7 @@ def sync(
 
     Args:
         id (UUID):
+        primitive_step_up (str | Unset):
         body (UpdateEndpointInput):
 
     Raises:
@@ -172,6 +196,7 @@ def sync(
         id=id,
 client=client,
 body=body,
+primitive_step_up=primitive_step_up,
 
     ).parsed
 
@@ -180,13 +205,14 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: UpdateEndpointInput,
+    primitive_step_up: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | UpdateEndpointResponse200]:
     """ Update a webhook endpoint
 
-     Updates an active webhook endpoint. If the URL is changed, the old
-    endpoint is deactivated and a new one is created (or an existing
-    deactivated endpoint with the new URL is reactivated).
+     Updates an active webhook endpoint. Changing the URL keeps the endpoint: its id, recipient routes,
+    signing secret, delivery history and any deliveries still owed to it stay with it, and owed
+    deliveries go to the new URL. Another active endpoint at the new URL is refused.
 
 
     Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint
@@ -195,6 +221,7 @@ async def asyncio_detailed(
 
     Args:
         id (UUID):
+        primitive_step_up (str | Unset):
         body (UpdateEndpointInput):
 
     Raises:
@@ -209,6 +236,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         id=id,
 body=body,
+primitive_step_up=primitive_step_up,
 
     )
 
@@ -223,13 +251,14 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: UpdateEndpointInput,
+    primitive_step_up: str | Unset = UNSET,
 
 ) -> ErrorResponse | UpdateEndpointResponse200 | None:
     """ Update a webhook endpoint
 
-     Updates an active webhook endpoint. If the URL is changed, the old
-    endpoint is deactivated and a new one is created (or an existing
-    deactivated endpoint with the new URL is reactivated).
+     Updates an active webhook endpoint. Changing the URL keeps the endpoint: its id, recipient routes,
+    signing secret, delivery history and any deliveries still owed to it stay with it, and owed
+    deliveries go to the new URL. Another active endpoint at the new URL is refused.
 
 
     Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint
@@ -238,6 +267,7 @@ async def asyncio(
 
     Args:
         id (UUID):
+        primitive_step_up (str | Unset):
         body (UpdateEndpointInput):
 
     Raises:
@@ -253,5 +283,6 @@ async def asyncio(
         id=id,
 client=client,
 body=body,
+primitive_step_up=primitive_step_up,
 
     )).parsed

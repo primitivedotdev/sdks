@@ -927,7 +927,7 @@ export class KeysRevokeCommand extends Command {
   static description =
     `Revoke an API key. It stops working at once; what it set up keeps working and is listed for review.
 
-  Asks for confirmation first; pass --yes to skip the prompt in scripts.`;
+  Asks for confirmation first; pass --yes to skip the prompt in scripts. Revoking runs directly. If your organization requires approval, the command prints the approval link, opens it where it can and waits for the one-time token; in a script, approve and run it again with --step-up-token.`;
 
   static summary = "Revoke an API key";
 
@@ -949,6 +949,7 @@ export class KeysRevokeCommand extends Command {
     }),
     reason: Flags.string({ description: "Why, recorded with the revocation." }),
     json: Flags.boolean({ description: "Print the result as JSON." }),
+    ...APPROVAL_FLAGS,
   };
 
   async run(): Promise<void> {
@@ -970,15 +971,20 @@ export class KeysRevokeCommand extends Command {
       }
     }
     const auth = await authenticate(this, flags);
-    const result = await call<CredentialsRevokeCredentialResult>(
-      revokeCredential({
-        client: auth.apiClient.client,
-        body: {
-          kind: "org_key",
-          id: args.id,
-          ...(flags.reason ? { reason: flags.reason } : {}),
-        },
-      }),
+    const result = await withApproval(
+      (token) =>
+        call<CredentialsRevokeCredentialResult>(
+          revokeCredential({
+            client: auth.apiClient.client,
+            body: {
+              kind: "org_key",
+              id: args.id,
+              ...(flags.reason ? { reason: flags.reason } : {}),
+            },
+            ...(token ? { headers: { [STEP_UP_HEADER]: token } } : {}),
+          }),
+        ),
+      approvalIo(flags),
     );
     if (!result.ok) {
       reportKeysError(this, result, auth, Boolean(flags.json));

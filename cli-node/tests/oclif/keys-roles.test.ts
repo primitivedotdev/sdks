@@ -753,6 +753,49 @@ describe("keys commands", () => {
     });
     expect(revoked.stdout).toContain(`Revoked key ${KEY_ID}.`);
   });
+
+  it("revoke takes an approval token, and without one prints the approval link and how to rerun", async () => {
+    const stepUpUrl = "https://app.example.test/approve/abc";
+    let calls = 0;
+    const requests = useServer((request) => {
+      calls += 1;
+      return request.headers.get("primitive-step-up")
+        ? Response.json({
+            success: true,
+            data: {
+              revoked: 1,
+              kind: "org_key",
+              id: KEY_ID,
+              standing_objects: [],
+            },
+          })
+        : Response.json(
+            {
+              success: false,
+              error: {
+                code: "step_up_required",
+                message: "Approve this in the dashboard.",
+                details: { step_up_url: stepUpUrl },
+              },
+            },
+            { status: 403 },
+          );
+    });
+    const refused = await run(KeysRevokeCommand, [KEY_ID, "--yes"]);
+    expect(refused.exitCode).toBe(1);
+    expect(refused.stderr).toContain(stepUpUrl);
+    expect(refused.stderr).toContain("--step-up-token");
+    const approved = await run(KeysRevokeCommand, [
+      KEY_ID,
+      "--yes",
+      "--step-up-token",
+      "token-123",
+    ]);
+    expect(approved.exitCode).toBeUndefined();
+    expect(requests.at(-1)?.headers.get("primitive-step-up")).toBe("token-123");
+    expect(approved.stdout).toContain(`Revoked key ${KEY_ID}.`);
+    expect(calls).toBe(2);
+  });
 });
 
 describe("roles commands", () => {

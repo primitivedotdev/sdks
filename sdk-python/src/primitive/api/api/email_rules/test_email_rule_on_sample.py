@@ -120,18 +120,14 @@ def sync_detailed(
 ) -> Response[ErrorResponse | TestEmailRuleOnSampleResponse200]:
     """ Test a rule against a made-up email
 
-     Reports what a rule would decide for an email you describe: its sender, recipients, subject, plain
-    text and attachment types, and optionally whether it is automated or from a mailing list and its
-    spam score. The email is classified the way received mail is, and the rule's conditions and its own
-    questions are decided as they would be for received mail with that content and those signals,
-    received now. Without them it is not automated and not from a mailing list; a rule that reads a spam
-    score you gave none for is decided on no score, and spam_score is listed in unset_columns. Nothing
-    is stored: no email, classification or decision. Test an unsaved tree from a compile response, or a
-    saved rule by rule_id (its current version); an unsaved tree is run as covering only your own mail
-    unless evaluation_scope names more, as on POST /email-rules/test. The answer includes what the
-    classifier read from the email. Needs mail:read, a credential acting as a member with their full
-    access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
-    organization.
+     Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text,
+    attachment types; optionally whether it is automated or from a mailing list, and its spam score),
+    received now: it is classified, and the conditions and questions decided, as received mail would be.
+    By default it is not automated or from a list; a rule reading a spam score you gave none for decides
+    on none (spam_score is then in unset_columns). Nothing is stored. Test an unsaved tree (covering
+    only your own mail unless evaluation_scope names more) or a saved rule by rule_id. The answer
+    includes what the classifier read. Needs mail:read, a member's own credential with their full access
+    (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -167,18 +163,14 @@ def sync(
 ) -> ErrorResponse | TestEmailRuleOnSampleResponse200 | None:
     """ Test a rule against a made-up email
 
-     Reports what a rule would decide for an email you describe: its sender, recipients, subject, plain
-    text and attachment types, and optionally whether it is automated or from a mailing list and its
-    spam score. The email is classified the way received mail is, and the rule's conditions and its own
-    questions are decided as they would be for received mail with that content and those signals,
-    received now. Without them it is not automated and not from a mailing list; a rule that reads a spam
-    score you gave none for is decided on no score, and spam_score is listed in unset_columns. Nothing
-    is stored: no email, classification or decision. Test an unsaved tree from a compile response, or a
-    saved rule by rule_id (its current version); an unsaved tree is run as covering only your own mail
-    unless evaluation_scope names more, as on POST /email-rules/test. The answer includes what the
-    classifier read from the email. Needs mail:read, a credential acting as a member with their full
-    access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
-    organization.
+     Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text,
+    attachment types; optionally whether it is automated or from a mailing list, and its spam score),
+    received now: it is classified, and the conditions and questions decided, as received mail would be.
+    By default it is not automated or from a list; a rule reading a spam score you gave none for decides
+    on none (spam_score is then in unset_columns). Nothing is stored. Test an unsaved tree (covering
+    only your own mail unless evaluation_scope names more) or a saved rule by rule_id. The answer
+    includes what the classifier read. Needs mail:read, a member's own credential with their full access
+    (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -209,18 +201,14 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | TestEmailRuleOnSampleResponse200]:
     """ Test a rule against a made-up email
 
-     Reports what a rule would decide for an email you describe: its sender, recipients, subject, plain
-    text and attachment types, and optionally whether it is automated or from a mailing list and its
-    spam score. The email is classified the way received mail is, and the rule's conditions and its own
-    questions are decided as they would be for received mail with that content and those signals,
-    received now. Without them it is not automated and not from a mailing list; a rule that reads a spam
-    score you gave none for is decided on no score, and spam_score is listed in unset_columns. Nothing
-    is stored: no email, classification or decision. Test an unsaved tree from a compile response, or a
-    saved rule by rule_id (its current version); an unsaved tree is run as covering only your own mail
-    unless evaluation_scope names more, as on POST /email-rules/test. The answer includes what the
-    classifier read from the email. Needs mail:read, a credential acting as a member with their full
-    access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
-    organization.
+     Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text,
+    attachment types; optionally whether it is automated or from a mailing list, and its spam score),
+    received now: it is classified, and the conditions and questions decided, as received mail would be.
+    By default it is not automated or from a list; a rule reading a spam score you gave none for decides
+    on none (spam_score is then in unset_columns). Nothing is stored. Test an unsaved tree (covering
+    only your own mail unless evaluation_scope names more) or a saved rule by rule_id. The answer
+    includes what the classifier read. Needs mail:read, a member's own credential with their full access
+    (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -256,18 +244,14 @@ async def asyncio(
 ) -> ErrorResponse | TestEmailRuleOnSampleResponse200 | None:
     """ Test a rule against a made-up email
 
-     Reports what a rule would decide for an email you describe: its sender, recipients, subject, plain
-    text and attachment types, and optionally whether it is automated or from a mailing list and its
-    spam score. The email is classified the way received mail is, and the rule's conditions and its own
-    questions are decided as they would be for received mail with that content and those signals,
-    received now. Without them it is not automated and not from a mailing list; a rule that reads a spam
-    score you gave none for is decided on no score, and spam_score is listed in unset_columns. Nothing
-    is stored: no email, classification or decision. Test an unsaved tree from a compile response, or a
-    saved rule by rule_id (its current version); an unsaved tree is run as covering only your own mail
-    unless evaluation_scope names more, as on POST /email-rules/test. The answer includes what the
-    classifier read from the email. Needs mail:read, a credential acting as a member with their full
-    access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
-    organization.
+     Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text,
+    attachment types; optionally whether it is automated or from a mailing list, and its spam score),
+    received now: it is classified, and the conditions and questions decided, as received mail would be.
+    By default it is not automated or from a list; a rule reading a spam score you gave none for decides
+    on none (spam_score is then in unset_columns). Nothing is stored. Test an unsaved tree (covering
+    only your own mail unless evaluation_scope names more) or a saved rule by rule_id. The answer
+    includes what the classifier read. Needs mail:read, a member's own credential with their full access
+    (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):

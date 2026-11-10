@@ -117,8 +117,8 @@ def sync_detailed(
      The rules the caller can see, newest first: their own, or every member's rules for a caller who
     reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
     for a selected rule). With matched_email_id, only the rules that matched that email. Needs
-    mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed
-    tokens are refused), and the email rules feature on the organization.
+    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+    token), and the email rules feature.
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -160,8 +160,8 @@ def sync(
      The rules the caller can see, newest first: their own, or every member's rules for a caller who
     reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
     for a selected rule). With matched_email_id, only the rules that matched that email. Needs
-    mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed
-    tokens are refused), and the email rules feature on the organization.
+    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+    token), and the email rules feature.
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -198,8 +198,8 @@ async def asyncio_detailed(
      The rules the caller can see, newest first: their own, or every member's rules for a caller who
     reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
     for a selected rule). With matched_email_id, only the rules that matched that email. Needs
-    mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed
-    tokens are refused), and the email rules feature on the organization.
+    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+    token), and the email rules feature.
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -241,8 +241,8 @@ async def asyncio(
      The rules the caller can see, newest first: their own, or every member's rules for a caller who
     reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
     for a selected rule). With matched_email_id, only the rules that matched that email. Needs
-    mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed
-    tokens are refused), and the email rules feature on the organization.
+    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+    token), and the email rules feature.
 
     Args:
         limit (int | Unset):  Default: 50.

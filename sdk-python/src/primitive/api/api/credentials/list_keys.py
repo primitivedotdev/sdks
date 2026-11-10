@@ -109,10 +109,12 @@ def sync_detailed(
 ) -> Response[ErrorResponse | ListKeysResponse200]:
     """ List API keys
 
-     Key metadata, never a secret: name, prefix, grant, creator, last use, expiry and suspension. The
-    person needs access to the whole organization's mail. Needs the organization's credential features
-    to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming
-    the feature. Only Primitive turns these on.
+     Key metadata, never a secret: name, prefix, grant, creator, last use, expiry, suspension and whether
+    each key works now (status). A grant's mail_scope.depth is raw only when the key holds mail.raw:read
+    and its scope lists an address or a domain, otherwise content. The person needs access to the whole
+    organization's mail. Needs the organization's credential features to be enabled; while they are not,
+    this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to
+    turn them on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.
@@ -148,10 +150,12 @@ def sync(
 ) -> ErrorResponse | ListKeysResponse200 | None:
     """ List API keys
 
-     Key metadata, never a secret: name, prefix, grant, creator, last use, expiry and suspension. The
-    person needs access to the whole organization's mail. Needs the organization's credential features
-    to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming
-    the feature. Only Primitive turns these on.
+     Key metadata, never a secret: name, prefix, grant, creator, last use, expiry, suspension and whether
+    each key works now (status). A grant's mail_scope.depth is raw only when the key holds mail.raw:read
+    and its scope lists an address or a domain, otherwise content. The person needs access to the whole
+    organization's mail. Needs the organization's credential features to be enabled; while they are not,
+    this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to
+    turn them on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.
@@ -182,10 +186,12 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | ListKeysResponse200]:
     """ List API keys
 
-     Key metadata, never a secret: name, prefix, grant, creator, last use, expiry and suspension. The
-    person needs access to the whole organization's mail. Needs the organization's credential features
-    to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming
-    the feature. Only Primitive turns these on.
+     Key metadata, never a secret: name, prefix, grant, creator, last use, expiry, suspension and whether
+    each key works now (status). A grant's mail_scope.depth is raw only when the key holds mail.raw:read
+    and its scope lists an address or a domain, otherwise content. The person needs access to the whole
+    organization's mail. Needs the organization's credential features to be enabled; while they are not,
+    this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to
+    turn them on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.
@@ -221,10 +227,12 @@ async def asyncio(
 ) -> ErrorResponse | ListKeysResponse200 | None:
     """ List API keys
 
-     Key metadata, never a secret: name, prefix, grant, creator, last use, expiry and suspension. The
-    person needs access to the whole organization's mail. Needs the organization's credential features
-    to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming
-    the feature. Only Primitive turns these on.
+     Key metadata, never a secret: name, prefix, grant, creator, last use, expiry, suspension and whether
+    each key works now (status). A grant's mail_scope.depth is raw only when the key holds mail.raw:read
+    and its scope lists an address or a domain, otherwise content. The person needs access to the whole
+    organization's mail. Needs the organization's credential features to be enabled; while they are not,
+    this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to
+    turn them on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.

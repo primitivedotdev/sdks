@@ -11,7 +11,8 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.list_email_rules_result_item import ListEmailRulesResultItem
+  from ..models.cursor_page_meta import CursorPageMeta
+  from ..models.email_rule import EmailRule
 
 
 
@@ -26,11 +27,13 @@ class ListEmailRulesResponse200:
     """ 
         Attributes:
             success (bool):
-            data (list[ListEmailRulesResultItem]):
+            data (list[EmailRule]):
+            meta (CursorPageMeta): Paging for a list read a page at a time.
      """
 
     success: bool
-    data: list[ListEmailRulesResultItem]
+    data: list[EmailRule]
+    meta: CursorPageMeta
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -38,7 +41,8 @@ class ListEmailRulesResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.list_email_rules_result_item import ListEmailRulesResultItem # noqa: PLC0415
+        from ..models.cursor_page_meta import CursorPageMeta # noqa: PLC0415
+        from ..models.email_rule import EmailRule # noqa: PLC0415
         success = self.success
 
         data = []
@@ -48,12 +52,15 @@ class ListEmailRulesResponse200:
 
 
 
+        meta = self.meta.to_dict()
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
             "success": success,
             "data": data,
+            "meta": meta,
         })
 
         return field_dict
@@ -62,23 +69,30 @@ class ListEmailRulesResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.list_email_rules_result_item import ListEmailRulesResultItem # noqa: PLC0415
+        from ..models.cursor_page_meta import CursorPageMeta # noqa: PLC0415
+        from ..models.email_rule import EmailRule # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 
         data = []
         _data = d.pop("data")
         for componentsschemas_list_email_rules_result_item_data in (_data):
-            componentsschemas_list_email_rules_result_item = ListEmailRulesResultItem.from_dict(componentsschemas_list_email_rules_result_item_data)
+            componentsschemas_list_email_rules_result_item = EmailRule.from_dict(componentsschemas_list_email_rules_result_item_data)
 
 
 
             data.append(componentsschemas_list_email_rules_result_item)
 
 
+        meta = CursorPageMeta.from_dict(d.pop("meta"))
+
+
+
+
         list_email_rules_response_200 = cls(
             success=success,
             data=data,
+            meta=meta,
         )
 
 

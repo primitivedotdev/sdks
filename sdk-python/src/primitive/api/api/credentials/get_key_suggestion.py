@@ -112,7 +112,7 @@ def sync_detailed(
     sent from (counts only, and only for a person with access to the whole organization's mail). Nothing
     is applied: narrowing is a change to the key (PATCH /v1/keys/:id). Needs the organization's
     credential features to be enabled; while they are not, this answers 404 feature_disabled, with
-    details.feature naming the feature. Only Primitive turns these on.
+    details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.
@@ -159,7 +159,7 @@ def sync(
     sent from (counts only, and only for a person with access to the whole organization's mail). Nothing
     is applied: narrowing is a change to the key (PATCH /v1/keys/:id). Needs the organization's
     credential features to be enabled; while they are not, this answers 404 feature_disabled, with
-    details.feature naming the feature. Only Primitive turns these on.
+    details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.
@@ -201,7 +201,7 @@ async def asyncio_detailed(
     sent from (counts only, and only for a person with access to the whole organization's mail). Nothing
     is applied: narrowing is a change to the key (PATCH /v1/keys/:id). Needs the organization's
     credential features to be enabled; while they are not, this answers 404 feature_disabled, with
-    details.feature naming the feature. Only Primitive turns these on.
+    details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.
@@ -248,7 +248,7 @@ async def asyncio(
     sent from (counts only, and only for a person with access to the whole organization's mail). Nothing
     is applied: narrowing is a change to the key (PATCH /v1/keys/:id). Needs the organization's
     credential features to be enabled; while they are not, this answers 404 feature_disabled, with
-    details.feature naming the feature. Only Primitive turns these on.
+    details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.

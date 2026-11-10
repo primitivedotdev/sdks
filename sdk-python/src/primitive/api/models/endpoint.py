@@ -12,6 +12,7 @@ from ..models.endpoint_kind import EndpointKind
 from ..models.endpoint_owner_key_status_type_1 import EndpointOwnerKeyStatusType1
 from ..models.endpoint_owner_key_status_type_2_type_1 import EndpointOwnerKeyStatusType2Type1
 from ..models.endpoint_owner_key_status_type_3_type_1 import EndpointOwnerKeyStatusType3Type1
+from ..models.endpoint_signed_with import EndpointSignedWith
 from typing import cast
 from uuid import UUID
 import datetime
@@ -56,7 +57,7 @@ class Endpoint:
             is_route_target (bool | Unset): When true, this endpoint is reachable only via an explicit recipient
                 route, never as a domain's default destination, and is exempt from
                 the one-endpoint-per-domain rule (so many can share a domain).
-            name (None | str | Unset): Stable name of a pull destination.
+            name (None | str | Unset): A pull destination's stable name, or an http webhook's label (null when it has none).
             owned_by_key (bool | Unset): Whether an API key owns this webhook instead of the organization.
             owner_key_id (None | Unset | UUID): The API key that owns this webhook. In endpoint responses it is set only for
                 a caller who may read API key metadata, and is null otherwise and when the organization owns the webhook. After
@@ -65,6 +66,12 @@ class Endpoint:
                 EndpointOwnerKeyStatusType3Type1 | None | Unset): Whether the owning key can act now. In endpoint responses it
                 is set only for a caller who may read API key metadata. Suspended also covers an expired key. A suspended or
                 revoked owner is sent nothing.
+            signed_with (EndpointSignedWith | Unset): Which secret signs deliveries to this webhook: its own (read it from
+                GET /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that is not a
+                webhook.
+            signing_secret (str | Unset): Only in the response that creates a webhook made with a signing secret of its own
+                (one made as a person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate
+                for itself): that secret, shown this once. Read it again from GET /endpoints/{id}/signing-secret.
      """
 
     id: UUID
@@ -92,6 +99,8 @@ class Endpoint:
     owned_by_key: bool | Unset = UNSET
     owner_key_id: None | Unset | UUID = UNSET
     owner_key_status: EndpointOwnerKeyStatusType1 | EndpointOwnerKeyStatusType2Type1 | EndpointOwnerKeyStatusType3Type1 | None | Unset = UNSET
+    signed_with: EndpointSignedWith | Unset = UNSET
+    signing_secret: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -220,6 +229,13 @@ class Endpoint:
         else:
             owner_key_status = self.owner_key_status
 
+        signed_with: str | Unset = UNSET
+        if not isinstance(self.signed_with, Unset):
+            signed_with = self.signed_with.value
+
+
+        signing_secret = self.signing_secret
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -265,6 +281,10 @@ class Endpoint:
             field_dict["owner_key_id"] = owner_key_id
         if owner_key_status is not UNSET:
             field_dict["owner_key_status"] = owner_key_status
+        if signed_with is not UNSET:
+            field_dict["signed_with"] = signed_with
+        if signing_secret is not UNSET:
+            field_dict["signing_secret"] = signing_secret
 
         return field_dict
 
@@ -544,6 +564,18 @@ class Endpoint:
         owner_key_status = _parse_owner_key_status(d.pop("owner_key_status", UNSET))
 
 
+        _signed_with = d.pop("signed_with", UNSET)
+        signed_with: EndpointSignedWith | Unset
+        if isinstance(_signed_with,  Unset):
+            signed_with = UNSET
+        else:
+            signed_with = EndpointSignedWith(_signed_with)
+
+
+
+
+        signing_secret = d.pop("signing_secret", UNSET)
+
         endpoint = cls(
             id=id,
             org_id=org_id,
@@ -570,6 +602,8 @@ class Endpoint:
             owned_by_key=owned_by_key,
             owner_key_id=owner_key_id,
             owner_key_status=owner_key_status,
+            signed_with=signed_with,
+            signing_secret=signing_secret,
         )
 
 

@@ -28,7 +28,9 @@ class CredentialsRotateKeyResult:
             key (str):
             key_prefix (str):
             previous_key_id (str):
-            previous_key_expires_at (datetime.datetime):
+            previous_key_expires_at (datetime.datetime): When the old key stops working: the time of the rotation plus
+                overlap_seconds (24 hours when it was omitted, now when it was 0), or the key's own expires_at when that comes
+                first.
             expires_at (datetime.datetime | None | Unset):
      """
 

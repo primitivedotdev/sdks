@@ -102,6 +102,20 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_429
 
+    if response.status_code == 502:
+        response_502 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_502
+
+    if response.status_code == 503:
+        response_503 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_503
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -136,15 +150,16 @@ def sync_detailed(
     refused with `grant_forbidden` (`keys_manage_required` or `actor_access_changed`) and nothing is
     rotated. A rule share paused by a role change (`email_rule_share`) takes keep, which leaves it
     paused, or revoke, which ends the share and needs confirm: true (the person it was shared with loses
-    the emails already shared; without it, 409 `confirmation_required`). Neither of the share's two
-    people may keep it (`grant_forbidden`, `share_decision_forbidden`). Access a person gave on their
-    own mailbox (`mailbox_access`) takes keep or revoke, and both need delegations:manage; revoke
-    removes only what that person gave on that mailbox. Nobody the access reaches, nor the person who
-    gave it, may keep it (`grant_forbidden`, `mailbox_access_decision_forbidden`). Person only: a
-    dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose
-    `suspensions.decide` (the person confirms at the step_up_url a 403 step_up_required answer carries,
-    which names this client, then send the token in the Primitive-Step-Up header; the token works only
-    with the client it was confirmed for). Needs members:manage. API keys are refused.
+    the emails already shared; without it, 409 `confirmation_required`, as for revoking a filter).
+    Neither of the share's two people may keep it (`grant_forbidden`, `share_decision_forbidden`).
+    Access a person gave on their own mailbox (`mailbox_access`) takes keep or revoke, and both need
+    delegations:manage; revoke removes only what that person gave on that mailbox. Nobody the access
+    reaches, nor the person who gave it, may keep it (`grant_forbidden`,
+    `mailbox_access_decision_forbidden`). Person only: a dashboard session, or the person's own OAuth or
+    CLI token with a session step-up of purpose `suspensions.decide` (the person confirms at the
+    step_up_url a 403 step_up_required answer carries, which names this client, then send the token in
+    the Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+    members:manage. API keys are refused.
 
     Args:
         id (UUID):
@@ -194,15 +209,16 @@ def sync(
     refused with `grant_forbidden` (`keys_manage_required` or `actor_access_changed`) and nothing is
     rotated. A rule share paused by a role change (`email_rule_share`) takes keep, which leaves it
     paused, or revoke, which ends the share and needs confirm: true (the person it was shared with loses
-    the emails already shared; without it, 409 `confirmation_required`). Neither of the share's two
-    people may keep it (`grant_forbidden`, `share_decision_forbidden`). Access a person gave on their
-    own mailbox (`mailbox_access`) takes keep or revoke, and both need delegations:manage; revoke
-    removes only what that person gave on that mailbox. Nobody the access reaches, nor the person who
-    gave it, may keep it (`grant_forbidden`, `mailbox_access_decision_forbidden`). Person only: a
-    dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose
-    `suspensions.decide` (the person confirms at the step_up_url a 403 step_up_required answer carries,
-    which names this client, then send the token in the Primitive-Step-Up header; the token works only
-    with the client it was confirmed for). Needs members:manage. API keys are refused.
+    the emails already shared; without it, 409 `confirmation_required`, as for revoking a filter).
+    Neither of the share's two people may keep it (`grant_forbidden`, `share_decision_forbidden`).
+    Access a person gave on their own mailbox (`mailbox_access`) takes keep or revoke, and both need
+    delegations:manage; revoke removes only what that person gave on that mailbox. Nobody the access
+    reaches, nor the person who gave it, may keep it (`grant_forbidden`,
+    `mailbox_access_decision_forbidden`). Person only: a dashboard session, or the person's own OAuth or
+    CLI token with a session step-up of purpose `suspensions.decide` (the person confirms at the
+    step_up_url a 403 step_up_required answer carries, which names this client, then send the token in
+    the Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+    members:manage. API keys are refused.
 
     Args:
         id (UUID):
@@ -247,15 +263,16 @@ async def asyncio_detailed(
     refused with `grant_forbidden` (`keys_manage_required` or `actor_access_changed`) and nothing is
     rotated. A rule share paused by a role change (`email_rule_share`) takes keep, which leaves it
     paused, or revoke, which ends the share and needs confirm: true (the person it was shared with loses
-    the emails already shared; without it, 409 `confirmation_required`). Neither of the share's two
-    people may keep it (`grant_forbidden`, `share_decision_forbidden`). Access a person gave on their
-    own mailbox (`mailbox_access`) takes keep or revoke, and both need delegations:manage; revoke
-    removes only what that person gave on that mailbox. Nobody the access reaches, nor the person who
-    gave it, may keep it (`grant_forbidden`, `mailbox_access_decision_forbidden`). Person only: a
-    dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose
-    `suspensions.decide` (the person confirms at the step_up_url a 403 step_up_required answer carries,
-    which names this client, then send the token in the Primitive-Step-Up header; the token works only
-    with the client it was confirmed for). Needs members:manage. API keys are refused.
+    the emails already shared; without it, 409 `confirmation_required`, as for revoking a filter).
+    Neither of the share's two people may keep it (`grant_forbidden`, `share_decision_forbidden`).
+    Access a person gave on their own mailbox (`mailbox_access`) takes keep or revoke, and both need
+    delegations:manage; revoke removes only what that person gave on that mailbox. Nobody the access
+    reaches, nor the person who gave it, may keep it (`grant_forbidden`,
+    `mailbox_access_decision_forbidden`). Person only: a dashboard session, or the person's own OAuth or
+    CLI token with a session step-up of purpose `suspensions.decide` (the person confirms at the
+    step_up_url a 403 step_up_required answer carries, which names this client, then send the token in
+    the Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+    members:manage. API keys are refused.
 
     Args:
         id (UUID):
@@ -305,15 +322,16 @@ async def asyncio(
     refused with `grant_forbidden` (`keys_manage_required` or `actor_access_changed`) and nothing is
     rotated. A rule share paused by a role change (`email_rule_share`) takes keep, which leaves it
     paused, or revoke, which ends the share and needs confirm: true (the person it was shared with loses
-    the emails already shared; without it, 409 `confirmation_required`). Neither of the share's two
-    people may keep it (`grant_forbidden`, `share_decision_forbidden`). Access a person gave on their
-    own mailbox (`mailbox_access`) takes keep or revoke, and both need delegations:manage; revoke
-    removes only what that person gave on that mailbox. Nobody the access reaches, nor the person who
-    gave it, may keep it (`grant_forbidden`, `mailbox_access_decision_forbidden`). Person only: a
-    dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose
-    `suspensions.decide` (the person confirms at the step_up_url a 403 step_up_required answer carries,
-    which names this client, then send the token in the Primitive-Step-Up header; the token works only
-    with the client it was confirmed for). Needs members:manage. API keys are refused.
+    the emails already shared; without it, 409 `confirmation_required`, as for revoking a filter).
+    Neither of the share's two people may keep it (`grant_forbidden`, `share_decision_forbidden`).
+    Access a person gave on their own mailbox (`mailbox_access`) takes keep or revoke, and both need
+    delegations:manage; revoke removes only what that person gave on that mailbox. Nobody the access
+    reaches, nor the person who gave it, may keep it (`grant_forbidden`,
+    `mailbox_access_decision_forbidden`). Person only: a dashboard session, or the person's own OAuth or
+    CLI token with a session step-up of purpose `suspensions.decide` (the person confirms at the
+    step_up_url a 403 step_up_required answer carries, which names this client, then send the token in
+    the Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+    members:manage. API keys are refused.
 
     Args:
         id (UUID):

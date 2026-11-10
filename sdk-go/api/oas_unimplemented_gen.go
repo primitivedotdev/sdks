@@ -17,13 +17,12 @@ var _ Handler = UnimplementedHandler{}
 //
 // Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches
 // from now on with the member who asked. Send no body to accept it as asked, or change it first with
-// english, tree and explanation together. Because this gives your mail to someone else, it is
-// limited to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused.
-// Also needs mail:send_as_member: a role that can only read this mailbox is refused. Needs mail:read,
-//
-//	a credential acting as a member with their full access (API keys, agent keys and narrowed tokens
-//
-// are refused), and the email rules feature on the organization.
+// english and tree together (and an explanation, or the server writes one). Because this gives your
+// mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and
+// agent tokens are refused. Also needs mail:share_own (sharing your own mail through email rules,
+// which only shows it and never sends): a role without it is refused, whether or not it can send.
+// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+// narrowed token), and the email rules feature.
 //
 // POST /email-rule-requests/{id}/accept
 func (UnimplementedHandler) AcceptEmailRuleRequest(ctx context.Context, req OptAcceptEmailRuleRequestRequest, params AcceptEmailRuleRequestParams) (r AcceptEmailRuleRequestRes, _ error) {
@@ -270,6 +269,20 @@ func (UnimplementedHandler) CheckDomainDns(ctx context.Context, params CheckDoma
 	return r, ht.ErrNotImplemented
 }
 
+// CheckEmailRuleRequestTarget implements checkEmailRuleRequestTarget operation.
+//
+// Says, before you ask, whether a member could accept a rule request now under their role, and if
+// not, which permission their role lacks. Nothing is sent and nothing is recorded. Needs
+// members:read, as listing members and their roles does. At most 60 checks an hour. Name them by
+// user id, or by their member mailbox address (counted with asking: at most 30 lookups by address an
+// hour). Needs mail:read, a member's own credential with their full access (not an API key, agent
+// key or narrowed token), and the email rules feature.
+//
+// POST /email-rule-requests/target-check
+func (UnimplementedHandler) CheckEmailRuleRequestTarget(ctx context.Context, req *CheckEmailRuleRequestTargetRequest, params CheckEmailRuleRequestTargetParams) (r CheckEmailRuleRequestTargetRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // CheckSendability implements checkSendability operation.
 //
 // Answer whether the caller could send to the given recipient (from the given address, if any)
@@ -342,9 +355,16 @@ func (UnimplementedHandler) CliLogout(ctx context.Context, req OptCliLogoutInput
 // published column contract, with a plain-English explanation of what it matches, the assumptions
 // made, and warnings for anything the columns cannot express. Where the columns fall short the rule
 // may carry up to three yes/no questions, asked about an email only after its conditions match.
-// Nothing is saved. The SQL the rule renders to is returned only when include_sql is true. Needs
-// mail:read, a credential acting as a member with their full access (API keys, agent keys and
-// narrowed tokens are refused), and the email rules feature on the organization.
+// Nothing is saved. A rule with no questions has its conditions counted, read only, over the
+// caller's recent classified mail (what a test of it covers by default), so a warning can say when
+// it matches nearly all of it. The SQL the rule renders to is returned only when include_sql is true.
+//
+//	kind do_not_share compiles a do-not-share rule for recall: conditions only as narrow as the
+//
+// description says, the judgement of what it describes put into questions, and with nothing a column
+// decides for certain, conditions that hold for every email. Needs mail:read, a member's own
+// credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature.
 //
 // POST /email-rules/compile
 func (UnimplementedHandler) CompileEmailRule(ctx context.Context, req *CompileEmailRuleRequest, params CompileEmailRuleParams) (r CompileEmailRuleRes, _ error) {
@@ -420,17 +440,18 @@ func (UnimplementedHandler) CreateAgentConnection(ctx context.Context, req *Crea
 
 // CreateEmailRule implements createEmailRule operation.
 //
-// Saves a rule as version 1, from a compile response or a tree you wrote. The tree is checked
-// against the column contract. New rules start in observe, where what the rule matches is recorded
-// and nothing is granted or blocked; draft is not evaluated. The caller is the rule's author, and
-// the rule never reaches mail the author cannot read. evaluation_scope chooses whose mail it runs
-// over: own_mailboxes (only your own mail) when omitted, so any other scope (author for all you can
-// read, or selected) is named; scope_selection may name only what you can read. The answer carries
-// the scope as stored. kind do_not_share makes a rule that blocks sharing: it runs before every
-// other rule, and while it is active no rule shares an email it matches or cannot decide. A key
-// cannot list one (details.reason rule_blocks_sharing on the key). Needs mail:read, a credential
-// acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
-// and the email rules feature on the organization.
+// Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column
+// contract; without an explanation the server writes one. It starts in observe (what it matches is
+// recorded, nothing granted or blocked) unless state is draft (not evaluated). You are its author,
+// and it never reaches mail you cannot read. evaluation_scope is own_mailboxes (your own mail)
+// unless you name author (all you can read) or selected; scope_selection may name only what you can
+// read. The answer carries the scope as stored. expectations saves emails it must match and must not;
+//
+//	the answer judges them (expectations_check). kind do_not_share blocks sharing: it runs before
+//
+// every other rule, and while active no rule shares an email it matches or cannot decide; a key
+// cannot list it (details.reason rule_blocks_sharing). Needs mail:read, a member's own credential
+// with their full access (not an API key, agent key or narrowed token), and the email rules feature.
 //
 // POST /email-rules
 func (UnimplementedHandler) CreateEmailRule(ctx context.Context, req *CreateEmailRuleRequest, params CreateEmailRuleParams) (r CreateEmailRuleRes, _ error) {
@@ -443,9 +464,12 @@ func (UnimplementedHandler) CreateEmailRule(ctx context.Context, req *CreateEmai
 // a tree you wrote. Name them by user id, or by their member mailbox address (at most 30 lookups by
 // address an hour). Nothing is evaluated and nothing is shared until they accept, and they may
 // change the rule first; they see the request and can preview what it matches in their own mail. You
-// may have at most 5 pending requests to one member and 50 in all. Needs mail:read, a credential
-// acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
-// and the email rules feature on the organization.
+// may have at most 5 pending requests to one member and 50 in all. If you can list members
+// (members:read), the answer also says whether they can accept it under their role
+// (target_can_accept), and if not, why (target_warning); the request is sent either way. To find out
+// before asking, use POST /v1/email-rule-requests/target-check. Needs mail:read, a member's own
+// credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature.
 //
 // POST /email-rule-requests
 func (UnimplementedHandler) CreateEmailRuleRequest(ctx context.Context, req *CreateEmailRuleRequestRequest, params CreateEmailRuleRequestParams) (r CreateEmailRuleRequestRes, _ error) {
@@ -458,10 +482,13 @@ func (UnimplementedHandler) CreateEmailRuleRequest(ctx context.Context, req *Cre
 // with the same URL and domain exists, it is reactivated
 // instead. Subject to plan limits on the number of active
 // endpoints.
-// **Signing is account-scoped, not per-endpoint.** This call
-// does not return any signing material; every endpoint on the
-// account uses the same webhook secret, fetched via
-// `GET /account/webhook-secret`. See the API-level "Webhook
+// **Signing.** A webhook is signed with the organization's webhook secret (`GET
+// /account/webhook-secret`) unless it has its own. A webhook made as a person's own, or by an API
+// key limited to some mailboxes, a third-party app or an agent delegate for itself, is made with its
+// own secret: the response carries it once as `signing_secret`, and `GET
+// /endpoints/{id}/signing-secret` returns it afterwards. Other webhooks, those a person who can read
+// every mailbox makes among them, sign with the organization's secret until given their own.
+// `signed_with` on the endpoint says which secret signs it. See the API-level "Webhook
 // signing" section for the full wire format (header name,
 // signed string, hash algo, secret format, tolerance) and a
 // language-agnostic verification recipe.
@@ -593,17 +620,19 @@ func (UnimplementedHandler) CreateGroup(ctx context.Context, req *CreateGroupReq
 // second key and is refused (409 idempotency_key_reused) with the first key's id in error.details.
 // key_id, so a caller whose first answer was lost can revoke that key. The onboarding field is for
 // the dashboard only. The person's own Primitive CLI login needs no step-up (it acts as the person,
-// held to the same rules); the Primitive app's token is refused, even with one. While the
+// held to the same rules) unless the organization's credential policy sets
+// cli_writes_require_approval; the Primitive app's token is refused, even with one. While the
 // organization's keys API is not enabled, this answers 404 feature_disabled (details.feature
-// keys_api; only Primitive turns it on), except that a dashboard session may still create a super
-// admin key (the dashboard's own create).
-// Person only: a dashboard session, the person's own Primitive CLI login with no step-up, or the
-// person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up
-// header. Without one any other OAuth token is answered 403 step_up_required, whose details carry
-// the dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client,
-// could not do it anyway). The person's role must hold keys:manage. API keys and agent connection
-// keys are refused. An agent acting for the person is refused unless it carries a step-up token the
-// person issued in the dashboard.
+// keys_api; contact Primitive to turn it on), except that a dashboard session may still create a
+// super admin key (the dashboard's own create).
+// Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
+// organization's credential policy sets cli_writes_require_approval), or the person's own OAuth
+// token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one
+// any other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that
+// issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway).
+// The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent
+// acting for the person is refused unless it carries a step-up token the person issued in the
+// dashboard.
 //
 // POST /keys
 func (UnimplementedHandler) CreateKey(ctx context.Context, req *CredentialsCreateKeyInput, params CreateKeyParams) (r CreateKeyRes, _ error) {
@@ -643,11 +672,15 @@ func (UnimplementedHandler) CreateProject(ctx context.Context, req *ProjectsCrea
 // value is refused with 400 `validation_error`. Every role that reaches mail reads it in full, and
 // raw MIME follows the role's mail.raw:read; `depth` is deprecated and ignored. Its mail scope names
 // no other member's personal mailbox: otherwise 403 `grant_forbidden` with `details.reason`
-// `personal_mailbox_member_only`. Person only: a dashboard session, or the person's own OAuth or CLI
-// token with a session step-up of purpose `roles.write` (the person confirms at the step_up_url a
-// 403 step_up_required answer carries, which names this client, then send the token in the
-// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
-// roles:assign. API keys are refused.
+// `personal_mailbox_member_only`. Each permission must have what it requires in the same role:
+// mail:read for mail.raw:read, mail.search:semantic, mail:share_own, changes:read and webhooks:read;
+// mail:send for mail:send_batch and mail:send_as_member; functions:deploy for templates:install;
+// agent_connections:manage for agent_connections:custom_domains. Otherwise 400 `validation_error`
+// with `details.reason` `unmet_requirement`, `details.permission` and `details.requires`. Person
+// only: a dashboard session, or the person's own OAuth or CLI token with a session step-up of
+// purpose `roles.write` (the person confirms at the step_up_url a 403 step_up_required answer
+// carries, which names this client, then send the token in the Primitive-Step-Up header; the token
+// works only with the client it was confirmed for). Needs roles:assign. API keys are refused.
 //
 // POST /roles
 func (UnimplementedHandler) CreateRole(ctx context.Context, req *CreateRoleRequest, params CreateRoleParams) (r CreateRoleRes, _ error) {
@@ -718,15 +751,16 @@ func (UnimplementedHandler) DecideAccessMode(ctx context.Context, req *DecideAcc
 // refused with `grant_forbidden` (`keys_manage_required` or `actor_access_changed`) and nothing is
 // rotated. A rule share paused by a role change (`email_rule_share`) takes keep, which leaves it
 // paused, or revoke, which ends the share and needs confirm: true (the person it was shared with
-// loses the emails already shared; without it, 409 `confirmation_required`). Neither of the share's
-// two people may keep it (`grant_forbidden`, `share_decision_forbidden`). Access a person gave on
-// their own mailbox (`mailbox_access`) takes keep or revoke, and both need delegations:manage;
-// revoke removes only what that person gave on that mailbox. Nobody the access reaches, nor the
-// person who gave it, may keep it (`grant_forbidden`, `mailbox_access_decision_forbidden`). Person
-// only: a dashboard session, or the person's own OAuth or CLI token with a session step-up of
-// purpose `suspensions.decide` (the person confirms at the step_up_url a 403 step_up_required answer
-// carries, which names this client, then send the token in the Primitive-Step-Up header; the token
-// works only with the client it was confirmed for). Needs members:manage. API keys are refused.
+// loses the emails already shared; without it, 409 `confirmation_required`, as for revoking a
+// filter). Neither of the share's two people may keep it (`grant_forbidden`,
+// `share_decision_forbidden`). Access a person gave on their own mailbox (`mailbox_access`) takes
+// keep or revoke, and both need delegations:manage; revoke removes only what that person gave on
+// that mailbox. Nobody the access reaches, nor the person who gave it, may keep it
+// (`grant_forbidden`, `mailbox_access_decision_forbidden`). Person only: a dashboard session, or the
+// person's own OAuth or CLI token with a session step-up of purpose `suspensions.decide` (the person
+// confirms at the step_up_url a 403 step_up_required answer carries, which names this client, then
+// send the token in the Primitive-Step-Up header; the token works only with the client it was
+// confirmed for). Needs members:manage. API keys are refused.
 //
 // POST /access-suspensions/{id}/decision
 func (UnimplementedHandler) DecideSuspension(ctx context.Context, req *DecideSuspensionRequest, params DecideSuspensionParams) (r DecideSuspensionRes, _ error) {
@@ -736,8 +770,8 @@ func (UnimplementedHandler) DecideSuspension(ctx context.Context, req *DecideSus
 // DeclineEmailRuleRequest implements declineEmailRuleRequest operation.
 //
 // Declines a pending request made to you. Nothing is written but the decision. Needs mail:read, a
-// credential acting as a member with their full access (API keys, agent keys and narrowed tokens are
-// refused), and the email rules feature on the organization.
+// member's own credential with their full access (not an API key, agent key or narrowed token), and
+// the email rules feature.
 //
 // POST /email-rule-requests/{id}/decline
 func (UnimplementedHandler) DeclineEmailRuleRequest(ctx context.Context, params DeclineEmailRuleRequestParams) (r DeclineEmailRuleRequestRes, _ error) {
@@ -832,12 +866,23 @@ func (UnimplementedHandler) DeleteEmail(ctx context.Context, params DeleteEmailP
 //
 // Deletes a rule with its versions, its decisions and the access it granted. The author, or a caller
 // who reads the whole organization's mail, may delete it; while it is shared with another member,
-// only the author or someone who manages members from the dashboard. Needs mail:read, a credential
-// acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
-// and the email rules feature on the organization.
+// only the author or someone who manages members from the dashboard. Needs mail:read, a member's own
+// credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature.
 //
 // DELETE /email-rules/{id}
 func (UnimplementedHandler) DeleteEmailRule(ctx context.Context, params DeleteEmailRuleParams) (r DeleteEmailRuleRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DeleteEmailRuleRequest implements deleteEmailRuleRequest operation.
+//
+// Deletes a request you withdrew, for everyone who could see it. Needs mail:read, a member's own
+// credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature.
+//
+// DELETE /email-rule-requests/{id}
+func (UnimplementedHandler) DeleteEmailRuleRequest(ctx context.Context, params DeleteEmailRuleRequestParams) (r DeleteEmailRuleRequestRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1400,7 +1445,7 @@ func (UnimplementedHandler) GetConversation(ctx context.Context, params GetConve
 //	whether members may create keys and the other rules every new key is held to. Needs the
 //
 // organization's credential features to be enabled; while they are not, this answers 404
-// feature_disabled, with details.feature naming the feature. Only Primitive turns these on.
+// feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 // Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
 // connection keys and agents are refused.
 //
@@ -1433,7 +1478,8 @@ func (UnimplementedHandler) GetDefaultNetworkAgent(ctx context.Context, params G
 
 // GetDelivery implements getDelivery operation.
 //
-// One webhook delivery attempt record, by the id listDeliveries returns.
+// One webhook delivery attempt record, by the id listDeliveries returns, with every attempt of the
+// same delivery (a retry is recorded as a new attempt with its own id).
 //
 // GET /webhooks/deliveries/{id}
 func (UnimplementedHandler) GetDelivery(ctx context.Context, params GetDeliveryParams) (r GetDeliveryRes, _ error) {
@@ -1502,11 +1548,11 @@ func (UnimplementedHandler) GetEmailReadable(ctx context.Context, params GetEmai
 
 // GetEmailRule implements getEmailRule operation.
 //
-// A rule, its scope (evaluation_scope, and scope_selection for a selected rule) and its current
-// version. What the scope comes to for its author now is GET /email-rules/{id}/scope. The SQL the
-// version renders to is included only when include_sql is true. Needs mail:read, a credential acting
-// as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the
-// email rules feature on the organization.
+// A rule, its scope (evaluation_scope, and scope_selection for a selected rule), its current version
+// and its saved expectations. What the scope comes to for its author now is GET
+// /email-rules/{id}/scope. The SQL the version renders to is included only when include_sql is true.
+// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+// narrowed token), and the email rules feature.
 //
 // GET /email-rules/{id}
 func (UnimplementedHandler) GetEmailRule(ctx context.Context, params GetEmailRuleParams) (r GetEmailRuleRes, _ error) {
@@ -1517,9 +1563,8 @@ func (UnimplementedHandler) GetEmailRule(ctx context.Context, params GetEmailRul
 //
 // A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a
 // member. A request is visible to the member who made it, the member it was made to, and the
-// organization's owners and admins. Needs mail:read, a credential acting as a member with their full
-// access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
-// organization.
+// organization's owners and admins. Needs mail:read, a member's own credential with their full
+// access (not an API key, agent key or narrowed token), and the email rules feature.
 //
 // GET /email-rule-requests/{id}
 func (UnimplementedHandler) GetEmailRuleRequest(ctx context.Context, params GetEmailRuleRequestParams) (r GetEmailRuleRequestRes, _ error) {
@@ -1530,8 +1575,8 @@ func (UnimplementedHandler) GetEmailRuleRequest(ctx context.Context, params GetE
 //
 // Whose mail the rule runs over, and what that comes to now: a rule never reaches further than what
 // its author can read when it runs, so what a selected rule names and its author can no longer read
-// stops matching. Needs mail:read, a credential acting as a member with their full access (API keys,
-// agent keys and narrowed tokens are refused), and the email rules feature on the organization.
+// stops matching. Needs mail:read, a member's own credential with their full access (not an API key,
+// agent key or narrowed token), and the email rules feature.
 //
 // GET /email-rules/{id}/scope
 func (UnimplementedHandler) GetEmailRuleScope(ctx context.Context, params GetEmailRuleScopeParams) (r GetEmailRuleScopeRes, _ error) {
@@ -1540,11 +1585,50 @@ func (UnimplementedHandler) GetEmailRuleScope(ctx context.Context, params GetEma
 
 // GetEmailRuleShare implements getEmailRuleShare operation.
 //
-// One share. Needs mail:read, a credential acting as a member with their full access (API keys,
-// agent keys and narrowed tokens are refused), and the email rules feature on the organization.
+// One share. Needs mail:read, a member's own credential with their full access (not an API key,
+// agent key or narrowed token), and the email rules feature.
 //
 // GET /email-rule-shares/{id}
 func (UnimplementedHandler) GetEmailRuleShare(ctx context.Context, params GetEmailRuleShareParams) (r GetEmailRuleShareRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetEmailRuleVocabulary implements getEmailRuleVocabulary operation.
+//
+// What a rule tree you write yourself can say: each column of the current vocabulary with its type,
+// source, meaning, operators and the value each takes, options, and whether it takes min_confidence;
+// and the tree's limits, its stored size included. Built from the checks a saved or tested tree must
+// pass. A tree is {version: tree_version, vocabulary: version, when, questions}. Needs mail:read, a
+// member's own credential with their full access (not an API key, agent key or narrowed token), and
+// the email rules feature.
+//
+// GET /email-rules/vocabulary
+func (UnimplementedHandler) GetEmailRuleVocabulary(ctx context.Context) (r GetEmailRuleVocabularyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetEndpoint implements getEndpoint operation.
+//
+// One endpoint, as GET /endpoints shows it, to a caller who would see it there. Any other id, a
+// deleted endpoint's included, answers 404.
+//
+// GET /endpoints/{id}
+func (UnimplementedHandler) GetEndpoint(ctx context.Context, params GetEndpointParams) (r GetEndpointRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetEndpointSigningSecret implements getEndpointSigningSecret operation.
+//
+// The secret deliveries to this webhook are signed with, when it signs with its own (signed_with is
+// own_secret). Verify the Primitive-Signature header with it. A webhook a person owns is given its
+// secret the first time it is asked for. A webhook that signs with the organization's secret answers
+// 409 conflict: rotate its signing secret to give it its own. Answered to the person who owns the
+// webhook; for a webhook an API key owns, to the key that acts for it and the person who holds that
+// key; for one a third-party app or an agent delegate owns, to that app or delegate; and for a
+// webhook the organization owns, to a caller who may change it and holds webhook_secret:read.
+//
+// GET /endpoints/{id}/signing-secret
+func (UnimplementedHandler) GetEndpointSigningSecret(ctx context.Context, params GetEndpointSigningSecretParams) (r GetEndpointSigningSecretRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1687,9 +1771,11 @@ func (UnimplementedHandler) GetInteraction(ctx context.Context, params GetIntera
 
 // GetKey implements getKey operation.
 //
-// One key's metadata, never its secret. The person needs access to the whole organization's mail.
-// Needs the organization's credential features to be enabled; while they are not, this answers 404
-// feature_disabled, with details.feature naming the feature. Only Primitive turns these on.
+// One key's metadata, never its secret, with whether it works now (status). Its grant's mail_scope.
+// depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain,
+// otherwise content. The person needs access to the whole organization's mail. Needs the
+// organization's credential features to be enabled; while they are not, this answers 404
+// feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 // Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
 // person's role must hold keys:read. API keys, agent connection keys and agents are refused.
 //
@@ -1704,8 +1790,8 @@ func (UnimplementedHandler) GetKey(ctx context.Context, params GetKeyParams) (r 
 // matrix for custom keys and the policy in force. An area marked org_wide_only (Members) is listed
 // only to a person who holds its permission, and only a custom key with no addresses or domains may
 // hold it. Needs the organization's credential features to be enabled; while they are not, this
-// answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns these
-// on.
+// answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn
+// them on.
 // Person only: a dashboard session. The person's role must hold keys:read. API keys, agent
 // connection keys and agents are refused.
 //
@@ -1727,7 +1813,7 @@ func (UnimplementedHandler) GetKeyBuilder(ctx context.Context) (r GetKeyBuilderR
 // read and sent from (counts only, and only for a person with access to the whole organization's
 // mail). Nothing is applied: narrowing is a change to the key (PATCH /v1/keys/:id). Needs the
 // organization's credential features to be enabled; while they are not, this answers 404
-// feature_disabled, with details.feature naming the feature. Only Primitive turns these on.
+// feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 // Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
 // connection keys and agents are refused.
 //
@@ -2042,10 +2128,10 @@ func (UnimplementedHandler) GetWebhookDeliveryStats(ctx context.Context, params 
 // Returns the webhook signing secret for your account. If no
 // secret exists yet, one is generated automatically on first
 // access.
-// Signing is account-scoped, not per-endpoint. Every webhook
-// delivery from any of your registered endpoints is signed
-// with this single secret. Rotate via
-// `POST /account/webhook-secret/rotate`.
+// Every webhook is signed with this secret unless it has its own. Rotate this secret via `POST
+// /account/webhook-secret/rotate`. A webhook whose signed_with is own_secret is signed with its own
+// secret instead; read it from GET /endpoints/{id}/signing-secret. A webhook's own secret rotates
+// via `POST /endpoints/{id}/signing-secret/rotate`.
 // **Secret format**: the returned string looks base64-shaped
 // (e.g. `XNHBBW8VqoBjRfNs1tkZj11jTk...`) but is NOT base64.
 // Use it AS-IS as a UTF-8 string when computing HMAC over a
@@ -2297,7 +2383,7 @@ func (UnimplementedHandler) ListContacts(ctx context.Context, params ListContact
 // Credential events (created, rotated, edited, revoked, used with a step-up, policy changes), newest
 // first, with a cursor. format=csv returns the same page as CSV. Needs the organization's credential
 // features to be enabled; while they are not, this answers 404 feature_disabled, with details.
-// feature naming the feature. Only Primitive turns these on.
+// feature naming the feature. Contact Primitive to turn them on.
 // Person only: a dashboard session. The person's role must hold credential_events:read. API keys,
 // agent connection keys and agents are refused.
 //
@@ -2311,10 +2397,11 @@ func (UnimplementedHandler) ListCredentialEvents(ctx context.Context, params Lis
 // Every credential that can act in the organization: API keys, Function keys, agent connection keys,
 // connected apps (OAuth), agent delegates and, where enabled, CLI logins. Secrets are never returned.
 //
-//	Filter with kind. Needs the organization's credential features to be enabled; while they are not,
+//	A key's grant.mail_scope.depth is raw only when it holds mail.raw:read and its scope lists an
 //
-// this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns
-// these on.
+// address or a domain, otherwise content. Filter with kind. Needs the organization's credential
+// features to be enabled; while they are not, this answers 404 feature_disabled, with details.
+// feature naming the feature. Contact Primitive to turn them on.
 // Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
 // connection keys and agents are refused.
 //
@@ -2388,10 +2475,11 @@ func (UnimplementedHandler) ListEmailAttachmentArchiveMembers(ctx context.Contex
 // ListEmailRuleDecisions implements listEmailRuleDecisions operation.
 //
 // What the rule decided for each email it was evaluated against, newest first: whether it matched,
-// whether it nearly did, how each part decided and the answers to its questions. Only decisions on
-// emails the caller can read are listed. With matched, only matches (true) or only the rest (false).
-// Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
-// narrowed tokens are refused), and the email rules feature on the organization.
+// whether it nearly did, how each part decided and the answers to its questions, with which email it
+// was (from_address, subject, received_at). Only decisions on emails the caller can read are listed.
+// With matched, only matches (true) or only the rest (false). Needs mail:read, a member's own
+// credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature.
 //
 // GET /email-rules/{id}/decisions
 func (UnimplementedHandler) ListEmailRuleDecisions(ctx context.Context, params ListEmailRuleDecisionsParams) (r ListEmailRuleDecisionsRes, _ error) {
@@ -2405,9 +2493,9 @@ func (UnimplementedHandler) ListEmailRuleDecisions(ctx context.Context, params L
 //
 //	declined and withdrawn ones, and any lists both. A request is visible to the member who made it,
 //
-// the member it was made to, and the organization's owners and admins. Needs mail:read, a credential
-// acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
-// and the email rules feature on the organization.
+// the member it was made to, and the organization's owners and admins. Needs mail:read, a member's
+// own credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature.
 //
 // GET /email-rule-requests
 func (UnimplementedHandler) ListEmailRuleRequests(ctx context.Context, params ListEmailRuleRequestsParams) (r ListEmailRuleRequestsRes, _ error) {
@@ -2416,15 +2504,14 @@ func (UnimplementedHandler) ListEmailRuleRequests(ctx context.Context, params Li
 
 // ListEmailRuleResults implements listEmailRuleResults operation.
 //
-// Every rule the caller can see and what it decided about this email: those that matched, those that
-// did not, and those that have not run on it, with what is known about them. A result names the
-// version of the rule that decided and carries that version's conditions and questions. A matched
-// rule with kind do_not_share keeps rules from sharing the email while it is active; anything shared
-// before then stays shared. Only a caller who can read the email gets an answer, and a rule the
-// caller cannot see is left out. At most 50 rules are listed, those with a result first; hidden
-// counts the rest. Needs mail:read, a credential acting as a member with their full access (API keys,
-//
-//	agent keys and narrowed tokens are refused), and the email rules feature on the organization.
+// Every rule you can see and what it decided about this email (matched, not matched, or not run,
+// with what is known), in the words of the version that decided. A matched do_not_share rule keeps
+// rules from sharing the email while it is active; what was shared before then stays shared. Only a
+// caller who can read the email gets an answer. classification is what the classifier read from the
+// email, every fact as rule conditions read it, so you can see why a rule did or did not match. At
+// most 50 rules are listed, those with a result first; hidden counts the rest. Needs mail:read, a
+// member's own credential with their full access (not an API key, agent key or narrowed token), and
+// the email rules feature.
 //
 // GET /emails/{id}/rule-results
 func (UnimplementedHandler) ListEmailRuleResults(ctx context.Context, params ListEmailRuleResultsParams) (r ListEmailRuleResultsRes, _ error) {
@@ -2438,9 +2525,8 @@ func (UnimplementedHandler) ListEmailRuleResults(ctx context.Context, params Lis
 // organization, addresses lists the inboxes known as someone's (member addresses, members' verified
 // work emails at the organization's domains, agents' addresses and inboxes with shared access), not
 // every address that receives mail: may_name_unlisted says when an address that is not listed, such
-// as an inbox nobody has claimed, may be named too. Needs mail:read, a credential acting as a member
-// with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules
-// feature on the organization.
+// as an inbox nobody has claimed, may be named too. Needs mail:read, a member's own credential with
+// their full access (not an API key, agent key or narrowed token), and the email rules feature.
 //
 // GET /email-rule-scope-options
 func (UnimplementedHandler) ListEmailRuleScopeOptions(ctx context.Context, params ListEmailRuleScopeOptionsParams) (r ListEmailRuleScopeOptionsRes, _ error) {
@@ -2449,10 +2535,13 @@ func (UnimplementedHandler) ListEmailRuleScopeOptions(ctx context.Context, param
 
 // ListEmailRuleShareEmails implements listEmailRuleShareEmails operation.
 //
-// The emails a rule shared with you has matched, newest first, as the email list shows them. Only
-// the person it was shared with can list them, from the dashboard or the Primitive CLI. An ended
-// share lists nothing. A page can be short or empty and still carry a cursor: keep reading until
-// meta.cursor is null.
+// The emails a rule share has given, newest first, as the email list shows them, each with
+// shared_at: when the share's rule first matched it. For the person it was shared with: what they
+// can read through it now, so an ended share lists nothing. For the person sharing their mail:
+// everything it has handed over while it ran, including after it ended, so they can see what left
+// their mailbox; while the share's rule is off this answers email_rule_not_active instead. Only
+// those two people can list them, from the dashboard or the Primitive CLI. A page can be short or
+// empty and still carry a cursor: keep reading until meta.cursor is null.
 //
 // GET /email-rule-shares/{id}/emails
 func (UnimplementedHandler) ListEmailRuleShareEmails(ctx context.Context, params ListEmailRuleShareEmailsParams) (r ListEmailRuleShareEmailsRes, _ error) {
@@ -2462,9 +2551,9 @@ func (UnimplementedHandler) ListEmailRuleShareEmails(ctx context.Context, params
 // ListEmailRuleShares implements listEmailRuleShares operation.
 //
 // Lists rules shared with you, rules you share, or every share you can see. A share is visible to
-// its two people and the organization's owners and admins. Needs mail:read, a credential acting as a
-// member with their full access (API keys, agent keys and narrowed tokens are refused), and the
-// email rules feature on the organization.
+// its two people and the organization's owners and admins. Needs mail:read, a member's own
+// credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature.
 //
 // GET /email-rule-shares
 func (UnimplementedHandler) ListEmailRuleShares(ctx context.Context, params ListEmailRuleSharesParams) (r ListEmailRuleSharesRes, _ error) {
@@ -2473,10 +2562,11 @@ func (UnimplementedHandler) ListEmailRuleShares(ctx context.Context, params List
 
 // ListEmailRuleVersions implements listEmailRuleVersions operation.
 //
-// The named versions of a rule, as they were written: what each one's conditions and questions were,
-// so a decision can be read against the version that made it. Numbers that are not versions of the
-// rule are left out. Needs mail:read, a credential acting as a member with their full access (API
-// keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.
+// A rule's versions as they were written: what each one's conditions and questions were, so a
+// decision can be read against the version that made it. Without versions, every version newest
+// first, a page at a time (meta.cursor). With versions, only those named, oldest first; numbers that
+// are not versions of the rule are left out. Needs mail:read, a member's own credential with their
+// full access (not an API key, agent key or narrowed token), and the email rules feature.
 //
 // GET /email-rules/{id}/versions
 func (UnimplementedHandler) ListEmailRuleVersions(ctx context.Context, params ListEmailRuleVersionsParams) (r ListEmailRuleVersionsRes, _ error) {
@@ -2488,8 +2578,8 @@ func (UnimplementedHandler) ListEmailRuleVersions(ctx context.Context, params Li
 // The rules the caller can see, newest first: their own, or every member's rules for a caller who
 // reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
 // for a selected rule). With matched_email_id, only the rules that matched that email. Needs
-// mail:read, a credential acting as a member with their full access (API keys, agent keys and
-// narrowed tokens are refused), and the email rules feature on the organization.
+// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+// token), and the email rules feature.
 //
 // GET /email-rules
 func (UnimplementedHandler) ListEmailRules(ctx context.Context, params ListEmailRulesParams) (r ListEmailRulesRes, _ error) {
@@ -2655,10 +2745,12 @@ func (UnimplementedHandler) ListInteractions(ctx context.Context, params ListInt
 
 // ListKeys implements listKeys operation.
 //
-// Key metadata, never a secret: name, prefix, grant, creator, last use, expiry and suspension. The
-// person needs access to the whole organization's mail. Needs the organization's credential features
-// to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming
-// the feature. Only Primitive turns these on.
+// Key metadata, never a secret: name, prefix, grant, creator, last use, expiry, suspension and
+// whether each key works now (status). A grant's mail_scope.depth is raw only when the key holds
+// mail.raw:read and its scope lists an address or a domain, otherwise content. The person needs
+// access to the whole organization's mail. Needs the organization's credential features to be
+// enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the
+// feature. Contact Primitive to turn them on.
 // Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
 // person's role must hold keys:read. API keys, agent connection keys and agents are refused.
 //
@@ -3515,8 +3607,8 @@ func (UnimplementedHandler) RevokeAgentConnection(ctx context.Context, params Re
 // created since a time, rotates the organization Function key and every running Function's own key,
 // and optionally suspends Functions. Owners only, from a dashboard session, and the body must
 // confirm with "revoke all". Needs the organization's credential features to be enabled; while they
-// are not, this answers 404 feature_disabled, with details.feature naming the feature. Only
-// Primitive turns these on.
+// are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact
+// Primitive to turn them on.
 // Person only: a dashboard session. The person's role must hold credentials:revoke_all. API keys,
 // agent connection keys and agents are refused.
 //
@@ -3530,11 +3622,16 @@ func (UnimplementedHandler) RevokeAllCredentials(ctx context.Context, req *Crede
 // Revoke one credential by kind and id. A Function key is rotated, never revoked (409
 // rotate_instead). An API key is revoked only by a person whose own access covers the key's access
 // (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered.
-// What the credential set up keeps working and is listed in standing_objects for review. Needs the
-// organization's credential features to be enabled; while they are not, this answers 404
-// feature_disabled, with details.feature naming the feature. Only Primitive turns these on.
-// Person only: a dashboard session. The person's role must hold keys:manage. API keys, agent
-// connection keys and agents are refused.
+// What the credential set up keeps working and is listed in standing_objects for review. The
+// person's own Primitive CLI login revokes an API key (kind org_key) as the person, with no step-up
+// unless the organization's credential policy sets cli_writes_require_approval (then it takes a keys.
+// create step-up); every other kind (a connected key named as org_key included, 403 grant_forbidden
+// target_not_covered), and every other app even with a step-up, is refused outside the dashboard
+// (403). Needs the organization's credential features to be enabled; while they are not, this
+// answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn
+// them on.
+// Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
+// person's role must hold keys:manage. API keys, agent connection keys and agents are refused.
 //
 // POST /credentials/revoke
 func (UnimplementedHandler) RevokeCredential(ctx context.Context, req *CredentialsRevokeCredentialInput, params RevokeCredentialParams) (r RevokeCredentialRes, _ error) {
@@ -3590,23 +3687,42 @@ func (UnimplementedHandler) RevokeProjectInvitation(ctx context.Context, params 
 	return r, ht.ErrNotImplemented
 }
 
+// RotateEndpointSigningSecret implements rotateEndpointSigningSecret operation.
+//
+// Replaces the webhook's own signing secret, or gives a webhook that signs with the organization's
+// secret one of its own, and returns it. Deliveries are signed with the new secret at once, so
+// update the handler at the same time. Answered to the person who owns the webhook; for a webhook an
+// API key owns, to the key that acts for it and the person who holds that key; for one a third-party
+// app or an agent delegate owns, to that app or delegate; and for a webhook the organization owns,
+// to a caller who may change it and holds webhook_secret:read.
+//
+// POST /endpoints/{id}/signing-secret/rotate
+func (UnimplementedHandler) RotateEndpointSigningSecret(ctx context.Context, params RotateEndpointSigningSecretParams) (r RotateEndpointSigningSecretRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // RotateKey implements rotateKey operation.
 //
-// Mint a successor with the same grant and return its secret once. The old key keeps working for
-// overlap_seconds, then stops. The person rotating must cover the key's access (403 grant_forbidden,
-// details.reason target_not_covered), and a key an owner created is rotated by an owner only (403
-// forbidden, details.reason owner_key_rotation), since rotating hands over the new secret. The
-// person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules);
-// the Primitive app's token is refused, even with one. Needs the organization's credential features
-// to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming
-// the feature. Only Primitive turns these on.
-// Person only: a dashboard session, the person's own Primitive CLI login with no step-up, or the
-// person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up
-// header. Without one any other OAuth token is answered 403 step_up_required, whose details carry
-// the dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client,
-// could not do it anyway). The person's role must hold keys:manage. API keys and agent connection
-// keys are refused. An agent acting for the person is refused unless it carries a step-up token the
-// person issued in the dashboard.
+// Mint a successor with a new id and the same name, grant, expiry and conditions, and return its
+// secret once. The old key keeps working for overlap_seconds, then stops: 24 hours when
+// overlap_seconds is omitted, at most 7 days, never past its own expires_at, and at once with 0
+// (which is how to rotate a key whose secret leaked). previous_key_expires_at says when the old key
+// stops. The person rotating must cover the key's access (403 grant_forbidden, details.reason
+// target_not_covered), and a key an owner holds is rotated by an owner only (403 forbidden, details.
+// reason owner_key_rotation), since rotating hands over the new secret. The person's own Primitive
+// CLI login needs no step-up (it acts as the person, held to the same rules) unless the
+// organization's credential policy sets cli_writes_require_approval; the Primitive app's token is
+// refused, even with one. Needs the organization's credential features to be enabled; while they are
+// not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive
+// to turn them on.
+// Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
+// organization's credential policy sets cli_writes_require_approval), or the person's own OAuth
+// token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one
+// any other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that
+// issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway).
+// The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent
+// acting for the person is refused unless it carries a step-up token the person issued in the
+// dashboard.
 //
 // POST /keys/{id}/rotate
 func (UnimplementedHandler) RotateKey(ctx context.Context, req *CredentialsRotateKeyInput, params RotateKeyParams) (r RotateKeyRes, _ error) {
@@ -4036,20 +4152,21 @@ func (UnimplementedHandler) SuspendFunctionRuntimeKey(ctx context.Context, req *
 
 // TestEmailRule implements testEmailRule operation.
 //
-// Runs a rule over received mail and reports what it would decide for each email: matched, near_miss,
+// Runs a rule over received mail and reports what it would decide for each email (matched, near_miss,
 //
-//	no_match, unclassified or not_found. Test an unsaved tree from a compile response, or a saved
+//	no_match, unclassified or not_found), with a summary: how each top-level condition and question
 //
-// rule by rule_id (its current version, run with its author's access). Either way the rule reads
-// only mail its author can read, and only what its scope covers; an unsaved tree covers only your
-// own mail unless evaluation_scope names more. Without email_ids, the newest emails it can read are
-// tested, at most 200 and none older than 30 days. Emails not classified yet that arrived more than
-// 2 hours ago are classified first and their classification is saved, unless classify_missing is
-// false; newer ones are left to normal classification and reported unclassified with reason pending.
-// The rule itself records nothing and grants nothing. Classification and the rule's own questions
-// stop at about 90 seconds; run the test again to continue where it stopped. Needs mail:read, a
-// credential acting as a member with their full access (API keys, agent keys and narrowed tokens are
-// refused), and the email rules feature on the organization.
+// decided and, when nothing matched, what stopped it. Test an unsaved tree from a compile response,
+// or a saved rule by rule_id (its current version, run with its author's access). The rule reads
+// only mail its author can read and its scope covers; an unsaved tree covers only your own mail
+// unless evaluation_scope names more. Without email_ids, the newest emails it can read are tested,
+// at most 200 and none older than 30 days; expected emails (expect, or a saved rule's saved
+// expectations) are tested whatever their age. Unclassified emails more than 2 hours old are
+// classified first and their classification saved, unless classify_missing is false; newer ones are
+// reported unclassified, pending. The rule itself records and grants nothing. Classification and the
+// rule's questions stop at about 90 seconds; a rerun continues the classification where it stopped.
+// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+// narrowed token), and the email rules feature.
 //
 // POST /email-rules/test
 func (UnimplementedHandler) TestEmailRule(ctx context.Context, req *TestEmailRuleRequest, params TestEmailRuleParams) (r TestEmailRuleRes, _ error) {
@@ -4058,18 +4175,14 @@ func (UnimplementedHandler) TestEmailRule(ctx context.Context, req *TestEmailRul
 
 // TestEmailRuleOnSample implements testEmailRuleOnSample operation.
 //
-// Reports what a rule would decide for an email you describe: its sender, recipients, subject, plain
-// text and attachment types, and optionally whether it is automated or from a mailing list and its
-// spam score. The email is classified the way received mail is, and the rule's conditions and its
-// own questions are decided as they would be for received mail with that content and those signals,
-// received now. Without them it is not automated and not from a mailing list; a rule that reads a
-// spam score you gave none for is decided on no score, and spam_score is listed in unset_columns.
-// Nothing is stored: no email, classification or decision. Test an unsaved tree from a compile
-// response, or a saved rule by rule_id (its current version); an unsaved tree is run as covering
-// only your own mail unless evaluation_scope names more, as on POST /email-rules/test. The answer
-// includes what the classifier read from the email. Needs mail:read, a credential acting as a member
-// with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules
-// feature on the organization.
+// Reports what a rule would decide for an email you describe (sender, recipients, subject, plain
+// text, attachment types; optionally whether it is automated or from a mailing list, and its spam
+// score), received now: it is classified, and the conditions and questions decided, as received mail
+// would be. By default it is not automated or from a list; a rule reading a spam score you gave none
+// for decides on none (spam_score is then in unset_columns). Nothing is stored. Test an unsaved tree
+// (covering only your own mail unless evaluation_scope names more) or a saved rule by rule_id. The
+// answer includes what the classifier read. Needs mail:read, a member's own credential with their
+// full access (not an API key, agent key or narrowed token), and the email rules feature.
 //
 // POST /email-rules/test-sample
 func (UnimplementedHandler) TestEmailRuleOnSample(ctx context.Context, req *TestEmailRuleOnSampleRequest, params TestEmailRuleOnSampleParams) (r TestEmailRuleOnSampleRes, _ error) {
@@ -4205,7 +4318,7 @@ func (UnimplementedHandler) UpdateAgentConnectionSettings(ctx context.Context, r
 // Change one or more policy rules. Admins may only tighten the policy; loosening any rule needs an
 // owner. Owners and admins are emailed about every change. Needs the organization's credential
 // features to be enabled; while they are not, this answers 404 feature_disabled, with details.
-// feature naming the feature. Only Primitive turns these on.
+// feature naming the feature. Contact Primitive to turn them on.
 // Person only: a dashboard session. The person's role must hold credential_policy:manage. API keys,
 // agent connection keys and agents are refused.
 //
@@ -4236,16 +4349,16 @@ func (UnimplementedHandler) UpdateDomain(ctx context.Context, req *UpdateDomainI
 
 // UpdateEmailRule implements updateEmailRule operation.
 //
-// Renames the rule, saves a new version (english, tree and explanation together; earlier versions
-// are kept unchanged), changes its state (draft, disabled; observe; or active) or changes whose mail
-// it runs over (evaluation_scope, with scope_selection when selected). Only the rule's author may
-// rename it, add a version, change its scope or move it to observe or active; anyone else who can
-// see it may only disable it (state draft), and while it is shared with another member only if they
-// manage members from the dashboard. Omit evaluation_scope to keep the current scope. A scope change
-// saves a new version with the same conditions; what was granted stays. A shared rule keeps its
-// scope. A rule's kind never changes. Needs mail:read, a credential acting as a member with their
-// full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on
-// the organization.
+// Renames the rule, saves a new version (english and tree together, with an explanation or one the
+// server writes; earlier versions stay), changes its state (draft is off; observe; active), whose
+// mail it runs over (evaluation_scope, with scope_selection when selected) or its saved expectations
+// (each saved version and new set is judged in expectations_check). Anyone but its author who sees
+// it may only disable it (state draft), and while it is shared only if they manage members from the
+// dashboard. Without evaluation_scope the scope stays; a scope change saves a new version with the
+// same conditions, and what was granted stays. A shared rule keeps its scope; a kind never changes.
+// Send if_version, the current_version you read, so a write never replaces a version saved since.
+// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+// narrowed token), and the email rules feature.
 //
 // PATCH /email-rules/{id}
 func (UnimplementedHandler) UpdateEmailRule(ctx context.Context, req *UpdateEmailRuleRequest, params UpdateEmailRuleParams) (r UpdateEmailRuleRes, _ error) {
@@ -4254,9 +4367,9 @@ func (UnimplementedHandler) UpdateEmailRule(ctx context.Context, req *UpdateEmai
 
 // UpdateEndpoint implements updateEndpoint operation.
 //
-// Updates an active webhook endpoint. If the URL is changed, the old
-// endpoint is deactivated and a new one is created (or an existing
-// deactivated endpoint with the new URL is reactivated).
+// Updates an active webhook endpoint. Changing the URL keeps the endpoint: its id, recipient routes,
+// signing secret, delivery history and any deliveries still owed to it stay with it, and owed
+// deliveries go to the new URL. Another active endpoint at the new URL is refused.
 // Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing
 // endpoint deletion disconnects the destination; creating a new destination does not backfill
 // historical events.
@@ -4329,17 +4442,19 @@ func (UnimplementedHandler) UpdateGroup(ctx context.Context, req *UpdateGroupReq
 // grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key and
 // is held to the same rules as creating one (a custom grant that does not say which mail it reaches
 // is refused with details.reason mail_scope_required), so it takes the same step-up. The person's
-// own Primitive CLI login needs no step-up (it acts as the person, held to the same rules); the
-// Primitive app's token is refused, even with one. Needs the organization's credential features to
-// be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the
-// feature. Only Primitive turns these on.
-// Person only: a dashboard session, the person's own Primitive CLI login with no step-up, or the
-// person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up
-// header. Without one any other OAuth token is answered 403 step_up_required, whose details carry
-// the dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client,
-// could not do it anyway). The person's role must hold keys:manage. API keys and agent connection
-// keys are refused. An agent acting for the person is refused unless it carries a step-up token the
-// person issued in the dashboard.
+// own Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless
+// the organization's credential policy sets cli_writes_require_approval; the Primitive app's token
+// is refused, even with one. Needs the organization's credential features to be enabled; while they
+// are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact
+// Primitive to turn them on.
+// Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
+// organization's credential policy sets cli_writes_require_approval), or the person's own OAuth
+// token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one
+// any other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that
+// issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway).
+// The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent
+// acting for the person is refused unless it carries a step-up token the person issued in the
+// dashboard.
 //
 // PATCH /keys/{id}
 func (UnimplementedHandler) UpdateKey(ctx context.Context, req *CredentialsUpdateKeyInput, params UpdateKeyParams) (r UpdateKeyRes, _ error) {
@@ -4448,11 +4563,13 @@ func (UnimplementedHandler) UpdateRepeatingSend(ctx context.Context, req *Update
 // whose stored scope cannot be read must be sent a new mail_scope, otherwise 400 `validation_error`
 // with `details.reason` `invalid_mail_scope`.  A personal mailbox the new version adds must be the
 // author's own, and every holder must be the member of each personal mailbox it names: otherwise 403
-// `grant_forbidden` with `details.reason` `personal_mailbox_member_only`. Person only: a dashboard
-// session, or the person's own OAuth or CLI token with a session step-up of purpose `roles.write`
-// (the person confirms at the step_up_url a 403 step_up_required answer carries, which names this
-// client, then send the token in the Primitive-Step-Up header; the token works only with the client
-// it was confirmed for). Needs roles:assign. API keys are refused.
+// `grant_forbidden` with `details.reason` `personal_mailbox_member_only`. Each permission in the new
+// version must have what it requires in the same role, as when creating one, including permissions
+// carried over unchanged. Person only: a dashboard session, or the person's own OAuth or CLI token
+// with a session step-up of purpose `roles.write` (the person confirms at the step_up_url a 403
+// step_up_required answer carries, which names this client, then send the token in the
+// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
+// roles:assign. API keys are refused.
 //
 // PATCH /roles/{id}
 func (UnimplementedHandler) UpdateRole(ctx context.Context, req *UpdateRoleRequest, params UpdateRoleParams) (r UpdateRoleRes, _ error) {
@@ -4578,9 +4695,8 @@ func (UnimplementedHandler) Whoami(ctx context.Context, params WhoamiParams) (r 
 
 // WithdrawEmailRuleRequest implements withdrawEmailRuleRequest operation.
 //
-// Withdraws a pending request you made. Needs mail:read, a credential acting as a member with their
-// full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on
-// the organization.
+// Withdraws a pending request you made. Needs mail:read, a member's own credential with their full
+// access (not an API key, agent key or narrowed token), and the email rules feature.
 //
 // POST /email-rule-requests/{id}/withdraw
 func (UnimplementedHandler) WithdrawEmailRuleRequest(ctx context.Context, params WithdrawEmailRuleRequestParams) (r WithdrawEmailRuleRequestRes, _ error) {

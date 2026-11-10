@@ -125,9 +125,8 @@ def sync_detailed(
     """ List rule shares
 
      Lists rules shared with you, rules you share, or every share you can see. A share is visible to its
-    two people and the organization's owners and admins. Needs mail:read, a credential acting as a
-    member with their full access (API keys, agent keys and narrowed tokens are refused), and the email
-    rules feature on the organization.
+    two people and the organization's owners and admins. Needs mail:read, a member's own credential with
+    their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         box (ListEmailRuleSharesBox | Unset): received: rules shared with you; given: rules you
@@ -173,9 +172,8 @@ def sync(
     """ List rule shares
 
      Lists rules shared with you, rules you share, or every share you can see. A share is visible to its
-    two people and the organization's owners and admins. Needs mail:read, a credential acting as a
-    member with their full access (API keys, agent keys and narrowed tokens are refused), and the email
-    rules feature on the organization.
+    two people and the organization's owners and admins. Needs mail:read, a member's own credential with
+    their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         box (ListEmailRuleSharesBox | Unset): received: rules shared with you; given: rules you
@@ -216,9 +214,8 @@ async def asyncio_detailed(
     """ List rule shares
 
      Lists rules shared with you, rules you share, or every share you can see. A share is visible to its
-    two people and the organization's owners and admins. Needs mail:read, a credential acting as a
-    member with their full access (API keys, agent keys and narrowed tokens are refused), and the email
-    rules feature on the organization.
+    two people and the organization's owners and admins. Needs mail:read, a member's own credential with
+    their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         box (ListEmailRuleSharesBox | Unset): received: rules shared with you; given: rules you
@@ -264,9 +261,8 @@ async def asyncio(
     """ List rule shares
 
      Lists rules shared with you, rules you share, or every share you can see. A share is visible to its
-    two people and the organization's owners and admins. Needs mail:read, a credential acting as a
-    member with their full access (API keys, agent keys and narrowed tokens are refused), and the email
-    rules feature on the organization.
+    two people and the organization's owners and admins. Needs mail:read, a member's own credential with
+    their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         box (ListEmailRuleSharesBox | Unset): received: rules shared with you; given: rules you

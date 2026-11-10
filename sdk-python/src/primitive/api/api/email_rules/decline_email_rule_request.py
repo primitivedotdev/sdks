@@ -111,8 +111,8 @@ def sync_detailed(
     """ Decline a rule request
 
      Declines a pending request made to you. Nothing is written but the decision. Needs mail:read, a
-    credential acting as a member with their full access (API keys, agent keys and narrowed tokens are
-    refused), and the email rules feature on the organization.
+    member's own credential with their full access (not an API key, agent key or narrowed token), and
+    the email rules feature.
 
     Args:
         id (UUID):
@@ -149,8 +149,8 @@ def sync(
     """ Decline a rule request
 
      Declines a pending request made to you. Nothing is written but the decision. Needs mail:read, a
-    credential acting as a member with their full access (API keys, agent keys and narrowed tokens are
-    refused), and the email rules feature on the organization.
+    member's own credential with their full access (not an API key, agent key or narrowed token), and
+    the email rules feature.
 
     Args:
         id (UUID):
@@ -182,8 +182,8 @@ async def asyncio_detailed(
     """ Decline a rule request
 
      Declines a pending request made to you. Nothing is written but the decision. Needs mail:read, a
-    credential acting as a member with their full access (API keys, agent keys and narrowed tokens are
-    refused), and the email rules feature on the organization.
+    member's own credential with their full access (not an API key, agent key or narrowed token), and
+    the email rules feature.
 
     Args:
         id (UUID):
@@ -220,8 +220,8 @@ async def asyncio(
     """ Decline a rule request
 
      Declines a pending request made to you. Nothing is written but the decision. Needs mail:read, a
-    credential acting as a member with their full access (API keys, agent keys and narrowed tokens are
-    refused), and the email rules feature on the organization.
+    member's own credential with their full access (not an API key, agent key or narrowed token), and
+    the email rules feature.
 
     Args:
         id (UUID):

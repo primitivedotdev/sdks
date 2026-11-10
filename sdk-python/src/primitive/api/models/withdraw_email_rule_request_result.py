@@ -15,9 +15,9 @@ from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
-  from ..models.withdraw_email_rule_request_result_proposer import WithdrawEmailRuleRequestResultProposer
-  from ..models.withdraw_email_rule_request_result_target import WithdrawEmailRuleRequestResultTarget
-  from ..models.withdraw_email_rule_request_result_tree import WithdrawEmailRuleRequestResultTree
+  from ..models.email_rule_request_proposer import EmailRuleRequestProposer
+  from ..models.email_rule_request_target import EmailRuleRequestTarget
+  from ..models.email_rule_tree import EmailRuleTree
 
 
 
@@ -35,21 +35,21 @@ class WithdrawEmailRuleRequestResult:
             status (WithdrawEmailRuleRequestResultStatus):
             name (str):
             english (str):
-            tree (WithdrawEmailRuleRequestResultTree):
+            tree (EmailRuleTree):
             explanation (str):
             assumptions (list[str]):
             warnings (list[str]):
             compiled_by (str):
             vocabulary (str):
-            proposed_via (WithdrawEmailRuleRequestResultProposedVia): session: from the proposer's own session; oauth: from
-                an OAuth or CLI token acting for them.
+            proposed_via (WithdrawEmailRuleRequestResultProposedVia): session: the proposer's own session; oauth: an OAuth
+                or CLI token acting for them.
             created_at (datetime.datetime):
             decided_at (datetime.datetime | None):
             decided_by_user_id (None | UUID):
-            proposer (WithdrawEmailRuleRequestResultProposer):
-            target (WithdrawEmailRuleRequestResultTarget):
-            target_address_typed (None | str): The address you typed to name the member. Only for the member who asked; null
-                otherwise, and when they were named by user id.
+            proposer (EmailRuleRequestProposer):
+            target (EmailRuleRequestTarget):
+            target_address_typed (None | str): The address the proposer typed to name the target; null for anyone else, and
+                when named by user id.
             is_proposer (bool):
             is_target (bool):
             share_id (None | UUID): The share accepting created, while it exists.
@@ -59,7 +59,7 @@ class WithdrawEmailRuleRequestResult:
     status: WithdrawEmailRuleRequestResultStatus
     name: str
     english: str
-    tree: WithdrawEmailRuleRequestResultTree
+    tree: EmailRuleTree
     explanation: str
     assumptions: list[str]
     warnings: list[str]
@@ -69,8 +69,8 @@ class WithdrawEmailRuleRequestResult:
     created_at: datetime.datetime
     decided_at: datetime.datetime | None
     decided_by_user_id: None | UUID
-    proposer: WithdrawEmailRuleRequestResultProposer
-    target: WithdrawEmailRuleRequestResultTarget
+    proposer: EmailRuleRequestProposer
+    target: EmailRuleRequestTarget
     target_address_typed: None | str
     is_proposer: bool
     is_target: bool
@@ -82,9 +82,9 @@ class WithdrawEmailRuleRequestResult:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.withdraw_email_rule_request_result_proposer import WithdrawEmailRuleRequestResultProposer # noqa: PLC0415
-        from ..models.withdraw_email_rule_request_result_target import WithdrawEmailRuleRequestResultTarget # noqa: PLC0415
-        from ..models.withdraw_email_rule_request_result_tree import WithdrawEmailRuleRequestResultTree # noqa: PLC0415
+        from ..models.email_rule_request_proposer import EmailRuleRequestProposer # noqa: PLC0415
+        from ..models.email_rule_request_target import EmailRuleRequestTarget # noqa: PLC0415
+        from ..models.email_rule_tree import EmailRuleTree # noqa: PLC0415
         id = str(self.id)
 
         status = self.status.value
@@ -174,9 +174,9 @@ class WithdrawEmailRuleRequestResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.withdraw_email_rule_request_result_proposer import WithdrawEmailRuleRequestResultProposer # noqa: PLC0415
-        from ..models.withdraw_email_rule_request_result_target import WithdrawEmailRuleRequestResultTarget # noqa: PLC0415
-        from ..models.withdraw_email_rule_request_result_tree import WithdrawEmailRuleRequestResultTree # noqa: PLC0415
+        from ..models.email_rule_request_proposer import EmailRuleRequestProposer # noqa: PLC0415
+        from ..models.email_rule_request_target import EmailRuleRequestTarget # noqa: PLC0415
+        from ..models.email_rule_tree import EmailRuleTree # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -192,7 +192,7 @@ class WithdrawEmailRuleRequestResult:
 
         english = d.pop("english")
 
-        tree = WithdrawEmailRuleRequestResultTree.from_dict(d.pop("tree"))
+        tree = EmailRuleTree.from_dict(d.pop("tree"))
 
 
 
@@ -255,12 +255,12 @@ class WithdrawEmailRuleRequestResult:
         decided_by_user_id = _parse_decided_by_user_id(d.pop("decided_by_user_id"))
 
 
-        proposer = WithdrawEmailRuleRequestResultProposer.from_dict(d.pop("proposer"))
+        proposer = EmailRuleRequestProposer.from_dict(d.pop("proposer"))
 
 
 
 
-        target = WithdrawEmailRuleRequestResultTarget.from_dict(d.pop("target"))
+        target = EmailRuleRequestTarget.from_dict(d.pop("target"))
 
 
 

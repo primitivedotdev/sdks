@@ -24,7 +24,9 @@ class TestResult:
         Attributes:
             status (int): HTTP status code returned by the endpoint
             body (str): Response body (truncated to 1000 characters)
-            signature (str | Unset): The signature header value sent (if webhook secret is configured)
+            signature (str | Unset): The signature header value sent, answered to a caller who may see it: for a webhook
+                signed with the organization's secret, a caller who may read that secret; for one signed with its own, the
+                person who owns it, calling as themselves.
      """
 
     status: int

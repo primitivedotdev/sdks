@@ -130,11 +130,15 @@ def sync_detailed(
     refused with 400 `validation_error`. Every role that reaches mail reads it in full, and raw MIME
     follows the role's mail.raw:read; `depth` is deprecated and ignored. Its mail scope names no other
     member's personal mailbox: otherwise 403 `grant_forbidden` with `details.reason`
-    `personal_mailbox_member_only`. Person only: a dashboard session, or the person's own OAuth or CLI
-    token with a session step-up of purpose `roles.write` (the person confirms at the step_up_url a 403
-    step_up_required answer carries, which names this client, then send the token in the Primitive-Step-
-    Up header; the token works only with the client it was confirmed for). Needs roles:assign. API keys
-    are refused.
+    `personal_mailbox_member_only`. Each permission must have what it requires in the same role:
+    mail:read for mail.raw:read, mail.search:semantic, mail:share_own, changes:read and webhooks:read;
+    mail:send for mail:send_batch and mail:send_as_member; functions:deploy for templates:install;
+    agent_connections:manage for agent_connections:custom_domains. Otherwise 400 `validation_error` with
+    `details.reason` `unmet_requirement`, `details.permission` and `details.requires`. Person only: a
+    dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose
+    `roles.write` (the person confirms at the step_up_url a 403 step_up_required answer carries, which
+    names this client, then send the token in the Primitive-Step-Up header; the token works only with
+    the client it was confirmed for). Needs roles:assign. API keys are refused.
 
     Args:
         primitive_step_up (str | Unset):
@@ -178,11 +182,15 @@ def sync(
     refused with 400 `validation_error`. Every role that reaches mail reads it in full, and raw MIME
     follows the role's mail.raw:read; `depth` is deprecated and ignored. Its mail scope names no other
     member's personal mailbox: otherwise 403 `grant_forbidden` with `details.reason`
-    `personal_mailbox_member_only`. Person only: a dashboard session, or the person's own OAuth or CLI
-    token with a session step-up of purpose `roles.write` (the person confirms at the step_up_url a 403
-    step_up_required answer carries, which names this client, then send the token in the Primitive-Step-
-    Up header; the token works only with the client it was confirmed for). Needs roles:assign. API keys
-    are refused.
+    `personal_mailbox_member_only`. Each permission must have what it requires in the same role:
+    mail:read for mail.raw:read, mail.search:semantic, mail:share_own, changes:read and webhooks:read;
+    mail:send for mail:send_batch and mail:send_as_member; functions:deploy for templates:install;
+    agent_connections:manage for agent_connections:custom_domains. Otherwise 400 `validation_error` with
+    `details.reason` `unmet_requirement`, `details.permission` and `details.requires`. Person only: a
+    dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose
+    `roles.write` (the person confirms at the step_up_url a 403 step_up_required answer carries, which
+    names this client, then send the token in the Primitive-Step-Up header; the token works only with
+    the client it was confirmed for). Needs roles:assign. API keys are refused.
 
     Args:
         primitive_step_up (str | Unset):
@@ -221,11 +229,15 @@ async def asyncio_detailed(
     refused with 400 `validation_error`. Every role that reaches mail reads it in full, and raw MIME
     follows the role's mail.raw:read; `depth` is deprecated and ignored. Its mail scope names no other
     member's personal mailbox: otherwise 403 `grant_forbidden` with `details.reason`
-    `personal_mailbox_member_only`. Person only: a dashboard session, or the person's own OAuth or CLI
-    token with a session step-up of purpose `roles.write` (the person confirms at the step_up_url a 403
-    step_up_required answer carries, which names this client, then send the token in the Primitive-Step-
-    Up header; the token works only with the client it was confirmed for). Needs roles:assign. API keys
-    are refused.
+    `personal_mailbox_member_only`. Each permission must have what it requires in the same role:
+    mail:read for mail.raw:read, mail.search:semantic, mail:share_own, changes:read and webhooks:read;
+    mail:send for mail:send_batch and mail:send_as_member; functions:deploy for templates:install;
+    agent_connections:manage for agent_connections:custom_domains. Otherwise 400 `validation_error` with
+    `details.reason` `unmet_requirement`, `details.permission` and `details.requires`. Person only: a
+    dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose
+    `roles.write` (the person confirms at the step_up_url a 403 step_up_required answer carries, which
+    names this client, then send the token in the Primitive-Step-Up header; the token works only with
+    the client it was confirmed for). Needs roles:assign. API keys are refused.
 
     Args:
         primitive_step_up (str | Unset):
@@ -269,11 +281,15 @@ async def asyncio(
     refused with 400 `validation_error`. Every role that reaches mail reads it in full, and raw MIME
     follows the role's mail.raw:read; `depth` is deprecated and ignored. Its mail scope names no other
     member's personal mailbox: otherwise 403 `grant_forbidden` with `details.reason`
-    `personal_mailbox_member_only`. Person only: a dashboard session, or the person's own OAuth or CLI
-    token with a session step-up of purpose `roles.write` (the person confirms at the step_up_url a 403
-    step_up_required answer carries, which names this client, then send the token in the Primitive-Step-
-    Up header; the token works only with the client it was confirmed for). Needs roles:assign. API keys
-    are refused.
+    `personal_mailbox_member_only`. Each permission must have what it requires in the same role:
+    mail:read for mail.raw:read, mail.search:semantic, mail:share_own, changes:read and webhooks:read;
+    mail:send for mail:send_batch and mail:send_as_member; functions:deploy for templates:install;
+    agent_connections:manage for agent_connections:custom_domains. Otherwise 400 `validation_error` with
+    `details.reason` `unmet_requirement`, `details.permission` and `details.requires`. Person only: a
+    dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose
+    `roles.write` (the person confirms at the step_up_url a 403 step_up_required answer carries, which
+    names this client, then send the token in the Primitive-Step-Up header; the token works only with
+    the client it was confirmed for). Needs roles:assign. API keys are refused.
 
     Args:
         primitive_step_up (str | Unset):

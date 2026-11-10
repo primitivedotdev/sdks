@@ -27,7 +27,7 @@ class TestEmailRuleResultWindow:
         Attributes:
             mode (TestEmailRuleResultWindowMode):
             since (datetime.datetime | None): The oldest arrival the recent window reaches; null when email_ids were given.
-            limit (int):
+            limit (int): The most emails the recent window holds: 200, less one place per expected email.
      """
 
     mode: TestEmailRuleResultWindowMode

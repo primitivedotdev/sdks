@@ -106,7 +106,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'ownership_proof_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'access_mode_unavailable' | 'agent_account_managed_domain_only' | 'agent_changed' | 'agent_limit' | 'agent_misconfigured' | 'agent_work_agreement_replay_conflict' | 'agent_work_deadline_not_future' | 'agent_work_inactive' | 'agent_work_not_found' | 'agent_work_replay_conflict' | 'agent_work_version_conflict' | 'already_claimed' | 'already_member' | 'archive_busy' | 'archive_invalid' | 'archive_limit_exceeded' | 'archive_unsafe_path' | 'archive_unsupported' | 'attachment_name_ambiguous' | 'attachment_not_archive' | 'authorization_unavailable' | 'bad_request' | 'body_not_supported' | 'build_failed' | 'builder_unavailable' | 'builtin_role' | 'chunk_too_large' | 'chunks_missing' | 'claim_failed' | 'claim_not_pending' | 'cleanup_incomplete' | 'cli_access_refused' | 'code_expired' | 'confirmation_required' | 'connection_already_claimed' | 'connection_cleanup_pending' | 'connection_create_request_conflict' | 'connection_owner_address_required' | 'connection_removed' | 'connection_revoked' | 'contact_request_invalid' | 'contact_request_not_ready' | 'contact_request_unauthenticated' | 'contact_request_unavailable' | 'cursor_expired' | 'delete_failed' | 'delivery_held' | 'delivery_unavailable' | 'deploy_failed' | 'deploy_outcome_unknown' | 'direct_delivery_failed' | 'direct_delivery_unavailable' | 'directory_limit' | 'dns_publication_failed' | 'dns_publication_pending' | 'dns_verification_failed' | 'download_token_expired' | 'download_token_invalid' | 'email_admission_unavailable' | 'email_in_use' | 'email_rule_author_only' | 'email_rule_author_unresolvable' | 'email_rule_compiler_unavailable' | 'email_rule_conflict' | 'email_rule_not_compiled' | 'email_rule_request_limit' | 'email_rule_request_not_pending' | 'email_rule_request_party_left' | 'email_rule_request_proposer_only' | 'email_rule_request_target_only' | 'email_rule_scope_locked' | 'email_rule_scope_not_readable' | 'email_rule_share_ended' | 'email_rule_share_limit' | 'embedding_provider_unavailable' | 'entitlement' | 'expired' | 'feature_not_enabled' | 'fresh_send_not_authorized' | 'function_cannot_receive_mail' | 'function_delivery_refused' | 'function_effect_email_mismatch' | 'function_effect_mismatch' | 'function_forked' | 'function_github_linked' | 'function_key_missing' | 'function_key_runtime_only' | 'function_not_deployed' | 'function_scope_forbidden' | 'function_signing_secret_missing' | 'function_suspended' | 'github_binding_owner_changed' | 'github_binding_paused' | 'grant_forbidden' | 'grant_not_available' | 'hash_mismatch' | 'hipaa_mode' | 'hipaa_mode_check_unavailable' | 'hipaa_mode_external_send_blocked' | 'host_key_limit' | 'idempotency_conflict' | 'idempotency_key_invalid' | 'invalid_code' | 'invalid_cursor' | 'invalid_email' | 'invalid_payload_reference' | 'invalid_request' | 'invalid_signature' | 'invalid_step' | 'invalid_token' | 'invalid_topic_sources' | 'invitation_accepted' | 'invitation_accepting' | 'invitation_address_not_allowed' | 'invitation_changed' | 'invitation_pending' | 'invitation_sending' | 'invitation_unconfirmed' | 'invitations_pending' | 'ip_not_allowed' | 'keep_refused' | 'key_change_superseded' | 'key_recently_created' | 'last_owner' | 'latest_message_mismatch' | 'latest_message_thread_unresolved' | 'load_test_recipient_not_allowed' | 'mail_relay_unavailable' | 'mail_routing_conflict' | 'mail_topic_edit_conflict' | 'mail_topic_generation_conflict' | 'mailbox_not_claimable' | 'mailbox_not_found' | 'mailbox_shared_with_others' | 'managed_build_failed' | 'managed_domain' | 'member_address_domain_unavailable' | 'member_address_history_confirmation_required' | 'member_address_immutable' | 'member_address_reserved' | 'member_address_unavailable' | 'member_changed' | 'message_not_found' | 'name_taken' | 'network_member_excluded' | 'network_member_not_found' | 'network_peer_not_found' | 'network_view_denied' | 'no_code' | 'no_endpoint' | 'no_mail_read' | 'not_a_template_install' | 'not_available' | 'not_claimable' | 'not_held' | 'not_pending' | 'object_suspended' | 'onboarding_key_in_use' | 'outbound_edge_rejected' | 'outbound_email_limit_exceeded' | 'outbound_relay_timeout' | 'outbound_relay_unavailable' | 'outside_key_scope' | 'path_invalid' | 'payload_too_large' | 'pending_owner_confirmation' | 'plan_required' | 'policy_forbidden' | 'presence_admission_busy' | 'presence_idempotency_conflict' | 'presence_probe_stale' | 'pro_plan_required' | 'project_changed' | 'pull_subscription_requires_agent_connection' | 'query_invalid' | 'recipient_changed' | 'recipient_suppressed' | 'redeploy_failed' | 'removal_failed' | 'removal_timeout' | 'request_expired' | 'resend_limit_exceeded' | 'resend_too_soon' | 'role_assigned' | 'role_assignment_unavailable' | 'role_key_taken' | 'rotate_instead' | 'rotation_in_progress' | 'rotation_incomplete' | 'rotation_refused' | 'rotation_unconfirmed' | 'runtime_grant_unavailable' | 'schedule_allowlist_not_provided' | 'schedule_sender_collision' | 'schedule_wake_disabled' | 'scheduled_at_required' | 'scheduled_payload_invalid' | 'search_unavailable' | 'semantic_search_not_enabled' | 'send_failed' | 'sender_not_authorized' | 'sent_email_tail_unavailable' | 'sent_mail_search_unavailable' | 'shopping_binding_conflict' | 'shopping_decision_conflict' | 'shopping_identity_conflict' | 'shopping_not_found' | 'shopping_owner_mail_required' | 'shopping_package_not_found' | 'shopping_proposal_expired' | 'shopping_replay_conflict' | 'shopping_source_unavailable' | 'shopping_too_many_shipments' | 'shopping_tracking_invalid' | 'shopping_version_conflict' | 'shopping_wake_unavailable' | 'shredded' | 'sign_in_email_change_required' | 'signal_not_allowed' | 'signal_parent_not_ready' | 'signal_sender_unauthenticated' | 'signing_secret_unavailable' | 'signup_failed' | 'standing_owner_revoked' | 'step_up_invalid' | 'step_up_not_accepted' | 'step_up_refused' | 'step_up_required' | 'stop_changed' | 'storage_error' | 'storage_limit_exceeded' | 'suspension_undecided' | 'template_role' | 'template_unavailable' | 'template_update_failed' | 'terms_not_accepted' | 'thread_busy' | 'too_many_attempts' | 'too_many_concurrent_builds' | 'too_many_resends' | 'topic_edit_too_large' | 'topic_generation_too_large' | 'unavailable' | 'unknown_chunk' | 'update_needs_input' | 'upstream_unavailable' | 'usage_limit_exceeded';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'ownership_proof_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'access_mode_unavailable' | 'agent_account_managed_domain_only' | 'agent_changed' | 'agent_limit' | 'agent_misconfigured' | 'agent_work_agreement_replay_conflict' | 'agent_work_deadline_not_future' | 'agent_work_inactive' | 'agent_work_not_found' | 'agent_work_replay_conflict' | 'agent_work_version_conflict' | 'already_claimed' | 'already_member' | 'archive_busy' | 'archive_invalid' | 'archive_limit_exceeded' | 'archive_unsafe_path' | 'archive_unsupported' | 'attachment_name_ambiguous' | 'attachment_not_archive' | 'authorization_unavailable' | 'bad_request' | 'body_not_supported' | 'build_failed' | 'builder_unavailable' | 'builtin_role' | 'chunk_too_large' | 'chunks_missing' | 'claim_failed' | 'claim_not_pending' | 'cleanup_incomplete' | 'cli_access_refused' | 'code_expired' | 'confirmation_required' | 'connection_already_claimed' | 'connection_cleanup_pending' | 'connection_create_request_conflict' | 'connection_owner_address_required' | 'connection_removed' | 'connection_revoked' | 'contact_request_invalid' | 'contact_request_not_ready' | 'contact_request_unauthenticated' | 'contact_request_unavailable' | 'cursor_expired' | 'delete_failed' | 'delivery_held' | 'delivery_unavailable' | 'deploy_failed' | 'deploy_outcome_unknown' | 'direct_delivery_failed' | 'direct_delivery_unavailable' | 'directory_limit' | 'dns_publication_failed' | 'dns_publication_pending' | 'dns_verification_failed' | 'download_token_expired' | 'download_token_invalid' | 'email_admission_unavailable' | 'email_in_use' | 'email_rule_author_only' | 'email_rule_author_unresolvable' | 'email_rule_compiler_unavailable' | 'email_rule_conflict' | 'email_rule_not_active' | 'email_rule_not_compiled' | 'email_rule_request_limit' | 'email_rule_request_not_pending' | 'email_rule_request_not_withdrawn' | 'email_rule_request_party_left' | 'email_rule_request_proposer_only' | 'email_rule_request_target_only' | 'email_rule_scope_locked' | 'email_rule_scope_not_readable' | 'email_rule_share_ended' | 'email_rule_share_limit' | 'embedding_provider_unavailable' | 'entitlement' | 'expired' | 'feature_not_enabled' | 'fresh_send_not_authorized' | 'function_cannot_receive_mail' | 'function_delivery_refused' | 'function_effect_email_mismatch' | 'function_effect_mismatch' | 'function_forked' | 'function_github_linked' | 'function_key_missing' | 'function_key_runtime_only' | 'function_not_deployed' | 'function_scope_forbidden' | 'function_signing_secret_missing' | 'function_suspended' | 'github_binding_owner_changed' | 'github_binding_paused' | 'grant_forbidden' | 'grant_not_available' | 'hash_mismatch' | 'hipaa_mode' | 'hipaa_mode_check_unavailable' | 'hipaa_mode_external_send_blocked' | 'host_key_limit' | 'idempotency_conflict' | 'idempotency_key_invalid' | 'invalid_code' | 'invalid_cursor' | 'invalid_email' | 'invalid_payload_reference' | 'invalid_request' | 'invalid_signature' | 'invalid_step' | 'invalid_token' | 'invalid_topic_sources' | 'invitation_accepted' | 'invitation_accepting' | 'invitation_address_not_allowed' | 'invitation_changed' | 'invitation_pending' | 'invitation_sending' | 'invitation_unconfirmed' | 'invitations_pending' | 'ip_not_allowed' | 'keep_refused' | 'key_change_superseded' | 'key_recently_created' | 'last_owner' | 'latest_message_mismatch' | 'latest_message_thread_unresolved' | 'load_test_recipient_not_allowed' | 'mail_relay_unavailable' | 'mail_routing_conflict' | 'mail_topic_edit_conflict' | 'mail_topic_generation_conflict' | 'mailbox_not_claimable' | 'mailbox_not_found' | 'mailbox_shared_with_others' | 'managed_build_failed' | 'managed_domain' | 'member_address_domain_unavailable' | 'member_address_history_confirmation_required' | 'member_address_immutable' | 'member_address_reserved' | 'member_address_unavailable' | 'member_changed' | 'message_not_found' | 'name_taken' | 'network_member_excluded' | 'network_member_not_found' | 'network_peer_not_found' | 'network_view_denied' | 'no_code' | 'no_endpoint' | 'no_mail_read' | 'not_a_template_install' | 'not_available' | 'not_claimable' | 'not_held' | 'not_pending' | 'object_suspended' | 'onboarding_key_in_use' | 'outbound_edge_rejected' | 'outbound_email_limit_exceeded' | 'outbound_relay_timeout' | 'outbound_relay_unavailable' | 'outside_key_scope' | 'path_invalid' | 'payload_too_large' | 'pending_owner_confirmation' | 'plan_required' | 'policy_forbidden' | 'presence_admission_busy' | 'presence_idempotency_conflict' | 'presence_probe_stale' | 'pro_plan_required' | 'project_changed' | 'pull_subscription_requires_agent_connection' | 'query_invalid' | 'recipient_changed' | 'recipient_suppressed' | 'redeploy_failed' | 'removal_failed' | 'removal_timeout' | 'request_expired' | 'resend_limit_exceeded' | 'resend_too_soon' | 'role_assigned' | 'role_assignment_unavailable' | 'role_key_taken' | 'rotate_instead' | 'rotation_in_progress' | 'rotation_incomplete' | 'rotation_refused' | 'rotation_unconfirmed' | 'runtime_grant_unavailable' | 'schedule_allowlist_not_provided' | 'schedule_sender_collision' | 'schedule_wake_disabled' | 'scheduled_at_required' | 'scheduled_payload_invalid' | 'search_unavailable' | 'semantic_search_not_enabled' | 'send_failed' | 'sender_not_authorized' | 'sent_email_tail_unavailable' | 'sent_mail_search_unavailable' | 'shopping_binding_conflict' | 'shopping_decision_conflict' | 'shopping_identity_conflict' | 'shopping_not_found' | 'shopping_owner_mail_required' | 'shopping_package_not_found' | 'shopping_proposal_expired' | 'shopping_replay_conflict' | 'shopping_source_unavailable' | 'shopping_too_many_shipments' | 'shopping_tracking_invalid' | 'shopping_version_conflict' | 'shopping_wake_unavailable' | 'shredded' | 'sign_in_email_change_required' | 'signal_not_allowed' | 'signal_parent_not_ready' | 'signal_sender_unauthenticated' | 'signing_secret_unavailable' | 'signup_failed' | 'standing_owner_revoked' | 'step_up_invalid' | 'step_up_not_accepted' | 'step_up_refused' | 'step_up_required' | 'stop_changed' | 'storage_error' | 'storage_limit_exceeded' | 'suspension_undecided' | 'template_role' | 'template_unavailable' | 'template_update_failed' | 'terms_not_accepted' | 'thread_busy' | 'too_many_attempts' | 'too_many_concurrent_builds' | 'too_many_resends' | 'topic_edit_too_large' | 'topic_generation_too_large' | 'unavailable' | 'unknown_chunk' | 'update_needs_input' | 'upstream_unavailable' | 'usage_limit_exceeded';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -144,6 +144,22 @@ export type ErrorResponse = {
              * Effective idempotency key associated with the original request.
              */
             client_idempotency_key?: string;
+            /**
+             * On a feature_disabled error: a stable id for the feature that is not turned on for the organization.
+             */
+            feature?: string;
+            /**
+             * On a feature_disabled error: the name the message gives the feature.
+             */
+            feature_name?: string;
+            /**
+             * On a feature_disabled error: who turns the feature on. primitive: Primitive does, when asked at contact_email. Treat an unfamiliar value as one added after your client was built.
+             */
+            enabled_by?: string;
+            /**
+             * On a feature_disabled error: the address to ask for the feature to be turned on.
+             */
+            contact_email?: string;
             /**
              * Present when `code == grant_forbidden`. The permission the operation requires. See `GrantForbiddenDetails` for the full shape.
              */
@@ -4060,7 +4076,7 @@ export type Endpoint = {
      */
     is_route_target?: boolean;
     /**
-     * Stable name of a pull destination.
+     * A pull destination's stable name, or an http webhook's label (null when it has none).
      */
     name?: string | null;
     /**
@@ -4075,6 +4091,14 @@ export type Endpoint = {
      * Whether the owning key can act now. In endpoint responses it is set only for a caller who may read API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent nothing.
      */
     owner_key_status?: 'active' | 'suspended' | 'revoked' | null;
+    /**
+     * Which secret signs deliveries to this webhook: its own (read it from GET /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that is not a webhook.
+     */
+    signed_with?: 'own_secret' | 'organization_secret';
+    /**
+     * Only in the response that creates a webhook made with a signing secret of its own (one made as a person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate for itself): that secret, shown this once. Read it again from GET /endpoints/{id}/signing-secret.
+     */
+    signing_secret?: string;
 };
 
 export type CreateEndpointInput = {
@@ -4136,7 +4160,7 @@ export type CreateEndpointInput = {
      */
     is_route_target?: boolean;
     /**
-     * Stable name within the credential scope, required for kind=pull. Only connected-agent credentials can create pull destinations, and each receives only its assigned address.
+     * For kind=pull, the stable name within the credential scope, required (a letter or digit, then letters, digits, - or _, 64 at most). Only connected-agent credentials can create pull destinations, and each receives only its assigned address. For kind=http, an optional label up to 200 characters, shown with the webhook in lists. Not for kind=function.
      */
     name?: string;
     /**
@@ -4191,6 +4215,10 @@ export type UpdateEndpointInput = {
      * Give this webhook to an API key of the organization. Only a route target can be given to a key; a default endpoint stays the organization's, and takeover is refused with it. null gives a key-owned webhook back to the organization (a caller with access to every mailbox only); it stays a route target.
      */
     owner_key_id?: string | null;
+    /**
+     * A webhook's label, up to 200 characters, shown with it in lists; null removes it. Only for http webhooks: a pull destination keeps the name it was created with.
+     */
+    name?: string | null;
 };
 
 export type TestResult = {
@@ -4203,7 +4231,7 @@ export type TestResult = {
      */
     body: string;
     /**
-     * The signature header value sent (if webhook secret is configured)
+     * The signature header value sent, answered to a caller who may see it: for a webhook signed with the organization's secret, a caller who may read that secret; for one signed with its own, the person who owns it, calling as themselves.
      */
     signature?: string;
 };
@@ -4588,6 +4616,22 @@ export type DeliverySummary = {
      * Machine-readable code for the last failure, or null.
      */
     last_error_code: string | null;
+    /**
+     * The HTTP status the endpoint answered this attempt with: a webhook's own answer, or for a Function what its runtime answered, which is the platform's own error when the Function could not be run. Null when no answer came back (a network error, a timeout, an attempt refused or not sent) and on attempts recorded before this field.
+     */
+    response_status: number | null;
+    /**
+     * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.
+     */
+    response_body: string | null;
+    /**
+     * Whether this is the latest attempt of its delivery: the one recorded last, where a record of no attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A retry is recorded as a new attempt with its own id and attempt_count (not always higher than the one before), so an earlier attempt never changes: follow the latest one, or read attempts on any of them.
+     */
+    latest_attempt: boolean;
+    /**
+     * When the next automatic retry of this delivery is due. Not reported yet: always null.
+     */
+    next_attempt_at: string | null;
 };
 
 export type ReplayResult = {
@@ -5956,11 +6000,75 @@ export type GetWebhookDeliveryStatsResult = {
     regressed: number;
 };
 
+export type GetEmailRuleVocabularyResult = {
+    version: string;
+    tree_version: 1;
+    columns: Array<{
+        name: string;
+        type: 'bool' | 'text' | 'text_list' | 'number' | 'timestamp' | 'choice' | 'multi';
+        /**
+         * email: from the message itself. fact: from its classification.
+         */
+        source: 'email' | 'fact';
+        description: string;
+        /**
+         * Each operator allowed, and its value: none (no value), text, text_list (a list of texts), number, number_range ([low, high]) or date_time (ISO 8601 with an offset from -12:00 to +14:00).
+         */
+        operators: Array<{
+            op: 'is_true' | 'is_false' | 'eq' | 'in' | 'contains' | 'contains_any' | 'contains_all' | 'starts_with' | 'ends_with' | 'is_null' | 'not_null' | 'is_empty' | 'not_empty' | 'gt' | 'gte' | 'lt' | 'lte' | 'between' | 'before' | 'after';
+            value: 'none' | 'text' | 'text_list' | 'number' | 'number_range' | 'date_time';
+        }>;
+        /**
+         * The only values it takes, on a column that has them.
+         */
+        options?: Array<string>;
+        /**
+         * Whether a condition may set min_confidence (0 to 1), though not one under an odd number of nots. On a multi column it tests each value the condition names by that value's own confidence: contains its value, contains_any at least one value the email has, contains_all every value.
+         */
+        min_confidence: boolean;
+    }>;
+    /**
+     * The most nesting levels (a condition is one), conditions, list values, characters in a text value and questions; a trimmed question's length bounds; and the most bytes the tree takes as stored JSON.
+     */
+    limits: {
+        depth: number;
+        conditions: number;
+        list_values: number;
+        text_length: number;
+        questions: number;
+        question_min_length: number;
+        question_max_length: number;
+        tree_bytes: number;
+    };
+};
+
+export type EmailRuleTree = {
+    version: 1;
+    /**
+     * Vocabulary version, such as v1.
+     */
+    vocabulary: string;
+    /**
+     * A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}.
+     */
+    when: {
+        [key: string]: unknown;
+    };
+    /**
+     * Yes/no questions asked once the conditions match; all must be yes.
+     */
+    questions: Array<string>;
+};
+
 export type CompileEmailRuleRequest = {
     /**
      * What the rule should match, in plain English.
      */
     english: string;
+    /**
+     * What the rule will be: grant (the default) or do_not_share. A do-not-share rule is compiled for recall: conditions only as narrow as the description says, and the judgement of what it describes put into questions, since an email it misses can be shared.
+     */
+    kind?: 'grant' | 'do_not_share';
     /**
      * Also return the SQL the rule renders to. Off by default.
      */
@@ -5968,33 +6076,17 @@ export type CompileEmailRuleRequest = {
 };
 
 export type CompileEmailRuleResult = {
-    tree: {
-        version: 1;
-        /**
-         * The column contract version the rule is written against, for example v1.
-         */
-        vocabulary: string;
-        /**
-         * The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...}).
-         */
-        when: {
-            [key: string]: unknown;
-        };
-        /**
-         * Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes.
-         */
-        questions: Array<string>;
-    };
+    tree: EmailRuleTree;
     /**
      * What the rule matches, in plain English.
      */
     explanation: string;
     /**
-     * Readings the compiler chose where the description was open to more than one.
+     * Readings the compiler chose where the description was open to more than one. Whenever the rule holds a condition, question or confidence bar that no words of the description call for, this list also has a line starting "Added without the description asking for it:" naming it (several share a line when there are many).
      */
     assumptions: Array<string>;
     /**
-     * Parts of the description the column contract cannot express, and how the rule handles them.
+     * Parts of the description the column contract cannot express, and how the rule handles them. When the rule reads automated or from_mailing_list, it also has a note on what that column reads and what it misses. When the rule has no questions and its conditions hold for all of the caller's recent classified mail (what a test of it covers by default), or for at least 90% of at least 20 emails, the first warning says so. That count is not made for a caller whose access shows headers only, or who could not run a test of the rule, and may also be skipped when the compile ran long or the count fails.
      */
     warnings: Array<string>;
     /**
@@ -6016,38 +6108,49 @@ export type CompileEmailRuleResult = {
     };
 };
 
-export type TestEmailRuleRequest = {
+export type EmailRuleScopeWarning = {
+    name: string;
+    kind: 'address' | 'domain';
     /**
-     * An unsaved rule tree, as POST /email-rules/compile returned it. Give tree or rule_id, not both.
+     * unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet.
      */
-    tree?: {
-        version: 1;
-        /**
-         * The column contract version the rule is written against, for example v1.
-         */
-        vocabulary: string;
-        /**
-         * The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...}).
-         */
-        when: {
-            [key: string]: unknown;
-        };
-        /**
-         * Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes.
-         */
-        questions: Array<string>;
+    reason: 'unknown_domain' | 'inactive_domain' | 'unknown_address';
+    message: string;
+};
+
+export type EmailRuleTreeInput = {
+    version: 1;
+    /**
+     * Vocabulary version, such as v1.
+     */
+    vocabulary: string;
+    /**
+     * A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}.
+     */
+    when: {
+        [key: string]: unknown;
     };
     /**
-     * own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those you can send from). author: all mail you can read, including inboxes added later. selected: what scope_selection names.
+     * Yes/no questions asked once the conditions match; all must be yes. Left out, none.
+     */
+    questions?: Array<string>;
+};
+
+/**
+ * For a selected rule: inboxes, and domains (each address at them the author reads); each one you can read.
+ */
+export type EmailRuleScopeSelection = {
+    addresses?: Array<string>;
+    domains?: Array<string>;
+};
+
+export type TestEmailRuleRequest = {
+    tree?: EmailRuleTreeInput;
+    /**
+     * own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
-    /**
-     * Inboxes, and domains (every address at them the author can read), for a selected rule; each one you can read.
-     */
-    scope_selection?: {
-        addresses?: Array<string>;
-        domains?: Array<string>;
-    };
+    scope_selection?: EmailRuleScopeSelection;
     /**
      * A saved rule you can see. Its current version is tested, with its author's access.
      */
@@ -6057,13 +6160,20 @@ export type TestEmailRuleRequest = {
      */
     kind?: 'grant' | 'do_not_share';
     /**
-     * Test exactly these emails. Without it, the newest emails the rule can read are tested, at most 200 and none older than 30 days.
+     * Test exactly these emails, and any expected ones. Without it, the newest emails the rule can read are tested, at most 200 and none older than 30 days.
      */
     email_ids?: Array<string>;
     /**
      * Classify emails in the set that have not been classified yet and arrived more than 2 hours ago, and save their classification. Defaults to true. Newer ones are left to the normal classification and reported pending. The rule is never evaluated on them for real.
      */
     classify_missing?: boolean;
+    /**
+     * Emails the rule must match and must not, at most 100 in all, always tested whatever their age: added to email_ids, or to the recent window, which gives up a place for each. The answer's expectations judge each.
+     */
+    expect?: {
+        match?: Array<string>;
+        no_match?: Array<string>;
+    };
 };
 
 export type TestEmailRuleResult = {
@@ -6078,6 +6188,9 @@ export type TestEmailRuleResult = {
          * The oldest arrival the recent window reaches; null when email_ids were given.
          */
         since: string | null;
+        /**
+         * The most emails the recent window holds: 200, less one place per expected email.
+         */
         limit: number;
     };
     counts: {
@@ -6100,21 +6213,25 @@ export type TestEmailRuleResult = {
     };
     questions: {
         /**
-         * Calls made to answer the rule's questions, one per matching email.
+         * Calls made to answer the rule's questions, one per matching email whose answers were not reused.
          */
         asked: number;
         /**
          * Whether the per-test limit on those calls was reached.
          */
         capped: boolean;
+        /**
+         * Matching emails whose question answers were reused (kept for the saved rule version, or recorded with its decision) instead of asked.
+         */
+        stored?: number;
     };
     /**
-     * Newest first; with email_ids, the ids not found follow in the order given.
+     * Newest first; ids not found (email_ids, then expected ones) follow in the order given.
      */
     results: Array<{
         email_id: string;
         /**
-         * not_found: no such email, or not one the rule can read (or not settled, held back, or being removed).
+         * near_miss: Not matched, but nearly: its questions did not all say yes, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false). not_found: no such email, or not one the rule can read (or not settled, held back, or being removed).
          */
         outcome: 'matched' | 'near_miss' | 'no_match' | 'unclassified' | 'not_found';
         received_at?: string;
@@ -6133,6 +6250,21 @@ export type TestEmailRuleResult = {
          */
         missing_facts?: Array<string>;
         /**
+         * By column the rule names: the value as its conditions compared it (a list cut at 50), and a fact's confidence. A fact left out reads null.
+         */
+        values?: {
+            [key: string]: {
+                value: string | number | boolean | Array<string> | unknown;
+                confidence?: number | null;
+                /**
+                 * A multi fact's chosen values, each with its own confidence: what a min_confidence on the column tests. Given in rule test results.
+                 */
+                value_confidences?: {
+                    [key: string]: number;
+                };
+            };
+        };
+        /**
          * The answers to the rule's own questions, asked only when its conditions matched.
          */
         question_answers?: Array<{
@@ -6142,44 +6274,79 @@ export type TestEmailRuleResult = {
             error_class?: string;
         }>;
         /**
+         * Where question_answers came from, when there are any. stored: a saved rule version's answers about this email, kept once given (by evaluation or an earlier test) or recorded with its decision, reused because answers are sampled and asking again can differ. asked_now: asked by this test (always, for an unsaved tree). not_asked: no call could be made; error_class says why.
+         */
+        question_answers_source?: 'stored' | 'asked_now' | 'not_asked';
+        /**
          * Why an unclassified email has no classification. pending: not reached before the test stopped, or not classified here (it arrived within the last 2 hours and normal classification has not finished with it, or classify_missing was false); run the test again later.
          */
         unclassified_reason?: 'pending' | 'classifier_unavailable' | 'classification_failed' | 'not_classifiable';
     }>;
+    summary?: {
+        /**
+         * Emails decided on their conditions: matched, near_miss and no_match, less any missing a fact the rule reads.
+         */
+        decided: number;
+        /**
+         * Each top-level condition (its parts index) in plain English, and how many decided emails it held on, failed on, and (except in an any rule) was the only failure on.
+         */
+        conditions: Array<{
+            index: number;
+            text: string;
+            held: number;
+            failed: number;
+            only_failure: number;
+        }>;
+        /**
+         * Each question's answers on the emails whose conditions held.
+         */
+        questions: Array<{
+            index: number;
+            yes: number;
+            no: number;
+            unanswered: number;
+        }>;
+        /**
+         * What to look at first, such as what stopped every email when nothing matched.
+         */
+        warnings: Array<string>;
+    };
+    /**
+     * Names in scope_selection that match nothing this organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.
+     */
+    scope_warnings?: Array<EmailRuleScopeWarning>;
+    /**
+     * Present when expect was given, or for a saved rule with saved expectations.
+     */
+    expectations?: {
+        /**
+         * Every expectation passed. One undecided is no pass: unclassified or a question unanswered (test again later), or not found (no such email the rule can read).
+         */
+        passed: boolean;
+        counts: {
+            passed: number;
+            failed: number;
+            undecided: number;
+        };
+        /**
+         * match first, then no_match, each in the order given (saved expectations by email id).
+         */
+        results: Array<{
+            email_id: string;
+            expected: 'match' | 'no_match';
+            outcome: 'matched' | 'near_miss' | 'no_match' | 'unclassified' | 'not_found';
+            status: 'passed' | 'failed' | 'undecided';
+        }>;
+    };
 };
 
 export type TestEmailRuleOnSampleRequest = {
+    tree?: EmailRuleTreeInput;
     /**
-     * An unsaved rule tree, as POST /email-rules/compile returned it. Give tree or rule_id, not both.
-     */
-    tree?: {
-        version: 1;
-        /**
-         * The column contract version the rule is written against, for example v1.
-         */
-        vocabulary: string;
-        /**
-         * The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...}).
-         */
-        when: {
-            [key: string]: unknown;
-        };
-        /**
-         * Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes.
-         */
-        questions: Array<string>;
-    };
-    /**
-     * own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those you can send from). author: all mail you can read, including inboxes added later. selected: what scope_selection names.
+     * own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
-    /**
-     * Inboxes, and domains (every address at them the author can read), for a selected rule; each one you can read.
-     */
-    scope_selection?: {
-        addresses?: Array<string>;
-        domains?: Array<string>;
-    };
+    scope_selection?: EmailRuleScopeSelection;
     /**
      * A saved rule you can see. Its current version is tested.
      */
@@ -6235,6 +6402,9 @@ export type TestEmailRuleOnSampleResult = {
      * When the made-up email counts as received (now): a rule on received_at is decided on it.
      */
     received_at: string;
+    /**
+     * near_miss: Not matched, but nearly: its questions did not all say yes, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false).
+     */
     outcome: 'matched' | 'near_miss' | 'no_match';
     /**
      * How each top-level part of the rule decided.
@@ -6248,6 +6418,21 @@ export type TestEmailRuleOnSampleResult = {
      * Facts the rule reads that this email's classification left out, so the rule did not match.
      */
     missing_facts?: Array<string>;
+    /**
+     * By column the rule names: the value as its conditions compared it (a list cut at 50), and a fact's confidence. A fact left out reads null.
+     */
+    values?: {
+        [key: string]: {
+            value: string | number | boolean | Array<string> | unknown;
+            confidence?: number | null;
+            /**
+             * A multi fact's chosen values, each with its own confidence: what a min_confidence on the column tests. Given in rule test results.
+             */
+            value_confidences?: {
+                [key: string]: number;
+            };
+        };
+    };
     /**
      * Email columns the rule reads that the made-up email left unset (spam_score without one), decided as no value.
      */
@@ -6276,6 +6461,79 @@ export type TestEmailRuleOnSampleResult = {
     };
 };
 
+export type EmailRuleWritten = {
+    id: string;
+    name: string;
+    state: 'draft' | 'observe' | 'active';
+    /**
+     * do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.
+     */
+    kind?: 'grant' | 'do_not_share';
+    /**
+     * Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
+     */
+    evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
+    /**
+     * What a selected rule names; null for any other scope.
+     */
+    scope_selection?: EmailRuleScopeNames | null;
+    current_version: number | null;
+    author_user_id: string;
+    /**
+     * Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members).
+     */
+    is_author: boolean;
+    created_at: string;
+    updated_at: string;
+    current: EmailRuleVersion | null;
+    /**
+     * Names in scope_selection that match nothing this organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.
+     */
+    scope_warnings?: Array<EmailRuleScopeWarning>;
+    /**
+     * After a write that saved a version or changed its expectations, if it has some: them, judged on that version from stored classifications without asking its questions. Undecided: one that needs answers not yet kept for that version, is unclassified or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed). Test by rule_id for the rest.
+     */
+    expectations_check?: {
+        version: number | null;
+        passed: boolean;
+        failed: Array<string>;
+        undecided: Array<string>;
+    };
+};
+
+export type EmailRuleScopeNames = {
+    addresses: Array<string>;
+    domains: Array<string>;
+};
+
+export type EmailRuleVersion = {
+    version: number;
+    english: string;
+    tree: EmailRuleTree;
+    explanation: string;
+    assumptions: Array<string>;
+    warnings: Array<string>;
+    /**
+     * Who produced the tree, as stated when saved (not verified), such as rule-compiler-v1 or member.
+     */
+    compiled_by: string;
+    vocabulary: string;
+    created_at: string;
+    /**
+     * Present only when include_sql was true.
+     */
+    sql?: {
+        /**
+         * A parameterized boolean expression over one row per email.
+         */
+        expression: string;
+        /**
+         * The values bound to $1, $2 and so on.
+         */
+        params: Array<unknown>;
+    };
+};
+
 export type CreateEmailRuleRequest = {
     /**
      * A short name for the rule.
@@ -6290,230 +6548,119 @@ export type CreateEmailRuleRequest = {
      */
     state?: 'draft' | 'observe';
     /**
-     * own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those you can send from). author: all mail you can read, including inboxes added later. selected: what scope_selection names.
+     * own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
+    scope_selection?: EmailRuleScopeSelection;
     /**
-     * Inboxes, and domains (every address at them the author can read), for a selected rule; each one you can read.
+     * Emails it must match and must not (at most 100): a test by rule_id judges them unless expect is given, and each version it saves is checked against them.
      */
-    scope_selection?: {
-        addresses?: Array<string>;
-        domains?: Array<string>;
+    expectations?: {
+        match?: Array<string>;
+        no_match?: Array<string>;
     };
     /**
      * The plain-English description the rule was compiled from.
      */
     english: string;
+    tree: EmailRuleTreeInput;
     /**
-     * The rule tree. Checked against the column contract on save.
+     * What the rule matches, in plain English. Left out, the server writes one from the tree.
      */
-    tree: {
-        version: 1;
-        /**
-         * The column contract version the rule is written against, for example v1.
-         */
-        vocabulary: string;
-        /**
-         * The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...}).
-         */
-        when: {
-            [key: string]: unknown;
-        };
-        /**
-         * Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes.
-         */
-        questions: Array<string>;
-    };
+    explanation?: string;
     /**
-     * What the rule matches, in plain English.
-     */
-    explanation: string;
-    /**
-     * Readings chosen where the description was open to more than one.
+     * Readings chosen where the description was open to more than one, as the compile response returned them (including its lines naming any condition, question or confidence bar the description did not ask for). Stored as sent.
      */
     assumptions?: Array<string>;
     /**
-     * Parts of the description the rule does not express.
+     * Parts of the description the rule does not express, as the compile response returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
      */
     warnings?: Array<string>;
     /**
-     * Who produced the tree, as the caller states it (not verified): the compile response's compiled_by, or member when you wrote or edited it yourself. Defaults to member.
+     * Who produced the tree (not verified): the compile response's compiled_by, or member (the default) for a tree you wrote or edited.
      */
     compiled_by?: string;
 };
 
-export type CreateEmailRuleResult = {
+export type CreateEmailRuleResult = EmailRuleWritten;
+
+export type EmailRule = {
     id: string;
     name: string;
     state: 'draft' | 'observe' | 'active';
     /**
-     * do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.
+     * do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.
      */
     kind?: 'grant' | 'do_not_share';
     /**
-     * Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.
+     * Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
     /**
      * What a selected rule names; null for any other scope.
      */
-    scope_selection?: {
-        addresses: Array<string>;
-        domains: Array<string>;
-    } | null;
+    scope_selection?: EmailRuleScopeNames | null;
     current_version: number | null;
     author_user_id: string;
     /**
-     * Whether the caller wrote the rule (under their current membership). Only the author edits a rule; anyone else who can see it may only disable or delete it, and while it is shared only if they manage members.
+     * Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members).
      */
     is_author: boolean;
     created_at: string;
     updated_at: string;
-    current: {
-        version: number;
-        english: string;
-        tree: {
-            version: 1;
-            /**
-             * The column contract version the rule is written against, for example v1.
-             */
-            vocabulary: string;
-            /**
-             * The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...}).
-             */
-            when: {
-                [key: string]: unknown;
-            };
-            /**
-             * Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes.
-             */
-            questions: Array<string>;
-        };
-        explanation: string;
-        assumptions: Array<string>;
-        warnings: Array<string>;
-        /**
-         * Who produced the tree, as the caller stated it when saving (not verified), for example rule-compiler-v1 or member.
-         */
-        compiled_by: string;
-        vocabulary: string;
-        created_at: string;
-        /**
-         * Present only when include_sql was true.
-         */
-        sql?: {
-            /**
-             * A parameterized boolean expression over one row per email.
-             */
-            expression: string;
-            /**
-             * The values bound to $1, $2 and so on.
-             */
-            params: Array<unknown>;
-        };
-    } | null;
 };
 
-export type ListEmailRulesResult = Array<{
-    id: string;
-    name: string;
-    state: 'draft' | 'observe' | 'active';
-    /**
-     * do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.
-     */
-    kind?: 'grant' | 'do_not_share';
-    /**
-     * Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.
-     */
-    evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
-    /**
-     * What a selected rule names; null for any other scope.
-     */
-    scope_selection?: {
-        addresses: Array<string>;
-        domains: Array<string>;
-    } | null;
-    current_version: number | null;
-    author_user_id: string;
-    /**
-     * Whether the caller wrote the rule (under their current membership). Only the author edits a rule; anyone else who can see it may only disable or delete it, and while it is shared only if they manage members.
-     */
-    is_author: boolean;
-    created_at: string;
-    updated_at: string;
-}>;
+export type ListEmailRulesResult = Array<EmailRule>;
 
-export type GetEmailRuleResult = {
+/**
+ * Paging for a list read a page at a time.
+ */
+export type CursorPageMeta = {
+    /**
+     * The page size this answer used.
+     */
+    limit: number;
+    /**
+     * Pass as cursor to read the next page; null on the last page.
+     */
+    cursor: string | null;
+};
+
+export type EmailRuleRead = {
     id: string;
     name: string;
     state: 'draft' | 'observe' | 'active';
     /**
-     * do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.
+     * do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.
      */
     kind?: 'grant' | 'do_not_share';
     /**
-     * Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.
+     * Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
     /**
      * What a selected rule names; null for any other scope.
      */
-    scope_selection?: {
-        addresses: Array<string>;
-        domains: Array<string>;
-    } | null;
+    scope_selection?: EmailRuleScopeNames | null;
     current_version: number | null;
     author_user_id: string;
     /**
-     * Whether the caller wrote the rule (under their current membership). Only the author edits a rule; anyone else who can see it may only disable or delete it, and while it is shared only if they manage members.
+     * Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members).
      */
     is_author: boolean;
     created_at: string;
     updated_at: string;
-    current: {
-        version: number;
-        english: string;
-        tree: {
-            version: 1;
-            /**
-             * The column contract version the rule is written against, for example v1.
-             */
-            vocabulary: string;
-            /**
-             * The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...}).
-             */
-            when: {
-                [key: string]: unknown;
-            };
-            /**
-             * Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes.
-             */
-            questions: Array<string>;
-        };
-        explanation: string;
-        assumptions: Array<string>;
-        warnings: Array<string>;
-        /**
-         * Who produced the tree, as the caller stated it when saving (not verified), for example rule-compiler-v1 or member.
-         */
-        compiled_by: string;
-        vocabulary: string;
-        created_at: string;
-        /**
-         * Present only when include_sql was true.
-         */
-        sql?: {
-            /**
-             * A parameterized boolean expression over one row per email.
-             */
-            expression: string;
-            /**
-             * The values bound to $1, $2 and so on.
-             */
-            params: Array<unknown>;
-        };
-    } | null;
+    current: EmailRuleVersion | null;
+    /**
+     * Its saved expectations, each list by email id.
+     */
+    expectations?: {
+        match: Array<string>;
+        no_match: Array<string>;
+    };
 };
+
+export type GetEmailRuleResult = EmailRuleRead;
 
 export type UpdateEmailRuleRequest = {
     /**
@@ -6528,126 +6675,42 @@ export type UpdateEmailRuleRequest = {
      * The plain-English description the rule was compiled from.
      */
     english?: string;
+    tree?: EmailRuleTreeInput;
     /**
-     * The rule tree. Checked against the column contract on save.
-     */
-    tree?: {
-        version: 1;
-        /**
-         * The column contract version the rule is written against, for example v1.
-         */
-        vocabulary: string;
-        /**
-         * The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...}).
-         */
-        when: {
-            [key: string]: unknown;
-        };
-        /**
-         * Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes.
-         */
-        questions: Array<string>;
-    };
-    /**
-     * What the rule matches, in plain English.
+     * What the rule matches, in plain English. Left out, the server writes one from the tree.
      */
     explanation?: string;
     /**
-     * Readings chosen where the description was open to more than one.
+     * Readings chosen where the description was open to more than one, as the compile response returned them (including its lines naming any condition, question or confidence bar the description did not ask for). Stored as sent.
      */
     assumptions?: Array<string>;
     /**
-     * Parts of the description the rule does not express.
+     * Parts of the description the rule does not express, as the compile response returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
      */
     warnings?: Array<string>;
     /**
-     * Who produced the tree, as the caller states it (not verified): the compile response's compiled_by, or member when you wrote or edited it yourself. Defaults to member.
+     * Who produced the tree (not verified): the compile response's compiled_by, or member (the default) for a tree you wrote or edited.
      */
     compiled_by?: string;
     /**
-     * author: all mail its author can read. own_mailboxes: mail to their own addresses. selected: what scope_selection names. Never more than the author can read.
+     * own_mailboxes: mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names. Left out, the scope stays. A change saves a new version with the same conditions, and is refused while the rule is shared.
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
+    scope_selection?: EmailRuleScopeSelection;
     /**
-     * Inboxes, and domains (every address at them the author can read), for a selected rule; each one you can read.
+     * The current_version you read. If the rule's now differs, nothing changes: 409 email_rule_conflict, details.reason version_moved and details.current_version. Send it with a new version so a concurrent edit is never replaced unseen. It guards versions only: a change to expectations alone saves none.
      */
-    scope_selection?: {
-        addresses?: Array<string>;
-        domains?: Array<string>;
-    };
+    if_version?: number;
+    /**
+     * Replaces its saved expectations (author only); null removes them.
+     */
+    expectations?: {
+        match?: Array<string>;
+        no_match?: Array<string>;
+    } | null;
 };
 
-export type UpdateEmailRuleResult = {
-    id: string;
-    name: string;
-    state: 'draft' | 'observe' | 'active';
-    /**
-     * do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.
-     */
-    kind?: 'grant' | 'do_not_share';
-    /**
-     * Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.
-     */
-    evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
-    /**
-     * What a selected rule names; null for any other scope.
-     */
-    scope_selection?: {
-        addresses: Array<string>;
-        domains: Array<string>;
-    } | null;
-    current_version: number | null;
-    author_user_id: string;
-    /**
-     * Whether the caller wrote the rule (under their current membership). Only the author edits a rule; anyone else who can see it may only disable or delete it, and while it is shared only if they manage members.
-     */
-    is_author: boolean;
-    created_at: string;
-    updated_at: string;
-    current: {
-        version: number;
-        english: string;
-        tree: {
-            version: 1;
-            /**
-             * The column contract version the rule is written against, for example v1.
-             */
-            vocabulary: string;
-            /**
-             * The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...}).
-             */
-            when: {
-                [key: string]: unknown;
-            };
-            /**
-             * Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes.
-             */
-            questions: Array<string>;
-        };
-        explanation: string;
-        assumptions: Array<string>;
-        warnings: Array<string>;
-        /**
-         * Who produced the tree, as the caller stated it when saving (not verified), for example rule-compiler-v1 or member.
-         */
-        compiled_by: string;
-        vocabulary: string;
-        created_at: string;
-        /**
-         * Present only when include_sql was true.
-         */
-        sql?: {
-            /**
-             * A parameterized boolean expression over one row per email.
-             */
-            expression: string;
-            /**
-             * The values bound to $1, $2 and so on.
-             */
-            params: Array<unknown>;
-        };
-    } | null;
-};
+export type UpdateEmailRuleResult = EmailRuleWritten;
 
 export type DeleteEmailRuleResult = {
     deleted: boolean;
@@ -6660,7 +6723,7 @@ export type ListEmailRuleDecisionsResult = Array<{
     classification_id: string;
     matched: boolean;
     /**
-     * The rule did not match, but all of its parts except one held.
+     * Not matched, but nearly: its questions did not all say yes, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false). Decisions recorded under the earlier definition counted an exclusion too.
      */
     near_miss: boolean;
     /**
@@ -6671,7 +6734,23 @@ export type ListEmailRuleDecisionsResult = Array<{
      * The answers to the rule's own questions, when they were asked.
      */
     question_answers: Array<unknown>;
+    /**
+     * Present, as true, on a decision about an email whose content cannot be read (withheld, failed to parse, discarded, or still awaiting sender authentication): matched still says what the rule decided, but how it got there was read from that content, so parts and question_answers are empty and near_miss is false. Discarding an email's content normally removes its decisions. Absent otherwise.
+     */
+    detail_withheld?: boolean;
     created_at: string;
+    /**
+     * The decided email's sender address, as GET /v1/emails/{id} shows it.
+     */
+    from_address?: string | null;
+    /**
+     * The decided email's subject, as GET /v1/emails/{id} shows it.
+     */
+    subject?: string | null;
+    /**
+     * When the decided email arrived. Null, with the other two, when you are not shown the email (it awaits sender authentication).
+     */
+    received_at?: string | null;
 }>;
 
 export type ListEmailRuleResultsResult = {
@@ -6696,7 +6775,7 @@ export type ListEmailRuleResultsResult = {
             rule_version: number;
             matched: boolean;
             /**
-             * How each top-level part of the rule decided. Empty when a fact the rule reads was missing, so it was not evaluated.
+             * How each top-level part of the rule decided. Empty when a fact the rule reads was missing, so it was not evaluated, or when detail_withheld is true.
              */
             parts: Array<{
                 index: number;
@@ -6715,23 +6794,11 @@ export type ListEmailRuleResultsResult = {
             /**
              * The conditions and questions of the version that decided, so the result reads in that version's words.
              */
-            tree: {
-                version: 1;
-                /**
-                 * The column contract version the rule is written against, for example v1.
-                 */
-                vocabulary: string;
-                /**
-                 * The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...}).
-                 */
-                when: {
-                    [key: string]: unknown;
-                };
-                /**
-                 * Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes.
-                 */
-                questions: Array<string>;
-            } | null;
+            tree: EmailRuleTree | null;
+            /**
+             * Present, as true, on a result for an email whose content cannot be read (withheld, failed to parse or discarded): matched still says what the rule decided, but how it got there was read from that content, so parts and question_answers are empty. Absent otherwise.
+             */
+            detail_withheld?: boolean;
             created_at: string;
         } | null;
         /**
@@ -6747,61 +6814,39 @@ export type ListEmailRuleResultsResult = {
      * How many more rules the caller can see that are not listed.
      */
     hidden: number;
+    /**
+     * What the classifier read from this email (one classification per vocabulary); null when it has none (not classified, or never will be), or while the email's content is withheld, discarded or failed to parse.
+     */
+    classification?: {
+        id: string;
+        vocabulary: string;
+        classified_at: string;
+        /**
+         * Every fact column, as rule conditions read it: the value (a multi's options lowercased; null if the classifier left it out or wrote another shape) and its confidence. It can differ from GET /emails/{id} understanding, which shows the facts as written.
+         */
+        facts: {
+            [key: string]: {
+                value: string | number | boolean | Array<string> | unknown;
+                confidence?: number | null;
+                /**
+                 * A multi fact's chosen values, each with its own confidence: what a min_confidence on the column tests. Given in rule test results.
+                 */
+                value_confidences?: {
+                    [key: string]: number;
+                };
+            };
+        };
+    } | null;
 };
 
-export type ListEmailRuleVersionsResult = Array<{
-    version: number;
-    english: string;
-    tree: {
-        version: 1;
-        /**
-         * The column contract version the rule is written against, for example v1.
-         */
-        vocabulary: string;
-        /**
-         * The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...}).
-         */
-        when: {
-            [key: string]: unknown;
-        };
-        /**
-         * Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes.
-         */
-        questions: Array<string>;
-    };
-    explanation: string;
-    assumptions: Array<string>;
-    warnings: Array<string>;
-    /**
-     * Who produced the tree, as the caller stated it when saving (not verified), for example rule-compiler-v1 or member.
-     */
-    compiled_by: string;
-    vocabulary: string;
-    created_at: string;
-    /**
-     * Present only when include_sql was true.
-     */
-    sql?: {
-        /**
-         * A parameterized boolean expression over one row per email.
-         */
-        expression: string;
-        /**
-         * The values bound to $1, $2 and so on.
-         */
-        params: Array<unknown>;
-    };
-}>;
+export type ListEmailRuleVersionsResult = Array<EmailRuleVersion>;
 
 export type GetEmailRuleScopeResult = {
     /**
-     * author: all mail its author can read. own_mailboxes: mail to their own addresses. selected: what scope_selection names. Never more than the author can read.
+     * own_mailboxes: mail to its author's own addresses and agents (for a rule that shares, those mail:share_own lets them share). author: all its author can read, inboxes added later included. selected: what scope_selection names.
      */
     evaluation_scope: 'author' | 'own_mailboxes' | 'selected';
-    scope_selection: {
-        addresses: Array<string>;
-        domains: Array<string>;
-    } | null;
+    scope_selection: EmailRuleScopeNames | null;
     /**
      * Shared, so its scope cannot change.
      */
@@ -6810,13 +6855,7 @@ export type GetEmailRuleScopeResult = {
      * How much its author can read now; null when it cannot run as them.
      */
     author_reach: 'organization' | 'limited' | 'own' | null;
-    /**
-     * What scope_selection names that its author no longer reads in full.
-     */
-    no_longer_readable: {
-        addresses: Array<string>;
-        domains: Array<string>;
-    };
+    no_longer_readable: EmailRuleScopeNames;
     /**
      * Inboxes its author still reads at the domains in no_longer_readable; the rule still covers them.
      */
@@ -6825,6 +6864,14 @@ export type GetEmailRuleScopeResult = {
      * Why it cannot run now (a reason as on POST /email-rules/test), or null.
      */
     stopped_reason: string | null;
+    /**
+     * Names in scope_selection that match nothing this organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.
+     */
+    scope_warnings?: Array<EmailRuleScopeWarning>;
+    /**
+     * It can decide no email: it cannot run as its author, or everything its scope names is at none of the organization's domains or no longer read. An inbox not in use yet, or a domain not active now, does not count.
+     */
+    reads_nothing?: boolean;
 };
 
 export type ListEmailRuleScopeOptionsResult = {
@@ -6858,6 +6905,38 @@ export type ListEmailRuleScopeOptionsResult = {
     may_name_unlisted?: boolean;
 };
 
+export type EmailRuleRequestProposer = {
+    user_id: string;
+    name: string | null;
+    /**
+     * Sign-in email; null unless you can list member emails, this is you, or they asked you.
+     */
+    email: string | null;
+    /**
+     * Still a member under the membership recorded (a request or share with someone who left no longer works).
+     */
+    active: boolean;
+};
+
+export type EmailRuleRequestTarget = {
+    /**
+     * Null unless you can list members or this is you.
+     */
+    user_id: string | null;
+    /**
+     * Null unless you can list members or this is you.
+     */
+    name: string | null;
+    /**
+     * Sign-in email; null unless you can list member emails or this is you.
+     */
+    email: string | null;
+    /**
+     * Still a member under the membership recorded (a request or share with someone who left no longer works).
+     */
+    active: boolean;
+};
+
 export type CreateEmailRuleRequestRequest = {
     /**
      * The member asked for the rule. Give target_user_id or target_email, not both.
@@ -6875,40 +6954,21 @@ export type CreateEmailRuleRequestRequest = {
      * The plain-English description the rule was compiled from.
      */
     english: string;
+    tree: EmailRuleTreeInput;
     /**
-     * The rule tree. Checked against the column contract on save.
+     * What the rule matches, in plain English. Left out, the server writes one from the tree.
      */
-    tree: {
-        version: 1;
-        /**
-         * The column contract version the rule is written against, for example v1.
-         */
-        vocabulary: string;
-        /**
-         * The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...}).
-         */
-        when: {
-            [key: string]: unknown;
-        };
-        /**
-         * Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes.
-         */
-        questions: Array<string>;
-    };
+    explanation?: string;
     /**
-     * What the rule matches, in plain English.
-     */
-    explanation: string;
-    /**
-     * Readings chosen where the description was open to more than one.
+     * Readings chosen where the description was open to more than one, as the compile response returned them (including its lines naming any condition, question or confidence bar the description did not ask for). Stored as sent.
      */
     assumptions?: Array<string>;
     /**
-     * Parts of the description the rule does not express.
+     * Parts of the description the rule does not express, as the compile response returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
      */
     warnings?: Array<string>;
     /**
-     * Who produced the tree, as the caller states it (not verified): the compile response's compiled_by, or member when you wrote or edited it yourself. Defaults to member.
+     * Who produced the tree (not verified): the compile response's compiled_by, or member (the default) for a tree you wrote or edited.
      */
     compiled_by?: string;
 };
@@ -6918,67 +6978,94 @@ export type CreateEmailRuleRequestResult = {
     status: 'pending' | 'accepted' | 'declined' | 'withdrawn';
     name: string;
     english: string;
-    tree: {
-        version: 1;
-        /**
-         * The column contract version the rule is written against, for example v1.
-         */
-        vocabulary: string;
-        /**
-         * The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...}).
-         */
-        when: {
-            [key: string]: unknown;
-        };
-        /**
-         * Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes.
-         */
-        questions: Array<string>;
-    };
+    tree: EmailRuleTree;
     explanation: string;
     assumptions: Array<string>;
     warnings: Array<string>;
     compiled_by: string;
     vocabulary: string;
     /**
-     * session: from the proposer's own session; oauth: from an OAuth or CLI token acting for them.
+     * session: the proposer's own session; oauth: an OAuth or CLI token acting for them.
      */
     proposed_via: 'session' | 'oauth';
     created_at: string;
     decided_at: string | null;
     decided_by_user_id: string | null;
-    proposer: {
+    proposer: EmailRuleRequestProposer;
+    target: EmailRuleRequestTarget;
+    /**
+     * The address the proposer typed to name the target; null for anyone else, and when named by user id.
+     */
+    target_address_typed: string | null;
+    is_proposer: boolean;
+    is_target: boolean;
+    /**
+     * The share accepting created, while it exists.
+     */
+    share_id: string | null;
+    /**
+     * Whether the member asked can accept it now under their role. Null unless you can list members and their roles (members:read), or when it could not be read.
+     */
+    target_can_accept?: boolean | null;
+    /**
+     * Why the member asked cannot accept it yet, naming the permission their role lacks. The request is still sent. Null when they can, or when target_can_accept is null.
+     */
+    target_warning?: string | null;
+};
+
+export type CheckEmailRuleRequestTargetRequest = {
+    /**
+     * The member to ask. Give target_user_id or target_email, not both.
+     */
+    target_user_id?: string;
+    /**
+     * The member to ask, by their member mailbox address. Give target_user_id or target_email, not both. Counts toward the same 30 lookups by address an hour as asking.
+     */
+    target_email?: string;
+};
+
+export type CheckEmailRuleRequestTargetResult = {
+    target: {
         user_id: string;
         name: string | null;
-        /**
-         * Their sign-in email. Null unless you can list member emails, this is you, or you are the member they asked.
-         */
         email: string | null;
-        /**
-         * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-         */
-        active: boolean;
-    };
-    target: {
-        /**
-         * Null unless you can list members or this is you.
-         */
-        user_id: string | null;
-        /**
-         * Null unless you can list members or this is you.
-         */
-        name: string | null;
-        /**
-         * Their sign-in email. Null unless you can list member emails or this is you.
-         */
-        email: string | null;
-        /**
-         * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-         */
-        active: boolean;
     };
     /**
-     * The address you typed to name the member. Only for the member who asked; null otherwise, and when they were named by user id.
+     * Whether they can accept a rule request now under their role.
+     */
+    can_accept: boolean;
+    /**
+     * The permission their role lacks for accepting, when can_accept is false.
+     */
+    missing_permission: string | null;
+    /**
+     * The same in words, with who can fix it.
+     */
+    warning: string | null;
+};
+
+export type EmailRuleRequest = {
+    id: string;
+    status: 'pending' | 'accepted' | 'declined' | 'withdrawn';
+    name: string;
+    english: string;
+    tree: EmailRuleTree;
+    explanation: string;
+    assumptions: Array<string>;
+    warnings: Array<string>;
+    compiled_by: string;
+    vocabulary: string;
+    /**
+     * session: the proposer's own session; oauth: an OAuth or CLI token acting for them.
+     */
+    proposed_via: 'session' | 'oauth';
+    created_at: string;
+    decided_at: string | null;
+    decided_by_user_id: string | null;
+    proposer: EmailRuleRequestProposer;
+    target: EmailRuleRequestTarget;
+    /**
+     * The address the proposer typed to name the target; null for anyone else, and when named by user id.
      */
     target_address_typed: string | null;
     is_proposer: boolean;
@@ -6989,308 +7076,118 @@ export type CreateEmailRuleRequestResult = {
     share_id: string | null;
 };
 
-export type ListEmailRuleRequestsResult = Array<{
-    id: string;
-    status: 'pending' | 'accepted' | 'declined' | 'withdrawn';
-    name: string;
-    english: string;
-    tree: {
-        version: 1;
-        /**
-         * The column contract version the rule is written against, for example v1.
-         */
-        vocabulary: string;
-        /**
-         * The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...}).
-         */
-        when: {
-            [key: string]: unknown;
-        };
-        /**
-         * Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes.
-         */
-        questions: Array<string>;
-    };
-    explanation: string;
-    assumptions: Array<string>;
-    warnings: Array<string>;
-    compiled_by: string;
-    vocabulary: string;
-    /**
-     * session: from the proposer's own session; oauth: from an OAuth or CLI token acting for them.
-     */
-    proposed_via: 'session' | 'oauth';
-    created_at: string;
-    decided_at: string | null;
-    decided_by_user_id: string | null;
-    proposer: {
-        user_id: string;
-        name: string | null;
-        /**
-         * Their sign-in email. Null unless you can list member emails, this is you, or you are the member they asked.
-         */
-        email: string | null;
-        /**
-         * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-         */
-        active: boolean;
-    };
-    target: {
-        /**
-         * Null unless you can list members or this is you.
-         */
-        user_id: string | null;
-        /**
-         * Null unless you can list members or this is you.
-         */
-        name: string | null;
-        /**
-         * Their sign-in email. Null unless you can list member emails or this is you.
-         */
-        email: string | null;
-        /**
-         * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-         */
-        active: boolean;
-    };
-    /**
-     * The address you typed to name the member. Only for the member who asked; null otherwise, and when they were named by user id.
-     */
-    target_address_typed: string | null;
-    is_proposer: boolean;
-    is_target: boolean;
-    /**
-     * The share accepting created, while it exists.
-     */
-    share_id: string | null;
-}>;
+export type ListEmailRuleRequestsResult = Array<EmailRuleRequest>;
 
-export type GetEmailRuleRequestResult = {
-    id: string;
-    status: 'pending' | 'accepted' | 'declined' | 'withdrawn';
-    name: string;
-    english: string;
-    tree: {
-        version: 1;
-        /**
-         * The column contract version the rule is written against, for example v1.
-         */
-        vocabulary: string;
-        /**
-         * The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...}).
-         */
-        when: {
-            [key: string]: unknown;
-        };
-        /**
-         * Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes.
-         */
-        questions: Array<string>;
-    };
-    explanation: string;
-    assumptions: Array<string>;
-    warnings: Array<string>;
-    compiled_by: string;
-    vocabulary: string;
-    /**
-     * session: from the proposer's own session; oauth: from an OAuth or CLI token acting for them.
-     */
-    proposed_via: 'session' | 'oauth';
-    created_at: string;
-    decided_at: string | null;
-    decided_by_user_id: string | null;
-    proposer: {
-        user_id: string;
-        name: string | null;
-        /**
-         * Their sign-in email. Null unless you can list member emails, this is you, or you are the member they asked.
-         */
-        email: string | null;
-        /**
-         * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-         */
-        active: boolean;
-    };
-    target: {
-        /**
-         * Null unless you can list members or this is you.
-         */
-        user_id: string | null;
-        /**
-         * Null unless you can list members or this is you.
-         */
-        name: string | null;
-        /**
-         * Their sign-in email. Null unless you can list member emails or this is you.
-         */
-        email: string | null;
-        /**
-         * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-         */
-        active: boolean;
-    };
-    /**
-     * The address you typed to name the member. Only for the member who asked; null otherwise, and when they were named by user id.
-     */
-    target_address_typed: string | null;
-    is_proposer: boolean;
-    is_target: boolean;
-    /**
-     * The share accepting created, while it exists.
-     */
-    share_id: string | null;
+export type GetEmailRuleRequestResult = EmailRuleRequest;
+
+export type DeclineEmailRuleRequestResult = EmailRuleRequest;
+
+export type WithdrawEmailRuleRequestResult = EmailRuleRequest;
+
+export type DeleteEmailRuleRequestResult = {
+    deleted: boolean;
 };
 
-export type DeclineEmailRuleRequestResult = {
+export type EmailRuleWithVersion = {
     id: string;
-    status: 'pending' | 'accepted' | 'declined' | 'withdrawn';
     name: string;
-    english: string;
-    tree: {
-        version: 1;
-        /**
-         * The column contract version the rule is written against, for example v1.
-         */
-        vocabulary: string;
-        /**
-         * The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...}).
-         */
-        when: {
-            [key: string]: unknown;
-        };
-        /**
-         * Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes.
-         */
-        questions: Array<string>;
-    };
-    explanation: string;
-    assumptions: Array<string>;
-    warnings: Array<string>;
-    compiled_by: string;
-    vocabulary: string;
+    state: 'draft' | 'observe' | 'active';
     /**
-     * session: from the proposer's own session; oauth: from an OAuth or CLI token acting for them.
+     * do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.
      */
-    proposed_via: 'session' | 'oauth';
+    kind?: 'grant' | 'do_not_share';
+    /**
+     * Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
+     */
+    evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
+    /**
+     * What a selected rule names; null for any other scope.
+     */
+    scope_selection?: EmailRuleScopeNames | null;
+    current_version: number | null;
+    author_user_id: string;
+    /**
+     * Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members).
+     */
+    is_author: boolean;
     created_at: string;
-    decided_at: string | null;
-    decided_by_user_id: string | null;
-    proposer: {
-        user_id: string;
-        name: string | null;
-        /**
-         * Their sign-in email. Null unless you can list member emails, this is you, or you are the member they asked.
-         */
-        email: string | null;
-        /**
-         * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-         */
-        active: boolean;
-    };
-    target: {
-        /**
-         * Null unless you can list members or this is you.
-         */
-        user_id: string | null;
-        /**
-         * Null unless you can list members or this is you.
-         */
-        name: string | null;
-        /**
-         * Their sign-in email. Null unless you can list member emails or this is you.
-         */
-        email: string | null;
-        /**
-         * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-         */
-        active: boolean;
-    };
-    /**
-     * The address you typed to name the member. Only for the member who asked; null otherwise, and when they were named by user id.
-     */
-    target_address_typed: string | null;
-    is_proposer: boolean;
-    is_target: boolean;
-    /**
-     * The share accepting created, while it exists.
-     */
-    share_id: string | null;
+    updated_at: string;
+    current: EmailRuleVersion | null;
 };
 
-export type WithdrawEmailRuleRequestResult = {
+export type EmailRuleShare = {
     id: string;
-    status: 'pending' | 'accepted' | 'declined' | 'withdrawn';
-    name: string;
-    english: string;
-    tree: {
-        version: 1;
-        /**
-         * The column contract version the rule is written against, for example v1.
-         */
-        vocabulary: string;
-        /**
-         * The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...}).
-         */
-        when: {
-            [key: string]: unknown;
-        };
-        /**
-         * Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes.
-         */
-        questions: Array<string>;
-    };
-    explanation: string;
-    assumptions: Array<string>;
-    warnings: Array<string>;
-    compiled_by: string;
-    vocabulary: string;
-    /**
-     * session: from the proposer's own session; oauth: from an OAuth or CLI token acting for them.
-     */
-    proposed_via: 'session' | 'oauth';
+    request_id: string;
     created_at: string;
-    decided_at: string | null;
-    decided_by_user_id: string | null;
-    proposer: {
-        user_id: string;
-        name: string | null;
-        /**
-         * Their sign-in email. Null unless you can list member emails, this is you, or you are the member they asked.
-         */
-        email: string | null;
-        /**
-         * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-         */
-        active: boolean;
-    };
-    target: {
-        /**
-         * Null unless you can list members or this is you.
-         */
-        user_id: string | null;
-        /**
-         * Null unless you can list members or this is you.
-         */
-        name: string | null;
-        /**
-         * Their sign-in email. Null unless you can list member emails or this is you.
-         */
-        email: string | null;
-        /**
-         * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-         */
-        active: boolean;
-    };
+    ended_at: string | null;
+    end_reason: 'stopped_by_granter' | 'removed_by_beneficiary' | 'stopped_by_admin' | 'rule_changed' | null;
     /**
-     * The address you typed to name the member. Only for the member who asked; null otherwise, and when they were named by user id.
+     * The version of the rule that was accepted. A new version of the rule ends the share.
      */
-    target_address_typed: string | null;
-    is_proposer: boolean;
-    is_target: boolean;
+    accepted_rule_version: number;
     /**
-     * The share accepting created, while it exists.
+     * Whether the member who accepted changed the rule's English, tree or explanation before accepting (a new name does not count).
      */
-    share_id: string | null;
+    edited_on_accept: boolean;
+    /**
+     * Not ended, and both people are still members under the memberships that were recorded.
+     */
+    live: boolean;
+    /**
+     * True when the rule is active and the share live but new email is not being shared now (what was shared stays visible); false when new email is shared. Null when it does not apply (share not live, rule not active, or you are not on the share) or could not be read.
+     */
+    delivery_paused: boolean | null;
+    /**
+     * Whether you are the member sharing their mail.
+     */
+    is_granter: boolean;
+    /**
+     * Whether you are the member it is shared with.
+     */
+    is_beneficiary: boolean;
+    granter: EmailRuleShareGranter;
+    beneficiary: EmailRuleShareBeneficiary;
+    /**
+     * The rule's name, state and description; null once the share is not live, except for the member sharing their mail.
+     */
+    rule: {
+        name: string;
+        state: 'draft' | 'observe' | 'active';
+        current_version: number | null;
+        english: string | null;
+        explanation: string | null;
+        updated_at: string;
+    } | null;
+    /**
+     * The rule itself. Only for the member sharing their mail; null for anyone else.
+     */
+    rule_id: string | null;
+};
+
+export type EmailRuleShareGranter = {
+    user_id: string;
+    name: string | null;
+    /**
+     * Sign-in email; null unless you can list member emails, this is you, or this is a live share with you.
+     */
+    email: string | null;
+    /**
+     * Still a member under the membership recorded (a request or share with someone who left no longer works).
+     */
+    active: boolean;
+};
+
+export type EmailRuleShareBeneficiary = {
+    user_id: string;
+    name: string | null;
+    /**
+     * Sign-in email; null unless you can list member emails, this is you, or you are the granter (live or not).
+     */
+    email: string | null;
+    /**
+     * Still a member under the membership recorded (a request or share with someone who left no longer works).
+     */
+    active: boolean;
 };
 
 export type AcceptEmailRuleRequestRequest = {
@@ -7302,475 +7199,36 @@ export type AcceptEmailRuleRequestRequest = {
      * The plain-English description the rule was compiled from.
      */
     english?: string;
+    tree?: EmailRuleTreeInput;
     /**
-     * The rule tree. Checked against the column contract on save.
-     */
-    tree?: {
-        version: 1;
-        /**
-         * The column contract version the rule is written against, for example v1.
-         */
-        vocabulary: string;
-        /**
-         * The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...}).
-         */
-        when: {
-            [key: string]: unknown;
-        };
-        /**
-         * Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes.
-         */
-        questions: Array<string>;
-    };
-    /**
-     * What the rule matches, in plain English.
+     * What the rule matches, in plain English. Left out, the server writes one from the tree.
      */
     explanation?: string;
     /**
-     * Readings chosen where the description was open to more than one.
+     * Readings chosen where the description was open to more than one, as the compile response returned them (including its lines naming any condition, question or confidence bar the description did not ask for). Stored as sent.
      */
     assumptions?: Array<string>;
     /**
-     * Parts of the description the rule does not express.
+     * Parts of the description the rule does not express, as the compile response returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
      */
     warnings?: Array<string>;
     /**
-     * Who produced the tree, as the caller states it (not verified): the compile response's compiled_by, or member when you wrote or edited it yourself. Defaults to member.
+     * Who produced the tree (not verified): the compile response's compiled_by, or member (the default) for a tree you wrote or edited.
      */
     compiled_by?: string;
 };
 
 export type AcceptEmailRuleRequestResult = {
-    request: {
-        id: string;
-        status: 'pending' | 'accepted' | 'declined' | 'withdrawn';
-        name: string;
-        english: string;
-        tree: {
-            version: 1;
-            /**
-             * The column contract version the rule is written against, for example v1.
-             */
-            vocabulary: string;
-            /**
-             * The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...}).
-             */
-            when: {
-                [key: string]: unknown;
-            };
-            /**
-             * Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes.
-             */
-            questions: Array<string>;
-        };
-        explanation: string;
-        assumptions: Array<string>;
-        warnings: Array<string>;
-        compiled_by: string;
-        vocabulary: string;
-        /**
-         * session: from the proposer's own session; oauth: from an OAuth or CLI token acting for them.
-         */
-        proposed_via: 'session' | 'oauth';
-        created_at: string;
-        decided_at: string | null;
-        decided_by_user_id: string | null;
-        proposer: {
-            user_id: string;
-            name: string | null;
-            /**
-             * Their sign-in email. Null unless you can list member emails, this is you, or you are the member they asked.
-             */
-            email: string | null;
-            /**
-             * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-             */
-            active: boolean;
-        };
-        target: {
-            /**
-             * Null unless you can list members or this is you.
-             */
-            user_id: string | null;
-            /**
-             * Null unless you can list members or this is you.
-             */
-            name: string | null;
-            /**
-             * Their sign-in email. Null unless you can list member emails or this is you.
-             */
-            email: string | null;
-            /**
-             * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-             */
-            active: boolean;
-        };
-        /**
-         * The address you typed to name the member. Only for the member who asked; null otherwise, and when they were named by user id.
-         */
-        target_address_typed: string | null;
-        is_proposer: boolean;
-        is_target: boolean;
-        /**
-         * The share accepting created, while it exists.
-         */
-        share_id: string | null;
-    };
-    rule: {
-        id: string;
-        name: string;
-        state: 'draft' | 'observe' | 'active';
-        /**
-         * do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.
-         */
-        kind?: 'grant' | 'do_not_share';
-        /**
-         * Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.
-         */
-        evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
-        /**
-         * What a selected rule names; null for any other scope.
-         */
-        scope_selection?: {
-            addresses: Array<string>;
-            domains: Array<string>;
-        } | null;
-        current_version: number | null;
-        author_user_id: string;
-        /**
-         * Whether the caller wrote the rule (under their current membership). Only the author edits a rule; anyone else who can see it may only disable or delete it, and while it is shared only if they manage members.
-         */
-        is_author: boolean;
-        created_at: string;
-        updated_at: string;
-        current: {
-            version: number;
-            english: string;
-            tree: {
-                version: 1;
-                /**
-                 * The column contract version the rule is written against, for example v1.
-                 */
-                vocabulary: string;
-                /**
-                 * The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...}).
-                 */
-                when: {
-                    [key: string]: unknown;
-                };
-                /**
-                 * Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes.
-                 */
-                questions: Array<string>;
-            };
-            explanation: string;
-            assumptions: Array<string>;
-            warnings: Array<string>;
-            /**
-             * Who produced the tree, as the caller stated it when saving (not verified), for example rule-compiler-v1 or member.
-             */
-            compiled_by: string;
-            vocabulary: string;
-            created_at: string;
-            /**
-             * Present only when include_sql was true.
-             */
-            sql?: {
-                /**
-                 * A parameterized boolean expression over one row per email.
-                 */
-                expression: string;
-                /**
-                 * The values bound to $1, $2 and so on.
-                 */
-                params: Array<unknown>;
-            };
-        } | null;
-    };
-    share: {
-        id: string;
-        request_id: string;
-        created_at: string;
-        ended_at: string | null;
-        end_reason: 'stopped_by_granter' | 'removed_by_beneficiary' | 'stopped_by_admin' | 'rule_changed' | null;
-        /**
-         * The version of the rule that was accepted. A new version of the rule ends the share.
-         */
-        accepted_rule_version: number;
-        /**
-         * Whether the member who accepted changed what the rule says first (its English, tree or explanation). A new name does not count.
-         */
-        edited_on_accept: boolean;
-        /**
-         * Not ended, and both people are still members under the memberships that were recorded.
-         */
-        live: boolean;
-        /**
-         * True when the rule is active and the share is live but new email is not being shared right now; email already shared stays visible. False when new email is being shared. Null when this does not apply (the share has ended, the rule is not active, or you are not one of the two people on the share) or could not be read.
-         */
-        delivery_paused: boolean | null;
-        /**
-         * Whether you are the member sharing their mail.
-         */
-        is_granter: boolean;
-        /**
-         * Whether you are the member it is shared with.
-         */
-        is_beneficiary: boolean;
-        granter: {
-            user_id: string;
-            name: string | null;
-            /**
-             * Their sign-in email. Null unless you can list member emails, this is you, or this is a live share with you.
-             */
-            email: string | null;
-            /**
-             * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-             */
-            active: boolean;
-        };
-        beneficiary: {
-            user_id: string;
-            name: string | null;
-            /**
-             * Their sign-in email. Null unless you can list member emails, this is you, or you are the member sharing with them.
-             */
-            email: string | null;
-            /**
-             * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-             */
-            active: boolean;
-        };
-        /**
-         * What the rule is called and describes. Null once the share is no longer live, except for the member who wrote the rule.
-         */
-        rule: {
-            name: string;
-            state: 'draft' | 'observe' | 'active';
-            current_version: number | null;
-            english: string | null;
-            explanation: string | null;
-            updated_at: string;
-        } | null;
-        /**
-         * The rule itself. Only for the member sharing their mail; null for anyone else.
-         */
-        rule_id: string | null;
-    };
+    request: EmailRuleRequest;
+    rule: EmailRuleWithVersion;
+    share: EmailRuleShare;
 };
 
-export type ListEmailRuleSharesResult = Array<{
-    id: string;
-    request_id: string;
-    created_at: string;
-    ended_at: string | null;
-    end_reason: 'stopped_by_granter' | 'removed_by_beneficiary' | 'stopped_by_admin' | 'rule_changed' | null;
-    /**
-     * The version of the rule that was accepted. A new version of the rule ends the share.
-     */
-    accepted_rule_version: number;
-    /**
-     * Whether the member who accepted changed what the rule says first (its English, tree or explanation). A new name does not count.
-     */
-    edited_on_accept: boolean;
-    /**
-     * Not ended, and both people are still members under the memberships that were recorded.
-     */
-    live: boolean;
-    /**
-     * True when the rule is active and the share is live but new email is not being shared right now; email already shared stays visible. False when new email is being shared. Null when this does not apply (the share has ended, the rule is not active, or you are not one of the two people on the share) or could not be read.
-     */
-    delivery_paused: boolean | null;
-    /**
-     * Whether you are the member sharing their mail.
-     */
-    is_granter: boolean;
-    /**
-     * Whether you are the member it is shared with.
-     */
-    is_beneficiary: boolean;
-    granter: {
-        user_id: string;
-        name: string | null;
-        /**
-         * Their sign-in email. Null unless you can list member emails, this is you, or this is a live share with you.
-         */
-        email: string | null;
-        /**
-         * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-         */
-        active: boolean;
-    };
-    beneficiary: {
-        user_id: string;
-        name: string | null;
-        /**
-         * Their sign-in email. Null unless you can list member emails, this is you, or you are the member sharing with them.
-         */
-        email: string | null;
-        /**
-         * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-         */
-        active: boolean;
-    };
-    /**
-     * What the rule is called and describes. Null once the share is no longer live, except for the member who wrote the rule.
-     */
-    rule: {
-        name: string;
-        state: 'draft' | 'observe' | 'active';
-        current_version: number | null;
-        english: string | null;
-        explanation: string | null;
-        updated_at: string;
-    } | null;
-    /**
-     * The rule itself. Only for the member sharing their mail; null for anyone else.
-     */
-    rule_id: string | null;
-}>;
+export type ListEmailRuleSharesResult = Array<EmailRuleShare>;
 
-export type ListGivenEmailRuleSharesResult = Array<{
-    id: string;
-    request_id: string;
-    created_at: string;
-    ended_at: string | null;
-    end_reason: 'stopped_by_granter' | 'removed_by_beneficiary' | 'stopped_by_admin' | 'rule_changed' | null;
-    /**
-     * The version of the rule that was accepted. A new version of the rule ends the share.
-     */
-    accepted_rule_version: number;
-    /**
-     * Whether the member who accepted changed what the rule says first (its English, tree or explanation). A new name does not count.
-     */
-    edited_on_accept: boolean;
-    /**
-     * Not ended, and both people are still members under the memberships that were recorded.
-     */
-    live: boolean;
-    /**
-     * True when the rule is active and the share is live but new email is not being shared right now; email already shared stays visible. False when new email is being shared. Null when this does not apply (the share has ended, the rule is not active, or you are not one of the two people on the share) or could not be read.
-     */
-    delivery_paused: boolean | null;
-    /**
-     * Whether you are the member sharing their mail.
-     */
-    is_granter: boolean;
-    /**
-     * Whether you are the member it is shared with.
-     */
-    is_beneficiary: boolean;
-    granter: {
-        user_id: string;
-        name: string | null;
-        /**
-         * Their sign-in email. Null unless you can list member emails, this is you, or this is a live share with you.
-         */
-        email: string | null;
-        /**
-         * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-         */
-        active: boolean;
-    };
-    beneficiary: {
-        user_id: string;
-        name: string | null;
-        /**
-         * Their sign-in email. Null unless you can list member emails, this is you, or you are the member sharing with them.
-         */
-        email: string | null;
-        /**
-         * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-         */
-        active: boolean;
-    };
-    /**
-     * What the rule is called and describes. Null once the share is no longer live, except for the member who wrote the rule.
-     */
-    rule: {
-        name: string;
-        state: 'draft' | 'observe' | 'active';
-        current_version: number | null;
-        english: string | null;
-        explanation: string | null;
-        updated_at: string;
-    } | null;
-    /**
-     * The rule itself. Only for the member sharing their mail; null for anyone else.
-     */
-    rule_id: string | null;
-}>;
+export type ListGivenEmailRuleSharesResult = Array<EmailRuleShare>;
 
-export type GetEmailRuleShareResult = {
-    id: string;
-    request_id: string;
-    created_at: string;
-    ended_at: string | null;
-    end_reason: 'stopped_by_granter' | 'removed_by_beneficiary' | 'stopped_by_admin' | 'rule_changed' | null;
-    /**
-     * The version of the rule that was accepted. A new version of the rule ends the share.
-     */
-    accepted_rule_version: number;
-    /**
-     * Whether the member who accepted changed what the rule says first (its English, tree or explanation). A new name does not count.
-     */
-    edited_on_accept: boolean;
-    /**
-     * Not ended, and both people are still members under the memberships that were recorded.
-     */
-    live: boolean;
-    /**
-     * True when the rule is active and the share is live but new email is not being shared right now; email already shared stays visible. False when new email is being shared. Null when this does not apply (the share has ended, the rule is not active, or you are not one of the two people on the share) or could not be read.
-     */
-    delivery_paused: boolean | null;
-    /**
-     * Whether you are the member sharing their mail.
-     */
-    is_granter: boolean;
-    /**
-     * Whether you are the member it is shared with.
-     */
-    is_beneficiary: boolean;
-    granter: {
-        user_id: string;
-        name: string | null;
-        /**
-         * Their sign-in email. Null unless you can list member emails, this is you, or this is a live share with you.
-         */
-        email: string | null;
-        /**
-         * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-         */
-        active: boolean;
-    };
-    beneficiary: {
-        user_id: string;
-        name: string | null;
-        /**
-         * Their sign-in email. Null unless you can list member emails, this is you, or you are the member sharing with them.
-         */
-        email: string | null;
-        /**
-         * Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works.
-         */
-        active: boolean;
-    };
-    /**
-     * What the rule is called and describes. Null once the share is no longer live, except for the member who wrote the rule.
-     */
-    rule: {
-        name: string;
-        state: 'draft' | 'observe' | 'active';
-        current_version: number | null;
-        english: string | null;
-        explanation: string | null;
-        updated_at: string;
-    } | null;
-    /**
-     * The rule itself. Only for the member sharing their mail; null for anyone else.
-     */
-    rule_id: string | null;
-};
+export type GetEmailRuleShareResult = EmailRuleShare;
 
 export type ListEmailRuleShareEmailsResult = Array<{
     delivery_report?: {
@@ -7855,6 +7313,10 @@ export type ListEmailRuleShareEmailsResult = Array<{
         subject: Array<string>;
         body: Array<string>;
     } | null;
+    /**
+     * When the share's rule first matched this email. The email was shared then or shortly after. Null if that could not be read.
+     */
+    shared_at: string | null;
     [key: string]: unknown;
 }>;
 
@@ -8615,6 +8077,14 @@ export type GetDeliveryResult = {
     duration_ms: number | null;
     last_error: string | null;
     last_error_code: string | null;
+    /**
+     * The HTTP status the endpoint answered this attempt with: a webhook's own answer, or for a Function what its runtime answered, which is the platform's own error when the Function could not be run. Null when no answer came back (a network error, a timeout, an attempt refused or not sent) and on attempts recorded before this field.
+     */
+    response_status: number | null;
+    /**
+     * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.
+     */
+    response_body: string | null;
     created_at: string;
     updated_at: string;
     email: {
@@ -8622,6 +8092,25 @@ export type GetDeliveryResult = {
         recipient: string | null;
         subject: string | null;
     } | null;
+    /**
+     * Whether this is the latest attempt of its delivery: the one recorded last, where a record of no attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A retry is recorded as a new attempt with its own id and attempt_count (not always higher than the one before), so an earlier attempt never changes: follow the latest one, or read attempts on any of them.
+     */
+    latest_attempt: boolean;
+    /**
+     * When the next automatic retry of this delivery is due. Not reported yet: always null.
+     */
+    next_attempt_at: string | null;
+    /**
+     * Every attempt of this delivery in the order recorded, oldest first, this one included: the same endpoint, and the same event (or, for an attempt recorded without one, the same email). Records of no attempt (attempt_count 0) are listed where they were recorded, so the last entry is not always the latest attempt (latest_attempt says which is). The newest 100 when there are more.
+     */
+    attempts: Array<{
+        id: string;
+        attempt_count: number;
+        status: string;
+        last_error_code: string | null;
+        duration_ms: number | null;
+        created_at: string;
+    }>;
 };
 
 /**
@@ -9126,6 +8615,7 @@ export type CredentialsGetCredentialPolicyResult = {
     cap_agents_below_person: boolean;
     removal_suspends_created: boolean;
     oauth_consent_admin_only: boolean;
+    cli_writes_require_approval?: boolean;
     cli_access?: 'owners_admins_and_operators' | 'owners_and_admins' | 'all_members' | 'off';
     [key: string]: unknown;
 };
@@ -9139,6 +8629,7 @@ export type CredentialsUpdateCredentialPolicyResult = {
     cap_agents_below_person: boolean;
     removal_suspends_created: boolean;
     oauth_consent_admin_only: boolean;
+    cli_writes_require_approval?: boolean;
     cli_access?: 'owners_admins_and_operators' | 'owners_and_admins' | 'all_members' | 'off';
     [key: string]: unknown;
 };
@@ -9152,6 +8643,7 @@ export type CredentialsUpdateCredentialPolicyInput = {
     cap_agents_below_person?: boolean;
     removal_suspends_created?: boolean;
     oauth_consent_admin_only?: boolean;
+    cli_writes_require_approval?: boolean;
     cli_access?: 'owners_admins_and_operators' | 'owners_and_admins' | 'all_members' | 'off';
 };
 
@@ -9186,6 +8678,7 @@ export type CredentialsGetKeyBuilderResult = {
         cap_agents_below_person: boolean;
         removal_suspends_created: boolean;
         oauth_consent_admin_only: boolean;
+        cli_writes_require_approval?: boolean;
         cli_access?: 'owners_admins_and_operators' | 'owners_and_admins' | 'all_members' | 'off';
         [key: string]: unknown;
     };
@@ -9259,11 +8752,17 @@ export type CredentialsRotateKeyResult = {
     key_prefix: string;
     expires_at?: string | null;
     previous_key_id: string;
+    /**
+     * When the old key stops working: the time of the rotation plus overlap_seconds (24 hours when it was omitted, now when it was 0), or the key's own expires_at when that comes first.
+     */
     previous_key_expires_at: string;
     [key: string]: unknown;
 };
 
 export type CredentialsRotateKeyInput = {
+    /**
+     * How long the old key keeps working, in seconds, up to 604800 (7 days), and never past its own expires_at. 86400 (24 hours) when omitted. 0 stops the old key at once: use it when rotating because the secret leaked.
+     */
     overlap_seconds?: number;
 };
 
@@ -9414,6 +8913,10 @@ export type CredentialsListKeysResult = {
         last_used_at: string | null;
         expires_at: string | null;
         suspended: boolean;
+        /**
+         * Whether the key works now: active; suspended (refused until the suspension is lifted); expired (refused since expires_at); or inactive, for an agent connection key whose connection cannot act (not claimed, revoked, its domain not verified, or its owner no longer a member). A revoked key is not listed. An endpoint's owner_key_status reports an expired key as suspended.
+         */
+        status?: 'active' | 'suspended' | 'expired' | 'inactive';
         [key: string]: unknown;
     }>;
     next_cursor: string | null;
@@ -9437,6 +8940,10 @@ export type CredentialsGetKeyResult = {
     last_used_at: string | null;
     expires_at: string | null;
     suspended: boolean;
+    /**
+     * Whether the key works now: active; suspended (refused until the suspension is lifted); expired (refused since expires_at); or inactive, for an agent connection key whose connection cannot act (not claimed, revoked, its domain not verified, or its owner no longer a member). A revoked key is not listed. An endpoint's owner_key_status reports an expired key as suspended.
+     */
+    status?: 'active' | 'suspended' | 'expired' | 'inactive';
     [key: string]: unknown;
 };
 
@@ -10185,6 +9692,21 @@ export type TemplateSchedule = {
     senderLocalpart: string;
     allowlistSecret?: string;
     recipientsSecret?: string;
+};
+
+export type EndpointSigningSecretResponse = {
+    success: true;
+    data: {
+        secret: string;
+    };
+    meta?: {
+        total?: number;
+        total_capped?: boolean;
+        limit?: number;
+        cursor?: string | null;
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
 };
 
 /**
@@ -12598,6 +12120,10 @@ export type CreateEndpointData = {
     body: CreateEndpointInput;
     headers?: {
         /**
+         * A single-use step-up token of purpose `webhooks.write` (Create a webhook or change where it delivers), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session. Asked for only from the person's own Primitive CLI login, and only when the organization's credential policy sets `cli_writes_require_approval`: creating a webhook that delivers to a URL (`kind` `http`), or changing an endpoint's `url`. The token only approves the request, which is still made by the CLI login, and it is spent whatever the answer.
+         */
+        'Primitive-Step-Up'?: string;
+        /**
          * Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.
          */
         'Idempotency-Key'?: string;
@@ -12691,8 +12217,62 @@ export type DeleteEndpointResponses = {
 
 export type DeleteEndpointResponse = DeleteEndpointResponses[keyof DeleteEndpointResponses];
 
+export type GetEndpointData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/endpoints/{id}';
+};
+
+export type GetEndpointErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Primitive encountered an internal error
+     */
+    500: ErrorResponse;
+};
+
+export type GetEndpointError = GetEndpointErrors[keyof GetEndpointErrors];
+
+export type GetEndpointResponses = {
+    /**
+     * The endpoint
+     */
+    200: SuccessEnvelope & {
+        data?: Endpoint;
+    };
+};
+
+export type GetEndpointResponse = GetEndpointResponses[keyof GetEndpointResponses];
+
 export type UpdateEndpointData = {
     body: UpdateEndpointInput;
+    headers?: {
+        /**
+         * A single-use step-up token of purpose `webhooks.write` (Create a webhook or change where it delivers), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session. Asked for only from the person's own Primitive CLI login, and only when the organization's credential policy sets `cli_writes_require_approval`: creating a webhook that delivers to a URL (`kind` `http`), or changing an endpoint's `url`. The token only approves the request, which is still made by the CLI login, and it is spent whatever the answer.
+         */
+        'Primitive-Step-Up'?: string;
+    };
     path: {
         /**
          * Resource UUID
@@ -12713,6 +12293,10 @@ export type UpdateEndpointErrors = {
      */
     401: ErrorResponse;
     /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
      * Resource not found
      */
     404: ErrorResponse;
@@ -12720,6 +12304,10 @@ export type UpdateEndpointErrors = {
      * The request conflicts with the current state of the resource
      */
     409: ErrorResponse;
+    /**
+     * Primitive is temporarily unable to process the request
+     */
+    503: ErrorResponse;
 };
 
 export type UpdateEndpointError = UpdateEndpointErrors[keyof UpdateEndpointErrors];
@@ -18633,7 +18221,7 @@ export type ListAddressNotesData = {
          */
         prefix?: string;
         /**
-         * Case-sensitive note name. AGENT_INFO, AGENT_USES and AGENT_RUNTIME (where the agent runs, e.g. its runtime, machine and working directory) are conventions, with no required value schema.
+         * The name of the last note on the previous page, as meta.cursor gave it. Omit for the first page.
          */
         cursor?: string;
         /**
@@ -18949,7 +18537,7 @@ export type ListPublicAddressNotesData = {
          */
         prefix?: string;
         /**
-         * Case-sensitive note name. AGENT_INFO, AGENT_USES and AGENT_RUNTIME (where the agent runs, e.g. its runtime, machine and working directory) are conventions, with no required value schema.
+         * The name of the last note on the previous page, as meta.cursor gave it. Omit for the first page.
          */
         cursor?: string;
         /**
@@ -19651,7 +19239,7 @@ export type ListInteractionsErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_disabled: interactions (or, for wake.dispatch, Wake dispatch) are not enabled for this organization, and details.feature is interactions or wake_dispatch; only Primitive turns them on. grant_forbidden: the credential does not hold the permission
+     * feature_disabled: interactions (or, for wake.dispatch, Wake dispatch) are not enabled for this organization, and details.feature is interactions or wake_dispatch; contact Primitive to turn them on. grant_forbidden: the credential does not hold the permission
      */
     403: ErrorResponse;
     /**
@@ -19696,7 +19284,7 @@ export type StartInteractionErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_disabled: interactions (or, for wake.dispatch, Wake dispatch) are not enabled for this organization, and details.feature is interactions or wake_dispatch; only Primitive turns them on. grant_forbidden: the credential does not hold the permission
+     * feature_disabled: interactions (or, for wake.dispatch, Wake dispatch) are not enabled for this organization, and details.feature is interactions or wake_dispatch; contact Primitive to turn them on. grant_forbidden: the credential does not hold the permission
      */
     403: ErrorResponse;
     /**
@@ -19736,7 +19324,7 @@ export type GetInteractionErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_disabled: interactions (or, for wake.dispatch, Wake dispatch) are not enabled for this organization, and details.feature is interactions or wake_dispatch; only Primitive turns them on. grant_forbidden: the credential does not hold the permission
+     * feature_disabled: interactions (or, for wake.dispatch, Wake dispatch) are not enabled for this organization, and details.feature is interactions or wake_dispatch; contact Primitive to turn them on. grant_forbidden: the credential does not hold the permission
      */
     403: ErrorResponse;
     /**
@@ -19790,7 +19378,7 @@ export type SendInteractionStepErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_disabled: interactions (or, for wake.dispatch, Wake dispatch) are not enabled for this organization, and details.feature is interactions or wake_dispatch; only Primitive turns them on. grant_forbidden: the credential does not hold the permission
+     * feature_disabled: interactions (or, for wake.dispatch, Wake dispatch) are not enabled for this organization, and details.feature is interactions or wake_dispatch; contact Primitive to turn them on. grant_forbidden: the credential does not hold the permission
      */
     403: ErrorResponse;
     /**
@@ -19948,6 +19536,41 @@ export type GetWebhookDeliveryStatsResponses = {
 
 export type GetWebhookDeliveryStatsResponse = GetWebhookDeliveryStatsResponses[keyof GetWebhookDeliveryStatsResponses];
 
+export type GetEmailRuleVocabularyData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/email-rules/vocabulary';
+};
+
+export type GetEmailRuleVocabularyErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead.
+     */
+    403: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type GetEmailRuleVocabularyError = GetEmailRuleVocabularyErrors[keyof GetEmailRuleVocabularyErrors];
+
+export type GetEmailRuleVocabularyResponses = {
+    /**
+     * Read the column catalog
+     */
+    200: SuccessEnvelope & {
+        data: GetEmailRuleVocabularyResult;
+    };
+};
+
+export type GetEmailRuleVocabularyResponse = GetEmailRuleVocabularyResponses[keyof GetEmailRuleVocabularyResponses];
+
 export type CompileEmailRuleData = {
     body: CompileEmailRuleRequest;
     headers?: {
@@ -20016,7 +19639,7 @@ export type TestEmailRuleData = {
 
 export type TestEmailRuleErrors = {
     /**
-     * validation_error: give exactly one of tree and rule_id, at most 200 email_ids, and a tree that is valid for the column contract. evaluation_scope, scope_selection and kind go only with tree. A saved rule whose current version no longer renders answers details.reason version_not_renderable.
+     * validation_error: give exactly one of tree and rule_id, at most 200 email_ids (with the expected emails), 1 to 100 expected emails none in both lists, and a tree that is valid for the column contract. evaluation_scope, scope_selection and kind go only with tree. A saved rule whose current version no longer renders answers details.reason version_not_renderable; email_ids that with its saved expectations name over 200 emails, too_many_emails.
      */
     400: ErrorResponse;
     /**
@@ -20116,7 +19739,7 @@ export type ListEmailRulesData = {
          */
         limit?: number;
         /**
-         * Opaque cursor from the previous page's next_cursor. Omit for the first page.
+         * Opaque cursor: the meta.cursor of the previous page. meta.cursor is null on the last page. Omit for the first page.
          */
         cursor?: string;
         /**
@@ -20137,7 +19760,7 @@ export type ListEmailRulesErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead.
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. grant_forbidden with details.reason mail_depth: matched_email_id with access to mail that shows headers only, since which rules matched an email is read from what it says.
      */
     403: ErrorResponse;
     /**
@@ -20154,6 +19777,7 @@ export type ListEmailRulesResponses = {
      */
     200: SuccessEnvelope & {
         data: ListEmailRulesResult;
+        meta: CursorPageMeta;
     };
 };
 
@@ -20202,7 +19826,7 @@ export type CreateEmailRuleResponses = {
      * Create a rule
      */
     201: SuccessEnvelope & {
-        data: CreateEmailRuleResult;
+        data: EmailRuleWritten;
     };
 };
 
@@ -20299,7 +19923,7 @@ export type GetEmailRuleResponses = {
      * Read a rule
      */
     200: SuccessEnvelope & {
-        data: GetEmailRuleResult;
+        data: EmailRuleRead;
     };
 };
 
@@ -20335,7 +19959,7 @@ export type UpdateEmailRuleErrors = {
      */
     404: ErrorResponse;
     /**
-     * email_rule_conflict: the rule changed while saving; read it again and retry. email_rule_scope_locked: the rule is shared. email_rule_author_unresolvable: the rule could not run as you over the chosen scope.
+     * email_rule_conflict: the rule changed while saving, or (details.reason version_moved, with details.current_version) its current version differs from if_version; read it again and retry. email_rule_scope_locked: the rule is shared. email_rule_author_unresolvable: the rule could not run as you over the chosen scope.
      */
     409: ErrorResponse;
     /**
@@ -20351,7 +19975,7 @@ export type UpdateEmailRuleResponses = {
      * Change a rule
      */
     200: SuccessEnvelope & {
-        data: UpdateEmailRuleResult;
+        data: EmailRuleWritten;
     };
 };
 
@@ -20371,7 +19995,7 @@ export type ListEmailRuleDecisionsData = {
          */
         limit?: number;
         /**
-         * Opaque cursor from the previous page's next_cursor. Omit for the first page.
+         * Opaque cursor: the meta.cursor of the previous page. meta.cursor is null on the last page. Omit for the first page.
          */
         cursor?: string;
         /**
@@ -20392,7 +20016,7 @@ export type ListEmailRuleDecisionsErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead.
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what emails say.
      */
     403: ErrorResponse;
     /**
@@ -20413,6 +20037,7 @@ export type ListEmailRuleDecisionsResponses = {
      */
     200: SuccessEnvelope & {
         data: ListEmailRuleDecisionsResult;
+        meta: CursorPageMeta;
     };
 };
 
@@ -20436,7 +20061,7 @@ export type ListEmailRuleResultsErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead.
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what the email says.
      */
     403: ErrorResponse;
     /**
@@ -20470,11 +20095,19 @@ export type ListEmailRuleVersionsData = {
          */
         id: string;
     };
-    query: {
+    query?: {
         /**
-         * The version numbers to read, comma-separated.
+         * Versions per page when versions is not given: 1 to 100, default 50.
          */
-        versions: string;
+        limit?: number;
+        /**
+         * Opaque cursor: the meta.cursor of the previous page, null on the last. Omit for the first page. Not with versions.
+         */
+        cursor?: string;
+        /**
+         * Read only these version numbers, comma-separated. Without it, every version, newest first, a page at a time.
+         */
+        versions?: string;
     };
     url: '/email-rules/{id}/versions';
 };
@@ -20510,6 +20143,7 @@ export type ListEmailRuleVersionsResponses = {
      */
     200: SuccessEnvelope & {
         data: ListEmailRuleVersionsResult;
+        meta?: CursorPageMeta;
     };
 };
 
@@ -20624,7 +20258,7 @@ export type ListEmailRuleRequestsData = {
          */
         limit?: number;
         /**
-         * Opaque cursor from the previous page's next_cursor. Omit for the first page.
+         * Opaque cursor: the meta.cursor of the previous page. meta.cursor is null on the last page. Omit for the first page.
          */
         cursor?: string;
     };
@@ -20658,6 +20292,7 @@ export type ListEmailRuleRequestsResponses = {
      */
     200: SuccessEnvelope & {
         data: ListEmailRuleRequestsResult;
+        meta: CursorPageMeta;
     };
 };
 
@@ -20720,6 +20355,107 @@ export type CreateEmailRuleRequestResponses = {
 
 export type CreateEmailRuleRequestResponse = CreateEmailRuleRequestResponses[keyof CreateEmailRuleRequestResponses];
 
+export type CheckEmailRuleRequestTargetData = {
+    body: CheckEmailRuleRequestTargetRequest;
+    headers?: {
+        /**
+         * Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.
+         */
+        'Idempotency-Key'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/email-rule-requests/target-check';
+};
+
+export type CheckEmailRuleRequestTargetErrors = {
+    /**
+     * validation_error: give exactly one of target_user_id and target_email; details.reason self_request when the member named is you, answered before either limit is counted.
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. grant_forbidden with details.permission members:read: you cannot list members and their roles.
+     */
+    403: ErrorResponse;
+    /**
+     * not_found: no current member of this organization matches the member named.
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+    /**
+     * service_unavailable: looking members up by address is unavailable right now. Try again in a moment, or name them by user id.
+     */
+    503: ErrorResponse;
+};
+
+export type CheckEmailRuleRequestTargetError = CheckEmailRuleRequestTargetErrors[keyof CheckEmailRuleRequestTargetErrors];
+
+export type CheckEmailRuleRequestTargetResponses = {
+    /**
+     * Check whether a member can accept a rule request
+     */
+    200: SuccessEnvelope & {
+        data: CheckEmailRuleRequestTargetResult;
+    };
+};
+
+export type CheckEmailRuleRequestTargetResponse = CheckEmailRuleRequestTargetResponses[keyof CheckEmailRuleRequestTargetResponses];
+
+export type DeleteEmailRuleRequestData = {
+    body?: never;
+    path: {
+        /**
+         * The request id.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/email-rule-requests/{id}';
+};
+
+export type DeleteEmailRuleRequestErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. email_rule_request_proposer_only: only the member who made the request may delete it.
+     */
+    403: ErrorResponse;
+    /**
+     * not_found: no request you can see has this id.
+     */
+    404: ErrorResponse;
+    /**
+     * email_rule_request_not_withdrawn: it is not withdrawn (details.status).
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type DeleteEmailRuleRequestError = DeleteEmailRuleRequestErrors[keyof DeleteEmailRuleRequestErrors];
+
+export type DeleteEmailRuleRequestResponses = {
+    /**
+     * Delete a withdrawn rule request
+     */
+    200: SuccessEnvelope & {
+        data: DeleteEmailRuleRequestResult;
+    };
+};
+
+export type DeleteEmailRuleRequestResponse = DeleteEmailRuleRequestResponses[keyof DeleteEmailRuleRequestResponses];
+
 export type GetEmailRuleRequestData = {
     body?: never;
     path: {
@@ -20758,7 +20494,7 @@ export type GetEmailRuleRequestResponses = {
      * Read a rule request
      */
     200: SuccessEnvelope & {
-        data: GetEmailRuleRequestResult;
+        data: EmailRuleRequest;
     };
 };
 
@@ -20812,7 +20548,7 @@ export type DeclineEmailRuleRequestResponses = {
      * Decline a rule request
      */
     200: SuccessEnvelope & {
-        data: DeclineEmailRuleRequestResult;
+        data: EmailRuleRequest;
     };
 };
 
@@ -20866,7 +20602,7 @@ export type WithdrawEmailRuleRequestResponses = {
      * Withdraw a rule request
      */
     200: SuccessEnvelope & {
-        data: WithdrawEmailRuleRequestResult;
+        data: EmailRuleRequest;
     };
 };
 
@@ -20892,7 +20628,7 @@ export type AcceptEmailRuleRequestData = {
 
 export type AcceptEmailRuleRequestErrors = {
     /**
-     * validation_error: a changed rule needs english, tree and explanation together, and a tree that is valid for the column contract. The rule as asked is checked the same way, and must be changed first if it no longer passes.
+     * validation_error: a changed rule needs english and tree together, and a tree that is valid for the column contract. The rule as asked is checked the same way, and must be changed first if it no longer passes.
      */
     400: ErrorResponse;
     /**
@@ -20900,7 +20636,7 @@ export type AcceptEmailRuleRequestErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. email_rule_request_target_only: only the member the request was made to may accept it. forbidden with details.reason first_party_required: accepted from another OAuth app or with an agent token. grant_forbidden with details.permission mail:send_as_member: the caller's role can only read this mailbox.
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. email_rule_request_target_only: only the member the request was made to may accept it. forbidden with details.reason first_party_required: accepted from another OAuth app or with an agent token. grant_forbidden with details.permission mail:share_own: the caller's role does not let them share their own mail through email rules.
      */
     403: ErrorResponse;
     /**
@@ -20951,7 +20687,7 @@ export type ListEmailRuleSharesData = {
          */
         limit?: number;
         /**
-         * Opaque cursor from the previous page's next_cursor. Omit for the first page.
+         * Opaque cursor: the meta.cursor of the previous page. meta.cursor is null on the last page. Omit for the first page.
          */
         cursor?: string;
     };
@@ -20985,6 +20721,7 @@ export type ListEmailRuleSharesResponses = {
      */
     200: SuccessEnvelope & {
         data: ListEmailRuleSharesResult;
+        meta: CursorPageMeta;
     };
 };
 
@@ -21003,7 +20740,7 @@ export type ListGivenEmailRuleSharesData = {
          */
         limit?: number;
         /**
-         * Opaque cursor from the previous page's next_cursor. Omit for the first page.
+         * Opaque cursor: the meta.cursor of the previous page. meta.cursor is null on the last page. Omit for the first page.
          */
         cursor?: string;
     };
@@ -21037,6 +20774,7 @@ export type ListGivenEmailRuleSharesResponses = {
      */
     200: SuccessEnvelope & {
         data: ListGivenEmailRuleSharesResult;
+        meta: CursorPageMeta;
     };
 };
 
@@ -21132,7 +20870,7 @@ export type GetEmailRuleShareResponses = {
      * Get a rule share
      */
     200: SuccessEnvelope & {
-        data: GetEmailRuleShareResult;
+        data: EmailRuleShare;
     };
 };
 
@@ -21152,7 +20890,7 @@ export type ListEmailRuleShareEmailsData = {
          */
         limit?: number;
         /**
-         * Opaque cursor from the previous page's next_cursor. Omit for the first page.
+         * Opaque cursor: the meta.cursor of the previous page. meta.cursor is null on the last page. Omit for the first page.
          */
         cursor?: string;
     };
@@ -21169,13 +20907,17 @@ export type ListEmailRuleShareEmailsErrors = {
      */
     401: ErrorResponse;
     /**
-     * forbidden: you are no longer a member.
+     * grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and which emails a share's rule gave is read from what they say; forbidden: you are no longer a member; or details.reason not_on_share: you can see this share as an owner or admin but are not one of its two people; or details.reason first_party_required: use the dashboard or the Primitive CLI, signed in as yourself.
      */
     403: ErrorResponse;
     /**
-     * not_found: no share of yours has this id.
+     * not_found: no share you can see has this id.
      */
     404: ErrorResponse;
+    /**
+     * email_rule_not_active: for the person sharing, the share's rule is off, so what it handed over cannot be listed while it is off (details.state). Turning the rule back on also starts sharing again while the share is live.
+     */
+    409: ErrorResponse;
     /**
      * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
@@ -21190,10 +20932,11 @@ export type ListEmailRuleShareEmailsError = ListEmailRuleShareEmailsErrors[keyof
 
 export type ListEmailRuleShareEmailsResponses = {
     /**
-     * List the emails a rule share has given you
+     * List the emails a rule share has given
      */
     200: SuccessEnvelope & {
         data: ListEmailRuleShareEmailsResult;
+        meta: CursorPageMeta;
     };
 };
 
@@ -24358,6 +24101,10 @@ export type RevokeCredentialData = {
     body: CredentialsRevokeCredentialInput;
     headers?: {
         /**
+         * A single-use step-up token of purpose `keys.create` (Create, rotate, change or revoke an API key), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session. Here only the person's own Primitive CLI login revoking an API key (kind `org_key`) uses it, when the route answers it 403 `step_up_required`: where the organization's credential policy sets `cli_writes_require_approval`, for example. Otherwise it needs no token. Every other app is refused here (403, `details.reason` `dashboard_only`), with or without a token.
+         */
+        'Primitive-Step-Up'?: string;
+        /**
          * Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.
          */
         'Idempotency-Key'?: string;
@@ -24728,7 +24475,7 @@ export type CreateKeyData = {
          */
         'Primitive-Not-After'?: string;
         /**
-         * A single-use step-up token of purpose `keys.create` (Create, rotate or change an API key), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session. The Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.reason` `dashboard_only`). The person's own Primitive CLI login needs no token for this purpose while the organization's keys API is on (a token it sends is still checked); while it is off, a token it sends is refused the same way.
+         * A single-use step-up token of purpose `keys.create` (Create, rotate, change or revoke an API key), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session. The Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.reason` `dashboard_only`). The person's own Primitive CLI login needs no token for this purpose while the organization's keys API is on (a token it sends is still checked), unless the organization's credential policy sets `cli_writes_require_approval`; while the keys API is off, a token it sends is refused the same way.
          */
         'Primitive-Step-Up'?: string;
     };
@@ -24782,7 +24529,7 @@ export type RotateKeyData = {
     body: CredentialsRotateKeyInput;
     headers?: {
         /**
-         * A single-use step-up token of purpose `keys.create` (Create, rotate or change an API key), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session. The Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.reason` `dashboard_only`). The person's own Primitive CLI login needs no token for this purpose while the organization's keys API is on (a token it sends is still checked); while it is off, a token it sends is refused the same way.
+         * A single-use step-up token of purpose `keys.create` (Create, rotate, change or revoke an API key), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session. The Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.reason` `dashboard_only`). The person's own Primitive CLI login needs no token for this purpose while the organization's keys API is on (a token it sends is still checked), unless the organization's credential policy sets `cli_writes_require_approval`; while the keys API is off, a token it sends is refused the same way.
          */
         'Primitive-Step-Up'?: string;
         /**
@@ -24894,7 +24641,7 @@ export type UpdateKeyData = {
     body: CredentialsUpdateKeyInput;
     headers?: {
         /**
-         * A single-use step-up token of purpose `keys.create` (Create, rotate or change an API key), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session. The Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.reason` `dashboard_only`). The person's own Primitive CLI login needs no token for this purpose while the organization's keys API is on (a token it sends is still checked); while it is off, a token it sends is refused the same way.
+         * A single-use step-up token of purpose `keys.create` (Create, rotate, change or revoke an API key), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session. The Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.reason` `dashboard_only`). The person's own Primitive CLI login needs no token for this purpose while the organization's keys API is on (a token it sends is still checked), unless the organization's credential policy sets `cli_writes_require_approval`; while the keys API is off, a token it sends is refused the same way.
          */
         'Primitive-Step-Up'?: string;
     };
@@ -26603,13 +26350,21 @@ export type DecideSuspensionErrors = {
      */
     404: ErrorResponse;
     /**
-     * conflict: the item changed while you edited it, or a member was removed and added back. Look again, then retry.
+     * conflict: the item changed while you decided, or a member was removed and added back; look again, then retry. confirmation_required: revoking a filter or a rule share needs confirm: true. keep_refused: an item of a deleted account that could not be moved to you, or one a revoked app left that could not be kept. rotation_in_progress: another rotation of the shared Function key finished first, and nothing was revoked by this one. rotation_refused: the key cannot be rotated (for example, it was rotated already). feature_disabled: rotating the Function key is not turned on for the organization (details.feature function_key_rotation). Narrowing passes on the refusals of the key edit (PATCH /keys/{id}) and the Function key change (PUT /functions/{id}/runtime-key) it makes.
      */
     409: ErrorResponse;
     /**
      * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
+    /**
+     * rotation_incomplete: some Functions could not take the new Function key yet, so the old one is kept; retry to finish. redeploy_failed: the item was kept, but redeploying its Function failed; redeploy the Function.
+     */
+    502: ErrorResponse;
+    /**
+     * service_unavailable: another access change is in progress, or the credential policy could not be read; retry in a moment.
+     */
+    503: ErrorResponse;
 };
 
 export type DecideSuspensionError = DecideSuspensionErrors[keyof DecideSuspensionErrors];
@@ -27016,6 +26771,108 @@ export type ReleaseSentEmailResponses = {
 };
 
 export type ReleaseSentEmailResponse = ReleaseSentEmailResponses[keyof ReleaseSentEmailResponses];
+
+export type GetEndpointSigningSecretData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/endpoints/{id}/signing-secret';
+};
+
+export type GetEndpointSigningSecretErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Primitive encountered an internal error
+     */
+    500: ErrorResponse;
+};
+
+export type GetEndpointSigningSecretError = GetEndpointSigningSecretErrors[keyof GetEndpointSigningSecretErrors];
+
+export type GetEndpointSigningSecretResponses = {
+    /**
+     * The signing secret
+     */
+    200: EndpointSigningSecretResponse;
+};
+
+export type GetEndpointSigningSecretResponse = GetEndpointSigningSecretResponses[keyof GetEndpointSigningSecretResponses];
+
+export type RotateEndpointSigningSecretData = {
+    body?: never;
+    headers?: {
+        /**
+         * Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.
+         */
+        'Idempotency-Key'?: string;
+    };
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/endpoints/{id}/signing-secret/rotate';
+};
+
+export type RotateEndpointSigningSecretErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Primitive encountered an internal error
+     */
+    500: ErrorResponse;
+};
+
+export type RotateEndpointSigningSecretError = RotateEndpointSigningSecretErrors[keyof RotateEndpointSigningSecretErrors];
+
+export type RotateEndpointSigningSecretResponses = {
+    /**
+     * The new signing secret
+     */
+    200: EndpointSigningSecretResponse;
+};
+
+export type RotateEndpointSigningSecretResponse = RotateEndpointSigningSecretResponses[keyof RotateEndpointSigningSecretResponses];
 
 export type SendMailBatchData = {
     body: {

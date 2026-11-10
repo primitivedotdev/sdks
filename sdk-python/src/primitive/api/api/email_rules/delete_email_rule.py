@@ -96,9 +96,9 @@ def sync_detailed(
 
      Deletes a rule with its versions, its decisions and the access it granted. The author, or a caller
     who reads the whole organization's mail, may delete it; while it is shared with another member, only
-    the author or someone who manages members from the dashboard. Needs mail:read, a credential acting
-    as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the
-    email rules feature on the organization.
+    the author or someone who manages members from the dashboard. Needs mail:read, a member's own
+    credential with their full access (not an API key, agent key or narrowed token), and the email rules
+    feature.
 
     Args:
         id (UUID):
@@ -133,9 +133,9 @@ def sync(
 
      Deletes a rule with its versions, its decisions and the access it granted. The author, or a caller
     who reads the whole organization's mail, may delete it; while it is shared with another member, only
-    the author or someone who manages members from the dashboard. Needs mail:read, a credential acting
-    as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the
-    email rules feature on the organization.
+    the author or someone who manages members from the dashboard. Needs mail:read, a member's own
+    credential with their full access (not an API key, agent key or narrowed token), and the email rules
+    feature.
 
     Args:
         id (UUID):
@@ -165,9 +165,9 @@ async def asyncio_detailed(
 
      Deletes a rule with its versions, its decisions and the access it granted. The author, or a caller
     who reads the whole organization's mail, may delete it; while it is shared with another member, only
-    the author or someone who manages members from the dashboard. Needs mail:read, a credential acting
-    as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the
-    email rules feature on the organization.
+    the author or someone who manages members from the dashboard. Needs mail:read, a member's own
+    credential with their full access (not an API key, agent key or narrowed token), and the email rules
+    feature.
 
     Args:
         id (UUID):
@@ -202,9 +202,9 @@ async def asyncio(
 
      Deletes a rule with its versions, its decisions and the access it granted. The author, or a caller
     who reads the whole organization's mail, may delete it; while it is shared with another member, only
-    the author or someone who manages members from the dashboard. Needs mail:read, a credential acting
-    as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the
-    email rules feature on the organization.
+    the author or someone who manages members from the dashboard. Needs mail:read, a member's own
+    credential with their full access (not an API key, agent key or narrowed token), and the email rules
+    feature.
 
     Args:
         id (UUID):

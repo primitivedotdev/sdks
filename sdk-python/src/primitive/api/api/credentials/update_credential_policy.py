@@ -110,7 +110,7 @@ def sync_detailed(
      Change one or more policy rules. Admins may only tighten the policy; loosening any rule needs an
     owner. Owners and admins are emailed about every change. Needs the organization's credential
     features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature
-    naming the feature. Only Primitive turns these on.
+    naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session. The person's role must hold credential_policy:manage. API keys,
     agent connection keys and agents are refused.
@@ -149,7 +149,7 @@ def sync(
      Change one or more policy rules. Admins may only tighten the policy; loosening any rule needs an
     owner. Owners and admins are emailed about every change. Needs the organization's credential
     features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature
-    naming the feature. Only Primitive turns these on.
+    naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session. The person's role must hold credential_policy:manage. API keys,
     agent connection keys and agents are refused.
@@ -183,7 +183,7 @@ async def asyncio_detailed(
      Change one or more policy rules. Admins may only tighten the policy; loosening any rule needs an
     owner. Owners and admins are emailed about every change. Needs the organization's credential
     features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature
-    naming the feature. Only Primitive turns these on.
+    naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session. The person's role must hold credential_policy:manage. API keys,
     agent connection keys and agents are refused.
@@ -222,7 +222,7 @@ async def asyncio(
      Change one or more policy rules. Admins may only tighten the policy; loosening any rule needs an
     owner. Owners and admins are emailed about every change. Needs the organization's credential
     features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature
-    naming the feature. Only Primitive turns these on.
+    naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session. The person's role must hold credential_policy:manage. API keys,
     agent connection keys and agents are refused.

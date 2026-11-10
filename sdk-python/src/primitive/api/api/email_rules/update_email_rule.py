@@ -117,16 +117,16 @@ def sync_detailed(
 ) -> Response[ErrorResponse | UpdateEmailRuleResponse200]:
     """ Change a rule
 
-     Renames the rule, saves a new version (english, tree and explanation together; earlier versions are
-    kept unchanged), changes its state (draft, disabled; observe; or active) or changes whose mail it
-    runs over (evaluation_scope, with scope_selection when selected). Only the rule's author may rename
-    it, add a version, change its scope or move it to observe or active; anyone else who can see it may
-    only disable it (state draft), and while it is shared with another member only if they manage
-    members from the dashboard. Omit evaluation_scope to keep the current scope. A scope change saves a
-    new version with the same conditions; what was granted stays. A shared rule keeps its scope. A
-    rule's kind never changes. Needs mail:read, a credential acting as a member with their full access
-    (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
-    organization.
+     Renames the rule, saves a new version (english and tree together, with an explanation or one the
+    server writes; earlier versions stay), changes its state (draft is off; observe; active), whose mail
+    it runs over (evaluation_scope, with scope_selection when selected) or its saved expectations (each
+    saved version and new set is judged in expectations_check). Anyone but its author who sees it may
+    only disable it (state draft), and while it is shared only if they manage members from the
+    dashboard. Without evaluation_scope the scope stays; a scope change saves a new version with the
+    same conditions, and what was granted stays. A shared rule keeps its scope; a kind never changes.
+    Send if_version, the current_version you read, so a write never replaces a version saved since.
+    Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+    narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -162,16 +162,16 @@ def sync(
 ) -> ErrorResponse | UpdateEmailRuleResponse200 | None:
     """ Change a rule
 
-     Renames the rule, saves a new version (english, tree and explanation together; earlier versions are
-    kept unchanged), changes its state (draft, disabled; observe; or active) or changes whose mail it
-    runs over (evaluation_scope, with scope_selection when selected). Only the rule's author may rename
-    it, add a version, change its scope or move it to observe or active; anyone else who can see it may
-    only disable it (state draft), and while it is shared with another member only if they manage
-    members from the dashboard. Omit evaluation_scope to keep the current scope. A scope change saves a
-    new version with the same conditions; what was granted stays. A shared rule keeps its scope. A
-    rule's kind never changes. Needs mail:read, a credential acting as a member with their full access
-    (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
-    organization.
+     Renames the rule, saves a new version (english and tree together, with an explanation or one the
+    server writes; earlier versions stay), changes its state (draft is off; observe; active), whose mail
+    it runs over (evaluation_scope, with scope_selection when selected) or its saved expectations (each
+    saved version and new set is judged in expectations_check). Anyone but its author who sees it may
+    only disable it (state draft), and while it is shared only if they manage members from the
+    dashboard. Without evaluation_scope the scope stays; a scope change saves a new version with the
+    same conditions, and what was granted stays. A shared rule keeps its scope; a kind never changes.
+    Send if_version, the current_version you read, so a write never replaces a version saved since.
+    Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+    narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -202,16 +202,16 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | UpdateEmailRuleResponse200]:
     """ Change a rule
 
-     Renames the rule, saves a new version (english, tree and explanation together; earlier versions are
-    kept unchanged), changes its state (draft, disabled; observe; or active) or changes whose mail it
-    runs over (evaluation_scope, with scope_selection when selected). Only the rule's author may rename
-    it, add a version, change its scope or move it to observe or active; anyone else who can see it may
-    only disable it (state draft), and while it is shared with another member only if they manage
-    members from the dashboard. Omit evaluation_scope to keep the current scope. A scope change saves a
-    new version with the same conditions; what was granted stays. A shared rule keeps its scope. A
-    rule's kind never changes. Needs mail:read, a credential acting as a member with their full access
-    (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
-    organization.
+     Renames the rule, saves a new version (english and tree together, with an explanation or one the
+    server writes; earlier versions stay), changes its state (draft is off; observe; active), whose mail
+    it runs over (evaluation_scope, with scope_selection when selected) or its saved expectations (each
+    saved version and new set is judged in expectations_check). Anyone but its author who sees it may
+    only disable it (state draft), and while it is shared only if they manage members from the
+    dashboard. Without evaluation_scope the scope stays; a scope change saves a new version with the
+    same conditions, and what was granted stays. A shared rule keeps its scope; a kind never changes.
+    Send if_version, the current_version you read, so a write never replaces a version saved since.
+    Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+    narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -247,16 +247,16 @@ async def asyncio(
 ) -> ErrorResponse | UpdateEmailRuleResponse200 | None:
     """ Change a rule
 
-     Renames the rule, saves a new version (english, tree and explanation together; earlier versions are
-    kept unchanged), changes its state (draft, disabled; observe; or active) or changes whose mail it
-    runs over (evaluation_scope, with scope_selection when selected). Only the rule's author may rename
-    it, add a version, change its scope or move it to observe or active; anyone else who can see it may
-    only disable it (state draft), and while it is shared with another member only if they manage
-    members from the dashboard. Omit evaluation_scope to keep the current scope. A scope change saves a
-    new version with the same conditions; what was granted stays. A shared rule keeps its scope. A
-    rule's kind never changes. Needs mail:read, a credential acting as a member with their full access
-    (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
-    organization.
+     Renames the rule, saves a new version (english and tree together, with an explanation or one the
+    server writes; earlier versions stay), changes its state (draft is off; observe; active), whose mail
+    it runs over (evaluation_scope, with scope_selection when selected) or its saved expectations (each
+    saved version and new set is judged in expectations_check). Anyone but its author who sees it may
+    only disable it (state draft), and while it is shared only if they manage members from the
+    dashboard. Without evaluation_scope the scope stays; a scope change saves a new version with the
+    same conditions, and what was granted stays. A shared rule keeps its scope; a kind never changes.
+    Send if_version, the current_version you read, so a write never replaces a version saved since.
+    Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+    narrowed token), and the email rules feature.
 
     Args:
         id (UUID):

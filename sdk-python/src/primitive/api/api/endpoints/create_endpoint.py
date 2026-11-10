@@ -20,10 +20,14 @@ from typing import cast
 def _get_kwargs(
     *,
     body: CreateEndpointInput,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(primitive_step_up, Unset):
+        headers["Primitive-Step-Up"] = primitive_step_up
+
     if not isinstance(idempotency_key, Unset):
         headers["Idempotency-Key"] = idempotency_key
 
@@ -116,6 +120,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CreateEndpointInput,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse]:
@@ -126,10 +131,13 @@ def sync_detailed(
     instead. Subject to plan limits on the number of active
     endpoints.
 
-    **Signing is account-scoped, not per-endpoint.** This call
-    does not return any signing material; every endpoint on the
-    account uses the same webhook secret, fetched via
-    `GET /account/webhook-secret`. See the API-level "Webhook
+    **Signing.** A webhook is signed with the organization's webhook secret (`GET /account/webhook-
+    secret`) unless it has its own. A webhook made as a person's own, or by an API key limited to some
+    mailboxes, a third-party app or an agent delegate for itself, is made with its own secret: the
+    response carries it once as `signing_secret`, and `GET /endpoints/{id}/signing-secret` returns it
+    afterwards. Other webhooks, those a person who can read every mailbox makes among them, sign with
+    the organization's secret until given their own. `signed_with` on the endpoint says which secret
+    signs it. See the API-level "Webhook
     signing" section for the full wire format (header name,
     signed string, hash algo, secret format, tolerance) and a
     language-agnostic verification recipe.
@@ -165,6 +173,7 @@ def sync_detailed(
     their own pull subscriptions only.
 
     Args:
+        primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (CreateEndpointInput):
 
@@ -179,6 +188,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+primitive_step_up=primitive_step_up,
 idempotency_key=idempotency_key,
 
     )
@@ -193,6 +203,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: CreateEndpointInput,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse | None:
@@ -203,10 +214,13 @@ def sync(
     instead. Subject to plan limits on the number of active
     endpoints.
 
-    **Signing is account-scoped, not per-endpoint.** This call
-    does not return any signing material; every endpoint on the
-    account uses the same webhook secret, fetched via
-    `GET /account/webhook-secret`. See the API-level "Webhook
+    **Signing.** A webhook is signed with the organization's webhook secret (`GET /account/webhook-
+    secret`) unless it has its own. A webhook made as a person's own, or by an API key limited to some
+    mailboxes, a third-party app or an agent delegate for itself, is made with its own secret: the
+    response carries it once as `signing_secret`, and `GET /endpoints/{id}/signing-secret` returns it
+    afterwards. Other webhooks, those a person who can read every mailbox makes among them, sign with
+    the organization's secret until given their own. `signed_with` on the endpoint says which secret
+    signs it. See the API-level "Webhook
     signing" section for the full wire format (header name,
     signed string, hash algo, secret format, tolerance) and a
     language-agnostic verification recipe.
@@ -242,6 +256,7 @@ def sync(
     their own pull subscriptions only.
 
     Args:
+        primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (CreateEndpointInput):
 
@@ -257,6 +272,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+primitive_step_up=primitive_step_up,
 idempotency_key=idempotency_key,
 
     ).parsed
@@ -265,6 +281,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CreateEndpointInput,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse]:
@@ -275,10 +292,13 @@ async def asyncio_detailed(
     instead. Subject to plan limits on the number of active
     endpoints.
 
-    **Signing is account-scoped, not per-endpoint.** This call
-    does not return any signing material; every endpoint on the
-    account uses the same webhook secret, fetched via
-    `GET /account/webhook-secret`. See the API-level "Webhook
+    **Signing.** A webhook is signed with the organization's webhook secret (`GET /account/webhook-
+    secret`) unless it has its own. A webhook made as a person's own, or by an API key limited to some
+    mailboxes, a third-party app or an agent delegate for itself, is made with its own secret: the
+    response carries it once as `signing_secret`, and `GET /endpoints/{id}/signing-secret` returns it
+    afterwards. Other webhooks, those a person who can read every mailbox makes among them, sign with
+    the organization's secret until given their own. `signed_with` on the endpoint says which secret
+    signs it. See the API-level "Webhook
     signing" section for the full wire format (header name,
     signed string, hash algo, secret format, tolerance) and a
     language-agnostic verification recipe.
@@ -314,6 +334,7 @@ async def asyncio_detailed(
     their own pull subscriptions only.
 
     Args:
+        primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (CreateEndpointInput):
 
@@ -328,6 +349,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+primitive_step_up=primitive_step_up,
 idempotency_key=idempotency_key,
 
     )
@@ -342,6 +364,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: CreateEndpointInput,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse | None:
@@ -352,10 +375,13 @@ async def asyncio(
     instead. Subject to plan limits on the number of active
     endpoints.
 
-    **Signing is account-scoped, not per-endpoint.** This call
-    does not return any signing material; every endpoint on the
-    account uses the same webhook secret, fetched via
-    `GET /account/webhook-secret`. See the API-level "Webhook
+    **Signing.** A webhook is signed with the organization's webhook secret (`GET /account/webhook-
+    secret`) unless it has its own. A webhook made as a person's own, or by an API key limited to some
+    mailboxes, a third-party app or an agent delegate for itself, is made with its own secret: the
+    response carries it once as `signing_secret`, and `GET /endpoints/{id}/signing-secret` returns it
+    afterwards. Other webhooks, those a person who can read every mailbox makes among them, sign with
+    the organization's secret until given their own. `signed_with` on the endpoint says which secret
+    signs it. See the API-level "Webhook
     signing" section for the full wire format (header name,
     signed string, hash algo, secret format, tolerance) and a
     language-agnostic verification recipe.
@@ -391,6 +417,7 @@ async def asyncio(
     their own pull subscriptions only.
 
     Args:
+        primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (CreateEndpointInput):
 
@@ -406,6 +433,7 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+primitive_step_up=primitive_step_up,
 idempotency_key=idempotency_key,
 
     )).parsed

@@ -94,8 +94,8 @@ def sync_detailed(
 ) -> Response[ErrorResponse | GetEmailRuleShareResponse200]:
     """ Get a rule share
 
-     One share. Needs mail:read, a credential acting as a member with their full access (API keys, agent
-    keys and narrowed tokens are refused), and the email rules feature on the organization.
+     One share. Needs mail:read, a member's own credential with their full access (not an API key, agent
+    key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -128,8 +128,8 @@ def sync(
 ) -> ErrorResponse | GetEmailRuleShareResponse200 | None:
     """ Get a rule share
 
-     One share. Needs mail:read, a credential acting as a member with their full access (API keys, agent
-    keys and narrowed tokens are refused), and the email rules feature on the organization.
+     One share. Needs mail:read, a member's own credential with their full access (not an API key, agent
+    key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -157,8 +157,8 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | GetEmailRuleShareResponse200]:
     """ Get a rule share
 
-     One share. Needs mail:read, a credential acting as a member with their full access (API keys, agent
-    keys and narrowed tokens are refused), and the email rules feature on the organization.
+     One share. Needs mail:read, a member's own credential with their full access (not an API key, agent
+    key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -191,8 +191,8 @@ async def asyncio(
 ) -> ErrorResponse | GetEmailRuleShareResponse200 | None:
     """ Get a rule share
 
-     One share. Needs mail:read, a credential acting as a member with their full access (API keys, agent
-    keys and narrowed tokens are refused), and the email rules feature on the organization.
+     One share. Needs mail:read, a member's own credential with their full access (not an API key, agent
+    key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):

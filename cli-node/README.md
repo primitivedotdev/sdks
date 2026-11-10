@@ -71,8 +71,9 @@ primitive listen --subscription local-webhook --forward-to http://localhost:3000
 ```
 
 This mode forwards the exact signed body and existing webhook headers. Configure
-the handler with your existing account webhook secret and normal signature
-verification. The CLI never forwards your API credentials. It does not follow
+the handler with the secret the webhook signs with (the account webhook secret,
+or the webhook's own secret when its `signed_with` is `own_secret`) and normal
+signature verification. The CLI never forwards your API credentials. It does not follow
 redirects or disable TLS verification. A response must finish within 30 seconds
 and remain within 1 MiB. Existing confirmation headers retain their meaning,
 including account content-discard behavior; exec and stdout do not confirm

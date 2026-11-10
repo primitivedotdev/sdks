@@ -530,7 +530,7 @@ requests. See [docs/repeating-sends.md](../docs/repeating-sends.md).
 - Header: `Primitive-Signature: t=<unix-seconds>,v1=<hex>`. The same value also rides `X-Primitive-Signature` and `X-Webhook-Signature`; the SDK additionally accepts the retired `MyMX-Signature` name when verifying older captured deliveries.
 - Signed string: `${timestamp}.${rawBody}` where `rawBody` is the exact request bytes before any JSON decoding.
 - Signature: HMAC-SHA256, hex-encoded.
-- Secret: returned by `GET /account/webhook-secret`. Use as a UTF-8 string; do not base64-decode despite the base64-shaped output.
+- Secret: the secret the webhook signs with. An endpoint's `signed_with` says which: `organization_secret` uses the organization's secret from `GET /account/webhook-secret`, and `own_secret` uses the webhook's own secret, returned as `signing_secret` when it is created and by `GET /endpoints/{id}/signing-secret`. Use it as a UTF-8 string; do not base64-decode despite the base64-shaped output.
 - Tolerance: reject deliveries with a timestamp more than 5 minutes off your wall-clock.
 
 The Node helper:
