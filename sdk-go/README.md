@@ -476,7 +476,7 @@ if sent, ok := event.(primitive.SentEmailEvent); ok {
 
 For organizations with email rules enabled, `email.received` events carry `Email.Analysis.Understanding` (`*EmailUnderstanding`): a `Version`, a `Status`, and when `"ready"`, `Facts` keyed by name, each with a `Value` (read with `AsBool`, `AsString`, `AsStrings` or `AsNumber`) and `Confidence`. Rule-granted deliveries also list the matching `Rules`. Treat an unfamiliar `Status`, fact name or value as one added after your SDK was built. `Email.Analysis.Sender` (`*SenderAnalysis`) is the sender authentication verdict.
 
-`EmailAnalysis.MatchedRules(ruleID ...string)` returns the `UnderstandingRule` entries of a rule-granted delivery, so it reads the same from the `ReceivedEmail` that `Receive` returns (`email.Analysis`) and the event `HandleWebhook` returns (`event.Email.Analysis`). It returns nil when no rule granted the delivery and skips entries without a rule ID. Given a rule ID, it keeps only that rule's entries.
+`EmailAnalysis.MatchedRules()` returns the `UnderstandingRule` entries of a rule-granted delivery, so it reads the same from the `ReceivedEmail` that `Receive` returns (`email.Analysis`) and the event `HandleWebhook` returns (`event.Email.Analysis`). It returns nil when no rule granted the delivery and skips entries without a rule ID. `MatchedRulesFor(ruleID)` keeps only that rule's entries.
 
 ```go
 email, err := primitive.Receive(primitive.HandleWebhookOptions{

@@ -9,7 +9,7 @@ import type { ReceivedEmail } from "./received-email.js";
  * `receive()` and `normalizeReceivedEmail()` return. Returns an empty array
  * when the delivery was not granted by a rule or the email carries no
  * understanding. Entries without a rule id are skipped. Pass `ruleId` to keep
- * only the entries for that rule.
+ * only the entries for that rule; `undefined` or `null` keeps every rule.
  *
  * @example
  * ```typescript
@@ -22,7 +22,7 @@ import type { ReceivedEmail } from "./received-email.js";
  */
 export function matchedRules(
   email: EmailReceivedEvent | ReceivedEmail,
-  ruleId?: string,
+  ruleId?: string | null,
 ): UnderstandingRule[] {
   const analysis = "email" in email ? email.email.analysis : email.analysis;
   const rules: unknown = analysis?.understanding?.rules;
@@ -31,14 +31,16 @@ export function matchedRules(
   }
   return rules.filter(
     (rule): rule is UnderstandingRule =>
-      hasRuleId(rule) && (ruleId === undefined || rule.id === ruleId),
+      hasRuleId(rule) && (ruleId == null || rule.id === ruleId),
   );
 }
 
 function hasRuleId(rule: unknown): rule is UnderstandingRule {
-  if (typeof rule !== "object" || rule === null) {
-    return false;
-  }
-  const { id } = rule as { id?: unknown };
-  return typeof id === "string" && id !== "";
+  return (
+    typeof rule === "object" &&
+    rule !== null &&
+    "id" in rule &&
+    typeof rule.id === "string" &&
+    rule.id !== ""
+  );
 }

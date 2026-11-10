@@ -300,12 +300,11 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 				}
 			}
 
-			var ruleID []string
-			if testCase.RuleID != nil {
-				ruleID = []string{*testCase.RuleID}
-			}
 			for shape, analysis := range map[string]EmailAnalysis{"event": event.Email.Analysis, "received email": email.Analysis} {
-				matched := analysis.MatchedRules(ruleID...)
+				matched := analysis.MatchedRules()
+				if testCase.RuleID != nil {
+					matched = analysis.MatchedRulesFor(*testCase.RuleID)
+				}
 				ids := make([]string, 0, len(matched))
 				for _, rule := range matched {
 					ids = append(ids, rule.ID)

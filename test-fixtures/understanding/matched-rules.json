@@ -1,5 +1,5 @@
 {
-  "description": "Shared cases for reading the rules that granted a delivery (matchedRules / matched_rules / EmailAnalysis.MatchedRules). Each case replaces email.analysis on test-fixtures/webhook/valid-email-received.json, validates the event, and calls the helper on the event and on the normalized received email, with rule_id when the case sets it. expected_rule_ids lists the ids of the returned rules, in order; each returned rule is the entry from email.analysis.understanding.rules. Entries without a rule id are skipped.",
+  "description": "Shared cases for reading the rules that granted a delivery (matchedRules / matched_rules / EmailAnalysis.MatchedRules and MatchedRulesFor). Each case replaces email.analysis on test-fixtures/webhook/valid-email-received.json, validates the event, and calls the helper on the event and on the normalized received email, with rule_id when the case sets it. expected_rule_ids lists the ids of the returned rules, in order; each returned rule is the entry from email.analysis.understanding.rules. Entries without a rule id are skipped.",
   "cases": [
     {
       "name": "no_understanding",

@@ -123,15 +123,21 @@ func TestEmailReceivedEventDecodesRouting(t *testing.T) {
 	}
 }
 
-func TestMatchedRulesUsesTheFirstRuleID(t *testing.T) {
+func TestMatchedRulesFor(t *testing.T) {
 	analysis := EmailAnalysis{Understanding: &EmailUnderstanding{
 		Version: 1,
 		Status:  "ready",
-		Rules:   []UnderstandingRule{{ID: "rule_1"}, {ID: "rule_2"}},
+		Rules:   []UnderstandingRule{{ID: "rule_1"}, {ID: ""}, {ID: "rule_2"}},
 	}}
 
-	if got := analysis.MatchedRules("rule_2", "rule_1"); !reflect.DeepEqual(got, []UnderstandingRule{{ID: "rule_2"}}) {
-		t.Fatalf("MatchedRules(rule_2, rule_1) = %+v; want only rule_2", got)
+	if got := analysis.MatchedRules(); !reflect.DeepEqual(got, []UnderstandingRule{{ID: "rule_1"}, {ID: "rule_2"}}) {
+		t.Fatalf("MatchedRules() = %+v; want rule_1 and rule_2", got)
+	}
+	if got := analysis.MatchedRulesFor("rule_2"); !reflect.DeepEqual(got, []UnderstandingRule{{ID: "rule_2"}}) {
+		t.Fatalf("MatchedRulesFor(rule_2) = %+v; want only rule_2", got)
+	}
+	if got := analysis.MatchedRulesFor(""); got != nil {
+		t.Fatalf("MatchedRulesFor(\"\") = %+v; want nil", got)
 	}
 	if got := (EmailAnalysis{}).MatchedRules(); got != nil {
 		t.Fatalf("MatchedRules without understanding = %+v; want nil", got)

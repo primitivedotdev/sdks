@@ -55,6 +55,15 @@ describe("matchedRules", () => {
     expect(matchedRules(event, "rule_1")).toEqual([rule]);
   });
 
+  it("treats a null rule id as no filter", () => {
+    const rules: UnderstandingRule[] = [{ id: "rule_1" }, { id: "rule_2" }];
+    const event = withUnvalidatedRules(rules);
+
+    expect(matchedRules(event, null)).toEqual(rules);
+    expect(matchedRules(event, undefined)).toEqual(rules);
+    expect(matchedRules(event, "rule_2")).toEqual([{ id: "rule_2" }]);
+  });
+
   it("returns an empty array when rules is not an array", () => {
     expect(matchedRules(withUnvalidatedRules({ id: "rule_1" }))).toEqual([]);
   });

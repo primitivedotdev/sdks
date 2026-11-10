@@ -580,7 +580,7 @@ if (isSentEmailFailedEvent(event) && event.scope === "recipient") {
 
 For organizations with email rules enabled, `email.received` events carry `email.analysis.understanding` (`EmailUnderstanding`): a `version`, a `status`, and when `ready`, `facts` keyed by name, each `{ value, confidence }`. Rule-granted deliveries also list the matching `rules`. Treat an unfamiliar `status`, fact name or value as one added after your SDK was built. `email.analysis.sender` (`SenderAnalysis`) is the sender authentication verdict.
 
-`matchedRules(email, ruleId?)` returns the `UnderstandingRule` entries of a rule-granted delivery. It takes the email `receive()` returns or the event `handleWebhook()` returns, returns an empty array when no rule granted the delivery, and skips entries without a rule id. With `ruleId` it keeps only that rule's entries. It is also exported from `@primitivedotdev/sdk/api` for Functions handlers.
+`matchedRules(email, ruleId?)` returns the `UnderstandingRule` entries of a rule-granted delivery. It takes the email `receive()` returns or the event `handleWebhook()` returns, returns an empty array when no rule granted the delivery, and skips entries without a rule id. With `ruleId` it keeps only that rule's entries; `undefined` or `null` keeps every rule. It is also exported from `@primitivedotdev/sdk/api` for Functions handlers.
 
 ```ts
 import primitive, { matchedRules } from "@primitivedotdev/sdk";
