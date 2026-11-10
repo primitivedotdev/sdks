@@ -569,8 +569,23 @@ describe("resolveDefaultFrom from the API's own answer", () => {
         }),
     });
     await expect(resolveDefaultFrom(client, authContext)).rejects.toThrow(
-      /^You have no member address of your own, so there is no default From\. Claim a member address\. You have no member address of your own; to claim one, run `primitive account provision-member-address --address dana@acme\.example`\.$/,
+      /^You have no member address of your own, so there is no default From\. Claim a member address\. You have no member address of your own; to claim one, run `primitive account provision-member-address --address dana@acme\.example`\. Pass the address to use with --from <address>\.$/,
     );
+  });
+
+  it("refuses an answer it cannot read, asking nothing else", async () => {
+    for (const data of [{}, { default_from: null }, null]) {
+      const { client, requests } = recordingClient({
+        "/whoami/send-from": () => Response.json({ success: true, data }),
+        "/whoami/grant": () => grantWithScope(scope(["me@example.test"])),
+      });
+      await expect(resolveDefaultFrom(client, authContext)).rejects.toThrow(
+        "Could not read which address this credential may send from, so --from has no default. Pass --from <address>.",
+      );
+      expect(requests.map((request) => request.path)).toEqual([
+        "/v1/whoami/send-from",
+      ]);
+    }
   });
 
   it("leaves a reply that lists nothing to its own rules", async () => {

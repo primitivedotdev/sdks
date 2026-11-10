@@ -492,8 +492,9 @@ async function claimHint(apiClient: PrimitiveApiClient): Promise<string> {
  * that lists what the credential may send from. Undefined only where the API
  * does not have the answer (an older API, a Function-bound key), or for a
  * reply when it lists nothing (a reply needs no send permission), so the
- * caller works the default out as before. Any other failure refuses: the
- * CLI never guesses past an answer it could not read.
+ * caller works the default out as before. Any other failure, or an answer it
+ * cannot read, refuses: the CLI never guesses past an answer it could not
+ * read.
  */
 async function sendFromAnswer(
   apiClient: PrimitiveApiClient,
@@ -533,13 +534,17 @@ async function sendFromAnswer(
         reason?: unknown;
       }
     | undefined;
+  // An answer it cannot read is not leave to guess: refuse, as for a failure.
   if (
     !data ||
     typeof data !== "object" ||
     !("default_from" in data) ||
     !Array.isArray(data.addresses)
   )
-    return undefined;
+    throw new Errors.CLIError(
+      "Could not read which address this credential may send from, so --from has no default. Pass --from <address>.",
+      { exit: 1 },
+    );
   if (typeof data.default_from === "string" && data.default_from) {
     const source =
       typeof data.default_source === "string" &&
@@ -575,10 +580,9 @@ async function sendFromAnswer(
     parts.push(
       `${addresses.length > 0 ? "Also any" : "Any"} address at: ${domains.join(", ")}.`,
     );
-  if (addresses.length > 0 || domains.length > 0)
-    parts.push("Pass the address to use with --from <address>.");
   // Only a person without a member address gets a suggestion to claim one.
   parts.push(await claimHint(apiClient));
+  parts.push("Pass the address to use with --from <address>.");
   throw new Errors.CLIError(parts.filter((part) => part).join(" "), {
     exit: 1,
   });
