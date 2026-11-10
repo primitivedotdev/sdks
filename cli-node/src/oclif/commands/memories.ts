@@ -85,6 +85,22 @@ function printData(command: Command, responseData: unknown): void {
   command.log(JSON.stringify(data, null, 2));
 }
 
+// Terminal control characters, built from code points so the pattern holds
+// no literal control character.
+const CONTROL_CHARACTERS = new RegExp(
+  `[${String.fromCharCode(0)}-${String.fromCharCode(31)}]`,
+);
+
+/**
+ * The stderr line naming the next page's cursor. A memory key can hold a line
+ * break or another control character, which would split or garble the line,
+ * so such a cursor is printed JSON-encoded, with a note on how to pass it.
+ */
+export function nextCursorLine(cursor: string): string {
+  if (!CONTROL_CHARACTERS.test(cursor)) return `next cursor: ${cursor}\n`;
+  return `next cursor (JSON-encoded, it holds control characters; decode it before passing it to --cursor, or read meta.cursor with --json --envelope): ${JSON.stringify(cursor)}\n`;
+}
+
 function handleMemoryInputError(error: unknown): boolean {
   if (!(error instanceof MemoryCliInputError)) return false;
   process.stderr.write(`${error.message}\n`);
@@ -552,7 +568,7 @@ class MemoriesSearchCommand extends Command {
     }),
     cursor: Flags.string({
       description:
-        "Key cursor from the previous page. The next page's cursor is meta.cursor, null on the last page: without --json it is printed on stderr as `next cursor: <value>`; with --json, add --envelope to get it.",
+        "Key cursor from the previous page. The next page's cursor is meta.cursor, null on the last page: without --json it is printed on stderr as `next cursor: <value>` (JSON-encoded, with a note, when it holds control characters); with --json, add --envelope to get it, the reliable way for a script to page.",
     }),
     envelope: Flags.boolean({
       description:
@@ -607,8 +623,7 @@ class MemoriesSearchCommand extends Command {
 
       const envelope = result.data;
       const cursor = envelope?.meta?.cursor;
-      if (cursor && !flags.json)
-        process.stderr.write(`next cursor: ${cursor}\n`);
+      if (cursor && !flags.json) process.stderr.write(nextCursorLine(cursor));
       if (flags.envelope) this.log(JSON.stringify(envelope ?? null, null, 2));
       else printData(this, result.data);
     });

@@ -653,6 +653,15 @@ describe("generated commands with --json", () => {
       jsonResponse(200, { success: true, data: [], meta: { cursor: null } });
     const last = await runMerged("memories:search", []);
     expect(last.stderr).toBe("");
+    responder = () =>
+      jsonResponse(200, {
+        success: true,
+        data: [{ key: "a\nb" }],
+        meta: { cursor: "a\nb" },
+      });
+    const odd = await runMerged("memories:search", []);
+    expect(odd.stderr.split("\n").filter(Boolean)).toHaveLength(1);
+    expect(odd.stderr).toContain('"a\\nb"');
   });
 
   it("keeps the data-only output and stderr cursor without --json", async () => {
