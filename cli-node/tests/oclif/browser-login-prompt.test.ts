@@ -1,6 +1,8 @@
 import { EventEmitter } from "node:events";
 import { describe, expect, it, vi } from "vitest";
 import {
+  browsableUrl,
+  browserCommand,
   canOfferCopyHotkey,
   copyToClipboard,
   formatBrowserLoginInstructions,
@@ -265,5 +267,42 @@ describe("runClipboardCommand", () => {
         "x",
       ),
     ).resolves.toBe(true);
+  });
+});
+
+describe("browserCommand", () => {
+  const link =
+    "https://app.example.test/app/settings/step-up?purpose=x&client=y";
+
+  it("hands the whole link to the protocol handler on Windows, never through cmd", () => {
+    const { command, args } = browserCommand(link, "win32");
+    expect(command).toMatch(/\\System32\\rundll32\.exe$/);
+    expect(args).toEqual(["url.dll,FileProtocolHandler", link]);
+  });
+
+  it("opens only http and https links", () => {
+    expect(browsableUrl(link)).toBe(link);
+    expect(browsableUrl("http://localhost:3000/cli")).toBe(
+      "http://localhost:3000/cli",
+    );
+    for (const other of [
+      "file:///etc/passwd",
+      "\\\\server\\share",
+      "C:\\Windows\\x.exe",
+      "not a url",
+    ]) {
+      expect(browsableUrl(other), other).toBeNull();
+    }
+  });
+
+  it("uses open on macOS and xdg-open elsewhere, with the link as one argument", () => {
+    expect(browserCommand(link, "darwin")).toEqual({
+      command: "open",
+      args: [link],
+    });
+    expect(browserCommand(link, "linux")).toEqual({
+      command: "xdg-open",
+      args: [link],
+    });
   });
 });
