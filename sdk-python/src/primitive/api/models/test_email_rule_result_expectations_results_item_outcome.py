@@ -5,6 +5,7 @@ class TestEmailRuleResultExpectationsResultsItemOutcome(StrEnum):
     NEAR_MISS = "near_miss"
     NOT_FOUND = "not_found"
     NO_MATCH = "no_match"
+    SKIPPED = "skipped"
     UNCLASSIFIED = "unclassified"
 
     def __str__(self) -> str:

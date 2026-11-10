@@ -172,6 +172,7 @@ var operationRolesBearerAuth = map[string][]string{
 	GetRelayAutoJoinOperation:                     []string{},
 	GetRepeatingSendOperation:                     []string{},
 	GetSearchSettingsOperation:                    []string{},
+	GetSendFromOperation:                          []string{},
 	GetSendPermissionsOperation:                   []string{},
 	GetSentEmailOperation:                         []string{},
 	GetSentHourlyStatsOperation:                   []string{},

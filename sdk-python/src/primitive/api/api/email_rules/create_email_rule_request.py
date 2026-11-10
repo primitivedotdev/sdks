@@ -128,14 +128,15 @@ def sync_detailed(
     """ Ask a member for a rule
 
      Asks another member of the organization for a rule over their own mail, from a compile response or a
-    tree you wrote. Name them by user id, or by their member mailbox address (at most 30 lookups by
-    address an hour). Nothing is evaluated and nothing is shared until they accept, and they may change
-    the rule first; they see the request and can preview what it matches in their own mail. You may have
-    at most 5 pending requests to one member and 50 in all. If you can list members (members:read), the
-    answer also says whether they can accept it under their role (target_can_accept), and if not, why
-    (target_warning); the request is sent either way. To find out before asking, use POST /v1/email-
-    rule-requests/target-check. Needs mail:read, a member's own credential with their full access (not
-    an API key, agent key or narrowed token), and the email rules feature.
+    tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work
+    email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated and
+    nothing is shared until they accept, and they may change the rule first; they see the request and
+    can preview what it matches in their own mail. You may have at most 5 pending requests to one member
+    and 50 in all. If you can list members (members:read), the answer also says whether they can accept
+    it under their role (target_can_accept), and if not, why (target_warning); the request is sent
+    either way. To find out before asking, use POST /v1/email-rule-requests/target-check. Needs
+    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+    token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -172,14 +173,15 @@ def sync(
     """ Ask a member for a rule
 
      Asks another member of the organization for a rule over their own mail, from a compile response or a
-    tree you wrote. Name them by user id, or by their member mailbox address (at most 30 lookups by
-    address an hour). Nothing is evaluated and nothing is shared until they accept, and they may change
-    the rule first; they see the request and can preview what it matches in their own mail. You may have
-    at most 5 pending requests to one member and 50 in all. If you can list members (members:read), the
-    answer also says whether they can accept it under their role (target_can_accept), and if not, why
-    (target_warning); the request is sent either way. To find out before asking, use POST /v1/email-
-    rule-requests/target-check. Needs mail:read, a member's own credential with their full access (not
-    an API key, agent key or narrowed token), and the email rules feature.
+    tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work
+    email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated and
+    nothing is shared until they accept, and they may change the rule first; they see the request and
+    can preview what it matches in their own mail. You may have at most 5 pending requests to one member
+    and 50 in all. If you can list members (members:read), the answer also says whether they can accept
+    it under their role (target_can_accept), and if not, why (target_warning); the request is sent
+    either way. To find out before asking, use POST /v1/email-rule-requests/target-check. Needs
+    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+    token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -211,14 +213,15 @@ async def asyncio_detailed(
     """ Ask a member for a rule
 
      Asks another member of the organization for a rule over their own mail, from a compile response or a
-    tree you wrote. Name them by user id, or by their member mailbox address (at most 30 lookups by
-    address an hour). Nothing is evaluated and nothing is shared until they accept, and they may change
-    the rule first; they see the request and can preview what it matches in their own mail. You may have
-    at most 5 pending requests to one member and 50 in all. If you can list members (members:read), the
-    answer also says whether they can accept it under their role (target_can_accept), and if not, why
-    (target_warning); the request is sent either way. To find out before asking, use POST /v1/email-
-    rule-requests/target-check. Needs mail:read, a member's own credential with their full access (not
-    an API key, agent key or narrowed token), and the email rules feature.
+    tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work
+    email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated and
+    nothing is shared until they accept, and they may change the rule first; they see the request and
+    can preview what it matches in their own mail. You may have at most 5 pending requests to one member
+    and 50 in all. If you can list members (members:read), the answer also says whether they can accept
+    it under their role (target_can_accept), and if not, why (target_warning); the request is sent
+    either way. To find out before asking, use POST /v1/email-rule-requests/target-check. Needs
+    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+    token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -255,14 +258,15 @@ async def asyncio(
     """ Ask a member for a rule
 
      Asks another member of the organization for a rule over their own mail, from a compile response or a
-    tree you wrote. Name them by user id, or by their member mailbox address (at most 30 lookups by
-    address an hour). Nothing is evaluated and nothing is shared until they accept, and they may change
-    the rule first; they see the request and can preview what it matches in their own mail. You may have
-    at most 5 pending requests to one member and 50 in all. If you can list members (members:read), the
-    answer also says whether they can accept it under their role (target_can_accept), and if not, why
-    (target_warning); the request is sent either way. To find out before asking, use POST /v1/email-
-    rule-requests/target-check. Needs mail:read, a member's own credential with their full access (not
-    an API key, agent key or narrowed token), and the email rules feature.
+    tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work
+    email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated and
+    nothing is shared until they accept, and they may change the rule first; they see the request and
+    can preview what it matches in their own mail. You may have at most 5 pending requests to one member
+    and 50 in all. If you can list members (members:read), the answer also says whether they can accept
+    it under their role (target_can_accept), and if not, why (target_warning); the request is sent
+    either way. To find out before asking, use POST /v1/email-rule-requests/target-check. Needs
+    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+    token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):

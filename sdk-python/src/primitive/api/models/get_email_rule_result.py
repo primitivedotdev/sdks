@@ -42,8 +42,8 @@ class GetEmailRuleResult:
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
             current (EmailRuleVersion | None):
-            kind (GetEmailRuleResultKind | Unset): do_not_share: it blocks sharing what it matches. Absent (or grant) on a
-                rule that shares.
+            kind (GetEmailRuleResultKind | Unset): grant: what it matches can be shared. do_not_share: it blocks sharing
+                what it matches. Optional only for an older core-api: every answer carries it.
             evaluation_scope (GetEmailRuleResultEvaluationScope | Unset): Whose mail it runs over, as stored (GET /email-
                 rules/{id}/scope: what that is now).
             scope_selection (EmailRuleScopeNames | None | Unset): What a selected rule names; null for any other scope.

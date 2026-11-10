@@ -43,8 +43,8 @@ class EmailRuleWritten:
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
             current (EmailRuleVersion | None):
-            kind (EmailRuleWrittenKind | Unset): do_not_share: it blocks sharing what it matches. Absent (or grant) on a
-                rule that shares.
+            kind (EmailRuleWrittenKind | Unset): grant: what it matches can be shared. do_not_share: it blocks sharing what
+                it matches. Optional only for an older core-api: every answer carries it.
             evaluation_scope (EmailRuleWrittenEvaluationScope | Unset): Whose mail it runs over, as stored (GET /email-
                 rules/{id}/scope: what that is now).
             scope_selection (EmailRuleScopeNames | None | Unset): What a selected rule names; null for any other scope.
@@ -52,10 +52,10 @@ class EmailRuleWritten:
                 organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.
             expectations_check (EmailRuleWrittenExpectationsCheck | Unset): After a write that saved a version or changed
                 its expectations, if it has some: them, judged on that version from stored classifications without asking its
-                questions. Undecided: one that needs answers not yet kept for that version, is unclassified or not reached, or
-                that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be
-                resolved, your access shows headers only, it could not finish in time, or the check failed). Test by rule_id for
-                the rest.
+                questions. Undecided: one that needs answers not yet kept for that version, is unclassified, skipped or not
+                reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its
+                author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed).
+                Test by rule_id for the rest.
      """
 
     id: UUID

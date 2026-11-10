@@ -507,6 +507,97 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "get-send-from",
+    "description": "The From addresses the calling credential may send from with POST /send-mail, and the one a send that names no From should use. Every address listed is one that send would accept as From for this credential, recipients aside. A connected agent's default is its own address. A person's default is their own member address, for a session and for every OAuth login of theirs, an agent's included. Any other credential has a default only when exactly one address and no domain is listed, and never a person's own member address. When there is no default, `reason` says why. `domains` lists the domains at which the credential may send from any address that is not reserved to someone else or left out of its grant; each is one GET /outbound/status lists as sendable for it. A credential that cannot send new mail, or one in an account where outbound mail is not enabled, gets no addresses and no domains. Every credential may ask about itself, a connected agent's key included, except a Function-bound key limited to its Function's own operations (403 function_scope_forbidden). It answers nothing about any other credential.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getSendFrom",
+    "path": "/whoami/send-from",
+    "pathParams": [],
+    "queryParams": [],
+    "headerParams": [],
+    "permissions": null,
+    "access": null,
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "default_from": {
+          "description": "The From a send that names none should use. Null when there is no single right answer; `reason` says why.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "default_source": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "agent_address",
+            "member_address",
+            "granted_address",
+            null
+          ],
+          "description": "Where default_from comes from. Null when default_from is null."
+        },
+        "addresses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "agent_address",
+                  "member_address",
+                  "granted"
+                ],
+                "description": "agent_address: this connected agent's own address. member_address: your own member address. granted: an address this credential's grant names."
+              }
+            },
+            "required": [
+              "address",
+              "kind"
+            ]
+          },
+          "description": "Addresses this credential may send from, each one a send would accept as From for it, recipients aside."
+        },
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Domains at which this credential may send from any address, except one reserved to someone else (a member's own address, or an agent's) or left out of its grant. Never listed for a connected agent."
+        },
+        "reason": {
+          "description": "Why default_from is null, in plain English. Null when there is a default.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "default_from",
+        "default_source",
+        "addresses",
+        "domains",
+        "reason"
+      ]
+    },
+    "sdkName": "getSendFrom",
+    "summary": "List the addresses this credential can send from",
+    "tag": "Account",
+    "tagCommand": "account"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "get-storage-stats",
     "description": "Return stored-email storage usage for the authenticated organization: the plan's included storage, the limit past which inbound mail is refused (null when it never is, as on paid plans), and the storage billed as overage. `quota_mb` is the included allowance, not a limit. The search index is billed as storage with mail (`search_index_bytes`) but never counts toward the limit.",
     "hasJsonBody": false,
@@ -16217,7 +16308,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "kind": {
-              "description": "do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.",
+              "description": "grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional only for an older core-api: every answer carries it.",
               "type": "string",
               "enum": [
                 "grant",
@@ -16626,7 +16717,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "check-email-rule-request-target",
-    "description": "Says, before you ask, whether a member could accept a rule request now under their role, and if not, which permission their role lacks. Nothing is sent and nothing is recorded. Needs members:read, as listing members and their roles does. At most 60 checks an hour. Name them by user id, or by their member mailbox address (counted with asking: at most 30 lookups by address an hour). Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Says, before you ask, whether a member could accept a rule request now under their role, and if not, which permission their role lacks. Nothing is sent and nothing is recorded. Needs members:read, as listing members and their roles does. At most 60 checks an hour. Name them by user id, or by their member mailbox address or verified work email (counted with asking: at most 30 lookups by address an hour). Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "checkEmailRuleRequestTarget",
@@ -16656,7 +16747,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "format": "uuid"
         },
         "target_email": {
-          "description": "The member to ask, by their member mailbox address. Give target_user_id or target_email, not both. Counts toward the same 30 lookups by address an hour as asking.",
+          "description": "The member to ask, by their member mailbox address or verified work email. Give target_user_id or target_email, not both. Counts toward the same 30 lookups by address an hour as asking.",
           "type": "string",
           "maxLength": 254,
           "format": "email",
@@ -17075,7 +17166,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "kind": {
-          "description": "do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.",
+          "description": "grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional only for an older core-api: every answer carries it.",
           "type": "string",
           "enum": [
             "grant",
@@ -17290,7 +17381,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "expectations_check": {
-          "description": "After a write that saved a version or changed its expectations, if it has some: them, judged on that version from stored classifications without asking its questions. Undecided: one that needs answers not yet kept for that version, is unclassified or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed). Test by rule_id for the rest.",
+          "description": "After a write that saved a version or changed its expectations, if it has some: them, judged on that version from stored classifications without asking its questions. Undecided: one that needs answers not yet kept for that version, is unclassified, skipped or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed). Test by rule_id for the rest.",
           "type": "object",
           "properties": {
             "version": {
@@ -17301,6 +17392,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "exclusiveMinimum": 0
             },
             "passed": {
+              "description": "False when any failed, true when every one passed, null when none failed but some are undecided (not a failure).",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "decided": {
+              "description": "Whether every expectation was judged (undecided is empty). Absent from a server that predates it.",
               "type": "boolean"
             },
             "failed": {
@@ -17347,7 +17446,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-email-rule-request",
-    "description": "Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address (at most 30 lookups by address an hour). Nothing is evaluated and nothing is shared until they accept, and they may change the rule first; they see the request and can preview what it matches in their own mail. You may have at most 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer also says whether they can accept it under their role (target_can_accept), and if not, why (target_warning); the request is sent either way. To find out before asking, use POST /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated and nothing is shared until they accept, and they may change the rule first; they see the request and can preview what it matches in their own mail. You may have at most 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer also says whether they can accept it under their role (target_can_accept), and if not, why (target_warning); the request is sent either way. To find out before asking, use POST /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "createEmailRuleRequest",
@@ -17376,7 +17475,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "format": "uuid"
         },
         "target_email": {
-          "description": "The member asked for the rule, by their member mailbox address. Give target_user_id or target_email, not both. Looking members up by address is limited to 30 an hour, and unless you can list members the answer does not say who it was.",
+          "description": "The member asked for the rule, by their member mailbox address, or by their verified work email if you can list members. Give target_user_id or target_email, not both. Looking members up by address is limited to 30 an hour, and unless you can list members the answer does not say who it was.",
           "type": "string",
           "maxLength": 254,
           "format": "email",
@@ -18135,7 +18234,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "kind": {
-          "description": "do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.",
+          "description": "grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional only for an older core-api: every answer carries it.",
           "type": "string",
           "enum": [
             "grant",
@@ -19671,7 +19770,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ]
               },
               "kind": {
-                "description": "do_not_share: the rule blocks sharing of what it matches. While it is active, no rule shares an email it has matched from then on; anything shared before, including while it was in observe, stays shared. Absent on a rule that shares what it matches.",
+                "description": "grant: the rule shares what it matches. do_not_share: the rule blocks sharing of what it matches. While it is active, no rule shares an email it has matched from then on; anything shared before, including while it was in observe, stays shared.",
                 "type": "string",
                 "enum": [
                   "grant",
@@ -20021,7 +20120,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rule-share-emails",
-    "description": "The emails a rule share has given, newest first, as the email list shows them, each with shared_at: when the share's rule first matched it. For the person it was shared with: what they can read through it now, so an ended share lists nothing. For the person sharing their mail: everything it has handed over while it ran, including after it ended, so they can see what left their mailbox; while the share's rule is off this answers email_rule_not_active instead. Only those two people can list them, from the dashboard or the Primitive CLI. A page can be short or empty and still carry a cursor: keep reading until meta.cursor is null.",
+    "description": "The emails a rule share has given, newest first, as the email list shows them, each with shared_at. For the person it was shared with: what they can read through it now, so an ended share lists nothing, and shared_at is when the share's rule first matched the email. For the person sharing their mail: everything it has handed over while it ran, including after it ended and whatever the rule's state now, so they can see what left their mailbox, and shared_at is when it was handed over. Only those two people can list them, from the dashboard or the Primitive CLI. A page can be short or empty and still carry a cursor: keep reading until meta.cursor is null.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleShareEmails",
@@ -20497,7 +20596,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "null"
             ],
             "format": "date-time",
-            "description": "When the share's rule first matched this email. The email was shared then or shortly after. Null if that could not be read."
+            "description": "For the person sharing, when the share handed this email over. For the person it was shared with, when the share's rule first matched it, which is when it was shared or shortly before. Null if that could not be read."
           }
         },
         "required": [
@@ -21027,7 +21126,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ]
           },
           "kind": {
-            "description": "do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.",
+            "description": "grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional only for an older core-api: every answer carries it.",
             "type": "string",
             "enum": [
               "grant",
@@ -21373,7 +21472,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "test-email-rule",
-    "description": "Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified or not_found), with a summary: how each top-level condition and question decided and, when nothing matched, what stopped it. Test an unsaved tree from a compile response, or a saved rule by rule_id (its current version, run with its author's access). The rule reads only mail its author can read and its scope covers; an unsaved tree covers only your own mail unless evaluation_scope names more. Without email_ids, the newest emails it can read are tested, at most 200 and none older than 30 days; expected emails (expect, or a saved rule's saved expectations) are tested whatever their age. Unclassified emails more than 2 hours old are classified first and their classification saved, unless classify_missing is false; newer ones are reported unclassified, pending. The rule itself records and grants nothing. Classification and the rule's questions stop at about 90 seconds; a rerun continues the classification where it stopped. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified, skipped or not_found), with a summary: how each top-level condition and question decided and, when nothing matched, what stopped it. Test an unsaved tree from a compile response, or a saved rule by rule_id (its current version, run with its author's access). The rule reads only mail its author can read and its scope covers; an unsaved tree covers only your own mail unless evaluation_scope names more. Without email_ids, the newest emails it can read are tested, at most 200 and none older than 30 days; expected emails (expect, or a saved rule's saved expectations) are tested whatever their age. Unclassified emails more than 2 hours old are classified first and their classification saved, unless classify_missing is false; newer ones are reported unclassified, pending. The rule itself records and grants nothing. Classification and the rule's questions stop at about 90 seconds; a rerun continues the classification where it stopped. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "testEmailRule",
@@ -21602,6 +21701,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "type": "integer",
               "minimum": 0
             },
+            "skipped": {
+              "type": "integer",
+              "minimum": 0
+            },
             "not_found": {
               "type": "integer",
               "minimum": 0
@@ -21627,7 +21730,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "still_unclassified": {
               "type": "integer",
               "minimum": 0,
-              "description": "Emails left without a classification."
+              "description": "Emails left without a classification (unclassified); a skipped email is counted under skipped instead."
             }
           },
           "required": [
@@ -21674,9 +21777,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "near_miss",
                   "no_match",
                   "unclassified",
+                  "skipped",
                   "not_found"
                 ],
-                "description": "near_miss: Not matched, but nearly: its questions did not all say yes, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false). not_found: no such email, or not one the rule can read (or not settled, held back, or being removed)."
+                "description": "near_miss: Not matched, but nearly: its questions did not all say yes, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false). skipped: an email you can see that cannot be tested; skipped_reason says why. not_found: no such email, or not one the rule can read (or not settled, or awaiting sender authentication)."
               },
               "received_at": {
                 "type": "string",
@@ -21820,6 +21924,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "stored",
                   "asked_now",
                   "not_asked"
+                ]
+              },
+              "skipped_reason": {
+                "description": "Why a skipped email cannot be tested. unparsed: its content failed to parse, so it can never be classified. rejected: it was rejected and never delivered. content_discarded: its content has been discarded, or is being. Nothing is classified or asked about it and no stored answers are used, so it never counts as a pass. The recent window holds only mail that can be tested, apart from unparsed mail; an email you name is reported as skipped, whichever of these it is.",
+                "type": "string",
+                "enum": [
+                  "unparsed",
+                  "rejected",
+                  "content_discarded"
                 ]
               },
               "unclassified_reason": {
@@ -21972,7 +22085,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "properties": {
             "passed": {
               "type": "boolean",
-              "description": "Every expectation passed. One undecided is no pass: unclassified or a question unanswered (test again later), or not found (no such email the rule can read)."
+              "description": "Every expectation passed. One undecided is no pass: unclassified or a question unanswered (test again later), skipped (it cannot be tested), or not found (no such email the rule can read)."
             },
             "counts": {
               "type": "object",
@@ -22019,6 +22132,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                       "near_miss",
                       "no_match",
                       "unclassified",
+                      "skipped",
                       "not_found"
                     ]
                   },
@@ -22693,7 +22807,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "kind": {
-          "description": "do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.",
+          "description": "grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional only for an older core-api: every answer carries it.",
           "type": "string",
           "enum": [
             "grant",
@@ -22908,7 +23022,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "expectations_check": {
-          "description": "After a write that saved a version or changed its expectations, if it has some: them, judged on that version from stored classifications without asking its questions. Undecided: one that needs answers not yet kept for that version, is unclassified or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed). Test by rule_id for the rest.",
+          "description": "After a write that saved a version or changed its expectations, if it has some: them, judged on that version from stored classifications without asking its questions. Undecided: one that needs answers not yet kept for that version, is unclassified, skipped or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed). Test by rule_id for the rest.",
           "type": "object",
           "properties": {
             "version": {
@@ -22919,6 +23033,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "exclusiveMinimum": 0
             },
             "passed": {
+              "description": "False when any failed, true when every one passed, null when none failed but some are undecided (not a failure).",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "decided": {
+              "description": "Whether every expectation was judged (undecided is empty). Absent from a server that predates it.",
               "type": "boolean"
             },
             "failed": {
@@ -45616,7 +45738,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-route",
-    "description": "Binds a recipient pattern to a destination. Provide exactly one of\n`endpoint_id` (an existing endpoint) or `function_id`. With `function_id`,\na dedicated route-target endpoint is minted for that function in the same\ntransaction, enabling per-address function routing (e.g.\n`alice@acme.com -> functionA`).\n",
+    "description": "Binds a recipient pattern to a destination. Provide exactly one of\n`endpoint_id` (an existing endpoint) or `function_id`. With `function_id`,\na dedicated route-target endpoint is minted for that function in the same\ntransaction, enabling per-address function routing (e.g.\n`alice@acme.com -> functionA`).\n\nA route that could never deliver is refused: an exact pattern that the endpoint's owner may not receive, or that the route's own owner may not act on, answers 400 validation_error with details.reason endpoint_owner_access or route_owner_access and details.recipient. A wildcard or regex route to an owned endpoint is written, with warnings saying it delivers only what the owner may receive. A route written disabled is judged when it is turned on.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "createRoute",
@@ -45687,74 +45809,110 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       ]
     },
     "responseSchema": {
-      "type": "object",
-      "description": "A recipient routing rule binding an address pattern to one endpoint.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "org_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "domain_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "uuid",
-          "description": "Domain the route is scoped to; null = org-wide."
-        },
-        "match_type": {
-          "type": "string",
-          "enum": [
-            "exact",
-            "wildcard",
-            "regex"
+      "allOf": [
+        {
+          "type": "object",
+          "description": "A recipient routing rule binding an address pattern to one endpoint.",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "org_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "domain_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "description": "Domain the route is scoped to; null = org-wide."
+            },
+            "match_type": {
+              "type": "string",
+              "enum": [
+                "exact",
+                "wildcard",
+                "regex"
+              ]
+            },
+            "pattern": {
+              "type": "string",
+              "description": "The recipient address pattern (an exact address or a wildcard)."
+            },
+            "pattern_norm": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Normalized pattern used for matching."
+            },
+            "endpoint_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The endpoint inbound mail matching this rule is delivered to."
+            },
+            "priority": {
+              "type": "integer",
+              "description": "Evaluation order within a scope; lower is checked first."
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "match_count": {
+              "type": "string",
+              "description": "How many emails have matched this rule (a bigint, returned as a string)."
+            },
+            "last_matched_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "id"
           ]
         },
-        "pattern": {
-          "type": "string",
-          "description": "The recipient address pattern (an exact address or a wildcard)."
-        },
-        "pattern_norm": {
-          "type": [
-            "string",
-            "null"
+        {
+          "type": "object",
+          "required": [
+            "warnings"
           ],
-          "description": "Normalized pattern used for matching."
-        },
-        "endpoint_id": {
-          "type": "string",
-          "format": "uuid",
-          "description": "The endpoint inbound mail matching this rule is delivered to."
-        },
-        "priority": {
-          "type": "integer",
-          "description": "Evaluation order within a scope; lower is checked first."
-        },
-        "enabled": {
-          "type": "boolean"
-        },
-        "match_count": {
-          "type": "string",
-          "description": "How many emails have matched this rule (a bigint, returned as a string)."
-        },
-        "last_matched_at": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
+          "properties": {
+            "warnings": {
+              "type": "array",
+              "description": "What the route may not do as written. endpoint_owner_limited: its endpoint is owned by a key, a third-party app or agent, or a person limited to some mail, so it delivers only mail for recipients that owner may receive (for an outbound-only owner, only bounces). route_owner_limited: the same for the route's own owner. owner_unchecked: that could not be checked just now. Empty when nothing limits it. Check any recipient with POST /v1/routes/simulate.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "enum": [
+                      "endpoint_owner_limited",
+                      "route_owner_limited",
+                      "owner_unchecked"
+                    ]
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
         }
-      },
-      "required": [
-        "id"
       ]
     },
     "sdkName": "createRoute",
@@ -46207,7 +46365,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "update-route",
-    "description": "Update a recipient route",
+    "description": "A route that could never deliver is refused: an exact pattern that the endpoint's owner may not receive, or that the route's own owner may not act on, answers 400 validation_error with details.reason endpoint_owner_access or route_owner_access and details.recipient. A wildcard or regex route to an owned endpoint is written, with warnings saying it delivers only what the owner may receive. A route written disabled is judged when it is turned on.",
     "hasJsonBody": true,
     "method": "PATCH",
     "operationId": "updateRoute",
@@ -46266,74 +46424,110 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     },
     "responseSchema": {
-      "type": "object",
-      "description": "A recipient routing rule binding an address pattern to one endpoint.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "org_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "domain_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "uuid",
-          "description": "Domain the route is scoped to; null = org-wide."
-        },
-        "match_type": {
-          "type": "string",
-          "enum": [
-            "exact",
-            "wildcard",
-            "regex"
+      "allOf": [
+        {
+          "type": "object",
+          "description": "A recipient routing rule binding an address pattern to one endpoint.",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "org_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "domain_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "description": "Domain the route is scoped to; null = org-wide."
+            },
+            "match_type": {
+              "type": "string",
+              "enum": [
+                "exact",
+                "wildcard",
+                "regex"
+              ]
+            },
+            "pattern": {
+              "type": "string",
+              "description": "The recipient address pattern (an exact address or a wildcard)."
+            },
+            "pattern_norm": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Normalized pattern used for matching."
+            },
+            "endpoint_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The endpoint inbound mail matching this rule is delivered to."
+            },
+            "priority": {
+              "type": "integer",
+              "description": "Evaluation order within a scope; lower is checked first."
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "match_count": {
+              "type": "string",
+              "description": "How many emails have matched this rule (a bigint, returned as a string)."
+            },
+            "last_matched_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "id"
           ]
         },
-        "pattern": {
-          "type": "string",
-          "description": "The recipient address pattern (an exact address or a wildcard)."
-        },
-        "pattern_norm": {
-          "type": [
-            "string",
-            "null"
+        {
+          "type": "object",
+          "required": [
+            "warnings"
           ],
-          "description": "Normalized pattern used for matching."
-        },
-        "endpoint_id": {
-          "type": "string",
-          "format": "uuid",
-          "description": "The endpoint inbound mail matching this rule is delivered to."
-        },
-        "priority": {
-          "type": "integer",
-          "description": "Evaluation order within a scope; lower is checked first."
-        },
-        "enabled": {
-          "type": "boolean"
-        },
-        "match_count": {
-          "type": "string",
-          "description": "How many emails have matched this rule (a bigint, returned as a string)."
-        },
-        "last_matched_at": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
+          "properties": {
+            "warnings": {
+              "type": "array",
+              "description": "What the route may not do as written. endpoint_owner_limited: its endpoint is owned by a key, a third-party app or agent, or a person limited to some mail, so it delivers only mail for recipients that owner may receive (for an outbound-only owner, only bounces). route_owner_limited: the same for the route's own owner. owner_unchecked: that could not be checked just now. Empty when nothing limits it. Check any recipient with POST /v1/routes/simulate.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "enum": [
+                      "endpoint_owner_limited",
+                      "route_owner_limited",
+                      "owner_unchecked"
+                    ]
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
         }
-      },
-      "required": [
-        "id"
       ]
     },
     "sdkName": "updateRoute",

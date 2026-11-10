@@ -24,8 +24,8 @@ class CheckEmailRuleRequestTargetRequest:
     """ 
         Attributes:
             target_user_id (UUID | Unset): The member to ask. Give target_user_id or target_email, not both.
-            target_email (str | Unset): The member to ask, by their member mailbox address. Give target_user_id or
-                target_email, not both. Counts toward the same 30 lookups by address an hour as asking.
+            target_email (str | Unset): The member to ask, by their member mailbox address or verified work email. Give
+                target_user_id or target_email, not both. Counts toward the same 30 lookups by address an hour as asking.
      """
 
     target_user_id: UUID | Unset = UNSET

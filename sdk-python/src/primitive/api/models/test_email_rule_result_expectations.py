@@ -28,7 +28,7 @@ class TestEmailRuleResultExpectations:
 
         Attributes:
             passed (bool): Every expectation passed. One undecided is no pass: unclassified or a question unanswered (test
-                again later), or not found (no such email the rule can read).
+                again later), skipped (it cannot be tested), or not found (no such email the rule can read).
             counts (TestEmailRuleResultExpectationsCounts):
             results (list[TestEmailRuleResultExpectationsResultsItem]): match first, then no_match, each in the order given
                 (saved expectations by email id).

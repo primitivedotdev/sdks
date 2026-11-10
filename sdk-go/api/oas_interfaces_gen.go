@@ -521,6 +521,10 @@ type GetSearchSettingsRes interface {
 	getSearchSettingsRes()
 }
 
+type GetSendFromRes interface {
+	getSendFromRes()
+}
+
 type GetSendPermissionsRes interface {
 	getSendPermissionsRes()
 }

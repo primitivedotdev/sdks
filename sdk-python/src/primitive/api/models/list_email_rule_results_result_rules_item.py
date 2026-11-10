@@ -41,9 +41,9 @@ class ListEmailRuleResultsResultRulesItem:
                 ListEmailRuleResultsResultRulesItemNotRunReasonType3Type1 | None): What is known about a rule with no result on
                 this email. draft: the rule is a draft now. created_after_email: the rule was created after the email arrived.
                 Null when it has a result, or when nothing is known.
-            kind (ListEmailRuleResultsResultRulesItemKind | Unset): do_not_share: the rule blocks sharing of what it
-                matches. While it is active, no rule shares an email it has matched from then on; anything shared before,
-                including while it was in observe, stays shared. Absent on a rule that shares what it matches.
+            kind (ListEmailRuleResultsResultRulesItemKind | Unset): grant: the rule shares what it matches. do_not_share:
+                the rule blocks sharing of what it matches. While it is active, no rule shares an email it has matched from then
+                on; anything shared before, including while it was in observe, stays shared.
             author_left (bool | Unset): On a do-not-share rule whose author is no longer a member of the organization: it
                 blocks nothing now, whatever it decided. Absent otherwise.
      """

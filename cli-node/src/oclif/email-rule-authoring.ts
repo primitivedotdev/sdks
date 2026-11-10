@@ -365,6 +365,10 @@ export function undecidedReason(
   const outcome = result?.outcome ?? expectation.outcome;
   if (outcome === "not_found")
     return { why: "no such email the rule can read", resolvable: false };
+  // An email that cannot be tested (unparsed, rejected, content discarded)
+  // stays that way: testing again never decides it.
+  if (outcome === "skipped")
+    return { why: skippedText(result), resolvable: false };
   if (outcome === "unclassified") {
     const reason = result?.unclassified_reason;
     return (
@@ -468,10 +472,27 @@ const NOT_MATCHED_ORDER: Record<string, number> = {
   near_miss: 1,
   no_match: 2,
   unclassified: 3,
-  not_found: 4,
+  skipped: 4,
+  not_found: 5,
 };
 
+const SKIPPED_REASONS: Record<string, string> = {
+  unparsed: "its content failed to parse",
+  rejected: "it was rejected and never delivered",
+  content_discarded: "its content was discarded",
+};
+
+/** Why a skipped email cannot be tested, from its skipped_reason. */
+function skippedText(
+  result: Pick<TestResult, "skipped_reason"> | undefined,
+): string {
+  const reason = result?.skipped_reason;
+  return `skipped: ${(reason && SKIPPED_REASONS[reason]) ?? (reason ? reason : "it cannot be tested")}`;
+}
+
 function notMatchedLine(result: TestResult): string[] {
+  if (result.outcome === "skipped")
+    return [`  ${result.email_id} ${skippedText(result)}`];
   if (result.outcome === "unclassified") {
     const reason = result.unclassified_reason;
     const note = !reason

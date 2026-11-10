@@ -24,21 +24,25 @@ T = TypeVar("T", bound="EmailRuleWrittenExpectationsCheck")
 class EmailRuleWrittenExpectationsCheck:
     """ After a write that saved a version or changed its expectations, if it has some: them, judged on that version from
     stored classifications without asking its questions. Undecided: one that needs answers not yet kept for that
-    version, is unclassified or not reached, or that its author does not read. Absent when it could not be judged (the
-    rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or
-    the check failed). Test by rule_id for the rest.
+    version, is unclassified, skipped or not reached, or that its author does not read. Absent when it could not be
+    judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish
+    in time, or the check failed). Test by rule_id for the rest.
 
         Attributes:
             version (int | None):
-            passed (bool):
+            passed (bool | None): False when any failed, true when every one passed, null when none failed but some are
+                undecided (not a failure).
             failed (list[UUID]):
             undecided (list[UUID]):
+            decided (bool | Unset): Whether every expectation was judged (undecided is empty). Absent from a server that
+                predates it.
      """
 
     version: int | None
-    passed: bool
+    passed: bool | None
     failed: list[UUID]
     undecided: list[UUID]
+    decided: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -49,6 +53,7 @@ class EmailRuleWrittenExpectationsCheck:
         version: int | None
         version = self.version
 
+        passed: bool | None
         passed = self.passed
 
         failed = []
@@ -65,6 +70,8 @@ class EmailRuleWrittenExpectationsCheck:
 
 
 
+        decided = self.decided
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -74,6 +81,8 @@ class EmailRuleWrittenExpectationsCheck:
             "failed": failed,
             "undecided": undecided,
         })
+        if decided is not UNSET:
+            field_dict["decided"] = decided
 
         return field_dict
 
@@ -90,7 +99,13 @@ class EmailRuleWrittenExpectationsCheck:
         version = _parse_version(d.pop("version"))
 
 
-        passed = d.pop("passed")
+        def _parse_passed(data: object) -> bool | None:
+            if data is None:
+                return data
+            return cast(bool | None, data)
+
+        passed = _parse_passed(d.pop("passed"))
+
 
         failed = []
         _failed = d.pop("failed")
@@ -112,11 +127,14 @@ class EmailRuleWrittenExpectationsCheck:
             undecided.append(undecided_item)
 
 
+        decided = d.pop("decided", UNSET)
+
         email_rule_written_expectations_check = cls(
             version=version,
             passed=passed,
             failed=failed,
             undecided=undecided,
+            decided=decided,
         )
 
 

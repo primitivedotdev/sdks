@@ -137,6 +137,7 @@ const (
 	GetRelayAutoJoinOperation                     OperationName = "GetRelayAutoJoin"
 	GetRepeatingSendOperation                     OperationName = "GetRepeatingSend"
 	GetSearchSettingsOperation                    OperationName = "GetSearchSettings"
+	GetSendFromOperation                          OperationName = "GetSendFrom"
 	GetSendPermissionsOperation                   OperationName = "GetSendPermissions"
 	GetSentEmailOperation                         OperationName = "GetSentEmail"
 	GetSentHourlyStatsOperation                   OperationName = "GetSentHourlyStats"

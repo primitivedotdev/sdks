@@ -226,6 +226,9 @@ from .create_role_result_kind import CreateRoleResultKind
 from .create_route_input import CreateRouteInput
 from .create_route_input_match_type import CreateRouteInputMatchType
 from .create_route_response_201 import CreateRouteResponse201
+from .create_route_response_201_data import CreateRouteResponse201Data
+from .create_route_response_201_data_warnings_item import CreateRouteResponse201DataWarningsItem
+from .create_route_response_201_data_warnings_item_code import CreateRouteResponse201DataWarningsItemCode
 from .create_wake_authorization_input import CreateWakeAuthorizationInput
 from .create_wake_authorization_response_201 import CreateWakeAuthorizationResponse201
 from .create_wake_schedule_input import CreateWakeScheduleInput
@@ -742,6 +745,13 @@ from .get_relay_auto_join_result import GetRelayAutoJoinResult
 from .get_relay_auto_join_result_options_item import GetRelayAutoJoinResultOptionsItem
 from .get_repeating_send_response_200 import GetRepeatingSendResponse200
 from .get_search_settings_response_200 import GetSearchSettingsResponse200
+from .get_send_from_response_200 import GetSendFromResponse200
+from .get_send_from_response_200_data import GetSendFromResponse200Data
+from .get_send_from_response_200_data_addresses_item import GetSendFromResponse200DataAddressesItem
+from .get_send_from_response_200_data_addresses_item_kind import GetSendFromResponse200DataAddressesItemKind
+from .get_send_from_response_200_data_default_source_type_1 import GetSendFromResponse200DataDefaultSourceType1
+from .get_send_from_response_200_data_default_source_type_2_type_1 import GetSendFromResponse200DataDefaultSourceType2Type1
+from .get_send_from_response_200_data_default_source_type_3_type_1 import GetSendFromResponse200DataDefaultSourceType3Type1
 from .get_send_permissions_response_200 import GetSendPermissionsResponse200
 from .get_sent_email_response_200 import GetSentEmailResponse200
 from .get_sent_hourly_stats_response_200 import GetSentHourlyStatsResponse200
@@ -1553,6 +1563,7 @@ from .test_email_rule_result_results_item_outcome import TestEmailRuleResultResu
 from .test_email_rule_result_results_item_parts_item import TestEmailRuleResultResultsItemPartsItem
 from .test_email_rule_result_results_item_question_answers_item import TestEmailRuleResultResultsItemQuestionAnswersItem
 from .test_email_rule_result_results_item_question_answers_source import TestEmailRuleResultResultsItemQuestionAnswersSource
+from .test_email_rule_result_results_item_skipped_reason import TestEmailRuleResultResultsItemSkippedReason
 from .test_email_rule_result_results_item_unclassified_reason import TestEmailRuleResultResultsItemUnclassifiedReason
 from .test_email_rule_result_results_item_values import TestEmailRuleResultResultsItemValues
 from .test_email_rule_result_results_item_values_additional_property import TestEmailRuleResultResultsItemValuesAdditionalProperty
@@ -1657,6 +1668,9 @@ from .update_role_result_kind import UpdateRoleResultKind
 from .update_route_input import UpdateRouteInput
 from .update_route_input_match_type import UpdateRouteInputMatchType
 from .update_route_response_200 import UpdateRouteResponse200
+from .update_route_response_200_data import UpdateRouteResponse200Data
+from .update_route_response_200_data_warnings_item import UpdateRouteResponse200DataWarningsItem
+from .update_route_response_200_data_warnings_item_code import UpdateRouteResponse200DataWarningsItemCode
 from .update_search_settings_response_200 import UpdateSearchSettingsResponse200
 from .update_wake_authorization_input import UpdateWakeAuthorizationInput
 from .update_wake_authorization_response_200 import UpdateWakeAuthorizationResponse200
@@ -1918,6 +1932,9 @@ __all__ = (
     "CreateRouteInput",
     "CreateRouteInputMatchType",
     "CreateRouteResponse201",
+    "CreateRouteResponse201Data",
+    "CreateRouteResponse201DataWarningsItem",
+    "CreateRouteResponse201DataWarningsItemCode",
     "CreateWakeAuthorizationInput",
     "CreateWakeAuthorizationResponse201",
     "CreateWakeScheduleInput",
@@ -2434,6 +2451,13 @@ __all__ = (
     "GetRelayAutoJoinResultOptionsItem",
     "GetRepeatingSendResponse200",
     "GetSearchSettingsResponse200",
+    "GetSendFromResponse200",
+    "GetSendFromResponse200Data",
+    "GetSendFromResponse200DataAddressesItem",
+    "GetSendFromResponse200DataAddressesItemKind",
+    "GetSendFromResponse200DataDefaultSourceType1",
+    "GetSendFromResponse200DataDefaultSourceType2Type1",
+    "GetSendFromResponse200DataDefaultSourceType3Type1",
     "GetSendPermissionsResponse200",
     "GetSentEmailResponse200",
     "GetSentHourlyStatsResponse200",
@@ -3245,6 +3269,7 @@ __all__ = (
     "TestEmailRuleResultResultsItemPartsItem",
     "TestEmailRuleResultResultsItemQuestionAnswersItem",
     "TestEmailRuleResultResultsItemQuestionAnswersSource",
+    "TestEmailRuleResultResultsItemSkippedReason",
     "TestEmailRuleResultResultsItemUnclassifiedReason",
     "TestEmailRuleResultResultsItemValues",
     "TestEmailRuleResultResultsItemValuesAdditionalProperty",
@@ -3351,6 +3376,9 @@ __all__ = (
     "UpdateRouteInput",
     "UpdateRouteInputMatchType",
     "UpdateRouteResponse200",
+    "UpdateRouteResponse200Data",
+    "UpdateRouteResponse200DataWarningsItem",
+    "UpdateRouteResponse200DataWarningsItemCode",
     "UpdateSearchSettingsResponse200",
     "UpdateWakeAuthorizationInput",
     "UpdateWakeAuthorizationResponse200",

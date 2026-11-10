@@ -123,9 +123,9 @@ def sync_detailed(
      Says, before you ask, whether a member could accept a rule request now under their role, and if not,
     which permission their role lacks. Nothing is sent and nothing is recorded. Needs members:read, as
     listing members and their roles does. At most 60 checks an hour. Name them by user id, or by their
-    member mailbox address (counted with asking: at most 30 lookups by address an hour). Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+    member mailbox address or verified work email (counted with asking: at most 30 lookups by address an
+    hour). Needs mail:read, a member's own credential with their full access (not an API key, agent key
+    or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -164,9 +164,9 @@ def sync(
      Says, before you ask, whether a member could accept a rule request now under their role, and if not,
     which permission their role lacks. Nothing is sent and nothing is recorded. Needs members:read, as
     listing members and their roles does. At most 60 checks an hour. Name them by user id, or by their
-    member mailbox address (counted with asking: at most 30 lookups by address an hour). Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+    member mailbox address or verified work email (counted with asking: at most 30 lookups by address an
+    hour). Needs mail:read, a member's own credential with their full access (not an API key, agent key
+    or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -200,9 +200,9 @@ async def asyncio_detailed(
      Says, before you ask, whether a member could accept a rule request now under their role, and if not,
     which permission their role lacks. Nothing is sent and nothing is recorded. Needs members:read, as
     listing members and their roles does. At most 60 checks an hour. Name them by user id, or by their
-    member mailbox address (counted with asking: at most 30 lookups by address an hour). Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+    member mailbox address or verified work email (counted with asking: at most 30 lookups by address an
+    hour). Needs mail:read, a member's own credential with their full access (not an API key, agent key
+    or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -241,9 +241,9 @@ async def asyncio(
      Says, before you ask, whether a member could accept a rule request now under their role, and if not,
     which permission their role lacks. Nothing is sent and nothing is recorded. Needs members:read, as
     listing members and their roles does. At most 60 checks an hour. Name them by user id, or by their
-    member mailbox address (counted with asking: at most 30 lookups by address an hour). Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+    member mailbox address or verified work email (counted with asking: at most 30 lookups by address an
+    hour). Needs mail:read, a member's own credential with their full access (not an API key, agent key
+    or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):

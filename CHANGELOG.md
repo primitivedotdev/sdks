@@ -346,6 +346,21 @@ Go (package `api`):
   `email.content.download` or `email.content`. The email event schema accepts
   and refuses the same payloads as before.
 
+#### Route write answers and share email refusals
+
+- `createRoute` and `updateRoute` answer `data` as the route plus its
+  `warnings`, so the generated type of `data` is new: in Go
+  `CreateRouteCreatedData` and `UpdateRouteOKData` instead of
+  `RecipientRoute`, and in Python `CreateRouteResponse201Data` and
+  `UpdateRouteResponse200Data`. Read the same route fields from it.
+- Go: `ListEmailRuleShareEmailsConflict` is gone, as the operation no longer
+  answers `409`, and so is the error code `email_rule_not_active`
+  (`ErrorResponseErrorCodeEmailRuleNotActive` in Go,
+  `ErrorResponseErrorCode.EMAIL_RULE_NOT_ACTIVE` in Python).
+- A rule write's `expectations_check.passed` can be null: in Go it is a
+  `NilBool` instead of a `bool` on `EmailRuleWrittenExpectationsCheck`, and
+  in Python `bool | None` on the expectations check models. A null `passed` means none failed but some are undecided.
+
 #### CLI sender default
 
 - `send` and `chat` no longer default `--from` to `agent@` at the first
@@ -393,7 +408,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
 
 165 operations, by area:
 
-- Account: `getOwnGrant`.
+- Account: `getOwnGrant`, `getSendFrom` (the addresses a credential may
+  send from, and the one a send that names no From should use).
 - Address notes: `listAddressNotes`, `listAddressNotesBatch`,
   `getAddressNote`, `putAddressNote`, `deleteAddressNote`,
   `listPublicAddressNotes`, `getPublicAddressNote`.
@@ -547,8 +563,7 @@ date-time is kept as null and sorts last. A sync stops with an error after
     `PERMISSIONS` list gains `mail:share_own`. `createRole` and
     `updateRole` refuse a permission whose prerequisite is not in the same
     role, with `400` and `details.reason` `unmet_requirement`.
-  - New error codes: `email_rule_not_active` and
-    `email_rule_request_not_withdrawn`.
+  - New error code: `email_rule_request_not_withdrawn`.
 - Endpoints:
   - Webhook signing: a webhook made as a person's own, or by an API key
     limited to some mailboxes, a third-party app or an agent delegate for
@@ -577,9 +592,25 @@ date-time is kept as null and sorts last. A sync stops with an error after
 - `ErrorResponse.error.details` declares `feature`, `feature_name`,
   `enabled_by` and `contact_email`, which a `feature_disabled` error
   carries.
-- `decideSuspension` declares `502` and `503`, and
-  `listEmailRuleShareEmails` declares `409`; in Go they are typed
+- `decideSuspension` declares `502` and `503`; in Go they are typed
   responses.
+- Email rules:
+  - `testEmailRule` can answer an email `skipped`, with `skipped_reason`
+    (`unparsed`, `rejected` or `content_discarded`), and its `counts`
+    carry `skipped`. A skipped expectation is undecided.
+  - In the `expectations_check` of `createEmailRule` and `updateEmailRule`,
+    `passed` is null when none failed but some are undecided, and `decided`
+    says whether every expectation was judged.
+  - Every rule answer carries `kind` (`grant` or `do_not_share`).
+  - `createEmailRuleRequest` and `checkEmailRuleRequestTarget` take a
+    member's verified work email in `target_email`, for a caller who can
+    list members.
+  - `listEmailRuleShareEmails` no longer answers `409` for a share whose
+    rule is off.
+- Routes: `createRoute` and `updateRoute` answer with `warnings`
+  (`endpoint_owner_limited`, `route_owner_limited`, `owner_unchecked`) and
+  refuse a route that could never deliver with `400` `validation_error`,
+  `details.reason` `endpoint_owner_access` or `route_owner_access`.
 
 #### Node SDK
 
@@ -771,8 +802,9 @@ parsers.
   `--body-file` or `--raw-body`. The exit code follows the expectations the
   answer judged: `expect`, or when none is sent, a saved rule's saved
   expectations. It is 1 when one failed, or when one is undecided and testing
-  again will not decide it (its email cannot be found or read, or cannot be
-  classified), and 3 when the only undecided ones a later test can decide
+  again will not decide it (its email cannot be found or read, cannot be
+  classified, or is `skipped` because it cannot be tested), and 3 when the
+  only undecided ones a later test can decide
   (not classified yet, or a question unanswered). Without `--json` it prints
   a report on stderr after the JSON: the summary's warnings, scope warnings,
   how each condition held and failed, the expectations with why each

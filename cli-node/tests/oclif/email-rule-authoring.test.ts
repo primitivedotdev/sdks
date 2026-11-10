@@ -697,6 +697,40 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
     });
   });
 
+  it("exits 1 with expectations_unresolvable for an email that cannot be tested", async () => {
+    const data = withResults(
+      [{ email_id: E, outcome: "skipped", skipped_reason: "unparsed" }],
+      {
+        passed: false,
+        counts: { passed: 0, failed: 0, undecided: 1 },
+        results: [
+          {
+            email_id: E,
+            expected: "match",
+            outcome: "skipped",
+            status: "undecided",
+          },
+        ],
+      },
+    );
+    answer(data);
+    const argv = ["--rule-id", RULE, "--expect-match", E];
+    const result = await run("email-rules:test-email-rule", argv);
+    expect(result.exitCode).toBe(1);
+    expect(stderrLines(result)).toEqual(
+      expect.arrayContaining([
+        `  undecided: ${E} expected match, got skipped (skipped: its content failed to parse; testing again will not decide it)`,
+        `  ${E} skipped: its content failed to parse`,
+      ]),
+    );
+    const json = await run("email-rules:test-email-rule", [...argv, "--json"]);
+    expect(json.exitCode).toBe(1);
+    expect(JSON.parse(json.merged).error).toEqual({
+      code: "expectations_unresolvable",
+      message: `1 expectation is undecided, and testing again will not decide it: ${E} (skipped: its content failed to parse).`,
+    });
+  });
+
   it("exits 3 only when a later test can decide every undecided one", async () => {
     const data = {
       ...testResult({
