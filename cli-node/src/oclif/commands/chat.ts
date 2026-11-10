@@ -1807,22 +1807,28 @@ class ChatCommand extends Command {
           !auth.connectedAgent &&
           anyUnfinishedChatReceipt(this.config.configDir)
         ) {
-          const legacyFrom = await legacyDefaultFromAddress(apiClient);
+          const legacy = await legacyDefaultFromAddress(apiClient);
+          // Reported as uncertain, never as not sent: a script must not read
+          // either stop as leave to send the message again.
+          if (legacy.kind === "unknown")
+            throw new UncertainChatSendError(
+              `Could not check whether an earlier version of this CLI left this chat unfinished under its old default From, so it was not sent. Rerun with --from ${from} to send it from ${from}, or retry once the API answers.`,
+            );
           const subjects = new Set([subject]);
           if (!parentReply && flags.subject === undefined)
             subjects.add(deriveSubject(message));
           if (
-            legacyFrom &&
-            legacyFrom.toLowerCase() !== from.toLowerCase() &&
+            legacy.kind === "address" &&
+            legacy.address.toLowerCase() !== from.toLowerCase() &&
             [...subjects].some((value) =>
               hasUnfinishedChatReceipt(
                 this.config.configDir,
-                hashFor(value, legacyFrom),
+                hashFor(value, legacy.address),
               ),
             )
           )
-            throw cliError(
-              `An earlier version of this CLI started this chat from ${legacyFrom} and did not finish it, so it may already have been sent. To resume it rather than send it again, rerun with --from ${legacyFrom}. To send it as a new message from ${from}, rerun with --from ${from}.`,
+            throw new UncertainChatSendError(
+              `An earlier version of this CLI started this chat from ${legacy.address} and did not finish it, so it may already have been sent. To resume it rather than send it again, rerun with --from ${legacy.address}. To send it as a new message from ${from}, rerun with --from ${from}.`,
             );
         }
         const requestHash = hashFor(subject);

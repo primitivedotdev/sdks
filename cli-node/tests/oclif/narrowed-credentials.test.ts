@@ -2,6 +2,7 @@ import { PrimitiveApiClient } from "@primitivedotdev/api-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkAccount } from "../../src/oclif/commands/doctor.js";
 import {
+  legacyDefaultFromAddress,
   pickDefaultFromAddress,
   resolveDefaultFrom,
 } from "../../src/oclif/outbound-defaults.js";
@@ -465,6 +466,63 @@ describe("resolveDefaultFrom: the person's sendability check", () => {
       "Cannot send: CLI auth is missing or invalid",
     );
     vi.restoreAllMocks();
+  });
+});
+
+describe("legacyDefaultFromAddress, as earlier versions worked it out", () => {
+  const domains = () =>
+    Response.json({
+      success: true,
+      data: [
+        { id: "d1", domain: "pending.example", is_active: false },
+        { id: "d2", domain: "acme.example", is_active: true },
+      ],
+    });
+
+  it("is agent@ at the first active domain", async () => {
+    const { client } = recordingClient({ "/domains": domains });
+    await expect(legacyDefaultFromAddress(client)).resolves.toEqual({
+      kind: "address",
+      address: "agent@acme.example",
+    });
+  });
+
+  it("is the one granted address, or none, for a credential that may not list domains", async () => {
+    const one = recordingClient({
+      "/domains": () => refusal(),
+      "/whoami/grant": () => grantWithScope(scope(["me@example.test"])),
+    }).client;
+    await expect(legacyDefaultFromAddress(one)).resolves.toEqual({
+      kind: "address",
+      address: "me@example.test",
+    });
+    const several = recordingClient({
+      "/domains": () => refusal(),
+      "/whoami/grant": () =>
+        grantWithScope(scope(["a@example.test", "b@example.test"])),
+    }).client;
+    await expect(legacyDefaultFromAddress(several)).resolves.toEqual({
+      kind: "none",
+    });
+  });
+
+  it("is none with no active domain, and unknown when the API does not answer", async () => {
+    const inactive = recordingClient({
+      "/domains": () => Response.json({ success: true, data: [] }),
+    }).client;
+    await expect(legacyDefaultFromAddress(inactive)).resolves.toEqual({
+      kind: "none",
+    });
+    const failing = recordingClient({
+      "/domains": () =>
+        Response.json(
+          { success: false, error: { code: "internal_error", message: "x" } },
+          { status: 500 },
+        ),
+    }).client;
+    await expect(legacyDefaultFromAddress(failing)).resolves.toEqual({
+      kind: "unknown",
+    });
   });
 });
 

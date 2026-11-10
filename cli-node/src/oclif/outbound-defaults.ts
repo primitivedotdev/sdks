@@ -19,6 +19,7 @@ import {
   extractErrorCode,
   extractErrorPayload,
   formatErrorPayload,
+  isGrantRefusal,
   surfaceUnauthorizedHint,
   writeErrorWithHints,
 } from "./api-command.js";
@@ -472,20 +473,41 @@ export function fromLine(address: string, source?: DefaultFromSource): string {
 }
 
 /**
- * The From that CLI versions before the per-credential default used when
- * --from was left out: agent@ at the organization's first active domain, or
- * null when it cannot be read. Only for finding a chat those versions left
- * unfinished; never sent from by default.
+ * The From that CLI versions before the per-credential default would have
+ * used with --from left out, worked out as they did: agent@ at the
+ * organization's first active domain, or, for a credential that may not list
+ * domains, the one address its grant names. `none` when they would have
+ * refused to send, so they cannot have left a chat behind; `unknown` when it
+ * cannot be read now. Only for finding a chat those versions left unfinished;
+ * never sent from by default.
  */
+export type LegacyDefaultFrom =
+  | { kind: "address"; address: string }
+  | { kind: "none" }
+  | { kind: "unknown" };
+
 export async function legacyDefaultFromAddress(
   apiClient: PrimitiveApiClient,
-): Promise<string | null> {
+): Promise<LegacyDefaultFrom> {
   try {
     const result = await listDomains({
       client: apiClient.client,
       responseStyle: "fields",
     });
-    if (result.error) return null;
+    if (result.error) {
+      const payload = extractErrorPayload(result.error);
+      if (!isGrantRefusal(payload)) return { kind: "unknown" };
+      const own = await getOwnGrant({
+        client: apiClient.client,
+        responseStyle: "fields",
+      });
+      if (own.error) return { kind: "unknown" };
+      const grant = (own.data?.data?.grant ?? null) as OwnGrant | null;
+      const reach = grant ? grantSendReach(grant) : null;
+      return reach?.addresses.length === 1
+        ? { kind: "address", address: reach.addresses[0] as string }
+        : { kind: "none" };
+    }
     const domains = (result.data as { data?: unknown } | undefined)?.data;
     const first = Array.isArray(domains)
       ? domains.find(
@@ -496,8 +518,10 @@ export async function legacyDefaultFromAddress(
             typeof (domain as { domain?: unknown }).domain === "string",
         )
       : undefined;
-    return first ? `agent@${first.domain}` : null;
+    return first
+      ? { kind: "address", address: `agent@${first.domain}` }
+      : { kind: "none" };
   } catch {
-    return null;
+    return { kind: "unknown" };
   }
 }
