@@ -260,6 +260,11 @@ async function runOclifCommand(
       stderr: stderrChunks.join(""),
       stdout: stdoutChunks.join(""),
     };
+  } catch (error) {
+    // What the command printed before it threw, for tests that read it.
+    if (error && typeof error === "object")
+      Object.assign(error, { stdout: stdoutChunks.join("") });
+    throw error;
   } finally {
     logSpy.mockRestore();
     stderrSpy.mockRestore();
@@ -769,26 +774,43 @@ describe("chat command", () => {
     const stoppedBy = (run: Promise<unknown>) =>
       run.then(
         () => null,
-        (error: { message: string; oclif?: { exit?: number } }) => error,
+        (error: {
+          message: string;
+          oclif?: { exit?: number };
+          stdout?: string;
+        }) => error,
       );
 
-    it("stops as uncertain, rather than send it again from the new default", async () => {
+    it("stops as uncertain, naming the old send's own key, rather than send it again from the new default", async () => {
       personAuth();
-      await leaveLegacyChat();
-      mocks.pickDefaultFromAddress.mockResolvedValue("dana@yuuja.example");
-      mocks.legacyDefaultFromAddress.mockResolvedValue({
-        kind: "address",
-        address: "agent@sender.example",
-      });
+      vi.useFakeTimers({ toFake: ["Date"] });
+      try {
+        await leaveLegacyChat();
+        const oldKey =
+          mocks.sendEmail.mock.calls[0][0].headers["Idempotency-Key"];
+        // A retry after the upgrade comes later than the key's time window.
+        vi.setSystemTime(Date.now() + 10 * 60 * 1000);
+        mocks.pickDefaultFromAddress.mockResolvedValue("dana@yuuja.example");
+        mocks.legacyDefaultFromAddress.mockResolvedValue({
+          kind: "addresses",
+          addresses: ["agent@other.example", "agent@sender.example"],
+        });
 
-      const stopped = await stoppedBy(
-        runChatCommand(["help@agent.example", "hello", "--json"]),
-      );
-      expect(stopped?.oclif?.exit).toBe(4);
-      expect(stopped?.message).toBe(
-        "A chat with this message to help@agent.example from agent@sender.example, started by an earlier version of this CLI, is unfinished: its outcome is unknown. To resume it rather than send it again, rerun with --from agent@sender.example. Rerunning with --from dana@yuuja.example sends a second copy.",
-      );
-      expect(mocks.sendEmail).toHaveBeenCalledOnce();
+        const stopped = await stoppedBy(
+          runChatCommand(["help@agent.example", "hello", "--json"]),
+        );
+        expect(stopped?.oclif?.exit).toBe(4);
+        expect(stopped?.message).toMatch(
+          /^A chat with this message to help@agent\.example from agent@sender\.example, started by an earlier version of this CLI, is unfinished and its outcome is unknown\. Check sent history for it before sending again; if it did not go out, remove its receipt \S+\.json and rerun\. Rerunning with --from dana@yuuja\.example may send a second copy\.$/,
+        );
+        expect(JSON.parse(stopped?.stdout ?? "{}")).toMatchObject({
+          outcome: "uncertain",
+          idempotency_key: oldKey,
+        });
+        expect(mocks.sendEmail).toHaveBeenCalledOnce();
+      } finally {
+        vi.useRealTimers();
+      }
 
       // Another message is not held up by it, and goes out from the new default.
       await runChatCommand(["help@agent.example", "something else", "--json"]);
@@ -807,8 +829,8 @@ describe("chat command", () => {
         }),
       );
       mocks.legacyDefaultFromAddress.mockResolvedValue({
-        kind: "address",
-        address: "agent@sender.example",
+        kind: "addresses",
+        addresses: ["agent@sender.example"],
       });
 
       const stopped = await stoppedBy(
@@ -816,8 +838,10 @@ describe("chat command", () => {
       );
       expect(stopped?.oclif?.exit).toBe(4);
       expect(stopped?.message).toContain(
-        "To resume it rather than send it again, rerun with --from agent@sender.example.",
+        "from agent@sender.example, started by an earlier version of this CLI, is unfinished and its outcome is unknown.",
       );
+      // No new default to warn about.
+      expect(stopped?.message).not.toContain("Rerunning with");
       // A different message gets the refusal itself.
       const refused = await stoppedBy(
         runChatCommand(["help@agent.example", "another", "--json"]),
@@ -841,8 +865,8 @@ describe("chat command", () => {
       expect(mocks.sendEmail).toHaveBeenCalledOnce();
 
       mocks.legacyDefaultFromAddress.mockResolvedValueOnce({
-        kind: "address",
-        address: "dana@yuuja.example",
+        kind: "addresses",
+        addresses: ["dana@yuuja.example"],
       });
       await runChatCommand(["help@agent.example", "hello", "--json"]);
       expect(mocks.sendEmail).toHaveBeenCalledTimes(2);

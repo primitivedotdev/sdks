@@ -153,11 +153,22 @@ export function hasUnfinishedChatReceipt(
 }
 
 /**
- * Whether a chat an earlier version of this CLI started is still unfinished:
- * an unfinished receipt without `from_rule`. Read from the saved receipts
- * alone, as a cheap first test before asking the API anything.
+ * How long after it started an earlier version's unfinished chat is still
+ * looked for. Bounds the legacy check in chat so it ends on its own: past a
+ * day, a retry of that exact chat is not expected.
  */
-export function anyUnfinishedLegacyChatReceipt(configDir: string): boolean {
+export const LEGACY_CHAT_RECEIPT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Whether a chat an earlier version of this CLI started in the last day is
+ * still unfinished: an unfinished receipt without `from_rule`. An unreadable
+ * receipt counts. Read from the saved receipts alone, as a cheap first test
+ * before asking the API anything.
+ */
+export function anyUnfinishedLegacyChatReceipt(
+  configDir: string,
+  now: number = Date.now(),
+): boolean {
   const directory = join(configDir, "chat-receipts");
   let names: string[];
   try {
@@ -169,23 +180,32 @@ export function anyUnfinishedLegacyChatReceipt(configDir: string): boolean {
     if (!name.endsWith(".json")) return false;
     try {
       const data = parseReceipt(readFileSync(join(directory, name), "utf8"));
-      return !data.completed && data.from_rule === undefined;
+      return (
+        !data.completed &&
+        data.from_rule === undefined &&
+        now - Date.parse(data.sent_at) <= LEGACY_CHAT_RECEIPT_WINDOW_MS
+      );
     } catch {
-      return false;
+      return true;
     }
   });
 }
 
 /**
  * The unfinished receipt filed under `scope`, or null when there is none or
- * it is finished: whether its send was recorded, when it started, and its
- * idempotency key when it kept one. An unreadable receipt counts as
- * unfinished with nothing recorded.
+ * it is finished: its recorded send, when it started, its idempotency key
+ * when it kept one, and its path. An unreadable receipt counts as unfinished
+ * with nothing recorded.
  */
 export function loadUnfinishedChatReceipt(
   configDir: string,
   scope: string,
-): { sent: boolean; sentAtIso?: string; idempotencyKey?: string } | null {
+): {
+  path: string;
+  sent: SendMailResult | null;
+  sentAtIso?: string;
+  idempotencyKey?: string;
+} | null {
   const path = join(
     configDir,
     "chat-receipts",
@@ -197,18 +217,19 @@ export function loadUnfinishedChatReceipt(
   } catch (error) {
     return (error as NodeJS.ErrnoException).code === "ENOENT"
       ? null
-      : { sent: false };
+      : { path, sent: null };
   }
   try {
     const data = parseReceipt(raw);
     if (data.completed) return null;
     return {
-      sent: data.sent !== null,
+      path,
+      sent: data.sent,
       sentAtIso: data.sent_at,
       ...(data.idempotency_key ? { idempotencyKey: data.idempotency_key } : {}),
     };
   } catch {
-    return { sent: false };
+    return { path, sent: null };
   }
 }
 

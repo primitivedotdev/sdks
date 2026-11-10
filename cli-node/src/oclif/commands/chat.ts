@@ -1579,11 +1579,9 @@ class ChatCommand extends Command {
    * and the From is part of a chat's receipt key. Before a new message goes
    * out under a defaulted From, look for one of their unfinished chats of
    * this same message from that old default, and stop as uncertain rather
-   * than send it a second time. Only receipts those versions wrote are read
-   * (see anyUnfinishedLegacyChatReceipt), so this costs nothing once they are
-   * gone. The old default is worked out from the organization's domains as
-   * they are now, so a chat from a first active domain that has since changed
-   * is not found.
+   * than send it a second time. Only receipts those versions wrote in the
+   * last day are read (see anyUnfinishedLegacyChatReceipt), so the check
+   * ends on its own.
    */
   private async stopForLegacyChat(params: {
     apiClient: PrimitiveApiClient;
@@ -1598,41 +1596,22 @@ class ChatCommand extends Command {
     const { configDir } = this.config;
     if (!anyUnfinishedLegacyChatReceipt(configDir)) return;
     const legacy = await legacyDefaultFromAddress(params.apiClient);
-    if (legacy.kind === "none") return;
+    // Nothing can send with a credential the API does not accept, and the
+    // check runs again on the next attempt.
+    if (legacy.kind === "none" || legacy.kind === "unauthorized") return;
     // Uncertain, never not sent: a script must not read the stop as leave
     // to send the message again.
     if (legacy.kind === "unknown")
       throw new UncertainChatSendError(
-        "Could not check whether a chat an earlier version of this CLI left unfinished is this message, so nothing was sent. Retry once the API answers. Passing --from skips this check and, if an earlier version already sent this message, sends a second copy.",
+        "Could not check whether a chat an earlier version of this CLI left unfinished is this message, so nothing was sent. Retry once the API answers. Passing --from skips this check and, if an earlier version already sent this message, may send a second copy.",
       );
-    if (
-      params.newFrom !== undefined &&
-      legacy.address.toLowerCase() === params.newFrom.toLowerCase()
-    )
-      return;
-    for (const subject of new Set(params.subjects)) {
-      const found = loadUnfinishedChatReceipt(
-        configDir,
-        chatRequestHash({
-          api: params.auth.apiBaseUrl,
-          account:
-            params.auth.credentials?.org_id ??
-            chatCredentialIdentity(params.auth.apiKey, params.auth.apiBaseUrl),
-          from: legacy.address,
-          recipient: params.recipient,
-          subject,
-          message: params.message,
-          parent: params.inReplyTo,
-          attachments: params.attachments,
-        }),
-      );
-      if (!found) continue;
-      // The key that chat's send carried, so the uncertain answer names how
-      // to reconcile it.
-      this.chatProgress.idempotencyKey =
-        found.idempotencyKey ??
-        deriveSendIdempotencyKey("send", {
-          from: legacy.address,
+    for (const address of legacy.addresses) {
+      // The receipt key is exact; the main path finds a receipt under the
+      // same From itself.
+      if (address === params.newFrom) continue;
+      for (const subject of new Set(params.subjects)) {
+        const body = {
+          from: address,
           to: params.recipient,
           subject,
           body_text: params.message,
@@ -1642,11 +1621,49 @@ class ChatCommand extends Command {
           ...(params.attachments !== undefined
             ? { attachments: params.attachments }
             : {}),
-        });
-      throw new UncertainChatSendError(
-        `A chat with this message to ${params.recipient} from ${legacy.address}, started by an earlier version of this CLI, is unfinished: ${found.sent ? "it was sent" : "its outcome is unknown"}. To resume it rather than send it again, rerun with --from ${legacy.address}.${params.newFrom !== undefined ? ` Rerunning with --from ${params.newFrom} sends a second copy.` : ""}`,
-        found.sentAtIso ? { sentAtIso: found.sentAtIso } : undefined,
-      );
+        };
+        const found = loadUnfinishedChatReceipt(
+          configDir,
+          chatRequestHash({
+            api: params.auth.apiBaseUrl,
+            account:
+              params.auth.credentials?.org_id ??
+              chatCredentialIdentity(
+                params.auth.apiKey,
+                params.auth.apiBaseUrl,
+              ),
+            from: address,
+            recipient: params.recipient,
+            subject,
+            message: params.message,
+            parent: params.inReplyTo,
+            attachments: params.attachments,
+          }),
+        );
+        if (!found) continue;
+        const startedAt = found.sentAtIso
+          ? Date.parse(found.sentAtIso)
+          : Number.NaN;
+        // The key that send carried: as recorded, or derived as it was then.
+        this.chatProgress.idempotencyKey =
+          found.sent?.client_idempotency_key ??
+          found.idempotencyKey ??
+          deriveSendIdempotencyKey(
+            "send",
+            body,
+            Number.isFinite(startedAt) ? startedAt : undefined,
+          );
+        const second =
+          params.newFrom !== undefined
+            ? ` Rerunning with --from ${params.newFrom} ${found.sent ? "sends" : "may send"} a second copy.`
+            : "";
+        throw new UncertainChatSendError(
+          found.sent
+            ? `A chat with this message to ${params.recipient} from ${address}, started by an earlier version of this CLI, is unfinished: it was sent (id ${found.sent.id}). To resume it and wait for its reply rather than send it again, rerun with --from ${address}.${second}`
+            : `A chat with this message to ${params.recipient} from ${address}, started by an earlier version of this CLI, is unfinished and its outcome is unknown. Check sent history for it before sending again; if it did not go out, remove its receipt ${found.path} and rerun.${second}`,
+          found.sentAtIso ? { sentAtIso: found.sentAtIso } : undefined,
+        );
+      }
     }
   }
 

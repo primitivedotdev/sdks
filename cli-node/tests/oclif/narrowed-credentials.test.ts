@@ -479,11 +479,11 @@ describe("legacyDefaultFromAddress, as earlier versions worked it out", () => {
       ],
     });
 
-  it("is agent@ at the first active domain", async () => {
+  it("is agent@ at every domain, the first active one first", async () => {
     const { client } = recordingClient({ "/domains": domains });
     await expect(legacyDefaultFromAddress(client)).resolves.toEqual({
-      kind: "address",
-      address: "agent@acme.example",
+      kind: "addresses",
+      addresses: ["agent@acme.example", "agent@pending.example"],
     });
   });
 
@@ -493,36 +493,69 @@ describe("legacyDefaultFromAddress, as earlier versions worked it out", () => {
       "/whoami/grant": () => grantWithScope(scope(["me@example.test"])),
     }).client;
     await expect(legacyDefaultFromAddress(one)).resolves.toEqual({
-      kind: "address",
-      address: "me@example.test",
+      kind: "addresses",
+      addresses: ["me@example.test"],
     });
-    const several = recordingClient({
-      "/domains": () => refusal(),
-      "/whoami/grant": () =>
-        grantWithScope(scope(["a@example.test", "b@example.test"])),
-    }).client;
-    await expect(legacyDefaultFromAddress(several)).resolves.toEqual({
-      kind: "none",
-    });
+    for (const grantScope of [
+      scope(["a@example.test", "b@example.test"]),
+      "org",
+      scope(["me@example.test"], "inbound"),
+    ]) {
+      const client = recordingClient({
+        "/domains": () => refusal(),
+        "/whoami/grant": () => grantWithScope(grantScope),
+      }).client;
+      await expect(legacyDefaultFromAddress(client)).resolves.toEqual({
+        kind: "none",
+      });
+    }
   });
 
-  it("is none with no active domain, and unknown when the API does not answer", async () => {
-    const inactive = recordingClient({
+  it("is none with no domain, unauthorized for a credential the API refuses, and unknown otherwise", async () => {
+    const empty = recordingClient({
       "/domains": () => Response.json({ success: true, data: [] }),
     }).client;
-    await expect(legacyDefaultFromAddress(inactive)).resolves.toEqual({
+    await expect(legacyDefaultFromAddress(empty)).resolves.toEqual({
       kind: "none",
     });
-    const failing = recordingClient({
+    const unauthorized = recordingClient({
       "/domains": () =>
         Response.json(
-          { success: false, error: { code: "internal_error", message: "x" } },
-          { status: 500 },
+          { success: false, error: { code: "unauthorized", message: "x" } },
+          { status: 401 },
         ),
     }).client;
-    await expect(legacyDefaultFromAddress(failing)).resolves.toEqual({
-      kind: "unknown",
+    await expect(legacyDefaultFromAddress(unauthorized)).resolves.toEqual({
+      kind: "unauthorized",
     });
+    const failures: Record<string, () => Response>[] = [
+      {
+        "/domains": () =>
+          Response.json(
+            { success: false, error: { code: "internal_error", message: "x" } },
+            { status: 500 },
+          ),
+      },
+      {
+        "/domains": () => refusal(),
+        "/whoami/grant": () =>
+          Response.json(
+            { success: false, error: { code: "internal_error", message: "x" } },
+            { status: 500 },
+          ),
+      },
+      {
+        "/domains": () => {
+          throw new TypeError("network down");
+        },
+      },
+    ];
+    for (const answers of failures) {
+      const client = recordingClient(answers).client;
+      await expect(legacyDefaultFromAddress(client)).resolves.toEqual({
+        kind: "unknown",
+      });
+    }
   });
 });
 

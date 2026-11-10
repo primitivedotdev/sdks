@@ -473,17 +473,20 @@ export function fromLine(address: string, source?: DefaultFromSource): string {
 }
 
 /**
- * The From that CLI versions before the per-credential default would have
- * used with --from left out, worked out as they did: agent@ at the
- * organization's first active domain, or, for a credential that may not list
- * domains, the one address its grant names. `none` when they would have
- * refused to send, so they cannot have left a chat behind; `unknown` when it
- * cannot be read now. Only for finding a chat those versions left unfinished;
- * never sent from by default.
+ * The Froms CLI versions before the per-credential default could have used
+ * with --from left out, worked out as they did: agent@ at the organization's
+ * first active domain (every domain is tried, first active first, in case
+ * the order or the active one has changed since), or, for a credential that
+ * may not list domains, the one address its grant names. `none` when they
+ * would have refused to send, so they cannot have left a chat behind;
+ * `unauthorized` when the credential is not accepted, so nothing can send;
+ * `unknown` when it cannot be read now. Only for finding a chat those
+ * versions left unfinished; never sent from by default.
  */
 export type LegacyDefaultFrom =
-  | { kind: "address"; address: string }
+  | { kind: "addresses"; addresses: string[] }
   | { kind: "none" }
+  | { kind: "unauthorized" }
   | { kind: "unknown" };
 
 export async function legacyDefaultFromAddress(
@@ -496,6 +499,8 @@ export async function legacyDefaultFromAddress(
     });
     if (result.error) {
       const payload = extractErrorPayload(result.error);
+      if (extractErrorCode(payload) === API_ERROR_CODES.unauthorized)
+        return { kind: "unauthorized" };
       if (!isGrantRefusal(payload)) return { kind: "unknown" };
       const own = await getOwnGrant({
         client: apiClient.client,
@@ -505,22 +510,27 @@ export async function legacyDefaultFromAddress(
       const grant = (own.data?.data?.grant ?? null) as OwnGrant | null;
       const reach = grant ? grantSendReach(grant) : null;
       return reach?.addresses.length === 1
-        ? { kind: "address", address: reach.addresses[0] as string }
+        ? { kind: "addresses", addresses: [reach.addresses[0] as string] }
         : { kind: "none" };
     }
     const domains = (result.data as { data?: unknown } | undefined)?.data;
-    const first = Array.isArray(domains)
-      ? domains.find(
-          (domain): domain is { domain: string } =>
+    const listed = Array.isArray(domains)
+      ? domains.filter(
+          (domain): domain is { domain: string; is_active?: unknown } =>
             typeof domain === "object" &&
             domain !== null &&
-            (domain as { is_active?: unknown }).is_active === true &&
             typeof (domain as { domain?: unknown }).domain === "string",
         )
-      : undefined;
-    return first
-      ? { kind: "address", address: `agent@${first.domain}` }
-      : { kind: "none" };
+      : [];
+    if (listed.length === 0) return { kind: "none" };
+    const ordered = [
+      ...listed.filter((domain) => domain.is_active === true),
+      ...listed.filter((domain) => domain.is_active !== true),
+    ];
+    return {
+      kind: "addresses",
+      addresses: ordered.map((domain) => `agent@${domain.domain}`),
+    };
   } catch {
     return { kind: "unknown" };
   }

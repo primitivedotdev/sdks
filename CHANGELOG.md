@@ -358,6 +358,10 @@ Go (package `api`):
   sends from that address. Otherwise nothing is sent: the command lists the
   addresses and domains you may send from and asks for `--from`. `send` names
   the From it used on stderr, and its `--json` envelope carries `from`.
+  When `chat` is run without `--from` within a day of a chat an earlier
+  version left unfinished under its old `agent@` default, and it is the same
+  message, `chat` stops with outcome `uncertain` (exit 4) instead of sending
+  it again, and names that chat's From and idempotency key.
 
 ### Additions
 
