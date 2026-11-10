@@ -113,17 +113,16 @@ def sync_detailed(
 ) -> Response[CreateEmailRuleResponse201 | ErrorResponse]:
     """ Create a rule
 
-     Saves a rule as version 1, from a compile response or a tree you wrote. The tree is checked against
-    the column contract. New rules start in observe, where what the rule matches is recorded and nothing
-    is granted or blocked; draft is not evaluated. The caller is the rule's author, and the rule never
-    reaches mail the author cannot read. evaluation_scope chooses whose mail it runs over: own_mailboxes
-    (only your own mail) when omitted, so any other scope (author for all you can read, or selected) is
-    named; scope_selection may name only what you can read. The answer carries the scope as stored. kind
-    do_not_share makes a rule that blocks sharing: it runs before every other rule, and while it is
-    active no rule shares an email it matches or cannot decide. A key cannot list one (details.reason
-    rule_blocks_sharing on the key). Needs mail:read, a credential acting as a member with their full
-    access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
-    organization.
+     Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column
+    contract; without an explanation the server writes one. It starts in observe (what it matches is
+    recorded, nothing granted or blocked) unless state is draft (not evaluated). You are its author, and
+    it never reaches mail you cannot read. evaluation_scope is own_mailboxes (your own mail) unless you
+    name author (all you can read) or selected; scope_selection may name only what you can read. The
+    answer carries the scope as stored. expectations saves emails it must match and must not; the answer
+    judges them (expectations_check). kind do_not_share blocks sharing: it runs before every other rule,
+    and while active no rule shares an email it matches or cannot decide; a key cannot list it
+    (details.reason rule_blocks_sharing). Needs mail:read, a member's own credential with their full
+    access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -159,17 +158,16 @@ def sync(
 ) -> CreateEmailRuleResponse201 | ErrorResponse | None:
     """ Create a rule
 
-     Saves a rule as version 1, from a compile response or a tree you wrote. The tree is checked against
-    the column contract. New rules start in observe, where what the rule matches is recorded and nothing
-    is granted or blocked; draft is not evaluated. The caller is the rule's author, and the rule never
-    reaches mail the author cannot read. evaluation_scope chooses whose mail it runs over: own_mailboxes
-    (only your own mail) when omitted, so any other scope (author for all you can read, or selected) is
-    named; scope_selection may name only what you can read. The answer carries the scope as stored. kind
-    do_not_share makes a rule that blocks sharing: it runs before every other rule, and while it is
-    active no rule shares an email it matches or cannot decide. A key cannot list one (details.reason
-    rule_blocks_sharing on the key). Needs mail:read, a credential acting as a member with their full
-    access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
-    organization.
+     Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column
+    contract; without an explanation the server writes one. It starts in observe (what it matches is
+    recorded, nothing granted or blocked) unless state is draft (not evaluated). You are its author, and
+    it never reaches mail you cannot read. evaluation_scope is own_mailboxes (your own mail) unless you
+    name author (all you can read) or selected; scope_selection may name only what you can read. The
+    answer carries the scope as stored. expectations saves emails it must match and must not; the answer
+    judges them (expectations_check). kind do_not_share blocks sharing: it runs before every other rule,
+    and while active no rule shares an email it matches or cannot decide; a key cannot list it
+    (details.reason rule_blocks_sharing). Needs mail:read, a member's own credential with their full
+    access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -200,17 +198,16 @@ async def asyncio_detailed(
 ) -> Response[CreateEmailRuleResponse201 | ErrorResponse]:
     """ Create a rule
 
-     Saves a rule as version 1, from a compile response or a tree you wrote. The tree is checked against
-    the column contract. New rules start in observe, where what the rule matches is recorded and nothing
-    is granted or blocked; draft is not evaluated. The caller is the rule's author, and the rule never
-    reaches mail the author cannot read. evaluation_scope chooses whose mail it runs over: own_mailboxes
-    (only your own mail) when omitted, so any other scope (author for all you can read, or selected) is
-    named; scope_selection may name only what you can read. The answer carries the scope as stored. kind
-    do_not_share makes a rule that blocks sharing: it runs before every other rule, and while it is
-    active no rule shares an email it matches or cannot decide. A key cannot list one (details.reason
-    rule_blocks_sharing on the key). Needs mail:read, a credential acting as a member with their full
-    access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
-    organization.
+     Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column
+    contract; without an explanation the server writes one. It starts in observe (what it matches is
+    recorded, nothing granted or blocked) unless state is draft (not evaluated). You are its author, and
+    it never reaches mail you cannot read. evaluation_scope is own_mailboxes (your own mail) unless you
+    name author (all you can read) or selected; scope_selection may name only what you can read. The
+    answer carries the scope as stored. expectations saves emails it must match and must not; the answer
+    judges them (expectations_check). kind do_not_share blocks sharing: it runs before every other rule,
+    and while active no rule shares an email it matches or cannot decide; a key cannot list it
+    (details.reason rule_blocks_sharing). Needs mail:read, a member's own credential with their full
+    access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -246,17 +243,16 @@ async def asyncio(
 ) -> CreateEmailRuleResponse201 | ErrorResponse | None:
     """ Create a rule
 
-     Saves a rule as version 1, from a compile response or a tree you wrote. The tree is checked against
-    the column contract. New rules start in observe, where what the rule matches is recorded and nothing
-    is granted or blocked; draft is not evaluated. The caller is the rule's author, and the rule never
-    reaches mail the author cannot read. evaluation_scope chooses whose mail it runs over: own_mailboxes
-    (only your own mail) when omitted, so any other scope (author for all you can read, or selected) is
-    named; scope_selection may name only what you can read. The answer carries the scope as stored. kind
-    do_not_share makes a rule that blocks sharing: it runs before every other rule, and while it is
-    active no rule shares an email it matches or cannot decide. A key cannot list one (details.reason
-    rule_blocks_sharing on the key). Needs mail:read, a credential acting as a member with their full
-    access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
-    organization.
+     Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column
+    contract; without an explanation the server writes one. It starts in observe (what it matches is
+    recorded, nothing granted or blocked) unless state is draft (not evaluated). You are its author, and
+    it never reaches mail you cannot read. evaluation_scope is own_mailboxes (your own mail) unless you
+    name author (all you can read) or selected; scope_selection may name only what you can read. The
+    answer carries the scope as stored. expectations saves emails it must match and must not; the answer
+    judges them (expectations_check). kind do_not_share blocks sharing: it runs before every other rule,
+    and while active no rule shares an email it matches or cannot decide; a key cannot list it
+    (details.reason rule_blocks_sharing). Needs mail:read, a member's own credential with their full
+    access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):

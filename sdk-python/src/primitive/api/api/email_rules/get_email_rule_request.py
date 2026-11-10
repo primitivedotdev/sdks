@@ -96,9 +96,8 @@ def sync_detailed(
 
      A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a
     member. A request is visible to the member who made it, the member it was made to, and the
-    organization's owners and admins. Needs mail:read, a credential acting as a member with their full
-    access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
-    organization.
+    organization's owners and admins. Needs mail:read, a member's own credential with their full access
+    (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -133,9 +132,8 @@ def sync(
 
      A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a
     member. A request is visible to the member who made it, the member it was made to, and the
-    organization's owners and admins. Needs mail:read, a credential acting as a member with their full
-    access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
-    organization.
+    organization's owners and admins. Needs mail:read, a member's own credential with their full access
+    (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -165,9 +163,8 @@ async def asyncio_detailed(
 
      A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a
     member. A request is visible to the member who made it, the member it was made to, and the
-    organization's owners and admins. Needs mail:read, a credential acting as a member with their full
-    access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
-    organization.
+    organization's owners and admins. Needs mail:read, a member's own credential with their full access
+    (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -202,9 +199,8 @@ async def asyncio(
 
      A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a
     member. A request is visible to the member who made it, the member it was made to, and the
-    organization's owners and admins. Needs mail:read, a credential acting as a member with their full
-    access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
-    organization.
+    organization's owners and admins. Needs mail:read, a member's own credential with their full access
+    (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):

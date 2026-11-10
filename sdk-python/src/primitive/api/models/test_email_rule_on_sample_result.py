@@ -18,6 +18,7 @@ if TYPE_CHECKING:
   from ..models.test_email_rule_on_sample_result_parts_item import TestEmailRuleOnSampleResultPartsItem
   from ..models.test_email_rule_on_sample_result_question_answers_item import TestEmailRuleOnSampleResultQuestionAnswersItem
   from ..models.test_email_rule_on_sample_result_rule import TestEmailRuleOnSampleResultRule
+  from ..models.test_email_rule_on_sample_result_values import TestEmailRuleOnSampleResultValues
 
 
 
@@ -34,7 +35,9 @@ class TestEmailRuleOnSampleResult:
             rule (TestEmailRuleOnSampleResultRule):
             received_at (datetime.datetime): When the made-up email counts as received (now): a rule on received_at is
                 decided on it.
-            outcome (TestEmailRuleOnSampleResultOutcome):
+            outcome (TestEmailRuleOnSampleResultOutcome): near_miss: Not matched, but nearly: its questions did not all say
+                yes, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a
+                top-level not, or is_false).
             parts (list[TestEmailRuleOnSampleResultPartsItem]): How each top-level part of the rule decided.
             question_answers (list[TestEmailRuleOnSampleResultQuestionAnswersItem]):
             classification (TestEmailRuleOnSampleResultClassification): Whether the email was classified; without a
@@ -43,6 +46,8 @@ class TestEmailRuleOnSampleResult:
                 confidence.
             missing_facts (list[str] | Unset): Facts the rule reads that this email's classification left out, so the rule
                 did not match.
+            values (TestEmailRuleOnSampleResultValues | Unset): By column the rule names: the value as its conditions
+                compared it (a list cut at 50), and a fact's confidence. A fact left out reads null.
             unset_columns (list[str] | Unset): Email columns the rule reads that the made-up email left unset (spam_score
                 without one), decided as no value.
      """
@@ -55,6 +60,7 @@ class TestEmailRuleOnSampleResult:
     classification: TestEmailRuleOnSampleResultClassification
     facts: TestEmailRuleOnSampleResultFacts
     missing_facts: list[str] | Unset = UNSET
+    values: TestEmailRuleOnSampleResultValues | Unset = UNSET
     unset_columns: list[str] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -68,6 +74,7 @@ class TestEmailRuleOnSampleResult:
         from ..models.test_email_rule_on_sample_result_parts_item import TestEmailRuleOnSampleResultPartsItem # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_question_answers_item import TestEmailRuleOnSampleResultQuestionAnswersItem # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_rule import TestEmailRuleOnSampleResultRule # noqa: PLC0415
+        from ..models.test_email_rule_on_sample_result_values import TestEmailRuleOnSampleResultValues # noqa: PLC0415
         rule = self.rule.to_dict()
 
         received_at = self.received_at.isoformat()
@@ -98,6 +105,10 @@ class TestEmailRuleOnSampleResult:
 
 
 
+        values: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.values, Unset):
+            values = self.values.to_dict()
+
         unset_columns: list[str] | Unset = UNSET
         if not isinstance(self.unset_columns, Unset):
             unset_columns = self.unset_columns
@@ -118,6 +129,8 @@ class TestEmailRuleOnSampleResult:
         })
         if missing_facts is not UNSET:
             field_dict["missing_facts"] = missing_facts
+        if values is not UNSET:
+            field_dict["values"] = values
         if unset_columns is not UNSET:
             field_dict["unset_columns"] = unset_columns
 
@@ -132,6 +145,7 @@ class TestEmailRuleOnSampleResult:
         from ..models.test_email_rule_on_sample_result_parts_item import TestEmailRuleOnSampleResultPartsItem # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_question_answers_item import TestEmailRuleOnSampleResultQuestionAnswersItem # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_rule import TestEmailRuleOnSampleResultRule # noqa: PLC0415
+        from ..models.test_email_rule_on_sample_result_values import TestEmailRuleOnSampleResultValues # noqa: PLC0415
         d = dict(src_dict)
         rule = TestEmailRuleOnSampleResultRule.from_dict(d.pop("rule"))
 
@@ -181,6 +195,16 @@ class TestEmailRuleOnSampleResult:
         missing_facts = cast(list[str], d.pop("missing_facts", UNSET))
 
 
+        _values = d.pop("values", UNSET)
+        values: TestEmailRuleOnSampleResultValues | Unset
+        if isinstance(_values,  Unset):
+            values = UNSET
+        else:
+            values = TestEmailRuleOnSampleResultValues.from_dict(_values)
+
+
+
+
         unset_columns = cast(list[str], d.pop("unset_columns", UNSET))
 
 
@@ -193,6 +217,7 @@ class TestEmailRuleOnSampleResult:
             classification=classification,
             facts=facts,
             missing_facts=missing_facts,
+            values=values,
             unset_columns=unset_columns,
         )
 

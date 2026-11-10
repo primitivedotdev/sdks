@@ -13,8 +13,9 @@ from ..models.update_email_rule_request_state import UpdateEmailRuleRequestState
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.update_email_rule_request_scope_selection import UpdateEmailRuleRequestScopeSelection
-  from ..models.update_email_rule_request_tree import UpdateEmailRuleRequestTree
+  from ..models.email_rule_scope_selection import EmailRuleScopeSelection
+  from ..models.email_rule_tree_input import EmailRuleTreeInput
+  from ..models.update_email_rule_request_expectations_type_0 import UpdateEmailRuleRequestExpectationsType0
 
 
 
@@ -34,37 +35,50 @@ class UpdateEmailRuleRequest:
                 granted only while it is active: leaving active pauses that, and returning to active restores reads and the
                 delivery of queued mail not yet skipped.
             english (str | Unset): The plain-English description the rule was compiled from.
-            tree (UpdateEmailRuleRequestTree | Unset): The rule tree. Checked against the column contract on save.
-            explanation (str | Unset): What the rule matches, in plain English.
-            assumptions (list[str] | Unset): Readings chosen where the description was open to more than one.
-            warnings (list[str] | Unset): Parts of the description the rule does not express.
-            compiled_by (str | Unset): Who produced the tree, as the caller states it (not verified): the compile response's
-                compiled_by, or member when you wrote or edited it yourself. Defaults to member.
-            evaluation_scope (UpdateEmailRuleRequestEvaluationScope | Unset): author: all mail its author can read.
-                own_mailboxes: mail to their own addresses. selected: what scope_selection names. Never more than the author can
-                read.
-            scope_selection (UpdateEmailRuleRequestScopeSelection | Unset): Inboxes, and domains (every address at them the
-                author can read), for a selected rule; each one you can read.
+            tree (EmailRuleTreeInput | Unset):
+            explanation (str | Unset): What the rule matches, in plain English. Left out, the server writes one from the
+                tree.
+            assumptions (list[str] | Unset): Readings chosen where the description was open to more than one, as the compile
+                response returned them (including its lines naming any condition, question or confidence bar the description did
+                not ask for). Stored as sent.
+            warnings (list[str] | Unset): Parts of the description the rule does not express, as the compile response
+                returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
+            compiled_by (str | Unset): Who produced the tree (not verified): the compile response's compiled_by, or member
+                (the default) for a tree you wrote or edited.
+            evaluation_scope (UpdateEmailRuleRequestEvaluationScope | Unset): own_mailboxes: mail to your own addresses and
+                agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
+                later included. selected: what scope_selection names. Left out, the scope stays. A change saves a new version
+                with the same conditions, and is refused while the rule is shared.
+            scope_selection (EmailRuleScopeSelection | Unset): For a selected rule: inboxes, and domains (each address at
+                them the author reads); each one you can read.
+            if_version (int | Unset): The current_version you read. If the rule's now differs, nothing changes: 409
+                email_rule_conflict, details.reason version_moved and details.current_version. Send it with a new version so a
+                concurrent edit is never replaced unseen. It guards versions only: a change to expectations alone saves none.
+            expectations (None | Unset | UpdateEmailRuleRequestExpectationsType0): Replaces its saved expectations (author
+                only); null removes them.
      """
 
     name: str | Unset = UNSET
     state: UpdateEmailRuleRequestState | Unset = UNSET
     english: str | Unset = UNSET
-    tree: UpdateEmailRuleRequestTree | Unset = UNSET
+    tree: EmailRuleTreeInput | Unset = UNSET
     explanation: str | Unset = UNSET
     assumptions: list[str] | Unset = UNSET
     warnings: list[str] | Unset = UNSET
     compiled_by: str | Unset = UNSET
     evaluation_scope: UpdateEmailRuleRequestEvaluationScope | Unset = UNSET
-    scope_selection: UpdateEmailRuleRequestScopeSelection | Unset = UNSET
+    scope_selection: EmailRuleScopeSelection | Unset = UNSET
+    if_version: int | Unset = UNSET
+    expectations: None | Unset | UpdateEmailRuleRequestExpectationsType0 = UNSET
 
 
 
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.update_email_rule_request_scope_selection import UpdateEmailRuleRequestScopeSelection # noqa: PLC0415
-        from ..models.update_email_rule_request_tree import UpdateEmailRuleRequestTree # noqa: PLC0415
+        from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
+        from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
+        from ..models.update_email_rule_request_expectations_type_0 import UpdateEmailRuleRequestExpectationsType0 # noqa: PLC0415
         name = self.name
 
         state: str | Unset = UNSET
@@ -103,6 +117,16 @@ class UpdateEmailRuleRequest:
         if not isinstance(self.scope_selection, Unset):
             scope_selection = self.scope_selection.to_dict()
 
+        if_version = self.if_version
+
+        expectations: dict[str, Any] | None | Unset
+        if isinstance(self.expectations, Unset):
+            expectations = UNSET
+        elif isinstance(self.expectations, UpdateEmailRuleRequestExpectationsType0):
+            expectations = self.expectations.to_dict()
+        else:
+            expectations = self.expectations
+
 
         field_dict: dict[str, Any] = {}
 
@@ -128,6 +152,10 @@ class UpdateEmailRuleRequest:
             field_dict["evaluation_scope"] = evaluation_scope
         if scope_selection is not UNSET:
             field_dict["scope_selection"] = scope_selection
+        if if_version is not UNSET:
+            field_dict["if_version"] = if_version
+        if expectations is not UNSET:
+            field_dict["expectations"] = expectations
 
         return field_dict
 
@@ -135,8 +163,9 @@ class UpdateEmailRuleRequest:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.update_email_rule_request_scope_selection import UpdateEmailRuleRequestScopeSelection # noqa: PLC0415
-        from ..models.update_email_rule_request_tree import UpdateEmailRuleRequestTree # noqa: PLC0415
+        from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
+        from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
+        from ..models.update_email_rule_request_expectations_type_0 import UpdateEmailRuleRequestExpectationsType0 # noqa: PLC0415
         d = dict(src_dict)
         name = d.pop("name", UNSET)
 
@@ -153,11 +182,11 @@ class UpdateEmailRuleRequest:
         english = d.pop("english", UNSET)
 
         _tree = d.pop("tree", UNSET)
-        tree: UpdateEmailRuleRequestTree | Unset
+        tree: EmailRuleTreeInput | Unset
         if isinstance(_tree,  Unset):
             tree = UNSET
         else:
-            tree = UpdateEmailRuleRequestTree.from_dict(_tree)
+            tree = EmailRuleTreeInput.from_dict(_tree)
 
 
 
@@ -183,13 +212,35 @@ class UpdateEmailRuleRequest:
 
 
         _scope_selection = d.pop("scope_selection", UNSET)
-        scope_selection: UpdateEmailRuleRequestScopeSelection | Unset
+        scope_selection: EmailRuleScopeSelection | Unset
         if isinstance(_scope_selection,  Unset):
             scope_selection = UNSET
         else:
-            scope_selection = UpdateEmailRuleRequestScopeSelection.from_dict(_scope_selection)
+            scope_selection = EmailRuleScopeSelection.from_dict(_scope_selection)
 
 
+
+
+        if_version = d.pop("if_version", UNSET)
+
+        def _parse_expectations(data: object) -> None | Unset | UpdateEmailRuleRequestExpectationsType0:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                expectations_type_0 = UpdateEmailRuleRequestExpectationsType0.from_dict(data)
+
+
+
+                return expectations_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | Unset | UpdateEmailRuleRequestExpectationsType0, data)
+
+        expectations = _parse_expectations(d.pop("expectations", UNSET))
 
 
         update_email_rule_request = cls(
@@ -203,6 +254,8 @@ class UpdateEmailRuleRequest:
             compiled_by=compiled_by,
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,
+            if_version=if_version,
+            expectations=expectations,
         )
 
         return update_email_rule_request

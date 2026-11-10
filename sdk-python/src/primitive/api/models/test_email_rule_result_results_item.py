@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.test_email_rule_result_results_item_outcome import TestEmailRuleResultResultsItemOutcome
+from ..models.test_email_rule_result_results_item_question_answers_source import TestEmailRuleResultResultsItemQuestionAnswersSource
 from ..models.test_email_rule_result_results_item_unclassified_reason import TestEmailRuleResultResultsItemUnclassifiedReason
 from typing import cast
 from uuid import UUID
@@ -17,6 +18,7 @@ import datetime
 if TYPE_CHECKING:
   from ..models.test_email_rule_result_results_item_parts_item import TestEmailRuleResultResultsItemPartsItem
   from ..models.test_email_rule_result_results_item_question_answers_item import TestEmailRuleResultResultsItemQuestionAnswersItem
+  from ..models.test_email_rule_result_results_item_values import TestEmailRuleResultResultsItemValues
 
 
 
@@ -31,8 +33,10 @@ class TestEmailRuleResultResultsItem:
     """ 
         Attributes:
             email_id (UUID):
-            outcome (TestEmailRuleResultResultsItemOutcome): not_found: no such email, or not one the rule can read (or not
-                settled, held back, or being removed).
+            outcome (TestEmailRuleResultResultsItemOutcome): near_miss: Not matched, but nearly: its questions did not all
+                say yes, or it needs several parts and exactly one failed while at least one part that held is not an exclusion
+                (a top-level not, or is_false). not_found: no such email, or not one the rule can read (or not settled, held
+                back, or being removed).
             received_at (datetime.datetime | Unset):
             from_address (None | str | Unset):
             subject (None | str | Unset):
@@ -40,8 +44,15 @@ class TestEmailRuleResultResultsItem:
                 Present for matched, near_miss and no_match.
             missing_facts (list[str] | Unset): Facts the rule reads that this email's classification left out, so the rule
                 did not match.
+            values (TestEmailRuleResultResultsItemValues | Unset): By column the rule names: the value as its conditions
+                compared it (a list cut at 50), and a fact's confidence. A fact left out reads null.
             question_answers (list[TestEmailRuleResultResultsItemQuestionAnswersItem] | Unset): The answers to the rule's
                 own questions, asked only when its conditions matched.
+            question_answers_source (TestEmailRuleResultResultsItemQuestionAnswersSource | Unset): Where question_answers
+                came from, when there are any. stored: a saved rule version's answers about this email, kept once given (by
+                evaluation or an earlier test) or recorded with its decision, reused because answers are sampled and asking
+                again can differ. asked_now: asked by this test (always, for an unsaved tree). not_asked: no call could be made;
+                error_class says why.
             unclassified_reason (TestEmailRuleResultResultsItemUnclassifiedReason | Unset): Why an unclassified email has no
                 classification. pending: not reached before the test stopped, or not classified here (it arrived within the last
                 2 hours and normal classification has not finished with it, or classify_missing was false); run the test again
@@ -55,7 +66,9 @@ class TestEmailRuleResultResultsItem:
     subject: None | str | Unset = UNSET
     parts: list[TestEmailRuleResultResultsItemPartsItem] | Unset = UNSET
     missing_facts: list[str] | Unset = UNSET
+    values: TestEmailRuleResultResultsItemValues | Unset = UNSET
     question_answers: list[TestEmailRuleResultResultsItemQuestionAnswersItem] | Unset = UNSET
+    question_answers_source: TestEmailRuleResultResultsItemQuestionAnswersSource | Unset = UNSET
     unclassified_reason: TestEmailRuleResultResultsItemUnclassifiedReason | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -66,6 +79,7 @@ class TestEmailRuleResultResultsItem:
     def to_dict(self) -> dict[str, Any]:
         from ..models.test_email_rule_result_results_item_parts_item import TestEmailRuleResultResultsItemPartsItem # noqa: PLC0415
         from ..models.test_email_rule_result_results_item_question_answers_item import TestEmailRuleResultResultsItemQuestionAnswersItem # noqa: PLC0415
+        from ..models.test_email_rule_result_results_item_values import TestEmailRuleResultResultsItemValues # noqa: PLC0415
         email_id = str(self.email_id)
 
         outcome = self.outcome.value
@@ -101,6 +115,10 @@ class TestEmailRuleResultResultsItem:
 
 
 
+        values: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.values, Unset):
+            values = self.values.to_dict()
+
         question_answers: list[dict[str, Any]] | Unset = UNSET
         if not isinstance(self.question_answers, Unset):
             question_answers = []
@@ -108,6 +126,11 @@ class TestEmailRuleResultResultsItem:
                 question_answers_item = question_answers_item_data.to_dict()
                 question_answers.append(question_answers_item)
 
+
+
+        question_answers_source: str | Unset = UNSET
+        if not isinstance(self.question_answers_source, Unset):
+            question_answers_source = self.question_answers_source.value
 
 
         unclassified_reason: str | Unset = UNSET
@@ -132,8 +155,12 @@ class TestEmailRuleResultResultsItem:
             field_dict["parts"] = parts
         if missing_facts is not UNSET:
             field_dict["missing_facts"] = missing_facts
+        if values is not UNSET:
+            field_dict["values"] = values
         if question_answers is not UNSET:
             field_dict["question_answers"] = question_answers
+        if question_answers_source is not UNSET:
+            field_dict["question_answers_source"] = question_answers_source
         if unclassified_reason is not UNSET:
             field_dict["unclassified_reason"] = unclassified_reason
 
@@ -145,6 +172,7 @@ class TestEmailRuleResultResultsItem:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.test_email_rule_result_results_item_parts_item import TestEmailRuleResultResultsItemPartsItem # noqa: PLC0415
         from ..models.test_email_rule_result_results_item_question_answers_item import TestEmailRuleResultResultsItemQuestionAnswersItem # noqa: PLC0415
+        from ..models.test_email_rule_result_results_item_values import TestEmailRuleResultResultsItemValues # noqa: PLC0415
         d = dict(src_dict)
         email_id = UUID(d.pop("email_id"))
 
@@ -201,6 +229,16 @@ class TestEmailRuleResultResultsItem:
         missing_facts = cast(list[str], d.pop("missing_facts", UNSET))
 
 
+        _values = d.pop("values", UNSET)
+        values: TestEmailRuleResultResultsItemValues | Unset
+        if isinstance(_values,  Unset):
+            values = UNSET
+        else:
+            values = TestEmailRuleResultResultsItemValues.from_dict(_values)
+
+
+
+
         _question_answers = d.pop("question_answers", UNSET)
         question_answers: list[TestEmailRuleResultResultsItemQuestionAnswersItem] | Unset = UNSET
         if _question_answers is not UNSET:
@@ -211,6 +249,16 @@ class TestEmailRuleResultResultsItem:
 
 
                 question_answers.append(question_answers_item)
+
+
+        _question_answers_source = d.pop("question_answers_source", UNSET)
+        question_answers_source: TestEmailRuleResultResultsItemQuestionAnswersSource | Unset
+        if isinstance(_question_answers_source,  Unset):
+            question_answers_source = UNSET
+        else:
+            question_answers_source = TestEmailRuleResultResultsItemQuestionAnswersSource(_question_answers_source)
+
+
 
 
         _unclassified_reason = d.pop("unclassified_reason", UNSET)
@@ -231,7 +279,9 @@ class TestEmailRuleResultResultsItem:
             subject=subject,
             parts=parts,
             missing_facts=missing_facts,
+            values=values,
             question_answers=question_answers,
+            question_answers_source=question_answers_source,
             unclassified_reason=unclassified_reason,
         )
 

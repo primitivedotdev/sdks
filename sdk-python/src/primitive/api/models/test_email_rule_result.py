@@ -11,11 +11,14 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
+  from ..models.email_rule_scope_warning import EmailRuleScopeWarning
   from ..models.test_email_rule_result_classification import TestEmailRuleResultClassification
   from ..models.test_email_rule_result_counts import TestEmailRuleResultCounts
+  from ..models.test_email_rule_result_expectations import TestEmailRuleResultExpectations
   from ..models.test_email_rule_result_questions import TestEmailRuleResultQuestions
   from ..models.test_email_rule_result_results_item import TestEmailRuleResultResultsItem
   from ..models.test_email_rule_result_rule import TestEmailRuleResultRule
+  from ..models.test_email_rule_result_summary import TestEmailRuleResultSummary
   from ..models.test_email_rule_result_window import TestEmailRuleResultWindow
 
 
@@ -35,8 +38,13 @@ class TestEmailRuleResult:
             counts (TestEmailRuleResultCounts):
             classification (TestEmailRuleResultClassification):
             questions (TestEmailRuleResultQuestions):
-            results (list[TestEmailRuleResultResultsItem]): Newest first; with email_ids, the ids not found follow in the
-                order given.
+            results (list[TestEmailRuleResultResultsItem]): Newest first; ids not found (email_ids, then expected ones)
+                follow in the order given.
+            summary (TestEmailRuleResultSummary | Unset):
+            scope_warnings (list[EmailRuleScopeWarning] | Unset): Names in scope_selection that match nothing this
+                organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.
+            expectations (TestEmailRuleResultExpectations | Unset): Present when expect was given, or for a saved rule with
+                saved expectations.
      """
 
     rule: TestEmailRuleResultRule
@@ -45,6 +53,9 @@ class TestEmailRuleResult:
     classification: TestEmailRuleResultClassification
     questions: TestEmailRuleResultQuestions
     results: list[TestEmailRuleResultResultsItem]
+    summary: TestEmailRuleResultSummary | Unset = UNSET
+    scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
+    expectations: TestEmailRuleResultExpectations | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -52,11 +63,14 @@ class TestEmailRuleResult:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.test_email_rule_result_classification import TestEmailRuleResultClassification # noqa: PLC0415
         from ..models.test_email_rule_result_counts import TestEmailRuleResultCounts # noqa: PLC0415
+        from ..models.test_email_rule_result_expectations import TestEmailRuleResultExpectations # noqa: PLC0415
         from ..models.test_email_rule_result_questions import TestEmailRuleResultQuestions # noqa: PLC0415
         from ..models.test_email_rule_result_results_item import TestEmailRuleResultResultsItem # noqa: PLC0415
         from ..models.test_email_rule_result_rule import TestEmailRuleResultRule # noqa: PLC0415
+        from ..models.test_email_rule_result_summary import TestEmailRuleResultSummary # noqa: PLC0415
         from ..models.test_email_rule_result_window import TestEmailRuleResultWindow # noqa: PLC0415
         rule = self.rule.to_dict()
 
@@ -75,6 +89,23 @@ class TestEmailRuleResult:
 
 
 
+        summary: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.summary, Unset):
+            summary = self.summary.to_dict()
+
+        scope_warnings: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.scope_warnings, Unset):
+            scope_warnings = []
+            for scope_warnings_item_data in self.scope_warnings:
+                scope_warnings_item = scope_warnings_item_data.to_dict()
+                scope_warnings.append(scope_warnings_item)
+
+
+
+        expectations: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.expectations, Unset):
+            expectations = self.expectations.to_dict()
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -86,6 +117,12 @@ class TestEmailRuleResult:
             "questions": questions,
             "results": results,
         })
+        if summary is not UNSET:
+            field_dict["summary"] = summary
+        if scope_warnings is not UNSET:
+            field_dict["scope_warnings"] = scope_warnings
+        if expectations is not UNSET:
+            field_dict["expectations"] = expectations
 
         return field_dict
 
@@ -93,11 +130,14 @@ class TestEmailRuleResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.test_email_rule_result_classification import TestEmailRuleResultClassification # noqa: PLC0415
         from ..models.test_email_rule_result_counts import TestEmailRuleResultCounts # noqa: PLC0415
+        from ..models.test_email_rule_result_expectations import TestEmailRuleResultExpectations # noqa: PLC0415
         from ..models.test_email_rule_result_questions import TestEmailRuleResultQuestions # noqa: PLC0415
         from ..models.test_email_rule_result_results_item import TestEmailRuleResultResultsItem # noqa: PLC0415
         from ..models.test_email_rule_result_rule import TestEmailRuleResultRule # noqa: PLC0415
+        from ..models.test_email_rule_result_summary import TestEmailRuleResultSummary # noqa: PLC0415
         from ..models.test_email_rule_result_window import TestEmailRuleResultWindow # noqa: PLC0415
         d = dict(src_dict)
         rule = TestEmailRuleResultRule.from_dict(d.pop("rule"))
@@ -135,6 +175,38 @@ class TestEmailRuleResult:
             results.append(results_item)
 
 
+        _summary = d.pop("summary", UNSET)
+        summary: TestEmailRuleResultSummary | Unset
+        if isinstance(_summary,  Unset):
+            summary = UNSET
+        else:
+            summary = TestEmailRuleResultSummary.from_dict(_summary)
+
+
+
+
+        _scope_warnings = d.pop("scope_warnings", UNSET)
+        scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
+        if _scope_warnings is not UNSET:
+            scope_warnings = []
+            for scope_warnings_item_data in _scope_warnings:
+                scope_warnings_item = EmailRuleScopeWarning.from_dict(scope_warnings_item_data)
+
+
+
+                scope_warnings.append(scope_warnings_item)
+
+
+        _expectations = d.pop("expectations", UNSET)
+        expectations: TestEmailRuleResultExpectations | Unset
+        if isinstance(_expectations,  Unset):
+            expectations = UNSET
+        else:
+            expectations = TestEmailRuleResultExpectations.from_dict(_expectations)
+
+
+
+
         test_email_rule_result = cls(
             rule=rule,
             window=window,
@@ -142,6 +214,9 @@ class TestEmailRuleResult:
             classification=classification,
             questions=questions,
             results=results,
+            summary=summary,
+            scope_warnings=scope_warnings,
+            expectations=expectations,
         )
 
 

@@ -81,10 +81,10 @@ def sync_detailed(
     secret exists yet, one is generated automatically on first
     access.
 
-    Signing is account-scoped, not per-endpoint. Every webhook
-    delivery from any of your registered endpoints is signed
-    with this single secret. Rotate via
-    `POST /account/webhook-secret/rotate`.
+    Every webhook is signed with this secret unless it has its own. Rotate this secret via `POST
+    /account/webhook-secret/rotate`. A webhook whose signed_with is own_secret is signed with its own
+    secret instead; read it from GET /endpoints/{id}/signing-secret. A webhook's own secret rotates via
+    `POST /endpoints/{id}/signing-secret/rotate`.
 
     **Secret format**: the returned string looks base64-shaped
     (e.g. `XNHBBW8VqoBjRfNs1tkZj11jTk...`) but is NOT base64.
@@ -127,10 +127,10 @@ def sync(
     secret exists yet, one is generated automatically on first
     access.
 
-    Signing is account-scoped, not per-endpoint. Every webhook
-    delivery from any of your registered endpoints is signed
-    with this single secret. Rotate via
-    `POST /account/webhook-secret/rotate`.
+    Every webhook is signed with this secret unless it has its own. Rotate this secret via `POST
+    /account/webhook-secret/rotate`. A webhook whose signed_with is own_secret is signed with its own
+    secret instead; read it from GET /endpoints/{id}/signing-secret. A webhook's own secret rotates via
+    `POST /endpoints/{id}/signing-secret/rotate`.
 
     **Secret format**: the returned string looks base64-shaped
     (e.g. `XNHBBW8VqoBjRfNs1tkZj11jTk...`) but is NOT base64.
@@ -168,10 +168,10 @@ async def asyncio_detailed(
     secret exists yet, one is generated automatically on first
     access.
 
-    Signing is account-scoped, not per-endpoint. Every webhook
-    delivery from any of your registered endpoints is signed
-    with this single secret. Rotate via
-    `POST /account/webhook-secret/rotate`.
+    Every webhook is signed with this secret unless it has its own. Rotate this secret via `POST
+    /account/webhook-secret/rotate`. A webhook whose signed_with is own_secret is signed with its own
+    secret instead; read it from GET /endpoints/{id}/signing-secret. A webhook's own secret rotates via
+    `POST /endpoints/{id}/signing-secret/rotate`.
 
     **Secret format**: the returned string looks base64-shaped
     (e.g. `XNHBBW8VqoBjRfNs1tkZj11jTk...`) but is NOT base64.
@@ -214,10 +214,10 @@ async def asyncio(
     secret exists yet, one is generated automatically on first
     access.
 
-    Signing is account-scoped, not per-endpoint. Every webhook
-    delivery from any of your registered endpoints is signed
-    with this single secret. Rotate via
-    `POST /account/webhook-secret/rotate`.
+    Every webhook is signed with this secret unless it has its own. Rotate this secret via `POST
+    /account/webhook-secret/rotate`. A webhook whose signed_with is own_secret is signed with its own
+    secret instead; read it from GET /endpoints/{id}/signing-secret. A webhook's own secret rotates via
+    `POST /endpoints/{id}/signing-secret/rotate`.
 
     **Secret format**: the returned string looks base64-shaped
     (e.g. `XNHBBW8VqoBjRfNs1tkZj11jTk...`) but is NOT base64.

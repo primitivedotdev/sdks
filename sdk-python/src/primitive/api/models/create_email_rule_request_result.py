@@ -15,9 +15,9 @@ from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
-  from ..models.create_email_rule_request_result_proposer import CreateEmailRuleRequestResultProposer
-  from ..models.create_email_rule_request_result_target import CreateEmailRuleRequestResultTarget
-  from ..models.create_email_rule_request_result_tree import CreateEmailRuleRequestResultTree
+  from ..models.email_rule_request_proposer import EmailRuleRequestProposer
+  from ..models.email_rule_request_target import EmailRuleRequestTarget
+  from ..models.email_rule_tree import EmailRuleTree
 
 
 
@@ -35,31 +35,35 @@ class CreateEmailRuleRequestResult:
             status (CreateEmailRuleRequestResultStatus):
             name (str):
             english (str):
-            tree (CreateEmailRuleRequestResultTree):
+            tree (EmailRuleTree):
             explanation (str):
             assumptions (list[str]):
             warnings (list[str]):
             compiled_by (str):
             vocabulary (str):
-            proposed_via (CreateEmailRuleRequestResultProposedVia): session: from the proposer's own session; oauth: from an
-                OAuth or CLI token acting for them.
+            proposed_via (CreateEmailRuleRequestResultProposedVia): session: the proposer's own session; oauth: an OAuth or
+                CLI token acting for them.
             created_at (datetime.datetime):
             decided_at (datetime.datetime | None):
             decided_by_user_id (None | UUID):
-            proposer (CreateEmailRuleRequestResultProposer):
-            target (CreateEmailRuleRequestResultTarget):
-            target_address_typed (None | str): The address you typed to name the member. Only for the member who asked; null
-                otherwise, and when they were named by user id.
+            proposer (EmailRuleRequestProposer):
+            target (EmailRuleRequestTarget):
+            target_address_typed (None | str): The address the proposer typed to name the target; null for anyone else, and
+                when named by user id.
             is_proposer (bool):
             is_target (bool):
             share_id (None | UUID): The share accepting created, while it exists.
+            target_can_accept (bool | None | Unset): Whether the member asked can accept it now under their role. Null
+                unless you can list members and their roles (members:read), or when it could not be read.
+            target_warning (None | str | Unset): Why the member asked cannot accept it yet, naming the permission their role
+                lacks. The request is still sent. Null when they can, or when target_can_accept is null.
      """
 
     id: UUID
     status: CreateEmailRuleRequestResultStatus
     name: str
     english: str
-    tree: CreateEmailRuleRequestResultTree
+    tree: EmailRuleTree
     explanation: str
     assumptions: list[str]
     warnings: list[str]
@@ -69,12 +73,14 @@ class CreateEmailRuleRequestResult:
     created_at: datetime.datetime
     decided_at: datetime.datetime | None
     decided_by_user_id: None | UUID
-    proposer: CreateEmailRuleRequestResultProposer
-    target: CreateEmailRuleRequestResultTarget
+    proposer: EmailRuleRequestProposer
+    target: EmailRuleRequestTarget
     target_address_typed: None | str
     is_proposer: bool
     is_target: bool
     share_id: None | UUID
+    target_can_accept: bool | None | Unset = UNSET
+    target_warning: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -82,9 +88,9 @@ class CreateEmailRuleRequestResult:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.create_email_rule_request_result_proposer import CreateEmailRuleRequestResultProposer # noqa: PLC0415
-        from ..models.create_email_rule_request_result_target import CreateEmailRuleRequestResultTarget # noqa: PLC0415
-        from ..models.create_email_rule_request_result_tree import CreateEmailRuleRequestResultTree # noqa: PLC0415
+        from ..models.email_rule_request_proposer import EmailRuleRequestProposer # noqa: PLC0415
+        from ..models.email_rule_request_target import EmailRuleRequestTarget # noqa: PLC0415
+        from ..models.email_rule_tree import EmailRuleTree # noqa: PLC0415
         id = str(self.id)
 
         status = self.status.value
@@ -142,6 +148,18 @@ class CreateEmailRuleRequestResult:
         else:
             share_id = self.share_id
 
+        target_can_accept: bool | None | Unset
+        if isinstance(self.target_can_accept, Unset):
+            target_can_accept = UNSET
+        else:
+            target_can_accept = self.target_can_accept
+
+        target_warning: None | str | Unset
+        if isinstance(self.target_warning, Unset):
+            target_warning = UNSET
+        else:
+            target_warning = self.target_warning
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -167,6 +185,10 @@ class CreateEmailRuleRequestResult:
             "is_target": is_target,
             "share_id": share_id,
         })
+        if target_can_accept is not UNSET:
+            field_dict["target_can_accept"] = target_can_accept
+        if target_warning is not UNSET:
+            field_dict["target_warning"] = target_warning
 
         return field_dict
 
@@ -174,9 +196,9 @@ class CreateEmailRuleRequestResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.create_email_rule_request_result_proposer import CreateEmailRuleRequestResultProposer # noqa: PLC0415
-        from ..models.create_email_rule_request_result_target import CreateEmailRuleRequestResultTarget # noqa: PLC0415
-        from ..models.create_email_rule_request_result_tree import CreateEmailRuleRequestResultTree # noqa: PLC0415
+        from ..models.email_rule_request_proposer import EmailRuleRequestProposer # noqa: PLC0415
+        from ..models.email_rule_request_target import EmailRuleRequestTarget # noqa: PLC0415
+        from ..models.email_rule_tree import EmailRuleTree # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -192,7 +214,7 @@ class CreateEmailRuleRequestResult:
 
         english = d.pop("english")
 
-        tree = CreateEmailRuleRequestResultTree.from_dict(d.pop("tree"))
+        tree = EmailRuleTree.from_dict(d.pop("tree"))
 
 
 
@@ -255,12 +277,12 @@ class CreateEmailRuleRequestResult:
         decided_by_user_id = _parse_decided_by_user_id(d.pop("decided_by_user_id"))
 
 
-        proposer = CreateEmailRuleRequestResultProposer.from_dict(d.pop("proposer"))
+        proposer = EmailRuleRequestProposer.from_dict(d.pop("proposer"))
 
 
 
 
-        target = CreateEmailRuleRequestResultTarget.from_dict(d.pop("target"))
+        target = EmailRuleRequestTarget.from_dict(d.pop("target"))
 
 
 
@@ -295,6 +317,26 @@ class CreateEmailRuleRequestResult:
         share_id = _parse_share_id(d.pop("share_id"))
 
 
+        def _parse_target_can_accept(data: object) -> bool | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(bool | None | Unset, data)
+
+        target_can_accept = _parse_target_can_accept(d.pop("target_can_accept", UNSET))
+
+
+        def _parse_target_warning(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        target_warning = _parse_target_warning(d.pop("target_warning", UNSET))
+
+
         create_email_rule_request_result = cls(
             id=id,
             status=status,
@@ -316,6 +358,8 @@ class CreateEmailRuleRequestResult:
             is_proposer=is_proposer,
             is_target=is_target,
             share_id=share_id,
+            target_can_accept=target_can_accept,
+            target_warning=target_warning,
         )
 
 

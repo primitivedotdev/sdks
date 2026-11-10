@@ -43,6 +43,20 @@ class DeliverySummary:
             event_type (None | str): The event type delivered, or null for a delivery recorded before event types existed.
             sent_email_id (None | UUID): The sent email an outbound sent_email.* delivery is about, otherwise null.
             last_error_code (None | str): Machine-readable code for the last failure, or null.
+            response_status (int | None): The HTTP status the endpoint answered this attempt with: a webhook's own answer,
+                or for a Function what its runtime answered, which is the platform's own error when the Function could not be
+                run. Null when no answer came back (a network error, a timeout, an attempt refused or not sent) and on attempts
+                recorded before this field.
+            response_body (None | str): The first 2 KB of the body the endpoint answered this attempt with, so a handler
+                that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was
+                sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is
+                deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.
+            latest_attempt (bool): Whether this is the latest attempt of its delivery: the one recorded last, where a record
+                of no attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A retry is
+                recorded as a new attempt with its own id and attempt_count (not always higher than the one before), so an
+                earlier attempt never changes: follow the latest one, or read attempts on any of them.
+            next_attempt_at (datetime.datetime | None): When the next automatic retry of this delivery is due. Not reported
+                yet: always null.
             duration_ms (int | None | Unset):
             last_error (None | str | Unset):
             email (DeliverySummaryEmailType0 | None | Unset):
@@ -60,6 +74,10 @@ class DeliverySummary:
     event_type: None | str
     sent_email_id: None | UUID
     last_error_code: None | str
+    response_status: int | None
+    response_body: None | str
+    latest_attempt: bool
+    next_attempt_at: datetime.datetime | None
     duration_ms: int | None | Unset = UNSET
     last_error: None | str | Unset = UNSET
     email: DeliverySummaryEmailType0 | None | Unset = UNSET
@@ -105,6 +123,20 @@ class DeliverySummary:
         last_error_code: None | str
         last_error_code = self.last_error_code
 
+        response_status: int | None
+        response_status = self.response_status
+
+        response_body: None | str
+        response_body = self.response_body
+
+        latest_attempt = self.latest_attempt
+
+        next_attempt_at: None | str
+        if isinstance(self.next_attempt_at, datetime.datetime):
+            next_attempt_at = self.next_attempt_at.isoformat()
+        else:
+            next_attempt_at = self.next_attempt_at
+
         duration_ms: int | None | Unset
         if isinstance(self.duration_ms, Unset):
             duration_ms = UNSET
@@ -141,6 +173,10 @@ class DeliverySummary:
             "event_type": event_type,
             "sent_email_id": sent_email_id,
             "last_error_code": last_error_code,
+            "response_status": response_status,
+            "response_body": response_body,
+            "latest_attempt": latest_attempt,
+            "next_attempt_at": next_attempt_at,
         })
         if duration_ms is not UNSET:
             field_dict["duration_ms"] = duration_ms
@@ -240,6 +276,42 @@ class DeliverySummary:
         last_error_code = _parse_last_error_code(d.pop("last_error_code"))
 
 
+        def _parse_response_status(data: object) -> int | None:
+            if data is None:
+                return data
+            return cast(int | None, data)
+
+        response_status = _parse_response_status(d.pop("response_status"))
+
+
+        def _parse_response_body(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        response_body = _parse_response_body(d.pop("response_body"))
+
+
+        latest_attempt = d.pop("latest_attempt")
+
+        def _parse_next_attempt_at(data: object) -> datetime.datetime | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                next_attempt_at_type_0 = datetime.datetime.fromisoformat(data)
+
+
+
+                return next_attempt_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None, data)
+
+        next_attempt_at = _parse_next_attempt_at(d.pop("next_attempt_at"))
+
+
         def _parse_duration_ms(data: object) -> int | None | Unset:
             if data is None:
                 return data
@@ -293,6 +365,10 @@ class DeliverySummary:
             event_type=event_type,
             sent_email_id=sent_email_id,
             last_error_code=last_error_code,
+            response_status=response_status,
+            response_body=response_body,
+            latest_attempt=latest_attempt,
+            next_attempt_at=next_attempt_at,
             duration_ms=duration_ms,
             last_error=last_error,
             email=email,

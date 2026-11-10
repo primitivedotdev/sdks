@@ -60,6 +60,7 @@ export const PERMISSIONS = [
   "mail:send",
   "mail:send_as_member",
   "mail:send_batch",
+  "mail:share_own",
   "mail:signal",
   "mail_sync:manage",
   "member_address:manage",
@@ -97,7 +98,7 @@ export type Permission = (typeof PERMISSIONS)[number];
 export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[]>> = {
   "acceptEmailRuleRequest": [
     "mail:read",
-    "mail:send_as_member"
+    "mail:share_own"
   ],
   "addDefaultNetworkMember": [
     "agent_networks:manage"
@@ -143,6 +144,10 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   ],
   "checkDomainDns": [
     "domains:read"
+  ],
+  "checkEmailRuleRequestTarget": [
+    "mail:read",
+    "members:read"
   ],
   "checkSendability": [
     "mail:send"
@@ -240,6 +245,9 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
     "mail:delete"
   ],
   "deleteEmailRule": [
+    "mail:read"
+  ],
+  "deleteEmailRuleRequest": [
     "mail:read"
   ],
   "deleteEndpoint": [
@@ -377,6 +385,15 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   ],
   "getEmailRuleShare": [
     "mail:read"
+  ],
+  "getEmailRuleVocabulary": [
+    "mail:read"
+  ],
+  "getEndpoint": [
+    "webhooks:read"
+  ],
+  "getEndpointSigningSecret": [
+    "endpoints:manage"
   ],
   "getFunction": [
     "functions:read"
@@ -771,6 +788,9 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   ],
   "revokeProjectInvitation": [
     "invitations:manage"
+  ],
+  "rotateEndpointSigningSecret": [
+    "endpoints:manage"
   ],
   "rotateKey": [
     "keys:manage"

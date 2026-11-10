@@ -144,18 +144,20 @@ def sync_detailed(
     second key and is refused (409 idempotency_key_reused) with the first key's id in
     error.details.key_id, so a caller whose first answer was lost can revoke that key. The onboarding
     field is for the dashboard only. The person's own Primitive CLI login needs no step-up (it acts as
-    the person, held to the same rules); the Primitive app's token is refused, even with one. While the
+    the person, held to the same rules) unless the organization's credential policy sets
+    cli_writes_require_approval; the Primitive app's token is refused, even with one. While the
     organization's keys API is not enabled, this answers 404 feature_disabled (details.feature keys_api;
-    only Primitive turns it on), except that a dashboard session may still create a super admin key (the
-    dashboard's own create).
+    contact Primitive to turn it on), except that a dashboard session may still create a super admin key
+    (the dashboard's own create).
 
-    Person only: a dashboard session, the person's own Primitive CLI login with no step-up, or the
-    person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up
-    header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the
-    dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could
-    not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are
-    refused. An agent acting for the person is refused unless it carries a step-up token the person
-    issued in the dashboard.
+    Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
+    organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token
+    with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any
+    other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that
+    issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway).
+    The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent
+    acting for the person is refused unless it carries a step-up token the person issued in the
+    dashboard.
 
     Args:
         idempotency_key (str | Unset):
@@ -211,18 +213,20 @@ def sync(
     second key and is refused (409 idempotency_key_reused) with the first key's id in
     error.details.key_id, so a caller whose first answer was lost can revoke that key. The onboarding
     field is for the dashboard only. The person's own Primitive CLI login needs no step-up (it acts as
-    the person, held to the same rules); the Primitive app's token is refused, even with one. While the
+    the person, held to the same rules) unless the organization's credential policy sets
+    cli_writes_require_approval; the Primitive app's token is refused, even with one. While the
     organization's keys API is not enabled, this answers 404 feature_disabled (details.feature keys_api;
-    only Primitive turns it on), except that a dashboard session may still create a super admin key (the
-    dashboard's own create).
+    contact Primitive to turn it on), except that a dashboard session may still create a super admin key
+    (the dashboard's own create).
 
-    Person only: a dashboard session, the person's own Primitive CLI login with no step-up, or the
-    person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up
-    header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the
-    dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could
-    not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are
-    refused. An agent acting for the person is refused unless it carries a step-up token the person
-    issued in the dashboard.
+    Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
+    organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token
+    with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any
+    other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that
+    issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway).
+    The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent
+    acting for the person is refused unless it carries a step-up token the person issued in the
+    dashboard.
 
     Args:
         idempotency_key (str | Unset):
@@ -273,18 +277,20 @@ async def asyncio_detailed(
     second key and is refused (409 idempotency_key_reused) with the first key's id in
     error.details.key_id, so a caller whose first answer was lost can revoke that key. The onboarding
     field is for the dashboard only. The person's own Primitive CLI login needs no step-up (it acts as
-    the person, held to the same rules); the Primitive app's token is refused, even with one. While the
+    the person, held to the same rules) unless the organization's credential policy sets
+    cli_writes_require_approval; the Primitive app's token is refused, even with one. While the
     organization's keys API is not enabled, this answers 404 feature_disabled (details.feature keys_api;
-    only Primitive turns it on), except that a dashboard session may still create a super admin key (the
-    dashboard's own create).
+    contact Primitive to turn it on), except that a dashboard session may still create a super admin key
+    (the dashboard's own create).
 
-    Person only: a dashboard session, the person's own Primitive CLI login with no step-up, or the
-    person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up
-    header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the
-    dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could
-    not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are
-    refused. An agent acting for the person is refused unless it carries a step-up token the person
-    issued in the dashboard.
+    Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
+    organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token
+    with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any
+    other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that
+    issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway).
+    The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent
+    acting for the person is refused unless it carries a step-up token the person issued in the
+    dashboard.
 
     Args:
         idempotency_key (str | Unset):
@@ -340,18 +346,20 @@ async def asyncio(
     second key and is refused (409 idempotency_key_reused) with the first key's id in
     error.details.key_id, so a caller whose first answer was lost can revoke that key. The onboarding
     field is for the dashboard only. The person's own Primitive CLI login needs no step-up (it acts as
-    the person, held to the same rules); the Primitive app's token is refused, even with one. While the
+    the person, held to the same rules) unless the organization's credential policy sets
+    cli_writes_require_approval; the Primitive app's token is refused, even with one. While the
     organization's keys API is not enabled, this answers 404 feature_disabled (details.feature keys_api;
-    only Primitive turns it on), except that a dashboard session may still create a super admin key (the
-    dashboard's own create).
+    contact Primitive to turn it on), except that a dashboard session may still create a super admin key
+    (the dashboard's own create).
 
-    Person only: a dashboard session, the person's own Primitive CLI login with no step-up, or the
-    person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up
-    header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the
-    dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could
-    not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are
-    refused. An agent acting for the person is refused unless it carries a step-up token the person
-    issued in the dashboard.
+    Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
+    organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token
+    with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any
+    other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that
+    issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway).
+    The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent
+    acting for the person is refused unless it carries a step-up token the person issued in the
+    dashboard.
 
     Args:
         idempotency_key (str | Unset):

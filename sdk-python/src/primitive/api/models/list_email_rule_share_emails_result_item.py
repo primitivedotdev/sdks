@@ -15,6 +15,7 @@ from ..models.list_email_rule_share_emails_result_item_parse_status_type_2_type_
 from ..models.list_email_rule_share_emails_result_item_parse_status_type_3_type_1 import ListEmailRuleShareEmailsResultItemParseStatusType3Type1
 from typing import cast
 from uuid import UUID
+import datetime
 
 if TYPE_CHECKING:
   from ..models.list_email_rule_share_emails_result_item_automation_headers_type_0 import ListEmailRuleShareEmailsResultItemAutomationHeadersType0
@@ -61,6 +62,8 @@ class ListEmailRuleShareEmailsResultItem:
             interaction_hint (ListEmailRuleShareEmailsResultItemInteractionHint):
             interaction_kind (None | str):
             interaction_candidate (bool):
+            shared_at (datetime.datetime | None): When the share's rule first matched this email. The email was shared then
+                or shortly after. Null if that could not be read.
             delivery_report (ListEmailRuleShareEmailsResultItemDeliveryReportType0 | None | Unset):
             presence_control (ListEmailRuleShareEmailsResultItemPresenceControlType0 | None | Unset):
             sender_member (ListEmailRuleShareEmailsResultItemSenderMemberType0 | None | Unset):
@@ -111,6 +114,7 @@ class ListEmailRuleShareEmailsResultItem:
     interaction_hint: ListEmailRuleShareEmailsResultItemInteractionHint
     interaction_kind: None | str
     interaction_candidate: bool
+    shared_at: datetime.datetime | None
     delivery_report: ListEmailRuleShareEmailsResultItemDeliveryReportType0 | None | Unset = UNSET
     presence_control: ListEmailRuleShareEmailsResultItemPresenceControlType0 | None | Unset = UNSET
     sender_member: ListEmailRuleShareEmailsResultItemSenderMemberType0 | None | Unset = UNSET
@@ -211,6 +215,12 @@ class ListEmailRuleShareEmailsResultItem:
         interaction_kind = self.interaction_kind
 
         interaction_candidate = self.interaction_candidate
+
+        shared_at: None | str
+        if isinstance(self.shared_at, datetime.datetime):
+            shared_at = self.shared_at.isoformat()
+        else:
+            shared_at = self.shared_at
 
         delivery_report: dict[str, Any] | None | Unset
         if isinstance(self.delivery_report, Unset):
@@ -368,6 +378,7 @@ class ListEmailRuleShareEmailsResultItem:
             "interaction_hint": interaction_hint,
             "interaction_kind": interaction_kind,
             "interaction_candidate": interaction_candidate,
+            "shared_at": shared_at,
         })
         if delivery_report is not UNSET:
             field_dict["delivery_report"] = delivery_report
@@ -562,6 +573,24 @@ class ListEmailRuleShareEmailsResultItem:
 
 
         interaction_candidate = d.pop("interaction_candidate")
+
+        def _parse_shared_at(data: object) -> datetime.datetime | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                shared_at_type_0 = datetime.datetime.fromisoformat(data)
+
+
+
+                return shared_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None, data)
+
+        shared_at = _parse_shared_at(d.pop("shared_at"))
+
 
         def _parse_delivery_report(data: object) -> ListEmailRuleShareEmailsResultItemDeliveryReportType0 | None | Unset:
             if data is None:
@@ -860,6 +889,7 @@ class ListEmailRuleShareEmailsResultItem:
             interaction_hint=interaction_hint,
             interaction_kind=interaction_kind,
             interaction_candidate=interaction_candidate,
+            shared_at=shared_at,
             delivery_report=delivery_report,
             presence_control=presence_control,
             sender_member=sender_member,

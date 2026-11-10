@@ -133,11 +133,12 @@ def sync_detailed(
 
      Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from
     now on with the member who asked. Send no body to accept it as asked, or change it first with
-    english, tree and explanation together. Because this gives your mail to someone else, it is limited
-    to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused. Also needs
-    mail:send_as_member: a role that can only read this mailbox is refused. Needs mail:read, a
-    credential acting as a member with their full access (API keys, agent keys and narrowed tokens are
-    refused), and the email rules feature on the organization.
+    english and tree together (and an explanation, or the server writes one). Because this gives your
+    mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and
+    agent tokens are refused. Also needs mail:share_own (sharing your own mail through email rules,
+    which only shows it and never sends): a role without it is refused, whether or not it can send.
+    Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+    narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -178,11 +179,12 @@ def sync(
 
      Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from
     now on with the member who asked. Send no body to accept it as asked, or change it first with
-    english, tree and explanation together. Because this gives your mail to someone else, it is limited
-    to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused. Also needs
-    mail:send_as_member: a role that can only read this mailbox is refused. Needs mail:read, a
-    credential acting as a member with their full access (API keys, agent keys and narrowed tokens are
-    refused), and the email rules feature on the organization.
+    english and tree together (and an explanation, or the server writes one). Because this gives your
+    mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and
+    agent tokens are refused. Also needs mail:share_own (sharing your own mail through email rules,
+    which only shows it and never sends): a role without it is refused, whether or not it can send.
+    Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+    narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -218,11 +220,12 @@ async def asyncio_detailed(
 
      Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from
     now on with the member who asked. Send no body to accept it as asked, or change it first with
-    english, tree and explanation together. Because this gives your mail to someone else, it is limited
-    to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused. Also needs
-    mail:send_as_member: a role that can only read this mailbox is refused. Needs mail:read, a
-    credential acting as a member with their full access (API keys, agent keys and narrowed tokens are
-    refused), and the email rules feature on the organization.
+    english and tree together (and an explanation, or the server writes one). Because this gives your
+    mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and
+    agent tokens are refused. Also needs mail:share_own (sharing your own mail through email rules,
+    which only shows it and never sends): a role without it is refused, whether or not it can send.
+    Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+    narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -263,11 +266,12 @@ async def asyncio(
 
      Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from
     now on with the member who asked. Send no body to accept it as asked, or change it first with
-    english, tree and explanation together. Because this gives your mail to someone else, it is limited
-    to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused. Also needs
-    mail:send_as_member: a role that can only read this mailbox is refused. Needs mail:read, a
-    credential acting as a member with their full access (API keys, agent keys and narrowed tokens are
-    refused), and the email rules feature on the organization.
+    english and tree together (and an explanation, or the server writes one). Because this gives your
+    mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and
+    agent tokens are refused. Also needs mail:share_own (sharing your own mail through email rules,
+    which only shows it and never sends): a role without it is refused, whether or not it can send.
+    Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+    narrowed token), and the email rules feature.
 
     Args:
         id (UUID):

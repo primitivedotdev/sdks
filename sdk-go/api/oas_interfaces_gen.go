@@ -69,6 +69,10 @@ type CheckDomainDnsRes interface {
 	checkDomainDnsRes()
 }
 
+type CheckEmailRuleRequestTargetRes interface {
+	checkEmailRuleRequestTargetRes()
+}
+
 type CheckSendabilityRes interface {
 	checkSendabilityRes()
 }
@@ -195,6 +199,10 @@ type DeleteDomainRes interface {
 
 type DeleteEmailRes interface {
 	deleteEmailRes()
+}
+
+type DeleteEmailRuleRequestRes interface {
+	deleteEmailRuleRequestRes()
 }
 
 type DeleteEmailRuleRes interface {
@@ -383,6 +391,18 @@ type GetEmailRuleScopeRes interface {
 
 type GetEmailRuleShareRes interface {
 	getEmailRuleShareRes()
+}
+
+type GetEmailRuleVocabularyRes interface {
+	getEmailRuleVocabularyRes()
+}
+
+type GetEndpointRes interface {
+	getEndpointRes()
+}
+
+type GetEndpointSigningSecretRes interface {
+	getEndpointSigningSecretRes()
 }
 
 type GetFunctionDeploymentRes interface {
@@ -963,6 +983,10 @@ type RevokeOrganizationInvitationRes interface {
 
 type RevokeProjectInvitationRes interface {
 	revokeProjectInvitationRes()
+}
+
+type RotateEndpointSigningSecretRes interface {
+	rotateEndpointSigningSecretRes()
 }
 
 type RotateKeyRes interface {

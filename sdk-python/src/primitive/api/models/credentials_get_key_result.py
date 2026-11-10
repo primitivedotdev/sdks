@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.credentials_get_key_result_kind import CredentialsGetKeyResultKind
+from ..models.credentials_get_key_result_status import CredentialsGetKeyResultStatus
 from typing import cast
 
 if TYPE_CHECKING:
@@ -37,6 +38,10 @@ class CredentialsGetKeyResult:
             last_used_at (None | str):
             expires_at (None | str):
             suspended (bool):
+            status (CredentialsGetKeyResultStatus | Unset): Whether the key works now: active; suspended (refused until the
+                suspension is lifted); expired (refused since expires_at); or inactive, for an agent connection key whose
+                connection cannot act (not claimed, revoked, its domain not verified, or its owner no longer a member). A
+                revoked key is not listed. An endpoint's owner_key_status reports an expired key as suspended.
      """
 
     id: str
@@ -50,6 +55,7 @@ class CredentialsGetKeyResult:
     last_used_at: None | str
     expires_at: None | str
     suspended: bool
+    status: CredentialsGetKeyResultStatus | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -86,6 +92,11 @@ class CredentialsGetKeyResult:
 
         suspended = self.suspended
 
+        status: str | Unset = UNSET
+        if not isinstance(self.status, Unset):
+            status = self.status.value
+
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -102,6 +113,8 @@ class CredentialsGetKeyResult:
             "expires_at": expires_at,
             "suspended": suspended,
         })
+        if status is not UNSET:
+            field_dict["status"] = status
 
         return field_dict
 
@@ -175,6 +188,16 @@ class CredentialsGetKeyResult:
 
         suspended = d.pop("suspended")
 
+        _status = d.pop("status", UNSET)
+        status: CredentialsGetKeyResultStatus | Unset
+        if isinstance(_status,  Unset):
+            status = UNSET
+        else:
+            status = CredentialsGetKeyResultStatus(_status)
+
+
+
+
         credentials_get_key_result = cls(
             id=id,
             kind=kind,
@@ -187,6 +210,7 @@ class CredentialsGetKeyResult:
             last_used_at=last_used_at,
             expires_at=expires_at,
             suspended=suspended,
+            status=status,
         )
 
 

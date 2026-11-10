@@ -94,14 +94,14 @@ def sync_detailed(
 ) -> Response[ErrorResponse | ListEmailRuleResultsResponse200]:
     """ List every rule's result on an email
 
-     Every rule the caller can see and what it decided about this email: those that matched, those that
-    did not, and those that have not run on it, with what is known about them. A result names the
-    version of the rule that decided and carries that version's conditions and questions. A matched rule
-    with kind do_not_share keeps rules from sharing the email while it is active; anything shared before
-    then stays shared. Only a caller who can read the email gets an answer, and a rule the caller cannot
-    see is left out. At most 50 rules are listed, those with a result first; hidden counts the rest.
-    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
-    narrowed tokens are refused), and the email rules feature on the organization.
+     Every rule you can see and what it decided about this email (matched, not matched, or not run, with
+    what is known), in the words of the version that decided. A matched do_not_share rule keeps rules
+    from sharing the email while it is active; what was shared before then stays shared. Only a caller
+    who can read the email gets an answer. classification is what the classifier read from the email,
+    every fact as rule conditions read it, so you can see why a rule did or did not match. At most 50
+    rules are listed, those with a result first; hidden counts the rest. Needs mail:read, a member's own
+    credential with their full access (not an API key, agent key or narrowed token), and the email rules
+    feature.
 
     Args:
         id (UUID):
@@ -134,14 +134,14 @@ def sync(
 ) -> ErrorResponse | ListEmailRuleResultsResponse200 | None:
     """ List every rule's result on an email
 
-     Every rule the caller can see and what it decided about this email: those that matched, those that
-    did not, and those that have not run on it, with what is known about them. A result names the
-    version of the rule that decided and carries that version's conditions and questions. A matched rule
-    with kind do_not_share keeps rules from sharing the email while it is active; anything shared before
-    then stays shared. Only a caller who can read the email gets an answer, and a rule the caller cannot
-    see is left out. At most 50 rules are listed, those with a result first; hidden counts the rest.
-    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
-    narrowed tokens are refused), and the email rules feature on the organization.
+     Every rule you can see and what it decided about this email (matched, not matched, or not run, with
+    what is known), in the words of the version that decided. A matched do_not_share rule keeps rules
+    from sharing the email while it is active; what was shared before then stays shared. Only a caller
+    who can read the email gets an answer. classification is what the classifier read from the email,
+    every fact as rule conditions read it, so you can see why a rule did or did not match. At most 50
+    rules are listed, those with a result first; hidden counts the rest. Needs mail:read, a member's own
+    credential with their full access (not an API key, agent key or narrowed token), and the email rules
+    feature.
 
     Args:
         id (UUID):
@@ -169,14 +169,14 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | ListEmailRuleResultsResponse200]:
     """ List every rule's result on an email
 
-     Every rule the caller can see and what it decided about this email: those that matched, those that
-    did not, and those that have not run on it, with what is known about them. A result names the
-    version of the rule that decided and carries that version's conditions and questions. A matched rule
-    with kind do_not_share keeps rules from sharing the email while it is active; anything shared before
-    then stays shared. Only a caller who can read the email gets an answer, and a rule the caller cannot
-    see is left out. At most 50 rules are listed, those with a result first; hidden counts the rest.
-    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
-    narrowed tokens are refused), and the email rules feature on the organization.
+     Every rule you can see and what it decided about this email (matched, not matched, or not run, with
+    what is known), in the words of the version that decided. A matched do_not_share rule keeps rules
+    from sharing the email while it is active; what was shared before then stays shared. Only a caller
+    who can read the email gets an answer. classification is what the classifier read from the email,
+    every fact as rule conditions read it, so you can see why a rule did or did not match. At most 50
+    rules are listed, those with a result first; hidden counts the rest. Needs mail:read, a member's own
+    credential with their full access (not an API key, agent key or narrowed token), and the email rules
+    feature.
 
     Args:
         id (UUID):
@@ -209,14 +209,14 @@ async def asyncio(
 ) -> ErrorResponse | ListEmailRuleResultsResponse200 | None:
     """ List every rule's result on an email
 
-     Every rule the caller can see and what it decided about this email: those that matched, those that
-    did not, and those that have not run on it, with what is known about them. A result names the
-    version of the rule that decided and carries that version's conditions and questions. A matched rule
-    with kind do_not_share keeps rules from sharing the email while it is active; anything shared before
-    then stays shared. Only a caller who can read the email gets an answer, and a rule the caller cannot
-    see is left out. At most 50 rules are listed, those with a result first; hidden counts the rest.
-    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
-    narrowed tokens are refused), and the email rules feature on the organization.
+     Every rule you can see and what it decided about this email (matched, not matched, or not run, with
+    what is known), in the words of the version that decided. A matched do_not_share rule keeps rules
+    from sharing the email while it is active; what was shared before then stays shared. Only a caller
+    who can read the email gets an answer. classification is what the classifier read from the email,
+    every fact as rule conditions read it, so you can see why a rule did or did not match. At most 50
+    rules are listed, those with a result first; hidden counts the rest. Needs mail:read, a member's own
+    credential with their full access (not an API key, agent key or narrowed token), and the email rules
+    feature.
 
     Args:
         id (UUID):

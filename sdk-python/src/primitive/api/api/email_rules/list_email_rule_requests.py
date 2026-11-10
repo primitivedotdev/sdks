@@ -127,9 +127,9 @@ def sync_detailed(
      Rule requests, newest first: those made to you (box incoming, the default), those you made
     (outgoing), or every one you can see (all). Pending ones by default; status decided lists accepted,
     declined and withdrawn ones, and any lists both. A request is visible to the member who made it, the
-    member it was made to, and the organization's owners and admins. Needs mail:read, a credential
-    acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
-    and the email rules feature on the organization.
+    member it was made to, and the organization's owners and admins. Needs mail:read, a member's own
+    credential with their full access (not an API key, agent key or narrowed token), and the email rules
+    feature.
 
     Args:
         box (ListEmailRuleRequestsBox | Unset): incoming: requests made to you; outgoing: requests
@@ -177,9 +177,9 @@ def sync(
      Rule requests, newest first: those made to you (box incoming, the default), those you made
     (outgoing), or every one you can see (all). Pending ones by default; status decided lists accepted,
     declined and withdrawn ones, and any lists both. A request is visible to the member who made it, the
-    member it was made to, and the organization's owners and admins. Needs mail:read, a credential
-    acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
-    and the email rules feature on the organization.
+    member it was made to, and the organization's owners and admins. Needs mail:read, a member's own
+    credential with their full access (not an API key, agent key or narrowed token), and the email rules
+    feature.
 
     Args:
         box (ListEmailRuleRequestsBox | Unset): incoming: requests made to you; outgoing: requests
@@ -222,9 +222,9 @@ async def asyncio_detailed(
      Rule requests, newest first: those made to you (box incoming, the default), those you made
     (outgoing), or every one you can see (all). Pending ones by default; status decided lists accepted,
     declined and withdrawn ones, and any lists both. A request is visible to the member who made it, the
-    member it was made to, and the organization's owners and admins. Needs mail:read, a credential
-    acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
-    and the email rules feature on the organization.
+    member it was made to, and the organization's owners and admins. Needs mail:read, a member's own
+    credential with their full access (not an API key, agent key or narrowed token), and the email rules
+    feature.
 
     Args:
         box (ListEmailRuleRequestsBox | Unset): incoming: requests made to you; outgoing: requests
@@ -272,9 +272,9 @@ async def asyncio(
      Rule requests, newest first: those made to you (box incoming, the default), those you made
     (outgoing), or every one you can see (all). Pending ones by default; status decided lists accepted,
     declined and withdrawn ones, and any lists both. A request is visible to the member who made it, the
-    member it was made to, and the organization's owners and admins. Needs mail:read, a credential
-    acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
-    and the email rules feature on the organization.
+    member it was made to, and the organization's owners and admins. Needs mail:read, a member's own
+    credential with their full access (not an API key, agent key or narrowed token), and the email rules
+    feature.
 
     Args:
         box (ListEmailRuleRequestsBox | Unset): incoming: requests made to you; outgoing: requests

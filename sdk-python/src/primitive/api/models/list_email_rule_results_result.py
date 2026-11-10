@@ -11,6 +11,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
+  from ..models.list_email_rule_results_result_classification_type_0 import ListEmailRuleResultsResultClassificationType0
   from ..models.list_email_rule_results_result_rules_item import ListEmailRuleResultsResultRulesItem
 
 
@@ -28,10 +29,14 @@ class ListEmailRuleResultsResult:
             rules (list[ListEmailRuleResultsResultRulesItem]): Every rule the caller can see: those that matched this email,
                 then those that did not, then those that have not run on it; newest rule first within each.
             hidden (int): How many more rules the caller can see that are not listed.
+            classification (ListEmailRuleResultsResultClassificationType0 | None | Unset): What the classifier read from
+                this email (one classification per vocabulary); null when it has none (not classified, or never will be), or
+                while the email's content is withheld, discarded or failed to parse.
      """
 
     rules: list[ListEmailRuleResultsResultRulesItem]
     hidden: int
+    classification: ListEmailRuleResultsResultClassificationType0 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -39,6 +44,7 @@ class ListEmailRuleResultsResult:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.list_email_rule_results_result_classification_type_0 import ListEmailRuleResultsResultClassificationType0 # noqa: PLC0415
         from ..models.list_email_rule_results_result_rules_item import ListEmailRuleResultsResultRulesItem # noqa: PLC0415
         rules = []
         for rules_item_data in self.rules:
@@ -49,6 +55,14 @@ class ListEmailRuleResultsResult:
 
         hidden = self.hidden
 
+        classification: dict[str, Any] | None | Unset
+        if isinstance(self.classification, Unset):
+            classification = UNSET
+        elif isinstance(self.classification, ListEmailRuleResultsResultClassificationType0):
+            classification = self.classification.to_dict()
+        else:
+            classification = self.classification
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -56,6 +70,8 @@ class ListEmailRuleResultsResult:
             "rules": rules,
             "hidden": hidden,
         })
+        if classification is not UNSET:
+            field_dict["classification"] = classification
 
         return field_dict
 
@@ -63,6 +79,7 @@ class ListEmailRuleResultsResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.list_email_rule_results_result_classification_type_0 import ListEmailRuleResultsResultClassificationType0 # noqa: PLC0415
         from ..models.list_email_rule_results_result_rules_item import ListEmailRuleResultsResultRulesItem # noqa: PLC0415
         d = dict(src_dict)
         rules = []
@@ -77,9 +94,30 @@ class ListEmailRuleResultsResult:
 
         hidden = d.pop("hidden")
 
+        def _parse_classification(data: object) -> ListEmailRuleResultsResultClassificationType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                classification_type_0 = ListEmailRuleResultsResultClassificationType0.from_dict(data)
+
+
+
+                return classification_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(ListEmailRuleResultsResultClassificationType0 | None | Unset, data)
+
+        classification = _parse_classification(d.pop("classification", UNSET))
+
+
         list_email_rule_results_result = cls(
             rules=rules,
             hidden=hidden,
+            classification=classification,
         )
 
 

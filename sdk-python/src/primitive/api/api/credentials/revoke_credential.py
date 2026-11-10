@@ -19,10 +19,14 @@ from typing import cast
 def _get_kwargs(
     *,
     body: CredentialsRevokeCredentialInput,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(primitive_step_up, Unset):
+        headers["Primitive-Step-Up"] = primitive_step_up
+
     if not isinstance(idempotency_key, Unset):
         headers["Idempotency-Key"] = idempotency_key
 
@@ -115,6 +119,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CredentialsRevokeCredentialInput,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | RevokeCredentialResponse200]:
@@ -123,14 +128,19 @@ def sync_detailed(
      Revoke one credential by kind and id. A Function key is rotated, never revoked (409 rotate_instead).
     An API key is revoked only by a person whose own access covers the key's access (an owner covers
     every key); otherwise 403 grant_forbidden, details.reason target_not_covered. What the credential
-    set up keeps working and is listed in standing_objects for review. Needs the organization's
-    credential features to be enabled; while they are not, this answers 404 feature_disabled, with
-    details.feature naming the feature. Only Primitive turns these on.
+    set up keeps working and is listed in standing_objects for review. The person's own Primitive CLI
+    login revokes an API key (kind org_key) as the person, with no step-up unless the organization's
+    credential policy sets cli_writes_require_approval (then it takes a keys.create step-up); every
+    other kind (a connected key named as org_key included, 403 grant_forbidden target_not_covered), and
+    every other app even with a step-up, is refused outside the dashboard (403). Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
-    Person only: a dashboard session. The person's role must hold keys:manage. API keys, agent
-    connection keys and agents are refused.
+    Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
+    person's role must hold keys:manage. API keys, agent connection keys and agents are refused.
 
     Args:
+        primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (CredentialsRevokeCredentialInput):
 
@@ -145,6 +155,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+primitive_step_up=primitive_step_up,
 idempotency_key=idempotency_key,
 
     )
@@ -159,6 +170,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: CredentialsRevokeCredentialInput,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | RevokeCredentialResponse200 | None:
@@ -167,14 +179,19 @@ def sync(
      Revoke one credential by kind and id. A Function key is rotated, never revoked (409 rotate_instead).
     An API key is revoked only by a person whose own access covers the key's access (an owner covers
     every key); otherwise 403 grant_forbidden, details.reason target_not_covered. What the credential
-    set up keeps working and is listed in standing_objects for review. Needs the organization's
-    credential features to be enabled; while they are not, this answers 404 feature_disabled, with
-    details.feature naming the feature. Only Primitive turns these on.
+    set up keeps working and is listed in standing_objects for review. The person's own Primitive CLI
+    login revokes an API key (kind org_key) as the person, with no step-up unless the organization's
+    credential policy sets cli_writes_require_approval (then it takes a keys.create step-up); every
+    other kind (a connected key named as org_key included, 403 grant_forbidden target_not_covered), and
+    every other app even with a step-up, is refused outside the dashboard (403). Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
-    Person only: a dashboard session. The person's role must hold keys:manage. API keys, agent
-    connection keys and agents are refused.
+    Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
+    person's role must hold keys:manage. API keys, agent connection keys and agents are refused.
 
     Args:
+        primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (CredentialsRevokeCredentialInput):
 
@@ -190,6 +207,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+primitive_step_up=primitive_step_up,
 idempotency_key=idempotency_key,
 
     ).parsed
@@ -198,6 +216,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: CredentialsRevokeCredentialInput,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | RevokeCredentialResponse200]:
@@ -206,14 +225,19 @@ async def asyncio_detailed(
      Revoke one credential by kind and id. A Function key is rotated, never revoked (409 rotate_instead).
     An API key is revoked only by a person whose own access covers the key's access (an owner covers
     every key); otherwise 403 grant_forbidden, details.reason target_not_covered. What the credential
-    set up keeps working and is listed in standing_objects for review. Needs the organization's
-    credential features to be enabled; while they are not, this answers 404 feature_disabled, with
-    details.feature naming the feature. Only Primitive turns these on.
+    set up keeps working and is listed in standing_objects for review. The person's own Primitive CLI
+    login revokes an API key (kind org_key) as the person, with no step-up unless the organization's
+    credential policy sets cli_writes_require_approval (then it takes a keys.create step-up); every
+    other kind (a connected key named as org_key included, 403 grant_forbidden target_not_covered), and
+    every other app even with a step-up, is refused outside the dashboard (403). Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
-    Person only: a dashboard session. The person's role must hold keys:manage. API keys, agent
-    connection keys and agents are refused.
+    Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
+    person's role must hold keys:manage. API keys, agent connection keys and agents are refused.
 
     Args:
+        primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (CredentialsRevokeCredentialInput):
 
@@ -228,6 +252,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+primitive_step_up=primitive_step_up,
 idempotency_key=idempotency_key,
 
     )
@@ -242,6 +267,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: CredentialsRevokeCredentialInput,
+    primitive_step_up: str | Unset = UNSET,
     idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | RevokeCredentialResponse200 | None:
@@ -250,14 +276,19 @@ async def asyncio(
      Revoke one credential by kind and id. A Function key is rotated, never revoked (409 rotate_instead).
     An API key is revoked only by a person whose own access covers the key's access (an owner covers
     every key); otherwise 403 grant_forbidden, details.reason target_not_covered. What the credential
-    set up keeps working and is listed in standing_objects for review. Needs the organization's
-    credential features to be enabled; while they are not, this answers 404 feature_disabled, with
-    details.feature naming the feature. Only Primitive turns these on.
+    set up keeps working and is listed in standing_objects for review. The person's own Primitive CLI
+    login revokes an API key (kind org_key) as the person, with no step-up unless the organization's
+    credential policy sets cli_writes_require_approval (then it takes a keys.create step-up); every
+    other kind (a connected key named as org_key included, 403 grant_forbidden target_not_covered), and
+    every other app even with a step-up, is refused outside the dashboard (403). Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
-    Person only: a dashboard session. The person's role must hold keys:manage. API keys, agent
-    connection keys and agents are refused.
+    Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
+    person's role must hold keys:manage. API keys, agent connection keys and agents are refused.
 
     Args:
+        primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (CredentialsRevokeCredentialInput):
 
@@ -273,6 +304,7 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+primitive_step_up=primitive_step_up,
 idempotency_key=idempotency_key,
 
     )).parsed

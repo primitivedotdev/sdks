@@ -104,6 +104,15 @@ no longer `UNSET` in Python, plain or `Nil*` fields rather than `Opt*` in Go):
   `listAgentConnections`, `listDefaultNetworkMembers` and
   `listDefaultNetworkAgents`: `meta`, with `limit` and a nullable `cursor`.
   In Go, `Meta` is the plain meta type rather than an `Opt...` wrapper.
+- The email rule lists `listEmailRules`, `listEmailRuleRequests`,
+  `listEmailRuleShares`, `listGivenEmailRuleShares`,
+  `listEmailRuleShareEmails` and `listEmailRuleDecisions`: `meta`
+  (`CursorPageMeta`, with `limit` and a nullable `cursor`).
+  `listEmailRuleVersions` carries it too, except when `versions` is given.
+- `DeliverySummary`, which `listDeliveries` and `getDelivery` return:
+  `latest_attempt`, `next_attempt_at`, `response_status` and
+  `response_body`.
+- `listEmailRuleShareEmails` items: `shared_at`.
 
 #### Nullable values
 
@@ -172,6 +181,122 @@ shapes. Among them: `MemoryScopeType0` and `MemoryScopeType1` are
 `InboxStatusFunctionSummary` and `InboxStatusRecentEmailSummary` are
 `InboxStatusEndpoints`, `InboxStatusFunctions` and `InboxStatusRecentEmails`.
 
+#### Renamed Email Rules types in Python and Go
+
+The API document now defines the Email Rules objects once, as named
+components, and references them where they recur. The generated Python and
+Go types for those objects are named after the component instead of after
+each operation and field. Shapes are unchanged apart from the new fields
+listed under Additions, and each new name replaces every old name listed with
+it. Request bodies' trees use `EmailRuleTreeInput` (its `questions` may be left
+out) and answers' trees use `EmailRuleTree`. In Go, `createEmailRule` and
+`updateEmailRule` answer with `EmailRuleWritten`, `getEmailRule` with
+`EmailRuleRead`, the rule request reads with `EmailRuleRequest` and
+`getEmailRuleShare` with `EmailRuleShare`, and the `Opt`, `OptNil` and `Nil`
+wrappers follow their types. Python keeps each operation's top-level result
+class under its old name, and also exports the `EmailRuleRead` and
+`EmailRuleWritten` models and their enums, which those result classes mirror.
+
+Other changes to existing email rule types:
+
+- `explanation` is optional on `createEmailRule` and
+  `createEmailRuleRequest` bodies: the server writes one when it is left out.
+  In Go, `Explanation` on `CreateEmailRuleRequest` and
+  `CreateEmailRuleRequestRequest` is an `OptString`; in Python it moves after
+  the required fields.
+- Go: `ListEmailRuleVersionsParams.Versions` is an `OptString`.
+
+Python (`primitive.api.models`):
+
+- `EmailRule` replaces `ListEmailRulesResultItem`.
+- `EmailRuleEvaluationScope` replaces `ListEmailRulesResultItemEvaluationScope`.
+- `EmailRuleKind` replaces `ListEmailRulesResultItemKind`.
+- `EmailRuleRequest` replaces `AcceptEmailRuleRequestResultRequest`, `ListEmailRuleRequestsResultItem`.
+- `EmailRuleRequestProposedVia` replaces `AcceptEmailRuleRequestResultRequestProposedVia`, `ListEmailRuleRequestsResultItemProposedVia`.
+- `EmailRuleRequestProposer` replaces `AcceptEmailRuleRequestResultRequestProposer`, `CreateEmailRuleRequestResultProposer`, `DeclineEmailRuleRequestResultProposer`, `GetEmailRuleRequestResultProposer`, `ListEmailRuleRequestsResultItemProposer`, `WithdrawEmailRuleRequestResultProposer`.
+- `EmailRuleRequestStatus` replaces `AcceptEmailRuleRequestResultRequestStatus`, `ListEmailRuleRequestsResultItemStatus`.
+- `EmailRuleRequestTarget` replaces `AcceptEmailRuleRequestResultRequestTarget`, `CreateEmailRuleRequestResultTarget`, `DeclineEmailRuleRequestResultTarget`, `GetEmailRuleRequestResultTarget`, `ListEmailRuleRequestsResultItemTarget`, `WithdrawEmailRuleRequestResultTarget`.
+- `EmailRuleScopeNames` replaces `AcceptEmailRuleRequestResultRuleScopeSelectionType0`, `CreateEmailRuleResultScopeSelectionType0`, `GetEmailRuleResultScopeSelectionType0`, `GetEmailRuleScopeResultNoLongerReadable`, `GetEmailRuleScopeResultScopeSelectionType0`, `ListEmailRulesResultItemScopeSelectionType0`, `UpdateEmailRuleResultScopeSelectionType0`.
+- `EmailRuleScopeSelection` replaces `CreateEmailRuleRequestScopeSelection`, `TestEmailRuleOnSampleRequestScopeSelection`, `TestEmailRuleRequestScopeSelection`, `UpdateEmailRuleRequestScopeSelection`.
+- `EmailRuleShare` replaces `AcceptEmailRuleRequestResultShare`, `ListEmailRuleSharesResultItem`, `ListGivenEmailRuleSharesResultItem`.
+- `EmailRuleShareBeneficiary` replaces `AcceptEmailRuleRequestResultShareBeneficiary`, `GetEmailRuleShareResultBeneficiary`, `ListEmailRuleSharesResultItemBeneficiary`, `ListGivenEmailRuleSharesResultItemBeneficiary`.
+- `EmailRuleShareEndReasonType1` replaces `AcceptEmailRuleRequestResultShareEndReasonType1`, `ListEmailRuleSharesResultItemEndReasonType1`, `ListGivenEmailRuleSharesResultItemEndReasonType1`.
+- `EmailRuleShareEndReasonType2Type1` replaces `AcceptEmailRuleRequestResultShareEndReasonType2Type1`, `ListEmailRuleSharesResultItemEndReasonType2Type1`, `ListGivenEmailRuleSharesResultItemEndReasonType2Type1`.
+- `EmailRuleShareEndReasonType3Type1` replaces `AcceptEmailRuleRequestResultShareEndReasonType3Type1`, `ListEmailRuleSharesResultItemEndReasonType3Type1`, `ListGivenEmailRuleSharesResultItemEndReasonType3Type1`.
+- `EmailRuleShareGranter` replaces `AcceptEmailRuleRequestResultShareGranter`, `GetEmailRuleShareResultGranter`, `ListEmailRuleSharesResultItemGranter`, `ListGivenEmailRuleSharesResultItemGranter`.
+- `EmailRuleShareRuleType0` replaces `AcceptEmailRuleRequestResultShareRuleType0`, `ListEmailRuleSharesResultItemRuleType0`, `ListGivenEmailRuleSharesResultItemRuleType0`.
+- `EmailRuleShareRuleType0State` replaces `AcceptEmailRuleRequestResultShareRuleType0State`, `ListEmailRuleSharesResultItemRuleType0State`, `ListGivenEmailRuleSharesResultItemRuleType0State`.
+- `EmailRuleState` replaces `ListEmailRulesResultItemState`.
+- `EmailRuleTree` replaces `AcceptEmailRuleRequestResultRequestTree`, `AcceptEmailRuleRequestResultRuleCurrentType0Tree`, `CompileEmailRuleResultTree`, `CreateEmailRuleRequestResultTree`, `CreateEmailRuleResultCurrentType0Tree`, `DeclineEmailRuleRequestResultTree`, `GetEmailRuleRequestResultTree`, `GetEmailRuleResultCurrentType0Tree`, `ListEmailRuleRequestsResultItemTree`, `ListEmailRuleResultsResultRulesItemDecisionType0TreeType0`, `ListEmailRuleVersionsResultItemTree`, `UpdateEmailRuleResultCurrentType0Tree`, `WithdrawEmailRuleRequestResultTree`.
+- `EmailRuleTreeInput` replaces `AcceptEmailRuleRequestRequestTree`, `CreateEmailRuleRequestRequestTree`, `CreateEmailRuleRequestTree`, `TestEmailRuleOnSampleRequestTree`, `TestEmailRuleRequestTree`, `UpdateEmailRuleRequestTree`.
+- `EmailRuleTreeInputVersion` replaces `AcceptEmailRuleRequestRequestTreeVersion`, `CreateEmailRuleRequestRequestTreeVersion`, `CreateEmailRuleRequestTreeVersion`, `TestEmailRuleOnSampleRequestTreeVersion`, `TestEmailRuleRequestTreeVersion`, `UpdateEmailRuleRequestTreeVersion`.
+- `EmailRuleTreeInputWhen` replaces `AcceptEmailRuleRequestRequestTreeWhen`, `CreateEmailRuleRequestRequestTreeWhen`, `CreateEmailRuleRequestTreeWhen`, `TestEmailRuleOnSampleRequestTreeWhen`, `TestEmailRuleRequestTreeWhen`, `UpdateEmailRuleRequestTreeWhen`.
+- `EmailRuleTreeVersion` replaces `AcceptEmailRuleRequestResultRequestTreeVersion`, `AcceptEmailRuleRequestResultRuleCurrentType0TreeVersion`, `CompileEmailRuleResultTreeVersion`, `CreateEmailRuleRequestResultTreeVersion`, `CreateEmailRuleResultCurrentType0TreeVersion`, `DeclineEmailRuleRequestResultTreeVersion`, `GetEmailRuleRequestResultTreeVersion`, `GetEmailRuleResultCurrentType0TreeVersion`, `ListEmailRuleRequestsResultItemTreeVersion`, `ListEmailRuleResultsResultRulesItemDecisionType0TreeType0Version`, `ListEmailRuleVersionsResultItemTreeVersion`, `UpdateEmailRuleResultCurrentType0TreeVersion`, `WithdrawEmailRuleRequestResultTreeVersion`.
+- `EmailRuleTreeWhen` replaces `AcceptEmailRuleRequestResultRequestTreeWhen`, `AcceptEmailRuleRequestResultRuleCurrentType0TreeWhen`, `CompileEmailRuleResultTreeWhen`, `CreateEmailRuleRequestResultTreeWhen`, `CreateEmailRuleResultCurrentType0TreeWhen`, `DeclineEmailRuleRequestResultTreeWhen`, `GetEmailRuleRequestResultTreeWhen`, `GetEmailRuleResultCurrentType0TreeWhen`, `ListEmailRuleRequestsResultItemTreeWhen`, `ListEmailRuleResultsResultRulesItemDecisionType0TreeType0When`, `ListEmailRuleVersionsResultItemTreeWhen`, `UpdateEmailRuleResultCurrentType0TreeWhen`, `WithdrawEmailRuleRequestResultTreeWhen`.
+- `EmailRuleVersion` replaces `AcceptEmailRuleRequestResultRuleCurrentType0`, `CreateEmailRuleResultCurrentType0`, `GetEmailRuleResultCurrentType0`, `ListEmailRuleVersionsResultItem`, `UpdateEmailRuleResultCurrentType0`.
+- `EmailRuleVersionSql` replaces `AcceptEmailRuleRequestResultRuleCurrentType0Sql`, `CreateEmailRuleResultCurrentType0Sql`, `GetEmailRuleResultCurrentType0Sql`, `ListEmailRuleVersionsResultItemSql`, `UpdateEmailRuleResultCurrentType0Sql`.
+- `EmailRuleWithVersion` replaces `AcceptEmailRuleRequestResultRule`.
+- `EmailRuleWithVersionEvaluationScope` replaces `AcceptEmailRuleRequestResultRuleEvaluationScope`.
+- `EmailRuleWithVersionKind` replaces `AcceptEmailRuleRequestResultRuleKind`.
+- `EmailRuleWithVersionState` replaces `AcceptEmailRuleRequestResultRuleState`.
+
+Go (package `api`):
+
+- `EmailRule` replaces `ListEmailRulesResultItem`.
+- `EmailRuleEvaluationScope` replaces `ListEmailRulesResultItemEvaluationScope`.
+- `EmailRuleKind` replaces `ListEmailRulesResultItemKind`.
+- `EmailRuleRead` replaces `GetEmailRuleResult`.
+- `EmailRuleReadEvaluationScope` replaces `GetEmailRuleResultEvaluationScope`.
+- `EmailRuleReadKind` replaces `GetEmailRuleResultKind`.
+- `EmailRuleReadState` replaces `GetEmailRuleResultState`.
+- `EmailRuleRequest` replaces `AcceptEmailRuleRequestResultRequest`, `DeclineEmailRuleRequestResult`, `GetEmailRuleRequestResult`, `ListEmailRuleRequestsResultItem`, `WithdrawEmailRuleRequestResult`.
+- `EmailRuleRequestProposedVia` replaces `AcceptEmailRuleRequestResultRequestProposedVia`, `DeclineEmailRuleRequestResultProposedVia`, `GetEmailRuleRequestResultProposedVia`, `ListEmailRuleRequestsResultItemProposedVia`, `WithdrawEmailRuleRequestResultProposedVia`.
+- `EmailRuleRequestProposer` replaces `AcceptEmailRuleRequestResultRequestProposer`, `CreateEmailRuleRequestResultProposer`, `DeclineEmailRuleRequestResultProposer`, `GetEmailRuleRequestResultProposer`, `ListEmailRuleRequestsResultItemProposer`, `WithdrawEmailRuleRequestResultProposer`.
+- `EmailRuleRequestStatus` replaces `AcceptEmailRuleRequestResultRequestStatus`, `DeclineEmailRuleRequestResultStatus`, `GetEmailRuleRequestResultStatus`, `ListEmailRuleRequestsResultItemStatus`, `WithdrawEmailRuleRequestResultStatus`.
+- `EmailRuleRequestTarget` replaces `AcceptEmailRuleRequestResultRequestTarget`, `CreateEmailRuleRequestResultTarget`, `DeclineEmailRuleRequestResultTarget`, `GetEmailRuleRequestResultTarget`, `ListEmailRuleRequestsResultItemTarget`, `WithdrawEmailRuleRequestResultTarget`.
+- `EmailRuleScopeNames` replaces `AcceptEmailRuleRequestResultRuleScopeSelection`, `CreateEmailRuleResultScopeSelection`, `GetEmailRuleResultScopeSelection`, `GetEmailRuleScopeResultNoLongerReadable`, `GetEmailRuleScopeResultScopeSelection`, `ListEmailRulesResultItemScopeSelection`, `UpdateEmailRuleResultScopeSelection`.
+- `EmailRuleScopeSelection` replaces `CreateEmailRuleRequestScopeSelection`, `TestEmailRuleOnSampleRequestScopeSelection`, `TestEmailRuleRequestScopeSelection`, `UpdateEmailRuleRequestScopeSelection`.
+- `EmailRuleShare` replaces `AcceptEmailRuleRequestResultShare`, `GetEmailRuleShareResult`, `ListEmailRuleSharesResultItem`, `ListGivenEmailRuleSharesResultItem`.
+- `EmailRuleShareBeneficiary` replaces `AcceptEmailRuleRequestResultShareBeneficiary`, `GetEmailRuleShareResultBeneficiary`, `ListEmailRuleSharesResultItemBeneficiary`, `ListGivenEmailRuleSharesResultItemBeneficiary`.
+- `EmailRuleShareEndReason` replaces `AcceptEmailRuleRequestResultShareEndReason`, `GetEmailRuleShareResultEndReason`, `ListEmailRuleSharesResultItemEndReason`, `ListGivenEmailRuleSharesResultItemEndReason`.
+- `EmailRuleShareGranter` replaces `AcceptEmailRuleRequestResultShareGranter`, `GetEmailRuleShareResultGranter`, `ListEmailRuleSharesResultItemGranter`, `ListGivenEmailRuleSharesResultItemGranter`.
+- `EmailRuleShareRule` replaces `AcceptEmailRuleRequestResultShareRule`, `GetEmailRuleShareResultRule`, `ListEmailRuleSharesResultItemRule`, `ListGivenEmailRuleSharesResultItemRule`.
+- `EmailRuleShareRuleState` replaces `AcceptEmailRuleRequestResultShareRuleState`, `GetEmailRuleShareResultRuleState`, `ListEmailRuleSharesResultItemRuleState`, `ListGivenEmailRuleSharesResultItemRuleState`.
+- `EmailRuleState` replaces `ListEmailRulesResultItemState`.
+- `EmailRuleTree` replaces `AcceptEmailRuleRequestResultRequestTree`, `AcceptEmailRuleRequestResultRuleCurrentTree`, `CompileEmailRuleResultTree`, `CreateEmailRuleRequestResultTree`, `CreateEmailRuleResultCurrentTree`, `DeclineEmailRuleRequestResultTree`, `GetEmailRuleRequestResultTree`, `GetEmailRuleResultCurrentTree`, `ListEmailRuleRequestsResultItemTree`, `ListEmailRuleResultsResultRulesItemDecisionTree`, `ListEmailRuleVersionsResultItemTree`, `UpdateEmailRuleResultCurrentTree`, `WithdrawEmailRuleRequestResultTree`.
+- `EmailRuleTreeInput` replaces `AcceptEmailRuleRequestRequestTree`, `CreateEmailRuleRequestRequestTree`, `CreateEmailRuleRequestTree`, `TestEmailRuleOnSampleRequestTree`, `TestEmailRuleRequestTree`, `UpdateEmailRuleRequestTree`.
+- `EmailRuleTreeInputVersion` replaces `AcceptEmailRuleRequestRequestTreeVersion`, `CreateEmailRuleRequestRequestTreeVersion`, `CreateEmailRuleRequestTreeVersion`, `TestEmailRuleOnSampleRequestTreeVersion`, `TestEmailRuleRequestTreeVersion`, `UpdateEmailRuleRequestTreeVersion`.
+- `EmailRuleTreeInputWhen` replaces `AcceptEmailRuleRequestRequestTreeWhen`, `CreateEmailRuleRequestRequestTreeWhen`, `CreateEmailRuleRequestTreeWhen`, `TestEmailRuleOnSampleRequestTreeWhen`, `TestEmailRuleRequestTreeWhen`, `UpdateEmailRuleRequestTreeWhen`.
+- `EmailRuleTreeVersion` replaces `AcceptEmailRuleRequestResultRequestTreeVersion`, `AcceptEmailRuleRequestResultRuleCurrentTreeVersion`, `CompileEmailRuleResultTreeVersion`, `CreateEmailRuleRequestResultTreeVersion`, `CreateEmailRuleResultCurrentTreeVersion`, `DeclineEmailRuleRequestResultTreeVersion`, `GetEmailRuleRequestResultTreeVersion`, `GetEmailRuleResultCurrentTreeVersion`, `ListEmailRuleRequestsResultItemTreeVersion`, `ListEmailRuleResultsResultRulesItemDecisionTreeVersion`, `ListEmailRuleVersionsResultItemTreeVersion`, `UpdateEmailRuleResultCurrentTreeVersion`, `WithdrawEmailRuleRequestResultTreeVersion`.
+- `EmailRuleTreeWhen` replaces `AcceptEmailRuleRequestResultRequestTreeWhen`, `AcceptEmailRuleRequestResultRuleCurrentTreeWhen`, `CompileEmailRuleResultTreeWhen`, `CreateEmailRuleRequestResultTreeWhen`, `CreateEmailRuleResultCurrentTreeWhen`, `DeclineEmailRuleRequestResultTreeWhen`, `GetEmailRuleRequestResultTreeWhen`, `GetEmailRuleResultCurrentTreeWhen`, `ListEmailRuleRequestsResultItemTreeWhen`, `ListEmailRuleResultsResultRulesItemDecisionTreeWhen`, `ListEmailRuleVersionsResultItemTreeWhen`, `UpdateEmailRuleResultCurrentTreeWhen`, `WithdrawEmailRuleRequestResultTreeWhen`.
+- `EmailRuleVersion` replaces `AcceptEmailRuleRequestResultRuleCurrent`, `CreateEmailRuleResultCurrent`, `GetEmailRuleResultCurrent`, `ListEmailRuleVersionsResultItem`, `UpdateEmailRuleResultCurrent`.
+- `EmailRuleVersionSQL` replaces `AcceptEmailRuleRequestResultRuleCurrentSQL`, `CreateEmailRuleResultCurrentSQL`, `GetEmailRuleResultCurrentSQL`, `ListEmailRuleVersionsResultItemSQL`, `UpdateEmailRuleResultCurrentSQL`.
+- `EmailRuleWithVersion` replaces `AcceptEmailRuleRequestResultRule`.
+- `EmailRuleWithVersionEvaluationScope` replaces `AcceptEmailRuleRequestResultRuleEvaluationScope`.
+- `EmailRuleWithVersionKind` replaces `AcceptEmailRuleRequestResultRuleKind`.
+- `EmailRuleWithVersionState` replaces `AcceptEmailRuleRequestResultRuleState`.
+- `EmailRuleWritten` replaces `CreateEmailRuleResult`, `UpdateEmailRuleResult`.
+- `EmailRuleWrittenEvaluationScope` replaces `CreateEmailRuleResultEvaluationScope`, `UpdateEmailRuleResultEvaluationScope`.
+- `EmailRuleWrittenKind` replaces `CreateEmailRuleResultKind`, `UpdateEmailRuleResultKind`.
+- `EmailRuleWrittenState` replaces `CreateEmailRuleResultState`, `UpdateEmailRuleResultState`.
+- `NilEmailRuleScopeNames` replaces `NilGetEmailRuleScopeResultScopeSelection`.
+- `NilEmailRuleShareEndReason` replaces `NilAcceptEmailRuleRequestResultShareEndReason`, `NilGetEmailRuleShareResultEndReason`, `NilListEmailRuleSharesResultItemEndReason`, `NilListGivenEmailRuleSharesResultItemEndReason`.
+- `NilEmailRuleShareRule` replaces `NilAcceptEmailRuleRequestResultShareRule`, `NilGetEmailRuleShareResultRule`, `NilListEmailRuleSharesResultItemRule`, `NilListGivenEmailRuleSharesResultItemRule`.
+- `NilEmailRuleTree` replaces `NilListEmailRuleResultsResultRulesItemDecisionTree`.
+- `NilEmailRuleVersion` replaces `NilAcceptEmailRuleRequestResultRuleCurrent`, `NilCreateEmailRuleResultCurrent`, `NilGetEmailRuleResultCurrent`, `NilUpdateEmailRuleResultCurrent`.
+- `OptEmailRuleEvaluationScope` replaces `OptListEmailRulesResultItemEvaluationScope`.
+- `OptEmailRuleKind` replaces `OptListEmailRulesResultItemKind`.
+- `OptEmailRuleReadEvaluationScope` replaces `OptGetEmailRuleResultEvaluationScope`.
+- `OptEmailRuleReadKind` replaces `OptGetEmailRuleResultKind`.
+- `OptEmailRuleScopeSelection` replaces `OptCreateEmailRuleRequestScopeSelection`, `OptTestEmailRuleOnSampleRequestScopeSelection`, `OptTestEmailRuleRequestScopeSelection`, `OptUpdateEmailRuleRequestScopeSelection`.
+- `OptEmailRuleTreeInput` replaces `OptAcceptEmailRuleRequestRequestTree`, `OptTestEmailRuleOnSampleRequestTree`, `OptTestEmailRuleRequestTree`, `OptUpdateEmailRuleRequestTree`.
+- `OptEmailRuleVersionSQL` replaces `OptAcceptEmailRuleRequestResultRuleCurrentSQL`, `OptCreateEmailRuleResultCurrentSQL`, `OptGetEmailRuleResultCurrentSQL`, `OptListEmailRuleVersionsResultItemSQL`, `OptUpdateEmailRuleResultCurrentSQL`.
+- `OptEmailRuleWithVersionEvaluationScope` replaces `OptAcceptEmailRuleRequestResultRuleEvaluationScope`.
+- `OptEmailRuleWithVersionKind` replaces `OptAcceptEmailRuleRequestResultRuleKind`.
+- `OptEmailRuleWrittenEvaluationScope` replaces `OptCreateEmailRuleResultEvaluationScope`, `OptUpdateEmailRuleResultEvaluationScope`.
+- `OptEmailRuleWrittenKind` replaces `OptCreateEmailRuleResultKind`, `OptUpdateEmailRuleResultKind`.
+- `OptNilEmailRuleScopeNames` replaces `OptNilAcceptEmailRuleRequestResultRuleScopeSelection`, `OptNilCreateEmailRuleResultScopeSelection`, `OptNilGetEmailRuleResultScopeSelection`, `OptNilListEmailRulesResultItemScopeSelection`, `OptNilUpdateEmailRuleResultScopeSelection`.
+
 #### Webhook events and validation
 
 - Go `HandleWebhook` and `Receive` return bounces and reports as well as
@@ -234,7 +359,7 @@ date-time is kept as null and sorts last. A sync stops with an error after
 
 #### New operations
 
-159 operations, by area:
+165 operations, by area:
 
 - Account: `getOwnGrant`.
 - Address notes: `listAddressNotes`, `listAddressNotesBatch`,
@@ -259,7 +384,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
 - Email rules: `compileEmailRule`, `testEmailRule`, `testEmailRuleOnSample`,
   `listEmailRules`, `createEmailRule`, `getEmailRule`, `updateEmailRule`,
   `deleteEmailRule`, `listEmailRuleDecisions`, `listEmailRuleVersions`,
-  `getEmailRuleScope`, `listEmailRuleScopeOptions`, `listEmailRuleResults`.
+  `getEmailRuleScope`, `listEmailRuleScopeOptions`, `listEmailRuleResults`,
+  `getEmailRuleVocabulary`.
   A rule's `evaluation_scope` chooses whose mail it runs over (`author`,
   `own_mailboxes`, or `selected` with `scope_selection` naming addresses and
   domains), never more than its author can read. A rule's `kind` is `grant`
@@ -273,6 +399,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
   `listEmailRuleScopeOptions` says with `may_name_unlisted` whether you may
   name an inbox its list does not show.
 - Emails: `getEmailReadable`.
+- Endpoints: `getEndpoint`, `getEndpointSigningSecret`,
+  `rotateEndpointSigningSecret`.
 - Functions: `lookupFunction`, `getOrgFunctionUsage`,
   `getOrgFunctionInvocationSeries`, `getOrgFunctionFallback`,
   `redeployFunction`, `updateFunctionTags`, `listFunctionDeployments`,
@@ -306,7 +434,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
   `leaveOrganization` moves here from Account.
 - Email rule requests: `createEmailRuleRequest`, `listEmailRuleRequests`,
   `getEmailRuleRequest`, `acceptEmailRuleRequest`, `declineEmailRuleRequest`,
-  `withdrawEmailRuleRequest`.
+  `withdrawEmailRuleRequest`, `deleteEmailRuleRequest`,
+  `checkEmailRuleRequestTarget`.
 - Email rule shares: `listEmailRuleShares`, `listGivenEmailRuleShares`,
   `getEmailRuleShare`, `listEmailRuleShareEmails`, `endEmailRuleShare`.
 - Relay auto join: `getRelayAutoJoin`, `setRelayAutoJoin`.
@@ -321,7 +450,7 @@ date-time is kept as null and sorts last. A sync stops with an error after
 
 #### New parameters and fields on existing operations
 
-- `Primitive-Step-Up` is a declared header parameter on the 33 operations that
+- `Primitive-Step-Up` is a declared header parameter on the 36 operations that
   accept a step-up confirmation token, so a client can send the confirmation
   token through the generated call: `headers: { "Primitive-Step-Up": token }`
   in Node, `primitive_step_up=` in Python, and `PrimitiveStepUp` on the
@@ -334,7 +463,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
   `leaveOrganization`, `setAccessMode`, `decideAccessMode`, `listBreakGlass`,
   `startBreakGlass`, `endBreakGlass`, `listOwnedItems`,
   `transferOwnedItems`, `listSuspensions`, `decideSuspension`,
-  `setOwnMailboxAccess`, `removeOwnAgentAccess` and `setRelayAutoJoin`.
+  `setOwnMailboxAccess`, `removeOwnAgentAccess`, `setRelayAutoJoin`,
+  `createEndpoint`, `updateEndpoint` and `revokeCredential`.
 - The `Idempotency-Key` descriptions say which operations do not perform the
   action again when a request is retried with the same key (`replyToEmail`,
   `startInteraction`, `sendInteractionStep`) and which do not use the key to
@@ -357,6 +487,67 @@ date-time is kept as null and sorts last. A sync stops with an error after
 - `listSentEmails`: `since`, `wait`.
 - `listAgentConnections`: `include_hidden`.
 - `whoami`: `include`, `check`, `resource`.
+- Email rules:
+  - `compileEmailRule` takes `kind`.
+  - `createEmailRule` and `updateEmailRule` take `expectations` (the emails a
+    rule should and should not match), and their answers carry
+    `expectations_check` and `scope_warnings`. `updateEmailRule` takes
+    `if_version`: a stale version is refused with `409` and
+    `details.reason` `version_moved`.
+  - `getEmailRule` carries `expectations`.
+  - `testEmailRule` takes `expect` and answers with `expectations`,
+    `scope_warnings` and `summary`. Its results carry `values` and
+    `question_answers_source`, and `testEmailRuleOnSample` answers with
+    `values`.
+  - `getEmailRuleScope` carries `scope_warnings` and `reads_nothing`.
+  - `listEmailRuleResults` carries the email's `classification`.
+  - `listEmailRuleDecisions` carries each email's `from_address`, `subject`
+    and `received_at`.
+  - `listEmailRuleVersions` lists versions newest first with `limit` and
+    `cursor`; `versions` is optional.
+  - `createEmailRuleRequest` answers with `target_can_accept` and
+    `target_warning`.
+  - `listEmailRuleDecisions` and `listEmailRuleResults` carry
+    `detail_withheld` on a decision whose email's content cannot be read;
+    `testEmailRule` answers carry `questions.stored`.
+  - `acceptEmailRuleRequest` needs `mail:share_own` (sharing your own mail
+    through email rules), no longer `mail:send_as_member`. The Node
+    `PERMISSIONS` list gains `mail:share_own`. `createRole` and
+    `updateRole` refuse a permission whose prerequisite is not in the same
+    role, with `400` and `details.reason` `unmet_requirement`.
+  - New error codes: `email_rule_not_active` and
+    `email_rule_request_not_withdrawn`.
+- Endpoints:
+  - Webhook signing: a webhook made as a person's own, or by an API key
+    limited to some mailboxes, a third-party app or an agent delegate for
+    itself, signs with its own secret, not the organization's. Its
+    `signed_with` is `own_secret`; verify its deliveries with the
+    `signing_secret` returned when it is created, or from
+    `getEndpointSigningSecret`. `signed_with` is `organization_secret` for
+    a webhook verified with `GET /account/webhook-secret`.
+  - Endpoints carry `signed_with` (`listEndpoints`, `getEndpoint`,
+    `createEndpoint`, `updateEndpoint`), and `createEndpoint` and
+    `updateEndpoint` answer with `signing_secret` when there is one to give.
+  - `createEndpoint` and `updateEndpoint` take `Primitive-Step-Up`, and
+    `updateEndpoint` takes `name`. `name` only needs at least one character.
+  - Changing an endpoint's URL keeps the endpoint: its id, recipient routes,
+    signing secret, delivery history and owed deliveries. Another active
+    endpoint at the new URL is refused.
+  - `updateEndpoint` declares `403` and `503` answers; in Go they are typed
+    responses instead of errors.
+- Credentials: `getCredentialPolicy`, `updateCredentialPolicy` and
+  `getKeyBuilder`'s `policy` carry `cli_writes_require_approval`; `getKey`
+  and `listKeys` items carry `status`; `revokeCredential` takes
+  `Primitive-Step-Up`.
+- `getDelivery` carries `attempts`; it and `listDeliveries` carry
+  `latest_attempt`, `next_attempt_at`, `response_status` and
+  `response_body`.
+- `ErrorResponse.error.details` declares `feature`, `feature_name`,
+  `enabled_by` and `contact_email`, which a `feature_disabled` error
+  carries.
+- `decideSuspension` declares `502` and `503`, and
+  `listEmailRuleShareEmails` declares `409`; in Go they are typed
+  responses.
 
 #### Node SDK
 
@@ -507,6 +698,22 @@ parsers.
   organization's members with their roles, so you can see each member's
   role before asking someone, for example for an email rule. It takes `--query`,
   `--limit`, `--cursor` and `--json`.
+- `primitive endpoints get <id>` reads one webhook endpoint, and
+  `primitive email-rules vocabulary` prints the column catalog a hand-written
+  rule tree is checked against. `email-rules delete-email-rule-request`
+  deletes a request you made and withdrew, `email-rules
+  check-email-rule-request-target` says whether a member can accept a request
+  before you send it, and `endpoints get-endpoint-signing-secret` and
+  `rotate-endpoint-signing-secret` read and rotate a webhook's own signing
+  secret.
+- `email-rules list-email-rule-versions` lists a rule's versions newest first
+  without `--versions`, and pages with `--limit` and `--cursor`.
+- The email rule list commands fetch a `--limit` above 100 in pages, and
+  their `--cursor` help names `meta.cursor`, now that their answers declare
+  it.
+- `keys revoke` takes `--step-up-token` and `--no-browser`. When the
+  server asks for approval, it prints the approval link, opens it where it
+  can and waits for the one-time token, as the other `keys` commands do.
 - Generated commands for the new operations, except `createKey`, `rotateKey`,
   `updateKey` and `revokeCredential`, which the `primitive keys` commands
   cover instead.

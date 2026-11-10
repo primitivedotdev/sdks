@@ -126,10 +126,11 @@ def sync_detailed(
     """ List a rule's decisions
 
      What the rule decided for each email it was evaluated against, newest first: whether it matched,
-    whether it nearly did, how each part decided and the answers to its questions. Only decisions on
-    emails the caller can read are listed. With matched, only matches (true) or only the rest (false).
-    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
-    narrowed tokens are refused), and the email rules feature on the organization.
+    whether it nearly did, how each part decided and the answers to its questions, with which email it
+    was (from_address, subject, received_at). Only decisions on emails the caller can read are listed.
+    With matched, only matches (true) or only the rest (false). Needs mail:read, a member's own
+    credential with their full access (not an API key, agent key or narrowed token), and the email rules
+    feature.
 
     Args:
         id (UUID):
@@ -173,10 +174,11 @@ def sync(
     """ List a rule's decisions
 
      What the rule decided for each email it was evaluated against, newest first: whether it matched,
-    whether it nearly did, how each part decided and the answers to its questions. Only decisions on
-    emails the caller can read are listed. With matched, only matches (true) or only the rest (false).
-    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
-    narrowed tokens are refused), and the email rules feature on the organization.
+    whether it nearly did, how each part decided and the answers to its questions, with which email it
+    was (from_address, subject, received_at). Only decisions on emails the caller can read are listed.
+    With matched, only matches (true) or only the rest (false). Needs mail:read, a member's own
+    credential with their full access (not an API key, agent key or narrowed token), and the email rules
+    feature.
 
     Args:
         id (UUID):
@@ -215,10 +217,11 @@ async def asyncio_detailed(
     """ List a rule's decisions
 
      What the rule decided for each email it was evaluated against, newest first: whether it matched,
-    whether it nearly did, how each part decided and the answers to its questions. Only decisions on
-    emails the caller can read are listed. With matched, only matches (true) or only the rest (false).
-    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
-    narrowed tokens are refused), and the email rules feature on the organization.
+    whether it nearly did, how each part decided and the answers to its questions, with which email it
+    was (from_address, subject, received_at). Only decisions on emails the caller can read are listed.
+    With matched, only matches (true) or only the rest (false). Needs mail:read, a member's own
+    credential with their full access (not an API key, agent key or narrowed token), and the email rules
+    feature.
 
     Args:
         id (UUID):
@@ -262,10 +265,11 @@ async def asyncio(
     """ List a rule's decisions
 
      What the rule decided for each email it was evaluated against, newest first: whether it matched,
-    whether it nearly did, how each part decided and the answers to its questions. Only decisions on
-    emails the caller can read are listed. With matched, only matches (true) or only the rest (false).
-    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
-    narrowed tokens are refused), and the email rules feature on the organization.
+    whether it nearly did, how each part decided and the answers to its questions, with which email it
+    was (from_address, subject, received_at). Only decisions on emails the caller can read are listed.
+    With matched, only matches (true) or only the rest (false). Needs mail:read, a member's own
+    credential with their full access (not an API key, agent key or narrowed token), and the email rules
+    feature.
 
     Args:
         id (UUID):

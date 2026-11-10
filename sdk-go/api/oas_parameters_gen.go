@@ -2056,6 +2056,99 @@ func decodeCheckDomainDnsParams(args [1]string, argsEscaped bool, r *http.Reques
 	return params, nil
 }
 
+// CheckEmailRuleRequestTargetParams is parameters of checkEmailRuleRequestTarget operation.
+type CheckEmailRuleRequestTargetParams struct {
+	// Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with
+	// the same key runs the request again. Operations that need a credential refuse a key that is empty,
+	// longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one
+	// in the Idempotency-Key response header; operations that need none ignore it.
+	IdempotencyKey OptString `json:",omitempty,omitzero"`
+}
+
+func unpackCheckEmailRuleRequestTargetParams(packed middleware.Parameters) (params CheckEmailRuleRequestTargetParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "Idempotency-Key",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.IdempotencyKey = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeCheckEmailRuleRequestTargetParams(args [0]string, argsEscaped bool, r *http.Request) (params CheckEmailRuleRequestTargetParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: Idempotency-Key.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIdempotencyKeyVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotIdempotencyKeyVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.IdempotencyKey.SetTo(paramsDotIdempotencyKeyVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.IdempotencyKey.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     255,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Idempotency-Key",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // CheckSendabilityParams is parameters of checkSendability operation.
 type CheckSendabilityParams struct {
 	// Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with
@@ -3303,6 +3396,16 @@ func decodeCreateEmailRuleRequestParams(args [0]string, argsEscaped bool, r *htt
 
 // CreateEndpointParams is parameters of createEndpoint operation.
 type CreateEndpointParams struct {
+	// A single-use step-up token of purpose `webhooks.write` (Create a webhook or change where it
+	// delivers), valid 5 minutes. When this operation answers 403 `step_up_required`, the person
+	// confirms at the link in `details.step_up_url` and the request is retried with the token that page
+	// shows, in this header. Accepted only with the person's own OAuth token of the client it was
+	// confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and
+	// with a dashboard session. Asked for only from the person's own Primitive CLI login, and only when
+	// the organization's credential policy sets `cli_writes_require_approval`: creating a webhook that
+	// delivers to a URL (`kind` `http`), or changing an endpoint's `url`. The token only approves the
+	// request, which is still made by the CLI login, and it is spent whatever the answer.
+	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 	// Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with
 	// the same key runs the request again. Operations that need a credential refuse a key that is empty,
 	// longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one
@@ -3311,6 +3414,15 @@ type CreateEndpointParams struct {
 }
 
 func unpackCreateEndpointParams(packed middleware.Parameters) (params CreateEndpointParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "Primitive-Step-Up",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.PrimitiveStepUp = v.(OptString)
+		}
+	}
 	{
 		key := middleware.ParameterKey{
 			Name: "Idempotency-Key",
@@ -3325,6 +3437,72 @@ func unpackCreateEndpointParams(packed middleware.Parameters) (params CreateEndp
 
 func decodeCreateEndpointParams(args [0]string, argsEscaped bool, r *http.Request) (params CreateEndpointParams, _ error) {
 	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: Primitive-Step-Up.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Primitive-Step-Up",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotPrimitiveStepUpVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPrimitiveStepUpVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.PrimitiveStepUp.SetTo(paramsDotPrimitiveStepUpVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.PrimitiveStepUp.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     0,
+							MaxLengthSet:  false,
+							Email:         false,
+							Hostname:      false,
+							Regex:         regexMap["^pstep_[0-9a-f]{64}$"],
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Primitive-Step-Up",
+			In:   "header",
+			Err:  err,
+		}
+	}
 	// Decode header: Idempotency-Key.
 	if err := func() error {
 		cfg := uri.HeaderParameterDecodingConfig{
@@ -3911,15 +4089,16 @@ type CreateKeyParams struct {
 	// revoke whatever the attempt made, knowing no late copy can still create a key. A key an earlier
 	// copy made is still reported as 409 idempotency_key_reused.
 	PrimitiveNotAfter OptString `json:",omitempty,omitzero"`
-	// A single-use step-up token of purpose `keys.create` (Create, rotate or change an API key), valid 5
-	// minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in
-	// `details.step_up_url` and the request is retried with the token that page shows, in this header.
-	// Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a
-	// token issued for MCP, with any API key or agent connection key, and with a dashboard session. The
-	// Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.
-	// reason` `dashboard_only`). The person's own Primitive CLI login needs no token for this purpose
-	// while the organization's keys API is on (a token it sends is still checked); while it is off, a
-	// token it sends is refused the same way.
+	// A single-use step-up token of purpose `keys.create` (Create, rotate, change or revoke an API key),
+	// valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the
+	// link in `details.step_up_url` and the request is retried with the token that page shows, in this
+	// header. Accepted only with the person's own OAuth token of the client it was confirmed for;
+	// refused with a token issued for MCP, with any API key or agent connection key, and with a
+	// dashboard session. The Primitive app is refused for this purpose even with a token (403
+	// `grant_forbidden`, `details.reason` `dashboard_only`). The person's own Primitive CLI login needs
+	// no token for this purpose while the organization's keys API is on (a token it sends is still
+	// checked), unless the organization's credential policy sets `cli_writes_require_approval`; while
+	// the keys API is off, a token it sends is refused the same way.
 	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 }
 
@@ -6047,6 +6226,72 @@ func unpackDeleteEmailRuleParams(packed middleware.Parameters) (params DeleteEma
 }
 
 func decodeDeleteEmailRuleParams(args [1]string, argsEscaped bool, r *http.Request) (params DeleteEmailRuleParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// DeleteEmailRuleRequestParams is parameters of deleteEmailRuleRequest operation.
+type DeleteEmailRuleRequestParams struct {
+	// The request id.
+	ID uuid.UUID
+}
+
+func unpackDeleteEmailRuleRequestParams(packed middleware.Parameters) (params DeleteEmailRuleRequestParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeDeleteEmailRuleRequestParams(args [1]string, argsEscaped bool, r *http.Request) (params DeleteEmailRuleRequestParams, _ error) {
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]
@@ -11194,6 +11439,138 @@ func decodeGetEmailRuleShareParams(args [1]string, argsEscaped bool, r *http.Req
 	return params, nil
 }
 
+// GetEndpointParams is parameters of getEndpoint operation.
+type GetEndpointParams struct {
+	// Resource UUID.
+	ID uuid.UUID
+}
+
+func unpackGetEndpointParams(packed middleware.Parameters) (params GetEndpointParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeGetEndpointParams(args [1]string, argsEscaped bool, r *http.Request) (params GetEndpointParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// GetEndpointSigningSecretParams is parameters of getEndpointSigningSecret operation.
+type GetEndpointSigningSecretParams struct {
+	// Resource UUID.
+	ID uuid.UUID
+}
+
+func unpackGetEndpointSigningSecretParams(packed middleware.Parameters) (params GetEndpointSigningSecretParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeGetEndpointSigningSecretParams(args [1]string, argsEscaped bool, r *http.Request) (params GetEndpointSigningSecretParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // GetFunctionParams is parameters of getFunction operation.
 type GetFunctionParams struct {
 	// Resource UUID.
@@ -14543,8 +14920,7 @@ type ListAddressNotesParams struct {
 	Address string
 	// Prefix for address notes.
 	Prefix OptString `json:",omitempty,omitzero"`
-	// Case-sensitive note name. AGENT_INFO, AGENT_USES and AGENT_RUNTIME (where the agent runs, e.g. its
-	// runtime, machine and working directory) are conventions, with no required value schema.
+	// The name of the last note on the previous page, as meta.cursor gave it. Omit for the first page.
 	Cursor OptString `json:",omitempty,omitzero"`
 	// Limit for address notes.
 	Limit OptInt `json:",omitempty,omitzero"`
@@ -18178,7 +18554,8 @@ type ListEmailRuleDecisionsParams struct {
 	ID uuid.UUID
 	// Maximum number of items to return.
 	Limit OptInt `json:",omitempty,omitzero"`
-	// Opaque cursor from the previous page's next_cursor. Omit for the first page.
+	// Opaque cursor: the meta.cursor of the previous page. meta.cursor is null on the last page. Omit
+	// for the first page.
 	Cursor OptString `json:",omitempty,omitzero"`
 	// True for only matches, false for only the rest.
 	Matched OptListEmailRuleDecisionsMatched `json:",omitempty,omitzero"`
@@ -18475,7 +18852,8 @@ type ListEmailRuleRequestsParams struct {
 	Status OptListEmailRuleRequestsStatus `json:",omitempty,omitzero"`
 	// Maximum number of items to return.
 	Limit OptInt `json:",omitempty,omitzero"`
-	// Opaque cursor from the previous page's next_cursor. Omit for the first page.
+	// Opaque cursor: the meta.cursor of the previous page. meta.cursor is null on the last page. Omit
+	// for the first page.
 	Cursor OptString `json:",omitempty,omitzero"`
 }
 
@@ -18949,7 +19327,8 @@ type ListEmailRuleShareEmailsParams struct {
 	ID uuid.UUID
 	// Maximum number of items to return.
 	Limit OptInt `json:",omitempty,omitzero"`
-	// Opaque cursor from the previous page's next_cursor. Omit for the first page.
+	// Opaque cursor: the meta.cursor of the previous page. meta.cursor is null on the last page. Omit
+	// for the first page.
 	Cursor OptString `json:",omitempty,omitzero"`
 }
 
@@ -19179,7 +19558,8 @@ type ListEmailRuleSharesParams struct {
 	Live OptListEmailRuleSharesLive `json:",omitempty,omitzero"`
 	// Maximum number of items to return.
 	Limit OptInt `json:",omitempty,omitzero"`
-	// Opaque cursor from the previous page's next_cursor. Omit for the first page.
+	// Opaque cursor: the meta.cursor of the previous page. meta.cursor is null on the last page. Omit
+	// for the first page.
 	Cursor OptString `json:",omitempty,omitzero"`
 }
 
@@ -19493,8 +19873,13 @@ func decodeListEmailRuleSharesParams(args [0]string, argsEscaped bool, r *http.R
 type ListEmailRuleVersionsParams struct {
 	// The rule id.
 	ID uuid.UUID
-	// The version numbers, comma-separated, at most 100.
-	Versions string
+	// Versions per page when versions is not given: 1 to 100, default 50.
+	Limit OptInt `json:",omitempty,omitzero"`
+	// Opaque cursor: the meta.cursor of the previous page, null on the last. Omit for the first page.
+	// Not with versions.
+	Cursor OptString `json:",omitempty,omitzero"`
+	// Read only these version numbers, comma-separated, at most 100. Not with limit or cursor.
+	Versions OptString `json:",omitempty,omitzero"`
 }
 
 func unpackListEmailRuleVersionsParams(packed middleware.Parameters) (params ListEmailRuleVersionsParams) {
@@ -19507,10 +19892,30 @@ func unpackListEmailRuleVersionsParams(packed middleware.Parameters) (params Lis
 	}
 	{
 		key := middleware.ParameterKey{
+			Name: "limit",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Limit = v.(OptInt)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "cursor",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Cursor = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
 			Name: "versions",
 			In:   "query",
 		}
-		params.Versions = packed[key].(string)
+		if v, ok := packed[key]; ok {
+			params.Versions = v.(OptString)
+		}
 	}
 	return params
 }
@@ -19562,6 +19967,140 @@ func decodeListEmailRuleVersionsParams(args [1]string, argsEscaped bool, r *http
 			Err:  err,
 		}
 	}
+	// Decode query: limit.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotLimitVal int
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotLimitVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Limit.SetTo(paramsDotLimitVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Limit.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "limit",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: cursor.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotCursorVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotCursorVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Cursor.SetTo(paramsDotCursorVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Cursor.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     200,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "cursor",
+			In:   "query",
+			Err:  err,
+		}
+	}
 	// Decode query: versions.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -19572,43 +20111,55 @@ func decodeListEmailRuleVersionsParams(args [1]string, argsEscaped bool, r *http
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotVersionsVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotVersionsVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Versions = c
+				params.Versions.SetTo(paramsDotVersionsVal)
 				return nil
 			}); err != nil {
 				return err
 			}
 			if err := func() error {
-				if err := (validate.String{
-					MinLength:     0,
-					MinLengthSet:  false,
-					MaxLength:     0,
-					MaxLengthSet:  false,
-					Email:         false,
-					Hostname:      false,
-					Regex:         regexMap["^[1-9]\\d{0,8}(,[1-9]\\d{0,8}){0,99}$"],
-					MinNumeric:    0,
-					MinNumericSet: false,
-					MaxNumeric:    0,
-					MaxNumericSet: false,
-				}).Validate(string(params.Versions)); err != nil {
-					return errors.Wrap(err, "string")
+				if value, ok := params.Versions.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     0,
+							MaxLengthSet:  false,
+							Email:         false,
+							Hostname:      false,
+							Regex:         regexMap["^[1-9]\\d{0,8}(,[1-9]\\d{0,8}){0,99}$"],
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
 				}
 				return nil
 			}(); err != nil {
 				return err
 			}
-		} else {
-			return err
 		}
 		return nil
 	}(); err != nil {
@@ -19625,7 +20176,8 @@ func decodeListEmailRuleVersionsParams(args [1]string, argsEscaped bool, r *http
 type ListEmailRulesParams struct {
 	// Maximum number of items to return.
 	Limit OptInt `json:",omitempty,omitzero"`
-	// Opaque cursor from the previous page's next_cursor. Omit for the first page.
+	// Opaque cursor: the meta.cursor of the previous page. meta.cursor is null on the last page. Omit
+	// for the first page.
 	Cursor OptString `json:",omitempty,omitzero"`
 	// Only rules that matched this email.
 	MatchedEmailID OptUUID `json:",omitempty,omitzero"`
@@ -22681,7 +23233,8 @@ type ListGivenEmailRuleSharesParams struct {
 	Live OptListGivenEmailRuleSharesLive `json:",omitempty,omitzero"`
 	// Maximum number of items to return.
 	Limit OptInt `json:",omitempty,omitzero"`
-	// Opaque cursor from the previous page's next_cursor. Omit for the first page.
+	// Opaque cursor: the meta.cursor of the previous page. meta.cursor is null on the last page. Omit
+	// for the first page.
 	Cursor OptString `json:",omitempty,omitzero"`
 }
 
@@ -25561,8 +26114,7 @@ type ListPublicAddressNotesParams struct {
 	Address string
 	// Prefix for address notes.
 	Prefix OptString `json:",omitempty,omitzero"`
-	// Case-sensitive note name. AGENT_INFO, AGENT_USES and AGENT_RUNTIME (where the agent runs, e.g. its
-	// runtime, machine and working directory) are conventions, with no required value schema.
+	// The name of the last note on the previous page, as meta.cursor gave it. Omit for the first page.
 	Cursor OptString `json:",omitempty,omitzero"`
 	// Limit for address notes.
 	Limit OptInt `json:",omitempty,omitzero"`
@@ -31608,6 +32160,16 @@ func decodeRevokeAllCredentialsParams(args [0]string, argsEscaped bool, r *http.
 
 // RevokeCredentialParams is parameters of revokeCredential operation.
 type RevokeCredentialParams struct {
+	// A single-use step-up token of purpose `keys.create` (Create, rotate, change or revoke an API key),
+	// valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the
+	// link in `details.step_up_url` and the request is retried with the token that page shows, in this
+	// header. Accepted only with the person's own OAuth token of the client it was confirmed for;
+	// refused with a token issued for MCP, with any API key or agent connection key, and with a
+	// dashboard session. Here only the person's own Primitive CLI login revoking an API key (kind
+	// `org_key`) uses it, when the route answers it 403 `step_up_required`: where the organization's
+	// credential policy sets `cli_writes_require_approval`, for example. Otherwise it needs no token.
+	// Every other app is refused here (403, `details.reason` `dashboard_only`), with or without a token.
+	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 	// Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with
 	// the same key runs the request again. Operations that need a credential refuse a key that is empty,
 	// longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one
@@ -31616,6 +32178,15 @@ type RevokeCredentialParams struct {
 }
 
 func unpackRevokeCredentialParams(packed middleware.Parameters) (params RevokeCredentialParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "Primitive-Step-Up",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.PrimitiveStepUp = v.(OptString)
+		}
+	}
 	{
 		key := middleware.ParameterKey{
 			Name: "Idempotency-Key",
@@ -31630,6 +32201,72 @@ func unpackRevokeCredentialParams(packed middleware.Parameters) (params RevokeCr
 
 func decodeRevokeCredentialParams(args [0]string, argsEscaped bool, r *http.Request) (params RevokeCredentialParams, _ error) {
 	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: Primitive-Step-Up.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Primitive-Step-Up",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotPrimitiveStepUpVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPrimitiveStepUpVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.PrimitiveStepUp.SetTo(paramsDotPrimitiveStepUpVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.PrimitiveStepUp.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     0,
+							MaxLengthSet:  false,
+							Email:         false,
+							Hostname:      false,
+							Regex:         regexMap["^pstep_[0-9a-f]{64}$"],
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Primitive-Step-Up",
+			In:   "header",
+			Err:  err,
+		}
+	}
 	// Decode header: Idempotency-Key.
 	if err := func() error {
 		cfg := uri.HeaderParameterDecodingConfig{
@@ -32179,19 +32816,167 @@ func decodeRevokeProjectInvitationParams(args [2]string, argsEscaped bool, r *ht
 	return params, nil
 }
 
+// RotateEndpointSigningSecretParams is parameters of rotateEndpointSigningSecret operation.
+type RotateEndpointSigningSecretParams struct {
+	// Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with
+	// the same key runs the request again. Operations that need a credential refuse a key that is empty,
+	// longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one
+	// in the Idempotency-Key response header; operations that need none ignore it.
+	IdempotencyKey OptString `json:",omitempty,omitzero"`
+	// Resource UUID.
+	ID uuid.UUID
+}
+
+func unpackRotateEndpointSigningSecretParams(packed middleware.Parameters) (params RotateEndpointSigningSecretParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "Idempotency-Key",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.IdempotencyKey = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeRotateEndpointSigningSecretParams(args [1]string, argsEscaped bool, r *http.Request) (params RotateEndpointSigningSecretParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: Idempotency-Key.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIdempotencyKeyVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotIdempotencyKeyVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.IdempotencyKey.SetTo(paramsDotIdempotencyKeyVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.IdempotencyKey.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     255,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Idempotency-Key",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // RotateKeyParams is parameters of rotateKey operation.
 type RotateKeyParams struct {
 	// The id of the object this operation acts on.
 	ID uuid.UUID
-	// A single-use step-up token of purpose `keys.create` (Create, rotate or change an API key), valid 5
-	// minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in
-	// `details.step_up_url` and the request is retried with the token that page shows, in this header.
-	// Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a
-	// token issued for MCP, with any API key or agent connection key, and with a dashboard session. The
-	// Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.
-	// reason` `dashboard_only`). The person's own Primitive CLI login needs no token for this purpose
-	// while the organization's keys API is on (a token it sends is still checked); while it is off, a
-	// token it sends is refused the same way.
+	// A single-use step-up token of purpose `keys.create` (Create, rotate, change or revoke an API key),
+	// valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the
+	// link in `details.step_up_url` and the request is retried with the token that page shows, in this
+	// header. Accepted only with the person's own OAuth token of the client it was confirmed for;
+	// refused with a token issued for MCP, with any API key or agent connection key, and with a
+	// dashboard session. The Primitive app is refused for this purpose even with a token (403
+	// `grant_forbidden`, `details.reason` `dashboard_only`). The person's own Primitive CLI login needs
+	// no token for this purpose while the organization's keys API is on (a token it sends is still
+	// checked), unless the organization's credential policy sets `cli_writes_require_approval`; while
+	// the keys API is off, a token it sends is refused the same way.
 	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 	// Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with
 	// the same key runs the request again. Operations that need a credential refuse a key that is empty,
@@ -39280,11 +40065,30 @@ func decodeUpdateEmailRuleParams(args [1]string, argsEscaped bool, r *http.Reque
 
 // UpdateEndpointParams is parameters of updateEndpoint operation.
 type UpdateEndpointParams struct {
+	// A single-use step-up token of purpose `webhooks.write` (Create a webhook or change where it
+	// delivers), valid 5 minutes. When this operation answers 403 `step_up_required`, the person
+	// confirms at the link in `details.step_up_url` and the request is retried with the token that page
+	// shows, in this header. Accepted only with the person's own OAuth token of the client it was
+	// confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and
+	// with a dashboard session. Asked for only from the person's own Primitive CLI login, and only when
+	// the organization's credential policy sets `cli_writes_require_approval`: creating a webhook that
+	// delivers to a URL (`kind` `http`), or changing an endpoint's `url`. The token only approves the
+	// request, which is still made by the CLI login, and it is spent whatever the answer.
+	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 	// Resource UUID.
 	ID uuid.UUID
 }
 
 func unpackUpdateEndpointParams(packed middleware.Parameters) (params UpdateEndpointParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "Primitive-Step-Up",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.PrimitiveStepUp = v.(OptString)
+		}
+	}
 	{
 		key := middleware.ParameterKey{
 			Name: "id",
@@ -39296,6 +40100,73 @@ func unpackUpdateEndpointParams(packed middleware.Parameters) (params UpdateEndp
 }
 
 func decodeUpdateEndpointParams(args [1]string, argsEscaped bool, r *http.Request) (params UpdateEndpointParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: Primitive-Step-Up.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Primitive-Step-Up",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotPrimitiveStepUpVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPrimitiveStepUpVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.PrimitiveStepUp.SetTo(paramsDotPrimitiveStepUpVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.PrimitiveStepUp.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     0,
+							MaxLengthSet:  false,
+							Email:         false,
+							Hostname:      false,
+							Regex:         regexMap["^pstep_[0-9a-f]{64}$"],
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Primitive-Step-Up",
+			In:   "header",
+			Err:  err,
+		}
+	}
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]
@@ -39841,15 +40712,16 @@ func decodeUpdateGroupParams(args [1]string, argsEscaped bool, r *http.Request) 
 type UpdateKeyParams struct {
 	// The id of the object this operation acts on.
 	ID uuid.UUID
-	// A single-use step-up token of purpose `keys.create` (Create, rotate or change an API key), valid 5
-	// minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in
-	// `details.step_up_url` and the request is retried with the token that page shows, in this header.
-	// Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a
-	// token issued for MCP, with any API key or agent connection key, and with a dashboard session. The
-	// Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.
-	// reason` `dashboard_only`). The person's own Primitive CLI login needs no token for this purpose
-	// while the organization's keys API is on (a token it sends is still checked); while it is off, a
-	// token it sends is refused the same way.
+	// A single-use step-up token of purpose `keys.create` (Create, rotate, change or revoke an API key),
+	// valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the
+	// link in `details.step_up_url` and the request is retried with the token that page shows, in this
+	// header. Accepted only with the person's own OAuth token of the client it was confirmed for;
+	// refused with a token issued for MCP, with any API key or agent connection key, and with a
+	// dashboard session. The Primitive app is refused for this purpose even with a token (403
+	// `grant_forbidden`, `details.reason` `dashboard_only`). The person's own Primitive CLI login needs
+	// no token for this purpose while the organization's keys API is on (a token it sends is still
+	// checked), unless the organization's credential policy sets `cli_writes_require_approval`; while
+	// the keys API is off, a token it sends is refused the same way.
 	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 }
 

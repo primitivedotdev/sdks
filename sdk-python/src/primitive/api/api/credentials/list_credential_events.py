@@ -159,7 +159,7 @@ def sync_detailed(
      Credential events (created, rotated, edited, revoked, used with a step-up, policy changes), newest
     first, with a cursor. format=csv returns the same page as CSV. Needs the organization's credential
     features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature
-    naming the feature. Only Primitive turns these on.
+    naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session. The person's role must hold credential_events:read. API keys,
     agent connection keys and agents are refused.
@@ -219,7 +219,7 @@ def sync(
      Credential events (created, rotated, edited, revoked, used with a step-up, policy changes), newest
     first, with a cursor. format=csv returns the same page as CSV. Needs the organization's credential
     features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature
-    naming the feature. Only Primitive turns these on.
+    naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session. The person's role must hold credential_events:read. API keys,
     agent connection keys and agents are refused.
@@ -274,7 +274,7 @@ async def asyncio_detailed(
      Credential events (created, rotated, edited, revoked, used with a step-up, policy changes), newest
     first, with a cursor. format=csv returns the same page as CSV. Needs the organization's credential
     features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature
-    naming the feature. Only Primitive turns these on.
+    naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session. The person's role must hold credential_events:read. API keys,
     agent connection keys and agents are refused.
@@ -334,7 +334,7 @@ async def asyncio(
      Credential events (created, rotated, edited, revoked, used with a step-up, policy changes), newest
     first, with a cursor. format=csv returns the same page as CSV. Needs the organization's credential
     features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature
-    naming the feature. Only Primitive turns these on.
+    naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session. The person's role must hold credential_events:read. API keys,
     agent connection keys and agents are refused.

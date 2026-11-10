@@ -22,12 +22,15 @@ T = TypeVar("T", bound="TestEmailRuleResultQuestions")
 class TestEmailRuleResultQuestions:
     """ 
         Attributes:
-            asked (int): Calls made to answer the rule's questions, one per matching email.
+            asked (int): Calls made to answer the rule's questions, one per matching email whose answers were not reused.
             capped (bool): Whether the per-test limit on those calls was reached.
+            stored (int | Unset): Matching emails whose question answers were reused (kept for the saved rule version, or
+                recorded with its decision) instead of asked.
      """
 
     asked: int
     capped: bool
+    stored: int | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -39,6 +42,8 @@ class TestEmailRuleResultQuestions:
 
         capped = self.capped
 
+        stored = self.stored
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -46,6 +51,8 @@ class TestEmailRuleResultQuestions:
             "asked": asked,
             "capped": capped,
         })
+        if stored is not UNSET:
+            field_dict["stored"] = stored
 
         return field_dict
 
@@ -58,9 +65,12 @@ class TestEmailRuleResultQuestions:
 
         capped = d.pop("capped")
 
+        stored = d.pop("stored", UNSET)
+
         test_email_rule_result_questions = cls(
             asked=asked,
             capped=capped,
+            stored=stored,
         )
 
 

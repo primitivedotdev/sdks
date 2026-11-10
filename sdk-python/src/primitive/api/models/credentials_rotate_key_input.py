@@ -22,7 +22,9 @@ T = TypeVar("T", bound="CredentialsRotateKeyInput")
 class CredentialsRotateKeyInput:
     """ 
         Attributes:
-            overlap_seconds (int | Unset):
+            overlap_seconds (int | Unset): How long the old key keeps working, in seconds, up to 604800 (7 days), and never
+                past its own expires_at. 86400 (24 hours) when omitted. 0 stops the old key at once: use it when rotating
+                because the secret leaked.
      """
 
     overlap_seconds: int | Unset = UNSET

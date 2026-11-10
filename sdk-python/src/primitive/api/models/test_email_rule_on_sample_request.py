@@ -14,9 +14,9 @@ from typing import cast
 from uuid import UUID
 
 if TYPE_CHECKING:
+  from ..models.email_rule_scope_selection import EmailRuleScopeSelection
+  from ..models.email_rule_tree_input import EmailRuleTreeInput
   from ..models.test_email_rule_on_sample_request_email import TestEmailRuleOnSampleRequestEmail
-  from ..models.test_email_rule_on_sample_request_scope_selection import TestEmailRuleOnSampleRequestScopeSelection
-  from ..models.test_email_rule_on_sample_request_tree import TestEmailRuleOnSampleRequestTree
 
 
 
@@ -31,22 +31,21 @@ class TestEmailRuleOnSampleRequest:
     """ 
         Attributes:
             email (TestEmailRuleOnSampleRequestEmail): A made-up received email. Nothing about it is stored.
-            tree (TestEmailRuleOnSampleRequestTree | Unset): An unsaved rule tree, as POST /email-rules/compile returned it.
-                Give tree or rule_id, not both.
+            tree (EmailRuleTreeInput | Unset):
             evaluation_scope (TestEmailRuleOnSampleRequestEvaluationScope | Unset): own_mailboxes (the default): mail to
-                your own addresses and agents (for a rule that shares, those you can send from). author: all mail you can read,
-                including inboxes added later. selected: what scope_selection names.
-            scope_selection (TestEmailRuleOnSampleRequestScopeSelection | Unset): Inboxes, and domains (every address at
-                them the author can read), for a selected rule; each one you can read.
+                your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can
+                read, inboxes added later included. selected: what scope_selection names.
+            scope_selection (EmailRuleScopeSelection | Unset): For a selected rule: inboxes, and domains (each address at
+                them the author reads); each one you can read.
             rule_id (UUID | Unset): A saved rule you can see. Its current version is tested.
             kind (TestEmailRuleOnSampleRequestKind | Unset): For an unsaved tree: do_not_share tests it as a rule that
                 blocks sharing, so an email it cannot decide counts as matched. A saved rule uses its own.
      """
 
     email: TestEmailRuleOnSampleRequestEmail
-    tree: TestEmailRuleOnSampleRequestTree | Unset = UNSET
+    tree: EmailRuleTreeInput | Unset = UNSET
     evaluation_scope: TestEmailRuleOnSampleRequestEvaluationScope | Unset = UNSET
-    scope_selection: TestEmailRuleOnSampleRequestScopeSelection | Unset = UNSET
+    scope_selection: EmailRuleScopeSelection | Unset = UNSET
     rule_id: UUID | Unset = UNSET
     kind: TestEmailRuleOnSampleRequestKind | Unset = UNSET
 
@@ -55,9 +54,9 @@ class TestEmailRuleOnSampleRequest:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
+        from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         from ..models.test_email_rule_on_sample_request_email import TestEmailRuleOnSampleRequestEmail # noqa: PLC0415
-        from ..models.test_email_rule_on_sample_request_scope_selection import TestEmailRuleOnSampleRequestScopeSelection # noqa: PLC0415
-        from ..models.test_email_rule_on_sample_request_tree import TestEmailRuleOnSampleRequestTree # noqa: PLC0415
         email = self.email.to_dict()
 
         tree: dict[str, Any] | Unset = UNSET
@@ -105,9 +104,9 @@ class TestEmailRuleOnSampleRequest:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
+        from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         from ..models.test_email_rule_on_sample_request_email import TestEmailRuleOnSampleRequestEmail # noqa: PLC0415
-        from ..models.test_email_rule_on_sample_request_scope_selection import TestEmailRuleOnSampleRequestScopeSelection # noqa: PLC0415
-        from ..models.test_email_rule_on_sample_request_tree import TestEmailRuleOnSampleRequestTree # noqa: PLC0415
         d = dict(src_dict)
         email = TestEmailRuleOnSampleRequestEmail.from_dict(d.pop("email"))
 
@@ -115,11 +114,11 @@ class TestEmailRuleOnSampleRequest:
 
 
         _tree = d.pop("tree", UNSET)
-        tree: TestEmailRuleOnSampleRequestTree | Unset
+        tree: EmailRuleTreeInput | Unset
         if isinstance(_tree,  Unset):
             tree = UNSET
         else:
-            tree = TestEmailRuleOnSampleRequestTree.from_dict(_tree)
+            tree = EmailRuleTreeInput.from_dict(_tree)
 
 
 
@@ -135,11 +134,11 @@ class TestEmailRuleOnSampleRequest:
 
 
         _scope_selection = d.pop("scope_selection", UNSET)
-        scope_selection: TestEmailRuleOnSampleRequestScopeSelection | Unset
+        scope_selection: EmailRuleScopeSelection | Unset
         if isinstance(_scope_selection,  Unset):
             scope_selection = UNSET
         else:
-            scope_selection = TestEmailRuleOnSampleRequestScopeSelection.from_dict(_scope_selection)
+            scope_selection = EmailRuleScopeSelection.from_dict(_scope_selection)
 
 
 

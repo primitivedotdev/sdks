@@ -11,7 +11,8 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.list_email_rule_versions_result_item import ListEmailRuleVersionsResultItem
+  from ..models.cursor_page_meta import CursorPageMeta
+  from ..models.email_rule_version import EmailRuleVersion
 
 
 
@@ -26,11 +27,13 @@ class ListEmailRuleVersionsResponse200:
     """ 
         Attributes:
             success (bool):
-            data (list[ListEmailRuleVersionsResultItem]):
+            data (list[EmailRuleVersion]):
+            meta (CursorPageMeta | Unset): Paging for a list read a page at a time.
      """
 
     success: bool
-    data: list[ListEmailRuleVersionsResultItem]
+    data: list[EmailRuleVersion]
+    meta: CursorPageMeta | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -38,7 +41,8 @@ class ListEmailRuleVersionsResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.list_email_rule_versions_result_item import ListEmailRuleVersionsResultItem # noqa: PLC0415
+        from ..models.cursor_page_meta import CursorPageMeta # noqa: PLC0415
+        from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
         success = self.success
 
         data = []
@@ -48,6 +52,10 @@ class ListEmailRuleVersionsResponse200:
 
 
 
+        meta: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.meta, Unset):
+            meta = self.meta.to_dict()
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -55,6 +63,8 @@ class ListEmailRuleVersionsResponse200:
             "success": success,
             "data": data,
         })
+        if meta is not UNSET:
+            field_dict["meta"] = meta
 
         return field_dict
 
@@ -62,23 +72,35 @@ class ListEmailRuleVersionsResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.list_email_rule_versions_result_item import ListEmailRuleVersionsResultItem # noqa: PLC0415
+        from ..models.cursor_page_meta import CursorPageMeta # noqa: PLC0415
+        from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 
         data = []
         _data = d.pop("data")
         for componentsschemas_list_email_rule_versions_result_item_data in (_data):
-            componentsschemas_list_email_rule_versions_result_item = ListEmailRuleVersionsResultItem.from_dict(componentsschemas_list_email_rule_versions_result_item_data)
+            componentsschemas_list_email_rule_versions_result_item = EmailRuleVersion.from_dict(componentsschemas_list_email_rule_versions_result_item_data)
 
 
 
             data.append(componentsschemas_list_email_rule_versions_result_item)
 
 
+        _meta = d.pop("meta", UNSET)
+        meta: CursorPageMeta | Unset
+        if isinstance(_meta,  Unset):
+            meta = UNSET
+        else:
+            meta = CursorPageMeta.from_dict(_meta)
+
+
+
+
         list_email_rule_versions_response_200 = cls(
             success=success,
             data=data,
+            meta=meta,
         )
 
 

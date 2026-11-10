@@ -16,8 +16,8 @@ from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
-  from ..models.get_email_rule_share_result_beneficiary import GetEmailRuleShareResultBeneficiary
-  from ..models.get_email_rule_share_result_granter import GetEmailRuleShareResultGranter
+  from ..models.email_rule_share_beneficiary import EmailRuleShareBeneficiary
+  from ..models.email_rule_share_granter import EmailRuleShareGranter
   from ..models.get_email_rule_share_result_rule_type_0 import GetEmailRuleShareResultRuleType0
 
 
@@ -40,19 +40,18 @@ class GetEmailRuleShareResult:
                 GetEmailRuleShareResultEndReasonType3Type1 | None):
             accepted_rule_version (int): The version of the rule that was accepted. A new version of the rule ends the
                 share.
-            edited_on_accept (bool): Whether the member who accepted changed what the rule says first (its English, tree or
-                explanation). A new name does not count.
+            edited_on_accept (bool): Whether the member who accepted changed the rule's English, tree or explanation before
+                accepting (a new name does not count).
             live (bool): Not ended, and both people are still members under the memberships that were recorded.
-            delivery_paused (bool | None): True when the rule is active and the share is live but new email is not being
-                shared right now; email already shared stays visible. False when new email is being shared. Null when this does
-                not apply (the share has ended, the rule is not active, or you are not one of the two people on the share) or
-                could not be read.
+            delivery_paused (bool | None): True when the rule is active and the share live but new email is not being shared
+                now (what was shared stays visible); false when new email is shared. Null when it does not apply (share not
+                live, rule not active, or you are not on the share) or could not be read.
             is_granter (bool): Whether you are the member sharing their mail.
             is_beneficiary (bool): Whether you are the member it is shared with.
-            granter (GetEmailRuleShareResultGranter):
-            beneficiary (GetEmailRuleShareResultBeneficiary):
-            rule (GetEmailRuleShareResultRuleType0 | None): What the rule is called and describes. Null once the share is no
-                longer live, except for the member who wrote the rule.
+            granter (EmailRuleShareGranter):
+            beneficiary (EmailRuleShareBeneficiary):
+            rule (GetEmailRuleShareResultRuleType0 | None): The rule's name, state and description; null once the share is
+                not live, except for the member sharing their mail.
             rule_id (None | UUID): The rule itself. Only for the member sharing their mail; null for anyone else.
      """
 
@@ -67,8 +66,8 @@ class GetEmailRuleShareResult:
     delivery_paused: bool | None
     is_granter: bool
     is_beneficiary: bool
-    granter: GetEmailRuleShareResultGranter
-    beneficiary: GetEmailRuleShareResultBeneficiary
+    granter: EmailRuleShareGranter
+    beneficiary: EmailRuleShareBeneficiary
     rule: GetEmailRuleShareResultRuleType0 | None
     rule_id: None | UUID
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -78,8 +77,8 @@ class GetEmailRuleShareResult:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.get_email_rule_share_result_beneficiary import GetEmailRuleShareResultBeneficiary # noqa: PLC0415
-        from ..models.get_email_rule_share_result_granter import GetEmailRuleShareResultGranter # noqa: PLC0415
+        from ..models.email_rule_share_beneficiary import EmailRuleShareBeneficiary # noqa: PLC0415
+        from ..models.email_rule_share_granter import EmailRuleShareGranter # noqa: PLC0415
         from ..models.get_email_rule_share_result_rule_type_0 import GetEmailRuleShareResultRuleType0 # noqa: PLC0415
         id = str(self.id)
 
@@ -159,8 +158,8 @@ class GetEmailRuleShareResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.get_email_rule_share_result_beneficiary import GetEmailRuleShareResultBeneficiary # noqa: PLC0415
-        from ..models.get_email_rule_share_result_granter import GetEmailRuleShareResultGranter # noqa: PLC0415
+        from ..models.email_rule_share_beneficiary import EmailRuleShareBeneficiary # noqa: PLC0415
+        from ..models.email_rule_share_granter import EmailRuleShareGranter # noqa: PLC0415
         from ..models.get_email_rule_share_result_rule_type_0 import GetEmailRuleShareResultRuleType0 # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
@@ -252,12 +251,12 @@ class GetEmailRuleShareResult:
 
         is_beneficiary = d.pop("is_beneficiary")
 
-        granter = GetEmailRuleShareResultGranter.from_dict(d.pop("granter"))
+        granter = EmailRuleShareGranter.from_dict(d.pop("granter"))
 
 
 
 
-        beneficiary = GetEmailRuleShareResultBeneficiary.from_dict(d.pop("beneficiary"))
+        beneficiary = EmailRuleShareBeneficiary.from_dict(d.pop("beneficiary"))
 
 
 

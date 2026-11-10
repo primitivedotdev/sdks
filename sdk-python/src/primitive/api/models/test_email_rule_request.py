@@ -14,8 +14,9 @@ from typing import cast
 from uuid import UUID
 
 if TYPE_CHECKING:
-  from ..models.test_email_rule_request_scope_selection import TestEmailRuleRequestScopeSelection
-  from ..models.test_email_rule_request_tree import TestEmailRuleRequestTree
+  from ..models.email_rule_scope_selection import EmailRuleScopeSelection
+  from ..models.email_rule_tree_input import EmailRuleTreeInput
+  from ..models.test_email_rule_request_expect import TestEmailRuleRequestExpect
 
 
 
@@ -29,38 +30,42 @@ T = TypeVar("T", bound="TestEmailRuleRequest")
 class TestEmailRuleRequest:
     """ 
         Attributes:
-            tree (TestEmailRuleRequestTree | Unset): An unsaved rule tree, as POST /email-rules/compile returned it. Give
-                tree or rule_id, not both.
+            tree (EmailRuleTreeInput | Unset):
             evaluation_scope (TestEmailRuleRequestEvaluationScope | Unset): own_mailboxes (the default): mail to your own
-                addresses and agents (for a rule that shares, those you can send from). author: all mail you can read, including
-                inboxes added later. selected: what scope_selection names.
-            scope_selection (TestEmailRuleRequestScopeSelection | Unset): Inboxes, and domains (every address at them the
-                author can read), for a selected rule; each one you can read.
+                addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read,
+                inboxes added later included. selected: what scope_selection names.
+            scope_selection (EmailRuleScopeSelection | Unset): For a selected rule: inboxes, and domains (each address at
+                them the author reads); each one you can read.
             rule_id (UUID | Unset): A saved rule you can see. Its current version is tested, with its author's access.
             kind (TestEmailRuleRequestKind | Unset): For an unsaved tree: do_not_share tests it as a rule that blocks
                 sharing, so an email it cannot decide counts as matched. A saved rule uses its own.
-            email_ids (list[UUID] | Unset): Test exactly these emails. Without it, the newest emails the rule can read are
-                tested, at most 200 and none older than 30 days.
+            email_ids (list[UUID] | Unset): Test exactly these emails, and any expected ones. Without it, the newest emails
+                the rule can read are tested, at most 200 and none older than 30 days.
             classify_missing (bool | Unset): Classify emails in the set that have not been classified yet and arrived more
                 than 2 hours ago, and save their classification. Defaults to true. Newer ones are left to the normal
                 classification and reported pending. The rule is never evaluated on them for real.
+            expect (TestEmailRuleRequestExpect | Unset): Emails the rule must match and must not, at most 100 in all, always
+                tested whatever their age: added to email_ids, or to the recent window, which gives up a place for each. The
+                answer's expectations judge each.
      """
 
-    tree: TestEmailRuleRequestTree | Unset = UNSET
+    tree: EmailRuleTreeInput | Unset = UNSET
     evaluation_scope: TestEmailRuleRequestEvaluationScope | Unset = UNSET
-    scope_selection: TestEmailRuleRequestScopeSelection | Unset = UNSET
+    scope_selection: EmailRuleScopeSelection | Unset = UNSET
     rule_id: UUID | Unset = UNSET
     kind: TestEmailRuleRequestKind | Unset = UNSET
     email_ids: list[UUID] | Unset = UNSET
     classify_missing: bool | Unset = UNSET
+    expect: TestEmailRuleRequestExpect | Unset = UNSET
 
 
 
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.test_email_rule_request_scope_selection import TestEmailRuleRequestScopeSelection # noqa: PLC0415
-        from ..models.test_email_rule_request_tree import TestEmailRuleRequestTree # noqa: PLC0415
+        from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
+        from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
+        from ..models.test_email_rule_request_expect import TestEmailRuleRequestExpect # noqa: PLC0415
         tree: dict[str, Any] | Unset = UNSET
         if not isinstance(self.tree, Unset):
             tree = self.tree.to_dict()
@@ -94,6 +99,10 @@ class TestEmailRuleRequest:
 
         classify_missing = self.classify_missing
 
+        expect: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.expect, Unset):
+            expect = self.expect.to_dict()
+
 
         field_dict: dict[str, Any] = {}
 
@@ -113,6 +122,8 @@ class TestEmailRuleRequest:
             field_dict["email_ids"] = email_ids
         if classify_missing is not UNSET:
             field_dict["classify_missing"] = classify_missing
+        if expect is not UNSET:
+            field_dict["expect"] = expect
 
         return field_dict
 
@@ -120,15 +131,16 @@ class TestEmailRuleRequest:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.test_email_rule_request_scope_selection import TestEmailRuleRequestScopeSelection # noqa: PLC0415
-        from ..models.test_email_rule_request_tree import TestEmailRuleRequestTree # noqa: PLC0415
+        from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
+        from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
+        from ..models.test_email_rule_request_expect import TestEmailRuleRequestExpect # noqa: PLC0415
         d = dict(src_dict)
         _tree = d.pop("tree", UNSET)
-        tree: TestEmailRuleRequestTree | Unset
+        tree: EmailRuleTreeInput | Unset
         if isinstance(_tree,  Unset):
             tree = UNSET
         else:
-            tree = TestEmailRuleRequestTree.from_dict(_tree)
+            tree = EmailRuleTreeInput.from_dict(_tree)
 
 
 
@@ -144,11 +156,11 @@ class TestEmailRuleRequest:
 
 
         _scope_selection = d.pop("scope_selection", UNSET)
-        scope_selection: TestEmailRuleRequestScopeSelection | Unset
+        scope_selection: EmailRuleScopeSelection | Unset
         if isinstance(_scope_selection,  Unset):
             scope_selection = UNSET
         else:
-            scope_selection = TestEmailRuleRequestScopeSelection.from_dict(_scope_selection)
+            scope_selection = EmailRuleScopeSelection.from_dict(_scope_selection)
 
 
 
@@ -187,6 +199,16 @@ class TestEmailRuleRequest:
 
         classify_missing = d.pop("classify_missing", UNSET)
 
+        _expect = d.pop("expect", UNSET)
+        expect: TestEmailRuleRequestExpect | Unset
+        if isinstance(_expect,  Unset):
+            expect = UNSET
+        else:
+            expect = TestEmailRuleRequestExpect.from_dict(_expect)
+
+
+
+
         test_email_rule_request = cls(
             tree=tree,
             evaluation_scope=evaluation_scope,
@@ -195,6 +217,7 @@ class TestEmailRuleRequest:
             kind=kind,
             email_ids=email_ids,
             classify_missing=classify_missing,
+            expect=expect,
         )
 
         return test_email_rule_request

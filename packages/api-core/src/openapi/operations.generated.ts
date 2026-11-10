@@ -581,7 +581,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-webhook-secret",
-    "description": "Returns the webhook signing secret for your account. If no\nsecret exists yet, one is generated automatically on first\naccess.\n\nSigning is account-scoped, not per-endpoint. Every webhook\ndelivery from any of your registered endpoints is signed\nwith this single secret. Rotate via\n`POST /account/webhook-secret/rotate`.\n\n**Secret format**: the returned string looks base64-shaped\n(e.g. `XNHBBW8VqoBjRfNs1tkZj11jTk...`) but is NOT base64.\nUse it AS-IS as a UTF-8 string when computing HMAC over a\ndelivery body. Base64-decoding before HMAC will silently\nproduce mismatched signatures.\n\nSee the API-level \"Webhook signing\" section for the full\nwire format (header name, signed string shape, hash algo,\ntolerance) including a language-agnostic verification\nrecipe.\n",
+    "description": "Returns the webhook signing secret for your account. If no\nsecret exists yet, one is generated automatically on first\naccess.\n\nEvery webhook is signed with this secret unless it has its own. Rotate this secret via `POST /account/webhook-secret/rotate`. A webhook whose signed_with is own_secret is signed with its own secret instead; read it from GET /endpoints/{id}/signing-secret. A webhook's own secret rotates via `POST /endpoints/{id}/signing-secret/rotate`.\n\n**Secret format**: the returned string looks base64-shaped\n(e.g. `XNHBBW8VqoBjRfNs1tkZj11jTk...`) but is NOT base64.\nUse it AS-IS as a UTF-8 string when computing HMAC over a\ndelivery body. Base64-decoding before HMAC will silently\nproduce mismatched signatures.\n\nSee the API-level \"Webhook signing\" section for the full\nwire format (header name, signed string shape, hash algo,\ntolerance) including a language-agnostic verification\nrecipe.\n",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getWebhookSecret",
@@ -1179,7 +1179,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
-        "description": "Case-sensitive note name. AGENT_INFO, AGENT_USES and AGENT_RUNTIME (where the agent runs, e.g. its runtime, machine and working directory) are conventions, with no required value schema.",
+        "description": "The name of the last note on the previous page, as meta.cursor gave it. Omit for the first page.",
         "enum": null,
         "name": "cursor",
         "required": false,
@@ -1399,7 +1399,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
-        "description": "Case-sensitive note name. AGENT_INFO, AGENT_USES and AGENT_RUNTIME (where the agent runs, e.g. its runtime, machine and working directory) are conventions, with no required value schema.",
+        "description": "The name of the last note on the previous page, as meta.cursor gave it. Omit for the first page.",
         "enum": null,
         "name": "cursor",
         "required": false,
@@ -11173,7 +11173,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-key",
-    "description": "Create an API key, super admin or narrowed to a preset or a custom permission set, optionally with an expiry and conditions. The secret is returned once. A key never holds more than the person creating it; the credential policy decides who may create which keys. grant is required: a request without it is refused (400 validation_error, details.reason grant_required), never treated as super admin. A custom key must say which mail it reaches: the addresses and domains it lists (grant.addresses, grant.domains), or every mailbox in the organization with grant.mail_scope \"org\", which cannot be combined with them; one that says neither is refused (400 validation_error, details.reason mail_scope_required). Super admin, Send only and Read only reach every mailbox by definition. members:read is only for an org-wide custom key: naming it with grant.addresses or grant.domains is refused (400). Owners and admins are emailed about every super admin key. Send an Idempotency-Key to retry safely: a second create by the same person under the same key makes no second key and is refused (409 idempotency_key_reused) with the first key's id in error.details.key_id, so a caller whose first answer was lost can revoke that key. The onboarding field is for the dashboard only. The person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules); the Primitive app's token is refused, even with one. While the organization's keys API is not enabled, this answers 404 feature_disabled (details.feature keys_api; only Primitive turns it on), except that a dashboard session may still create a super admin key (the dashboard's own create).\n\nPerson only: a dashboard session, the person's own Primitive CLI login with no step-up, or the person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.",
+    "description": "Create an API key, super admin or narrowed to a preset or a custom permission set, optionally with an expiry and conditions. The secret is returned once. A key never holds more than the person creating it; the credential policy decides who may create which keys. grant is required: a request without it is refused (400 validation_error, details.reason grant_required), never treated as super admin. A custom key must say which mail it reaches: the addresses and domains it lists (grant.addresses, grant.domains), or every mailbox in the organization with grant.mail_scope \"org\", which cannot be combined with them; one that says neither is refused (400 validation_error, details.reason mail_scope_required). Super admin, Send only and Read only reach every mailbox by definition. members:read is only for an org-wide custom key: naming it with grant.addresses or grant.domains is refused (400). Owners and admins are emailed about every super admin key. Send an Idempotency-Key to retry safely: a second create by the same person under the same key makes no second key and is refused (409 idempotency_key_reused) with the first key's id in error.details.key_id, so a caller whose first answer was lost can revoke that key. The onboarding field is for the dashboard only. The person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless the organization's credential policy sets cli_writes_require_approval; the Primitive app's token is refused, even with one. While the organization's keys API is not enabled, this answers 404 feature_disabled (details.feature keys_api; contact Primitive to turn it on), except that a dashboard session may still create a super admin key (the dashboard's own create).\n\nPerson only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "createKey",
@@ -11196,7 +11196,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
-        "description": "A single-use step-up token of purpose `keys.create` (Create, rotate or change an API key), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session. The Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.reason` `dashboard_only`). The person's own Primitive CLI login needs no token for this purpose while the organization's keys API is on (a token it sends is still checked); while it is off, a token it sends is refused the same way.",
+        "description": "A single-use step-up token of purpose `keys.create` (Create, rotate, change or revoke an API key), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session. The Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.reason` `dashboard_only`). The person's own Primitive CLI login needs no token for this purpose while the organization's keys API is on (a token it sends is still checked), unless the organization's credential policy sets `cli_writes_require_approval`; while the keys API is off, a token it sends is refused the same way.",
         "enum": null,
         "name": "Primitive-Step-Up",
         "required": false,
@@ -11505,7 +11505,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-credential-policy",
-    "description": "The organization credential policy: key lifetime and expiry rules, who may create super admin keys, whether members may create keys and the other rules every new key is held to. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns these on.\n\nPerson only: a dashboard session. The person's role must hold credentials:read. API keys, agent connection keys and agents are refused.",
+    "description": "The organization credential policy: key lifetime and expiry rules, who may create super admin keys, whether members may create keys and the other rules every new key is held to. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session. The person's role must hold credentials:read. API keys, agent connection keys and agents are refused.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getCredentialPolicy",
@@ -11553,6 +11553,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "oauth_consent_admin_only": {
           "type": "boolean"
         },
+        "cli_writes_require_approval": {
+          "type": "boolean"
+        },
         "cli_access": {
           "type": "string",
           "enum": [
@@ -11584,7 +11587,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-key",
-    "description": "One key's metadata, never its secret. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns these on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.",
+    "description": "One key's metadata, never its secret, with whether it works now (status). Its grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain, otherwise content. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getKey",
@@ -11686,6 +11689,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "suspended": {
           "type": "boolean"
+        },
+        "status": {
+          "description": "Whether the key works now: active; suspended (refused until the suspension is lifted); expired (refused since expires_at); or inactive, for an agent connection key whose connection cannot act (not claimed, revoked, its domain not verified, or its owner no longer a member). A revoked key is not listed. An endpoint's owner_key_status reports an expired key as suspended.",
+          "type": "string",
+          "enum": [
+            "active",
+            "suspended",
+            "expired",
+            "inactive"
+          ]
         }
       },
       "required": [
@@ -11712,7 +11725,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-key-builder",
-    "description": "The key presets the caller may use (each with whether it is available and why not), the permission matrix for custom keys and the policy in force. An area marked org_wide_only (Members) is listed only to a person who holds its permission, and only a custom key with no addresses or domains may hold it. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns these on.\n\nPerson only: a dashboard session. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.",
+    "description": "The key presets the caller may use (each with whether it is available and why not), the permission matrix for custom keys and the policy in force. An area marked org_wide_only (Members) is listed only to a person who holds its permission, and only a custom key with no addresses or domains may hold it. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getKeyBuilder",
@@ -11862,6 +11875,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "oauth_consent_admin_only": {
               "type": "boolean"
             },
+            "cli_writes_require_approval": {
+              "type": "boolean"
+            },
             "cli_access": {
               "type": "string",
               "enum": [
@@ -11902,7 +11918,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-key-suggestion",
-    "description": "The permissions a key used over the last 30 days, as a custom grant that would have served every successful call (also as builder areas), the narrowest mail scope its calls support (depth is deprecated: raw when it downloaded raw MIME, otherwise content) (the mailboxes of the messages it named and sent, with notes on what the request log cannot account for), and whether it is unused. Calls to routes only the super admin key can use (groups and mailbox access) derive no permission, since a custom key is refused there; super_admin_only_calls counts them. usage gives the same window anonymized: successful and failed requests per UTC day, the routes called by their declared template (never the called path) with the permission each needed, and how many mailboxes the key read and sent from (counts only, and only for a person with access to the whole organization's mail). Nothing is applied: narrowing is a change to the key (PATCH /v1/keys/:id). Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns these on.\n\nPerson only: a dashboard session. The person's role must hold credentials:read. API keys, agent connection keys and agents are refused.",
+    "description": "The permissions a key used over the last 30 days, as a custom grant that would have served every successful call (also as builder areas), the narrowest mail scope its calls support (depth is deprecated: raw when it downloaded raw MIME, otherwise content) (the mailboxes of the messages it named and sent, with notes on what the request log cannot account for), and whether it is unused. Calls to routes only the super admin key can use (groups and mailbox access) derive no permission, since a custom key is refused there; super_admin_only_calls counts them. usage gives the same window anonymized: successful and failed requests per UTC day, the routes called by their declared template (never the called path) with the permission each needed, and how many mailboxes the key read and sent from (counts only, and only for a person with access to the whole organization's mail). Nothing is applied: narrowing is a change to the key (PATCH /v1/keys/:id). Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session. The person's role must hold credentials:read. API keys, agent connection keys and agents are refused.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getKeySuggestion",
@@ -12277,7 +12293,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-credential-events",
-    "description": "Credential events (created, rotated, edited, revoked, used with a step-up, policy changes), newest first, with a cursor. format=csv returns the same page as CSV. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns these on.\n\nPerson only: a dashboard session. The person's role must hold credential_events:read. API keys, agent connection keys and agents are refused.",
+    "description": "Credential events (created, rotated, edited, revoked, used with a step-up, policy changes), newest first, with a cursor. format=csv returns the same page as CSV. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session. The person's role must hold credential_events:read. API keys, agent connection keys and agents are refused.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listCredentialEvents",
@@ -12465,7 +12481,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-credentials",
-    "description": "Every credential that can act in the organization: API keys, Function keys, agent connection keys, connected apps (OAuth), agent delegates and, where enabled, CLI logins. Secrets are never returned. Filter with kind. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns these on.\n\nPerson only: a dashboard session. The person's role must hold credentials:read. API keys, agent connection keys and agents are refused.",
+    "description": "Every credential that can act in the organization: API keys, Function keys, agent connection keys, connected apps (OAuth), agent delegates and, where enabled, CLI logins. Secrets are never returned. A key's grant.mail_scope.depth is raw only when it holds mail.raw:read and its scope lists an address or a domain, otherwise content. Filter with kind. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session. The person's role must hold credentials:read. API keys, agent connection keys and agents are refused.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listCredentials",
@@ -12853,7 +12869,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-keys",
-    "description": "Key metadata, never a secret: name, prefix, grant, creator, last use, expiry and suspension. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns these on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.",
+    "description": "Key metadata, never a secret: name, prefix, grant, creator, last use, expiry, suspension and whether each key works now (status). A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain, otherwise content. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listKeys",
@@ -12960,6 +12976,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               },
               "suspended": {
                 "type": "boolean"
+              },
+              "status": {
+                "description": "Whether the key works now: active; suspended (refused until the suspension is lifted); expired (refused since expires_at); or inactive, for an agent connection key whose connection cannot act (not claimed, revoked, its domain not verified, or its owner no longer a member). A revoked key is not listed. An endpoint's owner_key_status reports an expired key as suspended.",
+                "type": "string",
+                "enum": [
+                  "active",
+                  "suspended",
+                  "expired",
+                  "inactive"
+                ]
               }
             },
             "required": [
@@ -13000,7 +13026,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "revoke-all-credentials",
-    "description": "The emergency response to a leak: revokes every API key, agent connection key and connected app created since a time, rotates the organization Function key and every running Function's own key, and optionally suspends Functions. Owners only, from a dashboard session, and the body must confirm with \"revoke all\". Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns these on.\n\nPerson only: a dashboard session. The person's role must hold credentials:revoke_all. API keys, agent connection keys and agents are refused.",
+    "description": "The emergency response to a leak: revokes every API key, agent connection key and connected app created since a time, rotates the organization Function key and every running Function's own key, and optionally suspends Functions. Owners only, from a dashboard session, and the body must confirm with \"revoke all\". Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session. The person's role must hold credentials:revoke_all. API keys, agent connection keys and agents are refused.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "revokeAllCredentials",
@@ -13106,7 +13132,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "revoke-credential",
-    "description": "Revoke one credential by kind and id. A Function key is rotated, never revoked (409 rotate_instead). An API key is revoked only by a person whose own access covers the key's access (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered. What the credential set up keeps working and is listed in standing_objects for review. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns these on.\n\nPerson only: a dashboard session. The person's role must hold keys:manage. API keys, agent connection keys and agents are refused.",
+    "description": "Revoke one credential by kind and id. A Function key is rotated, never revoked (409 rotate_instead). An API key is revoked only by a person whose own access covers the key's access (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered. What the credential set up keeps working and is listed in standing_objects for review. The person's own Primitive CLI login revokes an API key (kind org_key) as the person, with no step-up unless the organization's credential policy sets cli_writes_require_approval (then it takes a keys.create step-up); every other kind (a connected key named as org_key included, 403 grant_forbidden target_not_covered), and every other app even with a step-up, is refused outside the dashboard (403). Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:manage. API keys, agent connection keys and agents are refused.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "revokeCredential",
@@ -13114,6 +13140,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [
+      {
+        "description": "A single-use step-up token of purpose `keys.create` (Create, rotate, change or revoke an API key), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session. Here only the person's own Primitive CLI login revoking an API key (kind `org_key`) uses it, when the route answers it 403 `step_up_required`: where the organization's credential policy sets `cli_writes_require_approval`, for example. Otherwise it needs no token. Every other app is refused here (403, `details.reason` `dashboard_only`), with or without a token.",
+        "enum": null,
+        "name": "Primitive-Step-Up",
+        "required": false,
+        "type": "string"
+      },
       {
         "description": "Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.",
         "enum": null,
@@ -13249,7 +13282,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "rotate-key",
-    "description": "Mint a successor with the same grant and return its secret once. The old key keeps working for overlap_seconds, then stops. The person rotating must cover the key's access (403 grant_forbidden, details.reason target_not_covered), and a key an owner created is rotated by an owner only (403 forbidden, details.reason owner_key_rotation), since rotating hands over the new secret. The person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules); the Primitive app's token is refused, even with one. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns these on.\n\nPerson only: a dashboard session, the person's own Primitive CLI login with no step-up, or the person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.",
+    "description": "Mint a successor with a new id and the same name, grant, expiry and conditions, and return its secret once. The old key keeps working for overlap_seconds, then stops: 24 hours when overlap_seconds is omitted, at most 7 days, never past its own expires_at, and at once with 0 (which is how to rotate a key whose secret leaked). previous_key_expires_at says when the old key stops. The person rotating must cover the key's access (403 grant_forbidden, details.reason target_not_covered), and a key an owner holds is rotated by an owner only (403 forbidden, details.reason owner_key_rotation), since rotating hands over the new secret. The person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless the organization's credential policy sets cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "rotateKey",
@@ -13266,7 +13299,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "queryParams": [],
     "headerParams": [
       {
-        "description": "A single-use step-up token of purpose `keys.create` (Create, rotate or change an API key), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session. The Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.reason` `dashboard_only`). The person's own Primitive CLI login needs no token for this purpose while the organization's keys API is on (a token it sends is still checked); while it is off, a token it sends is refused the same way.",
+        "description": "A single-use step-up token of purpose `keys.create` (Create, rotate, change or revoke an API key), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session. The Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.reason` `dashboard_only`). The person's own Primitive CLI login needs no token for this purpose while the organization's keys API is on (a token it sends is still checked), unless the organization's credential policy sets `cli_writes_require_approval`; while the keys API is off, a token it sends is refused the same way.",
         "enum": null,
         "name": "Primitive-Step-Up",
         "required": false,
@@ -13287,6 +13320,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "type": "object",
       "properties": {
         "overlap_seconds": {
+          "description": "How long the old key keeps working, in seconds, up to 604800 (7 days), and never past its own expires_at. 86400 (24 hours) when omitted. 0 stops the old key at once: use it when rotating because the secret leaked.",
           "type": "integer",
           "minimum": 0,
           "maximum": 604800
@@ -13320,7 +13354,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "previous_key_expires_at": {
           "type": "string",
           "format": "date-time",
-          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+          "description": "When the old key stops working: the time of the rotation plus overlap_seconds (24 hours when it was omitted, now when it was 0), or the key's own expires_at when that comes first."
         }
       },
       "required": [
@@ -13341,7 +13376,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "update-credential-policy",
-    "description": "Change one or more policy rules. Admins may only tighten the policy; loosening any rule needs an owner. Owners and admins are emailed about every change. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns these on.\n\nPerson only: a dashboard session. The person's role must hold credential_policy:manage. API keys, agent connection keys and agents are refused.",
+    "description": "Change one or more policy rules. Admins may only tighten the policy; loosening any rule needs an owner. Owners and admins are emailed about every change. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session. The person's role must hold credential_policy:manage. API keys, agent connection keys and agents are refused.",
     "hasJsonBody": true,
     "method": "PATCH",
     "operationId": "updateCredentialPolicy",
@@ -13386,6 +13421,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "boolean"
         },
         "oauth_consent_admin_only": {
+          "type": "boolean"
+        },
+        "cli_writes_require_approval": {
           "type": "boolean"
         },
         "cli_access": {
@@ -13436,6 +13474,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "oauth_consent_admin_only": {
           "type": "boolean"
         },
+        "cli_writes_require_approval": {
+          "type": "boolean"
+        },
         "cli_access": {
           "type": "string",
           "enum": [
@@ -13467,7 +13508,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "update-key",
-    "description": "Rename a key, change its expiry, its grant or its conditions, or suspend it. Any change needs the person's own access to cover the key's access now (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key and is held to the same rules as creating one (a custom grant that does not say which mail it reaches is refused with details.reason mail_scope_required), so it takes the same step-up. The person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules); the Primitive app's token is refused, even with one. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Only Primitive turns these on.\n\nPerson only: a dashboard session, the person's own Primitive CLI login with no step-up, or the person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.",
+    "description": "Rename a key, change its expiry, its grant or its conditions, or suspend it. Any change needs the person's own access to cover the key's access now (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key and is held to the same rules as creating one (a custom grant that does not say which mail it reaches is refused with details.reason mail_scope_required), so it takes the same step-up. The person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless the organization's credential policy sets cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.",
     "hasJsonBody": true,
     "method": "PATCH",
     "operationId": "updateKey",
@@ -13484,7 +13525,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "queryParams": [],
     "headerParams": [
       {
-        "description": "A single-use step-up token of purpose `keys.create` (Create, rotate or change an API key), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session. The Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.reason` `dashboard_only`). The person's own Primitive CLI login needs no token for this purpose while the organization's keys API is on (a token it sends is still checked); while it is off, a token it sends is refused the same way.",
+        "description": "A single-use step-up token of purpose `keys.create` (Create, rotate, change or revoke an API key), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session. The Primitive app is refused for this purpose even with a token (403 `grant_forbidden`, `details.reason` `dashboard_only`). The person's own Primitive CLI login needs no token for this purpose while the organization's keys API is on (a token it sends is still checked), unless the organization's credential policy sets `cli_writes_require_approval`; while the keys API is off, a token it sends is refused the same way.",
         "enum": null,
         "name": "Primitive-Step-Up",
         "required": false,
@@ -15721,7 +15762,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "accept-email-rule-request",
-    "description": "Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from now on with the member who asked. Send no body to accept it as asked, or change it first with english, tree and explanation together. Because this gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused. Also needs mail:send_as_member: a role that can only read this mailbox is refused. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from now on with the member who asked. Send no body to accept it as asked, or change it first with english and tree together (and an explanation, or the server writes one). Because this gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused. Also needs mail:share_own (sharing your own mail through email rules, which only shows it and never sends): a role without it is refused, whether or not it can send. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "acceptEmailRuleRequest",
@@ -15747,7 +15788,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "permissions": [
       "mail:read",
-      "mail:send_as_member"
+      "mail:share_own"
     ],
     "requestSchema": {
       "type": "object",
@@ -15773,7 +15814,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "vocabulary": {
               "type": "string",
-              "description": "The column contract version the rule is written against, for example v1."
+              "description": "Vocabulary version, such as v1."
             },
             "when": {
               "type": "object",
@@ -15781,33 +15822,31 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "string"
               },
               "additionalProperties": {},
-              "description": "The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...})."
+              "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
             },
             "questions": {
+              "description": "Yes/no questions asked once the conditions match; all must be yes. Left out, none.",
               "type": "array",
               "items": {
                 "type": "string"
-              },
-              "description": "Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes."
+              }
             }
           },
           "required": [
             "version",
             "vocabulary",
-            "when",
-            "questions"
+            "when"
           ],
-          "additionalProperties": false,
-          "description": "The rule tree. Checked against the column contract on save."
+          "additionalProperties": false
         },
         "explanation": {
+          "description": "What the rule matches, in plain English. Left out, the server writes one from the tree.",
           "type": "string",
           "minLength": 1,
-          "maxLength": 1000,
-          "description": "What the rule matches, in plain English."
+          "maxLength": 1000
         },
         "assumptions": {
-          "description": "Readings chosen where the description was open to more than one.",
+          "description": "Readings chosen where the description was open to more than one, as the compile response returned them (including its lines naming any condition, question or confidence bar the description did not ask for). Stored as sent.",
           "maxItems": 10,
           "type": "array",
           "items": {
@@ -15817,7 +15856,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "warnings": {
-          "description": "Parts of the description the rule does not express.",
+          "description": "Parts of the description the rule does not express, as the compile response returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.",
           "maxItems": 10,
           "type": "array",
           "items": {
@@ -15827,7 +15866,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "compiled_by": {
-          "description": "Who produced the tree, as the caller states it (not verified): the compile response's compiled_by, or member when you wrote or edited it yourself. Defaults to member.",
+          "description": "Who produced the tree (not verified): the compile response's compiled_by, or member (the default) for a tree you wrote or edited.",
           "type": "string",
           "minLength": 1,
           "maxLength": 64
@@ -15869,7 +15908,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 },
                 "vocabulary": {
                   "type": "string",
-                  "description": "The column contract version the rule is written against, for example v1."
+                  "description": "Vocabulary version, such as v1."
                 },
                 "when": {
                   "type": "object",
@@ -15877,14 +15916,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                     "type": "string"
                   },
                   "additionalProperties": {},
-                  "description": "The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...})."
+                  "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
                 },
                 "questions": {
                   "type": "array",
                   "items": {
                     "type": "string"
                   },
-                  "description": "Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes."
+                  "description": "Yes/no questions asked once the conditions match; all must be yes."
                 }
               },
               "required": [
@@ -15921,7 +15960,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "session",
                 "oauth"
               ],
-              "description": "session: from the proposer's own session; oauth: from an OAuth or CLI token acting for them."
+              "description": "session: the proposer's own session; oauth: an OAuth or CLI token acting for them."
             },
             "created_at": {
               "type": "string",
@@ -15955,7 +15994,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   ]
                 },
                 "email": {
-                  "description": "Their sign-in email. Null unless you can list member emails, this is you, or you are the member they asked.",
+                  "description": "Sign-in email; null unless you can list member emails, this is you, or they asked you.",
                   "type": [
                     "string",
                     "null"
@@ -15963,7 +16002,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 },
                 "active": {
                   "type": "boolean",
-                  "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+                  "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
                 }
               },
               "required": [
@@ -15992,7 +16031,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   ]
                 },
                 "email": {
-                  "description": "Their sign-in email. Null unless you can list member emails or this is you.",
+                  "description": "Sign-in email; null unless you can list member emails or this is you.",
                   "type": [
                     "string",
                     "null"
@@ -16000,7 +16039,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 },
                 "active": {
                   "type": "boolean",
-                  "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+                  "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
                 }
               },
               "required": [
@@ -16011,7 +16050,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "target_address_typed": {
-              "description": "The address you typed to name the member. Only for the member who asked; null otherwise, and when they were named by user id.",
+              "description": "The address the proposer typed to name the target; null for anyone else, and when named by user id.",
               "type": [
                 "string",
                 "null"
@@ -16074,7 +16113,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "kind": {
-              "description": "do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.",
+              "description": "do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.",
               "type": "string",
               "enum": [
                 "grant",
@@ -16082,7 +16121,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "evaluation_scope": {
-              "description": "Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.",
+              "description": "Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).",
               "type": "string",
               "enum": [
                 "author",
@@ -16091,29 +16130,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "scope_selection": {
-              "type": [
-                "object",
-                "null"
-              ],
-              "properties": {
-                "addresses": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
+              "description": "What a selected rule names; null for any other scope.",
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "addresses": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "domains": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "addresses",
+                    "domains"
+                  ]
                 },
-                "domains": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
+                {
+                  "type": "null"
                 }
-              },
-              "required": [
-                "addresses",
-                "domains"
-              ],
-              "description": "What a selected rule names; null for any other scope."
+              ]
             },
             "current_version": {
               "type": [
@@ -16128,7 +16171,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "is_author": {
               "type": "boolean",
-              "description": "Whether the caller wrote the rule (under their current membership). Only the author edits a rule; anyone else who can see it may only disable or delete it, and while it is shared only if they manage members."
+              "description": "Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members)."
             },
             "created_at": {
               "type": "string",
@@ -16139,108 +16182,112 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "format": "date-time"
             },
             "current": {
-              "type": [
-                "object",
-                "null"
-              ],
-              "properties": {
-                "version": {
-                  "type": "integer",
-                  "exclusiveMinimum": 0
-                },
-                "english": {
-                  "type": "string"
-                },
-                "tree": {
+              "anyOf": [
+                {
                   "type": "object",
                   "properties": {
                     "version": {
-                      "type": "number",
-                      "const": 1
+                      "type": "integer",
+                      "exclusiveMinimum": 0
                     },
-                    "vocabulary": {
-                      "type": "string",
-                      "description": "The column contract version the rule is written against, for example v1."
+                    "english": {
+                      "type": "string"
                     },
-                    "when": {
+                    "tree": {
                       "type": "object",
-                      "propertyNames": {
-                        "type": "string"
+                      "properties": {
+                        "version": {
+                          "type": "number",
+                          "const": 1
+                        },
+                        "vocabulary": {
+                          "type": "string",
+                          "description": "Vocabulary version, such as v1."
+                        },
+                        "when": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {},
+                          "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
+                        },
+                        "questions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Yes/no questions asked once the conditions match; all must be yes."
+                        }
                       },
-                      "additionalProperties": {},
-                      "description": "The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...})."
+                      "required": [
+                        "version",
+                        "vocabulary",
+                        "when",
+                        "questions"
+                      ]
                     },
-                    "questions": {
+                    "explanation": {
+                      "type": "string"
+                    },
+                    "assumptions": {
                       "type": "array",
                       "items": {
                         "type": "string"
+                      }
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "compiled_by": {
+                      "type": "string",
+                      "description": "Who produced the tree, as stated when saved (not verified), such as rule-compiler-v1 or member."
+                    },
+                    "vocabulary": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "sql": {
+                      "description": "Present only when include_sql was true.",
+                      "type": "object",
+                      "properties": {
+                        "expression": {
+                          "type": "string",
+                          "description": "A parameterized boolean expression over one row per email."
+                        },
+                        "params": {
+                          "type": "array",
+                          "items": {},
+                          "description": "The values bound to $1, $2 and so on."
+                        }
                       },
-                      "description": "Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes."
+                      "required": [
+                        "expression",
+                        "params"
+                      ]
                     }
                   },
                   "required": [
                     "version",
+                    "english",
+                    "tree",
+                    "explanation",
+                    "assumptions",
+                    "warnings",
+                    "compiled_by",
                     "vocabulary",
-                    "when",
-                    "questions"
+                    "created_at"
                   ]
                 },
-                "explanation": {
-                  "type": "string"
-                },
-                "assumptions": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "warnings": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "compiled_by": {
-                  "type": "string",
-                  "description": "Who produced the tree, as the caller stated it when saving (not verified), for example rule-compiler-v1 or member."
-                },
-                "vocabulary": {
-                  "type": "string"
-                },
-                "created_at": {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                "sql": {
-                  "description": "Present only when include_sql was true.",
-                  "type": "object",
-                  "properties": {
-                    "expression": {
-                      "type": "string",
-                      "description": "A parameterized boolean expression over one row per email."
-                    },
-                    "params": {
-                      "type": "array",
-                      "items": {},
-                      "description": "The values bound to $1, $2 and so on."
-                    }
-                  },
-                  "required": [
-                    "expression",
-                    "params"
-                  ]
+                {
+                  "type": "null"
                 }
-              },
-              "required": [
-                "version",
-                "english",
-                "tree",
-                "explanation",
-                "assumptions",
-                "warnings",
-                "compiled_by",
-                "vocabulary",
-                "created_at"
               ]
             }
           },
@@ -16297,14 +16344,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "edited_on_accept": {
               "type": "boolean",
-              "description": "Whether the member who accepted changed what the rule says first (its English, tree or explanation). A new name does not count."
+              "description": "Whether the member who accepted changed the rule's English, tree or explanation before accepting (a new name does not count)."
             },
             "live": {
               "type": "boolean",
               "description": "Not ended, and both people are still members under the memberships that were recorded."
             },
             "delivery_paused": {
-              "description": "True when the rule is active and the share is live but new email is not being shared right now; email already shared stays visible. False when new email is being shared. Null when this does not apply (the share has ended, the rule is not active, or you are not one of the two people on the share) or could not be read.",
+              "description": "True when the rule is active and the share live but new email is not being shared now (what was shared stays visible); false when new email is shared. Null when it does not apply (share not live, rule not active, or you are not on the share) or could not be read.",
               "type": [
                 "boolean",
                 "null"
@@ -16332,7 +16379,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   ]
                 },
                 "email": {
-                  "description": "Their sign-in email. Null unless you can list member emails, this is you, or this is a live share with you.",
+                  "description": "Sign-in email; null unless you can list member emails, this is you, or this is a live share with you.",
                   "type": [
                     "string",
                     "null"
@@ -16340,7 +16387,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 },
                 "active": {
                   "type": "boolean",
-                  "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+                  "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
                 }
               },
               "required": [
@@ -16364,7 +16411,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   ]
                 },
                 "email": {
-                  "description": "Their sign-in email. Null unless you can list member emails, this is you, or you are the member sharing with them.",
+                  "description": "Sign-in email; null unless you can list member emails, this is you, or you are the granter (live or not).",
                   "type": [
                     "string",
                     "null"
@@ -16372,7 +16419,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 },
                 "active": {
                   "type": "boolean",
-                  "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+                  "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
                 }
               },
               "required": [
@@ -16430,7 +16477,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "explanation",
                 "updated_at"
               ],
-              "description": "What the rule is called and describes. Null once the share is no longer live, except for the member who wrote the rule."
+              "description": "The rule's name, state and description; null once the share is not live, except for the member sharing their mail."
             },
             "rule_id": {
               "type": [
@@ -16474,8 +16521,110 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": true,
+    "command": "check-email-rule-request-target",
+    "description": "Says, before you ask, whether a member could accept a rule request now under their role, and if not, which permission their role lacks. Nothing is sent and nothing is recorded. Needs members:read, as listing members and their roles does. At most 60 checks an hour. Name them by user id, or by their member mailbox address (counted with asking: at most 30 lookups by address an hour). Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "checkEmailRuleRequestTarget",
+    "path": "/email-rule-requests/target-check",
+    "pathParams": [],
+    "queryParams": [],
+    "headerParams": [
+      {
+        "description": "Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.",
+        "enum": null,
+        "name": "Idempotency-Key",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "permissions": [
+      "mail:read",
+      "members:read"
+    ],
+    "requestSchema": {
+      "type": "object",
+      "properties": {
+        "target_user_id": {
+          "description": "The member to ask. Give target_user_id or target_email, not both.",
+          "type": "string",
+          "format": "uuid"
+        },
+        "target_email": {
+          "description": "The member to ask, by their member mailbox address. Give target_user_id or target_email, not both. Counts toward the same 30 lookups by address an hour as asking.",
+          "type": "string",
+          "maxLength": 254,
+          "format": "email",
+          "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "email": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "user_id",
+            "name",
+            "email"
+          ]
+        },
+        "can_accept": {
+          "type": "boolean",
+          "description": "Whether they can accept a rule request now under their role."
+        },
+        "missing_permission": {
+          "description": "The permission their role lacks for accepting, when can_accept is false.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "warning": {
+          "description": "The same in words, with who can fix it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "target",
+        "can_accept",
+        "missing_permission",
+        "warning"
+      ]
+    },
+    "sdkName": "checkEmailRuleRequestTarget",
+    "summary": "Check whether a member can accept a rule request",
+    "tag": "Email Rules",
+    "tagCommand": "email-rules"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
     "command": "compile-email-rule",
-    "description": "Turns a plain-English description of which received emails to match into a rule tree over the published column contract, with a plain-English explanation of what it matches, the assumptions made, and warnings for anything the columns cannot express. Where the columns fall short the rule may carry up to three yes/no questions, asked about an email only after its conditions match. Nothing is saved. The SQL the rule renders to is returned only when include_sql is true. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "Turns a plain-English description of which received emails to match into a rule tree over the published column contract, with a plain-English explanation of what it matches, the assumptions made, and warnings for anything the columns cannot express. Where the columns fall short the rule may carry up to three yes/no questions, asked about an email only after its conditions match. Nothing is saved. A rule with no questions has its conditions counted, read only, over the caller's recent classified mail (what a test of it covers by default), so a warning can say when it matches nearly all of it. The SQL the rule renders to is returned only when include_sql is true. kind do_not_share compiles a do-not-share rule for recall: conditions only as narrow as the description says, the judgement of what it describes put into questions, and with nothing a column decides for certain, conditions that hold for every email. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "compileEmailRule",
@@ -16503,6 +16652,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "maxLength": 2000,
           "description": "What the rule should match, in plain English."
         },
+        "kind": {
+          "description": "What the rule will be: grant (the default) or do_not_share. A do-not-share rule is compiled for recall: conditions only as narrow as the description says, and the judgement of what it describes put into questions, since an email it misses can be shared.",
+          "type": "string",
+          "enum": [
+            "grant",
+            "do_not_share"
+          ]
+        },
         "include_sql": {
           "description": "Also return the SQL the rule renders to. Off by default.",
           "type": "boolean"
@@ -16525,7 +16682,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "vocabulary": {
               "type": "string",
-              "description": "The column contract version the rule is written against, for example v1."
+              "description": "Vocabulary version, such as v1."
             },
             "when": {
               "type": "object",
@@ -16533,14 +16690,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "string"
               },
               "additionalProperties": {},
-              "description": "The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...})."
+              "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
             },
             "questions": {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes."
+              "description": "Yes/no questions asked once the conditions match; all must be yes."
             }
           },
           "required": [
@@ -16559,14 +16716,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "items": {
             "type": "string"
           },
-          "description": "Readings the compiler chose where the description was open to more than one."
+          "description": "Readings the compiler chose where the description was open to more than one. Whenever the rule holds a condition, question or confidence bar that no words of the description call for, this list also has a line starting \"Added without the description asking for it:\" naming it (several share a line when there are many)."
         },
         "warnings": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Parts of the description the column contract cannot express, and how the rule handles them."
+          "description": "Parts of the description the column contract cannot express, and how the rule handles them. When the rule reads automated or from_mailing_list, it also has a note on what that column reads and what it misses. When the rule has no questions and its conditions hold for all of the caller's recent classified mail (what a test of it covers by default), or for at least 90% of at least 20 emails, the first warning says so. That count is not made for a caller whose access shows headers only, or who could not run a test of the rule, and may also be skipped when the compile ran long or the count fails."
         },
         "compiled_by": {
           "type": "string",
@@ -16609,7 +16766,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-email-rule",
-    "description": "Saves a rule as version 1, from a compile response or a tree you wrote. The tree is checked against the column contract. New rules start in observe, where what the rule matches is recorded and nothing is granted or blocked; draft is not evaluated. The caller is the rule's author, and the rule never reaches mail the author cannot read. evaluation_scope chooses whose mail it runs over: own_mailboxes (only your own mail) when omitted, so any other scope (author for all you can read, or selected) is named; scope_selection may name only what you can read. The answer carries the scope as stored. kind do_not_share makes a rule that blocks sharing: it runs before every other rule, and while it is active no rule shares an email it matches or cannot decide. A key cannot list one (details.reason rule_blocks_sharing on the key). Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column contract; without an explanation the server writes one. It starts in observe (what it matches is recorded, nothing granted or blocked) unless state is draft (not evaluated). You are its author, and it never reaches mail you cannot read. evaluation_scope is own_mailboxes (your own mail) unless you name author (all you can read) or selected; scope_selection may name only what you can read. The answer carries the scope as stored. expectations saves emails it must match and must not; the answer judges them (expectations_check). kind do_not_share blocks sharing: it runs before every other rule, and while active no rule shares an email it matches or cannot decide; a key cannot list it (details.reason rule_blocks_sharing). Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "createEmailRule",
@@ -16660,7 +16817,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "own_mailboxes",
             "selected"
           ],
-          "description": "own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those you can send from). author: all mail you can read, including inboxes added later. selected: what scope_selection names."
+          "description": "own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
         },
         "scope_selection": {
           "type": "object",
@@ -16687,7 +16844,30 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             }
           },
           "additionalProperties": false,
-          "description": "Inboxes, and domains (every address at them the author can read), for a selected rule; each one you can read."
+          "description": "For a selected rule: inboxes, and domains (each address at them the author reads); each one you can read."
+        },
+        "expectations": {
+          "type": "object",
+          "properties": {
+            "match": {
+              "maxItems": 100,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "no_match": {
+              "maxItems": 100,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "description": "Emails it must match and must not (at most 100): a test by rule_id judges them unless expect is given, and each version it saves is checked against them."
         },
         "english": {
           "type": "string",
@@ -16704,7 +16884,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "vocabulary": {
               "type": "string",
-              "description": "The column contract version the rule is written against, for example v1."
+              "description": "Vocabulary version, such as v1."
             },
             "when": {
               "type": "object",
@@ -16712,33 +16892,31 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "string"
               },
               "additionalProperties": {},
-              "description": "The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...})."
+              "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
             },
             "questions": {
+              "description": "Yes/no questions asked once the conditions match; all must be yes. Left out, none.",
               "type": "array",
               "items": {
                 "type": "string"
-              },
-              "description": "Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes."
+              }
             }
           },
           "required": [
             "version",
             "vocabulary",
-            "when",
-            "questions"
+            "when"
           ],
-          "additionalProperties": false,
-          "description": "The rule tree. Checked against the column contract on save."
+          "additionalProperties": false
         },
         "explanation": {
+          "description": "What the rule matches, in plain English. Left out, the server writes one from the tree.",
           "type": "string",
           "minLength": 1,
-          "maxLength": 1000,
-          "description": "What the rule matches, in plain English."
+          "maxLength": 1000
         },
         "assumptions": {
-          "description": "Readings chosen where the description was open to more than one.",
+          "description": "Readings chosen where the description was open to more than one, as the compile response returned them (including its lines naming any condition, question or confidence bar the description did not ask for). Stored as sent.",
           "maxItems": 10,
           "type": "array",
           "items": {
@@ -16748,7 +16926,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "warnings": {
-          "description": "Parts of the description the rule does not express.",
+          "description": "Parts of the description the rule does not express, as the compile response returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.",
           "maxItems": 10,
           "type": "array",
           "items": {
@@ -16758,7 +16936,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "compiled_by": {
-          "description": "Who produced the tree, as the caller states it (not verified): the compile response's compiled_by, or member when you wrote or edited it yourself. Defaults to member.",
+          "description": "Who produced the tree (not verified): the compile response's compiled_by, or member (the default) for a tree you wrote or edited.",
           "type": "string",
           "minLength": 1,
           "maxLength": 64
@@ -16767,8 +16945,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "required": [
         "name",
         "english",
-        "tree",
-        "explanation"
+        "tree"
       ],
       "additionalProperties": false
     },
@@ -16791,7 +16968,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "kind": {
-          "description": "do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.",
+          "description": "do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.",
           "type": "string",
           "enum": [
             "grant",
@@ -16799,7 +16976,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "evaluation_scope": {
-          "description": "Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.",
+          "description": "Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).",
           "type": "string",
           "enum": [
             "author",
@@ -16808,29 +16985,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "scope_selection": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "properties": {
-            "addresses": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
+          "description": "What a selected rule names; null for any other scope.",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "addresses": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "domains": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "addresses",
+                "domains"
+              ]
             },
-            "domains": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
+            {
+              "type": "null"
             }
-          },
-          "required": [
-            "addresses",
-            "domains"
-          ],
-          "description": "What a selected rule names; null for any other scope."
+          ]
         },
         "current_version": {
           "type": [
@@ -16845,7 +17026,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "is_author": {
           "type": "boolean",
-          "description": "Whether the caller wrote the rule (under their current membership). Only the author edits a rule; anyone else who can see it may only disable or delete it, and while it is shared only if they manage members."
+          "description": "Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members)."
         },
         "created_at": {
           "type": "string",
@@ -16856,108 +17037,185 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "format": "date-time"
         },
         "current": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "properties": {
-            "version": {
-              "type": "integer",
-              "exclusiveMinimum": 0
-            },
-            "english": {
-              "type": "string"
-            },
-            "tree": {
+          "anyOf": [
+            {
               "type": "object",
               "properties": {
                 "version": {
-                  "type": "number",
-                  "const": 1
+                  "type": "integer",
+                  "exclusiveMinimum": 0
                 },
-                "vocabulary": {
-                  "type": "string",
-                  "description": "The column contract version the rule is written against, for example v1."
+                "english": {
+                  "type": "string"
                 },
-                "when": {
+                "tree": {
                   "type": "object",
-                  "propertyNames": {
-                    "type": "string"
+                  "properties": {
+                    "version": {
+                      "type": "number",
+                      "const": 1
+                    },
+                    "vocabulary": {
+                      "type": "string",
+                      "description": "Vocabulary version, such as v1."
+                    },
+                    "when": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {},
+                      "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
+                    },
+                    "questions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Yes/no questions asked once the conditions match; all must be yes."
+                    }
                   },
-                  "additionalProperties": {},
-                  "description": "The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...})."
+                  "required": [
+                    "version",
+                    "vocabulary",
+                    "when",
+                    "questions"
+                  ]
                 },
-                "questions": {
+                "explanation": {
+                  "type": "string"
+                },
+                "assumptions": {
                   "type": "array",
                   "items": {
                     "type": "string"
+                  }
+                },
+                "warnings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "compiled_by": {
+                  "type": "string",
+                  "description": "Who produced the tree, as stated when saved (not verified), such as rule-compiler-v1 or member."
+                },
+                "vocabulary": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "sql": {
+                  "description": "Present only when include_sql was true.",
+                  "type": "object",
+                  "properties": {
+                    "expression": {
+                      "type": "string",
+                      "description": "A parameterized boolean expression over one row per email."
+                    },
+                    "params": {
+                      "type": "array",
+                      "items": {},
+                      "description": "The values bound to $1, $2 and so on."
+                    }
                   },
-                  "description": "Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes."
+                  "required": [
+                    "expression",
+                    "params"
+                  ]
                 }
               },
               "required": [
                 "version",
+                "english",
+                "tree",
+                "explanation",
+                "assumptions",
+                "warnings",
+                "compiled_by",
                 "vocabulary",
-                "when",
-                "questions"
+                "created_at"
               ]
             },
-            "explanation": {
-              "type": "string"
-            },
-            "assumptions": {
-              "type": "array",
-              "items": {
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "scope_warnings": {
+          "description": "Names in scope_selection that match nothing this organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
                 "type": "string"
-              }
-            },
-            "warnings": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "compiled_by": {
-              "type": "string",
-              "description": "Who produced the tree, as the caller stated it when saving (not verified), for example rule-compiler-v1 or member."
-            },
-            "vocabulary": {
-              "type": "string"
-            },
-            "created_at": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "sql": {
-              "description": "Present only when include_sql was true.",
-              "type": "object",
-              "properties": {
-                "expression": {
-                  "type": "string",
-                  "description": "A parameterized boolean expression over one row per email."
-                },
-                "params": {
-                  "type": "array",
-                  "items": {},
-                  "description": "The values bound to $1, $2 and so on."
-                }
               },
-              "required": [
-                "expression",
-                "params"
-              ]
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "address",
+                  "domain"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "unknown_domain",
+                  "inactive_domain",
+                  "unknown_address"
+                ],
+                "description": "unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet."
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "kind",
+              "reason",
+              "message"
+            ]
+          }
+        },
+        "expectations_check": {
+          "description": "After a write that saved a version or changed its expectations, if it has some: them, judged on that version from stored classifications without asking its questions. Undecided: one that needs answers not yet kept for that version, is unclassified or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed). Test by rule_id for the rest.",
+          "type": "object",
+          "properties": {
+            "version": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "exclusiveMinimum": 0
+            },
+            "passed": {
+              "type": "boolean"
+            },
+            "failed": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "undecided": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
             }
           },
           "required": [
             "version",
-            "english",
-            "tree",
-            "explanation",
-            "assumptions",
-            "warnings",
-            "compiled_by",
-            "vocabulary",
-            "created_at"
+            "passed",
+            "failed",
+            "undecided"
           ]
         }
       },
@@ -16982,7 +17240,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-email-rule-request",
-    "description": "Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address (at most 30 lookups by address an hour). Nothing is evaluated and nothing is shared until they accept, and they may change the rule first; they see the request and can preview what it matches in their own mail. You may have at most 5 pending requests to one member and 50 in all. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address (at most 30 lookups by address an hour). Nothing is evaluated and nothing is shared until they accept, and they may change the rule first; they see the request and can preview what it matches in their own mail. You may have at most 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer also says whether they can accept it under their role (target_can_accept), and if not, why (target_warning); the request is sent either way. To find out before asking, use POST /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "createEmailRuleRequest",
@@ -17037,7 +17295,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "vocabulary": {
               "type": "string",
-              "description": "The column contract version the rule is written against, for example v1."
+              "description": "Vocabulary version, such as v1."
             },
             "when": {
               "type": "object",
@@ -17045,33 +17303,31 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "string"
               },
               "additionalProperties": {},
-              "description": "The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...})."
+              "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
             },
             "questions": {
+              "description": "Yes/no questions asked once the conditions match; all must be yes. Left out, none.",
               "type": "array",
               "items": {
                 "type": "string"
-              },
-              "description": "Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes."
+              }
             }
           },
           "required": [
             "version",
             "vocabulary",
-            "when",
-            "questions"
+            "when"
           ],
-          "additionalProperties": false,
-          "description": "The rule tree. Checked against the column contract on save."
+          "additionalProperties": false
         },
         "explanation": {
+          "description": "What the rule matches, in plain English. Left out, the server writes one from the tree.",
           "type": "string",
           "minLength": 1,
-          "maxLength": 1000,
-          "description": "What the rule matches, in plain English."
+          "maxLength": 1000
         },
         "assumptions": {
-          "description": "Readings chosen where the description was open to more than one.",
+          "description": "Readings chosen where the description was open to more than one, as the compile response returned them (including its lines naming any condition, question or confidence bar the description did not ask for). Stored as sent.",
           "maxItems": 10,
           "type": "array",
           "items": {
@@ -17081,7 +17337,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "warnings": {
-          "description": "Parts of the description the rule does not express.",
+          "description": "Parts of the description the rule does not express, as the compile response returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.",
           "maxItems": 10,
           "type": "array",
           "items": {
@@ -17091,7 +17347,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "compiled_by": {
-          "description": "Who produced the tree, as the caller states it (not verified): the compile response's compiled_by, or member when you wrote or edited it yourself. Defaults to member.",
+          "description": "Who produced the tree (not verified): the compile response's compiled_by, or member (the default) for a tree you wrote or edited.",
           "type": "string",
           "minLength": 1,
           "maxLength": 64
@@ -17100,8 +17356,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "required": [
         "name",
         "english",
-        "tree",
-        "explanation"
+        "tree"
       ],
       "additionalProperties": false
     },
@@ -17136,7 +17391,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "vocabulary": {
               "type": "string",
-              "description": "The column contract version the rule is written against, for example v1."
+              "description": "Vocabulary version, such as v1."
             },
             "when": {
               "type": "object",
@@ -17144,14 +17399,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "string"
               },
               "additionalProperties": {},
-              "description": "The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...})."
+              "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
             },
             "questions": {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes."
+              "description": "Yes/no questions asked once the conditions match; all must be yes."
             }
           },
           "required": [
@@ -17188,7 +17443,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "session",
             "oauth"
           ],
-          "description": "session: from the proposer's own session; oauth: from an OAuth or CLI token acting for them."
+          "description": "session: the proposer's own session; oauth: an OAuth or CLI token acting for them."
         },
         "created_at": {
           "type": "string",
@@ -17222,7 +17477,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "email": {
-              "description": "Their sign-in email. Null unless you can list member emails, this is you, or you are the member they asked.",
+              "description": "Sign-in email; null unless you can list member emails, this is you, or they asked you.",
               "type": [
                 "string",
                 "null"
@@ -17230,7 +17485,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "active": {
               "type": "boolean",
-              "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+              "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
             }
           },
           "required": [
@@ -17259,7 +17514,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "email": {
-              "description": "Their sign-in email. Null unless you can list member emails or this is you.",
+              "description": "Sign-in email; null unless you can list member emails or this is you.",
               "type": [
                 "string",
                 "null"
@@ -17267,7 +17522,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "active": {
               "type": "boolean",
-              "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+              "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
             }
           },
           "required": [
@@ -17278,7 +17533,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "target_address_typed": {
-          "description": "The address you typed to name the member. Only for the member who asked; null otherwise, and when they were named by user id.",
+          "description": "The address the proposer typed to name the target; null for anyone else, and when named by user id.",
           "type": [
             "string",
             "null"
@@ -17297,6 +17552,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ],
           "format": "uuid",
           "description": "The share accepting created, while it exists."
+        },
+        "target_can_accept": {
+          "description": "Whether the member asked can accept it now under their role. Null unless you can list members and their roles (members:read), or when it could not be read.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "target_warning": {
+          "description": "Why the member asked cannot accept it yet, naming the permission their role lacks. The request is still sent. Null when they can, or when target_can_accept is null.",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
@@ -17331,7 +17600,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "decline-email-rule-request",
-    "description": "Declines a pending request made to you. Nothing is written but the decision. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "Declines a pending request made to you. Nothing is written but the decision. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": false,
     "method": "POST",
     "operationId": "declineEmailRuleRequest",
@@ -17390,7 +17659,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "vocabulary": {
               "type": "string",
-              "description": "The column contract version the rule is written against, for example v1."
+              "description": "Vocabulary version, such as v1."
             },
             "when": {
               "type": "object",
@@ -17398,14 +17667,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "string"
               },
               "additionalProperties": {},
-              "description": "The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...})."
+              "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
             },
             "questions": {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes."
+              "description": "Yes/no questions asked once the conditions match; all must be yes."
             }
           },
           "required": [
@@ -17442,7 +17711,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "session",
             "oauth"
           ],
-          "description": "session: from the proposer's own session; oauth: from an OAuth or CLI token acting for them."
+          "description": "session: the proposer's own session; oauth: an OAuth or CLI token acting for them."
         },
         "created_at": {
           "type": "string",
@@ -17476,7 +17745,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "email": {
-              "description": "Their sign-in email. Null unless you can list member emails, this is you, or you are the member they asked.",
+              "description": "Sign-in email; null unless you can list member emails, this is you, or they asked you.",
               "type": [
                 "string",
                 "null"
@@ -17484,7 +17753,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "active": {
               "type": "boolean",
-              "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+              "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
             }
           },
           "required": [
@@ -17513,7 +17782,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "email": {
-              "description": "Their sign-in email. Null unless you can list member emails or this is you.",
+              "description": "Sign-in email; null unless you can list member emails or this is you.",
               "type": [
                 "string",
                 "null"
@@ -17521,7 +17790,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "active": {
               "type": "boolean",
-              "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+              "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
             }
           },
           "required": [
@@ -17532,7 +17801,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "target_address_typed": {
-          "description": "The address you typed to name the member. Only for the member who asked; null otherwise, and when they were named by user id.",
+          "description": "The address the proposer typed to name the target; null for anyone else, and when named by user id.",
           "type": [
             "string",
             "null"
@@ -17585,7 +17854,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "delete-email-rule",
-    "description": "Deletes a rule with its versions, its decisions and the access it granted. The author, or a caller who reads the whole organization's mail, may delete it; while it is shared with another member, only the author or someone who manages members from the dashboard. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "Deletes a rule with its versions, its decisions and the access it granted. The author, or a caller who reads the whole organization's mail, may delete it; while it is shared with another member, only the author or someone who manages members from the dashboard. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": false,
     "method": "DELETE",
     "operationId": "deleteEmailRule",
@@ -17618,6 +17887,46 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "deleteEmailRule",
     "summary": "Delete a rule",
+    "tag": "Email Rules",
+    "tagCommand": "email-rules"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "delete-email-rule-request",
+    "description": "Deletes a request you withdrew, for everyone who could see it. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "hasJsonBody": false,
+    "method": "DELETE",
+    "operationId": "deleteEmailRuleRequest",
+    "path": "/email-rule-requests/{id}",
+    "pathParams": [
+      {
+        "description": "The request id.",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "deleted": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "deleted"
+      ]
+    },
+    "sdkName": "deleteEmailRuleRequest",
+    "summary": "Delete a withdrawn rule request",
     "tag": "Email Rules",
     "tagCommand": "email-rules"
   },
@@ -17663,7 +17972,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email-rule",
-    "description": "A rule, its scope (evaluation_scope, and scope_selection for a selected rule) and its current version. What the scope comes to for its author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when include_sql is true. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "A rule, its scope (evaluation_scope, and scope_selection for a selected rule), its current version and its saved expectations. What the scope comes to for its author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when include_sql is true. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEmailRule",
@@ -17713,7 +18022,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "kind": {
-          "description": "do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.",
+          "description": "do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.",
           "type": "string",
           "enum": [
             "grant",
@@ -17721,7 +18030,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "evaluation_scope": {
-          "description": "Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.",
+          "description": "Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).",
           "type": "string",
           "enum": [
             "author",
@@ -17730,29 +18039,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "scope_selection": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "properties": {
-            "addresses": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
+          "description": "What a selected rule names; null for any other scope.",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "addresses": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "domains": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "addresses",
+                "domains"
+              ]
             },
-            "domains": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
+            {
+              "type": "null"
             }
-          },
-          "required": [
-            "addresses",
-            "domains"
-          ],
-          "description": "What a selected rule names; null for any other scope."
+          ]
         },
         "current_version": {
           "type": [
@@ -17767,7 +18080,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "is_author": {
           "type": "boolean",
-          "description": "Whether the caller wrote the rule (under their current membership). Only the author edits a rule; anyone else who can see it may only disable or delete it, and while it is shared only if they manage members."
+          "description": "Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members)."
         },
         "created_at": {
           "type": "string",
@@ -17778,108 +18091,136 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "format": "date-time"
         },
         "current": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "properties": {
-            "version": {
-              "type": "integer",
-              "exclusiveMinimum": 0
-            },
-            "english": {
-              "type": "string"
-            },
-            "tree": {
+          "anyOf": [
+            {
               "type": "object",
               "properties": {
                 "version": {
-                  "type": "number",
-                  "const": 1
+                  "type": "integer",
+                  "exclusiveMinimum": 0
                 },
-                "vocabulary": {
-                  "type": "string",
-                  "description": "The column contract version the rule is written against, for example v1."
+                "english": {
+                  "type": "string"
                 },
-                "when": {
+                "tree": {
                   "type": "object",
-                  "propertyNames": {
-                    "type": "string"
+                  "properties": {
+                    "version": {
+                      "type": "number",
+                      "const": 1
+                    },
+                    "vocabulary": {
+                      "type": "string",
+                      "description": "Vocabulary version, such as v1."
+                    },
+                    "when": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {},
+                      "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
+                    },
+                    "questions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Yes/no questions asked once the conditions match; all must be yes."
+                    }
                   },
-                  "additionalProperties": {},
-                  "description": "The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...})."
+                  "required": [
+                    "version",
+                    "vocabulary",
+                    "when",
+                    "questions"
+                  ]
                 },
-                "questions": {
+                "explanation": {
+                  "type": "string"
+                },
+                "assumptions": {
                   "type": "array",
                   "items": {
                     "type": "string"
+                  }
+                },
+                "warnings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "compiled_by": {
+                  "type": "string",
+                  "description": "Who produced the tree, as stated when saved (not verified), such as rule-compiler-v1 or member."
+                },
+                "vocabulary": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "sql": {
+                  "description": "Present only when include_sql was true.",
+                  "type": "object",
+                  "properties": {
+                    "expression": {
+                      "type": "string",
+                      "description": "A parameterized boolean expression over one row per email."
+                    },
+                    "params": {
+                      "type": "array",
+                      "items": {},
+                      "description": "The values bound to $1, $2 and so on."
+                    }
                   },
-                  "description": "Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes."
+                  "required": [
+                    "expression",
+                    "params"
+                  ]
                 }
               },
               "required": [
                 "version",
+                "english",
+                "tree",
+                "explanation",
+                "assumptions",
+                "warnings",
+                "compiled_by",
                 "vocabulary",
-                "when",
-                "questions"
+                "created_at"
               ]
             },
-            "explanation": {
-              "type": "string"
-            },
-            "assumptions": {
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expectations": {
+          "description": "Its saved expectations, each list by email id.",
+          "type": "object",
+          "properties": {
+            "match": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "format": "uuid"
               }
             },
-            "warnings": {
+            "no_match": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "format": "uuid"
               }
-            },
-            "compiled_by": {
-              "type": "string",
-              "description": "Who produced the tree, as the caller stated it when saving (not verified), for example rule-compiler-v1 or member."
-            },
-            "vocabulary": {
-              "type": "string"
-            },
-            "created_at": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "sql": {
-              "description": "Present only when include_sql was true.",
-              "type": "object",
-              "properties": {
-                "expression": {
-                  "type": "string",
-                  "description": "A parameterized boolean expression over one row per email."
-                },
-                "params": {
-                  "type": "array",
-                  "items": {},
-                  "description": "The values bound to $1, $2 and so on."
-                }
-              },
-              "required": [
-                "expression",
-                "params"
-              ]
             }
           },
           "required": [
-            "version",
-            "english",
-            "tree",
-            "explanation",
-            "assumptions",
-            "warnings",
-            "compiled_by",
-            "vocabulary",
-            "created_at"
+            "match",
+            "no_match"
           ]
         }
       },
@@ -17904,7 +18245,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email-rule-request",
-    "description": "A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a member. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a member. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEmailRuleRequest",
@@ -17955,7 +18296,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "vocabulary": {
               "type": "string",
-              "description": "The column contract version the rule is written against, for example v1."
+              "description": "Vocabulary version, such as v1."
             },
             "when": {
               "type": "object",
@@ -17963,14 +18304,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "string"
               },
               "additionalProperties": {},
-              "description": "The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...})."
+              "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
             },
             "questions": {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes."
+              "description": "Yes/no questions asked once the conditions match; all must be yes."
             }
           },
           "required": [
@@ -18007,7 +18348,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "session",
             "oauth"
           ],
-          "description": "session: from the proposer's own session; oauth: from an OAuth or CLI token acting for them."
+          "description": "session: the proposer's own session; oauth: an OAuth or CLI token acting for them."
         },
         "created_at": {
           "type": "string",
@@ -18041,7 +18382,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "email": {
-              "description": "Their sign-in email. Null unless you can list member emails, this is you, or you are the member they asked.",
+              "description": "Sign-in email; null unless you can list member emails, this is you, or they asked you.",
               "type": [
                 "string",
                 "null"
@@ -18049,7 +18390,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "active": {
               "type": "boolean",
-              "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+              "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
             }
           },
           "required": [
@@ -18078,7 +18419,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "email": {
-              "description": "Their sign-in email. Null unless you can list member emails or this is you.",
+              "description": "Sign-in email; null unless you can list member emails or this is you.",
               "type": [
                 "string",
                 "null"
@@ -18086,7 +18427,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "active": {
               "type": "boolean",
-              "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+              "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
             }
           },
           "required": [
@@ -18097,7 +18438,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "target_address_typed": {
-          "description": "The address you typed to name the member. Only for the member who asked; null otherwise, and when they were named by user id.",
+          "description": "The address the proposer typed to name the target; null for anyone else, and when named by user id.",
           "type": [
             "string",
             "null"
@@ -18150,7 +18491,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email-rule-scope",
-    "description": "Whose mail the rule runs over, and what that comes to now: a rule never reaches further than what its author can read when it runs, so what a selected rule names and its author can no longer read stops matching. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "Whose mail the rule runs over, and what that comes to now: a rule never reaches further than what its author can read when it runs, so what a selected rule names and its author can no longer read stops matching. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEmailRuleScope",
@@ -18180,30 +18521,34 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "own_mailboxes",
             "selected"
           ],
-          "description": "author: all mail its author can read. own_mailboxes: mail to their own addresses. selected: what scope_selection names. Never more than the author can read."
+          "description": "own_mailboxes: mail to its author's own addresses and agents (for a rule that shares, those mail:share_own lets them share). author: all its author can read, inboxes added later included. selected: what scope_selection names."
         },
         "scope_selection": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "properties": {
-            "addresses": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "addresses": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "domains": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "addresses",
+                "domains"
+              ]
             },
-            "domains": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
+            {
+              "type": "null"
             }
-          },
-          "required": [
-            "addresses",
-            "domains"
           ]
         },
         "locked": {
@@ -18242,8 +18587,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "required": [
             "addresses",
             "domains"
-          ],
-          "description": "What scope_selection names that its author no longer reads in full."
+          ]
         },
         "still_read": {
           "description": "Inboxes its author still reads at the domains in no_longer_readable; the rule still covers them.",
@@ -18258,6 +18602,47 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "string",
             "null"
           ]
+        },
+        "scope_warnings": {
+          "description": "Names in scope_selection that match nothing this organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "address",
+                  "domain"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "unknown_domain",
+                  "inactive_domain",
+                  "unknown_address"
+                ],
+                "description": "unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet."
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "kind",
+              "reason",
+              "message"
+            ]
+          }
+        },
+        "reads_nothing": {
+          "description": "It can decide no email: it cannot run as its author, or everything its scope names is at none of the organization's domains or no longer read. An inbox not in use yet, or a domain not active now, does not count.",
+          "type": "boolean"
         }
       },
       "required": [
@@ -18278,7 +18663,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email-rule-share",
-    "description": "One share. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "One share. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEmailRuleShare",
@@ -18339,14 +18724,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "edited_on_accept": {
           "type": "boolean",
-          "description": "Whether the member who accepted changed what the rule says first (its English, tree or explanation). A new name does not count."
+          "description": "Whether the member who accepted changed the rule's English, tree or explanation before accepting (a new name does not count)."
         },
         "live": {
           "type": "boolean",
           "description": "Not ended, and both people are still members under the memberships that were recorded."
         },
         "delivery_paused": {
-          "description": "True when the rule is active and the share is live but new email is not being shared right now; email already shared stays visible. False when new email is being shared. Null when this does not apply (the share has ended, the rule is not active, or you are not one of the two people on the share) or could not be read.",
+          "description": "True when the rule is active and the share live but new email is not being shared now (what was shared stays visible); false when new email is shared. Null when it does not apply (share not live, rule not active, or you are not on the share) or could not be read.",
           "type": [
             "boolean",
             "null"
@@ -18374,7 +18759,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "email": {
-              "description": "Their sign-in email. Null unless you can list member emails, this is you, or this is a live share with you.",
+              "description": "Sign-in email; null unless you can list member emails, this is you, or this is a live share with you.",
               "type": [
                 "string",
                 "null"
@@ -18382,7 +18767,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "active": {
               "type": "boolean",
-              "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+              "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
             }
           },
           "required": [
@@ -18406,7 +18791,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "email": {
-              "description": "Their sign-in email. Null unless you can list member emails, this is you, or you are the member sharing with them.",
+              "description": "Sign-in email; null unless you can list member emails, this is you, or you are the granter (live or not).",
               "type": [
                 "string",
                 "null"
@@ -18414,7 +18799,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "active": {
               "type": "boolean",
-              "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+              "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
             }
           },
           "required": [
@@ -18472,7 +18857,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "explanation",
             "updated_at"
           ],
-          "description": "What the rule is called and describes. Null once the share is no longer live, except for the member who wrote the rule."
+          "description": "The rule's name, state and description; null once the share is not live, except for the member sharing their mail."
         },
         "rule_id": {
           "type": [
@@ -18509,8 +18894,197 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "get-email-rule-vocabulary",
+    "description": "What a rule tree you write yourself can say: each column of the current vocabulary with its type, source, meaning, operators and the value each takes, options, and whether it takes min_confidence; and the tree's limits, its stored size included. Built from the checks a saved or tested tree must pass. A tree is {version: tree_version, vocabulary: version, when, questions}. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getEmailRuleVocabulary",
+    "path": "/email-rules/vocabulary",
+    "pathParams": [],
+    "queryParams": [],
+    "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "tree_version": {
+          "type": "number",
+          "const": 1
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "bool",
+                  "text",
+                  "text_list",
+                  "number",
+                  "timestamp",
+                  "choice",
+                  "multi"
+                ]
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "email",
+                  "fact"
+                ],
+                "description": "email: from the message itself. fact: from its classification."
+              },
+              "description": {
+                "type": "string"
+              },
+              "operators": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "op": {
+                      "type": "string",
+                      "enum": [
+                        "is_true",
+                        "is_false",
+                        "eq",
+                        "in",
+                        "contains",
+                        "contains_any",
+                        "contains_all",
+                        "starts_with",
+                        "ends_with",
+                        "is_null",
+                        "not_null",
+                        "is_empty",
+                        "not_empty",
+                        "gt",
+                        "gte",
+                        "lt",
+                        "lte",
+                        "between",
+                        "before",
+                        "after"
+                      ]
+                    },
+                    "value": {
+                      "type": "string",
+                      "enum": [
+                        "none",
+                        "text",
+                        "text_list",
+                        "number",
+                        "number_range",
+                        "date_time"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "op",
+                    "value"
+                  ]
+                },
+                "description": "Each operator allowed, and its value: none (no value), text, text_list (a list of texts), number, number_range ([low, high]) or date_time (ISO 8601 with an offset from -12:00 to +14:00)."
+              },
+              "options": {
+                "description": "The only values it takes, on a column that has them.",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "min_confidence": {
+                "type": "boolean",
+                "description": "Whether a condition may set min_confidence (0 to 1), though not one under an odd number of nots. On a multi column it tests each value the condition names by that value's own confidence: contains its value, contains_any at least one value the email has, contains_all every value."
+              }
+            },
+            "required": [
+              "name",
+              "type",
+              "source",
+              "description",
+              "operators",
+              "min_confidence"
+            ]
+          }
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "depth": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "conditions": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "list_values": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "text_length": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "questions": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "question_min_length": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "question_max_length": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "tree_bytes": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "depth",
+            "conditions",
+            "list_values",
+            "text_length",
+            "questions",
+            "question_min_length",
+            "question_max_length",
+            "tree_bytes"
+          ],
+          "description": "The most nesting levels (a condition is one), conditions, list values, characters in a text value and questions; a trimmed question's length bounds; and the most bytes the tree takes as stored JSON."
+        }
+      },
+      "required": [
+        "version",
+        "tree_version",
+        "columns",
+        "limits"
+      ]
+    },
+    "sdkName": "getEmailRuleVocabulary",
+    "summary": "Read the column catalog",
+    "tag": "Email Rules",
+    "tagCommand": "email-rules"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "list-email-rule-decisions",
-    "description": "What the rule decided for each email it was evaluated against, newest first: whether it matched, whether it nearly did, how each part decided and the answers to its questions. Only decisions on emails the caller can read are listed. With matched, only matches (true) or only the rest (false). Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "What the rule decided for each email it was evaluated against, newest first: whether it matched, whether it nearly did, how each part decided and the answers to its questions, with which email it was (from_address, subject, received_at). Only decisions on emails the caller can read are listed. With matched, only matches (true) or only the rest (false). Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleDecisions",
@@ -18536,7 +19110,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "integer"
       },
       {
-        "description": "Opaque cursor from the previous page's next_cursor. Omit for the first page.",
+        "description": "Opaque cursor: the meta.cursor of the previous page. meta.cursor is null on the last page. Omit for the first page.",
         "enum": null,
         "name": "cursor",
         "required": false,
@@ -18584,7 +19158,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "near_miss": {
             "type": "boolean",
-            "description": "The rule did not match, but all of its parts except one held."
+            "description": "Not matched, but nearly: its questions did not all say yes, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false). Decisions recorded under the earlier definition counted an exclusion too."
           },
           "parts": {
             "type": "array",
@@ -18596,9 +19170,36 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "items": {},
             "description": "The answers to the rule's own questions, when they were asked."
           },
+          "detail_withheld": {
+            "description": "Present, as true, on a decision about an email whose content cannot be read (withheld, failed to parse, discarded, or still awaiting sender authentication): matched still says what the rule decided, but how it got there was read from that content, so parts and question_answers are empty and near_miss is false. Discarding an email's content normally removes its decisions. Absent otherwise.",
+            "type": "boolean",
+            "const": true
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "from_address": {
+            "description": "The decided email's sender address, as GET /v1/emails/{id} shows it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "subject": {
+            "description": "The decided email's subject, as GET /v1/emails/{id} shows it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "received_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the decided email arrived. Null, with the other two, when you are not shown the email (it awaits sender authentication)."
           }
         },
         "required": [
@@ -18623,7 +19224,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rule-requests",
-    "description": "Rule requests, newest first: those made to you (box incoming, the default), those you made (outgoing), or every one you can see (all). Pending ones by default; status decided lists accepted, declined and withdrawn ones, and any lists both. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "Rule requests, newest first: those made to you (box incoming, the default), those you made (outgoing), or every one you can see (all). Pending ones by default; status decided lists accepted, declined and withdrawn ones, and any lists both. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleRequests",
@@ -18665,7 +19266,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "integer"
       },
       {
-        "description": "Opaque cursor from the previous page's next_cursor. Omit for the first page.",
+        "description": "Opaque cursor: the meta.cursor of the previous page. meta.cursor is null on the last page. Omit for the first page.",
         "enum": null,
         "name": "cursor",
         "required": false,
@@ -18710,7 +19311,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               },
               "vocabulary": {
                 "type": "string",
-                "description": "The column contract version the rule is written against, for example v1."
+                "description": "Vocabulary version, such as v1."
               },
               "when": {
                 "type": "object",
@@ -18718,14 +19319,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "type": "string"
                 },
                 "additionalProperties": {},
-                "description": "The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...})."
+                "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
               },
               "questions": {
                 "type": "array",
                 "items": {
                   "type": "string"
                 },
-                "description": "Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes."
+                "description": "Yes/no questions asked once the conditions match; all must be yes."
               }
             },
             "required": [
@@ -18762,7 +19363,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "session",
               "oauth"
             ],
-            "description": "session: from the proposer's own session; oauth: from an OAuth or CLI token acting for them."
+            "description": "session: the proposer's own session; oauth: an OAuth or CLI token acting for them."
           },
           "created_at": {
             "type": "string",
@@ -18796,7 +19397,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ]
               },
               "email": {
-                "description": "Their sign-in email. Null unless you can list member emails, this is you, or you are the member they asked.",
+                "description": "Sign-in email; null unless you can list member emails, this is you, or they asked you.",
                 "type": [
                   "string",
                   "null"
@@ -18804,7 +19405,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               },
               "active": {
                 "type": "boolean",
-                "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+                "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
               }
             },
             "required": [
@@ -18833,7 +19434,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ]
               },
               "email": {
-                "description": "Their sign-in email. Null unless you can list member emails or this is you.",
+                "description": "Sign-in email; null unless you can list member emails or this is you.",
                 "type": [
                   "string",
                   "null"
@@ -18841,7 +19442,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               },
               "active": {
                 "type": "boolean",
-                "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+                "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
               }
             },
             "required": [
@@ -18852,7 +19453,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ]
           },
           "target_address_typed": {
-            "description": "The address you typed to name the member. Only for the member who asked; null otherwise, and when they were named by user id.",
+            "description": "The address the proposer typed to name the target; null for anyone else, and when named by user id.",
             "type": [
               "string",
               "null"
@@ -18906,7 +19507,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rule-results",
-    "description": "Every rule the caller can see and what it decided about this email: those that matched, those that did not, and those that have not run on it, with what is known about them. A result names the version of the rule that decided and carries that version's conditions and questions. A matched rule with kind do_not_share keeps rules from sharing the email while it is active; anything shared before then stays shared. Only a caller who can read the email gets an answer, and a rule the caller cannot see is left out. At most 50 rules are listed, those with a result first; hidden counts the rest. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "Every rule you can see and what it decided about this email (matched, not matched, or not run, with what is known), in the words of the version that decided. A matched do_not_share rule keeps rules from sharing the email while it is active; what was shared before then stays shared. Only a caller who can read the email gets an answer. classification is what the classifier read from the email, every fact as rule conditions read it, so you can see why a rule did or did not match. At most 50 rules are listed, those with a result first; hidden counts the rest. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleResults",
@@ -18996,7 +19597,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                         "columns"
                       ]
                     },
-                    "description": "How each top-level part of the rule decided. Empty when a fact the rule reads was missing, so it was not evaluated."
+                    "description": "How each top-level part of the rule decided. Empty when a fact the rule reads was missing, so it was not evaluated, or when detail_withheld is true."
                   },
                   "question_answers": {
                     "type": "array",
@@ -19031,42 +19632,51 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                     "description": "The answers to the rule's own questions, asked only when its conditions matched."
                   },
                   "tree": {
-                    "type": [
-                      "object",
-                      "null"
-                    ],
-                    "properties": {
-                      "version": {
-                        "type": "number",
-                        "const": 1
-                      },
-                      "vocabulary": {
-                        "type": "string",
-                        "description": "The column contract version the rule is written against, for example v1."
-                      },
-                      "when": {
+                    "description": "The conditions and questions of the version that decided, so the result reads in that version's words.",
+                    "anyOf": [
+                      {
                         "type": "object",
-                        "propertyNames": {
-                          "type": "string"
+                        "properties": {
+                          "version": {
+                            "type": "number",
+                            "const": 1
+                          },
+                          "vocabulary": {
+                            "type": "string",
+                            "description": "Vocabulary version, such as v1."
+                          },
+                          "when": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {},
+                            "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
+                          },
+                          "questions": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Yes/no questions asked once the conditions match; all must be yes."
+                          }
                         },
-                        "additionalProperties": {},
-                        "description": "The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...})."
+                        "required": [
+                          "version",
+                          "vocabulary",
+                          "when",
+                          "questions"
+                        ]
                       },
-                      "questions": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        },
-                        "description": "Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes."
+                      {
+                        "type": "null"
                       }
-                    },
-                    "required": [
-                      "version",
-                      "vocabulary",
-                      "when",
-                      "questions"
-                    ],
-                    "description": "The conditions and questions of the version that decided, so the result reads in that version's words."
+                    ]
+                  },
+                  "detail_withheld": {
+                    "description": "Present, as true, on a result for an email whose content cannot be read (withheld, failed to parse or discarded): matched still says what the rule decided, but how it got there was read from that content, so parts and question_answers are empty. Absent otherwise.",
+                    "type": "boolean",
+                    "const": true
                   },
                   "created_at": {
                     "type": "string",
@@ -19115,6 +19725,85 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "integer",
           "minimum": 0,
           "description": "How many more rules the caller can see that are not listed."
+        },
+        "classification": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "vocabulary": {
+              "type": "string"
+            },
+            "classified_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "facts": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "confidence": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "value_confidences": {
+                    "description": "A multi fact's chosen values, each with its own confidence: what a min_confidence on the column tests. Given in rule test results.",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "number"
+                    }
+                  }
+                },
+                "required": [
+                  "value"
+                ]
+              },
+              "description": "Every fact column, as rule conditions read it: the value (a multi's options lowercased; null if the classifier left it out or wrote another shape) and its confidence. It can differ from GET /emails/{id} understanding, which shows the facts as written."
+            }
+          },
+          "required": [
+            "id",
+            "vocabulary",
+            "classified_at",
+            "facts"
+          ],
+          "description": "What the classifier read from this email (one classification per vocabulary); null when it has none (not classified, or never will be), or while the email's content is withheld, discarded or failed to parse."
         }
       },
       "required": [
@@ -19131,7 +19820,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rule-scope-options",
-    "description": "How much the caller can read, and the inboxes and domains the caller can read, which is what they may name when a rule runs over selected inboxes and domains. For a caller who reads the whole organization, addresses lists the inboxes known as someone's (member addresses, members' verified work emails at the organization's domains, agents' addresses and inboxes with shared access), not every address that receives mail: may_name_unlisted says when an address that is not listed, such as an inbox nobody has claimed, may be named too. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "How much the caller can read, and the inboxes and domains the caller can read, which is what they may name when a rule runs over selected inboxes and domains. For a caller who reads the whole organization, addresses lists the inboxes known as someone's (member addresses, members' verified work emails at the organization's domains, agents' addresses and inboxes with shared access), not every address that receives mail: may_name_unlisted says when an address that is not listed, such as an inbox nobody has claimed, may be named too. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleScopeOptions",
@@ -19211,7 +19900,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rule-share-emails",
-    "description": "The emails a rule shared with you has matched, newest first, as the email list shows them. Only the person it was shared with can list them, from the dashboard or the Primitive CLI. An ended share lists nothing. A page can be short or empty and still carry a cursor: keep reading until meta.cursor is null.",
+    "description": "The emails a rule share has given, newest first, as the email list shows them, each with shared_at: when the share's rule first matched it. For the person it was shared with: what they can read through it now, so an ended share lists nothing. For the person sharing their mail: everything it has handed over while it ran, including after it ended, so they can see what left their mailbox; while the share's rule is off this answers email_rule_not_active instead. Only those two people can list them, from the dashboard or the Primitive CLI. A page can be short or empty and still carry a cursor: keep reading until meta.cursor is null.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleShareEmails",
@@ -19237,7 +19926,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "integer"
       },
       {
-        "description": "Opaque cursor from the previous page's next_cursor. Omit for the first page.",
+        "description": "Opaque cursor: the meta.cursor of the previous page. meta.cursor is null on the last page. Omit for the first page.",
         "enum": null,
         "name": "cursor",
         "required": false,
@@ -19679,6 +20368,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "subject",
               "body"
             ]
+          },
+          "shared_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the share's rule first matched this email. The email was shared then or shortly after. Null if that could not be read."
           }
         },
         "required": [
@@ -19705,13 +20402,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "awaiting",
           "interaction_hint",
           "interaction_kind",
-          "interaction_candidate"
+          "interaction_candidate",
+          "shared_at"
         ],
         "additionalProperties": {}
       }
     },
     "sdkName": "listEmailRuleShareEmails",
-    "summary": "List the emails a rule share has given you",
+    "summary": "List the emails a rule share has given",
     "tag": "Email Rules",
     "tagCommand": "email-rules"
   },
@@ -19719,7 +20417,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rule-shares",
-    "description": "Lists rules shared with you, rules you share, or every share you can see. A share is visible to its two people and the organization's owners and admins. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "Lists rules shared with you, rules you share, or every share you can see. A share is visible to its two people and the organization's owners and admins. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleShares",
@@ -19761,7 +20459,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "integer"
       },
       {
-        "description": "Opaque cursor from the previous page's next_cursor. Omit for the first page.",
+        "description": "Opaque cursor: the meta.cursor of the previous page. meta.cursor is null on the last page. Omit for the first page.",
         "enum": null,
         "name": "cursor",
         "required": false,
@@ -19816,14 +20514,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "edited_on_accept": {
             "type": "boolean",
-            "description": "Whether the member who accepted changed what the rule says first (its English, tree or explanation). A new name does not count."
+            "description": "Whether the member who accepted changed the rule's English, tree or explanation before accepting (a new name does not count)."
           },
           "live": {
             "type": "boolean",
             "description": "Not ended, and both people are still members under the memberships that were recorded."
           },
           "delivery_paused": {
-            "description": "True when the rule is active and the share is live but new email is not being shared right now; email already shared stays visible. False when new email is being shared. Null when this does not apply (the share has ended, the rule is not active, or you are not one of the two people on the share) or could not be read.",
+            "description": "True when the rule is active and the share live but new email is not being shared now (what was shared stays visible); false when new email is shared. Null when it does not apply (share not live, rule not active, or you are not on the share) or could not be read.",
             "type": [
               "boolean",
               "null"
@@ -19851,7 +20549,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ]
               },
               "email": {
-                "description": "Their sign-in email. Null unless you can list member emails, this is you, or this is a live share with you.",
+                "description": "Sign-in email; null unless you can list member emails, this is you, or this is a live share with you.",
                 "type": [
                   "string",
                   "null"
@@ -19859,7 +20557,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               },
               "active": {
                 "type": "boolean",
-                "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+                "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
               }
             },
             "required": [
@@ -19883,7 +20581,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ]
               },
               "email": {
-                "description": "Their sign-in email. Null unless you can list member emails, this is you, or you are the member sharing with them.",
+                "description": "Sign-in email; null unless you can list member emails, this is you, or you are the granter (live or not).",
                 "type": [
                   "string",
                   "null"
@@ -19891,7 +20589,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               },
               "active": {
                 "type": "boolean",
-                "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+                "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
               }
             },
             "required": [
@@ -19949,7 +20647,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "explanation",
               "updated_at"
             ],
-            "description": "What the rule is called and describes. Null once the share is no longer live, except for the member who wrote the rule."
+            "description": "The rule's name, state and description; null once the share is not live, except for the member sharing their mail."
           },
           "rule_id": {
             "type": [
@@ -19988,7 +20686,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rule-versions",
-    "description": "The named versions of a rule, as they were written: what each one's conditions and questions were, so a decision can be read against the version that made it. Numbers that are not versions of the rule are left out. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "A rule's versions as they were written: what each one's conditions and questions were, so a decision can be read against the version that made it. Without versions, every version newest first, a page at a time (meta.cursor). With versions, only those named, oldest first; numbers that are not versions of the rule are left out. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleVersions",
@@ -20004,10 +20702,26 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [
       {
-        "description": "The version numbers, comma-separated, at most 100.",
+        "description": "Versions per page when versions is not given: 1 to 100, default 50.",
+        "enum": null,
+        "maximum": 100,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "Opaque cursor: the meta.cursor of the previous page, null on the last. Omit for the first page. Not with versions.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Read only these version numbers, comma-separated, at most 100. Not with limit or cursor.",
         "enum": null,
         "name": "versions",
-        "required": true,
+        "required": false,
         "type": "string"
       }
     ],
@@ -20037,7 +20751,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               },
               "vocabulary": {
                 "type": "string",
-                "description": "The column contract version the rule is written against, for example v1."
+                "description": "Vocabulary version, such as v1."
               },
               "when": {
                 "type": "object",
@@ -20045,14 +20759,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "type": "string"
                 },
                 "additionalProperties": {},
-                "description": "The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...})."
+                "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
               },
               "questions": {
                 "type": "array",
                 "items": {
                   "type": "string"
                 },
-                "description": "Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes."
+                "description": "Yes/no questions asked once the conditions match; all must be yes."
               }
             },
             "required": [
@@ -20079,7 +20793,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "compiled_by": {
             "type": "string",
-            "description": "Who produced the tree, as the caller stated it when saving (not verified), for example rule-compiler-v1 or member."
+            "description": "Who produced the tree, as stated when saved (not verified), such as rule-compiler-v1 or member."
           },
           "vocabulary": {
             "type": "string"
@@ -20130,7 +20844,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rules",
-    "description": "The rules the caller can see, newest first: their own, or every member's rules for a caller who reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection for a selected rule). With matched_email_id, only the rules that matched that email. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "The rules the caller can see, newest first: their own, or every member's rules for a caller who reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection for a selected rule). With matched_email_id, only the rules that matched that email. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRules",
@@ -20148,7 +20862,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "integer"
       },
       {
-        "description": "Opaque cursor from the previous page's next_cursor. Omit for the first page.",
+        "description": "Opaque cursor: the meta.cursor of the previous page. meta.cursor is null on the last page. Omit for the first page.",
         "enum": null,
         "name": "cursor",
         "required": false,
@@ -20188,7 +20902,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ]
           },
           "kind": {
-            "description": "do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.",
+            "description": "do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.",
             "type": "string",
             "enum": [
               "grant",
@@ -20196,7 +20910,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ]
           },
           "evaluation_scope": {
-            "description": "Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.",
+            "description": "Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).",
             "type": "string",
             "enum": [
               "author",
@@ -20205,29 +20919,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ]
           },
           "scope_selection": {
-            "type": [
-              "object",
-              "null"
-            ],
-            "properties": {
-              "addresses": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
+            "description": "What a selected rule names; null for any other scope.",
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "addresses": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "domains": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "addresses",
+                  "domains"
+                ]
               },
-              "domains": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
+              {
+                "type": "null"
               }
-            },
-            "required": [
-              "addresses",
-              "domains"
-            ],
-            "description": "What a selected rule names; null for any other scope."
+            ]
           },
           "current_version": {
             "type": [
@@ -20242,7 +20960,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "is_author": {
             "type": "boolean",
-            "description": "Whether the caller wrote the rule (under their current membership). Only the author edits a rule; anyone else who can see it may only disable or delete it, and while it is shared only if they manage members."
+            "description": "Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members)."
           },
           "created_at": {
             "type": "string",
@@ -20304,7 +21022,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "integer"
       },
       {
-        "description": "Opaque cursor from the previous page's next_cursor. Omit for the first page.",
+        "description": "Opaque cursor: the meta.cursor of the previous page. meta.cursor is null on the last page. Omit for the first page.",
         "enum": null,
         "name": "cursor",
         "required": false,
@@ -20357,14 +21075,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "edited_on_accept": {
             "type": "boolean",
-            "description": "Whether the member who accepted changed what the rule says first (its English, tree or explanation). A new name does not count."
+            "description": "Whether the member who accepted changed the rule's English, tree or explanation before accepting (a new name does not count)."
           },
           "live": {
             "type": "boolean",
             "description": "Not ended, and both people are still members under the memberships that were recorded."
           },
           "delivery_paused": {
-            "description": "True when the rule is active and the share is live but new email is not being shared right now; email already shared stays visible. False when new email is being shared. Null when this does not apply (the share has ended, the rule is not active, or you are not one of the two people on the share) or could not be read.",
+            "description": "True when the rule is active and the share live but new email is not being shared now (what was shared stays visible); false when new email is shared. Null when it does not apply (share not live, rule not active, or you are not on the share) or could not be read.",
             "type": [
               "boolean",
               "null"
@@ -20392,7 +21110,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ]
               },
               "email": {
-                "description": "Their sign-in email. Null unless you can list member emails, this is you, or this is a live share with you.",
+                "description": "Sign-in email; null unless you can list member emails, this is you, or this is a live share with you.",
                 "type": [
                   "string",
                   "null"
@@ -20400,7 +21118,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               },
               "active": {
                 "type": "boolean",
-                "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+                "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
               }
             },
             "required": [
@@ -20424,7 +21142,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ]
               },
               "email": {
-                "description": "Their sign-in email. Null unless you can list member emails, this is you, or you are the member sharing with them.",
+                "description": "Sign-in email; null unless you can list member emails, this is you, or you are the granter (live or not).",
                 "type": [
                   "string",
                   "null"
@@ -20432,7 +21150,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               },
               "active": {
                 "type": "boolean",
-                "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+                "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
               }
             },
             "required": [
@@ -20490,7 +21208,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "explanation",
               "updated_at"
             ],
-            "description": "What the rule is called and describes. Null once the share is no longer live, except for the member who wrote the rule."
+            "description": "The rule's name, state and description; null once the share is not live, except for the member sharing their mail."
           },
           "rule_id": {
             "type": [
@@ -20529,7 +21247,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "test-email-rule",
-    "description": "Runs a rule over received mail and reports what it would decide for each email: matched, near_miss, no_match, unclassified or not_found. Test an unsaved tree from a compile response, or a saved rule by rule_id (its current version, run with its author's access). Either way the rule reads only mail its author can read, and only what its scope covers; an unsaved tree covers only your own mail unless evaluation_scope names more. Without email_ids, the newest emails it can read are tested, at most 200 and none older than 30 days. Emails not classified yet that arrived more than 2 hours ago are classified first and their classification is saved, unless classify_missing is false; newer ones are left to normal classification and reported unclassified with reason pending. The rule itself records nothing and grants nothing. Classification and the rule's own questions stop at about 90 seconds; run the test again to continue where it stopped. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified or not_found), with a summary: how each top-level condition and question decided and, when nothing matched, what stopped it. Test an unsaved tree from a compile response, or a saved rule by rule_id (its current version, run with its author's access). The rule reads only mail its author can read and its scope covers; an unsaved tree covers only your own mail unless evaluation_scope names more. Without email_ids, the newest emails it can read are tested, at most 200 and none older than 30 days; expected emails (expect, or a saved rule's saved expectations) are tested whatever their age. Unclassified emails more than 2 hours old are classified first and their classification saved, unless classify_missing is false; newer ones are reported unclassified, pending. The rule itself records and grants nothing. Classification and the rule's questions stop at about 90 seconds; a rerun continues the classification where it stopped. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "testEmailRule",
@@ -20552,7 +21270,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "type": "object",
       "properties": {
         "tree": {
-          "description": "An unsaved rule tree, as POST /email-rules/compile returned it. Give tree or rule_id, not both.",
           "type": "object",
           "properties": {
             "version": {
@@ -20561,7 +21278,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "vocabulary": {
               "type": "string",
-              "description": "The column contract version the rule is written against, for example v1."
+              "description": "Vocabulary version, such as v1."
             },
             "when": {
               "type": "object",
@@ -20569,21 +21286,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "string"
               },
               "additionalProperties": {},
-              "description": "The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...})."
+              "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
             },
             "questions": {
+              "description": "Yes/no questions asked once the conditions match; all must be yes. Left out, none.",
               "type": "array",
               "items": {
                 "type": "string"
-              },
-              "description": "Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes."
+              }
             }
           },
           "required": [
             "version",
             "vocabulary",
-            "when",
-            "questions"
+            "when"
           ],
           "additionalProperties": false
         },
@@ -20594,7 +21310,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "own_mailboxes",
             "selected"
           ],
-          "description": "own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those you can send from). author: all mail you can read, including inboxes added later. selected: what scope_selection names."
+          "description": "own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
         },
         "scope_selection": {
           "type": "object",
@@ -20621,7 +21337,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             }
           },
           "additionalProperties": false,
-          "description": "Inboxes, and domains (every address at them the author can read), for a selected rule; each one you can read."
+          "description": "For a selected rule: inboxes, and domains (each address at them the author reads); each one you can read."
         },
         "rule_id": {
           "description": "A saved rule you can see. Its current version is tested, with its author's access.",
@@ -20637,7 +21353,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "email_ids": {
-          "description": "Test exactly these emails. Without it, the newest emails the rule can read are tested, at most 200 and none older than 30 days.",
+          "description": "Test exactly these emails, and any expected ones. Without it, the newest emails the rule can read are tested, at most 200 and none older than 30 days.",
           "minItems": 1,
           "maxItems": 200,
           "type": "array",
@@ -20649,6 +21365,29 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "classify_missing": {
           "description": "Classify emails in the set that have not been classified yet and arrived more than 2 hours ago, and save their classification. Defaults to true. Newer ones are left to the normal classification and reported pending. The rule is never evaluated on them for real.",
           "type": "boolean"
+        },
+        "expect": {
+          "type": "object",
+          "properties": {
+            "match": {
+              "maxItems": 100,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "no_match": {
+              "maxItems": 100,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "description": "Emails the rule must match and must not, at most 100 in all, always tested whatever their age: added to email_ids, or to the recent window, which gives up a place for each. The answer's expectations judge each."
         }
       },
       "additionalProperties": false
@@ -20703,7 +21442,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "limit": {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0,
+              "description": "The most emails the recent window holds: 200, less one place per expected email."
             }
           },
           "required": [
@@ -20774,11 +21514,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "asked": {
               "type": "integer",
               "minimum": 0,
-              "description": "Calls made to answer the rule's questions, one per matching email."
+              "description": "Calls made to answer the rule's questions, one per matching email whose answers were not reused."
             },
             "capped": {
               "type": "boolean",
               "description": "Whether the per-test limit on those calls was reached."
+            },
+            "stored": {
+              "description": "Matching emails whose question answers were reused (kept for the saved rule version, or recorded with its decision) instead of asked.",
+              "type": "integer",
+              "minimum": 0
             }
           },
           "required": [
@@ -20804,7 +21549,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "unclassified",
                   "not_found"
                 ],
-                "description": "not_found: no such email, or not one the rule can read (or not settled, held back, or being removed)."
+                "description": "near_miss: Not matched, but nearly: its questions did not all say yes, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false). not_found: no such email, or not one the rule can read (or not settled, held back, or being removed)."
               },
               "received_at": {
                 "type": "string",
@@ -20856,6 +21601,59 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "type": "string"
                 }
               },
+              "values": {
+                "description": "By column the rule names: the value as its conditions compared it (a list cut at 50), and a fact's confidence. A fact left out reads null.",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "confidence": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "value_confidences": {
+                      "description": "A multi fact's chosen values, each with its own confidence: what a min_confidence on the column tests. Given in rule test results.",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "number"
+                      }
+                    }
+                  },
+                  "required": [
+                    "value"
+                  ]
+                }
+              },
               "question_answers": {
                 "description": "The answers to the rule's own questions, asked only when its conditions matched.",
                 "type": "array",
@@ -20888,6 +21686,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   ]
                 }
               },
+              "question_answers_source": {
+                "description": "Where question_answers came from, when there are any. stored: a saved rule version's answers about this email, kept once given (by evaluation or an earlier test) or recorded with its decision, reused because answers are sampled and asking again can differ. asked_now: asked by this test (always, for an unsaved tree). not_asked: no call could be made; error_class says why.",
+                "type": "string",
+                "enum": [
+                  "stored",
+                  "asked_now",
+                  "not_asked"
+                ]
+              },
               "unclassified_reason": {
                 "description": "Why an unclassified email has no classification. pending: not reached before the test stopped, or not classified here (it arrived within the last 2 hours and normal classification has not finished with it, or classify_missing was false); run the test again later.",
                 "type": "string",
@@ -20904,7 +21711,214 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "outcome"
             ]
           },
-          "description": "Newest first; with email_ids, the ids not found follow in the order given."
+          "description": "Newest first; ids not found (email_ids, then expected ones) follow in the order given."
+        },
+        "summary": {
+          "type": "object",
+          "properties": {
+            "decided": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Emails decided on their conditions: matched, near_miss and no_match, less any missing a fact the rule reads."
+            },
+            "conditions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "index": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "held": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "failed": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "only_failure": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "index",
+                  "text",
+                  "held",
+                  "failed",
+                  "only_failure"
+                ]
+              },
+              "description": "Each top-level condition (its parts index) in plain English, and how many decided emails it held on, failed on, and (except in an any rule) was the only failure on."
+            },
+            "questions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "index": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "yes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "no": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "unanswered": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "index",
+                  "yes",
+                  "no",
+                  "unanswered"
+                ]
+              },
+              "description": "Each question's answers on the emails whose conditions held."
+            },
+            "warnings": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "What to look at first, such as what stopped every email when nothing matched."
+            }
+          },
+          "required": [
+            "decided",
+            "conditions",
+            "questions",
+            "warnings"
+          ]
+        },
+        "scope_warnings": {
+          "description": "Names in scope_selection that match nothing this organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "address",
+                  "domain"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "unknown_domain",
+                  "inactive_domain",
+                  "unknown_address"
+                ],
+                "description": "unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet."
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "kind",
+              "reason",
+              "message"
+            ]
+          }
+        },
+        "expectations": {
+          "description": "Present when expect was given, or for a saved rule with saved expectations.",
+          "type": "object",
+          "properties": {
+            "passed": {
+              "type": "boolean",
+              "description": "Every expectation passed. One undecided is no pass: unclassified or a question unanswered (test again later), or not found (no such email the rule can read)."
+            },
+            "counts": {
+              "type": "object",
+              "properties": {
+                "passed": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "failed": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "undecided": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "passed",
+                "failed",
+                "undecided"
+              ]
+            },
+            "results": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "email_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "expected": {
+                    "type": "string",
+                    "enum": [
+                      "match",
+                      "no_match"
+                    ]
+                  },
+                  "outcome": {
+                    "type": "string",
+                    "enum": [
+                      "matched",
+                      "near_miss",
+                      "no_match",
+                      "unclassified",
+                      "not_found"
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "passed",
+                      "failed",
+                      "undecided"
+                    ]
+                  }
+                },
+                "required": [
+                  "email_id",
+                  "expected",
+                  "outcome",
+                  "status"
+                ]
+              },
+              "description": "match first, then no_match, each in the order given (saved expectations by email id)."
+            }
+          },
+          "required": [
+            "passed",
+            "counts",
+            "results"
+          ]
         }
       },
       "required": [
@@ -20925,7 +21939,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "test-email-rule-on-sample",
-    "description": "Reports what a rule would decide for an email you describe: its sender, recipients, subject, plain text and attachment types, and optionally whether it is automated or from a mailing list and its spam score. The email is classified the way received mail is, and the rule's conditions and its own questions are decided as they would be for received mail with that content and those signals, received now. Without them it is not automated and not from a mailing list; a rule that reads a spam score you gave none for is decided on no score, and spam_score is listed in unset_columns. Nothing is stored: no email, classification or decision. Test an unsaved tree from a compile response, or a saved rule by rule_id (its current version); an unsaved tree is run as covering only your own mail unless evaluation_scope names more, as on POST /email-rules/test. The answer includes what the classifier read from the email. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text, attachment types; optionally whether it is automated or from a mailing list, and its spam score), received now: it is classified, and the conditions and questions decided, as received mail would be. By default it is not automated or from a list; a rule reading a spam score you gave none for decides on none (spam_score is then in unset_columns). Nothing is stored. Test an unsaved tree (covering only your own mail unless evaluation_scope names more) or a saved rule by rule_id. The answer includes what the classifier read. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "testEmailRuleOnSample",
@@ -20948,7 +21962,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "type": "object",
       "properties": {
         "tree": {
-          "description": "An unsaved rule tree, as POST /email-rules/compile returned it. Give tree or rule_id, not both.",
           "type": "object",
           "properties": {
             "version": {
@@ -20957,7 +21970,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "vocabulary": {
               "type": "string",
-              "description": "The column contract version the rule is written against, for example v1."
+              "description": "Vocabulary version, such as v1."
             },
             "when": {
               "type": "object",
@@ -20965,21 +21978,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "string"
               },
               "additionalProperties": {},
-              "description": "The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...})."
+              "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
             },
             "questions": {
+              "description": "Yes/no questions asked once the conditions match; all must be yes. Left out, none.",
               "type": "array",
               "items": {
                 "type": "string"
-              },
-              "description": "Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes."
+              }
             }
           },
           "required": [
             "version",
             "vocabulary",
-            "when",
-            "questions"
+            "when"
           ],
           "additionalProperties": false
         },
@@ -20990,7 +22002,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "own_mailboxes",
             "selected"
           ],
-          "description": "own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those you can send from). author: all mail you can read, including inboxes added later. selected: what scope_selection names."
+          "description": "own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
         },
         "scope_selection": {
           "type": "object",
@@ -21017,7 +22029,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             }
           },
           "additionalProperties": false,
-          "description": "Inboxes, and domains (every address at them the author can read), for a selected rule; each one you can read."
+          "description": "For a selected rule: inboxes, and domains (each address at them the author reads); each one you can read."
         },
         "rule_id": {
           "description": "A saved rule you can see. Its current version is tested.",
@@ -21166,7 +22178,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "matched",
             "near_miss",
             "no_match"
-          ]
+          ],
+          "description": "near_miss: Not matched, but nearly: its questions did not all say yes, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false)."
         },
         "parts": {
           "type": "array",
@@ -21200,6 +22213,59 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "array",
           "items": {
             "type": "string"
+          }
+        },
+        "values": {
+          "description": "By column the rule names: the value as its conditions compared it (a list cut at 50), and a fact's confidence. A fact left out reads null.",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "confidence": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "value_confidences": {
+                "description": "A multi fact's chosen values, each with its own confidence: what a min_confidence on the column tests. Given in rule test results.",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "number"
+                }
+              }
+            },
+            "required": [
+              "value"
+            ]
           }
         },
         "unset_columns": {
@@ -21300,7 +22366,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "update-email-rule",
-    "description": "Renames the rule, saves a new version (english, tree and explanation together; earlier versions are kept unchanged), changes its state (draft, disabled; observe; or active) or changes whose mail it runs over (evaluation_scope, with scope_selection when selected). Only the rule's author may rename it, add a version, change its scope or move it to observe or active; anyone else who can see it may only disable it (state draft), and while it is shared with another member only if they manage members from the dashboard. Omit evaluation_scope to keep the current scope. A scope change saves a new version with the same conditions; what was granted stays. A shared rule keeps its scope. A rule's kind never changes. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "Renames the rule, saves a new version (english and tree together, with an explanation or one the server writes; earlier versions stay), changes its state (draft is off; observe; active), whose mail it runs over (evaluation_scope, with scope_selection when selected) or its saved expectations (each saved version and new set is judged in expectations_check). Anyone but its author who sees it may only disable it (state draft), and while it is shared only if they manage members from the dashboard. Without evaluation_scope the scope stays; a scope change saves a new version with the same conditions, and what was granted stays. A shared rule keeps its scope; a kind never changes. Send if_version, the current_version you read, so a write never replaces a version saved since. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": true,
     "method": "PATCH",
     "operationId": "updateEmailRule",
@@ -21352,7 +22418,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "vocabulary": {
               "type": "string",
-              "description": "The column contract version the rule is written against, for example v1."
+              "description": "Vocabulary version, such as v1."
             },
             "when": {
               "type": "object",
@@ -21360,33 +22426,31 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "string"
               },
               "additionalProperties": {},
-              "description": "The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...})."
+              "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
             },
             "questions": {
+              "description": "Yes/no questions asked once the conditions match; all must be yes. Left out, none.",
               "type": "array",
               "items": {
                 "type": "string"
-              },
-              "description": "Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes."
+              }
             }
           },
           "required": [
             "version",
             "vocabulary",
-            "when",
-            "questions"
+            "when"
           ],
-          "additionalProperties": false,
-          "description": "The rule tree. Checked against the column contract on save."
+          "additionalProperties": false
         },
         "explanation": {
+          "description": "What the rule matches, in plain English. Left out, the server writes one from the tree.",
           "type": "string",
           "minLength": 1,
-          "maxLength": 1000,
-          "description": "What the rule matches, in plain English."
+          "maxLength": 1000
         },
         "assumptions": {
-          "description": "Readings chosen where the description was open to more than one.",
+          "description": "Readings chosen where the description was open to more than one, as the compile response returned them (including its lines naming any condition, question or confidence bar the description did not ask for). Stored as sent.",
           "maxItems": 10,
           "type": "array",
           "items": {
@@ -21396,7 +22460,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "warnings": {
-          "description": "Parts of the description the rule does not express.",
+          "description": "Parts of the description the rule does not express, as the compile response returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.",
           "maxItems": 10,
           "type": "array",
           "items": {
@@ -21406,7 +22470,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "compiled_by": {
-          "description": "Who produced the tree, as the caller states it (not verified): the compile response's compiled_by, or member when you wrote or edited it yourself. Defaults to member.",
+          "description": "Who produced the tree (not verified): the compile response's compiled_by, or member (the default) for a tree you wrote or edited.",
           "type": "string",
           "minLength": 1,
           "maxLength": 64
@@ -21418,7 +22482,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "own_mailboxes",
             "selected"
           ],
-          "description": "author: all mail its author can read. own_mailboxes: mail to their own addresses. selected: what scope_selection names. Never more than the author can read."
+          "description": "own_mailboxes: mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names. Left out, the scope stays. A change saves a new version with the same conditions, and is refused while the rule is shared."
         },
         "scope_selection": {
           "type": "object",
@@ -21445,7 +22509,38 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             }
           },
           "additionalProperties": false,
-          "description": "Inboxes, and domains (every address at them the author can read), for a selected rule; each one you can read."
+          "description": "For a selected rule: inboxes, and domains (each address at them the author reads); each one you can read."
+        },
+        "if_version": {
+          "description": "The current_version you read. If the rule's now differs, nothing changes: 409 email_rule_conflict, details.reason version_moved and details.current_version. Send it with a new version so a concurrent edit is never replaced unseen. It guards versions only: a change to expectations alone saves none.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "expectations": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "match": {
+              "maxItems": 100,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "no_match": {
+              "maxItems": 100,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "description": "Replaces its saved expectations (author only); null removes them."
         }
       },
       "additionalProperties": false
@@ -21469,7 +22564,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "kind": {
-          "description": "do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.",
+          "description": "do_not_share: it blocks sharing what it matches. Absent (or grant) on a rule that shares.",
           "type": "string",
           "enum": [
             "grant",
@@ -21477,7 +22572,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "evaluation_scope": {
-          "description": "Whose mail the rule runs over, as stored; GET /email-rules/{id}/scope says what that comes to now.",
+          "description": "Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).",
           "type": "string",
           "enum": [
             "author",
@@ -21486,29 +22581,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "scope_selection": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "properties": {
-            "addresses": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
+          "description": "What a selected rule names; null for any other scope.",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "addresses": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "domains": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "addresses",
+                "domains"
+              ]
             },
-            "domains": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
+            {
+              "type": "null"
             }
-          },
-          "required": [
-            "addresses",
-            "domains"
-          ],
-          "description": "What a selected rule names; null for any other scope."
+          ]
         },
         "current_version": {
           "type": [
@@ -21523,7 +22622,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "is_author": {
           "type": "boolean",
-          "description": "Whether the caller wrote the rule (under their current membership). Only the author edits a rule; anyone else who can see it may only disable or delete it, and while it is shared only if they manage members."
+          "description": "Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members)."
         },
         "created_at": {
           "type": "string",
@@ -21534,108 +22633,185 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "format": "date-time"
         },
         "current": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "properties": {
-            "version": {
-              "type": "integer",
-              "exclusiveMinimum": 0
-            },
-            "english": {
-              "type": "string"
-            },
-            "tree": {
+          "anyOf": [
+            {
               "type": "object",
               "properties": {
                 "version": {
-                  "type": "number",
-                  "const": 1
+                  "type": "integer",
+                  "exclusiveMinimum": 0
                 },
-                "vocabulary": {
-                  "type": "string",
-                  "description": "The column contract version the rule is written against, for example v1."
+                "english": {
+                  "type": "string"
                 },
-                "when": {
+                "tree": {
                   "type": "object",
-                  "propertyNames": {
-                    "type": "string"
+                  "properties": {
+                    "version": {
+                      "type": "number",
+                      "const": 1
+                    },
+                    "vocabulary": {
+                      "type": "string",
+                      "description": "Vocabulary version, such as v1."
+                    },
+                    "when": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {},
+                      "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
+                    },
+                    "questions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Yes/no questions asked once the conditions match; all must be yes."
+                    }
                   },
-                  "additionalProperties": {},
-                  "description": "The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...})."
+                  "required": [
+                    "version",
+                    "vocabulary",
+                    "when",
+                    "questions"
+                  ]
                 },
-                "questions": {
+                "explanation": {
+                  "type": "string"
+                },
+                "assumptions": {
                   "type": "array",
                   "items": {
                     "type": "string"
+                  }
+                },
+                "warnings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "compiled_by": {
+                  "type": "string",
+                  "description": "Who produced the tree, as stated when saved (not verified), such as rule-compiler-v1 or member."
+                },
+                "vocabulary": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "sql": {
+                  "description": "Present only when include_sql was true.",
+                  "type": "object",
+                  "properties": {
+                    "expression": {
+                      "type": "string",
+                      "description": "A parameterized boolean expression over one row per email."
+                    },
+                    "params": {
+                      "type": "array",
+                      "items": {},
+                      "description": "The values bound to $1, $2 and so on."
+                    }
                   },
-                  "description": "Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes."
+                  "required": [
+                    "expression",
+                    "params"
+                  ]
                 }
               },
               "required": [
                 "version",
+                "english",
+                "tree",
+                "explanation",
+                "assumptions",
+                "warnings",
+                "compiled_by",
                 "vocabulary",
-                "when",
-                "questions"
+                "created_at"
               ]
             },
-            "explanation": {
-              "type": "string"
-            },
-            "assumptions": {
-              "type": "array",
-              "items": {
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "scope_warnings": {
+          "description": "Names in scope_selection that match nothing this organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
                 "type": "string"
-              }
-            },
-            "warnings": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "compiled_by": {
-              "type": "string",
-              "description": "Who produced the tree, as the caller stated it when saving (not verified), for example rule-compiler-v1 or member."
-            },
-            "vocabulary": {
-              "type": "string"
-            },
-            "created_at": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "sql": {
-              "description": "Present only when include_sql was true.",
-              "type": "object",
-              "properties": {
-                "expression": {
-                  "type": "string",
-                  "description": "A parameterized boolean expression over one row per email."
-                },
-                "params": {
-                  "type": "array",
-                  "items": {},
-                  "description": "The values bound to $1, $2 and so on."
-                }
               },
-              "required": [
-                "expression",
-                "params"
-              ]
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "address",
+                  "domain"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "unknown_domain",
+                  "inactive_domain",
+                  "unknown_address"
+                ],
+                "description": "unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet."
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "kind",
+              "reason",
+              "message"
+            ]
+          }
+        },
+        "expectations_check": {
+          "description": "After a write that saved a version or changed its expectations, if it has some: them, judged on that version from stored classifications without asking its questions. Undecided: one that needs answers not yet kept for that version, is unclassified or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed). Test by rule_id for the rest.",
+          "type": "object",
+          "properties": {
+            "version": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "exclusiveMinimum": 0
+            },
+            "passed": {
+              "type": "boolean"
+            },
+            "failed": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "undecided": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
             }
           },
           "required": [
             "version",
-            "english",
-            "tree",
-            "explanation",
-            "assumptions",
-            "warnings",
-            "compiled_by",
-            "vocabulary",
-            "created_at"
+            "passed",
+            "failed",
+            "undecided"
           ]
         }
       },
@@ -21660,7 +22836,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "withdraw-email-rule-request",
-    "description": "Withdraws a pending request you made. Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the organization.",
+    "description": "Withdraws a pending request you made. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": false,
     "method": "POST",
     "operationId": "withdrawEmailRuleRequest",
@@ -21719,7 +22895,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "vocabulary": {
               "type": "string",
-              "description": "The column contract version the rule is written against, for example v1."
+              "description": "Vocabulary version, such as v1."
             },
             "when": {
               "type": "object",
@@ -21727,14 +22903,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "string"
               },
               "additionalProperties": {},
-              "description": "The rule's conditions: a condition ({column, op, value?, min_confidence?}) or a group ({all: [...]}, {any: [...]} or {not: ...})."
+              "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
             },
             "questions": {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "Yes/no questions of the rule's own, asked about an email only after its conditions match. An email matches only if every answer is yes."
+              "description": "Yes/no questions asked once the conditions match; all must be yes."
             }
           },
           "required": [
@@ -21771,7 +22947,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "session",
             "oauth"
           ],
-          "description": "session: from the proposer's own session; oauth: from an OAuth or CLI token acting for them."
+          "description": "session: the proposer's own session; oauth: an OAuth or CLI token acting for them."
         },
         "created_at": {
           "type": "string",
@@ -21805,7 +22981,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "email": {
-              "description": "Their sign-in email. Null unless you can list member emails, this is you, or you are the member they asked.",
+              "description": "Sign-in email; null unless you can list member emails, this is you, or they asked you.",
               "type": [
                 "string",
                 "null"
@@ -21813,7 +22989,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "active": {
               "type": "boolean",
-              "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+              "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
             }
           },
           "required": [
@@ -21842,7 +23018,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "email": {
-              "description": "Their sign-in email. Null unless you can list member emails or this is you.",
+              "description": "Sign-in email; null unless you can list member emails or this is you.",
               "type": [
                 "string",
                 "null"
@@ -21850,7 +23026,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "active": {
               "type": "boolean",
-              "description": "Whether they are still a member under the membership that was recorded. A request or share whose other person left no longer works."
+              "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
             }
           },
           "required": [
@@ -21861,7 +23037,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "target_address_typed": {
-          "description": "The address you typed to name the member. Only for the member who asked; null otherwise, and when they were named by user id.",
+          "description": "The address the proposer typed to name the target; null for anyone else, and when named by user id.",
           "type": [
             "string",
             "null"
@@ -26239,7 +27415,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-endpoint",
-    "description": "Creates a new webhook endpoint. If a deactivated endpoint\nwith the same URL and domain exists, it is reactivated\ninstead. Subject to plan limits on the number of active\nendpoints.\n\n**Signing is account-scoped, not per-endpoint.** This call\ndoes not return any signing material; every endpoint on the\naccount uses the same webhook secret, fetched via\n`GET /account/webhook-secret`. See the API-level \"Webhook\nsigning\" section for the full wire format (header name,\nsigned string, hash algo, secret format, tolerance) and a\nlanguage-agnostic verification recipe.\n\nAfter creating the endpoint, fire a test delivery against\nit via `POST /endpoints/{id}/test` to confirm your verifier\naccepts the signature.\n\n\nFor local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named creation resumes the same active destination; omitted filters preserve its selection, while conflicting supplied configuration returns 409. New unfiltered destinations receive all subsequently ready eligible event types within their credential scope. Connected-agent credentials automatically create private subscriptions restricted to inbound email for their assigned address. Names are isolated per credential; revocation or replacement deletes its subscriptions. Address-scoped events contain parsed mail without raw MIME, signed download links, routing metadata, or sibling envelope recipients. Pull destinations do not occupy HTTP routing slots. Signing-secret setup and a test HTTP delivery are not required for pull receiving.\n\nFor local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named creation resumes the same active destination; omitted filters preserve its selection, while conflicting supplied configuration returns 409. Creating a pull destination requires a connected-agent credential; it creates a private subscription restricted to inbound email for the assigned address of that credential. Account API keys receive 403 pull_subscription_requires_agent_connection and can instead receive mail with GET /emails?since=<cursor>&wait=30 or an HTTP endpoint. Pulling or completing an account destination created earlier returns the same 403. Names are isolated per credential; revocation or replacement deletes its subscriptions. Address-scoped events contain parsed mail without raw MIME, signed download links, routing metadata, or sibling envelope recipients. Pull destinations do not occupy HTTP routing slots. Signing-secret setup and a test HTTP delivery are not required for pull receiving.\n\nAgent connection keys (pconn_) may use endpoints.pull:manage instead of endpoints:manage here, for their own pull subscriptions only.",
+    "description": "Creates a new webhook endpoint. If a deactivated endpoint\nwith the same URL and domain exists, it is reactivated\ninstead. Subject to plan limits on the number of active\nendpoints.\n\n**Signing.** A webhook is signed with the organization's webhook secret (`GET /account/webhook-secret`) unless it has its own. A webhook made as a person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate for itself, is made with its own secret: the response carries it once as `signing_secret`, and `GET /endpoints/{id}/signing-secret` returns it afterwards. Other webhooks, those a person who can read every mailbox makes among them, sign with the organization's secret until given their own. `signed_with` on the endpoint says which secret signs it. See the API-level \"Webhook\nsigning\" section for the full wire format (header name,\nsigned string, hash algo, secret format, tolerance) and a\nlanguage-agnostic verification recipe.\n\nAfter creating the endpoint, fire a test delivery against\nit via `POST /endpoints/{id}/test` to confirm your verifier\naccepts the signature.\n\n\nFor local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named creation resumes the same active destination; omitted filters preserve its selection, while conflicting supplied configuration returns 409. New unfiltered destinations receive all subsequently ready eligible event types within their credential scope. Connected-agent credentials automatically create private subscriptions restricted to inbound email for their assigned address. Names are isolated per credential; revocation or replacement deletes its subscriptions. Address-scoped events contain parsed mail without raw MIME, signed download links, routing metadata, or sibling envelope recipients. Pull destinations do not occupy HTTP routing slots. Signing-secret setup and a test HTTP delivery are not required for pull receiving.\n\nFor local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named creation resumes the same active destination; omitted filters preserve its selection, while conflicting supplied configuration returns 409. Creating a pull destination requires a connected-agent credential; it creates a private subscription restricted to inbound email for the assigned address of that credential. Account API keys receive 403 pull_subscription_requires_agent_connection and can instead receive mail with GET /emails?since=<cursor>&wait=30 or an HTTP endpoint. Pulling or completing an account destination created earlier returns the same 403. Names are isolated per credential; revocation or replacement deletes its subscriptions. Address-scoped events contain parsed mail without raw MIME, signed download links, routing metadata, or sibling envelope recipients. Pull destinations do not occupy HTTP routing slots. Signing-secret setup and a test HTTP delivery are not required for pull receiving.\n\nAgent connection keys (pconn_) may use endpoints.pull:manage instead of endpoints:manage here, for their own pull subscriptions only.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "createEndpoint",
@@ -26247,6 +27423,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [
+      {
+        "description": "A single-use step-up token of purpose `webhooks.write` (Create a webhook or change where it delivers), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session. Asked for only from the person's own Primitive CLI login, and only when the organization's credential policy sets `cli_writes_require_approval`: creating a webhook that delivers to a URL (`kind` `http`), or changing an endpoint's `url`. The token only approves the request, which is still made by the CLI login, and it is spent whatever the answer.",
+        "enum": null,
+        "name": "Primitive-Step-Up",
+        "required": false,
+        "type": "string"
+      },
       {
         "description": "Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.",
         "enum": null,
@@ -26366,8 +27549,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "name": {
           "type": "string",
-          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$",
-          "description": "Stable name within the credential scope, required for kind=pull. Only connected-agent credentials can create pull destinations, and each receives only its assigned address."
+          "minLength": 1,
+          "description": "For kind=pull, the stable name within the credential scope, required (a letter or digit, then letters, digits, - or _, 64 at most). Only connected-agent credentials can create pull destinations, and each receives only its assigned address. For kind=http, an optional label up to 200 characters, shown with the webhook in lists. Not for kind=function."
         },
         "takeover": {
           "type": "boolean",
@@ -26590,7 +27773,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "string",
             "null"
           ],
-          "description": "Stable name of a pull destination."
+          "description": "A pull destination's stable name, or an http webhook's label (null when it has none)."
         },
         "owned_by_key": {
           "description": "Whether an API key owns this webhook instead of the organization.",
@@ -26617,6 +27800,18 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "revoked",
             null
           ]
+        },
+        "signed_with": {
+          "description": "Which secret signs deliveries to this webhook: its own (read it from GET /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that is not a webhook.",
+          "type": "string",
+          "enum": [
+            "own_secret",
+            "organization_secret"
+          ]
+        },
+        "signing_secret": {
+          "description": "Only in the response that creates a webhook made with a signing secret of its own (one made as a person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate for itself): that secret, shown this once. Read it again from GET /endpoints/{id}/signing-secret.",
+          "type": "string"
         }
       },
       "required": [
@@ -26675,6 +27870,338 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "deleteEndpoint",
     "summary": "Delete a webhook endpoint",
+    "tag": "Endpoints",
+    "tagCommand": "endpoints"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-endpoint",
+    "description": "One endpoint, as GET /endpoints shows it, to a caller who would see it there. Any other id, a deleted endpoint's included, answers 404.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getEndpoint",
+    "path": "/endpoints/{id}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "headerParams": [],
+    "permissions": [
+      "webhooks:read"
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "recipient": {
+          "description": "Server-enforced recipient for an address-scoped pull subscription; null for an account-wide destination created before pull creation required a connected-agent credential.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "receiver_capabilities": {
+          "type": "object",
+          "properties": {
+            "completion_modes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "http",
+                  "exec",
+                  "stdout",
+                  "sdk"
+                ]
+              }
+            },
+            "stream_protocols": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "primitive.events.v1"
+                ]
+              }
+            }
+          },
+          "required": [
+            "completion_modes",
+            "stream_protocols"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "org_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "domain_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Restrict this endpoint to emails from a specific domain"
+        },
+        "rules": {
+          "type": "object",
+          "description": "Endpoint-specific filtering rules",
+          "additionalProperties": true,
+          "properties": {
+            "event_types": {
+              "minItems": 1,
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Event types this endpoint receives. Omitted: every event type except the opt-in sent_email.* events, which an endpoint receives only when it lists them."
+            },
+            "max_size_bytes": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Skip messages larger than this many bytes."
+            },
+            "exclude_attachments": {
+              "type": "boolean",
+              "description": "When true, skip messages that have attachments."
+            },
+            "attachment_limit_mb": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Skip messages whose attachments total more than this many megabytes."
+            },
+            "sender_whitelist": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
+                  }
+                ]
+              },
+              "description": "Deliver only messages whose authenticated From identity matches an entry: an exact address, or @domain, which also matches its subdomains."
+            },
+            "sender_blacklist": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
+                  }
+                ]
+              },
+              "description": "Skip messages whose envelope sender or From address matches an entry: an exact address, or @domain, which also matches its subdomains."
+            }
+          }
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "delivery_count": {
+          "type": "integer",
+          "description": "Total webhook deliveries attempted"
+        },
+        "success_count": {
+          "type": "integer",
+          "description": "Successful deliveries"
+        },
+        "failure_count": {
+          "type": "integer",
+          "description": "Failed deliveries"
+        },
+        "consecutive_fails": {
+          "type": "integer",
+          "description": "Current streak of consecutive failures"
+        },
+        "last_delivery_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "last_success_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "last_failure_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "deactivated_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "http",
+            "function",
+            "pull"
+          ],
+          "description": "http: deliver to the webhook URL. function: invoke a Primitive Function."
+        },
+        "function_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "The Function this endpoint invokes, when kind is function."
+        },
+        "is_route_target": {
+          "type": "boolean",
+          "description": "When true, this endpoint is reachable only via an explicit recipient\nroute, never as a domain's default destination, and is exempt from\nthe one-endpoint-per-domain rule (so many can share a domain).\n"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "A pull destination's stable name, or an http webhook's label (null when it has none)."
+        },
+        "owned_by_key": {
+          "description": "Whether an API key owns this webhook instead of the organization.",
+          "type": "boolean"
+        },
+        "owner_key_id": {
+          "description": "The API key that owns this webhook. In endpoint responses it is set only for a caller who may read API key metadata, and is null otherwise and when the organization owns the webhook. After a rotation, the key that carries on for the key first named while it can act.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        "owner_key_status": {
+          "description": "Whether the owning key can act now. In endpoint responses it is set only for a caller who may read API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent nothing.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "active",
+            "suspended",
+            "revoked",
+            null
+          ]
+        },
+        "signed_with": {
+          "description": "Which secret signs deliveries to this webhook: its own (read it from GET /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that is not a webhook.",
+          "type": "string",
+          "enum": [
+            "own_secret",
+            "organization_secret"
+          ]
+        },
+        "signing_secret": {
+          "description": "Only in the response that creates a webhook made with a signing secret of its own (one made as a person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate for itself): that secret, shown this once. Read it again from GET /endpoints/{id}/signing-secret.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "org_id",
+        "enabled",
+        "rules",
+        "created_at",
+        "updated_at",
+        "delivery_count",
+        "success_count",
+        "failure_count",
+        "consecutive_fails"
+      ]
+    },
+    "sdkName": "getEndpoint",
+    "summary": "Get an endpoint",
+    "tag": "Endpoints",
+    "tagCommand": "endpoints"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-endpoint-signing-secret",
+    "description": "The secret deliveries to this webhook are signed with, when it signs with its own (signed_with is own_secret). Verify the Primitive-Signature header with it. A webhook a person owns is given its secret the first time it is asked for. A webhook that signs with the organization's secret answers 409 conflict: rotate its signing secret to give it its own. Answered to the person who owns the webhook; for a webhook an API key owns, to the key that acts for it and the person who holds that key; for one a third-party app or an agent delegate owns, to that app or delegate; and for a webhook the organization owns, to a caller who may change it and holds webhook_secret:read.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getEndpointSigningSecret",
+    "path": "/endpoints/{id}/signing-secret",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "headerParams": [],
+    "permissions": [
+      "endpoints:manage"
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "secret": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "secret"
+      ]
+    },
+    "sdkName": "getEndpointSigningSecret",
+    "summary": "Get a webhook's own signing secret",
     "tag": "Endpoints",
     "tagCommand": "endpoints"
   },
@@ -26905,7 +28432,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "string",
               "null"
             ],
-            "description": "Stable name of a pull destination."
+            "description": "A pull destination's stable name, or an http webhook's label (null when it has none)."
           },
           "owned_by_key": {
             "description": "Whether an API key owns this webhook instead of the organization.",
@@ -26932,6 +28459,18 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "revoked",
               null
             ]
+          },
+          "signed_with": {
+            "description": "Which secret signs deliveries to this webhook: its own (read it from GET /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that is not a webhook.",
+            "type": "string",
+            "enum": [
+              "own_secret",
+              "organization_secret"
+            ]
+          },
+          "signing_secret": {
+            "description": "Only in the response that creates a webhook made with a signing secret of its own (one made as a person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate for itself): that secret, shown this once. Read it again from GET /endpoints/{id}/signing-secret.",
+            "type": "string"
           }
         },
         "required": [
@@ -27107,6 +28646,54 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "rotate-endpoint-signing-secret",
+    "description": "Replaces the webhook's own signing secret, or gives a webhook that signs with the organization's secret one of its own, and returns it. Deliveries are signed with the new secret at once, so update the handler at the same time. Answered to the person who owns the webhook; for a webhook an API key owns, to the key that acts for it and the person who holds that key; for one a third-party app or an agent delegate owns, to that app or delegate; and for a webhook the organization owns, to a caller who may change it and holds webhook_secret:read.",
+    "hasJsonBody": false,
+    "method": "POST",
+    "operationId": "rotateEndpointSigningSecret",
+    "path": "/endpoints/{id}/signing-secret/rotate",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "headerParams": [
+      {
+        "description": "Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.",
+        "enum": null,
+        "name": "Idempotency-Key",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "permissions": [
+      "endpoints:manage"
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "secret": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "secret"
+      ]
+    },
+    "sdkName": "rotateEndpointSigningSecret",
+    "summary": "Rotate a webhook's signing secret, or give it its own",
+    "tag": "Endpoints",
+    "tagCommand": "endpoints"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "test-endpoint",
     "description": "Sends a sample `email.received` event to the endpoint. The request\nincludes SSRF protection (private IP rejection and DNS pinning).\nRate limited to 4 per minute and 30 per hour (non-exempt).\nSuccessful deliveries and verified-domain endpoints are exempt\nfrom the rate limit.\n",
     "hasJsonBody": false,
@@ -27149,7 +28736,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "signature": {
           "type": "string",
-          "description": "The signature header value sent (if webhook secret is configured)"
+          "description": "The signature header value sent, answered to a caller who may see it: for a webhook signed with the organization's secret, a caller who may read that secret; for one signed with its own, the person who owns it, calling as themselves."
         }
       },
       "required": [
@@ -27304,7 +28891,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "update-endpoint",
-    "description": "Updates an active webhook endpoint. If the URL is changed, the old\nendpoint is deactivated and a new one is created (or an existing\ndeactivated endpoint with the new URL is reactivated).\n\n\nPull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint deletion disconnects the destination; creating a new destination does not backfill historical events.",
+    "description": "Updates an active webhook endpoint. Changing the URL keeps the endpoint: its id, recipient routes, signing secret, delivery history and any deliveries still owed to it stay with it, and owed deliveries go to the new URL. Another active endpoint at the new URL is refused.\n\n\nPull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint deletion disconnects the destination; creating a new destination does not backfill historical events.",
     "hasJsonBody": true,
     "method": "PATCH",
     "operationId": "updateEndpoint",
@@ -27319,7 +28906,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
-    "headerParams": [],
+    "headerParams": [
+      {
+        "description": "A single-use step-up token of purpose `webhooks.write` (Create a webhook or change where it delivers), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session. Asked for only from the person's own Primitive CLI login, and only when the organization's credential policy sets `cli_writes_require_approval`: creating a webhook that delivers to a URL (`kind` `http`), or changing an endpoint's `url`. The token only approves the request, which is still made by the CLI login, and it is spent whatever the answer.",
+        "enum": null,
+        "name": "Primitive-Step-Up",
+        "required": false,
+        "type": "string"
+      }
+    ],
     "permissions": [
       "endpoints:manage"
     ],
@@ -27419,6 +29014,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ],
           "format": "uuid",
           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        "name": {
+          "description": "A webhook's label, up to 200 characters, shown with it in lists; null removes it. Only for http webhooks: a pull destination keeps the name it was created with.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
         }
       },
       "minProperties": 1
@@ -27632,7 +29235,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "string",
             "null"
           ],
-          "description": "Stable name of a pull destination."
+          "description": "A pull destination's stable name, or an http webhook's label (null when it has none)."
         },
         "owned_by_key": {
           "description": "Whether an API key owns this webhook instead of the organization.",
@@ -27659,6 +29262,18 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "revoked",
             null
           ]
+        },
+        "signed_with": {
+          "description": "Which secret signs deliveries to this webhook: its own (read it from GET /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that is not a webhook.",
+          "type": "string",
+          "enum": [
+            "own_secret",
+            "organization_secret"
+          ]
+        },
+        "signing_secret": {
+          "description": "Only in the response that creates a webhook made with a signing secret of its own (one made as a person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate for itself): that secret, shown this once. Read it again from GET /endpoints/{id}/signing-secret.",
+          "type": "string"
         }
       },
       "required": [
@@ -41385,7 +43000,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-role",
-    "description": "A role nobody can use to gain access they do not hold: its permissions and mail scope must be within the author's own. mail_scope is \"org\" (the default) or { addresses, domains }; any other value is refused with 400 `validation_error`. Every role that reaches mail reads it in full, and raw MIME follows the role's mail.raw:read; `depth` is deprecated and ignored. Its mail scope names no other member's personal mailbox: otherwise 403 `grant_forbidden` with `details.reason` `personal_mailbox_member_only`. Person only: a dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose `roles.write` (the person confirms at the step_up_url a 403 step_up_required answer carries, which names this client, then send the token in the Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs roles:assign. API keys are refused.",
+    "description": "A role nobody can use to gain access they do not hold: its permissions and mail scope must be within the author's own. mail_scope is \"org\" (the default) or { addresses, domains }; any other value is refused with 400 `validation_error`. Every role that reaches mail reads it in full, and raw MIME follows the role's mail.raw:read; `depth` is deprecated and ignored. Its mail scope names no other member's personal mailbox: otherwise 403 `grant_forbidden` with `details.reason` `personal_mailbox_member_only`. Each permission must have what it requires in the same role: mail:read for mail.raw:read, mail.search:semantic, mail:share_own, changes:read and webhooks:read; mail:send for mail:send_batch and mail:send_as_member; functions:deploy for templates:install; agent_connections:manage for agent_connections:custom_domains. Otherwise 400 `validation_error` with `details.reason` `unmet_requirement`, `details.permission` and `details.requires`. Person only: a dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose `roles.write` (the person confirms at the step_up_url a 403 step_up_required answer carries, which names this client, then send the token in the Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs roles:assign. API keys are refused.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "createRole",
@@ -41685,7 +43300,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "decide-suspension",
-    "description": "Keep, narrow or revoke one suspended or flagged item. Keeping it, and revoking an API key, needs the decider to cover it (revoking an uncovered key is refused with `grant_forbidden`, `target_not_covered`). Keeping an API key rotated (`rotate: true`, other than the shared Function key) also revokes its older secrets still in a rotation overlap, and needs keys:manage on both the credential and the person: without it, or if the decider lost members:manage meanwhile, it is refused with `grant_forbidden` (`keys_manage_required` or `actor_access_changed`) and nothing is rotated. A rule share paused by a role change (`email_rule_share`) takes keep, which leaves it paused, or revoke, which ends the share and needs confirm: true (the person it was shared with loses the emails already shared; without it, 409 `confirmation_required`). Neither of the share's two people may keep it (`grant_forbidden`, `share_decision_forbidden`). Access a person gave on their own mailbox (`mailbox_access`) takes keep or revoke, and both need delegations:manage; revoke removes only what that person gave on that mailbox. Nobody the access reaches, nor the person who gave it, may keep it (`grant_forbidden`, `mailbox_access_decision_forbidden`). Person only: a dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose `suspensions.decide` (the person confirms at the step_up_url a 403 step_up_required answer carries, which names this client, then send the token in the Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs members:manage. API keys are refused.",
+    "description": "Keep, narrow or revoke one suspended or flagged item. Keeping it, and revoking an API key, needs the decider to cover it (revoking an uncovered key is refused with `grant_forbidden`, `target_not_covered`). Keeping an API key rotated (`rotate: true`, other than the shared Function key) also revokes its older secrets still in a rotation overlap, and needs keys:manage on both the credential and the person: without it, or if the decider lost members:manage meanwhile, it is refused with `grant_forbidden` (`keys_manage_required` or `actor_access_changed`) and nothing is rotated. A rule share paused by a role change (`email_rule_share`) takes keep, which leaves it paused, or revoke, which ends the share and needs confirm: true (the person it was shared with loses the emails already shared; without it, 409 `confirmation_required`, as for revoking a filter). Neither of the share's two people may keep it (`grant_forbidden`, `share_decision_forbidden`). Access a person gave on their own mailbox (`mailbox_access`) takes keep or revoke, and both need delegations:manage; revoke removes only what that person gave on that mailbox. Nobody the access reaches, nor the person who gave it, may keep it (`grant_forbidden`, `mailbox_access_decision_forbidden`). Person only: a dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose `suspensions.decide` (the person confirms at the step_up_url a 403 step_up_required answer carries, which names this client, then send the token in the Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs members:manage. API keys are refused.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "decideSuspension",
@@ -43547,7 +45162,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "update-role",
-    "description": "A new version of the role, with a new `id`: the version you edited is retired, the response is the new one (same `key`, `version` one higher), and every member and group holding the role moves to it. The old id answers 404 `not_found` from then on, so store the returned `id` (or look the role up by `key` in GET /roles) before editing or assigning it again. Every holder whose access shrinks goes through the reduction path. mail_scope follows the same rules as creating a role; a role whose stored scope cannot be read must be sent a new mail_scope, otherwise 400 `validation_error` with `details.reason` `invalid_mail_scope`.  A personal mailbox the new version adds must be the author's own, and every holder must be the member of each personal mailbox it names: otherwise 403 `grant_forbidden` with `details.reason` `personal_mailbox_member_only`. Person only: a dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose `roles.write` (the person confirms at the step_up_url a 403 step_up_required answer carries, which names this client, then send the token in the Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs roles:assign. API keys are refused.",
+    "description": "A new version of the role, with a new `id`: the version you edited is retired, the response is the new one (same `key`, `version` one higher), and every member and group holding the role moves to it. The old id answers 404 `not_found` from then on, so store the returned `id` (or look the role up by `key` in GET /roles) before editing or assigning it again. Every holder whose access shrinks goes through the reduction path. mail_scope follows the same rules as creating a role; a role whose stored scope cannot be read must be sent a new mail_scope, otherwise 400 `validation_error` with `details.reason` `invalid_mail_scope`.  A personal mailbox the new version adds must be the author's own, and every holder must be the member of each personal mailbox it names: otherwise 403 `grant_forbidden` with `details.reason` `personal_mailbox_member_only`. Each permission in the new version must have what it requires in the same role, as when creating one, including permissions carried over unchanged. Person only: a dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose `roles.write` (the person confirms at the step_up_url a 403 step_up_required answer carries, which names this client, then send the token in the Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs roles:assign. API keys are refused.",
     "hasJsonBody": true,
     "method": "PATCH",
     "operationId": "updateRole",
@@ -55926,7 +57541,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-delivery",
-    "description": "One webhook delivery attempt record, by the id listDeliveries returns.",
+    "description": "One webhook delivery attempt record, by the id listDeliveries returns, with every attempt of the same delivery (a retry is recorded as a new attempt with its own id).",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getDelivery",
@@ -56019,6 +57634,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "null"
           ]
         },
+        "response_status": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "The HTTP status the endpoint answered this attempt with: a webhook's own answer, or for a Function what its runtime answered, which is the platform's own error when the Function could not be run. Null when no answer came back (a network error, a timeout, an attempt refused or not sent) and on attempts recorded before this field."
+        },
+        "response_body": {
+          "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "created_at": {
           "type": "string"
         },
@@ -56052,6 +57681,68 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "recipient",
             "subject"
           ]
+        },
+        "latest_attempt": {
+          "type": "boolean",
+          "description": "Whether this is the latest attempt of its delivery: the one recorded last, where a record of no attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A retry is recorded as a new attempt with its own id and attempt_count (not always higher than the one before), so an earlier attempt never changes: follow the latest one, or read attempts on any of them."
+        },
+        "next_attempt_at": {
+          "description": "When the next automatic retry of this delivery is due. Not reported yet: always null.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "attempts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 19,
+                    "pattern": "^\\d+$"
+                  },
+                  {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                ]
+              },
+              "attempt_count": {
+                "type": "integer"
+              },
+              "status": {
+                "type": "string"
+              },
+              "last_error_code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "duration_ms": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "created_at": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "attempt_count",
+              "status",
+              "last_error_code",
+              "duration_ms",
+              "created_at"
+            ]
+          },
+          "description": "Every attempt of this delivery in the order recorded, oldest first, this one included: the same endpoint, and the same event (or, for an attempt recorded without one, the same email). Records of no attempt (attempt_count 0) are listed where they were recorded, so the last entry is not always the latest attempt (latest_attempt says which is). The newest 100 when there are more."
         }
       },
       "required": [
@@ -56067,9 +57758,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "duration_ms",
         "last_error",
         "last_error_code",
+        "response_status",
+        "response_body",
         "created_at",
         "updated_at",
-        "email"
+        "email",
+        "latest_attempt",
+        "next_attempt_at",
+        "attempts"
       ]
     },
     "sdkName": "getDelivery",
@@ -56270,6 +57966,32 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "null"
             ],
             "description": "Machine-readable code for the last failure, or null."
+          },
+          "response_status": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "The HTTP status the endpoint answered this attempt with: a webhook's own answer, or for a Function what its runtime answered, which is the platform's own error when the Function could not be run. Null when no answer came back (a network error, a timeout, an attempt refused or not sent) and on attempts recorded before this field."
+          },
+          "response_body": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent."
+          },
+          "latest_attempt": {
+            "type": "boolean",
+            "description": "Whether this is the latest attempt of its delivery: the one recorded last, where a record of no attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A retry is recorded as a new attempt with its own id and attempt_count (not always higher than the one before), so an earlier attempt never changes: follow the latest one, or read attempts on any of them."
+          },
+          "next_attempt_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the next automatic retry of this delivery is due. Not reported yet: always null."
           }
         },
         "required": [
@@ -56284,7 +58006,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "updated_at",
           "event_type",
           "sent_email_id",
-          "last_error_code"
+          "last_error_code",
+          "response_status",
+          "response_body",
+          "latest_attempt",
+          "next_attempt_at"
         ]
       }
     },

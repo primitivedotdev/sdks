@@ -33,6 +33,7 @@ class CredentialsUpdateCredentialPolicyInput:
             cap_agents_below_person (bool | Unset):
             removal_suspends_created (bool | Unset):
             oauth_consent_admin_only (bool | Unset):
+            cli_writes_require_approval (bool | Unset):
             cli_access (CredentialsUpdateCredentialPolicyInputCliAccess | Unset):
      """
 
@@ -44,6 +45,7 @@ class CredentialsUpdateCredentialPolicyInput:
     cap_agents_below_person: bool | Unset = UNSET
     removal_suspends_created: bool | Unset = UNSET
     oauth_consent_admin_only: bool | Unset = UNSET
+    cli_writes_require_approval: bool | Unset = UNSET
     cli_access: CredentialsUpdateCredentialPolicyInputCliAccess | Unset = UNSET
 
 
@@ -74,6 +76,8 @@ class CredentialsUpdateCredentialPolicyInput:
 
         oauth_consent_admin_only = self.oauth_consent_admin_only
 
+        cli_writes_require_approval = self.cli_writes_require_approval
+
         cli_access: str | Unset = UNSET
         if not isinstance(self.cli_access, Unset):
             cli_access = self.cli_access.value
@@ -100,6 +104,8 @@ class CredentialsUpdateCredentialPolicyInput:
             field_dict["removal_suspends_created"] = removal_suspends_created
         if oauth_consent_admin_only is not UNSET:
             field_dict["oauth_consent_admin_only"] = oauth_consent_admin_only
+        if cli_writes_require_approval is not UNSET:
+            field_dict["cli_writes_require_approval"] = cli_writes_require_approval
         if cli_access is not UNSET:
             field_dict["cli_access"] = cli_access
 
@@ -142,6 +148,8 @@ class CredentialsUpdateCredentialPolicyInput:
 
         oauth_consent_admin_only = d.pop("oauth_consent_admin_only", UNSET)
 
+        cli_writes_require_approval = d.pop("cli_writes_require_approval", UNSET)
+
         _cli_access = d.pop("cli_access", UNSET)
         cli_access: CredentialsUpdateCredentialPolicyInputCliAccess | Unset
         if isinstance(_cli_access,  Unset):
@@ -161,6 +169,7 @@ class CredentialsUpdateCredentialPolicyInput:
             cap_agents_below_person=cap_agents_below_person,
             removal_suspends_created=removal_suspends_created,
             oauth_consent_admin_only=oauth_consent_admin_only,
+            cli_writes_require_approval=cli_writes_require_approval,
             cli_access=cli_access,
         )
 

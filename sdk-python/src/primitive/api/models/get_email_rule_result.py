@@ -16,8 +16,9 @@ from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
-  from ..models.get_email_rule_result_current_type_0 import GetEmailRuleResultCurrentType0
-  from ..models.get_email_rule_result_scope_selection_type_0 import GetEmailRuleResultScopeSelectionType0
+  from ..models.email_rule_scope_names import EmailRuleScopeNames
+  from ..models.email_rule_version import EmailRuleVersion
+  from ..models.get_email_rule_result_expectations import GetEmailRuleResultExpectations
 
 
 
@@ -36,18 +37,17 @@ class GetEmailRuleResult:
             state (GetEmailRuleResultState):
             current_version (int | None):
             author_user_id (UUID):
-            is_author (bool): Whether the caller wrote the rule (under their current membership). Only the author edits a
-                rule; anyone else who can see it may only disable or delete it, and while it is shared only if they manage
-                members.
+            is_author (bool): Whether you are its author, in your current membership. Only its author edits it; others who
+                see it may only disable or delete it (while shared, only if they manage members).
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
-            current (GetEmailRuleResultCurrentType0 | None):
-            kind (GetEmailRuleResultKind | Unset): do_not_share: the rule blocks sharing of what it matches. Absent (or
-                grant) on a rule that shares what it matches.
-            evaluation_scope (GetEmailRuleResultEvaluationScope | Unset): Whose mail the rule runs over, as stored; GET
-                /email-rules/{id}/scope says what that comes to now.
-            scope_selection (GetEmailRuleResultScopeSelectionType0 | None | Unset): What a selected rule names; null for any
-                other scope.
+            current (EmailRuleVersion | None):
+            kind (GetEmailRuleResultKind | Unset): do_not_share: it blocks sharing what it matches. Absent (or grant) on a
+                rule that shares.
+            evaluation_scope (GetEmailRuleResultEvaluationScope | Unset): Whose mail it runs over, as stored (GET /email-
+                rules/{id}/scope: what that is now).
+            scope_selection (EmailRuleScopeNames | None | Unset): What a selected rule names; null for any other scope.
+            expectations (GetEmailRuleResultExpectations | Unset): Its saved expectations, each list by email id.
      """
 
     id: UUID
@@ -58,10 +58,11 @@ class GetEmailRuleResult:
     is_author: bool
     created_at: datetime.datetime
     updated_at: datetime.datetime
-    current: GetEmailRuleResultCurrentType0 | None
+    current: EmailRuleVersion | None
     kind: GetEmailRuleResultKind | Unset = UNSET
     evaluation_scope: GetEmailRuleResultEvaluationScope | Unset = UNSET
-    scope_selection: GetEmailRuleResultScopeSelectionType0 | None | Unset = UNSET
+    scope_selection: EmailRuleScopeNames | None | Unset = UNSET
+    expectations: GetEmailRuleResultExpectations | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -69,8 +70,9 @@ class GetEmailRuleResult:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.get_email_rule_result_current_type_0 import GetEmailRuleResultCurrentType0 # noqa: PLC0415
-        from ..models.get_email_rule_result_scope_selection_type_0 import GetEmailRuleResultScopeSelectionType0 # noqa: PLC0415
+        from ..models.email_rule_scope_names import EmailRuleScopeNames # noqa: PLC0415
+        from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
+        from ..models.get_email_rule_result_expectations import GetEmailRuleResultExpectations # noqa: PLC0415
         id = str(self.id)
 
         name = self.name
@@ -89,7 +91,7 @@ class GetEmailRuleResult:
         updated_at = self.updated_at.isoformat()
 
         current: dict[str, Any] | None
-        if isinstance(self.current, GetEmailRuleResultCurrentType0):
+        if isinstance(self.current, EmailRuleVersion):
             current = self.current.to_dict()
         else:
             current = self.current
@@ -107,10 +109,14 @@ class GetEmailRuleResult:
         scope_selection: dict[str, Any] | None | Unset
         if isinstance(self.scope_selection, Unset):
             scope_selection = UNSET
-        elif isinstance(self.scope_selection, GetEmailRuleResultScopeSelectionType0):
+        elif isinstance(self.scope_selection, EmailRuleScopeNames):
             scope_selection = self.scope_selection.to_dict()
         else:
             scope_selection = self.scope_selection
+
+        expectations: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.expectations, Unset):
+            expectations = self.expectations.to_dict()
 
 
         field_dict: dict[str, Any] = {}
@@ -132,6 +138,8 @@ class GetEmailRuleResult:
             field_dict["evaluation_scope"] = evaluation_scope
         if scope_selection is not UNSET:
             field_dict["scope_selection"] = scope_selection
+        if expectations is not UNSET:
+            field_dict["expectations"] = expectations
 
         return field_dict
 
@@ -139,8 +147,9 @@ class GetEmailRuleResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.get_email_rule_result_current_type_0 import GetEmailRuleResultCurrentType0 # noqa: PLC0415
-        from ..models.get_email_rule_result_scope_selection_type_0 import GetEmailRuleResultScopeSelectionType0 # noqa: PLC0415
+        from ..models.email_rule_scope_names import EmailRuleScopeNames # noqa: PLC0415
+        from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
+        from ..models.get_email_rule_result_expectations import GetEmailRuleResultExpectations # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -179,20 +188,20 @@ class GetEmailRuleResult:
 
 
 
-        def _parse_current(data: object) -> GetEmailRuleResultCurrentType0 | None:
+        def _parse_current(data: object) -> EmailRuleVersion | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                current_type_0 = GetEmailRuleResultCurrentType0.from_dict(data)
+                current_type_1 = EmailRuleVersion.from_dict(data)
 
 
 
-                return current_type_0
+                return current_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(GetEmailRuleResultCurrentType0 | None, data)
+            return cast(EmailRuleVersion | None, data)
 
         current = _parse_current(d.pop("current"))
 
@@ -217,7 +226,7 @@ class GetEmailRuleResult:
 
 
 
-        def _parse_scope_selection(data: object) -> GetEmailRuleResultScopeSelectionType0 | None | Unset:
+        def _parse_scope_selection(data: object) -> EmailRuleScopeNames | None | Unset:
             if data is None:
                 return data
             if isinstance(data, Unset):
@@ -225,16 +234,26 @@ class GetEmailRuleResult:
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                scope_selection_type_0 = GetEmailRuleResultScopeSelectionType0.from_dict(data)
+                scope_selection_type_1 = EmailRuleScopeNames.from_dict(data)
 
 
 
-                return scope_selection_type_0
+                return scope_selection_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(GetEmailRuleResultScopeSelectionType0 | None | Unset, data)
+            return cast(EmailRuleScopeNames | None | Unset, data)
 
         scope_selection = _parse_scope_selection(d.pop("scope_selection", UNSET))
+
+
+        _expectations = d.pop("expectations", UNSET)
+        expectations: GetEmailRuleResultExpectations | Unset
+        if isinstance(_expectations,  Unset):
+            expectations = UNSET
+        else:
+            expectations = GetEmailRuleResultExpectations.from_dict(_expectations)
+
+
 
 
         get_email_rule_result = cls(
@@ -250,6 +269,7 @@ class GetEmailRuleResult:
             kind=kind,
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,
+            expectations=expectations,
         )
 
 

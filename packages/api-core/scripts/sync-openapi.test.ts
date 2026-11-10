@@ -2,7 +2,8 @@
 // Importing the script must not run it: main() exits when no path is given.
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { normalizeNode, syncOpenApi } from "./sync-openapi.ts";
+import YAML from "yaml";
+import { normalizeNode, renderYaml, syncOpenApi } from "./sync-openapi.ts";
 
 const NULL = { type: "null" };
 
@@ -150,5 +151,25 @@ describe("syncOpenApi", () => {
       () => syncOpenApi({ openapi: "3.0.3", paths: { "/x": {} } }),
       /OpenAPI 3\.1/,
     );
+  });
+});
+
+describe("renderYaml", () => {
+  it("writes YAML that a YAML 1.1 parser reads the same as the document", () => {
+    const doc = {
+      summary: {
+        questions: {
+          type: "object",
+          required: ["yes", "no", "unanswered"],
+          properties: { yes: { type: "integer" }, no: { type: "integer" } },
+        },
+      },
+      words: ["y", "n", "on", "off", "Yes", "NO", "~", "null", "true", "maybe"],
+      breaks: "line\u2028separator",
+    };
+    const text = renderYaml(doc);
+    assert.deepEqual(YAML.parse(text, { version: "1.1" }), doc);
+    assert.deepEqual(YAML.parse(text), doc);
+    assert.match(text, /^ {6}"yes":/m);
   });
 });

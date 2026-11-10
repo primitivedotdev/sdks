@@ -12,9 +12,9 @@ from typing import cast
 import datetime
 
 if TYPE_CHECKING:
+  from ..models.email_rule_tree import EmailRuleTree
   from ..models.list_email_rule_results_result_rules_item_decision_type_0_parts_item import ListEmailRuleResultsResultRulesItemDecisionType0PartsItem
   from ..models.list_email_rule_results_result_rules_item_decision_type_0_question_answers_item import ListEmailRuleResultsResultRulesItemDecisionType0QuestionAnswersItem
-  from ..models.list_email_rule_results_result_rules_item_decision_type_0_tree_type_0 import ListEmailRuleResultsResultRulesItemDecisionType0TreeType0
 
 
 
@@ -32,20 +32,24 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
             rule_version (int): The version of the rule that decided.
             matched (bool):
             parts (list[ListEmailRuleResultsResultRulesItemDecisionType0PartsItem]): How each top-level part of the rule
-                decided. Empty when a fact the rule reads was missing, so it was not evaluated.
+                decided. Empty when a fact the rule reads was missing, so it was not evaluated, or when detail_withheld is true.
             question_answers (list[ListEmailRuleResultsResultRulesItemDecisionType0QuestionAnswersItem]): The answers to the
                 rule's own questions, asked only when its conditions matched.
-            tree (ListEmailRuleResultsResultRulesItemDecisionType0TreeType0 | None): The conditions and questions of the
-                version that decided, so the result reads in that version's words.
+            tree (EmailRuleTree | None): The conditions and questions of the version that decided, so the result reads in
+                that version's words.
             created_at (datetime.datetime):
+            detail_withheld (bool | Unset): Present, as true, on a result for an email whose content cannot be read
+                (withheld, failed to parse or discarded): matched still says what the rule decided, but how it got there was
+                read from that content, so parts and question_answers are empty. Absent otherwise.
      """
 
     rule_version: int
     matched: bool
     parts: list[ListEmailRuleResultsResultRulesItemDecisionType0PartsItem]
     question_answers: list[ListEmailRuleResultsResultRulesItemDecisionType0QuestionAnswersItem]
-    tree: ListEmailRuleResultsResultRulesItemDecisionType0TreeType0 | None
+    tree: EmailRuleTree | None
     created_at: datetime.datetime
+    detail_withheld: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -53,9 +57,9 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_rule_tree import EmailRuleTree # noqa: PLC0415
         from ..models.list_email_rule_results_result_rules_item_decision_type_0_parts_item import ListEmailRuleResultsResultRulesItemDecisionType0PartsItem # noqa: PLC0415
         from ..models.list_email_rule_results_result_rules_item_decision_type_0_question_answers_item import ListEmailRuleResultsResultRulesItemDecisionType0QuestionAnswersItem # noqa: PLC0415
-        from ..models.list_email_rule_results_result_rules_item_decision_type_0_tree_type_0 import ListEmailRuleResultsResultRulesItemDecisionType0TreeType0 # noqa: PLC0415
         rule_version = self.rule_version
 
         matched = self.matched
@@ -75,12 +79,14 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
 
 
         tree: dict[str, Any] | None
-        if isinstance(self.tree, ListEmailRuleResultsResultRulesItemDecisionType0TreeType0):
+        if isinstance(self.tree, EmailRuleTree):
             tree = self.tree.to_dict()
         else:
             tree = self.tree
 
         created_at = self.created_at.isoformat()
+
+        detail_withheld = self.detail_withheld
 
 
         field_dict: dict[str, Any] = {}
@@ -93,6 +99,8 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
             "tree": tree,
             "created_at": created_at,
         })
+        if detail_withheld is not UNSET:
+            field_dict["detail_withheld"] = detail_withheld
 
         return field_dict
 
@@ -100,9 +108,9 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_rule_tree import EmailRuleTree # noqa: PLC0415
         from ..models.list_email_rule_results_result_rules_item_decision_type_0_parts_item import ListEmailRuleResultsResultRulesItemDecisionType0PartsItem # noqa: PLC0415
         from ..models.list_email_rule_results_result_rules_item_decision_type_0_question_answers_item import ListEmailRuleResultsResultRulesItemDecisionType0QuestionAnswersItem # noqa: PLC0415
-        from ..models.list_email_rule_results_result_rules_item_decision_type_0_tree_type_0 import ListEmailRuleResultsResultRulesItemDecisionType0TreeType0 # noqa: PLC0415
         d = dict(src_dict)
         rule_version = d.pop("rule_version")
 
@@ -128,20 +136,20 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
             question_answers.append(question_answers_item)
 
 
-        def _parse_tree(data: object) -> ListEmailRuleResultsResultRulesItemDecisionType0TreeType0 | None:
+        def _parse_tree(data: object) -> EmailRuleTree | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                tree_type_0 = ListEmailRuleResultsResultRulesItemDecisionType0TreeType0.from_dict(data)
+                tree_type_1 = EmailRuleTree.from_dict(data)
 
 
 
-                return tree_type_0
+                return tree_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(ListEmailRuleResultsResultRulesItemDecisionType0TreeType0 | None, data)
+            return cast(EmailRuleTree | None, data)
 
         tree = _parse_tree(d.pop("tree"))
 
@@ -151,6 +159,8 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
 
 
 
+        detail_withheld = d.pop("detail_withheld", UNSET)
+
         list_email_rule_results_result_rules_item_decision_type_0 = cls(
             rule_version=rule_version,
             matched=matched,
@@ -158,6 +168,7 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
             question_answers=question_answers,
             tree=tree,
             created_at=created_at,
+            detail_withheld=detail_withheld,
         )
 
 

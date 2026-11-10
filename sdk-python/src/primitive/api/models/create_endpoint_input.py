@@ -38,8 +38,10 @@ class CreateEndpointInput:
             is_route_target (bool | Unset): Create this endpoint as a route-target: reachable only via an
                 explicit recipient route, never a domain's default destination, and
                 exempt from the one-endpoint-per-domain rule.
-            name (str | Unset): Stable name within the credential scope, required for kind=pull. Only connected-agent
-                credentials can create pull destinations, and each receives only its assigned address.
+            name (str | Unset): For kind=pull, the stable name within the credential scope, required (a letter or digit,
+                then letters, digits, - or _, 64 at most). Only connected-agent credentials can create pull destinations, and
+                each receives only its assigned address. For kind=http, an optional label up to 200 characters, shown with the
+                webhook in lists. Not for kind=function.
             takeover (bool | Unset): When the domain (or, with no domain_id, the organization's fallback slot) already has
                 an active endpoint: false (the default) answers 409 conflict with details.holder naming it; true retires that
                 endpoint in the same request, after the checks deleting it would need. Route targets and pull destinations never

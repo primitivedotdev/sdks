@@ -33,6 +33,7 @@ class CredentialsGetKeyBuilderResultPolicy:
             cap_agents_below_person (bool):
             removal_suspends_created (bool):
             oauth_consent_admin_only (bool):
+            cli_writes_require_approval (bool | Unset):
             cli_access (CredentialsGetKeyBuilderResultPolicyCliAccess | Unset):
      """
 
@@ -44,6 +45,7 @@ class CredentialsGetKeyBuilderResultPolicy:
     cap_agents_below_person: bool
     removal_suspends_created: bool
     oauth_consent_admin_only: bool
+    cli_writes_require_approval: bool | Unset = UNSET
     cli_access: CredentialsGetKeyBuilderResultPolicyCliAccess | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -69,6 +71,8 @@ class CredentialsGetKeyBuilderResultPolicy:
 
         oauth_consent_admin_only = self.oauth_consent_admin_only
 
+        cli_writes_require_approval = self.cli_writes_require_approval
+
         cli_access: str | Unset = UNSET
         if not isinstance(self.cli_access, Unset):
             cli_access = self.cli_access.value
@@ -87,6 +91,8 @@ class CredentialsGetKeyBuilderResultPolicy:
             "removal_suspends_created": removal_suspends_created,
             "oauth_consent_admin_only": oauth_consent_admin_only,
         })
+        if cli_writes_require_approval is not UNSET:
+            field_dict["cli_writes_require_approval"] = cli_writes_require_approval
         if cli_access is not UNSET:
             field_dict["cli_access"] = cli_access
 
@@ -122,6 +128,8 @@ class CredentialsGetKeyBuilderResultPolicy:
 
         oauth_consent_admin_only = d.pop("oauth_consent_admin_only")
 
+        cli_writes_require_approval = d.pop("cli_writes_require_approval", UNSET)
+
         _cli_access = d.pop("cli_access", UNSET)
         cli_access: CredentialsGetKeyBuilderResultPolicyCliAccess | Unset
         if isinstance(_cli_access,  Unset):
@@ -141,6 +149,7 @@ class CredentialsGetKeyBuilderResultPolicy:
             cap_agents_below_person=cap_agents_below_person,
             removal_suspends_created=removal_suspends_created,
             oauth_consent_admin_only=oauth_consent_admin_only,
+            cli_writes_require_approval=cli_writes_require_approval,
             cli_access=cli_access,
         )
 

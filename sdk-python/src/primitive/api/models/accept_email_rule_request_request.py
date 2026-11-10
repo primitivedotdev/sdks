@@ -11,7 +11,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.accept_email_rule_request_request_tree import AcceptEmailRuleRequestRequestTree
+  from ..models.email_rule_tree_input import EmailRuleTreeInput
 
 
 
@@ -27,17 +27,21 @@ class AcceptEmailRuleRequestRequest:
         Attributes:
             name (str | Unset): A name for the rule. Defaults to the name it was asked for under.
             english (str | Unset): The plain-English description the rule was compiled from.
-            tree (AcceptEmailRuleRequestRequestTree | Unset): The rule tree. Checked against the column contract on save.
-            explanation (str | Unset): What the rule matches, in plain English.
-            assumptions (list[str] | Unset): Readings chosen where the description was open to more than one.
-            warnings (list[str] | Unset): Parts of the description the rule does not express.
-            compiled_by (str | Unset): Who produced the tree, as the caller states it (not verified): the compile response's
-                compiled_by, or member when you wrote or edited it yourself. Defaults to member.
+            tree (EmailRuleTreeInput | Unset):
+            explanation (str | Unset): What the rule matches, in plain English. Left out, the server writes one from the
+                tree.
+            assumptions (list[str] | Unset): Readings chosen where the description was open to more than one, as the compile
+                response returned them (including its lines naming any condition, question or confidence bar the description did
+                not ask for). Stored as sent.
+            warnings (list[str] | Unset): Parts of the description the rule does not express, as the compile response
+                returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
+            compiled_by (str | Unset): Who produced the tree (not verified): the compile response's compiled_by, or member
+                (the default) for a tree you wrote or edited.
      """
 
     name: str | Unset = UNSET
     english: str | Unset = UNSET
-    tree: AcceptEmailRuleRequestRequestTree | Unset = UNSET
+    tree: EmailRuleTreeInput | Unset = UNSET
     explanation: str | Unset = UNSET
     assumptions: list[str] | Unset = UNSET
     warnings: list[str] | Unset = UNSET
@@ -48,7 +52,7 @@ class AcceptEmailRuleRequestRequest:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.accept_email_rule_request_request_tree import AcceptEmailRuleRequestRequestTree # noqa: PLC0415
+        from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         name = self.name
 
         english = self.english
@@ -99,18 +103,18 @@ class AcceptEmailRuleRequestRequest:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.accept_email_rule_request_request_tree import AcceptEmailRuleRequestRequestTree # noqa: PLC0415
+        from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         d = dict(src_dict)
         name = d.pop("name", UNSET)
 
         english = d.pop("english", UNSET)
 
         _tree = d.pop("tree", UNSET)
-        tree: AcceptEmailRuleRequestRequestTree | Unset
+        tree: EmailRuleTreeInput | Unset
         if isinstance(_tree,  Unset):
             tree = UNSET
         else:
-            tree = AcceptEmailRuleRequestRequestTree.from_dict(_tree)
+            tree = EmailRuleTreeInput.from_dict(_tree)
 
 
 

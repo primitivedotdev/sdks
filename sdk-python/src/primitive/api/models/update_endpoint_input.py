@@ -37,6 +37,8 @@ class UpdateEndpointInput:
                 be given to a key; a default endpoint stays the organization's, and takeover is refused with it. null gives a
                 key-owned webhook back to the organization (a caller with access to every mailbox only); it stays a route
                 target.
+            name (None | str | Unset): A webhook's label, up to 200 characters, shown with it in lists; null removes it.
+                Only for http webhooks: a pull destination keeps the name it was created with.
      """
 
     url: str | Unset = UNSET
@@ -45,6 +47,7 @@ class UpdateEndpointInput:
     rules: UpdateEndpointInputRules | Unset = UNSET
     takeover: bool | Unset = UNSET
     owner_key_id: None | Unset | UUID = UNSET
+    name: None | str | Unset = UNSET
 
 
 
@@ -78,6 +81,12 @@ class UpdateEndpointInput:
         else:
             owner_key_id = self.owner_key_id
 
+        name: None | str | Unset
+        if isinstance(self.name, Unset):
+            name = UNSET
+        else:
+            name = self.name
+
 
         field_dict: dict[str, Any] = {}
 
@@ -95,6 +104,8 @@ class UpdateEndpointInput:
             field_dict["takeover"] = takeover
         if owner_key_id is not UNSET:
             field_dict["owner_key_id"] = owner_key_id
+        if name is not UNSET:
+            field_dict["name"] = name
 
         return field_dict
 
@@ -160,6 +171,16 @@ class UpdateEndpointInput:
         owner_key_id = _parse_owner_key_id(d.pop("owner_key_id", UNSET))
 
 
+        def _parse_name(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        name = _parse_name(d.pop("name", UNSET))
+
+
         update_endpoint_input = cls(
             url=url,
             enabled=enabled,
@@ -167,6 +188,7 @@ class UpdateEndpointInput:
             rules=rules,
             takeover=takeover,
             owner_key_id=owner_key_id,
+            name=name,
         )
 
         return update_endpoint_input

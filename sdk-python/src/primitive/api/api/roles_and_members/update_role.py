@@ -131,11 +131,13 @@ def sync_detailed(
     stored scope cannot be read must be sent a new mail_scope, otherwise 400 `validation_error` with
     `details.reason` `invalid_mail_scope`.  A personal mailbox the new version adds must be the author's
     own, and every holder must be the member of each personal mailbox it names: otherwise 403
-    `grant_forbidden` with `details.reason` `personal_mailbox_member_only`. Person only: a dashboard
-    session, or the person's own OAuth or CLI token with a session step-up of purpose `roles.write` (the
-    person confirms at the step_up_url a 403 step_up_required answer carries, which names this client,
-    then send the token in the Primitive-Step-Up header; the token works only with the client it was
-    confirmed for). Needs roles:assign. API keys are refused.
+    `grant_forbidden` with `details.reason` `personal_mailbox_member_only`. Each permission in the new
+    version must have what it requires in the same role, as when creating one, including permissions
+    carried over unchanged. Person only: a dashboard session, or the person's own OAuth or CLI token
+    with a session step-up of purpose `roles.write` (the person confirms at the step_up_url a 403
+    step_up_required answer carries, which names this client, then send the token in the Primitive-Step-
+    Up header; the token works only with the client it was confirmed for). Needs roles:assign. API keys
+    are refused.
 
     Args:
         id (UUID):
@@ -182,11 +184,13 @@ def sync(
     stored scope cannot be read must be sent a new mail_scope, otherwise 400 `validation_error` with
     `details.reason` `invalid_mail_scope`.  A personal mailbox the new version adds must be the author's
     own, and every holder must be the member of each personal mailbox it names: otherwise 403
-    `grant_forbidden` with `details.reason` `personal_mailbox_member_only`. Person only: a dashboard
-    session, or the person's own OAuth or CLI token with a session step-up of purpose `roles.write` (the
-    person confirms at the step_up_url a 403 step_up_required answer carries, which names this client,
-    then send the token in the Primitive-Step-Up header; the token works only with the client it was
-    confirmed for). Needs roles:assign. API keys are refused.
+    `grant_forbidden` with `details.reason` `personal_mailbox_member_only`. Each permission in the new
+    version must have what it requires in the same role, as when creating one, including permissions
+    carried over unchanged. Person only: a dashboard session, or the person's own OAuth or CLI token
+    with a session step-up of purpose `roles.write` (the person confirms at the step_up_url a 403
+    step_up_required answer carries, which names this client, then send the token in the Primitive-Step-
+    Up header; the token works only with the client it was confirmed for). Needs roles:assign. API keys
+    are refused.
 
     Args:
         id (UUID):
@@ -228,11 +232,13 @@ async def asyncio_detailed(
     stored scope cannot be read must be sent a new mail_scope, otherwise 400 `validation_error` with
     `details.reason` `invalid_mail_scope`.  A personal mailbox the new version adds must be the author's
     own, and every holder must be the member of each personal mailbox it names: otherwise 403
-    `grant_forbidden` with `details.reason` `personal_mailbox_member_only`. Person only: a dashboard
-    session, or the person's own OAuth or CLI token with a session step-up of purpose `roles.write` (the
-    person confirms at the step_up_url a 403 step_up_required answer carries, which names this client,
-    then send the token in the Primitive-Step-Up header; the token works only with the client it was
-    confirmed for). Needs roles:assign. API keys are refused.
+    `grant_forbidden` with `details.reason` `personal_mailbox_member_only`. Each permission in the new
+    version must have what it requires in the same role, as when creating one, including permissions
+    carried over unchanged. Person only: a dashboard session, or the person's own OAuth or CLI token
+    with a session step-up of purpose `roles.write` (the person confirms at the step_up_url a 403
+    step_up_required answer carries, which names this client, then send the token in the Primitive-Step-
+    Up header; the token works only with the client it was confirmed for). Needs roles:assign. API keys
+    are refused.
 
     Args:
         id (UUID):
@@ -279,11 +285,13 @@ async def asyncio(
     stored scope cannot be read must be sent a new mail_scope, otherwise 400 `validation_error` with
     `details.reason` `invalid_mail_scope`.  A personal mailbox the new version adds must be the author's
     own, and every holder must be the member of each personal mailbox it names: otherwise 403
-    `grant_forbidden` with `details.reason` `personal_mailbox_member_only`. Person only: a dashboard
-    session, or the person's own OAuth or CLI token with a session step-up of purpose `roles.write` (the
-    person confirms at the step_up_url a 403 step_up_required answer carries, which names this client,
-    then send the token in the Primitive-Step-Up header; the token works only with the client it was
-    confirmed for). Needs roles:assign. API keys are refused.
+    `grant_forbidden` with `details.reason` `personal_mailbox_member_only`. Each permission in the new
+    version must have what it requires in the same role, as when creating one, including permissions
+    carried over unchanged. Person only: a dashboard session, or the person's own OAuth or CLI token
+    with a session step-up of purpose `roles.write` (the person confirms at the step_up_url a 403
+    step_up_required answer carries, which names this client, then send the token in the Primitive-Step-
+    Up header; the token works only with the client it was confirmed for). Needs roles:assign. API keys
+    are refused.
 
     Args:
         id (UUID):

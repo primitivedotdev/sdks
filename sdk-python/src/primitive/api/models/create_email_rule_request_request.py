@@ -12,7 +12,7 @@ from typing import cast
 from uuid import UUID
 
 if TYPE_CHECKING:
-  from ..models.create_email_rule_request_request_tree import CreateEmailRuleRequestRequestTree
+  from ..models.email_rule_tree_input import EmailRuleTreeInput
 
 
 
@@ -28,24 +28,28 @@ class CreateEmailRuleRequestRequest:
         Attributes:
             name (str): A short name for the rule.
             english (str): The plain-English description the rule was compiled from.
-            tree (CreateEmailRuleRequestRequestTree): The rule tree. Checked against the column contract on save.
-            explanation (str): What the rule matches, in plain English.
+            tree (EmailRuleTreeInput):
             target_user_id (UUID | Unset): The member asked for the rule. Give target_user_id or target_email, not both.
             target_email (str | Unset): The member asked for the rule, by their member mailbox address. Give target_user_id
                 or target_email, not both. Looking members up by address is limited to 30 an hour, and unless you can list
                 members the answer does not say who it was.
-            assumptions (list[str] | Unset): Readings chosen where the description was open to more than one.
-            warnings (list[str] | Unset): Parts of the description the rule does not express.
-            compiled_by (str | Unset): Who produced the tree, as the caller states it (not verified): the compile response's
-                compiled_by, or member when you wrote or edited it yourself. Defaults to member.
+            explanation (str | Unset): What the rule matches, in plain English. Left out, the server writes one from the
+                tree.
+            assumptions (list[str] | Unset): Readings chosen where the description was open to more than one, as the compile
+                response returned them (including its lines naming any condition, question or confidence bar the description did
+                not ask for). Stored as sent.
+            warnings (list[str] | Unset): Parts of the description the rule does not express, as the compile response
+                returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
+            compiled_by (str | Unset): Who produced the tree (not verified): the compile response's compiled_by, or member
+                (the default) for a tree you wrote or edited.
      """
 
     name: str
     english: str
-    tree: CreateEmailRuleRequestRequestTree
-    explanation: str
+    tree: EmailRuleTreeInput
     target_user_id: UUID | Unset = UNSET
     target_email: str | Unset = UNSET
+    explanation: str | Unset = UNSET
     assumptions: list[str] | Unset = UNSET
     warnings: list[str] | Unset = UNSET
     compiled_by: str | Unset = UNSET
@@ -55,20 +59,20 @@ class CreateEmailRuleRequestRequest:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.create_email_rule_request_request_tree import CreateEmailRuleRequestRequestTree # noqa: PLC0415
+        from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         name = self.name
 
         english = self.english
 
         tree = self.tree.to_dict()
 
-        explanation = self.explanation
-
         target_user_id: str | Unset = UNSET
         if not isinstance(self.target_user_id, Unset):
             target_user_id = str(self.target_user_id)
 
         target_email = self.target_email
+
+        explanation = self.explanation
 
         assumptions: list[str] | Unset = UNSET
         if not isinstance(self.assumptions, Unset):
@@ -91,12 +95,13 @@ class CreateEmailRuleRequestRequest:
             "name": name,
             "english": english,
             "tree": tree,
-            "explanation": explanation,
         })
         if target_user_id is not UNSET:
             field_dict["target_user_id"] = target_user_id
         if target_email is not UNSET:
             field_dict["target_email"] = target_email
+        if explanation is not UNSET:
+            field_dict["explanation"] = explanation
         if assumptions is not UNSET:
             field_dict["assumptions"] = assumptions
         if warnings is not UNSET:
@@ -110,18 +115,16 @@ class CreateEmailRuleRequestRequest:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.create_email_rule_request_request_tree import CreateEmailRuleRequestRequestTree # noqa: PLC0415
+        from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         d = dict(src_dict)
         name = d.pop("name")
 
         english = d.pop("english")
 
-        tree = CreateEmailRuleRequestRequestTree.from_dict(d.pop("tree"))
+        tree = EmailRuleTreeInput.from_dict(d.pop("tree"))
 
 
 
-
-        explanation = d.pop("explanation")
 
         _target_user_id = d.pop("target_user_id", UNSET)
         target_user_id: UUID | Unset
@@ -135,6 +138,8 @@ class CreateEmailRuleRequestRequest:
 
         target_email = d.pop("target_email", UNSET)
 
+        explanation = d.pop("explanation", UNSET)
+
         assumptions = cast(list[str], d.pop("assumptions", UNSET))
 
 
@@ -147,9 +152,9 @@ class CreateEmailRuleRequestRequest:
             name=name,
             english=english,
             tree=tree,
-            explanation=explanation,
             target_user_id=target_user_id,
             target_email=target_email,
+            explanation=explanation,
             assumptions=assumptions,
             warnings=warnings,
             compiled_by=compiled_by,

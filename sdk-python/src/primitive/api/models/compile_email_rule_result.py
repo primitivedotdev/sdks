@@ -12,7 +12,7 @@ from typing import cast
 
 if TYPE_CHECKING:
   from ..models.compile_email_rule_result_sql import CompileEmailRuleResultSql
-  from ..models.compile_email_rule_result_tree import CompileEmailRuleResultTree
+  from ..models.email_rule_tree import EmailRuleTree
 
 
 
@@ -26,17 +26,24 @@ T = TypeVar("T", bound="CompileEmailRuleResult")
 class CompileEmailRuleResult:
     """ 
         Attributes:
-            tree (CompileEmailRuleResultTree):
+            tree (EmailRuleTree):
             explanation (str): What the rule matches, in plain English.
-            assumptions (list[str]): Readings the compiler chose where the description was open to more than one.
+            assumptions (list[str]): Readings the compiler chose where the description was open to more than one. Whenever
+                the rule holds a condition, question or confidence bar that no words of the description call for, this list also
+                has a line starting "Added without the description asking for it:" naming it (several share a line when there
+                are many).
             warnings (list[str]): Parts of the description the column contract cannot express, and how the rule handles
-                them.
+                them. When the rule reads automated or from_mailing_list, it also has a note on what that column reads and what
+                it misses. When the rule has no questions and its conditions hold for all of the caller's recent classified mail
+                (what a test of it covers by default), or for at least 90% of at least 20 emails, the first warning says so.
+                That count is not made for a caller whose access shows headers only, or who could not run a test of the rule,
+                and may also be skipped when the compile ran long or the count fails.
             compiled_by (str): An opaque name for the version of the rule compiler that produced the rule, such as rule-
                 compiler-v1. Send it back as compiled_by when you save the rule.
             sql (CompileEmailRuleResultSql | Unset): Present only when include_sql was true.
      """
 
-    tree: CompileEmailRuleResultTree
+    tree: EmailRuleTree
     explanation: str
     assumptions: list[str]
     warnings: list[str]
@@ -50,7 +57,7 @@ class CompileEmailRuleResult:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.compile_email_rule_result_sql import CompileEmailRuleResultSql # noqa: PLC0415
-        from ..models.compile_email_rule_result_tree import CompileEmailRuleResultTree # noqa: PLC0415
+        from ..models.email_rule_tree import EmailRuleTree # noqa: PLC0415
         tree = self.tree.to_dict()
 
         explanation = self.explanation
@@ -89,9 +96,9 @@ class CompileEmailRuleResult:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.compile_email_rule_result_sql import CompileEmailRuleResultSql # noqa: PLC0415
-        from ..models.compile_email_rule_result_tree import CompileEmailRuleResultTree # noqa: PLC0415
+        from ..models.email_rule_tree import EmailRuleTree # noqa: PLC0415
         d = dict(src_dict)
-        tree = CompileEmailRuleResultTree.from_dict(d.pop("tree"))
+        tree = EmailRuleTree.from_dict(d.pop("tree"))
 
 
 

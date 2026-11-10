@@ -148,13 +148,10 @@ function flagDescription(parameter: PrimitiveParameterManifest): string {
 }
 
 // Operations the server may ask a person to approve in the browser although
-// the published spec does not list the Primitive-Step-Up header for them:
-// creating a webhook, and changing one. The header is sent only with a token
-// the person passes or pastes from the approval page.
-export const STEP_UP_OPERATIONS: ReadonlySet<string> = new Set([
-  "createEndpoint",
-  "updateEndpoint",
-]);
+// the published spec does not list the Primitive-Step-Up header for them. None
+// today: every such operation declares the header. The header is sent only
+// with a token the person passes or pastes from the approval page.
+export const STEP_UP_OPERATIONS: ReadonlySet<string> = new Set<string>([]);
 
 /** Whether an operation takes the browser approval token. */
 export function takesStepUp(

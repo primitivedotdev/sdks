@@ -11,9 +11,9 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.accept_email_rule_request_result_request import AcceptEmailRuleRequestResultRequest
-  from ..models.accept_email_rule_request_result_rule import AcceptEmailRuleRequestResultRule
-  from ..models.accept_email_rule_request_result_share import AcceptEmailRuleRequestResultShare
+  from ..models.email_rule_request import EmailRuleRequest
+  from ..models.email_rule_share import EmailRuleShare
+  from ..models.email_rule_with_version import EmailRuleWithVersion
 
 
 
@@ -27,14 +27,14 @@ T = TypeVar("T", bound="AcceptEmailRuleRequestResult")
 class AcceptEmailRuleRequestResult:
     """ 
         Attributes:
-            request (AcceptEmailRuleRequestResultRequest):
-            rule (AcceptEmailRuleRequestResultRule):
-            share (AcceptEmailRuleRequestResultShare):
+            request (EmailRuleRequest):
+            rule (EmailRuleWithVersion):
+            share (EmailRuleShare):
      """
 
-    request: AcceptEmailRuleRequestResultRequest
-    rule: AcceptEmailRuleRequestResultRule
-    share: AcceptEmailRuleRequestResultShare
+    request: EmailRuleRequest
+    rule: EmailRuleWithVersion
+    share: EmailRuleShare
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -42,9 +42,9 @@ class AcceptEmailRuleRequestResult:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.accept_email_rule_request_result_request import AcceptEmailRuleRequestResultRequest # noqa: PLC0415
-        from ..models.accept_email_rule_request_result_rule import AcceptEmailRuleRequestResultRule # noqa: PLC0415
-        from ..models.accept_email_rule_request_result_share import AcceptEmailRuleRequestResultShare # noqa: PLC0415
+        from ..models.email_rule_request import EmailRuleRequest # noqa: PLC0415
+        from ..models.email_rule_share import EmailRuleShare # noqa: PLC0415
+        from ..models.email_rule_with_version import EmailRuleWithVersion # noqa: PLC0415
         request = self.request.to_dict()
 
         rule = self.rule.to_dict()
@@ -66,21 +66,21 @@ class AcceptEmailRuleRequestResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.accept_email_rule_request_result_request import AcceptEmailRuleRequestResultRequest # noqa: PLC0415
-        from ..models.accept_email_rule_request_result_rule import AcceptEmailRuleRequestResultRule # noqa: PLC0415
-        from ..models.accept_email_rule_request_result_share import AcceptEmailRuleRequestResultShare # noqa: PLC0415
+        from ..models.email_rule_request import EmailRuleRequest # noqa: PLC0415
+        from ..models.email_rule_share import EmailRuleShare # noqa: PLC0415
+        from ..models.email_rule_with_version import EmailRuleWithVersion # noqa: PLC0415
         d = dict(src_dict)
-        request = AcceptEmailRuleRequestResultRequest.from_dict(d.pop("request"))
+        request = EmailRuleRequest.from_dict(d.pop("request"))
 
 
 
 
-        rule = AcceptEmailRuleRequestResultRule.from_dict(d.pop("rule"))
+        rule = EmailRuleWithVersion.from_dict(d.pop("rule"))
 
 
 
 
-        share = AcceptEmailRuleRequestResultShare.from_dict(d.pop("share"))
+        share = EmailRuleShare.from_dict(d.pop("share"))
 
 
 

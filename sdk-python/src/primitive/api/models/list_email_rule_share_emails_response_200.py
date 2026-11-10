@@ -11,6 +11,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
+  from ..models.cursor_page_meta import CursorPageMeta
   from ..models.list_email_rule_share_emails_result_item import ListEmailRuleShareEmailsResultItem
 
 
@@ -27,10 +28,12 @@ class ListEmailRuleShareEmailsResponse200:
         Attributes:
             success (bool):
             data (list[ListEmailRuleShareEmailsResultItem]):
+            meta (CursorPageMeta): Paging for a list read a page at a time.
      """
 
     success: bool
     data: list[ListEmailRuleShareEmailsResultItem]
+    meta: CursorPageMeta
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -38,6 +41,7 @@ class ListEmailRuleShareEmailsResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.cursor_page_meta import CursorPageMeta # noqa: PLC0415
         from ..models.list_email_rule_share_emails_result_item import ListEmailRuleShareEmailsResultItem # noqa: PLC0415
         success = self.success
 
@@ -48,12 +52,15 @@ class ListEmailRuleShareEmailsResponse200:
 
 
 
+        meta = self.meta.to_dict()
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
             "success": success,
             "data": data,
+            "meta": meta,
         })
 
         return field_dict
@@ -62,6 +69,7 @@ class ListEmailRuleShareEmailsResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.cursor_page_meta import CursorPageMeta # noqa: PLC0415
         from ..models.list_email_rule_share_emails_result_item import ListEmailRuleShareEmailsResultItem # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
@@ -76,9 +84,15 @@ class ListEmailRuleShareEmailsResponse200:
             data.append(componentsschemas_list_email_rule_share_emails_result_item)
 
 
+        meta = CursorPageMeta.from_dict(d.pop("meta"))
+
+
+
+
         list_email_rule_share_emails_response_200 = cls(
             success=success,
             data=data,
+            meta=meta,
         )
 
 

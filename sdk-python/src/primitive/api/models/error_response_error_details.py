@@ -34,6 +34,12 @@ class ErrorResponseErrorDetails:
             sent_email_id (str | Unset): ID of the persisted sent-email attempt associated with the error.
             content_hash (str | Unset): Content hash of the original request on idempotency cache-hit errors.
             client_idempotency_key (str | Unset): Effective idempotency key associated with the original request.
+            feature (str | Unset): On a feature_disabled error: a stable id for the feature that is not turned on for the
+                organization.
+            feature_name (str | Unset): On a feature_disabled error: the name the message gives the feature.
+            enabled_by (str | Unset): On a feature_disabled error: who turns the feature on. primitive: Primitive does, when
+                asked at contact_email. Treat an unfamiliar value as one added after your client was built.
+            contact_email (str | Unset): On a feature_disabled error: the address to ask for the feature to be turned on.
             permission (None | str | Unset): Present when `code == grant_forbidden`. The permission the operation requires.
                 See `GrantForbiddenDetails` for the full shape.
             credential_kind (None | str | Unset): Present when `code == grant_forbidden`. The kind of credential that was
@@ -57,6 +63,10 @@ class ErrorResponseErrorDetails:
     sent_email_id: str | Unset = UNSET
     content_hash: str | Unset = UNSET
     client_idempotency_key: str | Unset = UNSET
+    feature: str | Unset = UNSET
+    feature_name: str | Unset = UNSET
+    enabled_by: str | Unset = UNSET
+    contact_email: str | Unset = UNSET
     permission: None | str | Unset = UNSET
     credential_kind: None | str | Unset = UNSET
     grant_template_key: None | str | Unset = UNSET
@@ -88,6 +98,14 @@ class ErrorResponseErrorDetails:
         content_hash = self.content_hash
 
         client_idempotency_key = self.client_idempotency_key
+
+        feature = self.feature
+
+        feature_name = self.feature_name
+
+        enabled_by = self.enabled_by
+
+        contact_email = self.contact_email
 
         permission: None | str | Unset
         if isinstance(self.permission, Unset):
@@ -152,6 +170,14 @@ class ErrorResponseErrorDetails:
             field_dict["content_hash"] = content_hash
         if client_idempotency_key is not UNSET:
             field_dict["client_idempotency_key"] = client_idempotency_key
+        if feature is not UNSET:
+            field_dict["feature"] = feature
+        if feature_name is not UNSET:
+            field_dict["feature_name"] = feature_name
+        if enabled_by is not UNSET:
+            field_dict["enabled_by"] = enabled_by
+        if contact_email is not UNSET:
+            field_dict["contact_email"] = contact_email
         if permission is not UNSET:
             field_dict["permission"] = permission
         if credential_kind is not UNSET:
@@ -195,6 +221,14 @@ class ErrorResponseErrorDetails:
         content_hash = d.pop("content_hash", UNSET)
 
         client_idempotency_key = d.pop("client_idempotency_key", UNSET)
+
+        feature = d.pop("feature", UNSET)
+
+        feature_name = d.pop("feature_name", UNSET)
+
+        enabled_by = d.pop("enabled_by", UNSET)
+
+        contact_email = d.pop("contact_email", UNSET)
 
         def _parse_permission(data: object) -> None | str | Unset:
             if data is None:
@@ -282,6 +316,10 @@ class ErrorResponseErrorDetails:
             sent_email_id=sent_email_id,
             content_hash=content_hash,
             client_idempotency_key=client_idempotency_key,
+            feature=feature,
+            feature_name=feature_name,
+            enabled_by=enabled_by,
+            contact_email=contact_email,
             permission=permission,
             credential_kind=credential_kind,
             grant_template_key=grant_template_key,

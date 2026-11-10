@@ -140,9 +140,8 @@ def sync_detailed(
     Args:
         address (str): Bare email address, normalized to lowercase. Plus tags are preserved.
         prefix (str | Unset):
-        cursor (str | Unset): Case-sensitive note name. AGENT_INFO, AGENT_USES and AGENT_RUNTIME
-            (where the agent runs, e.g. its runtime, machine and working directory) are conventions,
-            with no required value schema.
+        cursor (str | Unset): The name of the last note on the previous page, as meta.cursor gave
+            it. Omit for the first page.
         limit (int | Unset):  Default: 50.
 
     Raises:
@@ -191,9 +190,8 @@ def sync(
     Args:
         address (str): Bare email address, normalized to lowercase. Plus tags are preserved.
         prefix (str | Unset):
-        cursor (str | Unset): Case-sensitive note name. AGENT_INFO, AGENT_USES and AGENT_RUNTIME
-            (where the agent runs, e.g. its runtime, machine and working directory) are conventions,
-            with no required value schema.
+        cursor (str | Unset): The name of the last note on the previous page, as meta.cursor gave
+            it. Omit for the first page.
         limit (int | Unset):  Default: 50.
 
     Raises:
@@ -237,9 +235,8 @@ async def asyncio_detailed(
     Args:
         address (str): Bare email address, normalized to lowercase. Plus tags are preserved.
         prefix (str | Unset):
-        cursor (str | Unset): Case-sensitive note name. AGENT_INFO, AGENT_USES and AGENT_RUNTIME
-            (where the agent runs, e.g. its runtime, machine and working directory) are conventions,
-            with no required value schema.
+        cursor (str | Unset): The name of the last note on the previous page, as meta.cursor gave
+            it. Omit for the first page.
         limit (int | Unset):  Default: 50.
 
     Raises:
@@ -288,9 +285,8 @@ async def asyncio(
     Args:
         address (str): Bare email address, normalized to lowercase. Plus tags are preserved.
         prefix (str | Unset):
-        cursor (str | Unset): Case-sensitive note name. AGENT_INFO, AGENT_USES and AGENT_RUNTIME
-            (where the agent runs, e.g. its runtime, machine and working directory) are conventions,
-            with no required value schema.
+        cursor (str | Unset): The name of the last note on the previous page, as meta.cursor gave
+            it. Omit for the first page.
         limit (int | Unset):  Default: 50.
 
     Raises:

@@ -93,7 +93,8 @@ def sync_detailed(
 ) -> Response[ErrorResponse | GetDeliveryResponse200]:
     """ Get a webhook delivery
 
-     One webhook delivery attempt record, by the id listDeliveries returns.
+     One webhook delivery attempt record, by the id listDeliveries returns, with every attempt of the
+    same delivery (a retry is recorded as a new attempt with its own id).
 
     Args:
         id (str):
@@ -126,7 +127,8 @@ def sync(
 ) -> ErrorResponse | GetDeliveryResponse200 | None:
     """ Get a webhook delivery
 
-     One webhook delivery attempt record, by the id listDeliveries returns.
+     One webhook delivery attempt record, by the id listDeliveries returns, with every attempt of the
+    same delivery (a retry is recorded as a new attempt with its own id).
 
     Args:
         id (str):
@@ -154,7 +156,8 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | GetDeliveryResponse200]:
     """ Get a webhook delivery
 
-     One webhook delivery attempt record, by the id listDeliveries returns.
+     One webhook delivery attempt record, by the id listDeliveries returns, with every attempt of the
+    same delivery (a retry is recorded as a new attempt with its own id).
 
     Args:
         id (str):
@@ -187,7 +190,8 @@ async def asyncio(
 ) -> ErrorResponse | GetDeliveryResponse200 | None:
     """ Get a webhook delivery
 
-     One webhook delivery attempt record, by the id listDeliveries returns.
+     One webhook delivery attempt record, by the id listDeliveries returns, with every attempt of the
+    same delivery (a retry is recorded as a new attempt with its own id).
 
     Args:
         id (str):

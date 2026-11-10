@@ -383,12 +383,20 @@ export function syncOpenApi(served: JsonObject): JsonObject {
 // string holding one is double-quoted, with the character escaped.
 const YAML_11_BREAKS = /[\u0085\u2028\u2029]/;
 
+// Plain words a YAML 1.1 parser reads as a boolean or null, though YAML 1.2
+// reads them as strings: a key or value spelled so is double-quoted.
+const YAML_11_WORDS =
+  /^(?:y|Y|yes|Yes|YES|n|N|no|No|NO|on|On|ON|off|Off|OFF|true|True|TRUE|false|False|FALSE|null|Null|NULL|~)$/;
+
 /** The document as YAML that YAML 1.1 and 1.2 parsers read the same way. */
 export function renderYaml(doc: JsonObject): string {
   const document = new YAML.Document(doc, { aliasDuplicateObjects: false });
   YAML.visit(document, {
     Scalar(_key, node) {
-      if (typeof node.value === "string" && YAML_11_BREAKS.test(node.value)) {
+      if (
+        typeof node.value === "string" &&
+        (YAML_11_BREAKS.test(node.value) || YAML_11_WORDS.test(node.value))
+      ) {
         node.type = "QUOTE_DOUBLE";
       }
     },
