@@ -30,8 +30,9 @@ class UpdateEmailRuleRequest:
         Attributes:
             name (str | Unset): A short name for the rule.
             state (UpdateEmailRuleRequestState | Unset): draft disables the rule; observe records decisions; active also
-                grants what it matches. Keys read and receive what a rule granted only while it is active: leaving active pauses
-                that, and returning to active restores reads and the delivery of queued mail not yet skipped.
+                grants what it matches, or for a do_not_share rule keeps it from being shared. Keys read and receive what a rule
+                granted only while it is active: leaving active pauses that, and returning to active restores reads and the
+                delivery of queued mail not yet skipped.
             english (str | Unset): The plain-English description the rule was compiled from.
             tree (UpdateEmailRuleRequestTree | Unset): The rule tree. Checked against the column contract on save.
             explanation (str | Unset): What the rule matches, in plain English.

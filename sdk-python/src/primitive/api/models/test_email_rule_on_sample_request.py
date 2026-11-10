@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.test_email_rule_on_sample_request_evaluation_scope import TestEmailRuleOnSampleRequestEvaluationScope
+from ..models.test_email_rule_on_sample_request_kind import TestEmailRuleOnSampleRequestKind
 from typing import cast
 from uuid import UUID
 
@@ -38,6 +39,8 @@ class TestEmailRuleOnSampleRequest:
             scope_selection (TestEmailRuleOnSampleRequestScopeSelection | Unset): Inboxes, and domains (every address at
                 them the author can read), for a selected rule; each one you can read.
             rule_id (UUID | Unset): A saved rule you can see. Its current version is tested.
+            kind (TestEmailRuleOnSampleRequestKind | Unset): For an unsaved tree: do_not_share tests it as a rule that
+                blocks sharing, so an email it cannot decide counts as matched. A saved rule uses its own.
      """
 
     email: TestEmailRuleOnSampleRequestEmail
@@ -45,6 +48,7 @@ class TestEmailRuleOnSampleRequest:
     evaluation_scope: TestEmailRuleOnSampleRequestEvaluationScope | Unset = UNSET
     scope_selection: TestEmailRuleOnSampleRequestScopeSelection | Unset = UNSET
     rule_id: UUID | Unset = UNSET
+    kind: TestEmailRuleOnSampleRequestKind | Unset = UNSET
 
 
 
@@ -73,6 +77,11 @@ class TestEmailRuleOnSampleRequest:
         if not isinstance(self.rule_id, Unset):
             rule_id = str(self.rule_id)
 
+        kind: str | Unset = UNSET
+        if not isinstance(self.kind, Unset):
+            kind = self.kind.value
+
+
 
         field_dict: dict[str, Any] = {}
 
@@ -87,6 +96,8 @@ class TestEmailRuleOnSampleRequest:
             field_dict["scope_selection"] = scope_selection
         if rule_id is not UNSET:
             field_dict["rule_id"] = rule_id
+        if kind is not UNSET:
+            field_dict["kind"] = kind
 
         return field_dict
 
@@ -143,12 +154,23 @@ class TestEmailRuleOnSampleRequest:
 
 
 
+        _kind = d.pop("kind", UNSET)
+        kind: TestEmailRuleOnSampleRequestKind | Unset
+        if isinstance(_kind,  Unset):
+            kind = UNSET
+        else:
+            kind = TestEmailRuleOnSampleRequestKind(_kind)
+
+
+
+
         test_email_rule_on_sample_request = cls(
             email=email,
             tree=tree,
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,
             rule_id=rule_id,
+            kind=kind,
         )
 
         return test_email_rule_on_sample_request

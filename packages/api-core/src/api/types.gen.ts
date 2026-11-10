@@ -6053,6 +6053,10 @@ export type TestEmailRuleRequest = {
      */
     rule_id?: string;
     /**
+     * For an unsaved tree: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. A saved rule uses its own.
+     */
+    kind?: 'grant' | 'do_not_share';
+    /**
      * Test exactly these emails. Without it, the newest emails the rule can read are tested, at most 200 and none older than 30 days.
      */
     email_ids?: Array<string>;
@@ -6181,6 +6185,10 @@ export type TestEmailRuleOnSampleRequest = {
      */
     rule_id?: string;
     /**
+     * For an unsaved tree: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. A saved rule uses its own.
+     */
+    kind?: 'grant' | 'do_not_share';
+    /**
      * A made-up received email. Nothing about it is stored.
      */
     email: {
@@ -6274,7 +6282,11 @@ export type CreateEmailRuleRequest = {
      */
     name: string;
     /**
-     * observe (the default) records what the rule would match and grants nothing; draft is not evaluated.
+     * grant (the default): what the rule matches can be shared. do_not_share: the rule runs before every other rule, and while it is active no rule shares an email it matches; an email it cannot decide counts as matched. Set when the rule is created; it never changes.
+     */
+    kind?: 'grant' | 'do_not_share';
+    /**
+     * observe (the default) records what the rule would match and grants or blocks nothing; draft is not evaluated.
      */
     state?: 'draft' | 'observe';
     /**
@@ -6334,6 +6346,10 @@ export type CreateEmailRuleResult = {
     id: string;
     name: string;
     state: 'draft' | 'observe' | 'active';
+    /**
+     * do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.
+     */
+    kind?: 'grant' | 'do_not_share';
     current_version: number | null;
     author_user_id: string;
     /**
@@ -6391,6 +6407,10 @@ export type ListEmailRulesResult = Array<{
     id: string;
     name: string;
     state: 'draft' | 'observe' | 'active';
+    /**
+     * do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.
+     */
+    kind?: 'grant' | 'do_not_share';
     current_version: number | null;
     author_user_id: string;
     /**
@@ -6405,6 +6425,10 @@ export type GetEmailRuleResult = {
     id: string;
     name: string;
     state: 'draft' | 'observe' | 'active';
+    /**
+     * do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.
+     */
+    kind?: 'grant' | 'do_not_share';
     current_version: number | null;
     author_user_id: string;
     /**
@@ -6464,7 +6488,7 @@ export type UpdateEmailRuleRequest = {
      */
     name?: string;
     /**
-     * draft disables the rule; observe records decisions; active also grants what it matches. Keys read and receive what a rule granted only while it is active: leaving active pauses that, and returning to active restores reads and the delivery of queued mail not yet skipped.
+     * draft disables the rule; observe records decisions; active also grants what it matches, or for a do_not_share rule keeps it from being shared. Keys read and receive what a rule granted only while it is active: leaving active pauses that, and returning to active restores reads and the delivery of queued mail not yet skipped.
      */
     state?: 'draft' | 'observe' | 'active';
     /**
@@ -6524,6 +6548,10 @@ export type UpdateEmailRuleResult = {
     id: string;
     name: string;
     state: 'draft' | 'observe' | 'active';
+    /**
+     * do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.
+     */
+    kind?: 'grant' | 'do_not_share';
     current_version: number | null;
     author_user_id: string;
     /**
@@ -6611,6 +6639,10 @@ export type ListEmailRuleResultsResult = {
         name: string;
         state: 'draft' | 'observe' | 'active';
         /**
+         * do_not_share: the rule blocks sharing of what it matches. While it is active, no rule shares an email it has matched from then on; anything shared before, including while it was in observe, stays shared. Absent on a rule that shares what it matches.
+         */
+        kind?: 'grant' | 'do_not_share';
+        /**
          * What the rule most recently decided about this email; null when it has not run on it.
          */
         decision: {
@@ -6662,6 +6694,10 @@ export type ListEmailRuleResultsResult = {
          * What is known about a rule with no result on this email. draft: the rule is a draft now. created_after_email: the rule was created after the email arrived. Null when it has a result, or when nothing is known.
          */
         not_run_reason: 'draft' | 'created_after_email' | null;
+        /**
+         * On a do-not-share rule whose author is no longer a member of the organization: it blocks nothing now, whatever it decided. Absent otherwise.
+         */
+        author_left?: boolean;
     }>;
     /**
      * How many more rules the caller can see that are not listed.
@@ -6738,6 +6774,10 @@ export type GetEmailRuleScopeResult = {
         domains: Array<string>;
     };
     /**
+     * Inboxes its author still reads at the domains in no_longer_readable; the rule still covers them.
+     */
+    still_read?: Array<string>;
+    /**
      * Why it cannot run now (a reason as on POST /email-rules/test), or null.
      */
     stopped_reason: string | null;
@@ -6752,6 +6792,10 @@ export type ListEmailRuleScopeOptionsResult = {
      * Whether a rule over only your own mail would run for you.
      */
     own_mail: boolean;
+    /**
+     * Whether a do_not_share rule over only your own mail would run for you: it covers every own mailbox you read, including ones you could not share.
+     */
+    own_mail_to_block?: boolean;
     /**
      * Inboxes you can read, matching q.
      */
@@ -7328,6 +7372,10 @@ export type AcceptEmailRuleRequestResult = {
         id: string;
         name: string;
         state: 'draft' | 'observe' | 'active';
+        /**
+         * do_not_share: the rule blocks sharing of what it matches. Absent (or grant) on a rule that shares what it matches.
+         */
+        kind?: 'grant' | 'do_not_share';
         current_version: number | null;
         author_user_id: string;
         /**
@@ -19909,7 +19957,7 @@ export type TestEmailRuleData = {
 
 export type TestEmailRuleErrors = {
     /**
-     * validation_error: give exactly one of tree and rule_id, at most 200 email_ids, and a tree that is valid for the column contract. evaluation_scope and scope_selection go only with tree. A saved rule whose current version no longer renders answers details.reason version_not_renderable.
+     * validation_error: give exactly one of tree and rule_id, at most 200 email_ids, and a tree that is valid for the column contract. evaluation_scope, scope_selection and kind go only with tree. A saved rule whose current version no longer renders answers details.reason version_not_renderable.
      */
     400: ErrorResponse;
     /**
@@ -19962,7 +20010,7 @@ export type TestEmailRuleOnSampleData = {
 
 export type TestEmailRuleOnSampleErrors = {
     /**
-     * validation_error: give exactly one of tree and rule_id (evaluation_scope and scope_selection only with tree), an email with a sender, 1 to 50 To addresses (and up to 50 Cc), and a text body, and a tree that is valid for the column contract and within the size limits for a saved rule. A saved rule whose current version no longer renders answers details.reason version_not_renderable.
+     * validation_error: give exactly one of tree and rule_id (evaluation_scope, scope_selection and kind only with tree), an email with a sender, 1 to 50 To addresses (and up to 50 Cc), and a text body, and a tree that is valid for the column contract and within the size limits for a saved rule. A saved rule whose current version no longer renders answers details.reason version_not_renderable.
      */
     400: ErrorResponse;
     /**

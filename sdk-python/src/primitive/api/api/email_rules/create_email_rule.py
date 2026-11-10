@@ -115,11 +115,13 @@ def sync_detailed(
 
      Saves a rule as version 1, from a compile response or a tree you wrote. The tree is checked against
     the column contract. New rules start in observe, where what the rule matches is recorded and nothing
-    is granted; draft is not evaluated. The caller is the rule's author, and the rule never reaches mail
-    the author cannot read. evaluation_scope (author when omitted) chooses whose mail it runs over;
-    scope_selection may name only what you can read. Needs mail:read, a credential acting as a member
-    with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules
-    feature on the organization.
+    is granted or blocked; draft is not evaluated. The caller is the rule's author, and the rule never
+    reaches mail the author cannot read. evaluation_scope (author when omitted) chooses whose mail it
+    runs over; scope_selection may name only what you can read. kind do_not_share makes a rule that
+    blocks sharing: it runs before every other rule, and while it is active no rule shares an email it
+    matches or cannot decide. A key cannot list one (details.reason rule_blocks_sharing on the key).
+    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
+    narrowed tokens are refused), and the email rules feature on the organization.
 
     Args:
         idempotency_key (str | Unset):
@@ -157,11 +159,13 @@ def sync(
 
      Saves a rule as version 1, from a compile response or a tree you wrote. The tree is checked against
     the column contract. New rules start in observe, where what the rule matches is recorded and nothing
-    is granted; draft is not evaluated. The caller is the rule's author, and the rule never reaches mail
-    the author cannot read. evaluation_scope (author when omitted) chooses whose mail it runs over;
-    scope_selection may name only what you can read. Needs mail:read, a credential acting as a member
-    with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules
-    feature on the organization.
+    is granted or blocked; draft is not evaluated. The caller is the rule's author, and the rule never
+    reaches mail the author cannot read. evaluation_scope (author when omitted) chooses whose mail it
+    runs over; scope_selection may name only what you can read. kind do_not_share makes a rule that
+    blocks sharing: it runs before every other rule, and while it is active no rule shares an email it
+    matches or cannot decide. A key cannot list one (details.reason rule_blocks_sharing on the key).
+    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
+    narrowed tokens are refused), and the email rules feature on the organization.
 
     Args:
         idempotency_key (str | Unset):
@@ -194,11 +198,13 @@ async def asyncio_detailed(
 
      Saves a rule as version 1, from a compile response or a tree you wrote. The tree is checked against
     the column contract. New rules start in observe, where what the rule matches is recorded and nothing
-    is granted; draft is not evaluated. The caller is the rule's author, and the rule never reaches mail
-    the author cannot read. evaluation_scope (author when omitted) chooses whose mail it runs over;
-    scope_selection may name only what you can read. Needs mail:read, a credential acting as a member
-    with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules
-    feature on the organization.
+    is granted or blocked; draft is not evaluated. The caller is the rule's author, and the rule never
+    reaches mail the author cannot read. evaluation_scope (author when omitted) chooses whose mail it
+    runs over; scope_selection may name only what you can read. kind do_not_share makes a rule that
+    blocks sharing: it runs before every other rule, and while it is active no rule shares an email it
+    matches or cannot decide. A key cannot list one (details.reason rule_blocks_sharing on the key).
+    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
+    narrowed tokens are refused), and the email rules feature on the organization.
 
     Args:
         idempotency_key (str | Unset):
@@ -236,11 +242,13 @@ async def asyncio(
 
      Saves a rule as version 1, from a compile response or a tree you wrote. The tree is checked against
     the column contract. New rules start in observe, where what the rule matches is recorded and nothing
-    is granted; draft is not evaluated. The caller is the rule's author, and the rule never reaches mail
-    the author cannot read. evaluation_scope (author when omitted) chooses whose mail it runs over;
-    scope_selection may name only what you can read. Needs mail:read, a credential acting as a member
-    with their full access (API keys, agent keys and narrowed tokens are refused), and the email rules
-    feature on the organization.
+    is granted or blocked; draft is not evaluated. The caller is the rule's author, and the rule never
+    reaches mail the author cannot read. evaluation_scope (author when omitted) chooses whose mail it
+    runs over; scope_selection may name only what you can read. kind do_not_share makes a rule that
+    blocks sharing: it runs before every other rule, and while it is active no rule shares an email it
+    matches or cannot decide. A key cannot list one (details.reason rule_blocks_sharing on the key).
+    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
+    narrowed tokens are refused), and the email rules feature on the organization.
 
     Args:
         idempotency_key (str | Unset):

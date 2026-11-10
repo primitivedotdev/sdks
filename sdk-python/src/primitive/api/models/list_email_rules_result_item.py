@@ -8,6 +8,7 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.list_email_rules_result_item_kind import ListEmailRulesResultItemKind
 from ..models.list_email_rules_result_item_state import ListEmailRulesResultItemState
 from typing import cast
 from uuid import UUID
@@ -36,6 +37,8 @@ class ListEmailRulesResultItem:
                 members.
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
+            kind (ListEmailRulesResultItemKind | Unset): do_not_share: the rule blocks sharing of what it matches. Absent
+                (or grant) on a rule that shares what it matches.
      """
 
     id: UUID
@@ -46,6 +49,7 @@ class ListEmailRulesResultItem:
     is_author: bool
     created_at: datetime.datetime
     updated_at: datetime.datetime
+    kind: ListEmailRulesResultItemKind | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -70,6 +74,11 @@ class ListEmailRulesResultItem:
 
         updated_at = self.updated_at.isoformat()
 
+        kind: str | Unset = UNSET
+        if not isinstance(self.kind, Unset):
+            kind = self.kind.value
+
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -83,6 +92,8 @@ class ListEmailRulesResultItem:
             "created_at": created_at,
             "updated_at": updated_at,
         })
+        if kind is not UNSET:
+            field_dict["kind"] = kind
 
         return field_dict
 
@@ -128,6 +139,16 @@ class ListEmailRulesResultItem:
 
 
 
+        _kind = d.pop("kind", UNSET)
+        kind: ListEmailRulesResultItemKind | Unset
+        if isinstance(_kind,  Unset):
+            kind = UNSET
+        else:
+            kind = ListEmailRulesResultItemKind(_kind)
+
+
+
+
         list_email_rules_result_item = cls(
             id=id,
             name=name,
@@ -137,6 +158,7 @@ class ListEmailRulesResultItem:
             is_author=is_author,
             created_at=created_at,
             updated_at=updated_at,
+            kind=kind,
         )
 
 

@@ -96,11 +96,12 @@ def sync_detailed(
 
      Every rule the caller can see and what it decided about this email: those that matched, those that
     did not, and those that have not run on it, with what is known about them. A result names the
-    version of the rule that decided and carries that version's conditions and questions. Only a caller
-    who can read the email gets an answer, and a rule the caller cannot see is left out. At most 50
-    rules are listed, those with a result first; hidden counts the rest. Needs mail:read, a credential
-    acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
-    and the email rules feature on the organization.
+    version of the rule that decided and carries that version's conditions and questions. A matched rule
+    with kind do_not_share keeps rules from sharing the email while it is active; anything shared before
+    then stays shared. Only a caller who can read the email gets an answer, and a rule the caller cannot
+    see is left out. At most 50 rules are listed, those with a result first; hidden counts the rest.
+    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
+    narrowed tokens are refused), and the email rules feature on the organization.
 
     Args:
         id (UUID):
@@ -135,11 +136,12 @@ def sync(
 
      Every rule the caller can see and what it decided about this email: those that matched, those that
     did not, and those that have not run on it, with what is known about them. A result names the
-    version of the rule that decided and carries that version's conditions and questions. Only a caller
-    who can read the email gets an answer, and a rule the caller cannot see is left out. At most 50
-    rules are listed, those with a result first; hidden counts the rest. Needs mail:read, a credential
-    acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
-    and the email rules feature on the organization.
+    version of the rule that decided and carries that version's conditions and questions. A matched rule
+    with kind do_not_share keeps rules from sharing the email while it is active; anything shared before
+    then stays shared. Only a caller who can read the email gets an answer, and a rule the caller cannot
+    see is left out. At most 50 rules are listed, those with a result first; hidden counts the rest.
+    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
+    narrowed tokens are refused), and the email rules feature on the organization.
 
     Args:
         id (UUID):
@@ -169,11 +171,12 @@ async def asyncio_detailed(
 
      Every rule the caller can see and what it decided about this email: those that matched, those that
     did not, and those that have not run on it, with what is known about them. A result names the
-    version of the rule that decided and carries that version's conditions and questions. Only a caller
-    who can read the email gets an answer, and a rule the caller cannot see is left out. At most 50
-    rules are listed, those with a result first; hidden counts the rest. Needs mail:read, a credential
-    acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
-    and the email rules feature on the organization.
+    version of the rule that decided and carries that version's conditions and questions. A matched rule
+    with kind do_not_share keeps rules from sharing the email while it is active; anything shared before
+    then stays shared. Only a caller who can read the email gets an answer, and a rule the caller cannot
+    see is left out. At most 50 rules are listed, those with a result first; hidden counts the rest.
+    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
+    narrowed tokens are refused), and the email rules feature on the organization.
 
     Args:
         id (UUID):
@@ -208,11 +211,12 @@ async def asyncio(
 
      Every rule the caller can see and what it decided about this email: those that matched, those that
     did not, and those that have not run on it, with what is known about them. A result names the
-    version of the rule that decided and carries that version's conditions and questions. Only a caller
-    who can read the email gets an answer, and a rule the caller cannot see is left out. At most 50
-    rules are listed, those with a result first; hidden counts the rest. Needs mail:read, a credential
-    acting as a member with their full access (API keys, agent keys and narrowed tokens are refused),
-    and the email rules feature on the organization.
+    version of the rule that decided and carries that version's conditions and questions. A matched rule
+    with kind do_not_share keeps rules from sharing the email while it is active; anything shared before
+    then stays shared. Only a caller who can read the email gets an answer, and a rule the caller cannot
+    see is left out. At most 50 rules are listed, those with a result first; hidden counts the rest.
+    Needs mail:read, a credential acting as a member with their full access (API keys, agent keys and
+    narrowed tokens are refused), and the email rules feature on the organization.
 
     Args:
         id (UUID):

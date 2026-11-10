@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.create_email_rule_request_evaluation_scope import CreateEmailRuleRequestEvaluationScope
+from ..models.create_email_rule_request_kind import CreateEmailRuleRequestKind
 from ..models.create_email_rule_request_state import CreateEmailRuleRequestState
 from typing import cast
 
@@ -32,8 +33,11 @@ class CreateEmailRuleRequest:
             english (str): The plain-English description the rule was compiled from.
             tree (CreateEmailRuleRequestTree): The rule tree. Checked against the column contract on save.
             explanation (str): What the rule matches, in plain English.
+            kind (CreateEmailRuleRequestKind | Unset): grant (the default): what the rule matches can be shared.
+                do_not_share: the rule runs before every other rule, and while it is active no rule shares an email it matches;
+                an email it cannot decide counts as matched. Set when the rule is created; it never changes.
             state (CreateEmailRuleRequestState | Unset): observe (the default) records what the rule would match and grants
-                nothing; draft is not evaluated.
+                or blocks nothing; draft is not evaluated.
             evaluation_scope (CreateEmailRuleRequestEvaluationScope | Unset): author: all mail its author can read.
                 own_mailboxes: mail to their own addresses. selected: what scope_selection names. Never more than the author can
                 read.
@@ -49,6 +53,7 @@ class CreateEmailRuleRequest:
     english: str
     tree: CreateEmailRuleRequestTree
     explanation: str
+    kind: CreateEmailRuleRequestKind | Unset = UNSET
     state: CreateEmailRuleRequestState | Unset = UNSET
     evaluation_scope: CreateEmailRuleRequestEvaluationScope | Unset = UNSET
     scope_selection: CreateEmailRuleRequestScopeSelection | Unset = UNSET
@@ -70,6 +75,11 @@ class CreateEmailRuleRequest:
         tree = self.tree.to_dict()
 
         explanation = self.explanation
+
+        kind: str | Unset = UNSET
+        if not isinstance(self.kind, Unset):
+            kind = self.kind.value
+
 
         state: str | Unset = UNSET
         if not isinstance(self.state, Unset):
@@ -108,6 +118,8 @@ class CreateEmailRuleRequest:
             "tree": tree,
             "explanation": explanation,
         })
+        if kind is not UNSET:
+            field_dict["kind"] = kind
         if state is not UNSET:
             field_dict["state"] = state
         if evaluation_scope is not UNSET:
@@ -140,6 +152,16 @@ class CreateEmailRuleRequest:
 
 
         explanation = d.pop("explanation")
+
+        _kind = d.pop("kind", UNSET)
+        kind: CreateEmailRuleRequestKind | Unset
+        if isinstance(_kind,  Unset):
+            kind = UNSET
+        else:
+            kind = CreateEmailRuleRequestKind(_kind)
+
+
+
 
         _state = d.pop("state", UNSET)
         state: CreateEmailRuleRequestState | Unset
@@ -184,6 +206,7 @@ class CreateEmailRuleRequest:
             english=english,
             tree=tree,
             explanation=explanation,
+            kind=kind,
             state=state,
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,

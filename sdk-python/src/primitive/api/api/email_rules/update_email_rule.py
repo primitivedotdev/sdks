@@ -123,9 +123,10 @@ def sync_detailed(
     it, add a version, change its scope or move it to observe or active; anyone else who can see it may
     only disable it (state draft), and while it is shared with another member only if they manage
     members from the dashboard. Omit evaluation_scope to keep the current scope. A scope change saves a
-    new version with the same conditions; what was granted stays. A shared rule keeps its scope. Needs
-    mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed
-    tokens are refused), and the email rules feature on the organization.
+    new version with the same conditions; what was granted stays. A shared rule keeps its scope. A
+    rule's kind never changes. Needs mail:read, a credential acting as a member with their full access
+    (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
+    organization.
 
     Args:
         id (UUID):
@@ -167,9 +168,10 @@ def sync(
     it, add a version, change its scope or move it to observe or active; anyone else who can see it may
     only disable it (state draft), and while it is shared with another member only if they manage
     members from the dashboard. Omit evaluation_scope to keep the current scope. A scope change saves a
-    new version with the same conditions; what was granted stays. A shared rule keeps its scope. Needs
-    mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed
-    tokens are refused), and the email rules feature on the organization.
+    new version with the same conditions; what was granted stays. A shared rule keeps its scope. A
+    rule's kind never changes. Needs mail:read, a credential acting as a member with their full access
+    (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
+    organization.
 
     Args:
         id (UUID):
@@ -206,9 +208,10 @@ async def asyncio_detailed(
     it, add a version, change its scope or move it to observe or active; anyone else who can see it may
     only disable it (state draft), and while it is shared with another member only if they manage
     members from the dashboard. Omit evaluation_scope to keep the current scope. A scope change saves a
-    new version with the same conditions; what was granted stays. A shared rule keeps its scope. Needs
-    mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed
-    tokens are refused), and the email rules feature on the organization.
+    new version with the same conditions; what was granted stays. A shared rule keeps its scope. A
+    rule's kind never changes. Needs mail:read, a credential acting as a member with their full access
+    (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
+    organization.
 
     Args:
         id (UUID):
@@ -250,9 +253,10 @@ async def asyncio(
     it, add a version, change its scope or move it to observe or active; anyone else who can see it may
     only disable it (state draft), and while it is shared with another member only if they manage
     members from the dashboard. Omit evaluation_scope to keep the current scope. A scope change saves a
-    new version with the same conditions; what was granted stays. A shared rule keeps its scope. Needs
-    mail:read, a credential acting as a member with their full access (API keys, agent keys and narrowed
-    tokens are refused), and the email rules feature on the organization.
+    new version with the same conditions; what was granted stays. A shared rule keeps its scope. A
+    rule's kind never changes. Needs mail:read, a credential acting as a member with their full access
+    (API keys, agent keys and narrowed tokens are refused), and the email rules feature on the
+    organization.
 
     Args:
         id (UUID):

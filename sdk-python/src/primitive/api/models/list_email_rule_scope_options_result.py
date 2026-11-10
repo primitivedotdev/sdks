@@ -30,6 +30,8 @@ class ListEmailRuleScopeOptionsResult:
             addresses (list[str]): Inboxes you can read, matching q.
             domains (list[str]): Domains you can read, matching q.
             more (bool): More match than are listed.
+            own_mail_to_block (bool | Unset): Whether a do_not_share rule over only your own mail would run for you: it
+                covers every own mailbox you read, including ones you could not share.
      """
 
     reach: ListEmailRuleScopeOptionsResultReach
@@ -37,6 +39,7 @@ class ListEmailRuleScopeOptionsResult:
     addresses: list[str]
     domains: list[str]
     more: bool
+    own_mail_to_block: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -58,6 +61,8 @@ class ListEmailRuleScopeOptionsResult:
 
         more = self.more
 
+        own_mail_to_block = self.own_mail_to_block
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -68,6 +73,8 @@ class ListEmailRuleScopeOptionsResult:
             "domains": domains,
             "more": more,
         })
+        if own_mail_to_block is not UNSET:
+            field_dict["own_mail_to_block"] = own_mail_to_block
 
         return field_dict
 
@@ -91,12 +98,15 @@ class ListEmailRuleScopeOptionsResult:
 
         more = d.pop("more")
 
+        own_mail_to_block = d.pop("own_mail_to_block", UNSET)
+
         list_email_rule_scope_options_result = cls(
             reach=reach,
             own_mail=own_mail,
             addresses=addresses,
             domains=domains,
             more=more,
+            own_mail_to_block=own_mail_to_block,
         )
 
 

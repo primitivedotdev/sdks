@@ -198,7 +198,12 @@ date-time is kept as null and sorts last. A sync stops with an error after
   `getEmailRuleScope`, `listEmailRuleScopeOptions`, `listEmailRuleResults`.
   A rule's `evaluation_scope` chooses whose mail it runs over (`author`,
   `own_mailboxes`, or `selected` with `scope_selection` naming addresses and
-  domains), never more than its author can read.
+  domains), never more than its author can read. A rule's `kind` is `grant`
+  (the default) or `do_not_share`, a rule that, while it is active, keeps
+  what it matches (and any email it cannot decide) from being shared; it is
+  set on `createEmailRule` (the CLI's `--kind`), can be tested on an unsaved
+  tree with `testEmailRule` and `testEmailRuleOnSample`, and is returned on
+  rules and on `listEmailRuleResults`.
 - Emails: `getEmailReadable`.
 - Functions: `lookupFunction`, `getOrgFunctionUsage`,
   `getOrgFunctionInvocationSeries`, `getOrgFunctionFallback`,
