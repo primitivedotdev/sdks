@@ -376,7 +376,8 @@ Go (package `api`):
   Where the API answers `getSendFrom`, the CLI takes the default, and the
   list of what you may send from, from that answer, which judges each address
   by the send's own rules; against an API without it, the CLI works them out
-  as above.
+  as above. If that answer cannot be read, nothing is sent and the command
+  asks for `--from`.
   When `chat` is run without `--from` within a day of a chat an earlier
   version left unfinished under its old `agent@` default, and it is the same
   message, `chat` stops with outcome `uncertain` (exit 4) instead of sending

@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   whoami: vi.fn(),
   checkSendability: vi.fn(),
   getOutboundStatus: vi.fn(),
+  getSendFrom: vi.fn(),
   followEmailConversation: vi.fn(),
   isSentSignal: vi.fn((_configDir: string, _sentId?: string | null) => false),
 }));
@@ -29,6 +30,7 @@ vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
     whoami: mocks.whoami,
     checkSendability: mocks.checkSendability,
     getOutboundStatus: mocks.getOutboundStatus,
+    getSendFrom: mocks.getSendFrom,
   };
 });
 
@@ -651,6 +653,27 @@ describe("send outcomes", () => {
     mocks.getOutboundStatus.mockResolvedValue({
       data: { data: { sendable_domains: ["acme.example"] } },
     });
+    // The API's own answer, as GET /v1/whoami/send-from gives it.
+    mocks.getSendFrom.mockResolvedValue({
+      data: {
+        data: memberAddress
+          ? {
+              default_from: memberAddress,
+              default_source: "member_address",
+              addresses: [{ address: memberAddress, kind: "member_address" }],
+              domains: [],
+              reason: null,
+            }
+          : {
+              default_from: null,
+              default_source: null,
+              addresses: [],
+              domains: [],
+              reason:
+                "You have no member address of your own, so there is no default From. Claim a member address.",
+            },
+      },
+    });
   }
   const noFromArgs = ["--to", "alice@example.com", "--body", "Hello"];
 
@@ -691,7 +714,7 @@ describe("send outcomes", () => {
     expect(result.exitCode, JSON.stringify(result)).toBe(1);
     expect(mocks.sendEmail).not.toHaveBeenCalled();
     expect(result.error).toContain(
-      "You have no member address of your own to send from, so --from has no default.",
+      "You have no member address of your own, so there is no default From.",
     );
     expect(result.error).not.toContain("agent@");
   });

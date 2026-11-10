@@ -60,7 +60,8 @@ import {
 // express through manifest-driven flag generation alone:
 //
 //   1. `--from` defaults by credential when omitted
-//      (resolveDefaultFrom in outbound-defaults.ts): a connected agent
+//      (resolveDefaultFrom in outbound-defaults.ts), as the API answers it
+//      (GET /v1/whoami/send-from) or, against an older API: a connected agent
 //      sends as its agent address, a person's own login as their member
 //      address when the API would let them send from it, and an org or
 //      function key whose grant names exactly one address as that
