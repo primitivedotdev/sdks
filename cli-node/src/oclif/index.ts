@@ -1,6 +1,7 @@
 import { Args, Command, Errors } from "@oclif/core";
 import type { PrimitiveOperationManifest } from "@primitivedotdev/api-core";
 import { createOperationCommand } from "./api-command.js";
+import { setKnownCommands } from "./api-path-commands.js";
 import { cliOperationManifest } from "./cli-operations.js";
 import AgentCheckMailCommand from "./commands/agent-check-mail.js";
 import AgentConnectCommand from "./commands/agent-connect.js";
@@ -895,6 +896,9 @@ export const COMMANDS: Record<string, typeof Command> = {
   "wake:authorizations:delete": WakeAuthorizationsDeleteCommand,
   "wake:dispatches:list": WakeDispatchesListCommand,
 };
+
+// Server messages that name an API route get the command that calls it.
+setKnownCommands(Object.keys(COMMANDS), CANONICAL_OPERATION_ALIASES);
 
 // With --json, every command except the streaming `listen` prints one JSON
 // document on stdout and nothing on stderr, so `2>&1` output still parses.

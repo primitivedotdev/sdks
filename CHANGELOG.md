@@ -740,6 +740,11 @@ parsers.
   `operationManifest` from `@primitivedotdev/sdk/openapi`) carries each
   operation's `access`, from the spec's `x-primitive-person-only`, or null;
   code that builds manifest objects by hand must now set it.
+- When a server message names an API route, such as "see GET
+  /v1/email-rule-scope-options", the CLI names the command that calls it:
+  after an error, as a `Hint: in the CLI, ... is ...` line, and inline in
+  the email rule scope warnings it prints. Where a hand-rolled command covers
+  the route, such as `keys create` for `POST /v1/keys`, that command is named.
 - `keys revoke` takes `--step-up-token` and `--no-browser`. When the
   server asks for approval, it prints the approval link, opens it where it
   can and waits for the one-time token, as the other `keys` commands do.
