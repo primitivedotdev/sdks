@@ -472,6 +472,8 @@ export const CANONICAL_OPERATION_ALIASES: Record<string, string> = {
   "endpoints:delete": "endpoints:delete-endpoint",
   "endpoints:get": "endpoints:get-endpoint",
   "endpoints:list": "endpoints:list-endpoints",
+  "endpoints:rotate-signing-secret": "endpoints:rotate-endpoint-signing-secret",
+  "endpoints:signing-secret": "endpoints:get-endpoint-signing-secret",
   "endpoints:test": "endpoints:test-endpoint",
   "endpoints:update": "endpoints:update-endpoint",
   "filters:create": "filters:create-filter",

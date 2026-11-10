@@ -703,9 +703,12 @@ parsers.
   rule tree is checked against. `email-rules delete-email-rule-request`
   deletes a request you made and withdrew, `email-rules
   check-email-rule-request-target` says whether a member can accept a request
-  before you send it, and `endpoints get-endpoint-signing-secret` and
-  `rotate-endpoint-signing-secret` read and rotate a webhook's own signing
-  secret.
+  before you send it.
+- `endpoints signing-secret <id>` (`get-endpoint-signing-secret`) prints the
+  secret a webhook whose `signed_with` is `own_secret` signs with, and
+  `endpoints rotate-signing-secret <id>` (`rotate-endpoint-signing-secret`)
+  replaces it, or gives a webhook signed with the organization's secret one of
+  its own, and prints the new secret.
 - `email-rules list-email-rule-versions` lists a rule's versions newest first
   without `--versions`, and pages with `--limit` and `--cursor`.
 - The email rule list commands fetch a `--limit` above 100 in pages, and
