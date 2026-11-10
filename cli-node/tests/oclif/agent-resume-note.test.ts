@@ -15,6 +15,16 @@ import {
   saveConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
 
+// undici links each copy of a Request to its parent's abort signal through a
+// WeakRef, so a copy nothing else holds can be garbage-collected before the
+// deadline fires, and its abort then never arrives: the stalled request hangs
+// until the test times out. The fixtures below keep every request in that
+// chain (the client's and their own copy) here until the test ends.
+const heldRequests: Request[] = [];
+afterEach(() => {
+  heldRequests.length = 0;
+});
+
 const own = "agent@example.test";
 const session = "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
 const profile: ConnectedAgentProfile = {
@@ -292,10 +302,16 @@ describe("AGENT_RESUME request deadlines", () => {
               data: note(`claude --resume ${session}`, "2"),
             })
           : Response.json(missing.body, { status: 404 });
+      heldRequests.push(request, ...(input instanceof Request ? [input] : []));
+      const { signal } = request;
       return new Promise<Response>((_resolve, reject) => {
-        request.signal.addEventListener("abort", () =>
-          reject(request.signal.reason),
-        );
+        if (signal.aborted) {
+          reject(signal.reason);
+          return;
+        }
+        signal.addEventListener("abort", () => reject(signal.reason), {
+          once: true,
+        });
       });
     });
     return { fetch, methods };
