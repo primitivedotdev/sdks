@@ -1154,7 +1154,11 @@ parsers.
 - `primitive emails facts <id>` prints what the classifier read from a
   received email, one fact per line with its value and confidence. With
   `--json` it prints the `classification` object, or null when the email has
-  none.
+  none. An API key, agent key or narrowed token, which cannot read rule
+  results, gets the facts from the email itself (`understanding.facts` of
+  `emails get`) in the same shape, as the classifier wrote them, with a note
+  saying so on stderr (in `warnings` with `--json`), instead of the rule
+  routes' refusal.
 - Generated commands for the new operations, except `createKey`, `rotateKey`,
   `updateKey` and `revokeCredential`, which the `primitive keys` commands
   cover instead.

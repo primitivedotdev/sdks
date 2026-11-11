@@ -817,7 +817,7 @@ export function isGrantRefusal(payload: unknown): boolean {
 }
 
 /** `details` of a refusal, whether the payload is the error or its envelope. */
-function refusalDetails(payload: unknown): Record<string, unknown> {
+export function refusalDetails(payload: unknown): Record<string, unknown> {
   const outer =
     payload && typeof payload === "object"
       ? (payload as { details?: unknown; error?: unknown })

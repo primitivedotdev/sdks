@@ -1848,6 +1848,155 @@ describe("emails facts", () => {
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain('"code": "not_found"');
   });
+
+  describe("for a credential that cannot read rule results", () => {
+    const refused = (reason: string) =>
+      jsonResponse(403, {
+        success: false,
+        error: {
+          code: "forbidden",
+          message: "Email rules are written by organization members.",
+          details: { reason },
+        },
+      });
+    /** Rule results refuse the credential; the email read answers `understanding`. */
+    const keyReading = (
+      understanding: unknown,
+      reason = "rule_author_credential",
+    ) => {
+      responder = (url) =>
+        url.pathname.endsWith("/rule-results")
+          ? refused(reason)
+          : jsonResponse(200, {
+              success: true,
+              data: {
+                id: A,
+                ...(understanding === undefined ? {} : { understanding }),
+              },
+            });
+    };
+    const ready = {
+      version: 1,
+      status: "ready",
+      classification_id: "00000000-0000-4000-8000-0000000000c1",
+      vocabulary: "v1",
+      classified_at: "2026-11-10T00:00:00Z",
+      facts: {
+        is_cold_outreach: { value: true, confidence: 0.69 },
+        topics: { value: ["Billing"], confidence: 0.8 },
+      },
+    };
+    const note = `This credential cannot read email rule results, so these facts come from the email itself (\`primitive emails get ${A} --json\`, understanding.facts), as the classifier wrote them. Rule conditions read a multi fact's options lowercased, and a fact left out here reads null to them.`;
+
+    it("reads the facts from the email itself and says so", async () => {
+      for (const reason of ["rule_author_credential", "narrowed_credential"]) {
+        keyReading(ready, reason);
+        calls = [];
+        const result = await run("emails:facts", [A]);
+        expect(result.exitCode, result.stderr).toBe(0);
+        expect(calls.map((call) => [call.method, call.url.pathname])).toEqual([
+          ["GET", `/v1/emails/${A}/rule-results`],
+          ["GET", `/v1/emails/${A}`],
+        ]);
+        expect(result.stdout).toBe(
+          "is_cold_outreach: true at 0.69\ntopics: [Billing] at 0.80\n",
+        );
+        expect(result.stderr).toBe(`${note}\n`);
+      }
+    });
+
+    it("prints the same classification shape with --json, the note in warnings", async () => {
+      keyReading(ready);
+      const result = await run("emails:facts", [A, "--json"]);
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toBe("");
+      expect(JSON.parse(result.merged)).toEqual({
+        id: ready.classification_id,
+        vocabulary: "v1",
+        classified_at: "2026-11-10T00:00:00Z",
+        facts: ready.facts,
+        warnings: [note],
+      });
+    });
+
+    it("says why when the email carries no ready facts", async () => {
+      for (const [understanding, message] of [
+        [{ version: 1, status: "pending" }, "it has not been classified"],
+        [{ version: 1, status: "unavailable" }, "was not classified in time"],
+        [{ version: 1, status: "later" }, "the email's understanding is later"],
+        [null, "the email read carries no facts"],
+        [undefined, "the email read carries no facts"],
+      ] as const) {
+        keyReading(understanding);
+        const result = await run("emails:facts", [A]);
+        expect(result.exitCode).toBe(0);
+        expect(result.stdout).toBe("");
+        expect(result.stderr).toContain(message);
+        expect(result.stderr).not.toContain("cannot read email rule results");
+
+        const json = await run("emails:facts", [A, "--json"]);
+        expect(json.exitCode).toBe(0);
+        expect(JSON.parse(json.merged)).toBeNull();
+      }
+    });
+
+    it("fails with the email read's error", async () => {
+      responder = (url) =>
+        url.pathname.endsWith("/rule-results")
+          ? refused("rule_author_credential")
+          : jsonResponse(404, {
+              success: false,
+              error: { code: "not_found", message: "No such email" },
+            });
+      const result = await run("emails:facts", [A]);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain(
+        "This credential cannot read email rule results, and reading the facts from the email itself failed:",
+      );
+      expect(result.stderr).toContain('"code": "not_found"');
+
+      const json = await run("emails:facts", [A, "--json"]);
+      expect(json.exitCode).toBe(1);
+      expect(json.stderr).toBe("");
+      expect(JSON.parse(json.merged)).toMatchObject({
+        error: { code: "not_found" },
+        exit_code: 1,
+        warnings: [
+          "This credential cannot read email rule results, and reading the facts from the email itself failed:",
+        ],
+      });
+    });
+
+    it("says a ready classification with no facts has none", async () => {
+      keyReading({ ...ready, facts: {} });
+      const result = await run("emails:facts", [A]);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toBe(
+        `${note}\nThis email's classification has no facts.\n`,
+      );
+    });
+
+    it("does not fall back for any other refusal", async () => {
+      for (const error of [
+        {
+          code: "grant_forbidden",
+          message: "Email rules need mail:read.",
+          details: { reason: "permission", permission: "mail:read" },
+        },
+        { code: "forbidden", message: "No.", details: { reason: "other" } },
+        { code: "forbidden", message: "No." },
+      ]) {
+        responder = () => jsonResponse(403, { success: false, error });
+        calls = [];
+        const result = await run("emails:facts", [A]);
+        expect(result.exitCode).toBe(1);
+        expect(calls).toHaveLength(1);
+        expect(result.stderr).toContain(`"code": "${error.code}"`);
+        expect(result.stderr).not.toContain("cannot read email rule results");
+      }
+    });
+  });
 });
 
 describe("formatFact", () => {
