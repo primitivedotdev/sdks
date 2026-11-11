@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   createAuthenticatedCliApiClient: vi.fn(),
@@ -843,6 +843,31 @@ describe("keys commands", () => {
   });
 
   describe("a permission the API says cannot be granted to a key", () => {
+    // The permission check goes out over plain fetch (no token exchange),
+    // so it reaches the same test server through the global fetch.
+    let handler: Handler = () => {
+      throw new Error("no server");
+    };
+    const checks: URL[] = [];
+    beforeEach(() => {
+      checks.length = 0;
+      vi.stubGlobal(
+        "fetch",
+        async (input: Request | string | URL, init?: RequestInit) => {
+          const request =
+            input instanceof Request ? input : new Request(input, init);
+          checks.push(new URL(request.url));
+          return handler(request);
+        },
+      );
+    });
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+    const serveAll = (next: Handler) => {
+      handler = next;
+      return useServer(next);
+    };
     const refusedAs = (name: string) =>
       Response.json(
         {
@@ -887,7 +912,7 @@ describe("keys commands", () => {
               { status: 400 },
             );
     const serve = (name: string, known: boolean | "fails") =>
-      useServer((request) => {
+      serveAll((request) => {
         const url = new URL(request.url);
         return url.pathname.endsWith("/whoami")
           ? checkAnswer(known)(url)
@@ -929,10 +954,9 @@ describe("keys commands", () => {
         expect(hint).toContain(
           "and, only when it reaches every mailbox, members:read. `primitive keys create --help-full` lists them by area.",
         );
-        const check = requests.find((r) =>
-          new URL(r.url).pathname.endsWith("/whoami"),
-        ) as Request;
-        expect(new URL(check.url).searchParams.get("check")).toBe(name);
+        expect(requests).toHaveLength(1);
+        expect(checks.map((url) => url.pathname)).toEqual(["/v1/whoami"]);
+        expect(checks[0]?.searchParams.get("check")).toBe(name);
       },
     );
 
@@ -958,7 +982,7 @@ describe("keys commands", () => {
     });
 
     it("update --add gets the same hint", async () => {
-      useServer((request) => {
+      serveAll((request) => {
         const url = new URL(request.url);
         if (url.pathname.endsWith("/whoami")) return checkAnswer(false)(url);
         return request.method === "GET"
@@ -979,7 +1003,7 @@ describe("keys commands", () => {
     });
 
     it("update says when the refused permission is one the key already holds", async () => {
-      useServer((request) => {
+      serveAll((request) => {
         const url = new URL(request.url);
         if (url.pathname.endsWith("/whoami")) return checkAnswer(true)(url);
         return request.method === "GET"
@@ -1022,7 +1046,7 @@ describe("keys commands", () => {
           throw new TypeError("network down");
         },
       ]) {
-        useServer((request) =>
+        serveAll((request) =>
           new URL(request.url).pathname.endsWith("/whoami")
             ? whoami()
             : refusedAs("mail:everything"),
@@ -1041,12 +1065,49 @@ describe("keys commands", () => {
       }
     });
 
+    it("gives up on a check that does not answer within five seconds", async () => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      try {
+        serveAll((request) =>
+          new URL(request.url).pathname.endsWith("/whoami")
+            ? new Promise<Response>(() => {})
+            : refusedAs("mail:everything"),
+        );
+        const pending = run(KeysCreateCommand, [
+          "--permission",
+          "mail:everything",
+          "--all-mailboxes",
+          "--step-up-token",
+          "pstep_x",
+        ]);
+        let settled = false;
+        void pending.finally(() => {
+          settled = true;
+        });
+        // Step the clock, letting real I/O (loading the command) run between
+        // steps, until the command reaches the check and its five seconds
+        // run out. Date is not faked, so this stops after real time too.
+        const started = Date.now();
+        while (!settled && Date.now() - started < 4_000) {
+          await vi.advanceTimersByTimeAsync(250);
+          await new Promise((resolve) => setImmediate(resolve));
+        }
+        const result = await pending;
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          "Hint: mail:everything is not a permission an API key can hold.",
+        );
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("lists the permissions in keys create --help-full", () => {
       expect(KeysCreateCommand.description).toContain(keyPermissionsHelp());
     });
 
     it("asks nothing more for any other refusal", async () => {
-      const requests = useServer(() =>
+      const requests = serveAll(() =>
         Response.json(
           {
             success: false,
@@ -1068,6 +1129,7 @@ describe("keys commands", () => {
       expect(result.exitCode).toBe(1);
       expect(result.stderr).not.toContain("A key can hold");
       expect(requests).toHaveLength(1);
+      expect(checks).toEqual([]);
     });
   });
 

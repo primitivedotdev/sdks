@@ -139,9 +139,24 @@ export function ungrantablePermission(payload: unknown): string | null {
  * Whether the API knows `name` as a permission at all: GET /whoami?check
  * answers a check for any permission it knows and refuses any other name
  * with "unknown permission". Null when the answer says neither, or does not
- * come in time.
+ * come in time: the hint never holds the command up for longer than that.
  */
 async function isKnownPermission(
+  client: Parameters<typeof fetchCallerIdentity>[0],
+  name: string,
+): Promise<boolean | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), CHECK_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([checkPermission(client, name), late]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function checkPermission(
   client: Parameters<typeof fetchCallerIdentity>[0],
   name: string,
 ): Promise<boolean | null> {
@@ -149,7 +164,13 @@ async function isKnownPermission(
     const { identity, error } = await fetchCallerIdentity(
       client,
       { check: name },
-      { signal: AbortSignal.timeout(CHECK_TIMEOUT_MS) },
+      {
+        // Plain fetch, not the client's: a saved login's 401 would otherwise
+        // exchange its token, which no signal stops. A 401 here just means
+        // the hint cannot say.
+        fetch: (input, init) => globalThis.fetch(input, init),
+        signal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
+      },
     );
     if (error) {
       const payload = extractErrorPayload(error);

@@ -53,13 +53,14 @@ type GeneratedApiClient = Awaited<
 export async function fetchCallerIdentity(
   client: GeneratedApiClient,
   query: Record<string, string>,
-  options: { signal?: AbortSignal } = {},
+  options: { fetch?: typeof fetch; signal?: AbortSignal } = {},
 ): Promise<{ identity: CallerIdentity | null; error: unknown }> {
   const result = await client.get<
     { 200: { success: true; data: CallerIdentity } },
     unknown,
     false
   >({
+    ...(options.fetch ? { fetch: options.fetch } : {}),
     ...(options.signal ? { signal: options.signal } : {}),
     query,
     responseStyle: "fields",
