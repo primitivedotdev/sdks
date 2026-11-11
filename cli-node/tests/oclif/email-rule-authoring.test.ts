@@ -1208,7 +1208,7 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
     ]);
     expect(result.exitCode, result.stderr).toBe(0);
     expect(stderrLines(result)).toEqual([
-      "This rule blocks sharing (kind do_not_share): while it is active, no rule shares an email it matches.",
+      "This rule blocks sharing (kind do_not_share): while it is active, no rule shares an email it matches. It blocks nothing until it is active.",
       `Expectations on version 4: none failed, 1 undecided (${D}). To decide the rest, run \`primitive email-rules test-email-rule --rule-id ${RULE}\`.`,
     ]);
     // A grant rule adds no line for its kind.

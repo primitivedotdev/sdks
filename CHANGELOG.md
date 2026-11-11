@@ -824,12 +824,14 @@ parsers.
     `routes update-route` print each of the route's `warnings`.
   - `webhook-deliveries get-delivery` lists each attempt with when it was
     made, its status and error code, and what the endpoint answered: the
-    HTTP status and the start of its body, or that no answer came back.
+    HTTP status and the start of its body (terminal controls removed), or
+    that no answer was recorded.
   - `create-email-rule` and `update-email-rule` say "none failed" when an
     expectations check has only undecided expectations (`passed` null), and
     say when the rule blocks sharing (`kind` `do_not_share`).
-  - `members list` (`roles members`) shows what each member's access lets
-    them do with mail (`mail_access`), where you can see it.
+- `members list` (`roles members`) shows what each member's access lets them
+  do with mail (`mail_access`: read and send, read only, send only or none),
+  where you can see it.
 - When a server message names an API route, such as "see GET
   /v1/email-rule-scope-options", the CLI names the command that calls it:
   after an error, as a `Hint: in the CLI, ... is ...` line, and inline in

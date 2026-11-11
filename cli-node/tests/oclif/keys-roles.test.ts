@@ -1040,6 +1040,9 @@ describe("roles commands", () => {
           withMail(true, false),
           withMail(false, true),
           withMail(false, false),
+          // Malformed or absent: nothing is said about mail.
+          { ...person, agents: [], mail_access: { read: "yes", send: true } },
+          { ...person, agents: [], mail_access: null },
         ],
         cursor: null,
         can_invite: false,
@@ -1049,6 +1052,8 @@ describe("roles commands", () => {
       "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111  mail: read only",
       "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111  mail: send only",
       "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111  mail: none",
+      "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111",
+      "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111",
     ]);
     expect(COMMANDS["members:list"]).toBe(RolesMembersCommand);
     expect(COMMANDS["roles:members"]).toBe(RolesMembersCommand);

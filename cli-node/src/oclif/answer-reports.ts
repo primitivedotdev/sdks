@@ -7,9 +7,15 @@
 
 import { withCliCommands } from "./api-path-commands.js";
 import type { OperationExtension } from "./operation-extension.js";
+import { sanitizeForTerminal } from "./terminal-text.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+/** Text from an answer, made safe and one line for a report: no terminal controls. */
+function oneLine(text: string): string {
+  return sanitizeForTerminal(text).replace(/\s+/g, " ").trim();
 }
 
 /** One line per warning a route write answers with (createRoute, updateRoute). */
@@ -19,61 +25,74 @@ export function routeWarningLines(data: unknown): string[] {
   return warnings.flatMap((warning) => {
     if (!isRecord(warning)) return [];
     const message =
-      typeof warning.message === "string" ? warning.message.trim() : "";
+      typeof warning.message === "string" ? oneLine(warning.message) : "";
     if (message) return [`Route warning: ${withCliCommands(message)}`];
-    return typeof warning.code === "string" && warning.code
-      ? [`Route warning: ${warning.code}`]
-      : [];
+    const code = typeof warning.code === "string" ? oneLine(warning.code) : "";
+    return code ? [`Route warning: ${code}`] : [];
   });
 }
 
-/** The longest answer body a report line shows before cutting it. */
+/** The longest answer body a report line shows before cutting it, in characters. */
 const BODY_PREVIEW_LENGTH = 120;
 
+/**
+ * The start of an endpoint's answer body, on one line. The body is whatever
+ * came back and may echo what an outside sender wrote, so terminal controls
+ * are removed before it is printed; it is cut by character, never inside one.
+ */
 function bodyPreview(body: string): string {
-  const flat = body.replace(/\s+/g, " ").trim();
-  return flat.length > BODY_PREVIEW_LENGTH
-    ? `${flat.slice(0, BODY_PREVIEW_LENGTH - 3)}...`
-    : flat;
+  const characters = Array.from(oneLine(body));
+  return characters.length > BODY_PREVIEW_LENGTH
+    ? `${characters.slice(0, BODY_PREVIEW_LENGTH - 3).join("")}...`
+    : characters.join("");
 }
 
+/** Statuses of an attempt the endpoint took, so no HTTP answer means none was needed (a pull endpoint). */
+const DELIVERED_STATUSES = new Set(["delivered", "header_confirmed"]);
+
 /**
- * One line per attempt of a delivery (getDelivery): when, its status, and
- * what the endpoint answered: the HTTP status and the start of the body, or,
- * for an attempt that was not delivered, that no answer came back.
+ * One line per attempt of a delivery (getDelivery): when, its status and
+ * error code, and what the endpoint answered: the HTTP status and the start
+ * of the body. A record of no attempt (attempt_count 0: skipped by rules,
+ * held or discarded) says it was not sent; an attempt that was not delivered
+ * and has no recorded answer says so.
  */
 export function deliveryAttemptLines(data: unknown): string[] {
   const attempts = isRecord(data) ? data.attempts : undefined;
-  if (!Array.isArray(attempts) || attempts.length === 0) return [];
-  const lines = [`Attempts (${attempts.length}):`];
+  if (!Array.isArray(attempts)) return [];
+  const lines: string[] = [];
   for (const attempt of attempts) {
     if (!isRecord(attempt)) continue;
+    const text = (value: unknown) =>
+      typeof value === "string" && value ? oneLine(value) : "";
+    const status = text(attempt.status);
     const parts = [
-      typeof attempt.created_at === "string" ? attempt.created_at : "",
-      typeof attempt.status === "string" ? attempt.status : "",
-      typeof attempt.last_error_code === "string" && attempt.last_error_code
-        ? attempt.last_error_code
-        : "",
+      text(attempt.created_at),
+      status,
+      text(attempt.last_error_code),
     ].filter((part) => part !== "");
-    // A delivered attempt with no HTTP answer was not made over HTTP (a pull
-    // endpoint), so only an undelivered one says that no answer came back.
+    const notSent = attempt.attempt_count === 0;
     const answered =
       typeof attempt.response_status === "number"
         ? `, answered HTTP ${attempt.response_status}`
-        : attempt.status === "delivered"
-          ? ""
-          : ", no answer";
+        : notSent
+          ? ", not sent"
+          : DELIVERED_STATUSES.has(status)
+            ? ""
+            : ", no answer recorded";
     const body =
-      typeof attempt.response_body === "string" && attempt.response_body.trim()
-        ? `: ${bodyPreview(attempt.response_body)}`
+      typeof attempt.response_body === "string"
+        ? bodyPreview(attempt.response_body)
         : "";
     const number =
-      typeof attempt.attempt_count === "number"
+      typeof attempt.attempt_count === "number" && !notSent
         ? `#${attempt.attempt_count} `
         : "";
-    lines.push(`  ${number}${parts.join(" ")}${answered}${body}`);
+    const line = `${number}${parts.join(" ")}${answered}${body ? `: ${body}` : ""}`;
+    // An entry with neither time nor status says nothing worth a line.
+    if (parts.length > 0) lines.push(`  ${line}`);
   }
-  return lines;
+  return lines.length > 0 ? [`Attempts (${lines.length}):`, ...lines] : [];
 }
 
 const routeReport: OperationExtension = {

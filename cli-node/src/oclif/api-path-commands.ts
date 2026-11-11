@@ -21,6 +21,7 @@ const PREFERRED_COMMANDS: Readonly<Record<string, string>> = {
   setFunctionRoute: "functions:route-set",
   unsetFunctionRoute: "functions:route-unset",
   getOrgRoutingTopology: "functions:routing-topology",
+  simulateRoute: "routes:test",
 };
 
 /** Commands the CLI offers, by id; set once the command table is built. */
