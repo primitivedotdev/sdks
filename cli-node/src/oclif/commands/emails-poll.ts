@@ -276,7 +276,8 @@ export const LATE_MAIL_CLOCK_SLACK_MS = 60_000;
  * re-read with what it has, and the poll goes on; so does reaching
  * `deadline`. `cutShort` says it did not reach as far back as it would have:
  * a page failed, the deadline came, or a search the server stopped early for
- * time returned short pages up to the page limit.
+ * time returned short pages up to the page limit. `failed` is the page that
+ * failed, so the caller can wait as long as the server asked (Retry-After).
  */
 export async function fetchRecentEmails(params: {
   apiClient: PrimitiveApiClient;
@@ -289,7 +290,11 @@ export async function fetchRecentEmails(params: {
   now?: number;
   /** The page reader the caller polls with, so the re-read reads as the poll does. */
   fetchPage?: typeof fetchEmailSearchPage;
-}): Promise<{ rows: EmailSearchResult[]; cutShort: boolean }> {
+}): Promise<{
+  rows: EmailSearchResult[];
+  cutShort: boolean;
+  failed?: EmailSearchPageResult;
+}> {
   const fetchPage = params.fetchPage ?? fetchEmailSearchPage;
   const now = params.now ?? Date.now();
   const sinceMs = params.since ? Date.parse(params.since) : Number.NaN;
@@ -322,7 +327,7 @@ export async function fetchRecentEmails(params: {
     } catch {
       return result(true);
     }
-    if (!page.ok) return result(true);
+    if (!page.ok) return { ...result(true), failed: page };
     newestFirst.push(...page.rows);
     if (!page.more || !page.cursor) return result(false);
     cursor = page.cursor;
@@ -366,7 +371,7 @@ export function lateMailReread(options: {
       Parameters<typeof fetchRecentEmails>[0],
       "from" | "now" | "deadline"
     >,
-  ) => Promise<EmailSearchResult[]>;
+  ) => Promise<{ rows: EmailSearchResult[]; failed?: EmailSearchPageResult }>;
 } {
   const { pollIntervalMs, deadline, start } = options;
   const intervalMs = Math.max(
@@ -384,7 +389,7 @@ export function lateMailReread(options: {
     due: (now = Date.now()) => now - ended >= intervalMs,
     read: async (params) => {
       const begun = Date.now();
-      const { rows, cutShort } = await fetchRecentEmails({
+      const { rows, cutShort, failed } = await fetchRecentEmails({
         ...params,
         deadline,
         from:
@@ -394,7 +399,7 @@ export function lateMailReread(options: {
       });
       if (!cutShort) covered = begun;
       ended = Date.now();
-      return rows;
+      return { rows, failed };
     },
   };
 }

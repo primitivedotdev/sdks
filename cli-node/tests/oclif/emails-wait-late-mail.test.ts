@@ -434,6 +434,58 @@ describe("an email that becomes readable after a later one", () => {
     },
   );
 
+  // A re-read the API rate limits with Retry-After: 60. The next poll waits for it, rather
+  // than coming back after only the two-second interval.
+  it.each(["wait", "watch"])(
+    "emails %s waits out a re-read's Retry-After before polling again",
+    async (command) => {
+      const server = lateServer();
+      mocks.searchEmails.mockImplementation(
+        async (request: Parameters<typeof server.handler>[0]) => {
+          const answer = await server.handler(request);
+          return request.query.sort === "received_at_desc"
+            ? {
+                error: { error: { code: "rate_limit_exceeded" } },
+                response: new Response(null, {
+                  status: 429,
+                  headers: { "Retry-After": "60" },
+                }),
+              }
+            : answer;
+        },
+      );
+      if (command === "wait")
+        await waitIds([
+          "--json",
+          "--include-existing",
+          "--number",
+          "3",
+          "--timeout",
+          "120",
+          "--interval",
+          "2",
+        ]);
+      else
+        await runWatch([
+          "--jsonl",
+          "--include-existing",
+          "--seconds",
+          "120",
+          "--interval",
+          "2",
+        ]);
+      const first = server.requests.findIndex(
+        (r) => r.sort === "received_at_desc",
+      );
+      expect(first).toBeGreaterThan(0);
+      const limited = server.requests[first];
+      const next = server.requests[first + 1];
+      expect(next?.sort).not.toBe("received_at_desc");
+      // Once: the 60 seconds asked for, then the usual two-second interval.
+      expect((next?.at ?? 0) - (limited?.end ?? 0)).toBe(62_000);
+    },
+  );
+
   it("is not re-read while nothing has been reported, as each poll reads from the start", async () => {
     const server = searchServer(() => []);
     mocks.searchEmails.mockImplementation(server.handler);
@@ -555,12 +607,14 @@ describe("fetchRecentEmails", () => {
         error: { error: { code: "unauthorized" } },
         response: new Response(null, { status: 401 }),
       });
+    // The failed page comes back too, for its Retry-After.
     expect(await recent()).toEqual({
       rows: [
         expect.objectContaining({ id: "a" }),
         expect.objectContaining({ id: "b" }),
       ],
       cutShort: true,
+      failed: expect.objectContaining({ ok: false }),
     });
 
     const throwing = vi.fn(async (): Promise<EmailSearchPageResult> => {
@@ -615,7 +669,7 @@ describe("lateMailReread", () => {
     });
     mocks.searchEmails.mockResolvedValue(page([]));
     vi.setSystemTime(START + 10_000);
-    expect(await reread.read(params)).toEqual([]);
+    expect(await reread.read(params)).toEqual({ rows: [] });
     expect(mocks.searchEmails).not.toHaveBeenCalled();
   });
 

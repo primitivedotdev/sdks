@@ -24,6 +24,7 @@ import { resolveScopedEmailWait } from "../scoped-email-wait.js";
 import {
   pauseForTransientFailure,
   transientFailure,
+  waitOutRetryAfter,
 } from "../transient-retry.js";
 import { formatHeader, formatRow, pickIdWidth } from "./emails-latest.js";
 import {
@@ -350,10 +351,11 @@ class EmailsWaitCommand extends Command {
           since,
           fetchPage: fetchEmailSearchPage,
         });
-        for (const email of collectNewAcceptedEmails(recent, seenIds)) {
+        for (const email of collectNewAcceptedEmails(recent.rows, seenIds)) {
           printEmail(email);
           if (matched >= flags.number) return;
         }
+        if (!(await waitOutRetryAfter(recent.failed, { deadline }))) break;
       }
       if (deadline !== null && Date.now() >= deadline) break;
       await sleep(flags.interval * 1000);

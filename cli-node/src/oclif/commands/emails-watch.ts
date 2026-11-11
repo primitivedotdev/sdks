@@ -18,6 +18,7 @@ import {
 import {
   pauseForTransientFailure,
   transientFailure,
+  waitOutRetryAfter,
 } from "../transient-retry.js";
 import { formatHeader, formatRow, pickIdWidth } from "./emails-latest.js";
 import {
@@ -225,10 +226,10 @@ class EmailsWatchCommand extends Command {
               since,
               fetchPage: fetchEmailSearchPage,
             })
-          : [];
+          : { rows: [] };
 
       for (const email of collectNewAcceptedEmails(
-        [...page.rows, ...recent],
+        [...page.rows, ...recent.rows],
         seenIds,
       )) {
         if (flags.jsonl) {
@@ -245,6 +246,7 @@ class EmailsWatchCommand extends Command {
       }
 
       if (cursorAdvanced) continue;
+      if (!(await waitOutRetryAfter(recent.failed, { deadline }))) break;
       if (deadline !== null && Date.now() >= deadline) break;
       await sleep(flags.interval * 1000);
     }
