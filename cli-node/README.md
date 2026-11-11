@@ -219,15 +219,15 @@ boundary to at most 60 characters. The whole message is the body.
 
 ## Authentication
 
-Use `primitive signin` or `primitive login` for existing accounts. With no email, both use browser approval; `primitive signin browser` and `primitive login browser` are the explicit browser forms.
+Use `primitive signin` or `primitive login` to log in. With no email, both use browser approval; `primitive signin browser` and `primitive login browser` are the explicit browser forms.
 
-Use `primitive signin <email> --accept-terms`, then `primitive signin confirm <email> <code>` for email-code sign-in. `primitive login <email>` and `primitive otp <email>` support the same email-code flow with matching `confirm` and `resend` subcommands.
+Use `primitive signin <email> --accept-terms`, then `primitive signin confirm <email> <code>` for email-code sign-in. `primitive login <email>` and `primitive otp <email>` support the same email-code flow with matching `confirm` and `resend` subcommands. The code logs you in to the account that uses the address, or creates a new account when none does. Primitive sends no emailed code to an address on a domain it receives mail for; log in with `primitive login browser` instead. Without a terminal to answer the terms prompt, these commands stop and ask for `--accept-terms`.
 
 Use `primitive logout --force` to remove local CLI credentials, pending email-code auth state, and stale credential locks without contacting Primitive. This is the recovery command when an interrupted auth command leaves the CLI saying another credential operation is already in progress.
 
 Use `primitive org leave` to leave the organization you are signed in to. It asks for confirmation first; pass `--yes` to skip the prompt in scripts. Leaving is final. Only a person signed in with `primitive login` can leave; API keys are refused. The only owner of an organization cannot leave it until someone else is made an owner. If the server asks you to confirm in the dashboard, the command prints the confirmation page and, in a terminal, asks for the token it shows; in a script, pass the token with `--step-up-token`. Refusals from the server are printed as returned, and the command exits 1.
 
-Use `primitive signup <email>` for new account creation, then `primitive signup confirm <email> <code>` with the emailed verification code. Non-interactive signup is available with `--accept-terms`.
+Use `primitive signup <email>` for new account creation, then `primitive signup confirm <email> <code>` with the emailed verification code. Without a terminal, pass `--accept-terms`.
 
 ### Switching organizations
 
