@@ -27,6 +27,7 @@ import {
   DEFAULT_EMAIL_POLL_PAGE_SIZE,
   fetchEmailSearchPage,
   filtersFromFlags,
+  type LateMailReread,
   lateMailReread,
   MAX_EMAIL_POLL_PAGE_SIZE,
   SINCE_VALUE_HELP,
@@ -158,9 +159,11 @@ class EmailsWatchCommand extends Command {
     let failures = 0;
     let printed = 0;
     let headerPrinted = false;
-    const reread = lateMailReread(flags.interval * 1000);
+    // Re-reads behind the cursor, once it has passed some mail.
+    let reread: LateMailReread | null = null;
 
     while (deadline === null || Date.now() < deadline) {
+      const polledAt = Date.now();
       let page: Awaited<ReturnType<typeof fetchEmailSearchPage>>;
       try {
         page = await fetchEmailSearchPage({
@@ -207,15 +210,19 @@ class EmailsWatchCommand extends Command {
       const nextCursor = cursorFromAcceptedRows(page.rows);
       const cursorAdvanced = Boolean(nextCursor && nextCursor !== cursor);
       if (nextCursor) cursor = nextCursor;
+      if (cursor !== null)
+        reread ??= lateMailReread({
+          pollIntervalMs: flags.interval * 1000,
+          deadline,
+          start: polledAt,
+        });
       // Idle: mail that became readable after the cursor passed its place.
-      // Until the cursor has passed some mail, each poll reads from the start.
       const recent =
-        cursor !== null && !cursorAdvanced && reread.due()
+        !cursorAdvanced && reread?.due()
           ? await reread.read({
               apiClient,
               filters,
               since,
-              deadline,
               fetchPage: fetchEmailSearchPage,
             })
           : [];

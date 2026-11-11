@@ -258,6 +258,10 @@ export const LATE_MAIL_REREAD_MS = 15_000;
 export const LATE_MAIL_MAX_PAGES = 3;
 /** A re-read also waits at least this many poll intervals, so a longer interval chosen to send fewer requests keeps doing so. */
 export const LATE_MAIL_REREAD_POLLS = 3;
+/** How far a re-read reads back at most, however long re-reads have been cut short, unless its interval needs more. */
+export const LATE_MAIL_MAX_LOOKBACK_MS = 60 * 60_000;
+/** Read back this much further, as this clock may run ahead of the server's. */
+export const LATE_MAIL_CLOCK_SLACK_MS = 60_000;
 
 /**
  * Mail received from `from` (LATE_MAIL_WINDOW_MS ago when not given, and
@@ -270,7 +274,9 @@ export const LATE_MAIL_REREAD_POLLS = 3;
  * is, so a busy stretch that holds more than the pages read loses its oldest
  * part rather than its newest. Best effort: a page that fails ends the
  * re-read with what it has, and the poll goes on; so does reaching
- * `deadline`. `cutShort` says it ended either way.
+ * `deadline`. `cutShort` says it did not reach as far back as it would have:
+ * a page failed, the deadline came, or a search the server stopped early for
+ * time returned short pages up to the page limit.
  */
 export async function fetchRecentEmails(params: {
   apiClient: PrimitiveApiClient;
@@ -290,14 +296,23 @@ export async function fetchRecentEmails(params: {
   const wanted = params.from ?? now - LATE_MAIL_WINDOW_MS;
   const from = Number.isNaN(sinceMs) ? wanted : Math.max(wanted, sinceMs);
   const newestFirst: EmailSearchResult[] = [];
+  const result = (cutShort: boolean) => ({
+    rows: newestFirst.reverse(),
+    cutShort,
+  });
   let cursor: string | null = null;
-  for (let pages = 0; pages < LATE_MAIL_MAX_PAGES; pages += 1) {
+  for (let pages = 0; ; pages += 1) {
+    // At the page limit with more to read. Only pages cut short for time hold fewer rows than asked for.
+    if (pages === LATE_MAIL_MAX_PAGES)
+      return result(
+        newestFirst.length < LATE_MAIL_MAX_PAGES * MAX_EMAIL_POLL_PAGE_SIZE,
+      );
     if (
       params.deadline !== undefined &&
       params.deadline !== null &&
       Date.now() >= params.deadline
     )
-      return { rows: newestFirst.reverse(), cutShort: true };
+      return result(true);
     let page: EmailSearchPageResult;
     try {
       page = await fetchPage({
@@ -310,50 +325,72 @@ export async function fetchRecentEmails(params: {
         since: new Date(from).toISOString(),
       });
     } catch {
-      return { rows: newestFirst.reverse(), cutShort: true };
+      return result(true);
     }
-    if (!page.ok) return { rows: newestFirst.reverse(), cutShort: true };
+    if (!page.ok) return result(true);
     newestFirst.push(...page.rows);
-    if (!page.more || !page.cursor) break;
+    if (!page.more || !page.cursor) return result(false);
     cursor = page.cursor;
   }
-  return { rows: newestFirst.reverse(), cutShort: false };
 }
 
 /**
- * An idle poll's re-reads of recent mail (fetchRecentEmails). One is due an
- * interval after this is made, as until then the poll has just read the same
- * mail itself, and then an interval after the last one finished, so a slow
+ * An idle poll's re-reads of recent mail (fetchRecentEmails), made once the
+ * poll's cursor has passed some mail, with `start` when the poll that first
+ * moved it was made.
+ *
+ * One is due an interval after `start`, as until then the poll has read the
+ * same mail itself, and then an interval after the last one ended, so a slow
  * re-read is not followed straight away by another. The interval is
  * LATE_MAIL_REREAD_MS, or LATE_MAIL_REREAD_POLLS poll intervals when that is
- * longer. Each re-read reads from LATE_MAIL_WINDOW_MS before the last one
- * that was not cut short began (before `start`, at first), so an email that
- * becomes readable within LATE_MAIL_WINDOW_MS of arriving is read however far
- * apart the re-reads come, unless it is older than the most a re-read reads.
+ * longer. The last poll before `deadline` re-reads as well, unless one ended
+ * within its interval, so mail that turned up since is not left unreported.
+ *
+ * Each re-read reads from LATE_MAIL_WINDOW_MS before the last one that was not
+ * cut short began (before `start`, at first), so an email that becomes
+ * readable within LATE_MAIL_WINDOW_MS of arriving is read however far apart
+ * re-reads come. That holds while it is among the most one re-read reads, and
+ * while re-reads are cut short for less than LATE_MAIL_MAX_LOOKBACK_MS.
  */
-export function lateMailReread(
-  pollIntervalMs: number,
-  start = Date.now(),
-): {
+export function lateMailReread(options: {
+  pollIntervalMs: number;
+  deadline: number | null;
+  start: number;
+}): {
   due: (now?: number) => boolean;
   read: (
-    params: Omit<Parameters<typeof fetchRecentEmails>[0], "from" | "now">,
+    params: Omit<
+      Parameters<typeof fetchRecentEmails>[0],
+      "from" | "now" | "deadline"
+    >,
   ) => Promise<EmailSearchResult[]>;
 } {
+  const { pollIntervalMs, deadline, start } = options;
   const intervalMs = Math.max(
     LATE_MAIL_REREAD_MS,
     LATE_MAIL_REREAD_POLLS * pollIntervalMs,
+  );
+  const maxLookBackMs = Math.max(
+    LATE_MAIL_MAX_LOOKBACK_MS,
+    LATE_MAIL_WINDOW_MS + 2 * intervalMs,
   );
   // When the last re-read not cut short began, and when the last re-read ended.
   let covered = start;
   let ended = start;
   return {
-    due: (now = Date.now()) => now - ended >= intervalMs,
+    due: (now = Date.now()) =>
+      now - ended >= intervalMs ||
+      (deadline !== null &&
+        deadline - now <= pollIntervalMs &&
+        deadline - ended > pollIntervalMs),
     read: async (params) => {
       const begun = Date.now();
       const { rows, cutShort } = await fetchRecentEmails({
         ...params,
-        from: covered - LATE_MAIL_WINDOW_MS,
+        deadline,
+        from:
+          Math.max(covered - LATE_MAIL_WINDOW_MS, begun - maxLookBackMs) -
+          LATE_MAIL_CLOCK_SLACK_MS,
         now: begun,
       });
       if (!cutShort) covered = begun;
@@ -362,6 +399,8 @@ export function lateMailReread(
     },
   };
 }
+
+export type LateMailReread = ReturnType<typeof lateMailReread>;
 
 export async function fetchEmailSearchPage(params: {
   apiClient: PrimitiveApiClient;
