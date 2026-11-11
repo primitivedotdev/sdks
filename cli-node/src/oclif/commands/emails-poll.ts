@@ -301,12 +301,7 @@ export async function fetchRecentEmails(params: {
     cutShort,
   });
   let cursor: string | null = null;
-  for (let pages = 0; ; pages += 1) {
-    // At the page limit with more to read. Only pages cut short for time hold fewer rows than asked for.
-    if (pages === LATE_MAIL_MAX_PAGES)
-      return result(
-        newestFirst.length < LATE_MAIL_MAX_PAGES * MAX_EMAIL_POLL_PAGE_SIZE,
-      );
+  for (let pages = 0; pages < LATE_MAIL_MAX_PAGES; pages += 1) {
     if (
       params.deadline !== undefined &&
       params.deadline !== null &&
@@ -332,6 +327,10 @@ export async function fetchRecentEmails(params: {
     if (!page.more || !page.cursor) return result(false);
     cursor = page.cursor;
   }
+  // At the page limit with more to read. Only pages a search stopped early for time hold fewer rows than asked for.
+  return result(
+    newestFirst.length < LATE_MAIL_MAX_PAGES * MAX_EMAIL_POLL_PAGE_SIZE,
+  );
 }
 
 /**
@@ -343,14 +342,16 @@ export async function fetchRecentEmails(params: {
  * same mail itself, and then an interval after the last one ended, so a slow
  * re-read is not followed straight away by another. The interval is
  * LATE_MAIL_REREAD_MS, or LATE_MAIL_REREAD_POLLS poll intervals when that is
- * longer. The last poll before `deadline` re-reads as well, unless one ended
- * within its interval, so mail that turned up since is not left unreported.
+ * longer. A wait that ends before the next one is due does not report mail
+ * that became readable since the last.
  *
- * Each re-read reads from LATE_MAIL_WINDOW_MS before the last one that was not
- * cut short began (before `start`, at first), so an email that becomes
- * readable within LATE_MAIL_WINDOW_MS of arriving is read however far apart
- * re-reads come. That holds while it is among the most one re-read reads, and
- * while re-reads are cut short for less than LATE_MAIL_MAX_LOOKBACK_MS.
+ * Each re-read reads from LATE_MAIL_WINDOW_MS (and LATE_MAIL_CLOCK_SLACK_MS)
+ * before the last one that was not cut short began (before `start`, at
+ * first), so an email that becomes readable within LATE_MAIL_WINDOW_MS of
+ * arriving is read however far apart re-reads come. That holds while it is
+ * among the most one re-read reads, and while a re-read that is not cut short
+ * comes within the look-back limit (LATE_MAIL_MAX_LOOKBACK_MS, or more for a
+ * long interval) less LATE_MAIL_WINDOW_MS of it becoming readable.
  */
 export function lateMailReread(options: {
   pollIntervalMs: number;
@@ -378,11 +379,7 @@ export function lateMailReread(options: {
   let covered = start;
   let ended = start;
   return {
-    due: (now = Date.now()) =>
-      now - ended >= intervalMs ||
-      (deadline !== null &&
-        deadline - now <= pollIntervalMs &&
-        deadline - ended > pollIntervalMs),
+    due: (now = Date.now()) => now - ended >= intervalMs,
     read: async (params) => {
       const begun = Date.now();
       const { rows, cutShort } = await fetchRecentEmails({

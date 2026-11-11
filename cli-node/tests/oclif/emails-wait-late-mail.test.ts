@@ -230,12 +230,10 @@ describe("an email that becomes readable after a later one", () => {
   // A re-read is a run of newest-first requests (it may read several pages), made only after
   // a poll that brought nothing new, at the largest page size and without the total count,
   // which the poll's own requests leave as the server's default. Each starts one interval after
-  // the poll first moved its cursor (here the first request) and after the previous one ended,
-  // but for one on the last poll before the deadline.
+  // the poll first moved its cursor (here the first request) and after the previous one ended.
   const expectThrottledRereads = (
     requests: ReturnType<typeof searchServer>["requests"],
     intervalSeconds: number,
-    deadline: number,
   ) => {
     const runs: Array<{ start: number; end: number }> = [];
     let previous: (typeof requests)[number] | undefined;
@@ -257,17 +255,12 @@ describe("an email that becomes readable after a later one", () => {
       LATE_MAIL_REREAD_MS,
       LATE_MAIL_REREAD_POLLS * intervalSeconds * 1000,
     );
-    const lastPoll = deadline - intervalSeconds * 1000;
     expect(runs.length).toBeGreaterThan(1);
     expect(runs[0]?.start).toBeGreaterThanOrEqual(START + spacing);
-    for (let i = 1; i < runs.length; i += 1) {
-      const gap = (runs[i]?.start ?? 0) - (runs[i - 1]?.end ?? 0);
-      if (gap < spacing) {
-        expect(runs[i]?.start).toBeGreaterThanOrEqual(lastPoll);
-        expect(runs[i - 1]?.end).toBeLessThan(lastPoll);
-        expect(i).toBe(runs.length - 1);
-      }
-    }
+    for (let i = 1; i < runs.length; i += 1)
+      expect(
+        (runs[i]?.start ?? 0) - (runs[i - 1]?.end ?? 0),
+      ).toBeGreaterThanOrEqual(spacing);
   };
 
   async function runWatch(argv: string[]) {
@@ -320,11 +313,7 @@ describe("an email that becomes readable after a later one", () => {
       ]);
       expect(ids).toEqual(["later", "earlier"]);
       expect(timeout).toContain("received 2");
-      expectThrottledRereads(
-        server.requests,
-        interval,
-        START + interval * 40_000,
-      );
+      expectThrottledRereads(server.requests, interval);
     },
   );
 
@@ -342,11 +331,7 @@ describe("an email that becomes readable after a later one", () => {
         String(interval),
       ]);
       expect(ids).toEqual(["later", "earlier"]);
-      expectThrottledRereads(
-        server.requests,
-        interval,
-        START + interval * 40_000,
-      );
+      expectThrottledRereads(server.requests, interval);
     },
   );
 
@@ -354,8 +339,9 @@ describe("an email that becomes readable after a later one", () => {
   // 1100s, and at 2100s to one received at 2000s; re-reads come at 2100s (ending 2120s) and at
   // 3020s, each reading from ten minutes and a minute of clock slack before the previous one
   // began (before 1200s, at first). Behind the cursor, an email received at 1000s and readable at
-  // 1250s is read by the first re-read; one received at 1445s and readable at 2105s, during the
-  // first re-read, is read by the second.
+  // 1250s is read by the first re-read. One received at 1445s and readable at 2105s, during the
+  // first re-read, is read by the second: it is eleven minutes late on purpose, so that only a
+  // look-back taken from when the first re-read began, not when it ended, reaches it.
   describe("with re-reads further apart than ten minutes (--interval 300)", () => {
     const at = (seconds: number) => START + seconds * 1000;
     const gapServer = () =>
@@ -412,50 +398,6 @@ describe("an email that becomes readable after a later one", () => {
     });
   });
 
-  // Re-reads come 90 seconds apart at --interval 30: one at 90s (ending 110s) misses an email
-  // readable from 95s, and the next would be due at 200s, after the deadline at 150s. The last
-  // poll, at 140s, re-reads anyway.
-  it.each(["wait", "watch"])(
-    "is reported by emails %s on its last poll before the deadline",
-    async (command) => {
-      const server = searchServer((_call, now) => [
-        row("later", { received_at: LATER }),
-        ...(now >= START + 95_000
-          ? [row("late", { received_at: EARLIER })]
-          : []),
-      ]);
-      mocks.searchEmails.mockImplementation(server.handler);
-      const ids =
-        command === "wait"
-          ? (
-              await waitIds([
-                "--json",
-                "--include-existing",
-                "--number",
-                "3",
-                "--timeout",
-                "150",
-                "--interval",
-                "30",
-              ])
-            ).ids
-          : await runWatch([
-              "--jsonl",
-              "--include-existing",
-              "--seconds",
-              "150",
-              "--interval",
-              "30",
-            ]);
-      expect(ids).toEqual(["later", "late"]);
-      expect(
-        server.requests
-          .filter((r) => r.sort === "received_at_desc")
-          .map((r) => (r.at - START) / 1000),
-      ).toEqual([90, 140]);
-    },
-  );
-
   // New mail on every other poll: a re-read only ever follows a poll that brought none.
   it.each(["wait", "watch"])(
     "emails %s re-reads only after a poll that brought nothing new",
@@ -488,7 +430,7 @@ describe("an email that becomes readable after a later one", () => {
           "2",
         ]);
       else await runWatch(["--jsonl", "--seconds", "60", "--interval", "2"]);
-      expectThrottledRereads(server.requests, 2, START + 60_000);
+      expectThrottledRereads(server.requests, 2);
     },
   );
 
@@ -675,22 +617,6 @@ describe("lateMailReread", () => {
     expect(reread.due(START + LATE_MAIL_REREAD_POLLS * 30_000)).toBe(true);
   });
 
-  it("is due on the last poll before the deadline unless one ended within it", async () => {
-    const reread = lateMailReread({
-      pollIntervalMs: 2_000,
-      deadline: START + 20_000,
-      start: START,
-    });
-    mocks.searchEmails.mockResolvedValue(page([]));
-    vi.setSystemTime(START + LATE_MAIL_REREAD_MS);
-    await reread.read(params);
-    expect(reread.due(START + 17_000)).toBe(false);
-    expect(reread.due(START + 18_500)).toBe(true);
-    vi.setSystemTime(START + 18_500);
-    await reread.read(params);
-    expect(reread.due(START + 19_500)).toBe(false);
-  });
-
   it("reads from ten minutes and the clock slack before the last re-read not cut short began", async () => {
     const reread = lateMailReread({
       pollIntervalMs: 2_000,
@@ -735,6 +661,20 @@ describe("lateMailReread", () => {
       START +
         2 * 3_600_000 -
         LATE_MAIL_MAX_LOOKBACK_MS -
+        LATE_MAIL_CLOCK_SLACK_MS,
+    );
+    // With re-reads an hour apart (a 20 minute poll interval) it reads back two of them and the window.
+    const slow = lateMailReread({
+      pollIntervalMs: 1_200_000,
+      deadline: null,
+      start: START,
+    });
+    vi.setSystemTime(START + 5 * 3_600_000);
+    await slow.read(params);
+    expect(readFrom(1)).toBe(
+      START +
+        5 * 3_600_000 -
+        (LATE_MAIL_WINDOW_MS + 2 * LATE_MAIL_REREAD_POLLS * 1_200_000) -
         LATE_MAIL_CLOCK_SLACK_MS,
     );
   });
