@@ -986,7 +986,9 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
 
 // emails facts
 
-type Classification = NonNullable<ListEmailRuleResultsResult["classification"]>;
+export type Classification = NonNullable<
+  ListEmailRuleResultsResult["classification"]
+>;
 
 /** The classification in a listEmailRuleResults answer, or null. */
 export function classificationOf(data: unknown): Classification | null {

@@ -1,15 +1,18 @@
 import { Args, Command, Errors, Flags } from "@oclif/core";
-import { listEmailRuleResults } from "@primitivedotdev/api-core";
+import { getEmail, listEmailRuleResults } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   API_BASE_URL_FLAG_DESCRIPTION,
+  extractErrorCode,
   extractErrorPayload,
+  refusalDetails,
   runWithTiming,
   surfaceUnauthorizedHint,
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
 import {
+  type Classification,
   classificationFactLines,
   classificationOf,
   isEmailId,
@@ -23,7 +26,9 @@ const ID_DESCRIPTION =
 /**
  * `primitive emails facts <id>`: what the classifier read from one received
  * email, every fact as email rule conditions read it, from the email's rule
- * results (GET /emails/{id}/rule-results).
+ * results (GET /emails/{id}/rule-results). A credential that may not read
+ * rule results gets the facts as written, from the email read
+ * (GET /emails/{id}, `understanding`).
  */
 export default class EmailsFactsCommand extends Command {
   static summary = "Show what the classifier read from an email";
@@ -33,7 +38,7 @@ export default class EmailsFactsCommand extends Command {
 
 Use it to see why an email rule did or did not match, alongside \`primitive email-rules list-email-rule-results --email-id <id>\`, which this reads. An email with no classification (not classified yet, never to be, or content that cannot be read) prints a message saying so on stderr and nothing on stdout. With --json, prints the classification object, or null when there is none.
 
-Needs the email rules feature, and a member's own credential with their full access (not an API key, agent key or narrowed token).`;
+Needs the email rules feature. Rule results are read with a member's own credential with their full access. An API key, agent key or narrowed token cannot read them, so for one of those the command reads the facts from the email itself instead (\`understanding.facts\` of \`primitive emails get <id> --json\`), as the classifier wrote them, and says so on stderr (in \`warnings\` with --json). Those differ from what rule conditions read in two ways: conditions read a multi fact's options lowercased, and read a fact the classifier left out as null, where \`understanding.facts\` leaves it out.`;
 
   static examples = [
     "<%= config.bin %> emails facts 3f0e1c2a-8b7d-4c6e-9a1b-2d3e4f5a6b7c",
@@ -48,7 +53,7 @@ Needs the email rules feature, and a member's own credential with their full acc
     id: Flags.string({ description: ID_DESCRIPTION }),
     json: Flags.boolean({
       description:
-        "Print the classification object as one JSON document on stdout (null when the email has none), and nothing on stderr. A failure prints the error with exit_code.",
+        "Print the classification object as one JSON document on stdout (null when the email has none), and nothing on stderr. When the facts come from the email itself, the note saying so is in its warnings. A failure prints the error with exit_code.",
     }),
     "api-key": Flags.string({
       description:
@@ -103,6 +108,16 @@ Needs the email rules feature, and a member's own credential with their full acc
       });
       if (result.error) {
         const payload = extractErrorPayload(result.error);
+        // A key or a narrowed token may not read rule results, but can read
+        // the facts as written from the email itself.
+        if (refusesRuleResultsToCredential(payload)) {
+          await this.printFactsFromEmail(id, Boolean(flags.json), {
+            apiClient,
+            auth,
+            baseUrlOverridden,
+          });
+          return;
+        }
         writeErrorWithHints(payload, result.response);
         surfaceUnauthorizedHint({
           auth,
@@ -129,4 +144,106 @@ Needs the email rules feature, and a member's own credential with their full acc
       this.log(lines.join("\n"));
     });
   }
+
+  /**
+   * The facts as `emails get` reads them, for a credential that may not read
+   * rule results: the email's understanding, when it is ready.
+   */
+  private async printFactsFromEmail(
+    id: string,
+    json: boolean,
+    client: Pick<
+      Awaited<ReturnType<typeof createAuthenticatedCliApiClient>>,
+      "apiClient" | "auth" | "baseUrlOverridden"
+    >,
+  ): Promise<void> {
+    const read = await getEmail({
+      client: client.apiClient.client,
+      path: { id },
+      responseStyle: "fields",
+    });
+    if (read.error) {
+      const payload = extractErrorPayload(read.error);
+      process.stderr.write(
+        "This credential cannot read email rule results, and reading the facts from the email itself failed:\n",
+      );
+      writeErrorWithHints(payload, read.response);
+      surfaceUnauthorizedHint({
+        auth: client.auth,
+        baseUrlOverridden: client.baseUrlOverridden,
+        configDir: this.config.configDir,
+        payload,
+      });
+      process.exitCode = 1;
+      return;
+    }
+    const understanding = (
+      read.data as { data?: { understanding?: unknown } } | undefined
+    )?.data?.understanding;
+    const classification = classificationFromUnderstanding(understanding);
+    if (classification) process.stderr.write(`${understandingNote(id)}\n`);
+    if (json) {
+      this.log(JSON.stringify(classification, null, 2));
+      return;
+    }
+    const lines = classification ? classificationFactLines(classification) : [];
+    if (lines.length === 0) {
+      process.stderr.write(
+        `${classification ? "This email's classification has no facts." : noUnderstandingMessage(understanding)}\n`,
+      );
+      return;
+    }
+    this.log(lines.join("\n"));
+  }
+}
+
+/** The refusals of rule results to a credential that is not a member's own, unnarrowed one. */
+const NOT_A_RULE_READER = new Set([
+  "rule_author_credential",
+  "narrowed_credential",
+]);
+
+/** Whether rule results were refused only because of the kind of credential. */
+export function refusesRuleResultsToCredential(payload: unknown): boolean {
+  if (extractErrorCode(payload) !== "forbidden") return false;
+  const { reason } = refusalDetails(payload);
+  return typeof reason === "string" && NOT_A_RULE_READER.has(reason);
+}
+
+/**
+ * The email's `understanding` as the classification rule results show
+ * (id, vocabulary, classified_at, facts), when it is ready; otherwise null.
+ */
+export function classificationFromUnderstanding(
+  understanding: unknown,
+): Classification | null {
+  if (!isRecord(understanding) || understanding.status !== "ready") return null;
+  // A ready block names all three; null rather than a dropped key otherwise.
+  return {
+    id: understanding.classification_id ?? null,
+    vocabulary: understanding.vocabulary ?? null,
+    classified_at: understanding.classified_at ?? null,
+    facts: isRecord(understanding.facts) ? understanding.facts : {},
+  } as Classification;
+}
+
+/** Where facts read from the email came from, and how they differ. */
+export function understandingNote(id: string): string {
+  return `This credential cannot read email rule results, so these facts come from the email itself (\`primitive emails get ${id} --json\`, understanding.facts), as the classifier wrote them. Rule conditions read a multi fact's options lowercased, and a fact left out here reads null to them.`;
+}
+
+/** Why an email read gave no facts to show. */
+export function noUnderstandingMessage(understanding: unknown): string {
+  const status = isRecord(understanding) ? understanding.status : undefined;
+  if (status === "pending")
+    return "No classification for this email yet: it has not been classified. Recent mail can take a while, so try again later.";
+  if (status === "unavailable")
+    return "No classification to show for this email: it was not classified in time, its content was discarded first, or its facts are too large to include.";
+  if (typeof status === "string")
+    return `No classification to show: the email's understanding is ${status}.`;
+  return "No classification to show: the email read carries no facts. Its content may be withheld, discarded or failed to parse, this credential may not read message content, or the facts could not be read just now, so try again.";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
