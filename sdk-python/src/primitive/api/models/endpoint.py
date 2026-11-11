@@ -18,6 +18,7 @@ from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
+  from ..models.endpoint_delivery_type_0 import EndpointDeliveryType0
   from ..models.endpoint_receiver_capabilities import EndpointReceiverCapabilities
   from ..models.endpoint_rules import EndpointRules
 
@@ -65,7 +66,18 @@ class Endpoint:
             owner_key_status (EndpointOwnerKeyStatusType1 | EndpointOwnerKeyStatusType2Type1 |
                 EndpointOwnerKeyStatusType3Type1 | None | Unset): Whether the owning key can act now. In endpoint responses it
                 is set only for a caller who may read API key metadata. Suspended also covers an expired key. A suspended or
-                revoked owner is sent nothing.
+                revoked owner is sent nothing. Anyone who may read the endpoint learns that from delivery.reasons, which never
+                names the key.
+            disabled_reason (None | str | Unset): Why the platform turned this endpoint off, when it names a reason.
+                owner_changed: it was given to a new owner while its URL stayed, and the URL was chosen under the previous
+                owner; turning it on or giving it a new URL starts it again. owner_credential_revoked: the third-party app or
+                agent delegate grant that owned it was revoked; an owner or admin who turns it back on takes it over. Null while
+                it is on and when it was turned off by hand. An access suspension does not set it (a suspension is decided
+                through its own record). Other values may be added.
+            delivery (EndpointDeliveryType0 | None | Unset): For a webhook (kind http) in GET /endpoints and GET
+                /endpoints/{id}: whether it is being sent received mail, and why not. Shown to anyone who may read the endpoint;
+                it names a state, never a key. Null when it could not be checked just now. Absent from other kinds of endpoint
+                and from create and update answers.
             signed_with (EndpointSignedWith | Unset): Which secret signs deliveries to this webhook: its own (read it from
                 GET /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that is not a
                 webhook.
@@ -99,6 +111,8 @@ class Endpoint:
     owned_by_key: bool | Unset = UNSET
     owner_key_id: None | Unset | UUID = UNSET
     owner_key_status: EndpointOwnerKeyStatusType1 | EndpointOwnerKeyStatusType2Type1 | EndpointOwnerKeyStatusType3Type1 | None | Unset = UNSET
+    disabled_reason: None | str | Unset = UNSET
+    delivery: EndpointDeliveryType0 | None | Unset = UNSET
     signed_with: EndpointSignedWith | Unset = UNSET
     signing_secret: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -108,6 +122,7 @@ class Endpoint:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.endpoint_delivery_type_0 import EndpointDeliveryType0 # noqa: PLC0415
         from ..models.endpoint_receiver_capabilities import EndpointReceiverCapabilities # noqa: PLC0415
         from ..models.endpoint_rules import EndpointRules # noqa: PLC0415
         id = str(self.id)
@@ -229,6 +244,20 @@ class Endpoint:
         else:
             owner_key_status = self.owner_key_status
 
+        disabled_reason: None | str | Unset
+        if isinstance(self.disabled_reason, Unset):
+            disabled_reason = UNSET
+        else:
+            disabled_reason = self.disabled_reason
+
+        delivery: dict[str, Any] | None | Unset
+        if isinstance(self.delivery, Unset):
+            delivery = UNSET
+        elif isinstance(self.delivery, EndpointDeliveryType0):
+            delivery = self.delivery.to_dict()
+        else:
+            delivery = self.delivery
+
         signed_with: str | Unset = UNSET
         if not isinstance(self.signed_with, Unset):
             signed_with = self.signed_with.value
@@ -281,6 +310,10 @@ class Endpoint:
             field_dict["owner_key_id"] = owner_key_id
         if owner_key_status is not UNSET:
             field_dict["owner_key_status"] = owner_key_status
+        if disabled_reason is not UNSET:
+            field_dict["disabled_reason"] = disabled_reason
+        if delivery is not UNSET:
+            field_dict["delivery"] = delivery
         if signed_with is not UNSET:
             field_dict["signed_with"] = signed_with
         if signing_secret is not UNSET:
@@ -292,6 +325,7 @@ class Endpoint:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.endpoint_delivery_type_0 import EndpointDeliveryType0 # noqa: PLC0415
         from ..models.endpoint_receiver_capabilities import EndpointReceiverCapabilities # noqa: PLC0415
         from ..models.endpoint_rules import EndpointRules # noqa: PLC0415
         d = dict(src_dict)
@@ -564,6 +598,36 @@ class Endpoint:
         owner_key_status = _parse_owner_key_status(d.pop("owner_key_status", UNSET))
 
 
+        def _parse_disabled_reason(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        disabled_reason = _parse_disabled_reason(d.pop("disabled_reason", UNSET))
+
+
+        def _parse_delivery(data: object) -> EndpointDeliveryType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                delivery_type_0 = EndpointDeliveryType0.from_dict(data)
+
+
+
+                return delivery_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EndpointDeliveryType0 | None | Unset, data)
+
+        delivery = _parse_delivery(d.pop("delivery", UNSET))
+
+
         _signed_with = d.pop("signed_with", UNSET)
         signed_with: EndpointSignedWith | Unset
         if isinstance(_signed_with,  Unset):
@@ -602,6 +666,8 @@ class Endpoint:
             owned_by_key=owned_by_key,
             owner_key_id=owner_key_id,
             owner_key_status=owner_key_status,
+            disabled_reason=disabled_reason,
+            delivery=delivery,
             signed_with=signed_with,
             signing_secret=signing_secret,
         )

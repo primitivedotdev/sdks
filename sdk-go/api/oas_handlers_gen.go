@@ -19989,7 +19989,8 @@ func (s *Server) handleGetEmailRuleVocabularyRequest(args [0]string, argsEscaped
 // handleGetEndpointRequest handles getEndpoint operation.
 //
 // One endpoint, as GET /endpoints shows it, to a caller who would see it there. Any other id, a
-// deleted endpoint's included, answers 404.
+// deleted endpoint's included, answers 404. For a webhook, delivery says whether it is being sent
+// received mail at all, why not, and how much rule-granted mail is held while its owner cannot act.
 //
 // GET /endpoints/{id}
 func (s *Server) handleGetEndpointRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -22643,9 +22644,11 @@ func (s *Server) handleGetInteractionRequest(args [1]string, argsEscaped bool, w
 
 // handleGetKeyRequest handles getKey operation.
 //
-// One key's metadata, never its secret, with whether it works now (status). Its grant's mail_scope.
-// depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain,
-// otherwise content. The person needs access to the whole organization's mail. Needs the
+// One key's metadata, never its secret, with whether it works now (status). A revoked key whose
+// record is kept is answered too, with status revoked, revoked_at and revoked_by, under the same
+// access rules as a key that works: one the caller may not read is 404, revoked or not. Its grant's
+// mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a
+// domain, otherwise content. The person needs access to the whole organization's mail. Needs the
 // organization's credential features to be enabled; while they are not, this answers 404
 // feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 // Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
@@ -36388,11 +36391,13 @@ func (s *Server) handleListInteractionsRequest(args [0]string, argsEscaped bool,
 // handleListKeysRequest handles listKeys operation.
 //
 // Key metadata, never a secret: name, prefix, grant, creator, last use, expiry, suspension and
-// whether each key works now (status). A grant's mail_scope.depth is raw only when the key holds
-// mail.raw:read and its scope lists an address or a domain, otherwise content. The person needs
-// access to the whole organization's mail. Needs the organization's credential features to be
-// enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the
-// feature. Contact Primitive to turn them on.
+// whether each key works now (status). Revoked keys are left out unless include_revoked is true,
+// which lists them too with status revoked, revoked_at and revoked_by, under the same access rules
+// as keys that work. A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its
+// scope lists an address or a domain, otherwise content. The person needs access to the whole
+// organization's mail. Needs the organization's credential features to be enabled; while they are
+// not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive
+// to turn them on.
 // Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
 // person's role must hold keys:read. API keys, agent connection keys and agents are refused.
 //
@@ -36539,6 +36544,10 @@ func (s *Server) handleListKeysRequest(args [0]string, argsEscaped bool, w http.
 					Name: "cursor",
 					In:   "query",
 				}: params.Cursor,
+				{
+					Name: "include_revoked",
+					In:   "query",
+				}: params.IncludeRevoked,
 			},
 			Raw: r,
 		}
@@ -47989,14 +47998,16 @@ func (s *Server) handleRevokeAllCredentialsRequest(args [0]string, argsEscaped b
 // Revoke one credential by kind and id. A Function key is rotated, never revoked (409
 // rotate_instead). An API key is revoked only by a person whose own access covers the key's access
 // (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered.
-// What the credential set up keeps working and is listed in standing_objects for review. The
-// person's own Primitive CLI login revokes an API key (kind org_key) as the person, with no step-up
-// unless the organization's credential policy sets cli_writes_require_approval (then it takes a keys.
-// create step-up); every other kind (a connected key named as org_key included, 403 grant_forbidden
-// target_not_covered), and every other app even with a step-up, is refused outside the dashboard
-// (403). Needs the organization's credential features to be enabled; while they are not, this
-// answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn
-// them on.
+// What the credential set up keeps working and is listed in standing_objects for review. An API key
+// (kind org_key or connected_key) that is already revoked, and whose record is kept, answers 200
+// with already_revoked true and revoked 0, to a caller who could have revoked it; anyone else gets
+// the answer they would get for a key that does not exist. The person's own Primitive CLI login
+// revokes an API key (kind org_key) as the person, with no step-up unless the organization's
+// credential policy sets cli_writes_require_approval (then it takes a keys.create step-up); every
+// other kind (a connected key named as org_key included, 403 grant_forbidden target_not_covered),
+// and every other app even with a step-up, is refused outside the dashboard (403). Needs the
+// organization's credential features to be enabled; while they are not, this answers 404
+// feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 // Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
 // person's role must hold keys:manage. API keys, agent connection keys and agents are refused.
 //
@@ -55849,6 +55860,11 @@ func (s *Server) handleTestEmailRuleOnSampleRequest(args [0]string, argsEscaped 
 // Rate limited to 4 per minute and 30 per hour (non-exempt).
 // Successful deliveries and verified-domain endpoints are exempt
 // from the rate limit.
+// The test is sent whether or not real mail would be. reachable says whether the endpoint answered
+// it with a 2xx; delivery says, apart from that, whether real email.received events would be sent to
+// the endpoint by its own conditions (on, not held, an owner that can receive mail, subscribed to
+// the event), with every reason it would not be. A 200 from the test alone does not mean mail
+// arrives.
 //
 // POST /endpoints/{id}/test
 func (s *Server) handleTestEndpointRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -56057,6 +56073,10 @@ func (s *Server) handleTestEndpointRequest(args [1]string, argsEscaped bool, w h
 // all. Delivery fails OPEN on an invalid blob (the message is
 // delivered as if unfiltered), so `rules_valid: false` exposes a
 // misconfiguration that is otherwise silent.
+// would_deliver also covers the endpoint's own delivery conditions for this email (delivery): it is
+// on, neither it nor the email's route is held, its owner may receive this email, and it subscribes
+// to the event. Which endpoint routing sends the email to is decided separately: POST
+// /routes/simulate answers that. A 503 means those conditions could not be read just now; retry.
 //
 // POST /endpoints/{id}/rules/test
 func (s *Server) handleTestEndpointRulesRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -58276,6 +58296,15 @@ func (s *Server) handleUpdateEmailRuleRequest(args [1]string, argsEscaped bool, 
 // Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing
 // endpoint deletion disconnects the destination; creating a new destination does not backfill
 // historical events.
+// Giving a webhook the organization does not own to a different key (owner_key_id), or a key's
+// webhook back to the organization (owner_key_id null), turns it off unless the request also sets
+// enabled: its URL was chosen under its previous owner. It then reads enabled false with
+// disabled_reason owner_changed, and turning it on or giving it a new URL starts it again. A key
+// that carries on for the owning key through rotation (its successor, at any depth up to 16
+// rotations) is not a different key: the webhook stays as it was, with the same signing secret. That
+// does not hold when the owning key was made from a key a transfer moved or rotated away, or from
+// one that has since been deleted: no successor carries on for it. The answer's warnings name each
+// such change (turned_off_owner_changed, turned_on_new_url), so a client can say so.
 //
 // PATCH /endpoints/{id}
 func (s *Server) handleUpdateEndpointRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -59507,11 +59536,16 @@ func (s *Server) handleUpdateGroupRequest(args [1]string, argsEscaped bool, w ht
 //
 // of the key and is held to the same rules as creating one (a custom grant that does not say which
 // mail it reaches is refused with details.reason mail_scope_required), so it takes the same step-up.
-// The person's own Primitive CLI login needs no step-up (it acts as the person, held to the same
-// rules) unless the organization's credential policy sets cli_writes_require_approval; the Primitive
-// app's token is refused, even with one. Needs the organization's credential features to be enabled;
-// while they are not, this answers 404 feature_disabled, with details.feature naming the feature.
-// Contact Primitive to turn them on.
+// It replaces the whole grant: send expected_grant_ref (grant.ref from GET /v1/keys/{id}) to have it
+// refused (409 conflict, details.reason grant_changed) if the grant changed since that read; a grant
+// change sent without it answers grant_unguarded: true. On a key limited to selected resources
+// (grant.resources), a grant change must drop the limits on purpose with a custom grant and grant.
+// resources {}; one that leaves them out is refused (409 conflict, details.reason
+// key_has_resource_limits) and nothing changes. The person's own Primitive CLI login needs no
+// step-up (it acts as the person, held to the same rules) unless the organization's credential
+// policy sets cli_writes_require_approval; the Primitive app's token is refused, even with one.
+// Needs the organization's credential features to be enabled; while they are not, this answers 404
+// feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 // Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
 // organization's credential policy sets cli_writes_require_approval), or the person's own OAuth
 // token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one
@@ -62900,7 +62934,10 @@ func (s *Server) handleVerifyDomainRequest(args [1]string, argsEscaped bool, w h
 // handleWhoamiRequest handles whoami operation.
 //
 // Current authenticated identity. member_address is null for machine credentials or an unavailable
-// member address.
+// member address. email (your own sign-in email) and role_name (your role as the members list labels
+// it) are set only when you are signed in as yourself, in the dashboard or with your own Primitive
+// CLI or app login, and are null for API keys, Functions, connected agents, agent signup logins and
+// other apps acting for you.
 //
 // GET /whoami
 func (s *Server) handleWhoamiRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {

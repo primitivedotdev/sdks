@@ -40,6 +40,8 @@ class TestEmailRuleResultResultsItem:
                 not_found: no such email, or not one the rule can read (or not settled, or awaiting sender authentication).
             received_at (datetime.datetime | Unset):
             from_address (None | str | Unset):
+            recipient (str | Unset): The mailbox this copy of the email was received in, as GET /v1/emails/{id} shows it.
+                Given with received_at, from_address and subject, so absent for not_found.
             subject (None | str | Unset):
             parts (list[TestEmailRuleResultResultsItemPartsItem] | Unset): How each top-level part of the rule decided.
                 Present for matched, near_miss and no_match.
@@ -69,6 +71,7 @@ class TestEmailRuleResultResultsItem:
     outcome: TestEmailRuleResultResultsItemOutcome
     received_at: datetime.datetime | Unset = UNSET
     from_address: None | str | Unset = UNSET
+    recipient: str | Unset = UNSET
     subject: None | str | Unset = UNSET
     parts: list[TestEmailRuleResultResultsItemPartsItem] | Unset = UNSET
     missing_facts: list[str] | Unset = UNSET
@@ -100,6 +103,8 @@ class TestEmailRuleResultResultsItem:
             from_address = UNSET
         else:
             from_address = self.from_address
+
+        recipient = self.recipient
 
         subject: None | str | Unset
         if isinstance(self.subject, Unset):
@@ -161,6 +166,8 @@ class TestEmailRuleResultResultsItem:
             field_dict["received_at"] = received_at
         if from_address is not UNSET:
             field_dict["from_address"] = from_address
+        if recipient is not UNSET:
+            field_dict["recipient"] = recipient
         if subject is not UNSET:
             field_dict["subject"] = subject
         if parts is not UNSET:
@@ -217,6 +224,8 @@ class TestEmailRuleResultResultsItem:
 
         from_address = _parse_from_address(d.pop("from_address", UNSET))
 
+
+        recipient = d.pop("recipient", UNSET)
 
         def _parse_subject(data: object) -> None | str | Unset:
             if data is None:
@@ -300,6 +309,7 @@ class TestEmailRuleResultResultsItem:
             outcome=outcome,
             received_at=received_at,
             from_address=from_address,
+            recipient=recipient,
             subject=subject,
             parts=parts,
             missing_facts=missing_facts,

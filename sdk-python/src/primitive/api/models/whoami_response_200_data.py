@@ -36,6 +36,12 @@ class WhoamiResponse200Data:
             request_id (str):
             auth_method (None | str):
             key_id (None | str):
+            email (None | str): Your own sign-in email, when you are signed in as yourself: in the dashboard, or with your
+                own Primitive CLI or app login. Null for API keys, Functions, connected agents, agent signup logins and other
+                apps acting for you.
+            role_name (None | str): Your role as the organization's members list labels it: a template or custom role as
+                "<name> (template)" or "<name> (custom)", otherwise Owner, Admin, Member or Restricted. Null for the same
+                credentials as email.
             grant (None | Unset | WhoamiResponse200DataGrantType0):
             check (WhoamiResponse200DataCheck | Unset):
      """
@@ -48,6 +54,8 @@ class WhoamiResponse200Data:
     request_id: str
     auth_method: None | str
     key_id: None | str
+    email: None | str
+    role_name: None | str
     grant: None | Unset | WhoamiResponse200DataGrantType0 = UNSET
     check: WhoamiResponse200DataCheck | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -83,6 +91,12 @@ class WhoamiResponse200Data:
         key_id: None | str
         key_id = self.key_id
 
+        email: None | str
+        email = self.email
+
+        role_name: None | str
+        role_name = self.role_name
+
         grant: dict[str, Any] | None | Unset
         if isinstance(self.grant, Unset):
             grant = UNSET
@@ -107,6 +121,8 @@ class WhoamiResponse200Data:
             "request_id": request_id,
             "auth_method": auth_method,
             "key_id": key_id,
+            "email": email,
+            "role_name": role_name,
         })
         if grant is not UNSET:
             field_dict["grant"] = grant
@@ -176,6 +192,22 @@ class WhoamiResponse200Data:
         key_id = _parse_key_id(d.pop("key_id"))
 
 
+        def _parse_email(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        email = _parse_email(d.pop("email"))
+
+
+        def _parse_role_name(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        role_name = _parse_role_name(d.pop("role_name"))
+
+
         def _parse_grant(data: object) -> None | Unset | WhoamiResponse200DataGrantType0:
             if data is None:
                 return data
@@ -215,6 +247,8 @@ class WhoamiResponse200Data:
             request_id=request_id,
             auth_method=auth_method,
             key_id=key_id,
+            email=email,
+            role_name=role_name,
             grant=grant,
             check=check,
         )

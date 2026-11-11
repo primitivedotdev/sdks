@@ -11,6 +11,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
+  from ..models.test_endpoint_rules_result_delivery_type_0 import TestEndpointRulesResultDeliveryType0
   from ..models.test_endpoint_rules_result_evaluated import TestEndpointRulesResultEvaluated
 
 
@@ -27,11 +28,15 @@ class TestEndpointRulesResult:
     shared matcher the live delivery paths use.
 
         Attributes:
-            would_deliver (bool): Whether the delivery path would deliver this email to the endpoint.
-            rule (None | str): Name of the failing rule when delivery would be
-                suppressed; null when the message matches and the
-                endpoint is subscribed to the event type.
-            reason (None | str): Human-readable explanation of the failing rule; null when the message matches.
+            would_deliver (bool): Whether this email would be sent to this endpoint by the endpoint's own conditions: it is
+                on, neither it nor the email's route is held, its owner may receive this email, it subscribes to the event, and
+                its rules match. Which endpoint routing sends the email to is decided separately: POST /routes/simulate answers
+                that. A rule grant can still deliver an email whose mailbox the owner does not read, and a Function endpoint is
+                also judged at delivery on its Function's run state and key.
+            rule (None | str): The first check that stops this email, in the order delivery makes them: disabled, held or an
+                acting_owner_* code (see delivery.reasons), then event_types when the endpoint does not subscribe, then the name
+                of the rule that does not match. Null when it would deliver.
+            reason (None | str): Why, in words. Null when it would deliver.
             rules_valid (bool): False when the endpoint's stored rules blob failed
                 validation. Delivery fails OPEN on an invalid blob
                 (delivers as if unfiltered), so false here surfaces a
@@ -46,6 +51,9 @@ class TestEndpointRulesResult:
                 can see WHAT was evaluated (in particular the
                 authenticated From identity versus the raw envelope
                 sender).
+            delivery (None | TestEndpointRulesResultDeliveryType0): The endpoint's own conditions for this email, as
+                delivery judges them, the owner judged on this email's mailbox and time. Null for a pull destination, which
+                nothing pushes to.
      """
 
     would_deliver: bool
@@ -55,6 +63,7 @@ class TestEndpointRulesResult:
     subscribed_to_event: bool
     event_type: str
     evaluated: TestEndpointRulesResultEvaluated
+    delivery: None | TestEndpointRulesResultDeliveryType0
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -62,6 +71,7 @@ class TestEndpointRulesResult:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.test_endpoint_rules_result_delivery_type_0 import TestEndpointRulesResultDeliveryType0 # noqa: PLC0415
         from ..models.test_endpoint_rules_result_evaluated import TestEndpointRulesResultEvaluated # noqa: PLC0415
         would_deliver = self.would_deliver
 
@@ -79,6 +89,12 @@ class TestEndpointRulesResult:
 
         evaluated = self.evaluated.to_dict()
 
+        delivery: dict[str, Any] | None
+        if isinstance(self.delivery, TestEndpointRulesResultDeliveryType0):
+            delivery = self.delivery.to_dict()
+        else:
+            delivery = self.delivery
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -90,6 +106,7 @@ class TestEndpointRulesResult:
             "subscribed_to_event": subscribed_to_event,
             "event_type": event_type,
             "evaluated": evaluated,
+            "delivery": delivery,
         })
 
         return field_dict
@@ -98,6 +115,7 @@ class TestEndpointRulesResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.test_endpoint_rules_result_delivery_type_0 import TestEndpointRulesResultDeliveryType0 # noqa: PLC0415
         from ..models.test_endpoint_rules_result_evaluated import TestEndpointRulesResultEvaluated # noqa: PLC0415
         d = dict(src_dict)
         would_deliver = d.pop("would_deliver")
@@ -129,6 +147,24 @@ class TestEndpointRulesResult:
 
 
 
+        def _parse_delivery(data: object) -> None | TestEndpointRulesResultDeliveryType0:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                delivery_type_0 = TestEndpointRulesResultDeliveryType0.from_dict(data)
+
+
+
+                return delivery_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | TestEndpointRulesResultDeliveryType0, data)
+
+        delivery = _parse_delivery(d.pop("delivery"))
+
+
         test_endpoint_rules_result = cls(
             would_deliver=would_deliver,
             rule=rule,
@@ -137,6 +173,7 @@ class TestEndpointRulesResult:
             subscribed_to_event=subscribed_to_event,
             event_type=event_type,
             evaluated=evaluated,
+            delivery=delivery,
         )
 
 

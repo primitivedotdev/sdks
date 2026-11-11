@@ -4088,9 +4088,49 @@ export type Endpoint = {
      */
     owner_key_id?: string | null;
     /**
-     * Whether the owning key can act now. In endpoint responses it is set only for a caller who may read API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent nothing.
+     * Whether the owning key can act now. In endpoint responses it is set only for a caller who may read API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent nothing. Anyone who may read the endpoint learns that from delivery.reasons, which never names the key.
      */
     owner_key_status?: 'active' | 'suspended' | 'revoked' | null;
+    /**
+     * Why the platform turned this endpoint off, when it names a reason. owner_changed: it was given to a new owner while its URL stayed, and the URL was chosen under the previous owner; turning it on or giving it a new URL starts it again. owner_credential_revoked: the third-party app or agent delegate grant that owned it was revoked; an owner or admin who turns it back on takes it over. Null while it is on and when it was turned off by hand. An access suspension does not set it (a suspension is decided through its own record). Other values may be added.
+     */
+    disabled_reason?: string | null;
+    /**
+     * For a webhook (kind http) in GET /endpoints and GET /endpoints/{id}: whether it is being sent received mail, and why not. Shown to anyone who may read the endpoint; it names a state, never a key. Null when it could not be checked just now. Absent from other kinds of endpoint and from create and update answers.
+     */
+    delivery?: {
+        /**
+         * Whether the webhook is being sent received mail at all now: it is on, it is not held, and its owner can receive mail. Which messages reach it is still decided per message, by routing, rule grants and its own rules.
+         */
+        delivering: boolean;
+        /**
+         * Every reason it is not, in the order delivery checks them; empty when it is. Codes, of which more may be added: disabled: the endpoint is off (disabled_reason on the endpoint says why). held: the endpoint, or the route the email came through, is held pending an owner or admin decision after its creator's access was reduced. acting_owner_revoked, acting_owner_suspended (which covers an expired key) and acting_owner_left: its owner cannot act now. acting_owner_permission: its owner does not read mail. acting_owner_depth: its owner sees headers only. acting_owner_scope: its owner does not read this email's mailbox, or, with no email to judge, reads no received mail at all now. These three name what the owner's access holds, so a caller who may not read API key metadata sees acting_owner_access in their place.
+         */
+        reasons: Array<{
+            code: string;
+            message: string;
+            [key: string]: unknown;
+        }>;
+        /**
+         * Rule-granted mail held for this webhook while its owner cannot act; null when none is. Only for a caller with access to every mailbox (held mail can be an earlier owner's), and absent when it could not be read just now.
+         */
+        held_for_owner?: {
+            /**
+             * Rule-granted emails waiting for this webhook because its owner could not act at their last check.
+             */
+            count: number;
+            /**
+             * When the oldest of them was queued.
+             */
+            oldest_queued_at: string;
+            /**
+             * When the oldest is given up on if its owner still cannot act. Each is checked again periodically, so the count can trail a change of the owner's state.
+             */
+            expires_at: string;
+            [key: string]: unknown;
+        } | null;
+        [key: string]: unknown;
+    } | null;
     /**
      * Which secret signs deliveries to this webhook: its own (read it from GET /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that is not a webhook.
      */
@@ -4212,7 +4252,7 @@ export type UpdateEndpointInput = {
      */
     takeover?: boolean;
     /**
-     * Give this webhook to an API key of the organization. Only a route target can be given to a key; a default endpoint stays the organization's, and takeover is refused with it. null gives a key-owned webhook back to the organization (a caller with access to every mailbox only); it stays a route target.
+     * Give this webhook to an API key of the organization. Only a route target can be given to a key; a default endpoint stays the organization's, and takeover is refused with it. null gives a key-owned webhook back to the organization (a caller with access to every mailbox only); it stays a route target. Giving a webhook the organization does not own to a different key, or a key's webhook back to the organization, turns it off (enabled false, disabled_reason owner_changed) unless the same request sets enabled: its URL was chosen under its previous owner. A key that carries on for the key that owns it through rotation (its successor, at any depth up to 16 rotations) is not a different key: the webhook stays as it was, with the same signing secret. That does not hold for a webhook whose owning key was made from a key a transfer moved or rotated away, or from one that has since been deleted: no successor carries on for it, so giving the webhook to one is a change of owner. Turning it on, or a new URL, starts it again. A webhook that signs with its own secret keeps signing with one: the same one when it stays with the same key, or was the organization's (giving away one the organization owns needs webhook_secret:read, since the key and its holder can then read its secret), and a new one for any other owner's. The response's warnings say when an update turned the webhook off or on.
      */
     owner_key_id?: string | null;
     /**
@@ -4234,6 +4274,36 @@ export type TestResult = {
      * The signature header value sent, answered to a caller who may see it: for a webhook signed with the organization's secret, a caller who may read that secret; for one signed with its own, the person who owns it, calling as themselves.
      */
     signature?: string;
+    /**
+     * Whether the endpoint answered the test with a 2xx status: the request reached it and its handler accepted it. It says nothing about whether real mail is sent to it: see delivery.
+     */
+    reachable: boolean;
+    /**
+     * Whether real email.received events would be sent to this endpoint, judged by the endpoint's own conditions as delivery judges them. Null when that could not be checked just now.
+     */
+    delivery: {
+        /**
+         * The event type checked.
+         */
+        event_type: string;
+        /**
+         * Whether this endpoint's own conditions let the event through: it is on, it is not held, its owner can receive it, and it subscribes to the event type. Which endpoint routing or a rule grant sends a message to is decided separately, per message: POST /routes/simulate answers that, and a rule grant can deliver an email outside its owner's mailboxes. A Function endpoint is also judged at delivery on its Function's run state and key.
+         */
+        would_deliver: boolean;
+        /**
+         * Every reason it would not be sent the event, in the order delivery checks them; empty when it would. Codes, of which more may be added: disabled: the endpoint is off (disabled_reason on the endpoint says why). held: the endpoint, or the route the email came through, is held pending an owner or admin decision after its creator's access was reduced. acting_owner_revoked, acting_owner_suspended (which covers an expired key) and acting_owner_left: its owner cannot act now. acting_owner_permission: its owner does not read mail. acting_owner_depth: its owner sees headers only. acting_owner_scope: its owner does not read this email's mailbox, or, with no email to judge, reads no received mail at all now. These three name what the owner's access holds, so a caller who may not read API key metadata sees acting_owner_access in their place. event_type_not_subscribed: rules.event_types leaves the event out.
+         */
+        reasons: Array<{
+            code: string;
+            message: string;
+            [key: string]: unknown;
+        }>;
+        /**
+         * While repeated failures have paused this webhook (its circuit breaker is open): when webhook events other than mail (interaction, sent mail and credential events) are next attempted. Received mail is attempted regardless, so this does not change would_deliver. Null when nothing is paused, and for a Function endpoint.
+         */
+        events_paused_until: string | null;
+        [key: string]: unknown;
+    } | null;
 };
 
 export type TestEndpointRulesInput = {
@@ -4250,18 +4320,15 @@ export type TestEndpointRulesInput = {
  */
 export type TestEndpointRulesResult = {
     /**
-     * Whether the delivery path would deliver this email to the endpoint.
+     * Whether this email would be sent to this endpoint by the endpoint's own conditions: it is on, neither it nor the email's route is held, its owner may receive this email, it subscribes to the event, and its rules match. Which endpoint routing sends the email to is decided separately: POST /routes/simulate answers that. A rule grant can still deliver an email whose mailbox the owner does not read, and a Function endpoint is also judged at delivery on its Function's run state and key.
      */
     would_deliver: boolean;
     /**
-     * Name of the failing rule when delivery would be
-     * suppressed; null when the message matches and the
-     * endpoint is subscribed to the event type.
-     *
+     * The first check that stops this email, in the order delivery makes them: disabled, held or an acting_owner_* code (see delivery.reasons), then event_types when the endpoint does not subscribe, then the name of the rule that does not match. Null when it would deliver.
      */
     rule: string | null;
     /**
-     * Human-readable explanation of the failing rule; null when the message matches.
+     * Why, in words. Null when it would deliver.
      */
     reason: string | null;
     /**
@@ -4313,6 +4380,32 @@ export type TestEndpointRulesResult = {
          */
         sender_trust_basis: string;
     };
+    /**
+     * The endpoint's own conditions for this email, as delivery judges them, the owner judged on this email's mailbox and time. Null for a pull destination, which nothing pushes to.
+     */
+    delivery: {
+        /**
+         * The event type checked.
+         */
+        event_type: string;
+        /**
+         * Whether this endpoint's own conditions let the event through: it is on, it is not held, its owner can receive it, and it subscribes to the event type. Which endpoint routing or a rule grant sends a message to is decided separately, per message: POST /routes/simulate answers that, and a rule grant can deliver an email outside its owner's mailboxes. A Function endpoint is also judged at delivery on its Function's run state and key.
+         */
+        would_deliver: boolean;
+        /**
+         * Every reason it would not be sent the event, in the order delivery checks them; empty when it would. Codes, of which more may be added: disabled: the endpoint is off (disabled_reason on the endpoint says why). held: the endpoint, or the route the email came through, is held pending an owner or admin decision after its creator's access was reduced. acting_owner_revoked, acting_owner_suspended (which covers an expired key) and acting_owner_left: its owner cannot act now. acting_owner_permission: its owner does not read mail. acting_owner_depth: its owner sees headers only. acting_owner_scope: its owner does not read this email's mailbox, or, with no email to judge, reads no received mail at all now. These three name what the owner's access holds, so a caller who may not read API key metadata sees acting_owner_access in their place. event_type_not_subscribed: rules.event_types leaves the event out.
+         */
+        reasons: Array<{
+            code: string;
+            message: string;
+            [key: string]: unknown;
+        }>;
+        /**
+         * While repeated failures have paused this webhook (its circuit breaker is open): when webhook events other than mail (interaction, sent mail and credential events) are next attempted. Received mail is attempted regardless, so this does not change would_deliver. Null when nothing is paused, and for a Function endpoint.
+         */
+        events_paused_until: string | null;
+        [key: string]: unknown;
+    } | null;
 };
 
 export type Filter = {
@@ -4629,7 +4722,11 @@ export type DeliverySummary = {
      */
     latest_attempt: boolean;
     /**
-     * When the next automatic retry of this delivery is due. Not reported yet: always null.
+     * Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. Null on every attempt of a delivery retried or settled on a schedule of its own, which this does not report: a held one (its release settles it, including the attempts it makes itself), a pull attempt, a rule-granted one, and a sent email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the message, reads false) and has not received the email by another delivery: null while a delivery pass for the email is running (whether another follows is decided when it ends), true when the email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no automatic retry of the email's delivery will try it again, which does not mean nothing else ever will.
+     */
+    retry_scheduled: boolean | null;
+    /**
+     * When the next automatic retry of this delivery is due. Not reported: always null. Whether one is coming is retry_scheduled.
      */
     next_attempt_at: string | null;
 };
@@ -6297,6 +6394,10 @@ export type TestEmailRuleResult = {
         outcome: 'matched' | 'near_miss' | 'no_match' | 'unclassified' | 'skipped' | 'not_found';
         received_at?: string;
         from_address?: string | null;
+        /**
+         * The mailbox this copy of the email was received in, as GET /v1/emails/{id} shows it. Given with received_at, from_address and subject, so absent for not_found.
+         */
+        recipient?: string;
         subject?: string | null;
         /**
          * How each top-level part of the rule decided. Present for matched, near_miss and no_match.
@@ -6788,6 +6889,15 @@ export type DeleteEmailRuleResult = {
     deleted: boolean;
 };
 
+export type EmailRuleWithheldBy = {
+    id: string;
+    name: string;
+    /**
+     * undecided: it had not decided the email, which blocks too. outside_scope_stale: cleared as outside its scope, and its author now reads the email.
+     */
+    reason: 'matched' | 'undecided' | 'outside_scope_stale';
+};
+
 export type ListEmailRuleDecisionsResult = Array<{
     id: string;
     email_id: string;
@@ -6810,6 +6920,14 @@ export type ListEmailRuleDecisionsResult = Array<{
      * Present, as true, on a decision about an email whose content cannot be read (withheld, failed to parse, discarded, or still awaiting sender authentication): matched still says what the rule decided, but how it got there was read from that content, so parts and question_answers are empty and near_miss is false. Discarding an email's content normally removes its decisions. Absent otherwise.
      */
     detail_withheld?: boolean;
+    /**
+     * Set when do-not-share rules kept this match from being shared, so no key or webhook got it through the rule: those you can see, and why.
+     */
+    withheld_by?: Array<EmailRuleWithheldBy>;
+    /**
+     * With withheld_by: how many more kept it back that you cannot see, or that were deleted since. Those rules are not shown; an admin can see them.
+     */
+    withheld_by_hidden?: number;
     created_at: string;
     /**
      * The decided email's sender address, as GET /v1/emails/{id} shows it.
@@ -6871,6 +6989,14 @@ export type ListEmailRuleResultsResult = {
              * Present, as true, on a result for an email whose content cannot be read (withheld, failed to parse or discarded): matched still says what the rule decided, but how it got there was read from that content, so parts and question_answers are empty. Absent otherwise.
              */
             detail_withheld?: boolean;
+            /**
+             * Set when do-not-share rules kept this match from being shared, so no key or webhook got it through the rule: those you can see, and why.
+             */
+            withheld_by?: Array<EmailRuleWithheldBy>;
+            /**
+             * With withheld_by: how many more kept it back that you cannot see, or that were deleted since. Those rules are not shown; an admin can see them.
+             */
+            withheld_by_hidden?: number;
             created_at: string;
         } | null;
         /**
@@ -8196,7 +8322,11 @@ export type GetDeliveryResult = {
      */
     latest_attempt: boolean;
     /**
-     * When the next automatic retry of this delivery is due. Not reported yet: always null.
+     * Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. Null on every attempt of a delivery retried or settled on a schedule of its own, which this does not report: a held one (its release settles it, including the attempts it makes itself), a pull attempt, a rule-granted one, and a sent email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the message, reads false) and has not received the email by another delivery: null while a delivery pass for the email is running (whether another follows is decided when it ends), true when the email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no automatic retry of the email's delivery will try it again, which does not mean nothing else ever will.
+     */
+    retry_scheduled: boolean | null;
+    /**
+     * When the next automatic retry of this delivery is due. Not reported: always null. Whether one is coming is retry_scheduled.
      */
     next_attempt_at: string | null;
     /**
@@ -8217,6 +8347,10 @@ export type GetDeliveryResult = {
          * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.
          */
         response_body: string | null;
+        /**
+         * Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. Null on every attempt of a delivery retried or settled on a schedule of its own, which this does not report: a held one (its release settles it, including the attempts it makes itself), a pull attempt, a rule-granted one, and a sent email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the message, reads false) and has not received the email by another delivery: null while a delivery pass for the email is running (whether another follows is decided when it ends), true when the email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no automatic retry of the email's delivery will try it again, which does not mean nothing else ever will.
+         */
+        retry_scheduled: boolean | null;
     }>;
 };
 
@@ -8676,6 +8810,10 @@ export type CredentialsRevokeCredentialResult = {
         kind: string;
         id: string;
     }>;
+    /**
+     * true when the API key was already revoked, so nothing changed and revoked is 0. Absent otherwise. GET /v1/keys/{id} says when and by whom, to a caller who may read the key.
+     */
+    already_revoked?: boolean;
     [key: string]: unknown;
 };
 
@@ -8910,6 +9048,10 @@ export type CredentialsUpdateKeyResult = {
         description: string;
         [key: string]: unknown;
     }>;
+    /**
+     * Present, as true, when the grant was changed without expected_grant_ref, so the change was not checked against changes made since the key was read. Send grant.ref from GET /v1/keys/{id} as expected_grant_ref to have such a change refused instead (409 conflict, details.reason grant_changed).
+     */
+    grant_unguarded?: boolean;
     [key: string]: unknown;
 };
 
@@ -9033,9 +9175,19 @@ export type CredentialsListKeysResult = {
         name: string | null;
         key_prefix: string;
         grant: {
+            /**
+             * The grant this read shows. Send it as expected_grant_ref on PATCH /v1/keys/{id} so the change is refused (409 conflict, details.reason grant_changed) if the grant has changed since this read.
+             */
+            ref?: string;
             template: string | null;
             permissions: Array<string> | null;
             mail_scope: unknown;
+            /**
+             * The Functions, domains, endpoints or routes the key is limited to, by type; null when it has no such limits. A grant change on a key with limits must drop them on purpose, with grant.resources {} (otherwise 409 conflict, details.reason key_has_resource_limits).
+             */
+            resources?: {
+                [key: string]: Array<string>;
+            } | null;
             [key: string]: unknown;
         };
         agent_address: string | null;
@@ -9045,9 +9197,17 @@ export type CredentialsListKeysResult = {
         expires_at: string | null;
         suspended: boolean;
         /**
-         * Whether the key works now: active; suspended (refused until the suspension is lifted); expired (refused since expires_at); or inactive, for an agent connection key whose connection cannot act (not claimed, revoked, its domain not verified, or its owner no longer a member). A revoked key is not listed. An endpoint's owner_key_status reports an expired key as suspended.
+         * Whether the key works now: active; suspended (refused until the suspension is lifted); expired (refused since expires_at); inactive, for an agent connection key whose connection cannot act (not claimed, revoked, its domain not verified, or its owner no longer a member); or revoked, which it stays for good and which no unrevoked key ever shows. A revoked key is listed only with include_revoked=true, and GET /v1/keys/{id} answers it. An endpoint's owner_key_status reports an expired key as suspended.
          */
-        status?: 'active' | 'suspended' | 'expired' | 'inactive';
+        status?: 'active' | 'suspended' | 'expired' | 'inactive' | 'revoked';
+        /**
+         * When the key was revoked (ISO 8601); null for a key that is not revoked.
+         */
+        revoked_at?: string | null;
+        /**
+         * The user id of the person who revoked the key from their own dashboard session, step-up or Primitive CLI login; null for a key that is not revoked, and for one revoked any other way (by an API key, another app or token, or an automatic process such as secret scanning).
+         */
+        revoked_by?: string | null;
         [key: string]: unknown;
     }>;
     next_cursor: string | null;
@@ -9060,9 +9220,19 @@ export type CredentialsGetKeyResult = {
     name: string | null;
     key_prefix: string;
     grant: {
+        /**
+         * The grant this read shows. Send it as expected_grant_ref on PATCH /v1/keys/{id} so the change is refused (409 conflict, details.reason grant_changed) if the grant has changed since this read.
+         */
+        ref?: string;
         template: string | null;
         permissions: Array<string> | null;
         mail_scope: unknown;
+        /**
+         * The Functions, domains, endpoints or routes the key is limited to, by type; null when it has no such limits. A grant change on a key with limits must drop them on purpose, with grant.resources {} (otherwise 409 conflict, details.reason key_has_resource_limits).
+         */
+        resources?: {
+            [key: string]: Array<string>;
+        } | null;
         [key: string]: unknown;
     };
     agent_address: string | null;
@@ -9072,9 +9242,17 @@ export type CredentialsGetKeyResult = {
     expires_at: string | null;
     suspended: boolean;
     /**
-     * Whether the key works now: active; suspended (refused until the suspension is lifted); expired (refused since expires_at); or inactive, for an agent connection key whose connection cannot act (not claimed, revoked, its domain not verified, or its owner no longer a member). A revoked key is not listed. An endpoint's owner_key_status reports an expired key as suspended.
+     * Whether the key works now: active; suspended (refused until the suspension is lifted); expired (refused since expires_at); inactive, for an agent connection key whose connection cannot act (not claimed, revoked, its domain not verified, or its owner no longer a member); or revoked, which it stays for good and which no unrevoked key ever shows. A revoked key is listed only with include_revoked=true, and GET /v1/keys/{id} answers it. An endpoint's owner_key_status reports an expired key as suspended.
      */
-    status?: 'active' | 'suspended' | 'expired' | 'inactive';
+    status?: 'active' | 'suspended' | 'expired' | 'inactive' | 'revoked';
+    /**
+     * When the key was revoked (ISO 8601); null for a key that is not revoked.
+     */
+    revoked_at?: string | null;
+    /**
+     * The user id of the person who revoked the key from their own dashboard session, step-up or Primitive CLI login; null for a key that is not revoked, and for one revoked any other way (by an API key, another app or token, or an automatic process such as secret scanning).
+     */
+    revoked_by?: string | null;
     [key: string]: unknown;
 };
 
@@ -9835,6 +10013,19 @@ export type TemplateSchedule = {
     recipientsSecret?: string;
 };
 
+export type EndpointUpdateWarning = {
+    code: string;
+    message: string;
+    [key: string]: unknown;
+};
+
+export type UpdatedEndpoint = Endpoint & {
+    /**
+     * When this update turned the webhook off or on without the request setting enabled. turned_off_owner_changed: the webhook was given to a new owner, so it is now off (disabled_reason owner_changed) until it is turned on or given a new URL. turned_on_new_url: it was off because its owner changed, and the new URL turned it back on. Empty when the update did neither. Other codes may be added.
+     */
+    warnings: Array<EndpointUpdateWarning>;
+};
+
 export type EndpointSigningSecretResponse = {
     success: true;
     data: {
@@ -9964,13 +10155,9 @@ export type CliOrgList = {
 };
 
 /**
- * The key of a built-in role. `operator` has every permission `admin`
- * has except managing members, changing roles, sending invitations and
- * billing. By default the CLI may be used by `owner`, `admin` and
- * `operator`.
- *
+ * The key of a built-in role. Every other role, including the `operator` template, is a template or custom role with a key of its own. A member's `role` (and the `stored_role` a role assignment returns) can also be `restricted`, which is not a built-in role and cannot be assigned: it stands for a template or custom role that does not fully include `member`, or for no role at all.
  */
-export type BuiltinRoleKey = 'owner' | 'admin' | 'operator' | 'member';
+export type BuiltinRoleKey = 'owner' | 'admin' | 'member';
 
 export type StartCliLoginData = {
     body?: StartCliLoginInput;
@@ -12458,7 +12645,7 @@ export type UpdateEndpointResponses = {
      * Updated endpoint
      */
     200: SuccessEnvelope & {
-        data?: Endpoint;
+        data?: UpdatedEndpoint;
     };
 };
 
@@ -12684,6 +12871,10 @@ export type TestEndpointRulesErrors = {
      *
      */
     404: ErrorResponse;
+    /**
+     * Primitive is temporarily unable to process the request
+     */
+    503: ErrorResponse;
 };
 
 export type TestEndpointRulesError = TestEndpointRulesErrors[keyof TestEndpointRulesErrors];
@@ -17509,6 +17700,14 @@ export type WhoamiResponses = {
             request_id: string;
             auth_method: string | null;
             key_id: string | null;
+            /**
+             * Your own sign-in email, when you are signed in as yourself: in the dashboard, or with your own Primitive CLI or app login. Null for API keys, Functions, connected agents, agent signup logins and other apps acting for you.
+             */
+            email: string | null;
+            /**
+             * Your role as the organization's members list labels it: a template or custom role as "<name> (template)" or "<name> (custom)", otherwise Owner, Admin, Member or Restricted. Null for the same credentials as email.
+             */
+            role_name: string | null;
             grant?: {
                 [key: string]: unknown;
             } | null;
@@ -24702,6 +24901,10 @@ export type ListKeysData = {
          * cursor (optional filter).
          */
         cursor?: string;
+        /**
+         * true to list revoked keys as well, newest first among the rest; false (the default) lists only keys that are not revoked. The cursor does not carry it: send it with every page.
+         */
+        include_revoked?: 'true' | 'false';
     };
     url: '/keys';
 };

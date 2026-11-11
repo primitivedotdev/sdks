@@ -9,6 +9,7 @@ from ...types import Response, UNSET
 from ... import errors
 
 from ...models.error_response import ErrorResponse
+from ...models.list_keys_include_revoked import ListKeysIncludeRevoked
 from ...models.list_keys_response_200 import ListKeysResponse200
 from ...types import UNSET, Unset
 from typing import cast
@@ -18,6 +19,7 @@ from typing import cast
 def _get_kwargs(
     *,
     cursor: str | Unset = UNSET,
+    include_revoked: ListKeysIncludeRevoked | Unset = UNSET,
 
 ) -> dict[str, Any]:
     
@@ -27,6 +29,12 @@ def _get_kwargs(
     params: dict[str, Any] = {}
 
     params["cursor"] = cursor
+
+    json_include_revoked: str | Unset = UNSET
+    if not isinstance(include_revoked, Unset):
+        json_include_revoked = include_revoked.value
+
+    params["include_revoked"] = json_include_revoked
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -105,22 +113,25 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     cursor: str | Unset = UNSET,
+    include_revoked: ListKeysIncludeRevoked | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListKeysResponse200]:
     """ List API keys
 
      Key metadata, never a secret: name, prefix, grant, creator, last use, expiry, suspension and whether
-    each key works now (status). A grant's mail_scope.depth is raw only when the key holds mail.raw:read
-    and its scope lists an address or a domain, otherwise content. The person needs access to the whole
-    organization's mail. Needs the organization's credential features to be enabled; while they are not,
-    this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to
-    turn them on.
+    each key works now (status). Revoked keys are left out unless include_revoked is true, which lists
+    them too with status revoked, revoked_at and revoked_by, under the same access rules as keys that
+    work. A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an
+    address or a domain, otherwise content. The person needs access to the whole organization's mail.
+    Needs the organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.
 
     Args:
         cursor (str | Unset):
+        include_revoked (ListKeysIncludeRevoked | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -133,6 +144,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         cursor=cursor,
+include_revoked=include_revoked,
 
     )
 
@@ -146,22 +158,25 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     cursor: str | Unset = UNSET,
+    include_revoked: ListKeysIncludeRevoked | Unset = UNSET,
 
 ) -> ErrorResponse | ListKeysResponse200 | None:
     """ List API keys
 
      Key metadata, never a secret: name, prefix, grant, creator, last use, expiry, suspension and whether
-    each key works now (status). A grant's mail_scope.depth is raw only when the key holds mail.raw:read
-    and its scope lists an address or a domain, otherwise content. The person needs access to the whole
-    organization's mail. Needs the organization's credential features to be enabled; while they are not,
-    this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to
-    turn them on.
+    each key works now (status). Revoked keys are left out unless include_revoked is true, which lists
+    them too with status revoked, revoked_at and revoked_by, under the same access rules as keys that
+    work. A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an
+    address or a domain, otherwise content. The person needs access to the whole organization's mail.
+    Needs the organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.
 
     Args:
         cursor (str | Unset):
+        include_revoked (ListKeysIncludeRevoked | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -175,6 +190,7 @@ def sync(
     return sync_detailed(
         client=client,
 cursor=cursor,
+include_revoked=include_revoked,
 
     ).parsed
 
@@ -182,22 +198,25 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     cursor: str | Unset = UNSET,
+    include_revoked: ListKeysIncludeRevoked | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListKeysResponse200]:
     """ List API keys
 
      Key metadata, never a secret: name, prefix, grant, creator, last use, expiry, suspension and whether
-    each key works now (status). A grant's mail_scope.depth is raw only when the key holds mail.raw:read
-    and its scope lists an address or a domain, otherwise content. The person needs access to the whole
-    organization's mail. Needs the organization's credential features to be enabled; while they are not,
-    this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to
-    turn them on.
+    each key works now (status). Revoked keys are left out unless include_revoked is true, which lists
+    them too with status revoked, revoked_at and revoked_by, under the same access rules as keys that
+    work. A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an
+    address or a domain, otherwise content. The person needs access to the whole organization's mail.
+    Needs the organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.
 
     Args:
         cursor (str | Unset):
+        include_revoked (ListKeysIncludeRevoked | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -210,6 +229,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         cursor=cursor,
+include_revoked=include_revoked,
 
     )
 
@@ -223,22 +243,25 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     cursor: str | Unset = UNSET,
+    include_revoked: ListKeysIncludeRevoked | Unset = UNSET,
 
 ) -> ErrorResponse | ListKeysResponse200 | None:
     """ List API keys
 
      Key metadata, never a secret: name, prefix, grant, creator, last use, expiry, suspension and whether
-    each key works now (status). A grant's mail_scope.depth is raw only when the key holds mail.raw:read
-    and its scope lists an address or a domain, otherwise content. The person needs access to the whole
-    organization's mail. Needs the organization's credential features to be enabled; while they are not,
-    this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to
-    turn them on.
+    each key works now (status). Revoked keys are left out unless include_revoked is true, which lists
+    them too with status revoked, revoked_at and revoked_by, under the same access rules as keys that
+    work. A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an
+    address or a domain, otherwise content. The person needs access to the whole organization's mail.
+    Needs the organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.
 
     Args:
         cursor (str | Unset):
+        include_revoked (ListKeysIncludeRevoked | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -252,5 +275,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 cursor=cursor,
+include_revoked=include_revoked,
 
     )).parsed

@@ -260,6 +260,7 @@ from .credentials_get_key_builder_result_presets_item import CredentialsGetKeyBu
 from .credentials_get_key_builder_result_presets_item_mail_reach import CredentialsGetKeyBuilderResultPresetsItemMailReach
 from .credentials_get_key_result import CredentialsGetKeyResult
 from .credentials_get_key_result_grant import CredentialsGetKeyResultGrant
+from .credentials_get_key_result_grant_resources_type_0 import CredentialsGetKeyResultGrantResourcesType0
 from .credentials_get_key_result_kind import CredentialsGetKeyResultKind
 from .credentials_get_key_result_status import CredentialsGetKeyResultStatus
 from .credentials_get_key_suggestion_result import CredentialsGetKeySuggestionResult
@@ -295,6 +296,7 @@ from .credentials_list_credentials_result_items_item_kind import CredentialsList
 from .credentials_list_keys_result import CredentialsListKeysResult
 from .credentials_list_keys_result_items_item import CredentialsListKeysResultItemsItem
 from .credentials_list_keys_result_items_item_grant import CredentialsListKeysResultItemsItemGrant
+from .credentials_list_keys_result_items_item_grant_resources_type_0 import CredentialsListKeysResultItemsItemGrantResourcesType0
 from .credentials_list_keys_result_items_item_kind import CredentialsListKeysResultItemsItemKind
 from .credentials_list_keys_result_items_item_status import CredentialsListKeysResultItemsItemStatus
 from .credentials_revoke_all_credentials_input import CredentialsRevokeAllCredentialsInput
@@ -489,6 +491,8 @@ from .email_rule_with_version import EmailRuleWithVersion
 from .email_rule_with_version_evaluation_scope import EmailRuleWithVersionEvaluationScope
 from .email_rule_with_version_kind import EmailRuleWithVersionKind
 from .email_rule_with_version_state import EmailRuleWithVersionState
+from .email_rule_withheld_by import EmailRuleWithheldBy
+from .email_rule_withheld_by_reason import EmailRuleWithheldByReason
 from .email_rule_written import EmailRuleWritten
 from .email_rule_written_evaluation_scope import EmailRuleWrittenEvaluationScope
 from .email_rule_written_expectations_check import EmailRuleWrittenExpectationsCheck
@@ -527,6 +531,9 @@ from .end_break_glass_result import EndBreakGlassResult
 from .end_email_rule_share_response_200 import EndEmailRuleShareResponse200
 from .end_email_rule_share_result import EndEmailRuleShareResult
 from .endpoint import Endpoint
+from .endpoint_delivery_type_0 import EndpointDeliveryType0
+from .endpoint_delivery_type_0_held_for_owner_type_0 import EndpointDeliveryType0HeldForOwnerType0
+from .endpoint_delivery_type_0_reasons_item import EndpointDeliveryType0ReasonsItem
 from .endpoint_kind import EndpointKind
 from .endpoint_owner_key_status_type_1 import EndpointOwnerKeyStatusType1
 from .endpoint_owner_key_status_type_2_type_1 import EndpointOwnerKeyStatusType2Type1
@@ -539,6 +546,7 @@ from .endpoint_signed_with import EndpointSignedWith
 from .endpoint_signing_secret_response import EndpointSigningSecretResponse
 from .endpoint_signing_secret_response_data import EndpointSigningSecretResponseData
 from .endpoint_signing_secret_response_meta import EndpointSigningSecretResponseMeta
+from .endpoint_update_warning import EndpointUpdateWarning
 from .error_response import ErrorResponse
 from .error_response_error import ErrorResponseError
 from .error_response_error_code import ErrorResponseErrorCode
@@ -935,6 +943,7 @@ from .list_interactions_response_200 import ListInteractionsResponse200
 from .list_interactions_result import ListInteractionsResult
 from .list_interactions_result_items_item import ListInteractionsResultItemsItem
 from .list_interactions_state import ListInteractionsState
+from .list_keys_include_revoked import ListKeysIncludeRevoked
 from .list_keys_response_200 import ListKeysResponse200
 from .list_mail_routing_response_200 import ListMailRoutingResponse200
 from .list_mail_topic_edits_response_200 import ListMailTopicEditsResponse200
@@ -1591,11 +1600,15 @@ from .test_endpoint_response_200 import TestEndpointResponse200
 from .test_endpoint_rules_input import TestEndpointRulesInput
 from .test_endpoint_rules_response_200 import TestEndpointRulesResponse200
 from .test_endpoint_rules_result import TestEndpointRulesResult
+from .test_endpoint_rules_result_delivery_type_0 import TestEndpointRulesResultDeliveryType0
+from .test_endpoint_rules_result_delivery_type_0_reasons_item import TestEndpointRulesResultDeliveryType0ReasonsItem
 from .test_endpoint_rules_result_evaluated import TestEndpointRulesResultEvaluated
 from .test_function_body import TestFunctionBody
 from .test_function_response_200 import TestFunctionResponse200
 from .test_invocation_result import TestInvocationResult
 from .test_result import TestResult
+from .test_result_delivery_type_0 import TestResultDeliveryType0
+from .test_result_delivery_type_0_reasons_item import TestResultDeliveryType0ReasonsItem
 from .thread import Thread
 from .thread_message import ThreadMessage
 from .thread_message_copies_item import ThreadMessageCopiesItem
@@ -1692,6 +1705,7 @@ from .update_wake_schedule_input_args import UpdateWakeScheduleInputArgs
 from .update_wake_schedule_response_200 import UpdateWakeScheduleResponse200
 from .updated_domain import UpdatedDomain
 from .updated_domain_dns_health import UpdatedDomainDnsHealth
+from .updated_endpoint import UpdatedEndpoint
 from .verified_domain import VerifiedDomain
 from .verified_domain_dns_health import VerifiedDomainDnsHealth
 from .verify_agent_claim_input import VerifyAgentClaimInput
@@ -1979,6 +1993,7 @@ __all__ = (
     "CredentialsGetKeyBuilderResultPresetsItemMailReach",
     "CredentialsGetKeyResult",
     "CredentialsGetKeyResultGrant",
+    "CredentialsGetKeyResultGrantResourcesType0",
     "CredentialsGetKeyResultKind",
     "CredentialsGetKeyResultStatus",
     "CredentialsGetKeySuggestionResult",
@@ -2014,6 +2029,7 @@ __all__ = (
     "CredentialsListKeysResult",
     "CredentialsListKeysResultItemsItem",
     "CredentialsListKeysResultItemsItemGrant",
+    "CredentialsListKeysResultItemsItemGrantResourcesType0",
     "CredentialsListKeysResultItemsItemKind",
     "CredentialsListKeysResultItemsItemStatus",
     "CredentialsRevokeAllCredentialsInput",
@@ -2204,6 +2220,8 @@ __all__ = (
     "EmailRuleTreeWhen",
     "EmailRuleVersion",
     "EmailRuleVersionSql",
+    "EmailRuleWithheldBy",
+    "EmailRuleWithheldByReason",
     "EmailRuleWithVersion",
     "EmailRuleWithVersionEvaluationScope",
     "EmailRuleWithVersionKind",
@@ -2246,6 +2264,9 @@ __all__ = (
     "EndEmailRuleShareResponse200",
     "EndEmailRuleShareResult",
     "Endpoint",
+    "EndpointDeliveryType0",
+    "EndpointDeliveryType0HeldForOwnerType0",
+    "EndpointDeliveryType0ReasonsItem",
     "EndpointKind",
     "EndpointOwnerKeyStatusType1",
     "EndpointOwnerKeyStatusType2Type1",
@@ -2258,6 +2279,7 @@ __all__ = (
     "EndpointSigningSecretResponse",
     "EndpointSigningSecretResponseData",
     "EndpointSigningSecretResponseMeta",
+    "EndpointUpdateWarning",
     "ErrorResponse",
     "ErrorResponseError",
     "ErrorResponseErrorCode",
@@ -2654,6 +2676,7 @@ __all__ = (
     "ListInteractionsResult",
     "ListInteractionsResultItemsItem",
     "ListInteractionsState",
+    "ListKeysIncludeRevoked",
     "ListKeysResponse200",
     "ListMailboxAccessResponse200",
     "ListMailboxAccessResult",
@@ -3310,11 +3333,15 @@ __all__ = (
     "TestEndpointRulesInput",
     "TestEndpointRulesResponse200",
     "TestEndpointRulesResult",
+    "TestEndpointRulesResultDeliveryType0",
+    "TestEndpointRulesResultDeliveryType0ReasonsItem",
     "TestEndpointRulesResultEvaluated",
     "TestFunctionBody",
     "TestFunctionResponse200",
     "TestInvocationResult",
     "TestResult",
+    "TestResultDeliveryType0",
+    "TestResultDeliveryType0ReasonsItem",
     "Thread",
     "ThreadMessage",
     "ThreadMessageCopiesItem",
@@ -3352,6 +3379,7 @@ __all__ = (
     "UpdateDefaultNetworkMemberResponse200DataOwnershipKind",
     "UpdateDefaultNetworkMemberResponse200DataOwnerType0",
     "UpdateDefaultNetworkMemberResponse200DataPresenceType0",
+    "UpdatedEndpoint",
     "UpdateDomainInput",
     "UpdateDomainResponse200",
     "UpdateEmailRuleRequest",

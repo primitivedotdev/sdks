@@ -118,7 +118,10 @@ def sync_detailed(
     """ Get current caller identity
 
      Current authenticated identity. member_address is null for machine credentials or an unavailable
-    member address.
+    member address. email (your own sign-in email) and role_name (your role as the members list labels
+    it) are set only when you are signed in as yourself, in the dashboard or with your own Primitive CLI
+    or app login, and are null for API keys, Functions, connected agents, agent signup logins and other
+    apps acting for you.
 
     Args:
         include (str | Unset):
@@ -158,7 +161,10 @@ def sync(
     """ Get current caller identity
 
      Current authenticated identity. member_address is null for machine credentials or an unavailable
-    member address.
+    member address. email (your own sign-in email) and role_name (your role as the members list labels
+    it) are set only when you are signed in as yourself, in the dashboard or with your own Primitive CLI
+    or app login, and are null for API keys, Functions, connected agents, agent signup logins and other
+    apps acting for you.
 
     Args:
         include (str | Unset):
@@ -193,7 +199,10 @@ async def asyncio_detailed(
     """ Get current caller identity
 
      Current authenticated identity. member_address is null for machine credentials or an unavailable
-    member address.
+    member address. email (your own sign-in email) and role_name (your role as the members list labels
+    it) are set only when you are signed in as yourself, in the dashboard or with your own Primitive CLI
+    or app login, and are null for API keys, Functions, connected agents, agent signup logins and other
+    apps acting for you.
 
     Args:
         include (str | Unset):
@@ -233,7 +242,10 @@ async def asyncio(
     """ Get current caller identity
 
      Current authenticated identity. member_address is null for machine credentials or an unavailable
-    member address.
+    member address. email (your own sign-in email) and role_name (your role as the members list labels
+    it) are set only when you are signed in as yourself, in the dashboard or with your own Primitive CLI
+    or app login, and are null for API keys, Functions, connected agents, agent signup logins and other
+    apps acting for you.
 
     Args:
         include (str | Unset):

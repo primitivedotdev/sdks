@@ -101,7 +101,9 @@ def sync_detailed(
 ) -> Response[ErrorResponse | GetKeyResponse200]:
     """ Get an API key
 
-     One key's metadata, never its secret, with whether it works now (status). Its grant's
+     One key's metadata, never its secret, with whether it works now (status). A revoked key whose record
+    is kept is answered too, with status revoked, revoked_at and revoked_by, under the same access rules
+    as a key that works: one the caller may not read is 404, revoked or not. Its grant's
     mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a
     domain, otherwise content. The person needs access to the whole organization's mail. Needs the
     organization's credential features to be enabled; while they are not, this answers 404
@@ -141,7 +143,9 @@ def sync(
 ) -> ErrorResponse | GetKeyResponse200 | None:
     """ Get an API key
 
-     One key's metadata, never its secret, with whether it works now (status). Its grant's
+     One key's metadata, never its secret, with whether it works now (status). A revoked key whose record
+    is kept is answered too, with status revoked, revoked_at and revoked_by, under the same access rules
+    as a key that works: one the caller may not read is 404, revoked or not. Its grant's
     mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a
     domain, otherwise content. The person needs access to the whole organization's mail. Needs the
     organization's credential features to be enabled; while they are not, this answers 404
@@ -176,7 +180,9 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | GetKeyResponse200]:
     """ Get an API key
 
-     One key's metadata, never its secret, with whether it works now (status). Its grant's
+     One key's metadata, never its secret, with whether it works now (status). A revoked key whose record
+    is kept is answered too, with status revoked, revoked_at and revoked_by, under the same access rules
+    as a key that works: one the caller may not read is 404, revoked or not. Its grant's
     mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a
     domain, otherwise content. The person needs access to the whole organization's mail. Needs the
     organization's credential features to be enabled; while they are not, this answers 404
@@ -216,7 +222,9 @@ async def asyncio(
 ) -> ErrorResponse | GetKeyResponse200 | None:
     """ Get an API key
 
-     One key's metadata, never its secret, with whether it works now (status). Its grant's
+     One key's metadata, never its secret, with whether it works now (status). A revoked key whose record
+    is kept is answered too, with status revoked, revoked_at and revoked_by, under the same access rules
+    as a key that works: one the caller may not read is 404, revoked or not. Its grant's
     mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a
     domain, otherwise content. The person needs access to the whole organization's mail. Needs the
     organization's credential features to be enabled; while they are not, this answers 404

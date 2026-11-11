@@ -12,6 +12,8 @@ from typing import cast
 from uuid import UUID
 import datetime
 
+if TYPE_CHECKING:
+  from ..models.email_rule_withheld_by import EmailRuleWithheldBy
 
 
 
@@ -40,6 +42,10 @@ class ListEmailRuleDecisionsResultItem:
                 (withheld, failed to parse, discarded, or still awaiting sender authentication): matched still says what the
                 rule decided, but how it got there was read from that content, so parts and question_answers are empty and
                 near_miss is false. Discarding an email's content normally removes its decisions. Absent otherwise.
+            withheld_by (list[EmailRuleWithheldBy] | Unset): Set when do-not-share rules kept this match from being shared,
+                so no key or webhook got it through the rule: those you can see, and why.
+            withheld_by_hidden (int | Unset): With withheld_by: how many more kept it back that you cannot see, or that were
+                deleted since. Those rules are not shown; an admin can see them.
             from_address (None | str | Unset): The decided email's sender address, as GET /v1/emails/{id} shows it.
             subject (None | str | Unset): The decided email's subject, as GET /v1/emails/{id} shows it.
             received_at (datetime.datetime | None | Unset): When the decided email arrived. Null, with the other two, when
@@ -56,6 +62,8 @@ class ListEmailRuleDecisionsResultItem:
     question_answers: list[Any]
     created_at: datetime.datetime
     detail_withheld: bool | Unset = UNSET
+    withheld_by: list[EmailRuleWithheldBy] | Unset = UNSET
+    withheld_by_hidden: int | Unset = UNSET
     from_address: None | str | Unset = UNSET
     subject: None | str | Unset = UNSET
     received_at: datetime.datetime | None | Unset = UNSET
@@ -66,6 +74,7 @@ class ListEmailRuleDecisionsResultItem:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_rule_withheld_by import EmailRuleWithheldBy # noqa: PLC0415
         id = str(self.id)
 
         email_id = str(self.email_id)
@@ -89,6 +98,17 @@ class ListEmailRuleDecisionsResultItem:
         created_at = self.created_at.isoformat()
 
         detail_withheld = self.detail_withheld
+
+        withheld_by: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.withheld_by, Unset):
+            withheld_by = []
+            for withheld_by_item_data in self.withheld_by:
+                withheld_by_item = withheld_by_item_data.to_dict()
+                withheld_by.append(withheld_by_item)
+
+
+
+        withheld_by_hidden = self.withheld_by_hidden
 
         from_address: None | str | Unset
         if isinstance(self.from_address, Unset):
@@ -126,6 +146,10 @@ class ListEmailRuleDecisionsResultItem:
         })
         if detail_withheld is not UNSET:
             field_dict["detail_withheld"] = detail_withheld
+        if withheld_by is not UNSET:
+            field_dict["withheld_by"] = withheld_by
+        if withheld_by_hidden is not UNSET:
+            field_dict["withheld_by_hidden"] = withheld_by_hidden
         if from_address is not UNSET:
             field_dict["from_address"] = from_address
         if subject is not UNSET:
@@ -139,6 +163,7 @@ class ListEmailRuleDecisionsResultItem:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_rule_withheld_by import EmailRuleWithheldBy # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -173,6 +198,20 @@ class ListEmailRuleDecisionsResultItem:
 
 
         detail_withheld = d.pop("detail_withheld", UNSET)
+
+        _withheld_by = d.pop("withheld_by", UNSET)
+        withheld_by: list[EmailRuleWithheldBy] | Unset = UNSET
+        if _withheld_by is not UNSET:
+            withheld_by = []
+            for withheld_by_item_data in _withheld_by:
+                withheld_by_item = EmailRuleWithheldBy.from_dict(withheld_by_item_data)
+
+
+
+                withheld_by.append(withheld_by_item)
+
+
+        withheld_by_hidden = d.pop("withheld_by_hidden", UNSET)
 
         def _parse_from_address(data: object) -> None | str | Unset:
             if data is None:
@@ -225,6 +264,8 @@ class ListEmailRuleDecisionsResultItem:
             question_answers=question_answers,
             created_at=created_at,
             detail_withheld=detail_withheld,
+            withheld_by=withheld_by,
+            withheld_by_hidden=withheld_by_hidden,
             from_address=from_address,
             subject=subject,
             received_at=received_at,

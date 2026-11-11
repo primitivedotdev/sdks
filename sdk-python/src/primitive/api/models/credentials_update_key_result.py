@@ -30,12 +30,16 @@ class CredentialsUpdateKeyResult:
             changed (list[str]):
             warnings (list[CredentialsUpdateKeyResultWarningsItem]):
             address_warnings (list[CredentialsUpdateKeyResultAddressWarningsItem] | Unset):
+            grant_unguarded (bool | Unset): Present, as true, when the grant was changed without expected_grant_ref, so the
+                change was not checked against changes made since the key was read. Send grant.ref from GET /v1/keys/{id} as
+                expected_grant_ref to have such a change refused instead (409 conflict, details.reason grant_changed).
      """
 
     id: str
     changed: list[str]
     warnings: list[CredentialsUpdateKeyResultWarningsItem]
     address_warnings: list[CredentialsUpdateKeyResultAddressWarningsItem] | Unset = UNSET
+    grant_unguarded: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -67,6 +71,8 @@ class CredentialsUpdateKeyResult:
 
 
 
+        grant_unguarded = self.grant_unguarded
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -77,6 +83,8 @@ class CredentialsUpdateKeyResult:
         })
         if address_warnings is not UNSET:
             field_dict["address_warnings"] = address_warnings
+        if grant_unguarded is not UNSET:
+            field_dict["grant_unguarded"] = grant_unguarded
 
         return field_dict
 
@@ -114,11 +122,14 @@ class CredentialsUpdateKeyResult:
                 address_warnings.append(address_warnings_item)
 
 
+        grant_unguarded = d.pop("grant_unguarded", UNSET)
+
         credentials_update_key_result = cls(
             id=id,
             changed=changed,
             warnings=warnings,
             address_warnings=address_warnings,
+            grant_unguarded=grant_unguarded,
         )
 
 

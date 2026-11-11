@@ -132,6 +132,16 @@ def sync_detailed(
     deletion disconnects the destination; creating a new destination does not backfill historical
     events.
 
+    Giving a webhook the organization does not own to a different key (owner_key_id), or a key's webhook
+    back to the organization (owner_key_id null), turns it off unless the request also sets enabled: its
+    URL was chosen under its previous owner. It then reads enabled false with disabled_reason
+    owner_changed, and turning it on or giving it a new URL starts it again. A key that carries on for
+    the owning key through rotation (its successor, at any depth up to 16 rotations) is not a different
+    key: the webhook stays as it was, with the same signing secret. That does not hold when the owning
+    key was made from a key a transfer moved or rotated away, or from one that has since been deleted:
+    no successor carries on for it. The answer's warnings name each such change
+    (turned_off_owner_changed, turned_on_new_url), so a client can say so.
+
     Args:
         id (UUID):
         primitive_step_up (str | Unset):
@@ -178,6 +188,16 @@ def sync(
     deletion disconnects the destination; creating a new destination does not backfill historical
     events.
 
+    Giving a webhook the organization does not own to a different key (owner_key_id), or a key's webhook
+    back to the organization (owner_key_id null), turns it off unless the request also sets enabled: its
+    URL was chosen under its previous owner. It then reads enabled false with disabled_reason
+    owner_changed, and turning it on or giving it a new URL starts it again. A key that carries on for
+    the owning key through rotation (its successor, at any depth up to 16 rotations) is not a different
+    key: the webhook stays as it was, with the same signing secret. That does not hold when the owning
+    key was made from a key a transfer moved or rotated away, or from one that has since been deleted:
+    no successor carries on for it. The answer's warnings name each such change
+    (turned_off_owner_changed, turned_on_new_url), so a client can say so.
+
     Args:
         id (UUID):
         primitive_step_up (str | Unset):
@@ -218,6 +238,16 @@ async def asyncio_detailed(
     Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint
     deletion disconnects the destination; creating a new destination does not backfill historical
     events.
+
+    Giving a webhook the organization does not own to a different key (owner_key_id), or a key's webhook
+    back to the organization (owner_key_id null), turns it off unless the request also sets enabled: its
+    URL was chosen under its previous owner. It then reads enabled false with disabled_reason
+    owner_changed, and turning it on or giving it a new URL starts it again. A key that carries on for
+    the owning key through rotation (its successor, at any depth up to 16 rotations) is not a different
+    key: the webhook stays as it was, with the same signing secret. That does not hold when the owning
+    key was made from a key a transfer moved or rotated away, or from one that has since been deleted:
+    no successor carries on for it. The answer's warnings name each such change
+    (turned_off_owner_changed, turned_on_new_url), so a client can say so.
 
     Args:
         id (UUID):
@@ -264,6 +294,16 @@ async def asyncio(
     Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint
     deletion disconnects the destination; creating a new destination does not backfill historical
     events.
+
+    Giving a webhook the organization does not own to a different key (owner_key_id), or a key's webhook
+    back to the organization (owner_key_id null), turns it off unless the request also sets enabled: its
+    URL was chosen under its previous owner. It then reads enabled false with disabled_reason
+    owner_changed, and turning it on or giving it a new URL starts it again. A key that carries on for
+    the owning key through rotation (its successor, at any depth up to 16 rotations) is not a different
+    key: the webhook stays as it was, with the same signing secret. That does not hold when the owning
+    key was made from a key a transfer moved or rotated away, or from one that has since been deleted:
+    no successor carries on for it. The answer's warnings name each such change
+    (turned_off_owner_changed, turned_on_new_url), so a client can say so.
 
     Args:
         id (UUID):

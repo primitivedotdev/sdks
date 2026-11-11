@@ -39,9 +39,15 @@ class CredentialsListKeysResultItemsItem:
             expires_at (None | str):
             suspended (bool):
             status (CredentialsListKeysResultItemsItemStatus | Unset): Whether the key works now: active; suspended (refused
-                until the suspension is lifted); expired (refused since expires_at); or inactive, for an agent connection key
-                whose connection cannot act (not claimed, revoked, its domain not verified, or its owner no longer a member). A
-                revoked key is not listed. An endpoint's owner_key_status reports an expired key as suspended.
+                until the suspension is lifted); expired (refused since expires_at); inactive, for an agent connection key whose
+                connection cannot act (not claimed, revoked, its domain not verified, or its owner no longer a member); or
+                revoked, which it stays for good and which no unrevoked key ever shows. A revoked key is listed only with
+                include_revoked=true, and GET /v1/keys/{id} answers it. An endpoint's owner_key_status reports an expired key as
+                suspended.
+            revoked_at (None | str | Unset): When the key was revoked (ISO 8601); null for a key that is not revoked.
+            revoked_by (None | str | Unset): The user id of the person who revoked the key from their own dashboard session,
+                step-up or Primitive CLI login; null for a key that is not revoked, and for one revoked any other way (by an API
+                key, another app or token, or an automatic process such as secret scanning).
      """
 
     id: str
@@ -56,6 +62,8 @@ class CredentialsListKeysResultItemsItem:
     expires_at: None | str
     suspended: bool
     status: CredentialsListKeysResultItemsItemStatus | Unset = UNSET
+    revoked_at: None | str | Unset = UNSET
+    revoked_by: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -97,6 +105,18 @@ class CredentialsListKeysResultItemsItem:
             status = self.status.value
 
 
+        revoked_at: None | str | Unset
+        if isinstance(self.revoked_at, Unset):
+            revoked_at = UNSET
+        else:
+            revoked_at = self.revoked_at
+
+        revoked_by: None | str | Unset
+        if isinstance(self.revoked_by, Unset):
+            revoked_by = UNSET
+        else:
+            revoked_by = self.revoked_by
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -115,6 +135,10 @@ class CredentialsListKeysResultItemsItem:
         })
         if status is not UNSET:
             field_dict["status"] = status
+        if revoked_at is not UNSET:
+            field_dict["revoked_at"] = revoked_at
+        if revoked_by is not UNSET:
+            field_dict["revoked_by"] = revoked_by
 
         return field_dict
 
@@ -198,6 +222,26 @@ class CredentialsListKeysResultItemsItem:
 
 
 
+        def _parse_revoked_at(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        revoked_at = _parse_revoked_at(d.pop("revoked_at", UNSET))
+
+
+        def _parse_revoked_by(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        revoked_by = _parse_revoked_by(d.pop("revoked_by", UNSET))
+
+
         credentials_list_keys_result_items_item = cls(
             id=id,
             kind=kind,
@@ -211,6 +255,8 @@ class CredentialsListKeysResultItemsItem:
             expires_at=expires_at,
             suspended=suspended,
             status=status,
+            revoked_at=revoked_at,
+            revoked_by=revoked_by,
         )
 
 
