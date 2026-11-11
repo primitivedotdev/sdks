@@ -1485,9 +1485,10 @@ describe("detached synthetic listener processes", () => {
         "could not be confirmed because its records could not be read. Its supervisor is still running",
       );
       expect(existsSync(join(stateFile(), "..", "stop.json"))).toBe(false);
-      // The worker reported ready, so no failure is saved to outlive it.
+      // The reason is saved even after a ready report, since ready can mean
+      // reconnecting or the worker can exit after it ...
       expect(existsSync(join(stateFile(), "..", "start-failure.json"))).toBe(
-        false,
+        true,
       );
       await vi.waitFor(
         () =>
@@ -1496,6 +1497,14 @@ describe("detached synthetic listener processes", () => {
             healthy: true,
             supervisorPid,
           }),
+        { timeout: 5000 },
+      );
+      // ... and the supervisor clears it while its worker is receiving.
+      await vi.waitFor(
+        () =>
+          expect(
+            existsSync(join(stateFile(), "..", "start-failure.json")),
+          ).toBe(false),
         { timeout: 5000 },
       );
       expect((await stopBackgroundListen(target)).phase).toBe("stopped");
@@ -1821,6 +1830,43 @@ describe("detached synthetic listener processes", () => {
       expect(current.detail).toContain(
         "failed: the receiver was not ready before the startup timeout.",
       );
+    } finally {
+      await vi
+        .waitFor(() => expect(existsSync(pidFile)).toBe(true), {
+          timeout: 5000,
+        })
+        .catch(() => {});
+      if (existsSync(pidFile))
+        process.kill(Number(readFileSync(pidFile, "utf8")), "SIGKILL");
+    }
+  }, 15_000);
+
+  it("saves why it stopped even when the worker record cannot be read", async () => {
+    const pidFile = join(directory, "hang.pid");
+    const hang = join(directory, "hang.mjs");
+    // A supervisor that never records ownership. After the start has given
+    // up and asked it to stop, the worker record stops parsing.
+    writeFileSync(
+      hang,
+      `import { mkdirSync, writeFileSync } from 'node:fs';
+      writeFileSync(${JSON.stringify(pidFile)}, String(process.pid));
+      setTimeout(() => {
+        mkdirSync(${JSON.stringify(join(stateFile(), ".."))}, { recursive: true });
+        writeFileSync(${JSON.stringify(stateFile())}, '{not json');
+      }, 900);
+      setInterval(() => {}, 1000);`,
+    );
+    const error = await startBackgroundListen({
+      ...target,
+      argv: [hang],
+      startupTimeoutMs: 500,
+    }).catch((caught: unknown) => caught);
+    try {
+      expect(error).toBeInstanceOf(ListenStateError);
+      expect((error as Error).message).toContain("did not become ready");
+      expect(
+        readMailJson(join(stateFile(), "..", "start-failure.json")),
+      ).toMatchObject({ reason: "timed-out", failureCode: null });
     } finally {
       await vi
         .waitFor(() => expect(existsSync(pidFile)).toBe(true), {

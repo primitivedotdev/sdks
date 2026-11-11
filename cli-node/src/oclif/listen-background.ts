@@ -1144,6 +1144,10 @@ export async function runBackgroundListenSupervisor(
   };
   process.on("uncaughtException", crashed);
   process.on("unhandledRejection", crashed);
+  // Whether the current worker's last report was receiving. While it is,
+  // any start failure saved for this receiver is history: a start that
+  // saved one after the worker's own receiving report is cleared here.
+  let workerReceiving = false;
   const heartbeat = setInterval(() => {
     try {
       if (stopRequested()) {
@@ -1151,6 +1155,7 @@ export async function runBackgroundListenSupervisor(
         child?.kill("SIGTERM");
       }
       tryPublish();
+      if (workerReceiving) clearStartFailure(paths);
     } catch {
       cancel();
     }
@@ -1180,6 +1185,8 @@ export async function runBackgroundListenSupervisor(
         const row = message as Record<string, unknown>;
         if (row.type !== "primitive-listen-state" || row.token !== token)
           return;
+        if (typeof row.phase === "string")
+          workerReceiving = row.phase === "receiving";
         if (row.phase === "receiving") {
           if (readyAt === null) readyAt = Date.now();
           // A start that gave up, or kept a receiver it could not verify, is
@@ -1208,6 +1215,7 @@ export async function runBackgroundListenSupervisor(
         child?.once("error", () => resolve({ code: null, signal: null }));
       });
       child = undefined;
+      workerReceiving = false;
       if (stopped || stopRequested()) break;
       let worker: State | null = null;
       try {
@@ -1550,12 +1558,11 @@ export async function startBackgroundListen(
         return { started: true, status: backgroundListenStatus(options) };
       }
       if (decision === "kept") {
-        // Nobody may be reading this error, so status keeps it too. After a
-        // ready report under a running supervisor the start most likely
-        // worked, and its supervisor has already cleared old records, so a
-        // record here would outlive a working receiver.
-        if (outcome !== "ready")
-          recordStartFailure(paths, keptReason, supervisorFailureCode);
+        // Nobody may be reading this error, so status keeps it too, even
+        // after a ready report: ready can mean reconnecting, and the worker
+        // can exit after it. The check below, and the supervisor on each
+        // receiving report, clear it once the worker receives.
+        recordStartFailure(paths, keptReason, supervisorFailureCode);
         // The worker may have reached receiving after the check above, and
         // after its supervisor cleared any earlier record.
         try {
@@ -1587,7 +1594,13 @@ export async function startBackgroundListen(
         child.signalCode === null
       )
         await delay(50);
-      const current = readState(paths.state);
+      // An unreadable worker record must not cost the saved explanation.
+      let current: State | null = null;
+      try {
+        current = readState(paths.state);
+      } catch {
+        /* Treated as no record of this start's worker. */
+      }
       const retained =
         current?.token === token &&
         owner(current) !== "gone" &&
