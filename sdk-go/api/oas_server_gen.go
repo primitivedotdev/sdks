@@ -369,12 +369,13 @@ type Handler interface {
 	// a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified
 	// work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated
 	// and nothing is shared until they accept, and they may change the rule first; they see the request
-	// and can preview what it matches in their own mail. You may have at most 5 pending requests to one
-	// member and 50 in all. If you can list members (members:read), the answer also says whether they
-	// can accept it under their role (target_can_accept), and if not, why (target_warning); the request
-	// is sent either way. To find out before asking, use POST /v1/email-rule-requests/target-check.
-	// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-	// narrowed token), and the email rules feature.
+	// and can preview what it matches in their own mail. A message (up to 500 characters) tells them why
+	// you are asking; they see it with the request, and it cannot be changed later. You may have at most
+	// 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer
+	// also says whether they can accept it under their role (target_can_accept), and if not, why
+	// (target_warning); the request is sent either way. To find out before asking, use POST
+	// /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full
+	// access (not an API key, agent key or narrowed token), and the email rules feature.
 	//
 	// POST /email-rule-requests
 	CreateEmailRuleRequest(ctx context.Context, req *CreateEmailRuleRequestRequest, params CreateEmailRuleRequestParams) (CreateEmailRuleRequestRes, error)
@@ -632,12 +633,13 @@ type Handler interface {
 	DecideSuspension(ctx context.Context, req *DecideSuspensionRequest, params DecideSuspensionParams) (DecideSuspensionRes, error)
 	// DeclineEmailRuleRequest implements declineEmailRuleRequest operation.
 	//
-	// Declines a pending request made to you. Nothing is written but the decision. Needs mail:read, a
-	// member's own credential with their full access (not an API key, agent key or narrowed token), and
-	// the email rules feature.
+	// Declines a pending request made to you. Nothing is written but the decision and, if you give one,
+	// its reason (reason, up to 500 characters), which the member who asked sees with the request. Needs
+	// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+	// token), and the email rules feature.
 	//
 	// POST /email-rule-requests/{id}/decline
-	DeclineEmailRuleRequest(ctx context.Context, params DeclineEmailRuleRequestParams) (DeclineEmailRuleRequestRes, error)
+	DeclineEmailRuleRequest(ctx context.Context, req OptDeclineEmailRuleRequestRequest, params DeclineEmailRuleRequestParams) (DeclineEmailRuleRequestRes, error)
 	// DeleteAddressNote implements deleteAddressNote operation.
 	//
 	// Organization-scoped address annotations, independent of agents, routes and endpoints. Any bare

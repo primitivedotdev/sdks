@@ -12867,6 +12867,9 @@ type CreateEmailRuleRequestRequest struct {
 	TargetEmail OptString `json:"target_email"`
 	// A short name for the rule.
 	Name string `json:"name"`
+	// A short note to the member asked about why you are asking, up to 500 characters; null or absent
+	// for none. They see it with the request; it cannot be changed later.
+	Message OptNilString `json:"message"`
 	// The plain-English description the rule was compiled from.
 	English string `json:"english"`
 	// The rule tree. Checked against the column contract on save.
@@ -12898,6 +12901,11 @@ func (s *CreateEmailRuleRequestRequest) GetTargetEmail() OptString {
 // GetName returns the value of Name.
 func (s *CreateEmailRuleRequestRequest) GetName() string {
 	return s.Name
+}
+
+// GetMessage returns the value of Message.
+func (s *CreateEmailRuleRequestRequest) GetMessage() OptNilString {
+	return s.Message
 }
 
 // GetEnglish returns the value of English.
@@ -12943,6 +12951,11 @@ func (s *CreateEmailRuleRequestRequest) SetTargetEmail(val OptString) {
 // SetName sets the value of Name.
 func (s *CreateEmailRuleRequestRequest) SetName(val string) {
 	s.Name = val
+}
+
+// SetMessage sets the value of Message.
+func (s *CreateEmailRuleRequestRequest) SetMessage(val OptNilString) {
+	s.Message = val
 }
 
 // SetEnglish sets the value of English.
@@ -13000,6 +13013,10 @@ type CreateEmailRuleRequestResult struct {
 	IsTarget           bool      `json:"is_target"`
 	// The share accepting created, while it exists.
 	ShareID NilUUID `json:"share_id"`
+	// What the member asking wrote about why; null when they wrote nothing.
+	Message OptNilString `json:"message"`
+	// Why the member asked declined it; null unless they gave a reason when declining.
+	DeclineReason OptNilString `json:"decline_reason"`
 	// Whether the member asked can accept it now under their role. Null unless you can list members and
 	// their roles (members:read), or when it could not be read.
 	TargetCanAccept OptNilBool `json:"target_can_accept"`
@@ -13106,6 +13123,16 @@ func (s *CreateEmailRuleRequestResult) GetIsTarget() bool {
 // GetShareID returns the value of ShareID.
 func (s *CreateEmailRuleRequestResult) GetShareID() NilUUID {
 	return s.ShareID
+}
+
+// GetMessage returns the value of Message.
+func (s *CreateEmailRuleRequestResult) GetMessage() OptNilString {
+	return s.Message
+}
+
+// GetDeclineReason returns the value of DeclineReason.
+func (s *CreateEmailRuleRequestResult) GetDeclineReason() OptNilString {
+	return s.DeclineReason
 }
 
 // GetTargetCanAccept returns the value of TargetCanAccept.
@@ -13216,6 +13243,16 @@ func (s *CreateEmailRuleRequestResult) SetIsTarget(val bool) {
 // SetShareID sets the value of ShareID.
 func (s *CreateEmailRuleRequestResult) SetShareID(val NilUUID) {
 	s.ShareID = val
+}
+
+// SetMessage sets the value of Message.
+func (s *CreateEmailRuleRequestResult) SetMessage(val OptNilString) {
+	s.Message = val
+}
+
+// SetDeclineReason sets the value of DeclineReason.
+func (s *CreateEmailRuleRequestResult) SetDeclineReason(val OptNilString) {
+	s.DeclineReason = val
 }
 
 // SetTargetCanAccept sets the value of TargetCanAccept.
@@ -23765,6 +23802,10 @@ type DecideSuspensionUnauthorized ErrorResponseHeaders
 
 func (*DecideSuspensionUnauthorized) decideSuspensionRes() {}
 
+type DeclineEmailRuleRequestBadRequest ErrorResponse
+
+func (*DeclineEmailRuleRequestBadRequest) declineEmailRuleRequestRes() {}
+
 type DeclineEmailRuleRequestConflict ErrorResponse
 
 func (*DeclineEmailRuleRequestConflict) declineEmailRuleRequestRes() {}
@@ -23804,6 +23845,23 @@ func (s *DeclineEmailRuleRequestOK) SetData(val EmailRuleRequest) {
 }
 
 func (*DeclineEmailRuleRequestOK) declineEmailRuleRequestRes() {}
+
+// Ref: #/components/schemas/DeclineEmailRuleRequestRequest
+type DeclineEmailRuleRequestRequest struct {
+	// Why you are declining, up to 500 characters; null or absent for none. The member who asked sees it
+	// with the request.
+	Reason OptNilString `json:"reason"`
+}
+
+// GetReason returns the value of Reason.
+func (s *DeclineEmailRuleRequestRequest) GetReason() OptNilString {
+	return s.Reason
+}
+
+// SetReason sets the value of Reason.
+func (s *DeclineEmailRuleRequestRequest) SetReason(val OptNilString) {
+	s.Reason = val
+}
 
 type DeclineEmailRuleRequestTooManyRequests ErrorResponseHeaders
 
@@ -31802,6 +31860,10 @@ type EmailRuleRequest struct {
 	IsTarget           bool      `json:"is_target"`
 	// The share accepting created, while it exists.
 	ShareID NilUUID `json:"share_id"`
+	// What the member asking wrote about why; null when they wrote nothing.
+	Message OptNilString `json:"message"`
+	// Why the member asked declined it; null unless they gave a reason when declining.
+	DeclineReason OptNilString `json:"decline_reason"`
 }
 
 // GetID returns the value of ID.
@@ -31904,6 +31966,16 @@ func (s *EmailRuleRequest) GetShareID() NilUUID {
 	return s.ShareID
 }
 
+// GetMessage returns the value of Message.
+func (s *EmailRuleRequest) GetMessage() OptNilString {
+	return s.Message
+}
+
+// GetDeclineReason returns the value of DeclineReason.
+func (s *EmailRuleRequest) GetDeclineReason() OptNilString {
+	return s.DeclineReason
+}
+
 // SetID sets the value of ID.
 func (s *EmailRuleRequest) SetID(val uuid.UUID) {
 	s.ID = val
@@ -32002,6 +32074,16 @@ func (s *EmailRuleRequest) SetIsTarget(val bool) {
 // SetShareID sets the value of ShareID.
 func (s *EmailRuleRequest) SetShareID(val NilUUID) {
 	s.ShareID = val
+}
+
+// SetMessage sets the value of Message.
+func (s *EmailRuleRequest) SetMessage(val OptNilString) {
+	s.Message = val
+}
+
+// SetDeclineReason sets the value of DeclineReason.
+func (s *EmailRuleRequest) SetDeclineReason(val OptNilString) {
+	s.DeclineReason = val
 }
 
 // Session: the proposer's own session; oauth: an OAuth or CLI token acting for them.
@@ -75920,6 +76002,52 @@ func (o OptDecideSuspensionResultFunctionStopped) Get() (v DecideSuspensionResul
 
 // Or returns value if set, or given parameter if does not.
 func (o OptDecideSuspensionResultFunctionStopped) Or(d DecideSuspensionResultFunctionStopped) DecideSuspensionResultFunctionStopped {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptDeclineEmailRuleRequestRequest returns new OptDeclineEmailRuleRequestRequest with value set to v.
+func NewOptDeclineEmailRuleRequestRequest(v DeclineEmailRuleRequestRequest) OptDeclineEmailRuleRequestRequest {
+	return OptDeclineEmailRuleRequestRequest{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptDeclineEmailRuleRequestRequest is optional DeclineEmailRuleRequestRequest.
+type OptDeclineEmailRuleRequestRequest struct {
+	Value DeclineEmailRuleRequestRequest
+	Set   bool
+}
+
+// IsSet returns true if OptDeclineEmailRuleRequestRequest was set.
+func (o OptDeclineEmailRuleRequestRequest) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptDeclineEmailRuleRequestRequest) Reset() {
+	var v DeclineEmailRuleRequestRequest
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptDeclineEmailRuleRequestRequest) SetTo(v DeclineEmailRuleRequestRequest) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptDeclineEmailRuleRequestRequest) Get() (v DeclineEmailRuleRequestRequest, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptDeclineEmailRuleRequestRequest) Or(d DeclineEmailRuleRequestRequest) DeclineEmailRuleRequestRequest {
 	if v, ok := o.Get(); ok {
 		return v
 	}

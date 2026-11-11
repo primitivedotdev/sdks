@@ -3123,7 +3123,7 @@ export const listEmailRuleRequests = <ThrowOnError extends boolean = false>(opti
 /**
  * Ask a member for a rule
  *
- * Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated and nothing is shared until they accept, and they may change the rule first; they see the request and can preview what it matches in their own mail. You may have at most 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer also says whether they can accept it under their role (target_can_accept), and if not, why (target_warning); the request is sent either way. To find out before asking, use POST /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+ * Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated and nothing is shared until they accept, and they may change the rule first; they see the request and can preview what it matches in their own mail. A message (up to 500 characters) tells them why you are asking; they see it with the request, and it cannot be changed later. You may have at most 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer also says whether they can accept it under their role (target_can_accept), and if not, why (target_warning); the request is sent either way. To find out before asking, use POST /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
  */
 export const createEmailRuleRequest = <ThrowOnError extends boolean = false>(options: Options<CreateEmailRuleRequestData, ThrowOnError>): RequestResult<CreateEmailRuleRequestResponses, CreateEmailRuleRequestErrors, ThrowOnError> => (options.client ?? client).post<CreateEmailRuleRequestResponses, CreateEmailRuleRequestErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -3175,12 +3175,16 @@ export const getEmailRuleRequest = <ThrowOnError extends boolean = false>(option
 /**
  * Decline a rule request
  *
- * Declines a pending request made to you. Nothing is written but the decision. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+ * Declines a pending request made to you. Nothing is written but the decision and, if you give one, its reason (reason, up to 500 characters), which the member who asked sees with the request. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
  */
 export const declineEmailRuleRequest = <ThrowOnError extends boolean = false>(options: Options<DeclineEmailRuleRequestData, ThrowOnError>): RequestResult<DeclineEmailRuleRequestResponses, DeclineEmailRuleRequestErrors, ThrowOnError> => (options.client ?? client).post<DeclineEmailRuleRequestResponses, DeclineEmailRuleRequestErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/email-rule-requests/{id}/decline',
-    ...options
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
 });
 
 /**

@@ -357,6 +357,7 @@ from .decide_suspension_result_decision import DecideSuspensionResultDecision
 from .decide_suspension_result_function_stopped import DecideSuspensionResultFunctionStopped
 from .decide_suspension_result_function_stopped_by import DecideSuspensionResultFunctionStoppedBy
 from .decide_suspension_result_function_stopped_stop_rank import DecideSuspensionResultFunctionStoppedStopRank
+from .decline_email_rule_request_request import DeclineEmailRuleRequestRequest
 from .decline_email_rule_request_response_200 import DeclineEmailRuleRequestResponse200
 from .decline_email_rule_request_result import DeclineEmailRuleRequestResult
 from .decline_email_rule_request_result_proposed_via import DeclineEmailRuleRequestResultProposedVia
@@ -2075,6 +2076,7 @@ __all__ = (
     "DecideSuspensionResultFunctionStopped",
     "DecideSuspensionResultFunctionStoppedBy",
     "DecideSuspensionResultFunctionStoppedStopRank",
+    "DeclineEmailRuleRequestRequest",
     "DeclineEmailRuleRequestResponse200",
     "DeclineEmailRuleRequestResult",
     "DeclineEmailRuleRequestResultProposedVia",

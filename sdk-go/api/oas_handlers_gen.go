@@ -5984,12 +5984,13 @@ func (s *Server) handleCreateEmailRuleRequest(args [0]string, argsEscaped bool, 
 // a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified
 // work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated
 // and nothing is shared until they accept, and they may change the rule first; they see the request
-// and can preview what it matches in their own mail. You may have at most 5 pending requests to one
-// member and 50 in all. If you can list members (members:read), the answer also says whether they
-// can accept it under their role (target_can_accept), and if not, why (target_warning); the request
-// is sent either way. To find out before asking, use POST /v1/email-rule-requests/target-check.
-// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-// narrowed token), and the email rules feature.
+// and can preview what it matches in their own mail. A message (up to 500 characters) tells them why
+// you are asking; they see it with the request, and it cannot be changed later. You may have at most
+// 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer
+// also says whether they can accept it under their role (target_can_accept), and if not, why
+// (target_warning); the request is sent either way. To find out before asking, use POST
+// /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full
+// access (not an API key, agent key or narrowed token), and the email rules feature.
 //
 // POST /email-rule-requests
 func (s *Server) handleCreateEmailRuleRequestRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -9225,9 +9226,10 @@ func (s *Server) handleDecideSuspensionRequest(args [1]string, argsEscaped bool,
 
 // handleDeclineEmailRuleRequestRequest handles declineEmailRuleRequest operation.
 //
-// Declines a pending request made to you. Nothing is written but the decision. Needs mail:read, a
-// member's own credential with their full access (not an API key, agent key or narrowed token), and
-// the email rules feature.
+// Declines a pending request made to you. Nothing is written but the decision and, if you give one,
+// its reason (reason, up to 500 characters), which the member who asked sees with the request. Needs
+// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+// token), and the email rules feature.
 //
 // POST /email-rule-requests/{id}/decline
 func (s *Server) handleDeclineEmailRuleRequestRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -9357,6 +9359,21 @@ func (s *Server) handleDeclineEmailRuleRequestRequest(args [1]string, argsEscape
 	}
 
 	var rawBody []byte
+	request, rawBody, close, err := s.decodeDeclineEmailRuleRequestRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
 
 	var response DeclineEmailRuleRequestRes
 	if m := s.cfg.Middleware; m != nil {
@@ -9365,7 +9382,7 @@ func (s *Server) handleDeclineEmailRuleRequestRequest(args [1]string, argsEscape
 			OperationName:    DeclineEmailRuleRequestOperation,
 			OperationSummary: "Decline a rule request",
 			OperationID:      "declineEmailRuleRequest",
-			Body:             nil,
+			Body:             request,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
 				{
@@ -9381,7 +9398,7 @@ func (s *Server) handleDeclineEmailRuleRequestRequest(args [1]string, argsEscape
 		}
 
 		type (
-			Request  = struct{}
+			Request  = OptDeclineEmailRuleRequestRequest
 			Params   = DeclineEmailRuleRequestParams
 			Response = DeclineEmailRuleRequestRes
 		)
@@ -9394,12 +9411,12 @@ func (s *Server) handleDeclineEmailRuleRequestRequest(args [1]string, argsEscape
 			mreq,
 			unpackDeclineEmailRuleRequestParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.DeclineEmailRuleRequest(ctx, params)
+				response, err = s.h.DeclineEmailRuleRequest(ctx, request, params)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.DeclineEmailRuleRequest(ctx, params)
+		response, err = s.h.DeclineEmailRuleRequest(ctx, request, params)
 	}
 	if err != nil {
 		defer recordError("Internal", err)

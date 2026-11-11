@@ -389,12 +389,13 @@ type Invoker interface {
 	// a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified
 	// work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated
 	// and nothing is shared until they accept, and they may change the rule first; they see the request
-	// and can preview what it matches in their own mail. You may have at most 5 pending requests to one
-	// member and 50 in all. If you can list members (members:read), the answer also says whether they
-	// can accept it under their role (target_can_accept), and if not, why (target_warning); the request
-	// is sent either way. To find out before asking, use POST /v1/email-rule-requests/target-check.
-	// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-	// narrowed token), and the email rules feature.
+	// and can preview what it matches in their own mail. A message (up to 500 characters) tells them why
+	// you are asking; they see it with the request, and it cannot be changed later. You may have at most
+	// 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer
+	// also says whether they can accept it under their role (target_can_accept), and if not, why
+	// (target_warning); the request is sent either way. To find out before asking, use POST
+	// /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full
+	// access (not an API key, agent key or narrowed token), and the email rules feature.
 	//
 	// POST /email-rule-requests
 	CreateEmailRuleRequest(ctx context.Context, request *CreateEmailRuleRequestRequest, params CreateEmailRuleRequestParams) (CreateEmailRuleRequestRes, error)
@@ -652,12 +653,13 @@ type Invoker interface {
 	DecideSuspension(ctx context.Context, request *DecideSuspensionRequest, params DecideSuspensionParams) (DecideSuspensionRes, error)
 	// DeclineEmailRuleRequest invokes declineEmailRuleRequest operation.
 	//
-	// Declines a pending request made to you. Nothing is written but the decision. Needs mail:read, a
-	// member's own credential with their full access (not an API key, agent key or narrowed token), and
-	// the email rules feature.
+	// Declines a pending request made to you. Nothing is written but the decision and, if you give one,
+	// its reason (reason, up to 500 characters), which the member who asked sees with the request. Needs
+	// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+	// token), and the email rules feature.
 	//
 	// POST /email-rule-requests/{id}/decline
-	DeclineEmailRuleRequest(ctx context.Context, params DeclineEmailRuleRequestParams) (DeclineEmailRuleRequestRes, error)
+	DeclineEmailRuleRequest(ctx context.Context, request OptDeclineEmailRuleRequestRequest, params DeclineEmailRuleRequestParams) (DeclineEmailRuleRequestRes, error)
 	// DeleteAddressNote invokes deleteAddressNote operation.
 	//
 	// Organization-scoped address annotations, independent of agents, routes and endpoints. Any bare
@@ -7950,12 +7952,13 @@ func (c *Client) sendCreateEmailRule(ctx context.Context, request *CreateEmailRu
 // a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified
 // work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated
 // and nothing is shared until they accept, and they may change the rule first; they see the request
-// and can preview what it matches in their own mail. You may have at most 5 pending requests to one
-// member and 50 in all. If you can list members (members:read), the answer also says whether they
-// can accept it under their role (target_can_accept), and if not, why (target_warning); the request
-// is sent either way. To find out before asking, use POST /v1/email-rule-requests/target-check.
-// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-// narrowed token), and the email rules feature.
+// and can preview what it matches in their own mail. A message (up to 500 characters) tells them why
+// you are asking; they see it with the request, and it cannot be changed later. You may have at most
+// 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer
+// also says whether they can accept it under their role (target_can_accept), and if not, why
+// (target_warning); the request is sent either way. To find out before asking, use POST
+// /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full
+// access (not an API key, agent key or narrowed token), and the email rules feature.
 //
 // POST /email-rule-requests
 func (c *Client) CreateEmailRuleRequest(ctx context.Context, request *CreateEmailRuleRequestRequest, params CreateEmailRuleRequestParams) (CreateEmailRuleRequestRes, error) {
@@ -10166,17 +10169,18 @@ func (c *Client) sendDecideSuspension(ctx context.Context, request *DecideSuspen
 
 // DeclineEmailRuleRequest invokes declineEmailRuleRequest operation.
 //
-// Declines a pending request made to you. Nothing is written but the decision. Needs mail:read, a
-// member's own credential with their full access (not an API key, agent key or narrowed token), and
-// the email rules feature.
+// Declines a pending request made to you. Nothing is written but the decision and, if you give one,
+// its reason (reason, up to 500 characters), which the member who asked sees with the request. Needs
+// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+// token), and the email rules feature.
 //
 // POST /email-rule-requests/{id}/decline
-func (c *Client) DeclineEmailRuleRequest(ctx context.Context, params DeclineEmailRuleRequestParams) (DeclineEmailRuleRequestRes, error) {
-	res, err := c.sendDeclineEmailRuleRequest(ctx, params)
+func (c *Client) DeclineEmailRuleRequest(ctx context.Context, request OptDeclineEmailRuleRequestRequest, params DeclineEmailRuleRequestParams) (DeclineEmailRuleRequestRes, error) {
+	res, err := c.sendDeclineEmailRuleRequest(ctx, request, params)
 	return res, err
 }
 
-func (c *Client) sendDeclineEmailRuleRequest(ctx context.Context, params DeclineEmailRuleRequestParams) (res DeclineEmailRuleRequestRes, err error) {
+func (c *Client) sendDeclineEmailRuleRequest(ctx context.Context, request OptDeclineEmailRuleRequestRequest, params DeclineEmailRuleRequestParams) (res DeclineEmailRuleRequestRes, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("declineEmailRuleRequest"),
 		semconv.HTTPRequestMethodKey.String("POST"),
@@ -10240,6 +10244,9 @@ func (c *Client) sendDeclineEmailRuleRequest(ctx context.Context, params Decline
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeDeclineEmailRuleRequestRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
 	}
 
 	stage = "EncodeHeaderParams"

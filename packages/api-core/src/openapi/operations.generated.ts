@@ -16478,6 +16478,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ],
               "format": "uuid",
               "description": "The share accepting created, while it exists."
+            },
+            "message": {
+              "description": "What the member asking wrote about why; null when they wrote nothing.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "decline_reason": {
+              "description": "Why the member asked declined it; null unless they gave a reason when declining.",
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "required": [
@@ -17660,7 +17674,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-email-rule-request",
-    "description": "Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated and nothing is shared until they accept, and they may change the rule first; they see the request and can preview what it matches in their own mail. You may have at most 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer also says whether they can accept it under their role (target_can_accept), and if not, why (target_warning); the request is sent either way. To find out before asking, use POST /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated and nothing is shared until they accept, and they may change the rule first; they see the request and can preview what it matches in their own mail. A message (up to 500 characters) tells them why you are asking; they see it with the request, and it cannot be changed later. You may have at most 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer also says whether they can accept it under their role (target_can_accept), and if not, why (target_warning); the request is sent either way. To find out before asking, use POST /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "createEmailRuleRequest",
@@ -17700,6 +17714,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "minLength": 1,
           "maxLength": 200,
           "description": "A short name for the rule."
+        },
+        "message": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "A short note to the member asked about why you are asking, up to 500 characters; null or absent for none. They see it with the request; it cannot be changed later."
         },
         "english": {
           "type": "string",
@@ -17974,6 +17997,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "format": "uuid",
           "description": "The share accepting created, while it exists."
         },
+        "message": {
+          "description": "What the member asking wrote about why; null when they wrote nothing.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "decline_reason": {
+          "description": "Why the member asked declined it; null unless they gave a reason when declining.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "target_can_accept": {
           "description": "Whether the member asked can accept it now under their role. Null unless you can list members and their roles (members:read), or when it could not be read.",
           "type": [
@@ -18021,8 +18058,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "decline-email-rule-request",
-    "description": "Declines a pending request made to you. Nothing is written but the decision. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
-    "hasJsonBody": false,
+    "description": "Declines a pending request made to you. Nothing is written but the decision and, if you give one, its reason (reason, up to 500 characters), which the member who asked sees with the request. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "hasJsonBody": true,
     "method": "POST",
     "operationId": "declineEmailRuleRequest",
     "path": "/email-rule-requests/{id}/decline",
@@ -18049,7 +18086,21 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "mail:read"
     ],
     "access": null,
-    "requestSchema": null,
+    "requestSchema": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Why you are declining, up to 500 characters; null or absent for none. The member who asked sees it with the request."
+        }
+      },
+      "additionalProperties": false
+    },
     "responseSchema": {
       "type": "object",
       "properties": {
@@ -18242,6 +18293,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ],
           "format": "uuid",
           "description": "The share accepting created, while it exists."
+        },
+        "message": {
+          "description": "What the member asking wrote about why; null when they wrote nothing.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "decline_reason": {
+          "description": "Why the member asked declined it; null unless they gave a reason when declining.",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
@@ -18884,6 +18949,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ],
           "format": "uuid",
           "description": "The share accepting created, while it exists."
+        },
+        "message": {
+          "description": "What the member asking wrote about why; null when they wrote nothing.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "decline_reason": {
+          "description": "Why the member asked declined it; null unless they gave a reason when declining.",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
@@ -19904,6 +19983,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ],
             "format": "uuid",
             "description": "The share accepting created, while it exists."
+          },
+          "message": {
+            "description": "What the member asking wrote about why; null when they wrote nothing.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "decline_reason": {
+            "description": "Why the member asked declined it; null unless they gave a reason when declining.",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -23522,6 +23615,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ],
           "format": "uuid",
           "description": "The share accepting created, while it exists."
+        },
+        "message": {
+          "description": "What the member asking wrote about why; null when they wrote nothing.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "decline_reason": {
+          "description": "Why the member asked declined it; null unless they gave a reason when declining.",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [

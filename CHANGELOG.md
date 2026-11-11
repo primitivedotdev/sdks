@@ -535,6 +535,10 @@ date-time is kept as null and sorts last. A sync stops with an error after
   none, instead of the old key's.
 - `listActivityObjects` takes `relation`: `created` (the default) or `asked`,
   what other members asked of you.
+- `createEmailRuleRequest` takes `message`, up to 500 characters, telling the
+  member asked why you are asking. `declineEmailRuleRequest` takes an optional
+  body with `reason`, up to 500 characters (`DeclineEmailRuleRequestRequest`).
+  A rule request carries both as `message` and `decline_reason`.
 - `Primitive-Step-Up` is a declared header parameter on the 36 operations that
   accept a step-up confirmation token, so a client can send the confirmation
   token through the generated call: `headers: { "Primitive-Step-Up": token }`
