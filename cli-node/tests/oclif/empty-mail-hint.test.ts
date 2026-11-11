@@ -1,5 +1,5 @@
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   emptyEmailListHint,
   listFilters,
@@ -294,6 +294,32 @@ describe("readCallerMailFor", () => {
     const started = Date.now();
     expect(await readCallerMail(deaf.client, 50)).toBeUndefined();
     expect(Date.now() - started).toBeLessThan(1_000);
+  });
+
+  it("reads the grant with plain fetch, so a 401 never exchanges a saved login's token", async () => {
+    let wrapped = 0;
+    const client = new PrimitiveApiClient({
+      apiKey: "prim_test",
+      apiBaseUrl: "https://api.example.test/v1",
+      fetch: (() => {
+        wrapped += 1;
+        return Promise.resolve(new Response("{}", { status: 500 }));
+      }) as typeof fetch,
+    });
+    const plain = vi.fn(async () =>
+      Response.json(
+        { success: false, error: { code: "unauthorized" } },
+        { status: 401 },
+      ),
+    );
+    vi.stubGlobal("fetch", plain);
+    try {
+      expect(await readCallerMail(client.client, 1_000)).toBeUndefined();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(plain).toHaveBeenCalledTimes(1);
+    expect(wrapped).toBe(0);
   });
 
   it("gives up on a grant read that does not answer in time", async () => {

@@ -2117,7 +2117,8 @@ export function createOperationCommand(
                     : query.cursor !== undefined
                       ? { pastFlag: "--cursor" as const }
                       : {}),
-                  nextCursor: more,
+                  // A tail is caught up whatever cursor it carries: --since and --cursor do not mix.
+                  nextCursor: tail ? null : more,
                   caller:
                     tail || more
                       ? null

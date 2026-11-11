@@ -615,10 +615,27 @@ describe("generated commands with --json", () => {
       data: [],
       meta: { cursor: "cursor-2" },
     });
-    // The page has a next cursor, so the hint says the list goes on rather than that it is empty.
+    // The page has a next cursor, so the hint says the list goes on rather than that it is empty, and no grant is read.
     expect(document.summary).toContain(
       "This page came back empty, but the list goes on: continue with --cursor cursor-2.",
     );
+    expect(fetchCalls.map((c) => c.url.pathname)).toEqual([
+      "/v1/emails",
+      "/v1/emails",
+    ]);
+  });
+
+  it("keeps a caught-up --since tail's wording even when its page carries a cursor", async () => {
+    responder = answering(grantWithScope("org"), {
+      success: true,
+      data: [],
+      meta: { cursor: "c9" },
+    });
+    const result = await runMerged("emails:list", ["--since", "c1"]);
+    expect(result.stderr).toContain(
+      "(no results) No inbound emails after the given --since.",
+    );
+    expect(result.stderr).not.toContain("continue with --cursor");
   });
 
   describe("an empty email list says what the credential reads", () => {
@@ -653,6 +670,10 @@ describe("generated commands with --json", () => {
         "/v1/emails",
         "/v1/whoami/grant",
       ]);
+      // With the credential's own token: the read uses plain fetch, not the client's, but keeps its auth.
+      expect(
+        new Headers(fetchCalls[1]?.init?.headers).get("authorization"),
+      ).toBe("Bearer prim_test_json_streams");
     });
 
     it("names the mailboxes a narrowed credential reads", async () => {

@@ -70,6 +70,10 @@ async function readGrant(
   try {
     const result = await getOwnGrant({
       client,
+      // Plain fetch, not the client's: a saved login's 401 would otherwise
+      // exchange its token, which no signal stops and which would keep the
+      // command running after the hint gave up. A 401 here just means no hint.
+      fetch: (input, init) => globalThis.fetch(input, init),
       responseStyle: "fields",
       signal: AbortSignal.timeout(timeoutMs),
     });
@@ -277,7 +281,7 @@ function reachSentence(reach: Reach, holder: Holder): string | null {
  * given, or a page or tail past the last email), and what this credential
  * reads. `caller` is undefined when the grant could not be read, and null
  * when it was not asked for (a tail poll, which should not double its
- * requests).
+ * requests, or a page with a next cursor, whose hint does not need it).
  */
 export function emptyEmailListHint(input: {
   filterFlags: readonly string[];
