@@ -57,6 +57,11 @@ import {
   fromVerifiedExpectation,
 } from "./from-verified-filter.js";
 import { writeIdempotentReplayBannerIfReplay } from "./idempotent-replay-banner.js";
+import {
+  inviteRefusalHint,
+  readRoles,
+  roleReadsAllMailWarning,
+} from "./member-role-mail.js";
 import type {
   OperationExtension,
   OperationReport,
@@ -1511,6 +1516,7 @@ export const OPERATION_ERROR_HINTS: Record<
     path?: Record<string, unknown>,
   ) => string | undefined
 > = {
+  inviteOrganizationMember: (code, body) => inviteRefusalHint(code, body),
   updateEmailRule: (code, _body, payload, path) =>
     code === "email_rule_conflict"
       ? versionMovedHint(payload, path?.id)
@@ -1914,6 +1920,22 @@ export function createOperationCommand(
             });
           }
         };
+        // Giving someone a role that reads every mailbox says so first, so
+        // the person approving the change sees it before the step-up link.
+        const preRequestNotes: string[] = [];
+        if (operation.sdkName === "setMemberRole") {
+          const role =
+            body && typeof body === "object"
+              ? (body as { role?: unknown }).role
+              : undefined;
+          const warning =
+            typeof role === "string"
+              ? roleReadsAllMailWarning(role, await readRoles(apiClient.client))
+              : null;
+          if (warning && parsedFlags.json === true)
+            preRequestNotes.push(warning);
+          else if (warning) process.stderr.write(`${warning}\n`);
+        }
         const result = paged
           ? await callPaged()
           : takesStepUp(operation)
@@ -2077,7 +2099,7 @@ export function createOperationCommand(
           process.stderr.write(`next cursor: ${cursor}\n`);
         }
         if (pagingNote && !jsonOutput) process.stderr.write(`${pagingNote}\n`);
-        const summary: string[] = [];
+        const summary: string[] = withEnvelope ? [...preRequestNotes] : [];
 
         // Empty-result hint. When a list-style operation returns
         // an empty array, emit an operation-specific note to

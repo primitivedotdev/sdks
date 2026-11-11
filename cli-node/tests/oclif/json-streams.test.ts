@@ -585,6 +585,140 @@ describe("generated commands with --json", () => {
     expect(document.summary).toContain("No inbound emails received yet");
   });
 
+  describe("giving someone a role that reads every mailbox says so", () => {
+    const ROLES = {
+      roles: [
+        {
+          id: "r-member",
+          key: "member",
+          kind: "builtin",
+          name: "Member",
+          mail_scope: "org",
+        },
+        {
+          id: "r-own",
+          key: "own_mail_read_only",
+          kind: "template",
+          name: "Read only (own mail)",
+          mail_scope: { self: true, depth: "raw" },
+        },
+      ],
+      invitations: {
+        limited_roles_available: true,
+        members_read_all_mail: true,
+      },
+    };
+    const MEMBER_ID = "00000000-0000-4000-8000-0000000000cc";
+
+    it("explains why an invitation for Member is refused where every member reads all mail", async () => {
+      responder = () =>
+        jsonResponse(403, {
+          success: false,
+          error: {
+            code: "grant_forbidden",
+            message:
+              "Inviting someone with this role needs you to be signed in to the dashboard, with permission to assign roles.",
+          },
+        });
+      const result = await runMerged(
+        "organizations:invite-organization-member",
+        [
+          "--request-id",
+          "00000000-0000-4000-8000-0000000000dd",
+          "--email",
+          "a@example.test",
+        ],
+      );
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain(
+        "Here every Member reads all of the organization's mail",
+      );
+      expect(result.stderr).toContain("--role none");
+    });
+
+    it("warns before the request when the role reads every mailbox", async () => {
+      responder = (url) =>
+        url.pathname.endsWith("/roles")
+          ? jsonResponse(200, { success: true, data: ROLES })
+          : jsonResponse(200, {
+              success: true,
+              data: { id: MEMBER_ID, role: "member" },
+            });
+      const result = await runMerged("roles-and-members:set-member-role", [
+        "--id",
+        MEMBER_ID,
+        "--role",
+        "member",
+      ]);
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toContain(
+        "Warning: Member reads all of this organization's mail while it uses whole-organization access",
+      );
+      // Read before the change is sent, so it shows ahead of any approval link.
+      expect(fetchCalls.map((c) => `${c.method} ${c.url.pathname}`)).toEqual([
+        "GET /v1/roles",
+        `PUT /v1/members/${MEMBER_ID}/role`,
+      ]);
+    });
+
+    it("says nothing for a narrower role, and keeps --json to one document", async () => {
+      responder = (url) =>
+        url.pathname.endsWith("/roles")
+          ? jsonResponse(200, { success: true, data: ROLES })
+          : jsonResponse(200, {
+              success: true,
+              data: { id: MEMBER_ID, role: "own_mail_read_only" },
+            });
+      const narrower = await runMerged("roles-and-members:set-member-role", [
+        "--id",
+        MEMBER_ID,
+        "--role",
+        "own_mail_read_only",
+      ]);
+      expect(narrower.stderr).not.toContain("Warning");
+      const json = await runMerged("roles-and-members:set-member-role", [
+        "--id",
+        MEMBER_ID,
+        "--role",
+        "member",
+        "--json",
+      ]);
+      expect(json.stderr).toBe("");
+      expect(parseOne(json.merged)).toMatchObject({ id: MEMBER_ID });
+      const enveloped = await runMerged("roles-and-members:set-member-role", [
+        "--id",
+        MEMBER_ID,
+        "--role",
+        "member",
+        "--json",
+        "--envelope",
+      ]);
+      expect(enveloped.stderr).toBe("");
+      expect(
+        String((parseOne(enveloped.merged) as Record<string, unknown>).summary),
+      ).toContain("Warning: Member reads all of this organization's mail");
+    });
+
+    it("still changes the role when the roles cannot be read, without a warning", async () => {
+      responder = (url, init) =>
+        url.pathname.endsWith("/roles")
+          ? serverError(url, init)
+          : jsonResponse(200, {
+              success: true,
+              data: { id: MEMBER_ID, role: "member" },
+            });
+      const result = await runMerged("roles-and-members:set-member-role", [
+        "--id",
+        MEMBER_ID,
+        "--role",
+        "member",
+      ]);
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).not.toContain("Warning");
+    });
+  });
+
   it("takes the email id of list-email-rule-results as --email-id, and --id still works", async () => {
     responder = () => jsonResponse(200, { success: true, data: { rules: [] } });
     const email = "00000000-0000-4000-8000-0000000000e1";
