@@ -1,6 +1,6 @@
 {
   "name": "@primitivedotdev/sdk",
-  "version": "3.0.0-preview.5",
+  "version": "3.0.0-preview.6",
   "publishConfig": {
     "tag": "preview"
   },

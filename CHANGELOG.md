@@ -16,38 +16,39 @@ the same OpenAPI spec. See `RELEASE.md`.
 OpenAPI document the API serves, and every client is regenerated from it. Most
 of the changes below follow from that document.
 
-Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.5` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.5`), and `3.0.0rc5` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring and the endpoint and signing-secret commands, `3.0.0-preview.3` (`3.0.0rc3`), which made API key writes from your own CLI login run directly, `3.0.0-preview.2` (`3.0.0rc2`), which added managing API keys from the CLI, and `3.0.0-preview.1` (`3.0.0rc1`).
+Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.6` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.6`), and `3.0.0rc6` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
 
-What `3.0.0-preview.5` (`3.0.0rc5`) changes from `3.0.0-preview.4`:
+What `3.0.0-preview.6` (`3.0.0rc6`) changes from `3.0.0-preview.5`:
 
-- `primitive send` and `chat` without `--from` take their default From from
-  the API's answer (`getSendFrom`, `GET /whoami/send-from`). A person's own
-  login sends as their member address, never `agent@` a domain, and a
-  connected agent sends as its agent address. When the API names no default,
-  nothing is sent: the command gives the API's reason and the addresses it
-  lists, and asks for `--from`.
-- New command `primitive activity created`: what you created, newest first,
-  with where each object stands now. Signed in as yourself, it covers what you
-  created through any credential of yours; with a key, what that key created.
-- The spec follows the API's current release: new operations
-  `listActivityObjects` and `getSendFrom`; each of a delivery's `attempts`
-  carries `response_status` and `response_body`; people carry `mail_access`;
-  and `account:read` is gone. The Node `PERMISSIONS` list loses it, which is
-  listed under breaking changes.
-- `email-rules create-email-rule` and `update-email-rule` take
-  `--fail-on-expectations`: exit 1 when an expectation failed and 3 when one
-  is undecided or was not checked, so the rule should be tested.
-- Without `--json`, the CLI reads out more of an answer on stderr: route
-  `warnings` on route writes; each delivery attempt with what the endpoint
-  answered (`webhook-deliveries get-delivery`); "none failed" when a rule
-  write's expectations are only undecided, and that a `do_not_share` rule
-  blocks nothing until it is active; and each member's mail access in
-  `members list`.
-- When a server message names an API route, the CLI also names the command
-  that calls it.
-- Generated commands the API answers only in a dashboard session say so in
-  their summary and help.
-- `keys update --json` prints the key at the top level, as `keys get` does.
+- The spec follows the API's current release. Among the new fields: whether a
+  webhook delivery will be retried (`retry_scheduled`), whether an endpoint is
+  being sent mail and why not (`delivery`), an endpoint test's `reachable` and
+  `delivery`, rotation links on keys, revoked keys and repeat revokes, which
+  do-not-share rules kept a match back (`withheld_by`), the email each rule
+  result is about, a rule request's message and decline reason, and the email
+  rule request webhook events. `operator` is no longer a built-in role key.
+  The breaking changes are listed below.
+- Keys: `keys update` and `keys rotate` take `--expires-at` and `--no-expiry`;
+  `keys update` takes `--add-rule` and `--remove-rule`, restates a grant only
+  when the key read shows its resource limits, and takes ended rules off;
+  `keys get` shows when a revoked key was revoked.
+- `email-rules delete-email-rule` asks before deleting (`--yes` without a
+  terminal) and reports the shares it ended and the keys still listing the
+  rule.
+- `primitive activity asked` lists the rule requests made to you.
+- `whoami` names you by your member address and shows the account email apart;
+  role lines say what kind of role they are.
+- `emails wait` and `emails watch` report mail that becomes readable after a
+  later email was already reported.
+- Without a terminal, email-code login, signup and other prompting commands
+  refuse at once and name the flag to pass; an address on a domain managed by
+  Primitive is pointed at `primitive login browser`.
+- A background listener keeps receiving across a CLI upgrade, and keeps its
+  supervisor when a new worker exits right after starting.
+- An empty email list says what the credential can read, and giving a role
+  that reads every mailbox says so.
+- Creating an endpoint at a deleted endpoint's URL makes a new endpoint, and
+  a URL already held on the same domain is refused.
 
 ### Breaking changes
 
@@ -57,7 +58,7 @@ What `3.0.0-preview.5` (`3.0.0rc5`) changes from `3.0.0-preview.4`:
   CLI moves from 1.75.0.
 - The Go module path is `github.com/primitivedotdev/sdks/sdk-go/v3`. Update
   imports from `.../sdk-go/v2` and `.../sdk-go/v2/api`.
-- `primitive functions init` scaffolds projects on `^3.0.0-preview.5` of both
+- `primitive functions init` scaffolds projects on `^3.0.0-preview.6` of both
   `@primitivedotdev/sdk` and `primitive`.
 
 #### Removed code
