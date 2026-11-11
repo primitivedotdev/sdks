@@ -1611,11 +1611,11 @@ describe("keys commands", () => {
     );
     const revoked = await run(KeysRevokeCommand, [KEY_ID, "--yes"]);
     expect(revoked.stdout).toContain(
-      "1 item(s) it set up for the organization keep working. 1 item(s) the key owned itself, such as its own webhooks, which stop with it.",
+      "1 item(s) the organization owns keep working. 1 item(s) the key owned itself, such as its own webhooks, which keep working only while someone can still act for them, such as a key of the same rotation that still works.",
     );
   });
 
-  it("revoke says what keeps working for the organization and what the key owned stops with it", () => {
+  it("revoke says what keeps working for the organization, and that what the key owned works only while someone can act for it", () => {
     expect(standingSummary([])).toBeNull();
     expect(standingSummary(undefined)).toBeNull();
     expect(
@@ -1625,18 +1625,19 @@ describe("keys commands", () => {
         { kind: "recipient_route", id: "c", label: "z", org_owned: false },
       ]),
     ).toBe(
-      "1 item(s) it set up for the organization keep working. 2 item(s) the key owned itself, such as its own webhooks, which stop with it. Review them with --json.",
+      "1 item(s) the organization owns keep working. 2 item(s) the key owned itself, such as its own webhooks, which keep working only while someone can still act for them, such as a key of the same rotation that still works. Review them with --json.",
     );
     expect(
       standingSummary([
         { kind: "endpoint", id: "b", label: "y", org_owned: false },
       ]),
     ).toBe(
-      "1 item(s) the key owned itself, such as its own webhooks, which stop with it. Review them with --json.",
+      "1 item(s) the key owned itself, such as its own webhooks, which keep working only while someone can still act for them, such as a key of the same rotation that still works. Review them with --json.",
     );
     expect(KeysRevokeCommand.description).not.toContain(
       "what it set up keeps working",
     );
+    expect(KeysRevokeCommand.description).not.toContain("stop with it");
     expect(KeysRotateCommand.description).toContain(
       "rotating alone does not extend a key",
     );
