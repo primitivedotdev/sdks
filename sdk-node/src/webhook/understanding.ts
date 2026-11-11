@@ -8,8 +8,10 @@ import type { ReceivedEmail } from "./received-email.js";
  * Takes the event `handleWebhook()` returns or the {@link ReceivedEmail} that
  * `receive()` and `normalizeReceivedEmail()` return. Returns an empty array
  * when the delivery was not granted by a rule or the email carries no
- * understanding. Entries without a rule id are skipped. Pass `ruleId` to keep
- * only the entries for that rule; `undefined` or `null` keeps every rule.
+ * understanding, and for a missing (`null` or `undefined`) or non-object
+ * argument. Entries without a rule id are skipped.
+ * Pass `ruleId` to keep only the entries for that rule; `undefined` or `null`
+ * keeps every rule.
  *
  * @example
  * ```typescript
@@ -21,10 +23,14 @@ import type { ReceivedEmail } from "./received-email.js";
  * ```
  */
 export function matchedRules(
-  email: EmailReceivedEvent | ReceivedEmail,
+  email: EmailReceivedEvent | ReceivedEmail | null | undefined,
   ruleId?: string | null,
 ): UnderstandingRule[] {
-  const analysis = "email" in email ? email.email.analysis : email.analysis;
+  // Only an untyped caller can pass anything else that is not an object.
+  if (email === null || typeof email !== "object") {
+    return [];
+  }
+  const analysis = "email" in email ? email.email?.analysis : email.analysis;
   const rules: unknown = analysis?.understanding?.rules;
   if (!Array.isArray(rules)) {
     return [];
