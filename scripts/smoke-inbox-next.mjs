@@ -306,7 +306,11 @@ try {
   assert.equal(JSON.parse(waited.stdout).email.id, arrived.id);
   const lists = log.filter((entry) => entry.path === "/v1/emails");
   assert.equal(lists[0].query.limit, "1", "the baseline must be read before the first check");
-  assert.equal(lists[1].query.awaiting, "you");
+  // The baseline then catches up on the tail, without waiting, before the
+  // first check, so it starts at the tail's own end.
+  assert.ok(lists[1].query.since, "the baseline must catch up on the tail");
+  assert.equal(lists[1].query.wait, undefined);
+  assert.equal(lists[2].query.awaiting, "you");
   assert.ok(lists.some((entry) => entry.query.wait !== undefined));
   const replyArrived = await run(["reply", "--id", arrived.id, "--body", "Thanks."]);
   assert.equal(replyArrived.code, 0, replyArrived.stderr);

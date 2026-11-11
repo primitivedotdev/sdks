@@ -18,9 +18,11 @@ vi.mock("../../src/oclif/api-client.js", () => ({
 }));
 
 import WaitCommand, {
+  cursorBefore,
   detailMatches,
   parseWaitDuration,
   senderMatches,
+  tailCursorAt,
   WAIT_EXIT_CODES,
   waitForEmail,
 } from "../../src/oclif/commands/wait.js";
@@ -39,6 +41,12 @@ type FakeMail = {
   reply_to_sent_email_id?: string | null;
   status?: string;
   created_at?: string;
+  /**
+   * When the email became visible, which the API stamps when it accepts the
+   * email, so after created_at. The forward tail orders and cursors on it;
+   * list rows do not carry it. Defaults to created_at.
+   */
+  visible_at?: string;
 };
 
 const LONG_AGO = "2026-01-05T12:00:00.000Z";
@@ -63,33 +71,87 @@ function detail(mail: FakeMail) {
   };
 }
 
+/** A tail cursor with its time at microseconds, so cursors compare as text. */
+function tailKey(at: string, id: string): string {
+  return `${at.replace(/(\.\d{3})Z$/, "$1000Z")}|${id}`;
+}
+
 /**
- * A fake inbox: `existing` mail is there before the wait starts, `arriving`
- * mail is returned by the first tail long-poll.
+ * A fake inbox with the API's two orders: a list without `since` is newest
+ * first by created_at; the forward tail (`since`) is oldest first by when
+ * each email became visible, and its cursor is that time and the id.
+ * `existing` mail is visible before the wait starts. `acceptedAfterStart`
+ * mail was inserted before the start (its created_at is older) but becomes
+ * visible just after the first read, as an email does when it is accepted
+ * while the command starts. `arriving` mail lands during the first
+ * long-poll (a tail read with `wait`), after all of it.
  */
-function fakeInbox(existing: FakeMail[], arriving: FakeMail[]) {
-  const all = new Map(
-    [...existing, ...arriving].map((mail) => [mail.id, detail(mail)]),
+function fakeInbox(
+  existing: FakeMail[],
+  arriving: FakeMail[],
+  options: { acceptedAfterStart?: FakeMail[] } = {},
+) {
+  const late = options.acceptedAfterStart ?? [];
+  const everyone = [...existing, ...late, ...arriving];
+  const all = new Map(everyone.map((mail) => [mail.id, detail(mail)]));
+  const visible = new Map<string, string>(
+    existing.map((mail) => [
+      mail.id,
+      tailKey(mail.visible_at ?? mail.created_at ?? LONG_AGO, mail.id),
+    ]),
   );
+  let reads = 0;
   let delivered = false;
+  const tail = (since: string) =>
+    everyone
+      .filter((mail) => (visible.get(mail.id) ?? "") > since)
+      .sort((a, b) =>
+        (visible.get(a.id) ?? "").localeCompare(visible.get(b.id) ?? ""),
+      );
   mocks.listEmails.mockImplementation(
     async ({ query }: { query: Record<string, unknown> }) => {
+      reads += 1;
+      if (reads === 2) {
+        for (const mail of late) {
+          visible.set(mail.id, tailKey(new Date().toISOString(), mail.id));
+        }
+      }
+      const limit = Number(query.limit);
       if (query.since === undefined) {
-        const newestFirst = [...existing].reverse().map(detail);
+        const newestFirst = [...existing, ...late]
+          .filter((mail) => visible.has(mail.id))
+          .sort((a, b) =>
+            (b.created_at ?? LONG_AGO).localeCompare(a.created_at ?? LONG_AGO),
+          )
+          .map(detail);
         return {
           data: {
-            data: newestFirst.slice(0, Number(query.limit)),
+            data: newestFirst.slice(0, limit),
             meta: { cursor: null },
           },
         };
       }
-      if (!delivered && arriving.length > 0) {
+      const since = String(query.since).replace(/(\.\d{3})Z\|/, "$1000Z|");
+      let rows = tail(since);
+      if (rows.length === 0 && Number(query.wait ?? 0) > 0 && !delivered) {
         delivered = true;
-        return {
-          data: { data: arriving.map(detail), meta: { cursor: "c|next" } },
-        };
+        // Stamped with the real time it lands, like the API's clock.
+        arriving.forEach((mail, index) => {
+          visible.set(
+            mail.id,
+            tailKey(new Date(Date.now() + index).toISOString(), mail.id),
+          );
+        });
+        rows = tail(since);
       }
-      return { data: { data: [], meta: { cursor: null } } };
+      const page = rows.slice(0, limit);
+      const last = page.at(-1);
+      return {
+        data: {
+          data: page.map(detail),
+          meta: { cursor: last ? (visible.get(last.id) ?? null) : null },
+        },
+      };
     },
   );
   mocks.getEmail.mockImplementation(
@@ -240,6 +302,92 @@ describe("primitive wait helpers", () => {
     });
     expect(found).toBeNull();
   });
+
+  it("still returns new mail when the client clock runs ahead of the server", async () => {
+    // The long-poll starts from the tail's own end, so only the check of
+    // what became visible since the start depends on the client clock. New
+    // mail is stamped with the server's (real) time, an hour before the
+    // client's start time.
+    fakeInbox([oldCode], [githubCode]);
+    const found = await waitForEmail({
+      apiClient: { client: {} } as never,
+      filters: { from: "github.com" },
+      includeExisting: false,
+      deadline: Date.now() + 10_000,
+      startedAt: Date.now() + 3_600_000,
+    });
+    expect(found?.id).toBe("gh-2");
+  });
+
+  it("counts mail made visible within a client clock lag, as the created_at check did", async () => {
+    // With the client clock an hour behind, the start reads an hour back:
+    // mail made visible in that hour counts as new. There is no allowance
+    // past the start time itself.
+    const halfHourAgo = new Date(Date.now() - 1_800_000).toISOString();
+    fakeInbox(
+      [{ ...githubCode, created_at: halfHourAgo, visible_at: halfHourAgo }],
+      [],
+    );
+    const found = await waitForEmail({
+      apiClient: { client: {} } as never,
+      filters: { from: "github.com" },
+      includeExisting: false,
+      deadline: Date.now() + 1_000,
+      startedAt: Date.now() - 3_600_000,
+    });
+    expect(found?.id).toBe("gh-2");
+  });
+
+  it("checks every email made visible since the start, past the first pages", async () => {
+    // More than the pages read before the long-poll became visible between
+    // the start and the baseline; the long-poll walks the rest.
+    const start = Date.now();
+    const unrelated: FakeMail[] = Array.from({ length: 600 }, (_, i) => {
+      const at = new Date(start + 1 + i).toISOString();
+      return {
+        id: `n${String(i).padStart(3, "0")}`,
+        sender: "news@example.com",
+        subject: "Weekly digest",
+        created_at: at,
+      };
+    });
+    fakeInbox(
+      [
+        ...unrelated,
+        { ...githubCode, created_at: new Date(start + 700).toISOString() },
+      ],
+      [],
+    );
+    const found = await waitForEmail({
+      apiClient: { client: {} } as never,
+      filters: { from: "github.com" },
+      includeExisting: false,
+      deadline: Date.now() + 5_000,
+      startedAt: start,
+    });
+    expect(found?.id).toBe("gh-2");
+  });
+
+  it("orders cursors by time when one is at milliseconds", () => {
+    expect(
+      cursorBefore(
+        "2026-11-11T13:00:00.123Z|b",
+        "2026-11-11T13:00:00.123456Z|a",
+      ),
+    ).toBe(true);
+    expect(
+      cursorBefore(
+        "2026-11-11T13:00:00.123456Z|a",
+        "2026-11-11T13:00:00.123Z|b",
+      ),
+    ).toBe(false);
+  });
+
+  it("marks a start time on the tail at microseconds", () => {
+    expect(tailCursorAt(Date.parse("2026-11-11T13:00:00.123Z"))).toBe(
+      "2026-11-11T13:00:00.123000Z|00000000-0000-4000-8000-000000000000",
+    );
+  });
 });
 
 describe("primitive wait command", () => {
@@ -268,7 +416,7 @@ describe("primitive wait command", () => {
     await runWait(["--code"]);
     const tail = mocks.listEmails.mock.calls
       .map(([arg]) => arg.query)
-      .find((query) => query.since !== undefined);
+      .find((query) => query.wait !== undefined);
     expect(tail.since).toBe(`${LONG_AGO}|old-1`);
     expect(tail.wait).toBeGreaterThan(0);
     expect(tail.wait).toBeLessThanOrEqual(30);
@@ -315,6 +463,145 @@ describe("primitive wait command", () => {
       "1",
     ]);
     expect(result.stdout).toBe("111111\n");
+  });
+
+  describe("when the newest email became visible after its created_at", () => {
+    // As on the API: accept stamps visibility after the insert that sets
+    // created_at, so the tail sorts the newest email after a cursor built
+    // from its created_at.
+    const visibleLater = (
+      mail: FakeMail,
+      created: string,
+      visible: string,
+    ) => ({
+      ...mail,
+      created_at: created,
+      visible_at: visible,
+    });
+    const invoice: FakeMail = {
+      id: "invoice-1",
+      sender: "billing@vendor.example",
+      subject: "Invoice 1042",
+      body_text: "Amount due: 120.00",
+    };
+
+    it("does not hand it back as new mail", async () => {
+      fakeInbox(
+        [
+          visibleLater(
+            invoice,
+            "2026-01-05T12:53:00.000Z",
+            "2026-01-05T12:53:01.250731Z",
+          ),
+        ],
+        [],
+      );
+      const result = await runWait(["--timeout", "1"]);
+      expect(result.exitCode).toBe(WAIT_EXIT_CODES.timeout);
+      expect(result.stdout).toBe("");
+      expect(mocks.getEmail).not.toHaveBeenCalled();
+    });
+
+    it("does not hand it back when it became visible in the same millisecond", async () => {
+      // The row's created_at is truncated to the millisecond; the tail
+      // compares microseconds.
+      fakeInbox(
+        [
+          visibleLater(
+            invoice,
+            "2026-01-05T12:53:00.123Z",
+            "2026-01-05T12:53:00.123456Z",
+          ),
+        ],
+        [],
+      );
+      const result = await runWait(["--timeout", "1"]);
+      expect(result.exitCode).toBe(WAIT_EXIT_CODES.timeout);
+      expect(mocks.getEmail).not.toHaveBeenCalled();
+    });
+
+    it("long-polls from the position the tail gives that email", async () => {
+      fakeInbox(
+        [
+          visibleLater(
+            oldCode,
+            "2026-01-05T12:53:00.000Z",
+            "2026-01-05T12:53:01.250731Z",
+          ),
+        ],
+        [githubCode],
+      );
+      const result = await runWait(["--code"]);
+      expect(result.stdout).toBe("482913\n");
+      const longPoll = mocks.listEmails.mock.calls
+        .map(([arg]) => arg.query)
+        .find((query) => query.wait !== undefined);
+      expect(longPoll.since).toBe("2026-01-05T12:53:01.250731Z|old-1");
+    });
+
+    it("skips an older email made visible after the newest one too", async () => {
+      fakeInbox(
+        [
+          visibleLater(
+            { ...invoice, id: "slow" },
+            "2026-01-05T12:50:00.000Z",
+            "2026-01-05T12:55:00.000000Z",
+          ),
+          visibleLater(
+            invoice,
+            "2026-01-05T12:53:00.000Z",
+            "2026-01-05T12:53:01.000000Z",
+          ),
+        ],
+        [],
+      );
+      const result = await runWait(["--timeout", "1"]);
+      expect(result.exitCode).toBe(WAIT_EXIT_CODES.timeout);
+      expect(mocks.getEmail).not.toHaveBeenCalled();
+    });
+
+    it("returns an email inserted before the start and accepted after it", async () => {
+      // A sign-up code still being accepted when the wait starts: older by
+      // created_at than the start, visible only after it.
+      fakeInbox([oldCode], [], {
+        acceptedAfterStart: [{ ...githubCode, created_at: LONG_AGO }],
+      });
+      const result = await runWait([
+        "--from",
+        "github.com",
+        "--code",
+        "--timeout",
+        "1",
+      ]);
+      expect(result.stdout).toBe("482913\n");
+    });
+
+    it("still returns the newest existing email with --include-existing", async () => {
+      fakeInbox(
+        [
+          visibleLater(
+            newsletter,
+            "2026-01-05T12:50:00.000Z",
+            "2026-01-05T12:50:00.900000Z",
+          ),
+          visibleLater(
+            oldCode,
+            "2026-01-05T12:53:00.000Z",
+            "2026-01-05T12:53:01.250731Z",
+          ),
+        ],
+        [],
+      );
+      const result = await runWait([
+        "--from",
+        "github.com",
+        "--code",
+        "--include-existing",
+        "--timeout",
+        "1",
+      ]);
+      expect(result.stdout).toBe("111111\n");
+    });
   });
 
   it("prints a readable email with its ID and the reply command by default", async () => {

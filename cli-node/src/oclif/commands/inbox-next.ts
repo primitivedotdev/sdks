@@ -90,11 +90,14 @@ const SCAN_PAGE_SIZE = 100;
 const DEFAULT_WAIT_TIMEOUT_SECONDS = 300;
 const MAX_LONG_POLL_SECONDS = 30;
 
+// The id half of a forward-tail cursor that marks only a time: it has to be
+// a well-formed UUID, and sorts before any real id at the same time.
+export const TIME_CURSOR_ID = "00000000-0000-4000-8000-000000000000";
+
 // The forward tail (`GET /emails?since=`) returns rows strictly after
 // this cursor, oldest first, so starting at the epoch walks awaiting
-// mail from the oldest. The id only has to be a well-formed UUID.
-export const EPOCH_CURSOR =
-  "1970-01-01T00:00:00.000000Z|00000000-0000-4000-8000-000000000000";
+// mail from the oldest.
+export const EPOCH_CURSOR = `1970-01-01T00:00:00.000000Z|${TIME_CURSOR_ID}`;
 
 type LooseRecord = Record<string, unknown>;
 
@@ -599,12 +602,27 @@ export async function countAutomatedAwaiting(params: {
   };
 }
 
+/** Pages of the forward tail `baselineCursor` reads to catch up, at most. */
+const BASELINE_CATCH_UP_PAGES = 5;
+
 /**
- * The wake-up cursor for --wait: the newest email's position, read
- * BEFORE the first state check. Anything that becomes visible after it
- * is returned by the long-poll, so there is no gap between "checked,
- * nothing awaits" and "started waiting". Built from the newest row the
- * way the API documents bootstrapping `since`; no client clock involved.
+ * The wake-up cursor for --wait (and for `primitive wait`): the end of the
+ * forward tail, the position of the email made visible most recently, read
+ * BEFORE the first state check. Anything that becomes visible after it is
+ * returned by the long-poll, so there is no gap between "checked, nothing
+ * awaits" and "started waiting". Taken from the server's answers alone, with
+ * no client clock involved.
+ *
+ * The tail orders and cursors on when an email became visible, which the
+ * API stamps when it accepts the email: after the created_at a list row
+ * carries, and to the microsecond where that created_at is truncated to the
+ * millisecond. So a cursor built from the newest row's created_at sits
+ * before that row on the tail, and the tail would hand it back, with any
+ * older email made visible after it, as new mail. From that cursor the tail
+ * is read forward without waiting until it is caught up, and the position it
+ * gives is the baseline. The read stops after BASELINE_CATCH_UP_PAGES pages;
+ * mail past that would still be handed back, which needs more than that many
+ * pages of mail made visible after the newest row's created_at.
  */
 export async function baselineCursor(params: {
   apiClient: PrimitiveApiClient;
@@ -615,7 +633,17 @@ export async function baselineCursor(params: {
   const newest = page.rows[0];
   const createdAt = str(newest?.created_at);
   const id = str(newest?.id);
-  return createdAt && id ? `${createdAt}|${id}` : EPOCH_CURSOR;
+  let cursor = createdAt && id ? `${createdAt}|${id}` : EPOCH_CURSOR;
+  for (let read = 0; read < BASELINE_CATCH_UP_PAGES; read += 1) {
+    const tail = await listPage(api, params.apiClient, {
+      limit: SCAN_PAGE_SIZE,
+      since: cursor,
+    });
+    if (tail.rows.length === 0 || !tail.cursor) break;
+    cursor = tail.cursor;
+    if (tail.rows.length < SCAN_PAGE_SIZE) break;
+  }
+  return cursor;
 }
 
 /**
