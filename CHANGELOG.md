@@ -816,10 +816,10 @@ parsers.
   within ten minutes of arriving. While nothing new arrives they re-read
   recent mail, up to its 300 newest matching emails, at most every 15
   seconds (or every three poll intervals, when that is longer), so such an
-  email prints after the later one. A wait with a time limit can end before
-  the next re-read, and a search by words that the server stops early for
-  time may not reach as far back. A connected agent's `emails wait` reads
-  its mail another way and is unchanged.
+  email prints after the later one. A wait or watch with a time limit can
+  end before the next re-read, and a search by words that the server stops
+  early for time may not reach as far back. A connected agent's
+  `emails wait` reads its mail another way and is unchanged.
 - `emails wait --since` and `emails watch --since` also take a duration
   ago, such as `15m` or `2h`. `emails wait` says in its help, and in its
   timeout message, that without `--since` or `--include-existing` it counts

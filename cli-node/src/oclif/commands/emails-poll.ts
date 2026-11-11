@@ -342,8 +342,10 @@ export async function fetchRecentEmails(params: {
  * same mail itself, and then an interval after the last one ended, so a slow
  * re-read is not followed straight away by another. The interval is
  * LATE_MAIL_REREAD_MS, or LATE_MAIL_REREAD_POLLS poll intervals when that is
- * longer. A wait that ends before the next one is due does not report mail
- * that became readable since the last.
+ * longer. A re-read is made only on a poll that brought nothing new once it
+ * is due, so a wait that ends before the next one is made does not report
+ * mail that became readable since the last. `deadline` stops a re-read's
+ * paging (fetchRecentEmails).
  *
  * Each re-read reads from LATE_MAIL_WINDOW_MS (and LATE_MAIL_CLOCK_SLACK_MS)
  * before the last one that was not cut short began (before `start`, at

@@ -607,6 +607,18 @@ describe("lateMailReread", () => {
     expect(reread.due(ended + LATE_MAIL_REREAD_MS)).toBe(true);
   });
 
+  it("reads no page once its deadline has passed", async () => {
+    const reread = lateMailReread({
+      pollIntervalMs: 2_000,
+      deadline: START + 10_000,
+      start: START,
+    });
+    mocks.searchEmails.mockResolvedValue(page([]));
+    vi.setSystemTime(START + 10_000);
+    expect(await reread.read(params)).toEqual([]);
+    expect(mocks.searchEmails).not.toHaveBeenCalled();
+  });
+
   it("waits three poll intervals when that is longer", () => {
     const reread = lateMailReread({
       pollIntervalMs: 30_000,
