@@ -1181,11 +1181,10 @@ export async function runBackgroundListenSupervisor(
         if (row.type !== "primitive-listen-state" || row.token !== token)
           return;
         if (row.phase === "receiving") {
-          if (readyAt === null) {
-            readyAt = Date.now();
-            // A start that gave up before this worker was ready is now history.
-            clearStartFailure(paths);
-          }
+          if (readyAt === null) readyAt = Date.now();
+          // A start that gave up, or kept a receiver it could not verify, is
+          // history once the worker receives again, on each recovery.
+          clearStartFailure(paths);
           if (record.failureCode !== null) {
             record.failureCode = null;
             tryPublish();
