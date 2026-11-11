@@ -238,12 +238,25 @@ export function describePermissions(grant: KeyGrantView): string {
   return permissions.length > 0 ? permissions.join(", ") : "none";
 }
 
-export function formatKeyRows(rows: readonly KeyView[]): string {
-  if (rows.length === 0) return "No API keys.";
+export function formatKeyRows(
+  rows: readonly KeyView[],
+  options: { includeRevoked?: boolean } = {},
+): string {
+  if (rows.length === 0) {
+    return options.includeRevoked
+      ? "No API keys, revoked or not."
+      : "No API keys. Revoked keys are left out; pass --include-revoked to list them too.";
+  }
   return rows
     .map((row) => {
-      const suspended = row.suspended ? " [suspended]" : "";
-      return `${row.id}  ${row.key_prefix}  ${row.name ?? "(unnamed)"}  ${describePermissions(row.grant)}  mail: ${describeMailScope(row.grant)}  expires ${row.expires_at ?? "never"}  last used ${row.last_used_at ?? "never"}${suspended}`;
+      // A revoked key never works again, whatever it was before.
+      const suspended =
+        row.suspended && row.status !== "revoked" ? " [suspended]" : "";
+      const revoked =
+        row.status === "revoked"
+          ? ` [revoked${row.revoked_at ? ` ${row.revoked_at}` : ""}]`
+          : "";
+      return `${row.id}  ${row.key_prefix}  ${row.name ?? "(unnamed)"}  ${describePermissions(row.grant)}  mail: ${describeMailScope(row.grant)}  expires ${row.expires_at ?? "never"}  last used ${row.last_used_at ?? "never"}${suspended}${revoked}`;
     })
     .join("\n");
 }
@@ -677,23 +690,31 @@ export class KeysListCommand extends Command {
   static description =
     `List the organization's API keys with their permissions, mail scope, expiry and last use. Only metadata is shown, never a secret.
 
-  You see your own keys, and every key if your role may read them all, as in the dashboard.`;
+  You see your own keys, and every key if your role may read them all, as in the dashboard.
+
+  Revoked keys are left out unless you pass --include-revoked, which lists them too, each marked [revoked] with when it was revoked. With --json, a revoked key has status "revoked", revoked_at and revoked_by. That confirms a revocation without having noted the key ids beforehand.`;
 
   static summary = "List API keys";
 
   static examples = [
     "<%= config.bin %> keys list",
     "<%= config.bin %> keys list --json",
+    "<%= config.bin %> keys list --include-revoked",
   ];
 
   static flags = {
     "api-key": API_KEY_FLAG,
     "api-base-url": API_BASE_URL_FLAG,
+    "include-revoked": Flags.boolean({
+      description:
+        "List revoked keys too, each marked [revoked] with when it was revoked.",
+    }),
     json: Flags.boolean({ description: "Print the keys as JSON." }),
   };
 
   async run(): Promise<void> {
     const { flags } = await this.parse(KeysListCommand);
+    const includeRevoked = flags["include-revoked"] === true;
     const auth = await authenticate(this, flags);
     const items: KeyView[] = [];
     let cursor: string | undefined;
@@ -701,7 +722,12 @@ export class KeysListCommand extends Command {
       const result = await call<CredentialsListKeysResult>(
         listKeys({
           client: auth.apiClient.client,
-          ...(cursor ? { query: { cursor } } : {}),
+          // The cursor does not carry include_revoked: it goes with every
+          // page. The client leaves an undefined parameter out.
+          query: {
+            cursor,
+            include_revoked: includeRevoked ? "true" : undefined,
+          },
         }),
       );
       if (!result.ok) {
@@ -716,7 +742,7 @@ export class KeysListCommand extends Command {
       this.log(JSON.stringify(items, null, 2));
       return;
     }
-    this.log(formatKeyRows(items));
+    this.log(formatKeyRows(items, { includeRevoked }));
   }
 }
 

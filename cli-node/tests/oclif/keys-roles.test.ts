@@ -185,7 +185,21 @@ const READER = keyRow({
 
 describe("keys helpers", () => {
   it("formats key rows and one key, with permissions and mail scope", () => {
-    expect(formatKeyRows([])).toBe("No API keys.");
+    expect(formatKeyRows([])).toBe(
+      "No API keys. Revoked keys are left out; pass --include-revoked to list them too.",
+    );
+    expect(formatKeyRows([], { includeRevoked: true })).toBe(
+      "No API keys, revoked or not.",
+    );
+    // A revoked key with no recorded time, once suspended: only [revoked].
+    expect(
+      formatKeyRows([
+        keyRow(
+          { template: "super_admin", permissions: null, mail_scope: null },
+          { status: "revoked", revoked_at: null, suspended: true },
+        ),
+      ]),
+    ).toMatch(/last used never \[revoked\]$/);
     expect(
       formatKeyRows([
         keyRow({
@@ -690,6 +704,62 @@ describe("keys commands", () => {
     expect(new URL((requests[1] as Request).url).search).toBe("?cursor=page-2");
     expect(result.stdout).toContain("mail:read  mail: every mailbox");
     expect(result.stdout).toContain("second  prim_ab12cd34...");
+  });
+
+  it("list --include-revoked asks for revoked keys on every page and marks them", async () => {
+    const revoked = {
+      ...READER,
+      id: "gone",
+      status: "revoked",
+      revoked_at: "2026-11-11T13:05:00.000Z",
+      revoked_by: "user-1",
+    };
+    const requests = useServer((request) => {
+      const cursor = new URL(request.url).searchParams.get("cursor");
+      return Response.json({
+        success: true,
+        data: cursor
+          ? { items: [revoked], next_cursor: null }
+          : { items: [READER], next_cursor: "page-2" },
+      });
+    });
+    const result = await run(KeysListCommand, ["--include-revoked"]);
+    expect(result.exitCode).toBeUndefined();
+    expect(
+      requests.map((r) => Object.fromEntries(new URL(r.url).searchParams)),
+    ).toEqual([
+      { include_revoked: "true" },
+      { cursor: "page-2", include_revoked: "true" },
+    ]);
+    for (const request of requests) {
+      expect(
+        new URL(request.url).searchParams.getAll("include_revoked"),
+      ).toEqual(["true"]);
+    }
+    const lines = result.stdout.trim().split("\n");
+    expect(lines[0]).not.toContain("[revoked");
+    expect(lines[1]).toMatch(
+      /^gone {2}.* \[revoked 2026-11-11T13:05:00\.000Z\]$/,
+    );
+
+    const json = await run(KeysListCommand, ["--include-revoked", "--json"]);
+    expect(JSON.parse(json.stdout)[1]).toMatchObject({
+      id: "gone",
+      status: "revoked",
+      revoked_at: "2026-11-11T13:05:00.000Z",
+      revoked_by: "user-1",
+    });
+  });
+
+  it("list without --include-revoked asks for no revoked keys and says they are left out", async () => {
+    const requests = useServer(() =>
+      Response.json({ success: true, data: { items: [], next_cursor: null } }),
+    );
+    const result = await run(KeysListCommand, []);
+    expect(new URL((requests[0] as Request).url).search).toBe("");
+    expect(result.stdout).toBe(
+      "No API keys. Revoked keys are left out; pass --include-revoked to list them too.\n",
+    );
   });
 
   it("get prints one key's permissions and scope, and the JSON as returned", async () => {
