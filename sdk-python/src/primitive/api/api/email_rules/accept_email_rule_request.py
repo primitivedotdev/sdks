@@ -135,16 +135,15 @@ def sync_detailed(
     now on with the member who asked. Send no body to accept it as asked, or change it first with
     english and tree together (and an explanation, or the server writes one). Because this gives your
     mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and
-    agent tokens are refused. Test it before accepting: on your mail with POST /v1/email-rules/test and
-    the request's tree, and on mail that has not arrived. Mail already received shows only what has
-    arrived. To see what the rule would do with an email that has not, such as one they would never want
-    shared, the member asked can pass the request's tree to POST /v1/email-rules/test-sample
-    (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules test-email-rule-on-sample
-    --body-file sample.json) with an email they make up. Nothing is stored, and it needs no access
-    beyond testing a rule of their own. Also needs mail:share_own (sharing your own mail through email
-    rules, which only shows it and never sends): a role without it is refused, whether or not it can
-    send. Needs mail:read, a member's own credential with their full access (not an API key, agent key
-    or narrowed token), and the email rules feature.
+    agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to POST
+    /v1/email-rules/test. A test on mail already received shows only what has arrived. To see what the
+    rule would do with an email that has not, such as one you would never want shared, pass the
+    request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI,
+    primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up.
+    Nothing is stored, and it needs no access beyond testing a rule of your own. Accepting also needs
+    mail:share_own (sharing your own mail through email rules, which only shows it and never sends): a
+    role without it is refused, whether or not it can send. Needs mail:read, a member's own credential
+    with their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -187,16 +186,15 @@ def sync(
     now on with the member who asked. Send no body to accept it as asked, or change it first with
     english and tree together (and an explanation, or the server writes one). Because this gives your
     mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and
-    agent tokens are refused. Test it before accepting: on your mail with POST /v1/email-rules/test and
-    the request's tree, and on mail that has not arrived. Mail already received shows only what has
-    arrived. To see what the rule would do with an email that has not, such as one they would never want
-    shared, the member asked can pass the request's tree to POST /v1/email-rules/test-sample
-    (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules test-email-rule-on-sample
-    --body-file sample.json) with an email they make up. Nothing is stored, and it needs no access
-    beyond testing a rule of their own. Also needs mail:share_own (sharing your own mail through email
-    rules, which only shows it and never sends): a role without it is refused, whether or not it can
-    send. Needs mail:read, a member's own credential with their full access (not an API key, agent key
-    or narrowed token), and the email rules feature.
+    agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to POST
+    /v1/email-rules/test. A test on mail already received shows only what has arrived. To see what the
+    rule would do with an email that has not, such as one you would never want shared, pass the
+    request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI,
+    primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up.
+    Nothing is stored, and it needs no access beyond testing a rule of your own. Accepting also needs
+    mail:share_own (sharing your own mail through email rules, which only shows it and never sends): a
+    role without it is refused, whether or not it can send. Needs mail:read, a member's own credential
+    with their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -234,16 +232,15 @@ async def asyncio_detailed(
     now on with the member who asked. Send no body to accept it as asked, or change it first with
     english and tree together (and an explanation, or the server writes one). Because this gives your
     mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and
-    agent tokens are refused. Test it before accepting: on your mail with POST /v1/email-rules/test and
-    the request's tree, and on mail that has not arrived. Mail already received shows only what has
-    arrived. To see what the rule would do with an email that has not, such as one they would never want
-    shared, the member asked can pass the request's tree to POST /v1/email-rules/test-sample
-    (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules test-email-rule-on-sample
-    --body-file sample.json) with an email they make up. Nothing is stored, and it needs no access
-    beyond testing a rule of their own. Also needs mail:share_own (sharing your own mail through email
-    rules, which only shows it and never sends): a role without it is refused, whether or not it can
-    send. Needs mail:read, a member's own credential with their full access (not an API key, agent key
-    or narrowed token), and the email rules feature.
+    agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to POST
+    /v1/email-rules/test. A test on mail already received shows only what has arrived. To see what the
+    rule would do with an email that has not, such as one you would never want shared, pass the
+    request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI,
+    primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up.
+    Nothing is stored, and it needs no access beyond testing a rule of your own. Accepting also needs
+    mail:share_own (sharing your own mail through email rules, which only shows it and never sends): a
+    role without it is refused, whether or not it can send. Needs mail:read, a member's own credential
+    with their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -286,16 +283,15 @@ async def asyncio(
     now on with the member who asked. Send no body to accept it as asked, or change it first with
     english and tree together (and an explanation, or the server writes one). Because this gives your
     mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and
-    agent tokens are refused. Test it before accepting: on your mail with POST /v1/email-rules/test and
-    the request's tree, and on mail that has not arrived. Mail already received shows only what has
-    arrived. To see what the rule would do with an email that has not, such as one they would never want
-    shared, the member asked can pass the request's tree to POST /v1/email-rules/test-sample
-    (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules test-email-rule-on-sample
-    --body-file sample.json) with an email they make up. Nothing is stored, and it needs no access
-    beyond testing a rule of their own. Also needs mail:share_own (sharing your own mail through email
-    rules, which only shows it and never sends): a role without it is refused, whether or not it can
-    send. Needs mail:read, a member's own credential with their full access (not an API key, agent key
-    or narrowed token), and the email rules feature.
+    agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to POST
+    /v1/email-rules/test. A test on mail already received shows only what has arrived. To see what the
+    rule would do with an email that has not, such as one you would never want shared, pass the
+    request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI,
+    primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up.
+    Nothing is stored, and it needs no access beyond testing a rule of your own. Accepting also needs
+    mail:share_own (sharing your own mail through email rules, which only shows it and never sends): a
+    role without it is refused, whether or not it can send. Needs mail:read, a member's own credential
+    with their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):

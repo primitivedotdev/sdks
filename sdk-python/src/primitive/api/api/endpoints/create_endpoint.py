@@ -126,9 +126,12 @@ def sync_detailed(
 ) -> Response[CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse]:
     """ Create a webhook endpoint
 
-     Creates a new webhook endpoint. If a deactivated endpoint
-    with the same URL and domain exists, it is reactivated
-    instead. Subject to plan limits on the number of active
+     Creates a new webhook endpoint. A URL can have one endpoint per domain, route targets included
+    (unlike the one default destination per domain), and endpoints with no domain_id count as one
+    domain. A disabled endpoint still holds its URL; a deleted one does not. A create at a URL another
+    endpoint has on the same domain is refused (400). A deleted endpoint's URL can be used again: the
+    create makes a new endpoint, with a new id, and the deleted one stays as it was. Subject to plan
+    limits on the number of active
     endpoints.
 
     **Signing.** A webhook is signed with the organization's webhook secret (`GET /account/webhook-
@@ -209,9 +212,12 @@ def sync(
 ) -> CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse | None:
     """ Create a webhook endpoint
 
-     Creates a new webhook endpoint. If a deactivated endpoint
-    with the same URL and domain exists, it is reactivated
-    instead. Subject to plan limits on the number of active
+     Creates a new webhook endpoint. A URL can have one endpoint per domain, route targets included
+    (unlike the one default destination per domain), and endpoints with no domain_id count as one
+    domain. A disabled endpoint still holds its URL; a deleted one does not. A create at a URL another
+    endpoint has on the same domain is refused (400). A deleted endpoint's URL can be used again: the
+    create makes a new endpoint, with a new id, and the deleted one stays as it was. Subject to plan
+    limits on the number of active
     endpoints.
 
     **Signing.** A webhook is signed with the organization's webhook secret (`GET /account/webhook-
@@ -287,9 +293,12 @@ async def asyncio_detailed(
 ) -> Response[CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse]:
     """ Create a webhook endpoint
 
-     Creates a new webhook endpoint. If a deactivated endpoint
-    with the same URL and domain exists, it is reactivated
-    instead. Subject to plan limits on the number of active
+     Creates a new webhook endpoint. A URL can have one endpoint per domain, route targets included
+    (unlike the one default destination per domain), and endpoints with no domain_id count as one
+    domain. A disabled endpoint still holds its URL; a deleted one does not. A create at a URL another
+    endpoint has on the same domain is refused (400). A deleted endpoint's URL can be used again: the
+    create makes a new endpoint, with a new id, and the deleted one stays as it was. Subject to plan
+    limits on the number of active
     endpoints.
 
     **Signing.** A webhook is signed with the organization's webhook secret (`GET /account/webhook-
@@ -370,9 +379,12 @@ async def asyncio(
 ) -> CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse | None:
     """ Create a webhook endpoint
 
-     Creates a new webhook endpoint. If a deactivated endpoint
-    with the same URL and domain exists, it is reactivated
-    instead. Subject to plan limits on the number of active
+     Creates a new webhook endpoint. A URL can have one endpoint per domain, route targets included
+    (unlike the one default destination per domain), and endpoints with no domain_id count as one
+    domain. A disabled endpoint still holds its URL; a deleted one does not. A create at a URL another
+    endpoint has on the same domain is refused (400). A deleted endpoint's URL can be used again: the
+    create makes a new endpoint, with a new id, and the deleted one stays as it was. Subject to plan
+    limits on the number of active
     endpoints.
 
     **Signing.** A webhook is signed with the organization's webhook secret (`GET /account/webhook-

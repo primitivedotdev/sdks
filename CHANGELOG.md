@@ -143,6 +143,8 @@ no longer `UNSET` in Python, plain or `Nil*` fields rather than `Opt*` in Go):
 - `whoami`: `email`, `role_name`.
 - `testEndpoint`'s answer (`TestResult`): `reachable`, `delivery`.
 - `testEndpointRules`' answer: `delivery`.
+- `listEmails`: `data`. In Python it comes before `meta` in the arguments of
+  `ListEmailsResponse200`.
 
 #### Nullable values
 
@@ -396,6 +398,22 @@ Go (package `api`):
   names the first check that stops the email: `disabled`, `held` or an
   `acting_owner_*` code, then `event_types`, then the name of the rule that
   does not match. `rule` is no longer always a rule's name.
+- A URL can have one endpoint per domain, route targets included, and
+  endpoints with no `domain_id` count as one domain. A disabled endpoint still
+  holds its URL; a deleted one does not. `createEndpoint` at a deleted
+  endpoint's URL makes a new endpoint with a new id and leaves the deleted one
+  as it was, instead of bringing the deleted endpoint back with its old id. A
+  URL another endpoint has on the same domain, a disabled one included, is
+  refused with `400`. `updateEndpoint` onto such a URL is refused with `400`,
+  and a move onto a domain where another endpoint has the URL with `409`.
+
+#### Email list meta
+
+- `listEmails` answers `meta` as `EmailListMeta`, the pagination fields plus
+  `recipient_outside_access` and `recipient_rules_only`. In Go
+  `ListEmailsOK.Meta` is `EmailListMeta` instead of `PaginationMeta`, and in
+  Python `ListEmailsResponse200.meta` is `EmailListMeta`. Node's
+  `EmailListMeta` extends `PaginationMeta`.
 
 #### CLI sender default
 
@@ -671,8 +689,9 @@ date-time is kept as null and sorts last. A sync stops with an error after
   - `createEndpoint` and `updateEndpoint` take `Primitive-Step-Up`, and
     `updateEndpoint` takes `name`. `name` only needs at least one character.
   - Changing an endpoint's URL keeps the endpoint: its id, recipient routes,
-    signing secret, delivery history and owed deliveries. Another active
-    endpoint at the new URL is refused.
+    signing secret, delivery history and owed deliveries. A URL another
+    endpoint has on the same domain is refused; see Endpoint answers under
+    breaking changes.
   - `updateEndpoint` declares `403` and `503` answers; in Go they are typed
     responses instead of errors.
   - Endpoints carry `disabled_reason`: `owner_changed`,
@@ -706,6 +725,16 @@ date-time is kept as null and sorts last. A sync stops with an error after
     `details.reason` `key_has_resource_limits`.
   - `revokeCredential` answers `already_revoked: true`, with `revoked` 0,
     for an API key that was already revoked.
+  - `listKeys` items and `getKey` carry `rotated_from` and `rotated_to`: the
+    key this one was rotated from, and the newest key rotated from it, among
+    those the caller may read.
+  - `revokeCredential` declares `standing_objects` (`kind`, `id`, `label`,
+    `org_owned`): what the credential set up or owns and, for an API key,
+    what it carries on for the keys it was rotated from. What the
+    organization owns keeps working; anything else keeps working only while
+    someone can still act for it, such as a key of the same rotation that
+    still works. It also declares `keep_failed`, the items chosen to keep that
+    could not be taken over.
 - `getDelivery` carries `attempts`; it and `listDeliveries` carry
   `latest_attempt`, `next_attempt_at`, `response_status` and
   `response_body`.
@@ -733,6 +762,14 @@ date-time is kept as null and sorts last. A sync stops with an error after
     kept it back that you cannot see, or that were deleted since).
   - `testEmailRule` results carry `recipient`, the mailbox the email was
     received in.
+  - `listEmailRuleResults` answers with `email` (its `id`, `from_address`,
+    `recipient`, `subject` and `received_at`), and each rule's decision
+    carries `near_miss`.
+- `listEmails`' `recipient` filter only filters the mail the caller can read
+  and is never refused for that: a mailbox outside the caller's mail access
+  lists nothing. For a credential limited to some mailboxes,
+  `meta.recipient_outside_access` or `meta.recipient_rules_only` says when
+  the mailbox is neither one of its addresses nor on one of its domains.
 - Routes: `createRoute` and `updateRoute` answer with `warnings`
   (`endpoint_owner_limited`, `route_owner_limited`, `owner_unchecked`) and
   refuse a route that could never deliver with `400` `validation_error`,
@@ -1025,10 +1062,12 @@ parsers.
   policy allows. `keys rotate` takes the same two flags for the new key.
   Without them the new key keeps the old key's expiry, and the command now
   prints when the new key expires. The time is ISO 8601 with its time zone.
-- `keys revoke` counts separately what the key set up for the
-  organization, which keeps working, and what the key owned itself, such as
-  its own webhooks, which stop with it. Its help no longer says that
-  everything the key set up keeps working.
+- `keys revoke` counts separately what the organization owns, which keeps
+  working, and what the key owned itself or carried on for the keys it was
+  rotated from, such as its own webhooks, which keeps working only while
+  someone can still act for it, such as a key of the same rotation that still
+  works. Its help no longer says that everything the key set up keeps
+  working.
 - Generated commands the API answers only in a dashboard session, such as
   `credentials list-credentials` and `credentials list-credential-events`,
   say so: their summary, which short help prints, ends with `(dashboard

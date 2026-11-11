@@ -1236,23 +1236,24 @@ export class KeysUpdateCommand extends Command {
 }
 
 /**
- * What a revoked key set up, split as revocation splits it: what the
+ * What a revoked key set up or owns, split as revocation splits it: what the
  * organization owns keeps working, and what the key itself owned (its own
- * webhooks, say) stops with it. Null when it set up nothing.
+ * webhooks, say) keeps working only while someone can still act for it, such
+ * as a key of the same rotation that still works. Null when there is none.
  */
 export function standingSummary(standing: unknown): string | null {
   if (!Array.isArray(standing) || standing.length === 0) return null;
-  const stopped = standing.filter(
+  const keyOwned = standing.filter(
     (item) => (item as { org_owned?: unknown }).org_owned === false,
   ).length;
-  const kept = standing.length - stopped;
+  const kept = standing.length - keyOwned;
   const parts = [
     ...(kept > 0
-      ? [`${kept} item(s) it set up for the organization keep working.`]
+      ? [`${kept} item(s) the organization owns keep working.`]
       : []),
-    ...(stopped > 0
+    ...(keyOwned > 0
       ? [
-          `${stopped} item(s) the key owned itself, such as its own webhooks, which stop with it.`,
+          `${keyOwned} item(s) the key owned itself or carried on for the keys it was rotated from, such as its own webhooks, which keep working only while someone can still act for them, such as a key of the same rotation that still works.`,
         ]
       : []),
   ];
@@ -1261,7 +1262,7 @@ export function standingSummary(standing: unknown): string | null {
 
 export class KeysRevokeCommand extends Command {
   static description =
-    `Revoke an API key. It stops working at once. What it set up for the organization keeps working; webhooks the key itself owns stop with it. What it set up is listed for review.
+    `Revoke an API key. It stops working at once. What the organization owns keeps working; what the key itself owns, such as its own webhooks, keeps working only while someone can still act for it, such as a key of the same rotation that still works. What it set up or owns is listed for review.
 
   Asks for confirmation first; pass --yes to skip the prompt in scripts. Revoking runs directly. If your organization requires approval, the command prints the approval link, opens it where it can and waits for the one-time token; in a script, approve and run it again with --step-up-token.`;
 
@@ -1336,9 +1337,7 @@ export class KeysRevokeCommand extends Command {
         ? `Key ${args.id} was already revoked; nothing changed.`
         : `Revoked key ${args.id}.`,
     );
-    const summary = standingSummary(
-      (result.data as { standing_objects?: unknown }).standing_objects,
-    );
+    const summary = standingSummary(result.data.standing_objects);
     if (summary) this.log(summary);
   }
 }

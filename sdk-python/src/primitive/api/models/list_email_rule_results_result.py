@@ -12,6 +12,7 @@ from typing import cast
 
 if TYPE_CHECKING:
   from ..models.list_email_rule_results_result_classification_type_0 import ListEmailRuleResultsResultClassificationType0
+  from ..models.list_email_rule_results_result_email import ListEmailRuleResultsResultEmail
   from ..models.list_email_rule_results_result_rules_item import ListEmailRuleResultsResultRulesItem
 
 
@@ -29,6 +30,8 @@ class ListEmailRuleResultsResult:
             rules (list[ListEmailRuleResultsResultRulesItem]): Every rule the caller can see: those that matched this email,
                 then those that did not, then those that have not run on it; newest rule first within each.
             hidden (int): How many more rules the caller can see that are not listed.
+            email (ListEmailRuleResultsResultEmail | Unset): The email these results are about, so a saved answer says which
+                one it was.
             classification (ListEmailRuleResultsResultClassificationType0 | None | Unset): What the classifier read from
                 this email (one classification per vocabulary); null when it has none (not classified, or never will be), or
                 while the email's content is withheld, discarded or failed to parse.
@@ -36,6 +39,7 @@ class ListEmailRuleResultsResult:
 
     rules: list[ListEmailRuleResultsResultRulesItem]
     hidden: int
+    email: ListEmailRuleResultsResultEmail | Unset = UNSET
     classification: ListEmailRuleResultsResultClassificationType0 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -45,6 +49,7 @@ class ListEmailRuleResultsResult:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.list_email_rule_results_result_classification_type_0 import ListEmailRuleResultsResultClassificationType0 # noqa: PLC0415
+        from ..models.list_email_rule_results_result_email import ListEmailRuleResultsResultEmail # noqa: PLC0415
         from ..models.list_email_rule_results_result_rules_item import ListEmailRuleResultsResultRulesItem # noqa: PLC0415
         rules = []
         for rules_item_data in self.rules:
@@ -54,6 +59,10 @@ class ListEmailRuleResultsResult:
 
 
         hidden = self.hidden
+
+        email: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.email, Unset):
+            email = self.email.to_dict()
 
         classification: dict[str, Any] | None | Unset
         if isinstance(self.classification, Unset):
@@ -70,6 +79,8 @@ class ListEmailRuleResultsResult:
             "rules": rules,
             "hidden": hidden,
         })
+        if email is not UNSET:
+            field_dict["email"] = email
         if classification is not UNSET:
             field_dict["classification"] = classification
 
@@ -80,6 +91,7 @@ class ListEmailRuleResultsResult:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.list_email_rule_results_result_classification_type_0 import ListEmailRuleResultsResultClassificationType0 # noqa: PLC0415
+        from ..models.list_email_rule_results_result_email import ListEmailRuleResultsResultEmail # noqa: PLC0415
         from ..models.list_email_rule_results_result_rules_item import ListEmailRuleResultsResultRulesItem # noqa: PLC0415
         d = dict(src_dict)
         rules = []
@@ -93,6 +105,16 @@ class ListEmailRuleResultsResult:
 
 
         hidden = d.pop("hidden")
+
+        _email = d.pop("email", UNSET)
+        email: ListEmailRuleResultsResultEmail | Unset
+        if isinstance(_email,  Unset):
+            email = UNSET
+        else:
+            email = ListEmailRuleResultsResultEmail.from_dict(_email)
+
+
+
 
         def _parse_classification(data: object) -> ListEmailRuleResultsResultClassificationType0 | None | Unset:
             if data is None:
@@ -117,6 +139,7 @@ class ListEmailRuleResultsResult:
         list_email_rule_results_result = cls(
             rules=rules,
             hidden=hidden,
+            email=email,
             classification=classification,
         )
 

@@ -48,6 +48,12 @@ class CredentialsGetKeyResult:
             revoked_by (None | str | Unset): The user id of the person who revoked the key from their own dashboard session,
                 step-up or Primitive CLI login; null for a key that is not revoked, and for one revoked any other way (by an API
                 key, another app or token, or an automatic process such as secret scanning).
+            rotated_from (None | str | Unset): The id of the key this key was rotated from (POST /v1/keys/{id}/rotate made
+                this key in its place); null for a key not made by rotation, when the caller may not read that key, or when its
+                record is gone. A revoked one is still named: GET /v1/keys/{id} answers it.
+            rotated_to (None | str | Unset): The id of the newest key rotated from this key that the caller may read; null
+                until it is rotated, or when the caller may read no key rotated from it. A revoked one is still named: GET
+                /v1/keys/{id} answers it.
      """
 
     id: str
@@ -64,6 +70,8 @@ class CredentialsGetKeyResult:
     status: CredentialsGetKeyResultStatus | Unset = UNSET
     revoked_at: None | str | Unset = UNSET
     revoked_by: None | str | Unset = UNSET
+    rotated_from: None | str | Unset = UNSET
+    rotated_to: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -117,6 +125,18 @@ class CredentialsGetKeyResult:
         else:
             revoked_by = self.revoked_by
 
+        rotated_from: None | str | Unset
+        if isinstance(self.rotated_from, Unset):
+            rotated_from = UNSET
+        else:
+            rotated_from = self.rotated_from
+
+        rotated_to: None | str | Unset
+        if isinstance(self.rotated_to, Unset):
+            rotated_to = UNSET
+        else:
+            rotated_to = self.rotated_to
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -139,6 +159,10 @@ class CredentialsGetKeyResult:
             field_dict["revoked_at"] = revoked_at
         if revoked_by is not UNSET:
             field_dict["revoked_by"] = revoked_by
+        if rotated_from is not UNSET:
+            field_dict["rotated_from"] = rotated_from
+        if rotated_to is not UNSET:
+            field_dict["rotated_to"] = rotated_to
 
         return field_dict
 
@@ -242,6 +266,26 @@ class CredentialsGetKeyResult:
         revoked_by = _parse_revoked_by(d.pop("revoked_by", UNSET))
 
 
+        def _parse_rotated_from(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        rotated_from = _parse_rotated_from(d.pop("rotated_from", UNSET))
+
+
+        def _parse_rotated_to(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        rotated_to = _parse_rotated_to(d.pop("rotated_to", UNSET))
+
+
         credentials_get_key_result = cls(
             id=id,
             kind=kind,
@@ -257,6 +301,8 @@ class CredentialsGetKeyResult:
             status=status,
             revoked_at=revoked_at,
             revoked_by=revoked_by,
+            rotated_from=rotated_from,
+            rotated_to=rotated_to,
         )
 
 

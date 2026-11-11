@@ -125,7 +125,11 @@ def sync_detailed(
 
      Updates an active webhook endpoint. Changing the URL keeps the endpoint: its id, recipient routes,
     signing secret, delivery history and any deliveries still owed to it stay with it, and owed
-    deliveries go to the new URL. Another active endpoint at the new URL is refused.
+    deliveries go to the new URL. A URL can have one endpoint per domain, route targets included (unlike
+    the one default destination per domain), and endpoints with no domain_id count as one domain. A
+    disabled endpoint still holds its URL; a deleted one does not. A change onto a URL another endpoint
+    has on the same domain is refused (400), and a move onto a domain where another endpoint has this
+    URL is refused (409).
 
 
     Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint
@@ -181,7 +185,11 @@ def sync(
 
      Updates an active webhook endpoint. Changing the URL keeps the endpoint: its id, recipient routes,
     signing secret, delivery history and any deliveries still owed to it stay with it, and owed
-    deliveries go to the new URL. Another active endpoint at the new URL is refused.
+    deliveries go to the new URL. A URL can have one endpoint per domain, route targets included (unlike
+    the one default destination per domain), and endpoints with no domain_id count as one domain. A
+    disabled endpoint still holds its URL; a deleted one does not. A change onto a URL another endpoint
+    has on the same domain is refused (400), and a move onto a domain where another endpoint has this
+    URL is refused (409).
 
 
     Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint
@@ -232,7 +240,11 @@ async def asyncio_detailed(
 
      Updates an active webhook endpoint. Changing the URL keeps the endpoint: its id, recipient routes,
     signing secret, delivery history and any deliveries still owed to it stay with it, and owed
-    deliveries go to the new URL. Another active endpoint at the new URL is refused.
+    deliveries go to the new URL. A URL can have one endpoint per domain, route targets included (unlike
+    the one default destination per domain), and endpoints with no domain_id count as one domain. A
+    disabled endpoint still holds its URL; a deleted one does not. A change onto a URL another endpoint
+    has on the same domain is refused (400), and a move onto a domain where another endpoint has this
+    URL is refused (409).
 
 
     Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint
@@ -288,7 +300,11 @@ async def asyncio(
 
      Updates an active webhook endpoint. Changing the URL keeps the endpoint: its id, recipient routes,
     signing secret, delivery history and any deliveries still owed to it stay with it, and owed
-    deliveries go to the new URL. Another active endpoint at the new URL is refused.
+    deliveries go to the new URL. A URL can have one endpoint per domain, route targets included (unlike
+    the one default destination per domain), and endpoints with no domain_id count as one domain. A
+    disabled endpoint still holds its URL; a deleted one does not. A change onto a URL another endpoint
+    has on the same domain is refused (400), and a move onto a domain where another endpoint has this
+    URL is refused (409).
 
 
     Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint

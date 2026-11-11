@@ -38,7 +38,9 @@ class GetEmailRuleRequestResult:
             tree (EmailRuleTree):
             explanation (str):
             assumptions (list[str]):
-            warnings (list[str]):
+            warnings (list[str]): As the member who asked sent them, normally from their compile. The compiler's note that
+                the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it
+                naming them.
             compiled_by (str):
             vocabulary (str):
             proposed_via (GetEmailRuleRequestResultProposedVia): session: the proposer's own session; oauth: an OAuth or CLI

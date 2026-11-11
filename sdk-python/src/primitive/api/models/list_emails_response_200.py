@@ -11,8 +11,8 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
+  from ..models.email_list_meta import EmailListMeta
   from ..models.email_summary import EmailSummary
-  from ..models.pagination_meta import PaginationMeta
 
 
 
@@ -27,13 +27,13 @@ class ListEmailsResponse200:
     """ 
         Attributes:
             success (bool):
-            meta (PaginationMeta):
-            data (list[EmailSummary] | Unset):
+            data (list[EmailSummary]):
+            meta (EmailListMeta):
      """
 
     success: bool
-    meta: PaginationMeta
-    data: list[EmailSummary] | Unset = UNSET
+    data: list[EmailSummary]
+    meta: EmailListMeta
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -41,30 +41,27 @@ class ListEmailsResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_list_meta import EmailListMeta # noqa: PLC0415
         from ..models.email_summary import EmailSummary # noqa: PLC0415
-        from ..models.pagination_meta import PaginationMeta # noqa: PLC0415
         success = self.success
 
+        data = []
+        for data_item_data in self.data:
+            data_item = data_item_data.to_dict()
+            data.append(data_item)
+
+
+
         meta = self.meta.to_dict()
-
-        data: list[dict[str, Any]] | Unset = UNSET
-        if not isinstance(self.data, Unset):
-            data = []
-            for data_item_data in self.data:
-                data_item = data_item_data.to_dict()
-                data.append(data_item)
-
-
 
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
             "success": success,
+            "data": data,
             "meta": meta,
         })
-        if data is not UNSET:
-            field_dict["data"] = data
 
         return field_dict
 
@@ -72,32 +69,30 @@ class ListEmailsResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_list_meta import EmailListMeta # noqa: PLC0415
         from ..models.email_summary import EmailSummary # noqa: PLC0415
-        from ..models.pagination_meta import PaginationMeta # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 
-        meta = PaginationMeta.from_dict(d.pop("meta"))
+        data = []
+        _data = d.pop("data")
+        for data_item_data in (_data):
+            data_item = EmailSummary.from_dict(data_item_data)
 
 
 
-
-        _data = d.pop("data", UNSET)
-        data: list[EmailSummary] | Unset = UNSET
-        if _data is not UNSET:
-            data = []
-            for data_item_data in _data:
-                data_item = EmailSummary.from_dict(data_item_data)
+            data.append(data_item)
 
 
+        meta = EmailListMeta.from_dict(d.pop("meta"))
 
-                data.append(data_item)
+
 
 
         list_emails_response_200 = cls(
             success=success,
-            meta=meta,
             data=data,
+            meta=meta,
         )
 
 

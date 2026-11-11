@@ -4084,11 +4084,11 @@ export type Endpoint = {
      */
     owned_by_key?: boolean;
     /**
-     * The API key that owns this webhook. In endpoint responses it is set only for a caller who may read API key metadata, and is null otherwise and when the organization owns the webhook. After a rotation, the key that carries on for the key first named while it can act.
+     * The API key that owns this webhook. In endpoint responses it is set only for a caller who may read API key metadata, and is null otherwise and when the organization owns the webhook. After a rotation, the key that carries on for the key first named while it can act. When none can, the key delivery stops on: the key first named while it is suspended and not expired, otherwise the newest key of its rotation that is not revoked, otherwise the newest one (only the key first named when nothing may carry on for it).
      */
     owner_key_id?: string | null;
     /**
-     * Whether the owning key can act now. In endpoint responses it is set only for a caller who may read API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent nothing. Anyone who may read the endpoint learns that from delivery.reasons, which never names the key.
+     * Whether the owning key can act now. In endpoint responses it is set only for a caller who may read API key metadata. It is the state delivery acts on. Suspended also covers an expired key. A suspended or revoked owner is sent nothing. Anyone who may read the endpoint learns that from delivery.reasons, which never names the key.
      */
     owner_key_status?: 'active' | 'suspended' | 'revoked' | null;
     /**
@@ -5954,6 +5954,17 @@ export type ArchiveMembers = {
     members: Array<ArchiveMember>;
 };
 
+export type EmailListMeta = PaginationMeta & {
+    /**
+     * Present, as true, when your credential is limited to some mailboxes, recipient names one that is neither one of its addresses nor on one of its domains (or the credential reads no received mail at all), and it reads through no email rule: the page is then empty however much mail that mailbox holds. Absent otherwise, and for an address on one of your domains, which may still list nothing.
+     */
+    recipient_outside_access?: boolean;
+    /**
+     * Present, as true, when your credential is limited to some mailboxes, recipient names one that is neither one of its addresses nor on one of its domains, and the credential reads some mail through email rules: the page holds only the mail those rules give it there. Absent otherwise.
+     */
+    recipient_rules_only?: boolean;
+};
+
 /**
  * Stored addressing and threading headers. A member is null when absent or withheld.
  */
@@ -6961,6 +6972,22 @@ export type ListEmailRuleDecisionsResult = Array<{
 
 export type ListEmailRuleResultsResult = {
     /**
+     * The email these results are about, so a saved answer says which one it was.
+     */
+    email?: {
+        id: string;
+        /**
+         * The sender address, as GET /v1/emails/{id} shows it.
+         */
+        from_address: string | null;
+        /**
+         * The mailbox this copy of the email was received in, as GET /v1/emails/{id} shows it.
+         */
+        recipient: string;
+        subject: string | null;
+        received_at: string;
+    };
+    /**
      * Every rule the caller can see: those that matched this email, then those that did not, then those that have not run on it; newest rule first within each.
      */
     rules: Array<{
@@ -6980,6 +7007,10 @@ export type ListEmailRuleResultsResult = {
              */
             rule_version: number;
             matched: boolean;
+            /**
+             * Not matched, but nearly: its questions did not all say yes, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false). False when detail_withheld is true. Decisions recorded under the earlier definition counted an exclusion too.
+             */
+            near_miss?: boolean;
             /**
              * How each top-level part of the rule decided. Empty when a fact the rule reads was missing, so it was not evaluated, or when detail_withheld is true.
              */
@@ -7002,7 +7033,7 @@ export type ListEmailRuleResultsResult = {
              */
             tree: EmailRuleTree | null;
             /**
-             * Present, as true, on a result for an email whose content cannot be read (withheld, failed to parse or discarded): matched still says what the rule decided, but how it got there was read from that content, so parts and question_answers are empty. Absent otherwise.
+             * Present, as true, on a result for an email whose content cannot be read (withheld, failed to parse or discarded): matched still says what the rule decided, but how it got there was read from that content, so parts and question_answers are empty and near_miss is false. Absent otherwise.
              */
             detail_withheld?: boolean;
             /**
@@ -7199,6 +7230,9 @@ export type CreateEmailRuleRequestResult = {
     tree: EmailRuleTree;
     explanation: string;
     assumptions: Array<string>;
+    /**
+     * As the member who asked sent them, normally from their compile. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them.
+     */
     warnings: Array<string>;
     compiled_by: string;
     vocabulary: string;
@@ -7278,6 +7312,9 @@ export type EmailRuleRequest = {
     tree: EmailRuleTree;
     explanation: string;
     assumptions: Array<string>;
+    /**
+     * As the member who asked sent them, normally from their compile. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them.
+     */
     warnings: Array<string>;
     compiled_by: string;
     vocabulary: string;
@@ -8833,6 +8870,32 @@ export type CredentialsRevokeCredentialResult = {
      * true when the API key was already revoked, so nothing changed and revoked is 0. Absent otherwise. GET /v1/keys/{id} says when and by whom, to a caller who may read the key.
      */
     already_revoked?: boolean;
+    /**
+     * Items you chose to keep that could not be taken over after the revocation. Each stopped with it, unless someone else had taken it over in the meantime.
+     */
+    keep_failed?: Array<{
+        kind: string;
+        id: string;
+    }>;
+    /**
+     * What the credential set up or owns, listed for review, and for an API key also what it carries on for the keys it was rotated from. Revoking deletes none of it.
+     */
+    standing_objects?: Array<{
+        /**
+         * endpoint, function_trigger, pull_subscription, recipient_route, filter_rule or wake_schedule.
+         */
+        kind: string;
+        id: string;
+        /**
+         * A webhook's URL, a pull subscription's name (or pull when it has none), a route's or filter's pattern, or a wake schedule's command and the address it wakes (command to address). A Function trigger's label is function: look it up by id.
+         */
+        label: string;
+        /**
+         * true: the organization owns it, and it keeps working. false: the credential owns it itself, as with everything a third-party app or agent delegate made, a webhook made with a narrowed API key, or a wake schedule made with a key that does not cover super_admin. It keeps working only while someone can still act for it, such as a key of the same rotation that still works, or whoever it was given to or kept it. Revoking a third-party app or agent delegate turns these off, except that a block filter it made keeps blocking, within the reach the app had, unless the person revoking chose to stop it.
+         */
+        org_owned: boolean;
+        [key: string]: unknown;
+    }>;
     [key: string]: unknown;
 };
 
@@ -9227,6 +9290,14 @@ export type CredentialsListKeysResult = {
          * The user id of the person who revoked the key from their own dashboard session, step-up or Primitive CLI login; null for a key that is not revoked, and for one revoked any other way (by an API key, another app or token, or an automatic process such as secret scanning).
          */
         revoked_by?: string | null;
+        /**
+         * The id of the key this key was rotated from (POST /v1/keys/{id}/rotate made this key in its place); null for a key not made by rotation, when the caller may not read that key, or when its record is gone. A revoked one is still named: GET /v1/keys/{id} answers it.
+         */
+        rotated_from?: string | null;
+        /**
+         * The id of the newest key rotated from this key that the caller may read; null until it is rotated, or when the caller may read no key rotated from it. A revoked one is still named: GET /v1/keys/{id} answers it.
+         */
+        rotated_to?: string | null;
         [key: string]: unknown;
     }>;
     next_cursor: string | null;
@@ -9272,6 +9343,14 @@ export type CredentialsGetKeyResult = {
      * The user id of the person who revoked the key from their own dashboard session, step-up or Primitive CLI login; null for a key that is not revoked, and for one revoked any other way (by an API key, another app or token, or an automatic process such as secret scanning).
      */
     revoked_by?: string | null;
+    /**
+     * The id of the key this key was rotated from (POST /v1/keys/{id}/rotate made this key in its place); null for a key not made by rotation, when the caller may not read that key, or when its record is gone. A revoked one is still named: GET /v1/keys/{id} answers it.
+     */
+    rotated_from?: string | null;
+    /**
+     * The id of the newest key rotated from this key that the caller may read; null until it is rotated, or when the caller may read no key rotated from it. A revoked one is still named: GET /v1/keys/{id} answers it.
+     */
+    rotated_to?: string | null;
     [key: string]: unknown;
 };
 
@@ -11466,7 +11545,7 @@ export type ListEmailsData = {
          */
         automated?: 'true' | 'false';
         /**
-         * Exact case-insensitive delivered recipient mailbox, applied before pagination. Combines with existing filters and cursors; does not search message text.
+         * Exact case-insensitive delivered recipient mailbox, applied before pagination. Combines with existing filters and cursors; does not search message text. It filters only the mail the caller can read, and is never refused for that (200): a mailbox outside the caller's mail access lists nothing, and one the caller reads only in part (for example through an email rule) lists only that part. For a caller limited to some mailboxes, meta.recipient_outside_access or meta.recipient_rules_only says so when the mailbox is neither one of its addresses nor on one of its domains.
          */
         recipient?: string;
         /**
@@ -11542,8 +11621,9 @@ export type ListEmailsResponses = {
     /**
      * Paginated list of emails
      */
-    200: ListEnvelope & {
-        data?: Array<EmailSummary>;
+    200: SuccessEnvelope & {
+        data: Array<EmailSummary>;
+        meta: EmailListMeta;
     };
 };
 

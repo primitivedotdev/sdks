@@ -40452,6 +40452,18 @@ func (s *CredentialsGetKeyResult) encodeFields(e *jx.Encoder) {
 			s.RevokedBy.Encode(e)
 		}
 	}
+	{
+		if s.RotatedFrom.Set {
+			e.FieldStart("rotated_from")
+			s.RotatedFrom.Encode(e)
+		}
+	}
+	{
+		if s.RotatedTo.Set {
+			e.FieldStart("rotated_to")
+			s.RotatedTo.Encode(e)
+		}
+	}
 	for k, elem := range s.AdditionalProps {
 		e.FieldStart(k)
 
@@ -40461,7 +40473,7 @@ func (s *CredentialsGetKeyResult) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfCredentialsGetKeyResult = [14]string{
+var jsonFieldsNameOfCredentialsGetKeyResult = [16]string{
 	0:  "id",
 	1:  "kind",
 	2:  "name",
@@ -40476,6 +40488,8 @@ var jsonFieldsNameOfCredentialsGetKeyResult = [14]string{
 	11: "status",
 	12: "revoked_at",
 	13: "revoked_by",
+	14: "rotated_from",
+	15: "rotated_to",
 }
 
 // Decode decodes CredentialsGetKeyResult from json.
@@ -40633,6 +40647,26 @@ func (s *CredentialsGetKeyResult) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"revoked_by\"")
+			}
+		case "rotated_from":
+			if err := func() error {
+				s.RotatedFrom.Reset()
+				if err := s.RotatedFrom.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"rotated_from\"")
+			}
+		case "rotated_to":
+			if err := func() error {
+				s.RotatedTo.Reset()
+				if err := s.RotatedTo.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"rotated_to\"")
 			}
 		default:
 			var elem jx.Raw
@@ -46755,6 +46789,18 @@ func (s *CredentialsListKeysResultItemsItem) encodeFields(e *jx.Encoder) {
 			s.RevokedBy.Encode(e)
 		}
 	}
+	{
+		if s.RotatedFrom.Set {
+			e.FieldStart("rotated_from")
+			s.RotatedFrom.Encode(e)
+		}
+	}
+	{
+		if s.RotatedTo.Set {
+			e.FieldStart("rotated_to")
+			s.RotatedTo.Encode(e)
+		}
+	}
 	for k, elem := range s.AdditionalProps {
 		e.FieldStart(k)
 
@@ -46764,7 +46810,7 @@ func (s *CredentialsListKeysResultItemsItem) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfCredentialsListKeysResultItemsItem = [14]string{
+var jsonFieldsNameOfCredentialsListKeysResultItemsItem = [16]string{
 	0:  "id",
 	1:  "kind",
 	2:  "name",
@@ -46779,6 +46825,8 @@ var jsonFieldsNameOfCredentialsListKeysResultItemsItem = [14]string{
 	11: "status",
 	12: "revoked_at",
 	13: "revoked_by",
+	14: "rotated_from",
+	15: "rotated_to",
 }
 
 // Decode decodes CredentialsListKeysResultItemsItem from json.
@@ -46936,6 +46984,26 @@ func (s *CredentialsListKeysResultItemsItem) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"revoked_by\"")
+			}
+		case "rotated_from":
+			if err := func() error {
+				s.RotatedFrom.Reset()
+				if err := s.RotatedFrom.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"rotated_from\"")
+			}
+		case "rotated_to":
+			if err := func() error {
+				s.RotatedTo.Reset()
+				if err := s.RotatedTo.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"rotated_to\"")
 			}
 		default:
 			var elem jx.Raw
@@ -48482,6 +48550,26 @@ func (s *CredentialsRevokeCredentialResult) encodeFields(e *jx.Encoder) {
 			s.AlreadyRevoked.Encode(e)
 		}
 	}
+	{
+		if s.KeepFailed != nil {
+			e.FieldStart("keep_failed")
+			e.ArrStart()
+			for _, elem := range s.KeepFailed {
+				elem.Encode(e)
+			}
+			e.ArrEnd()
+		}
+	}
+	{
+		if s.StandingObjects != nil {
+			e.FieldStart("standing_objects")
+			e.ArrStart()
+			for _, elem := range s.StandingObjects {
+				elem.Encode(e)
+			}
+			e.ArrEnd()
+		}
+	}
 	for k, elem := range s.AdditionalProps {
 		e.FieldStart(k)
 
@@ -48491,12 +48579,14 @@ func (s *CredentialsRevokeCredentialResult) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfCredentialsRevokeCredentialResult = [5]string{
+var jsonFieldsNameOfCredentialsRevokeCredentialResult = [7]string{
 	0: "revoked",
 	1: "kind",
 	2: "id",
 	3: "kept",
 	4: "already_revoked",
+	5: "keep_failed",
+	6: "standing_objects",
 }
 
 // Decode decodes CredentialsRevokeCredentialResult from json.
@@ -48569,6 +48659,40 @@ func (s *CredentialsRevokeCredentialResult) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"already_revoked\"")
+			}
+		case "keep_failed":
+			if err := func() error {
+				s.KeepFailed = make([]CredentialsRevokeCredentialResultKeepFailedItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem CredentialsRevokeCredentialResultKeepFailedItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.KeepFailed = append(s.KeepFailed, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"keep_failed\"")
+			}
+		case "standing_objects":
+			if err := func() error {
+				s.StandingObjects = make([]CredentialsRevokeCredentialResultStandingObjectsItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem CredentialsRevokeCredentialResultStandingObjectsItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.StandingObjects = append(s.StandingObjects, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"standing_objects\"")
 			}
 		default:
 			var elem jx.Raw
@@ -48691,6 +48815,119 @@ func (s CredentialsRevokeCredentialResultAdditional) MarshalJSON() ([]byte, erro
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *CredentialsRevokeCredentialResultAdditional) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *CredentialsRevokeCredentialResultKeepFailedItem) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *CredentialsRevokeCredentialResultKeepFailedItem) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("kind")
+		e.Str(s.Kind)
+	}
+	{
+		e.FieldStart("id")
+		e.Str(s.ID)
+	}
+}
+
+var jsonFieldsNameOfCredentialsRevokeCredentialResultKeepFailedItem = [2]string{
+	0: "kind",
+	1: "id",
+}
+
+// Decode decodes CredentialsRevokeCredentialResultKeepFailedItem from json.
+func (s *CredentialsRevokeCredentialResultKeepFailedItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CredentialsRevokeCredentialResultKeepFailedItem to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "kind":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.Kind = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"kind\"")
+			}
+		case "id":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.ID = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"id\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode CredentialsRevokeCredentialResultKeepFailedItem")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfCredentialsRevokeCredentialResultKeepFailedItem) {
+					name = jsonFieldsNameOfCredentialsRevokeCredentialResultKeepFailedItem[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *CredentialsRevokeCredentialResultKeepFailedItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CredentialsRevokeCredentialResultKeepFailedItem) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -48852,6 +49089,230 @@ func (s CredentialsRevokeCredentialResultKind) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *CredentialsRevokeCredentialResultKind) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *CredentialsRevokeCredentialResultStandingObjectsItem) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *CredentialsRevokeCredentialResultStandingObjectsItem) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("kind")
+		e.Str(s.Kind)
+	}
+	{
+		e.FieldStart("id")
+		e.Str(s.ID)
+	}
+	{
+		e.FieldStart("label")
+		e.Str(s.Label)
+	}
+	{
+		e.FieldStart("org_owned")
+		e.Bool(s.OrgOwned)
+	}
+	for k, elem := range s.AdditionalProps {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
+}
+
+var jsonFieldsNameOfCredentialsRevokeCredentialResultStandingObjectsItem = [4]string{
+	0: "kind",
+	1: "id",
+	2: "label",
+	3: "org_owned",
+}
+
+// Decode decodes CredentialsRevokeCredentialResultStandingObjectsItem from json.
+func (s *CredentialsRevokeCredentialResultStandingObjectsItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CredentialsRevokeCredentialResultStandingObjectsItem to nil")
+	}
+	var requiredBitSet [1]uint8
+	s.AdditionalProps = map[string]jx.Raw{}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "kind":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.Kind = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"kind\"")
+			}
+		case "id":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.ID = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"id\"")
+			}
+		case "label":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.Label = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"label\"")
+			}
+		case "org_owned":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Bool()
+				s.OrgOwned = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"org_owned\"")
+			}
+		default:
+			var elem jx.Raw
+			if err := func() error {
+				v, err := d.RawAppend(nil)
+				elem = jx.Raw(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrapf(err, "decode field %q", k)
+			}
+			s.AdditionalProps[string(k)] = elem
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode CredentialsRevokeCredentialResultStandingObjectsItem")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00001111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfCredentialsRevokeCredentialResultStandingObjectsItem) {
+					name = jsonFieldsNameOfCredentialsRevokeCredentialResultStandingObjectsItem[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *CredentialsRevokeCredentialResultStandingObjectsItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CredentialsRevokeCredentialResultStandingObjectsItem) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s CredentialsRevokeCredentialResultStandingObjectsItemAdditional) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields implements json.Marshaler.
+func (s CredentialsRevokeCredentialResultStandingObjectsItemAdditional) encodeFields(e *jx.Encoder) {
+	for k, elem := range s {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
+}
+
+// Decode decodes CredentialsRevokeCredentialResultStandingObjectsItemAdditional from json.
+func (s *CredentialsRevokeCredentialResultStandingObjectsItemAdditional) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CredentialsRevokeCredentialResultStandingObjectsItemAdditional to nil")
+	}
+	m := s.init()
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		var elem jx.Raw
+		if err := func() error {
+			v, err := d.RawAppend(nil)
+			elem = jx.Raw(v)
+			if err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
+			return errors.Wrapf(err, "decode field %q", k)
+		}
+		m[string(k)] = elem
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode CredentialsRevokeCredentialResultStandingObjectsItemAdditional")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s CredentialsRevokeCredentialResultStandingObjectsItemAdditional) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CredentialsRevokeCredentialResultStandingObjectsItemAdditional) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -70341,6 +70802,168 @@ func (s EmailDetailUnderstandingFactsItemValue) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *EmailDetailUnderstandingFactsItemValue) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *EmailListMeta) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EmailListMeta) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("total")
+		e.Int(s.Total)
+	}
+	{
+		e.FieldStart("limit")
+		e.Int(s.Limit)
+	}
+	{
+		e.FieldStart("cursor")
+		s.Cursor.Encode(e)
+	}
+	{
+		if s.RecipientOutsideAccess.Set {
+			e.FieldStart("recipient_outside_access")
+			s.RecipientOutsideAccess.Encode(e)
+		}
+	}
+	{
+		if s.RecipientRulesOnly.Set {
+			e.FieldStart("recipient_rules_only")
+			s.RecipientRulesOnly.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfEmailListMeta = [5]string{
+	0: "total",
+	1: "limit",
+	2: "cursor",
+	3: "recipient_outside_access",
+	4: "recipient_rules_only",
+}
+
+// Decode decodes EmailListMeta from json.
+func (s *EmailListMeta) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailListMeta to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "total":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Int()
+				s.Total = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"total\"")
+			}
+		case "limit":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Int()
+				s.Limit = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"limit\"")
+			}
+		case "cursor":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				if err := s.Cursor.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"cursor\"")
+			}
+		case "recipient_outside_access":
+			if err := func() error {
+				s.RecipientOutsideAccess.Reset()
+				if err := s.RecipientOutsideAccess.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"recipient_outside_access\"")
+			}
+		case "recipient_rules_only":
+			if err := func() error {
+				s.RecipientRulesOnly.Reset()
+				if err := s.RecipientRulesOnly.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"recipient_rules_only\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailListMeta")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEmailListMeta) {
+					name = jsonFieldsNameOfEmailListMeta[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EmailListMeta) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailListMeta) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -129918,6 +130541,12 @@ func (s *ListEmailRuleResultsResult) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *ListEmailRuleResultsResult) encodeFields(e *jx.Encoder) {
 	{
+		if s.Email.Set {
+			e.FieldStart("email")
+			s.Email.Encode(e)
+		}
+	}
+	{
 		e.FieldStart("rules")
 		e.ArrStart()
 		for _, elem := range s.Rules {
@@ -129937,10 +130566,11 @@ func (s *ListEmailRuleResultsResult) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfListEmailRuleResultsResult = [3]string{
-	0: "rules",
-	1: "hidden",
-	2: "classification",
+var jsonFieldsNameOfListEmailRuleResultsResult = [4]string{
+	0: "email",
+	1: "rules",
+	2: "hidden",
+	3: "classification",
 }
 
 // Decode decodes ListEmailRuleResultsResult from json.
@@ -129952,8 +130582,18 @@ func (s *ListEmailRuleResultsResult) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
+		case "email":
+			if err := func() error {
+				s.Email.Reset()
+				if err := s.Email.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"email\"")
+			}
 		case "rules":
-			requiredBitSet[0] |= 1 << 0
+			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
 				s.Rules = make([]ListEmailRuleResultsResultRulesItem, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -129971,7 +130611,7 @@ func (s *ListEmailRuleResultsResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"rules\"")
 			}
 		case "hidden":
-			requiredBitSet[0] |= 1 << 1
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
 				v, err := d.Int()
 				s.Hidden = int(v)
@@ -130002,7 +130642,7 @@ func (s *ListEmailRuleResultsResult) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000011,
+		0b00000110,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -130520,6 +131160,166 @@ func (s *ListEmailRuleResultsResultClassificationFactsItemValueConfidences) Unma
 }
 
 // Encode implements json.Marshaler.
+func (s *ListEmailRuleResultsResultEmail) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ListEmailRuleResultsResultEmail) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("id")
+		json.EncodeUUID(e, s.ID)
+	}
+	{
+		e.FieldStart("from_address")
+		s.FromAddress.Encode(e)
+	}
+	{
+		e.FieldStart("recipient")
+		e.Str(s.Recipient)
+	}
+	{
+		e.FieldStart("subject")
+		s.Subject.Encode(e)
+	}
+	{
+		e.FieldStart("received_at")
+		json.EncodeDateTime(e, s.ReceivedAt)
+	}
+}
+
+var jsonFieldsNameOfListEmailRuleResultsResultEmail = [5]string{
+	0: "id",
+	1: "from_address",
+	2: "recipient",
+	3: "subject",
+	4: "received_at",
+}
+
+// Decode decodes ListEmailRuleResultsResultEmail from json.
+func (s *ListEmailRuleResultsResultEmail) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ListEmailRuleResultsResultEmail to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.ID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"id\"")
+			}
+		case "from_address":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.FromAddress.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"from_address\"")
+			}
+		case "recipient":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.Recipient = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"recipient\"")
+			}
+		case "subject":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				if err := s.Subject.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"subject\"")
+			}
+		case "received_at":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				v, err := json.DecodeDateTime(d)
+				s.ReceivedAt = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"received_at\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ListEmailRuleResultsResultEmail")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00011111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfListEmailRuleResultsResultEmail) {
+					name = jsonFieldsNameOfListEmailRuleResultsResultEmail[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ListEmailRuleResultsResultEmail) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ListEmailRuleResultsResultEmail) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
 func (s *ListEmailRuleResultsResultRulesItem) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
@@ -130729,6 +131529,12 @@ func (s *ListEmailRuleResultsResultRulesItemDecision) encodeFields(e *jx.Encoder
 		e.Bool(s.Matched)
 	}
 	{
+		if s.NearMiss.Set {
+			e.FieldStart("near_miss")
+			s.NearMiss.Encode(e)
+		}
+	}
+	{
 		e.FieldStart("parts")
 		e.ArrStart()
 		for _, elem := range s.Parts {
@@ -130776,16 +131582,17 @@ func (s *ListEmailRuleResultsResultRulesItemDecision) encodeFields(e *jx.Encoder
 	}
 }
 
-var jsonFieldsNameOfListEmailRuleResultsResultRulesItemDecision = [9]string{
+var jsonFieldsNameOfListEmailRuleResultsResultRulesItemDecision = [10]string{
 	0: "rule_version",
 	1: "matched",
-	2: "parts",
-	3: "question_answers",
-	4: "tree",
-	5: "detail_withheld",
-	6: "withheld_by",
-	7: "withheld_by_hidden",
-	8: "created_at",
+	2: "near_miss",
+	3: "parts",
+	4: "question_answers",
+	5: "tree",
+	6: "detail_withheld",
+	7: "withheld_by",
+	8: "withheld_by_hidden",
+	9: "created_at",
 }
 
 // Decode decodes ListEmailRuleResultsResultRulesItemDecision from json.
@@ -130821,8 +131628,18 @@ func (s *ListEmailRuleResultsResultRulesItemDecision) Decode(d *jx.Decoder) erro
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"matched\"")
 			}
+		case "near_miss":
+			if err := func() error {
+				s.NearMiss.Reset()
+				if err := s.NearMiss.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"near_miss\"")
+			}
 		case "parts":
-			requiredBitSet[0] |= 1 << 2
+			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
 				s.Parts = make([]ListEmailRuleResultsResultRulesItemDecisionPartsItem, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -130840,7 +131657,7 @@ func (s *ListEmailRuleResultsResultRulesItemDecision) Decode(d *jx.Decoder) erro
 				return errors.Wrap(err, "decode field \"parts\"")
 			}
 		case "question_answers":
-			requiredBitSet[0] |= 1 << 3
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
 				s.QuestionAnswers = make([]ListEmailRuleResultsResultRulesItemDecisionQuestionAnswersItem, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -130858,7 +131675,7 @@ func (s *ListEmailRuleResultsResultRulesItemDecision) Decode(d *jx.Decoder) erro
 				return errors.Wrap(err, "decode field \"question_answers\"")
 			}
 		case "tree":
-			requiredBitSet[0] |= 1 << 4
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
 				if err := s.Tree.Decode(d); err != nil {
 					return err
@@ -130905,7 +131722,7 @@ func (s *ListEmailRuleResultsResultRulesItemDecision) Decode(d *jx.Decoder) erro
 				return errors.Wrap(err, "decode field \"withheld_by_hidden\"")
 			}
 		case "created_at":
-			requiredBitSet[1] |= 1 << 0
+			requiredBitSet[1] |= 1 << 1
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.CreatedAt = v
@@ -130926,8 +131743,8 @@ func (s *ListEmailRuleResultsResultRulesItemDecision) Decode(d *jx.Decoder) erro
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [2]uint8{
-		0b00011111,
-		0b00000001,
+		0b00111011,
+		0b00000010,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -135483,10 +136300,6 @@ func (s *ListEmailsOK) encodeFields(e *jx.Encoder) {
 		e.Bool(true)
 	}
 	{
-		e.FieldStart("meta")
-		s.Meta.Encode(e)
-	}
-	{
 		e.FieldStart("data")
 		e.ArrStart()
 		for _, elem := range s.Data {
@@ -135494,12 +136307,16 @@ func (s *ListEmailsOK) encodeFields(e *jx.Encoder) {
 		}
 		e.ArrEnd()
 	}
+	{
+		e.FieldStart("meta")
+		s.Meta.Encode(e)
+	}
 }
 
 var jsonFieldsNameOfListEmailsOK = [3]string{
 	0: "success",
-	1: "meta",
-	2: "data",
+	1: "data",
+	2: "meta",
 }
 
 // Decode decodes ListEmailsOK from json.
@@ -135523,18 +136340,8 @@ func (s *ListEmailsOK) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"success\"")
 			}
-		case "meta":
-			requiredBitSet[0] |= 1 << 1
-			if err := func() error {
-				if err := s.Meta.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"meta\"")
-			}
 		case "data":
-			requiredBitSet[0] |= 1 << 2
+			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
 				s.Data = make([]EmailSummary, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -135550,6 +136357,16 @@ func (s *ListEmailsOK) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"data\"")
+			}
+		case "meta":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				if err := s.Meta.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"meta\"")
 			}
 		default:
 			return d.Skip()
@@ -164608,6 +165425,39 @@ func (s OptListEmailRuleResultsResultClassificationFactsItemValueConfidences) Ma
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptListEmailRuleResultsResultClassificationFactsItemValueConfidences) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ListEmailRuleResultsResultEmail as json.
+func (o OptListEmailRuleResultsResultEmail) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes ListEmailRuleResultsResultEmail from json.
+func (o *OptListEmailRuleResultsResultEmail) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptListEmailRuleResultsResultEmail to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptListEmailRuleResultsResultEmail) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptListEmailRuleResultsResultEmail) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
