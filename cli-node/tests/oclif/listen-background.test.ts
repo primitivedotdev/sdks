@@ -156,6 +156,15 @@ function running(
   return { token, controller, done };
 }
 
+/** The synthetic relaunch's JSON lines: kills, starts and errors. */
+function relaunchRows(path: string): Array<Record<string, unknown>> {
+  if (!existsSync(path)) return [];
+  return readFileSync(path, "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+}
+
 function childFiles() {
   for (const name of [
     "listen-background",
@@ -201,17 +210,33 @@ function childFiles() {
     // --background, as the real CLI does.
     if (process.argv.includes('--background')) {
       const { startBackgroundListen } = await import('./listen-background.js');
+      const { appendFileSync, readFileSync } = await import('node:fs');
       const relaunchTarget = JSON.parse(process.env.TEST_LISTEN_TARGET);
       const startedAt = Date.now();
       // The test reads this to know the relaunch has finished, and why not.
-      const note = (row) => appendFileSync(process.env.TEST_RELAUNCH_LOG ?? '/dev/null', JSON.stringify({ after: Date.now() - startedAt, ...row }) + '\\n');
+      const log = (row) => appendFileSync(process.env.TEST_RELAUNCH_LOG ?? '/dev/null', JSON.stringify({ after: Date.now() - startedAt, ...row }) + '\\n');
+      // Kill the replacement's new worker after it reported ready and before
+      // this start checks ownership, and wait until its supervisor reaped it.
+      const beforeStartupCheck = process.env.TEST_KILL_READY_WORKER ? async () => {
+        const { pid } = JSON.parse(readFileSync(process.env.TEST_KILL_READY_WORKER, 'utf8'));
+        process.kill(pid, 'SIGKILL');
+        const until = Date.now() + 5000;
+        for (;;) {
+          try { process.kill(pid, 0); } catch { break; }
+          if (Date.now() > until) throw new Error('killed worker was not reaped');
+          await new Promise(resolve => setTimeout(resolve, 5));
+        }
+        log({ killed: pid });
+      } : undefined;
       try {
-        await startBackgroundListen({ ...relaunchTarget, argv: [process.argv[1]], startupTimeoutMs: 5000 });
+        await startBackgroundListen({ ...relaunchTarget, argv: [process.argv[1]], startupTimeoutMs: 5000,
+          env: process.env.TEST_RELAUNCH_MODE ? { TEST_LISTEN_MODE: process.env.TEST_RELAUNCH_MODE } : undefined,
+          beforeStartupCheck });
+        log({ started: true });
       } catch (error) {
-        note({ error: String(error?.message ?? error) });
+        log({ error: String(error?.message ?? error) });
         throw error;
       }
-      note({ started: true });
       process.exit(0);
     }
     import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
@@ -239,6 +264,12 @@ function childFiles() {
         appendFileSync(process.env.TEST_IPC_CAPTURE, JSON.stringify(args[0]) + '\\n');
         return send(...args);
       };
+    }
+    // Workers that exit before reporting anything, every time or only once.
+    if (process.env.TEST_EXIT_ALWAYS) process.exit(1);
+    if (process.env.TEST_EXIT_ONCE && !existsSync(process.env.TEST_EXIT_ONCE)) {
+      writeFileSync(process.env.TEST_EXIT_ONCE, 'exited');
+      process.exit(1);
     }
     let attempts = 0;
     await runBackgroundListen({ ...target, token: backgroundListenToken(), detached: true,
@@ -477,6 +508,32 @@ describe("listener lifecycle state", () => {
     });
     writeSupervisor(f.token, "running", Date.now());
     expect(backgroundListenStatus(target)).toMatchObject({ healthy: true });
+  });
+
+  it("records an existing receiver it could neither verify nor stop, until that receiver recovers", async () => {
+    const f = running(undefined, undefined, { detached: true });
+    await vi.waitFor(() => expect(saved().phase).toBe("receiving"));
+    writeSupervisor(f.token, "running", Date.now() - 60_000);
+    await expect(
+      startBackgroundListen({ ...target, argv: ["unused"] }),
+    ).rejects.toThrow("stale or unverifiable");
+    const current = backgroundListenStatus(target);
+    expect(current).toMatchObject({
+      reason: "stale",
+      lastStartFailure: { reason: "existing-kept", failureCode: null },
+    });
+    expect(current.detail).toContain(
+      "could not be verified or stopped, so it was left in place.",
+    );
+    // A healthy, receiving receiver makes the failed start history.
+    writeSupervisor(f.token, "running", Date.now());
+    expect(backgroundListenStatus(target)).toMatchObject({ healthy: true });
+    expect(backgroundListenStatus(target)).not.toHaveProperty(
+      "lastStartFailure",
+    );
+    writeSupervisor(f.token, "stopped", Date.now());
+    f.controller.abort();
+    await f.done;
   });
 
   it("replaces a worker whose supervisor has failed instead of reusing it", async () => {
@@ -742,6 +799,43 @@ describe("listener lifecycle state", () => {
     });
     // A newer CLI's code may be a deliberate hold, so it is never auto-restarted.
     expect(backgroundListenRestartable(current)).toBe(false);
+  });
+
+  it("reads a start failure saved by a newer CLI and ignores an unreadable one", () => {
+    const path = join(stateFile(), "..", "start-failure.json");
+    writeMailJson(path, {
+      version: 1,
+      at: 1_700_000_000_000,
+      reason: "some-future-reason",
+      failureCode: "some-future-code",
+      extra: "ignored",
+    });
+    expect(backgroundListenStatus(target)).toMatchObject({
+      reason: "absent",
+      healthy: false,
+      lastStartFailure: {
+        at: 1_700_000_000_000,
+        reason: "unrecognized",
+        failureCode: "unrecognized",
+      },
+    });
+    expect(backgroundListenStatus(target).detail).toContain(
+      "The last background start, at 2023-11-14T22:13:20.000Z, failed",
+    );
+    // Past the latest time a Date can hold: ignored rather than fatal.
+    writeMailJson(path, {
+      version: 1,
+      at: 9e15,
+      reason: "timed-out",
+      failureCode: null,
+    });
+    expect(backgroundListenStatus(target)).not.toHaveProperty(
+      "lastStartFailure",
+    );
+    writeFileSync(path, "not json", { mode: 0o600 });
+    const unreadable = backgroundListenStatus(target);
+    expect(unreadable).toMatchObject({ reason: "absent" });
+    expect(unreadable).not.toHaveProperty("lastStartFailure");
   });
 
   it("allows one external restart per interval and refuses when the claim cannot be saved", () => {
@@ -1320,6 +1414,226 @@ describe("detached synthetic listener processes", () => {
   );
 
   it.skipIf(process.platform === "win32")(
+    "keeps a supervised start whose worker dies between reporting ready and the ownership check",
+    async () => {
+      const child = childFiles();
+      let killed = 0;
+      const result = await startBackgroundListen({
+        ...target,
+        argv: [child],
+        env: { TEST_LISTEN_TARGET: JSON.stringify(target) },
+        startupTimeoutMs: 5000,
+        beforeStartupCheck: async () => {
+          killed = saved().pid;
+          process.kill(killed, "SIGKILL");
+          // Until its supervisor reaps it, a killed worker still looks alive.
+          for (;;) {
+            try {
+              process.kill(killed, 0);
+            } catch {
+              break;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 5));
+          }
+        },
+      });
+      expect(killed).toBeGreaterThan(0);
+      // The supervisor owns the restart; the start no longer stops it.
+      expect(result).toMatchObject({
+        started: true,
+        status: { healthy: false, reason: "restarting" },
+      });
+      expect(result.status).not.toHaveProperty("lastStartFailure");
+      await vi.waitFor(
+        () => {
+          const current = backgroundListenStatus(target);
+          expect(current).toMatchObject({
+            phase: "receiving",
+            healthy: true,
+            supervisorPid: result.status.supervisorPid,
+          });
+          expect(current.pid).not.toBe(killed);
+        },
+        { timeout: 8000 },
+      );
+      expect((await stopBackgroundListen(target)).phase).toBe("stopped");
+    },
+    15_000,
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "keeps a running supervisor when its records cannot be read to confirm the start",
+    async () => {
+      const child = childFiles();
+      let supervisorPid = 0;
+      const error = await startBackgroundListen({
+        ...target,
+        argv: [child],
+        env: { TEST_LISTEN_TARGET: JSON.stringify(target) },
+        startupTimeoutMs: 5000,
+        beforeStartupCheck: () => {
+          supervisorPid = JSON.parse(
+            readFileSync(join(stateFile(), "..", "supervisor.json"), "utf8"),
+          ).pid;
+          // Only this process's reads fail, as on a briefly failing disk.
+          storage.failReads = "EIO";
+        },
+      }).catch((caught: unknown) => caught);
+      storage.failReads = null;
+      expect(error).toBeInstanceOf(ListenStateError);
+      expect((error as Error).message).toContain(
+        "could not be confirmed because its records could not be read. Its supervisor is still running",
+      );
+      expect(existsSync(join(stateFile(), "..", "stop.json"))).toBe(false);
+      // The worker reported ready, so no failure is saved to outlive it.
+      expect(existsSync(join(stateFile(), "..", "start-failure.json"))).toBe(
+        false,
+      );
+      await vi.waitFor(
+        () =>
+          expect(backgroundListenStatus(target)).toMatchObject({
+            phase: "receiving",
+            healthy: true,
+            supervisorPid,
+          }),
+        { timeout: 5000 },
+      );
+      expect((await stopBackgroundListen(target)).phase).toBe("stopped");
+    },
+    15_000,
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "keeps a replacement supervisor whose new worker dies right after it reports ready",
+    async () => {
+      const child = childFiles();
+      const relaunchLog = join(directory, "relaunch.log");
+      const result = await startBackgroundListen({
+        ...target,
+        argv: [child],
+        env: {
+          TEST_LISTEN_TARGET: JSON.stringify(target),
+          TEST_RELAUNCH_LOG: relaunchLog,
+          // Read only by the relaunch: kill its first worker inside the window.
+          TEST_KILL_READY_WORKER: stateFile(),
+        },
+        startupTimeoutMs: 5000,
+      });
+      const lostSupervisor = result.status.supervisorPid as number;
+      const firstWorker = result.status.pid;
+      process.kill(lostSupervisor, "SIGKILL");
+      let killed = 0;
+      await vi.waitFor(
+        () => {
+          const row = relaunchRows(relaunchLog).find((item) => item.killed);
+          expect(row, JSON.stringify(relaunchRows(relaunchLog))).toBeDefined();
+          killed = Number(row?.killed);
+        },
+        { timeout: 15_000 },
+      );
+      expect(killed).not.toBe(firstWorker);
+      await vi.waitFor(
+        () =>
+          expect(relaunchRows(relaunchLog)).toContainEqual(
+            expect.objectContaining({ started: true }),
+          ),
+        { timeout: 5000 },
+      );
+      await vi.waitFor(
+        () => {
+          const current = backgroundListenStatus(target);
+          expect(current, JSON.stringify(current)).toMatchObject({
+            phase: "receiving",
+            healthy: true,
+          });
+          expect(current.supervisorPid).not.toBe(lostSupervisor);
+          expect(current.pid).not.toBe(killed);
+          expect(current.pid).not.toBe(firstWorker);
+        },
+        { timeout: 10_000 },
+      );
+      expect(backgroundListenStatus(target)).not.toHaveProperty(
+        "lastStartFailure",
+      );
+      expect((await stopBackgroundListen(target)).phase).toBe("stopped");
+    },
+    40_000,
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "records a failed relaunch where status shows it, and a later start clears it",
+    async () => {
+      const child = childFiles();
+      const relaunchLog = join(directory, "relaunch.log");
+      const privateText = `private-detail-${randomUUID()}`;
+      const result = await startBackgroundListen({
+        ...target,
+        argv: [child],
+        env: {
+          TEST_LISTEN_TARGET: JSON.stringify(target),
+          TEST_RELAUNCH_LOG: relaunchLog,
+          // Only the replacement's worker fails.
+          TEST_RELAUNCH_MODE: "failed",
+          TEST_FAILURE_CODE: "native-session-unavailable",
+          TEST_FAILURE_DETAIL: privateText,
+        },
+        startupTimeoutMs: 5000,
+      });
+      const lostAt = Date.now();
+      process.kill(result.status.supervisorPid as number, "SIGKILL");
+      // The relaunching process exits with its error unread; the record stays.
+      await vi.waitFor(
+        () =>
+          expect(relaunchRows(relaunchLog)).toContainEqual(
+            expect.objectContaining({
+              error: expect.stringContaining("did not become ready"),
+            }),
+          ),
+        { timeout: 15_000 },
+      );
+      await vi.waitFor(
+        () =>
+          expect(backgroundListenStatus(target)).toMatchObject({
+            healthy: false,
+            reason: "stopped",
+            lastStartFailure: {
+              reason: "worker-failed",
+              failureCode: "native-session-unavailable",
+            },
+          }),
+        { timeout: 5000 },
+      );
+      const current = backgroundListenStatus(target);
+      expect(current.lastStartFailure?.at).toBeGreaterThanOrEqual(lostAt);
+      expect(current.detail).toContain(
+        "failed: the receiver reported a failure while starting. Start it again with the same listen command",
+      );
+      expect(JSON.stringify(current)).not.toContain(privateText);
+      expect(
+        readFileSync(join(stateFile(), "..", "start-failure.json"), "utf8"),
+      ).not.toContain(privateText);
+      // A stopped receiver is not restarted on its own; the owner starts it.
+      expect(backgroundListenRestartable(current)).toBe(false);
+      const again = await startBackgroundListen({
+        ...target,
+        argv: [child],
+        env: { TEST_LISTEN_TARGET: JSON.stringify(target) },
+        startupTimeoutMs: 5000,
+      });
+      expect(again).toMatchObject({
+        started: true,
+        status: { phase: "receiving", healthy: true },
+      });
+      expect(again.status).not.toHaveProperty("lastStartFailure");
+      expect(existsSync(join(stateFile(), "..", "start-failure.json"))).toBe(
+        false,
+      );
+      expect((await stopBackgroundListen(target)).phase).toBe("stopped");
+    },
+    40_000,
+  );
+
+  it.skipIf(process.platform === "win32")(
     "keeps supervising through a full disk instead of exiting",
     async () => {
       const child = childFiles();
@@ -1387,28 +1701,134 @@ describe("detached synthetic listener processes", () => {
         },
         startupTimeoutMs: 5000,
       }),
-    ).rejects.toThrow("without --background");
+    ).rejects.toThrow("profile and API origin");
     expect(existsSync(marker)).toBe(false);
     expect(backgroundListenStatus(changed).reason).toBe("absent");
-    expect(backgroundListenStatus(target).reason).toBe("absent");
+    // The child reports the changed target as a hold, so its supervisor
+    // ends instead of restarting a child that would refuse the same way.
+    const current = backgroundListenStatus(target);
+    expect(current).toMatchObject({
+      lastStartFailure: {
+        reason: "worker-failed",
+        failureCode: "connection-changed",
+      },
+    });
+    expect(["absent", "failed"]).toContain(current.reason);
+    expect(backgroundListenRestartable(current)).toBe(false);
   }, 10_000);
 
-  it("requests token-scoped cleanup when startup never reaches readiness", async () => {
-    const child = childFiles();
-    await expect(
-      startBackgroundListen({
+  it.each([
+    ["exits once and is then still starting", "once"],
+    ["keeps exiting before it reports anything", "always"],
+    // As after a CLI upgrade, whose version is part of the options.
+    ["runs with options other than its parent selected", "options"],
+  ] as const)(
+    "never stops a supervisor that holds its start at the deadline when its worker %s",
+    async (_name, mode) => {
+      const child = childFiles();
+      const options = {
         ...target,
         argv: [child],
+        ...(mode === "options" ? { configuration: "a".repeat(64) } : {}),
         env: {
           TEST_LISTEN_TARGET: JSON.stringify(target),
-          TEST_LISTEN_MODE: "blocked",
+          TEST_RESTART_DELAY_MS: "50",
+          ...(mode === "once"
+            ? {
+                TEST_LISTEN_MODE: "blocked",
+                TEST_EXIT_ONCE: join(directory, "exited-once"),
+              }
+            : mode === "always"
+              ? { TEST_EXIT_ALWAYS: "1" }
+              : { TEST_CONFIGURATION: "b".repeat(64) }),
         },
-        startupTimeoutMs: 500,
-      }),
-    ).rejects.toThrow("stopped");
-    expect(backgroundListenStatus(target)).toMatchObject({
-      phase: "stopped",
-      healthy: false,
-    });
-  }, 10_000);
+        startupTimeoutMs: 3000,
+      };
+      const error = await startBackgroundListen(options).catch(
+        (caught: unknown) => caught,
+      );
+      // Not ready, so not a success, but the supervisor owns the restarts.
+      expect(error).toBeInstanceOf(ListenStateError);
+      expect((error as Error).message).toContain(
+        "not ready before the startup timeout. Its supervisor is still running and keeps the receiver, restarting it if it exits, so it was not stopped.",
+      );
+      expect((error as Error).message).toContain(
+        "exited without reporting a reason",
+      );
+      expect(existsSync(join(stateFile(), "..", "stop.json"))).toBe(false);
+      const current = backgroundListenStatus(target);
+      expect(current.supervisorPid).toBeGreaterThan(0);
+      // Neither stopped by the start nor held as a changed connection.
+      expect(["stopped", "failed"]).not.toContain(current.reason);
+      // The supervisor's own code is kept, not only the worker's.
+      expect(current.lastStartFailure).toMatchObject({
+        reason: "timed-out",
+        failureCode: "crashed",
+      });
+      expect(current.detail).toContain(
+        "failed: the receiver was not ready before the startup timeout.",
+      );
+      // Starting again neither hides the record behind a reuse of a receiver
+      // that is still starting, nor replaces it while its supervisor waits
+      // to restart the worker.
+      if (mode === "once")
+        expect(await startBackgroundListen(options)).toMatchObject({
+          started: false,
+          status: { phase: "starting" },
+        });
+      else
+        await expect(startBackgroundListen(options)).rejects.toThrow(
+          "stale or unverifiable",
+        );
+      expect(backgroundListenStatus(target).lastStartFailure).toMatchObject({
+        reason: "timed-out",
+        failureCode: "crashed",
+      });
+      await stopBackgroundListen(target);
+      expect(["stopped", "absent"]).toContain(
+        backgroundListenStatus(target).reason,
+      );
+    },
+    15_000,
+  );
+
+  it("requests token-scoped cleanup and records why when no supervisor holds the start at the deadline", async () => {
+    const pidFile = join(directory, "hang.pid");
+    const hang = join(directory, "hang.mjs");
+    // Stands in for a supervisor that never records ownership.
+    writeFileSync(
+      hang,
+      `import { writeFileSync } from 'node:fs';
+      writeFileSync(${JSON.stringify(pidFile)}, String(process.pid));
+      setInterval(() => {}, 1000);`,
+    );
+    const error = await startBackgroundListen({
+      ...target,
+      argv: [hang],
+      startupTimeoutMs: 500,
+    }).catch((caught: unknown) => caught);
+    try {
+      expect(error).toBeInstanceOf(ListenStateError);
+      expect((error as Error).message).toContain("did not become ready");
+      expect(readMailJson(join(stateFile(), "..", "stop.json"))).toMatchObject({
+        token: expect.any(String),
+      });
+      const current = backgroundListenStatus(target);
+      expect(current).toMatchObject({
+        reason: "absent",
+        lastStartFailure: { reason: "timed-out", failureCode: null },
+      });
+      expect(current.detail).toContain(
+        "failed: the receiver was not ready before the startup timeout.",
+      );
+    } finally {
+      await vi
+        .waitFor(() => expect(existsSync(pidFile)).toBe(true), {
+          timeout: 5000,
+        })
+        .catch(() => {});
+      if (existsSync(pidFile))
+        process.kill(Number(readFileSync(pidFile, "utf8")), "SIGKILL");
+    }
+  }, 15_000);
 });

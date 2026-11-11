@@ -13,6 +13,8 @@ import {
   saveConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
 import { COMMANDS } from "../../src/oclif/index.js";
+import { startBackgroundListen } from "../../src/oclif/listen-background.js";
+import { notificationScope } from "../../src/oclif/notify-session.js";
 import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 describe("doctor command registration", () => {
@@ -435,4 +437,83 @@ describe("doctor with a saved connected profile", () => {
       rmSync(directory, { recursive: true, force: true });
     }
   });
+
+  it("reports a native receiver's failed background start offline", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "primitive-doctor-native-"));
+    const session = "22222222-2222-4222-8222-222222222222";
+    const stderr: string[] = [];
+    const write = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation((chunk: string | Uint8Array) => {
+        stderr.push(String(chunk));
+        return true;
+      });
+    const logged: string[] = [];
+    const log = vi.spyOn(console, "log").mockImplementation((line) => {
+      logged.push(String(line));
+    });
+    try {
+      vi.stubEnv("PRIMITIVE_CONFIG_DIR", directory);
+      vi.stubEnv("PRIMITIVE_AGENT_PROFILE", "native");
+      vi.stubEnv("PRIMITIVE_API_KEY", undefined);
+      const apiKey = ["pconn", "c".repeat(48)].join("_");
+      saveConnectedAgentProfile(directory, "native", {
+        version: 1,
+        auth_method: "agent_connection",
+        api_key: apiKey,
+        api_base_url: "https://api.primitive.dev/v1",
+        org_id: session,
+        agent_address: "native@example.com",
+        owner_address: "owner@example.com",
+        invitation_hash: "d".repeat(64),
+        created_at: new Date().toISOString(),
+      });
+      writeMailJson(
+        join(agentProfileDirectory(directory, "native"), "setup.json"),
+        { session, receiverMode: "native" },
+      );
+      const root = resolve(import.meta.dirname, "../..");
+      // A healthy or never-started receiver adds no row.
+      await DoctorCommand.run([], { root });
+      expect(JSON.parse(logged.join("\n")).checks).not.toContainEqual(
+        expect.objectContaining({ label: "Receiver" }),
+      );
+      // A start whose supervisor exits before the receiver is ready.
+      const exits = join(directory, "exits.mjs");
+      writeFileSync(exits, "process.exit(0);");
+      await expect(
+        startBackgroundListen({
+          configDir: directory,
+          scope: notificationScope("https://api.primitive.dev/v1", apiKey),
+          threadId: session,
+          argv: [exits],
+          startupTimeoutMs: 5000,
+        }),
+      ).rejects.toThrow("did not become ready");
+      logged.length = 0;
+      stderr.length = 0;
+      await DoctorCommand.run([], { root });
+      const receiver = JSON.parse(logged.join("\n")).checks.find(
+        (check: { label: string }) => check.label === "Receiver",
+      );
+      expect(receiver).toMatchObject({ status: "warn" });
+      expect(receiver.message).toMatch(
+        /^This profile's receiver is not receiving, and its last background start failed at \d{4}-\d\d-\d\dT[\d:.]+Z \(supervisor-exited\)$/,
+      );
+      expect(receiver.hint).toContain(
+        "its supervisor exited before the receiver was ready",
+      );
+      expect(receiver.hint).toContain(
+        `listen --status --notify-session ${session}`,
+      );
+      expect(stderr.join("")).toContain("[WARN] Receiver:");
+      // A warning only: doctor still exits 0.
+      expect(process.exitCode ?? 0).toBe(0);
+    } finally {
+      write.mockRestore();
+      log.mockRestore();
+      vi.unstubAllEnvs();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  }, 15_000);
 });

@@ -7,7 +7,7 @@ import {
   listDomains,
   type PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
-import { receiverStatusCommand } from "../agent-connect.js";
+import { receiverStatusCommand, savedReceiver } from "../agent-connect.js";
 import { cliInvocation } from "../agent-identity-suggestions.js";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import { extractErrorPayload, isGrantRefusal } from "../api-command.js";
@@ -17,6 +17,8 @@ import {
   agentProfilesDirectory,
   loadConnectedAgentProfile,
 } from "../connected-agent-profile.js";
+import { backgroundListenStatus } from "../listen-background.js";
+import { notificationScope } from "../notify-session.js";
 
 // `primitive doctor` is a one-command health check the AGX walkthrough
 // kept asking for. Before this command, a user with a misconfigured
@@ -365,6 +367,39 @@ async function checkDomains(client: PrimitiveApiClient): Promise<CheckOutcome> {
   }
 }
 
+/**
+ * A background start that gave up, such as a receiver replacing its lost
+ * supervisor, has no terminal to report to. Its saved reason is read
+ * offline here, and only while the receiver is not receiving.
+ */
+function checkReceiverStart(
+  configDir: string,
+  profileName: string,
+): CheckOutcome | null {
+  try {
+    const receiver = savedReceiver(configDir, profileName);
+    if (receiver?.mode !== "native" || !receiver.session) return null;
+    const profile = loadConnectedAgentProfile(configDir, profileName);
+    if (!profile) return null;
+    const listener = backgroundListenStatus({
+      configDir,
+      scope: notificationScope(profile.api_base_url, profile.api_key),
+      threadId: receiver.session,
+    });
+    // Status leaves the record out once the receiver is healthy and receiving.
+    const failure = listener.lastStartFailure;
+    if (!failure) return null;
+    return {
+      status: "warn",
+      message: `This profile's receiver is not receiving, and its last background start failed at ${new Date(failure.at).toISOString()} (${failure.reason}${failure.failureCode ? `, ${failure.failureCode}` : ""})`,
+      hint: `${listener.detail ? `${listener.detail} ` : ""}Inspect it with \`${receiverStatusCommand(configDir, profileName).command}\`.`,
+    };
+  } catch {
+    // Unreadable local state is for listen --status to explain.
+    return null;
+  }
+}
+
 class DoctorCommand extends Command {
   static description =
     `Run a one-shot environment health check: Node version, proxy env, CLI auth resolution, /account reachability, and verified-domain status. With PRIMITIVE_AGENT_PROFILE selected, reports saved identity offline and points to whoami and exact listener status instead of account-only checks. Prints actionable hints for each warning or failure.`;
@@ -424,6 +459,10 @@ class DoctorCommand extends Command {
           configDir: this.config.configDir,
         });
     rows.push({ label: "Auth", outcome: apiKeyCheck });
+    const receiverStart = connected
+      ? checkReceiverStart(this.config.configDir, connected.profileName)
+      : null;
+    if (receiverStart) rows.push({ label: "Receiver", outcome: receiverStart });
 
     // Only run the live checks if we have a key to authenticate with.
     // Reporting the network-failure case without a key would just

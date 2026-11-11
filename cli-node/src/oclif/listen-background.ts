@@ -66,6 +66,28 @@ const HOLDING_FAILURE_CODES: readonly BackgroundListenFailureCode[] = [
   "unrecognized",
 ];
 
+// Why a background start gave up. The start's own process may be detached
+// with no output (a worker replacing its lost supervisor, or a restart from
+// another command), so the reason is saved where status can show it.
+const startFailureReasons = [
+  "timed-out",
+  "cancelled",
+  "supervisor-exited",
+  "spawn-failed",
+  "worker-failed",
+  "ownership-changed",
+  "options-changed",
+  "existing-kept",
+  "unverifiable",
+] as const;
+type StartFailureReason = (typeof startFailureReasons)[number];
+export type BackgroundListenStartFailure = {
+  at: number;
+  /** "unrecognized" is a reason saved by a newer CLI. */
+  reason: StartFailureReason | "unrecognized";
+  failureCode: BackgroundListenFailureCode | null;
+};
+
 function knownFailureCode(value: unknown): BackgroundListenFailureCode | null {
   return failureCodes.includes(value as BackgroundListenFailureCode)
     ? (value as BackgroundListenFailureCode)
@@ -142,8 +164,62 @@ function failureGuidance(code: BackgroundListenFailureCode): string {
   }
 }
 
+function startFailureCause(reason: BackgroundListenStartFailure["reason"]) {
+  switch (reason) {
+    case "timed-out":
+      return "the receiver was not ready before the startup timeout";
+    case "cancelled":
+      return "the start was cancelled, or the receiver was stopped while it started";
+    case "supervisor-exited":
+      return "its supervisor exited before the receiver was ready";
+    case "spawn-failed":
+      return "its supervisor could not be started";
+    case "worker-failed":
+      return "the receiver reported a failure while starting";
+    case "ownership-changed":
+      return "another listener held this receiver, or its supervisor no longer did, when startup was checked";
+    case "options-changed":
+      return "the receiver ran with options other than those requested";
+    case "existing-kept":
+      return "the receiver already recorded for this session could not be verified or stopped, so it was left in place";
+    case "unverifiable":
+      return "its records could not be read to confirm it";
+    case "unrecognized":
+      return "its reason is one this version of the CLI does not recognize";
+  }
+}
+
+/**
+ * A failed start is history once the receiver is healthy and receiving. A
+ * healthy receiver that is still starting or reconnecting has not shown that
+ * the start which failed was recovered from.
+ */
+function startFailureCurrent(status: {
+  healthy: boolean;
+  phase?: BackgroundListenPhase | null;
+}): boolean {
+  return !(status.healthy && status.phase === "receiving");
+}
+
 /** One sentence an owner or agent can act on; never raw error text. */
 function statusDetail(
+  status: Pick<BackgroundListenStatus, "healthy" | "reason" | "failureCode"> & {
+    phase?: BackgroundListenPhase | null;
+    lastStartFailure?: BackgroundListenStartFailure | null;
+  },
+): string | null {
+  const base = receiverDetail(status);
+  const failure = status.lastStartFailure;
+  if (!failure || !startFailureCurrent(status)) return base;
+  const restart =
+    status.reason === "stopped" || status.reason === "absent"
+      ? " Start it again with the same listen command, or run it without --background for details."
+      : "";
+  const note = `The last background start, at ${new Date(failure.at).toISOString()}, failed: ${startFailureCause(failure.reason)}.${restart}`;
+  return base ? `${base} ${note}` : note;
+}
+
+function receiverDetail(
   status: Pick<BackgroundListenStatus, "healthy" | "reason" | "failureCode">,
 ): string | null {
   if (status.healthy) return null;
@@ -222,6 +298,13 @@ export type BackgroundListenStatus = {
   supervisorUpdatedAt?: number | null;
   /** Why the receiver is not healthy, in words; null when healthy. */
   detail?: string | null;
+  /**
+   * Present when the last background start gave up and the receiver is not
+   * yet healthy and receiving. A later start that succeeds, or finds a
+   * healthy receiver, removes the record, and so does a supervisor once its
+   * worker is receiving.
+   */
+  lastStartFailure?: BackgroundListenStartFailure;
 };
 
 export function backgroundListenToken(
@@ -245,7 +328,12 @@ export function verifyBackgroundListenTarget(
   target: BackgroundListenTarget & { configuration?: string },
   env: NodeJS.ProcessEnv = process.env,
 ): void {
-  if (backgroundListenToken(env) === null) return;
+  const token = backgroundListenToken(env);
+  if (token === null) return;
+  // Whether every restart would refuse the same way. The options fingerprint
+  // includes the CLI version, so it also changes on an upgrade, and a failing
+  // disk can recover; neither is a changed connection.
+  let changedConnection = true;
   try {
     const value: unknown = JSON.parse(env[BACKGROUND_LISTEN_TARGET_ENV] ?? "");
     const expected = mailObject(value, [
@@ -267,13 +355,26 @@ export function verifyBackgroundListenTarget(
     const configDir = mailString(expected.configDir, 4096);
     if (
       mailString(expected.scope) !== mailString(target.scope) ||
-      mailId(expected.threadId) !== mailId(target.threadId) ||
-      configDir !== realpathSync(configDir) ||
-      configDir !== realpathSync(target.configDir) ||
-      configuration !== configurationFingerprint(target.configuration)
+      mailId(expected.threadId) !== mailId(target.threadId)
     )
       throw new Error("Changed listener target");
+    let resolved: string[];
+    try {
+      resolved = [realpathSync(configDir), realpathSync(target.configDir)];
+    } catch (error) {
+      if (storageFailureCode(error) !== null) changedConnection = false;
+      throw error;
+    }
+    if (resolved.some((path) => path !== configDir))
+      throw new Error("Changed listener target");
+    changedConnection = false;
+    if (configuration !== configurationFingerprint(target.configuration))
+      throw new Error("Changed listener options");
   } catch {
+    // Tell the supervisor to hold this receiver rather than restart a child
+    // that would refuse the same way every time.
+    if (changedConnection && env === process.env)
+      announce(token, "failed", "connection-changed");
     throw new ListenStateError(
       "Background listener target changed or its parent expectation is invalid. No listener was started.",
     );
@@ -320,7 +421,65 @@ function files(target: BackgroundListenTarget, create = false) {
     state: join(directory, "state.json"),
     stop: join(directory, "stop.json"),
     supervisor: join(directory, "supervisor.json"),
+    // Kept apart from state.json and supervisor.json, which their owners
+    // rewrite on every heartbeat and older CLIs read with an exact key set,
+    // and from restart.json, whose read failure would refuse every restart.
+    startFailure: join(directory, "start-failure.json"),
   };
+}
+
+/** A diagnostic only: an unreadable record is reported as none, never as an error. */
+function readStartFailure(path: string): BackgroundListenStartFailure | null {
+  try {
+    const value = readMailJson(path, 1024);
+    if (!value || typeof value !== "object" || Array.isArray(value))
+      return null;
+    const row = value as Record<string, unknown>;
+    if (
+      row.version !== 1 ||
+      !Number.isSafeInteger(row.at) ||
+      Number(row.at) < 0 ||
+      // The latest time a Date can hold; a later one cannot be printed.
+      Number(row.at) > 8.64e15 ||
+      typeof row.reason !== "string" ||
+      (row.failureCode !== null && typeof row.failureCode !== "string")
+    )
+      return null;
+    return {
+      at: Number(row.at),
+      reason: startFailureReasons.includes(row.reason as StartFailureReason)
+        ? (row.reason as StartFailureReason)
+        : "unrecognized",
+      failureCode: savedFailureCode(row.failureCode),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function recordStartFailure(
+  paths: ReturnType<typeof files>,
+  reason: StartFailureReason,
+  failureCode: BackgroundListenFailureCode | null,
+): void {
+  try {
+    writeMailJson(paths.startFailure, {
+      version: 1,
+      at: Date.now(),
+      reason,
+      failureCode,
+    });
+  } catch {
+    /* The start's own error still reaches any caller that is listening. */
+  }
+}
+
+function clearStartFailure(paths: ReturnType<typeof files>): void {
+  try {
+    removeMailFile(paths.startFailure);
+  } catch {
+    /* A stale record names its time; the next start replaces it. */
+  }
 }
 
 function readSupervisor(path: string): SupervisorState | null {
@@ -470,7 +629,15 @@ export function backgroundListenStatus(
   const paths = files(target);
   const worker = status(readState(paths.state));
   const supervisor = readSupervisor(paths.supervisor);
-  if (!supervisor) return worker;
+  const saved = readStartFailure(paths.startFailure);
+  if (!supervisor)
+    return saved && startFailureCurrent(worker)
+      ? {
+          ...worker,
+          lastStartFailure: saved,
+          detail: statusDetail({ ...worker, lastStartFailure: saved }),
+        }
+      : worker;
   const ownership = owner(supervisor);
   // A heartbeat dated in the future (clock change, corrupt state) is not
   // evidence of a live supervisor.
@@ -497,20 +664,30 @@ export function backgroundListenStatus(
   const failureCode = healthy
     ? null
     : (supervisor.failureCode ?? worker.failureCode);
+  const phase =
+    supervisor.phase === "failed"
+      ? "failed"
+      : reason === "restarting"
+        ? "reconnecting"
+        : worker.phase;
+  const lastStartFailure =
+    saved && startFailureCurrent({ healthy, phase }) ? saved : null;
   return {
     ...worker,
-    phase:
-      supervisor.phase === "failed"
-        ? "failed"
-        : reason === "restarting"
-          ? "reconnecting"
-          : worker.phase,
+    phase,
     healthy,
     reason,
     failureCode,
     supervisorPid: supervisor.pid,
     supervisorUpdatedAt: supervisor.updatedAt,
-    detail: statusDetail({ healthy, reason, failureCode }),
+    detail: statusDetail({
+      healthy,
+      reason,
+      failureCode,
+      phase,
+      lastStartFailure,
+    }),
+    ...(lastStartFailure ? { lastStartFailure } : {}),
   };
 }
 
@@ -1004,7 +1181,11 @@ export async function runBackgroundListenSupervisor(
         if (row.type !== "primitive-listen-state" || row.token !== token)
           return;
         if (row.phase === "receiving") {
-          if (readyAt === null) readyAt = Date.now();
+          if (readyAt === null) {
+            readyAt = Date.now();
+            // A start that gave up before this worker was ready is now history.
+            clearStartFailure(paths);
+          }
           if (record.failureCode !== null) {
             record.failureCode = null;
             tryPublish();
@@ -1130,6 +1311,11 @@ export async function startBackgroundListen(
     env?: NodeJS.ProcessEnv;
     startupTimeoutMs?: number;
     signal?: AbortSignal;
+    /**
+     * Runs after the receiver first reports ready and before this start
+     * confirms who owns it. Tests use it to act inside that window.
+     */
+    beforeStartupCheck?(): Promise<void> | void;
   },
 ): Promise<{ started: boolean; status: BackgroundListenStatus }> {
   const configuration = configurationFingerprint(options.configuration);
@@ -1155,14 +1341,21 @@ export async function startBackgroundListen(
       owner(priorSupervisor) !== "gone"
     ) {
       const current = backgroundListenStatus(options);
-      if (!current.healthy)
+      if (!current.healthy) {
+        // A supervisor waiting to restart its worker is working as intended.
+        if (current.reason !== "restarting")
+          recordStartFailure(paths, "existing-kept", current.failureCode);
         throw new ListenStateError(
           "Existing supervisor ownership is stale or unverifiable. Inspect status before restarting.",
         );
+      }
       if (prior?.configuration !== configuration)
         throw new ListenStateError(
           "Stop the existing listener before changing receiving options.",
         );
+      // Only a receiver that is receiving makes an earlier failed start
+      // history; one still starting has not recovered from it yet.
+      if (!startFailureCurrent(current)) clearStartFailure(paths);
       return { started: false, status: current };
     }
     if (
@@ -1172,10 +1365,12 @@ export async function startBackgroundListen(
       owner(prior) !== "gone"
     ) {
       const current = status(prior);
-      if (!current.healthy)
+      if (!current.healthy) {
+        recordStartFailure(paths, "existing-kept", current.failureCode);
         throw new ListenStateError(
           "Existing listener ownership is stale or unverifiable; the worker was retained. Inspect status or request a stop before restarting.",
         );
+      }
       if (!prior.detached)
         throw new ListenStateError(
           "An existing foreground listener owns this session. Stop it before restarting with --background.",
@@ -1188,12 +1383,15 @@ export async function startBackgroundListen(
           throw new ListenStateError(
             "Stop the existing listener before changing receiving options.",
           );
+        if (!startFailureCurrent(current)) clearStartFailure(paths);
         return { started: false, status: current };
       }
-      if (!(await stopOrphanedWorker(paths, prior.token)))
+      if (!(await stopOrphanedWorker(paths, prior.token))) {
+        recordStartFailure(paths, "existing-kept", null);
         throw new ListenStateError(
           "The existing background listener lost its supervisor and did not stop. Stop it, then start again.",
         );
+      }
     }
     const token = randomUUID();
     const env: NodeJS.ProcessEnv = {
@@ -1233,70 +1431,154 @@ export async function startBackgroundListen(
       stdio: ["ignore", "ignore", "ignore", "ipc"],
     });
     let startupFailureCode: BackgroundListenFailureCode | null = null;
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const timer = setTimeout(
-          () =>
-            finish(
-              new ListenStateError("Background listener startup timed out."),
-            ),
-          timeout,
-        );
-        const abort = () =>
-          finish(
-            new ListenStateError("Background listener startup was cancelled."),
-          );
-        const exit = () =>
-          finish(
-            new ListenStateError(
-              "Background listener stopped before it became ready.",
-            ),
-          );
-        const error = () =>
-          finish(
-            new ListenStateError("Background listener could not be started."),
-          );
-        const message = (value: unknown) => {
-          if (!value || typeof value !== "object") return;
-          const next = value as Record<string, unknown>;
-          if (next.type !== "primitive-listen-state" || next.token !== token)
-            return;
-          if (next.phase === "receiving" || next.phase === "reconnecting")
-            finish();
-          else if (next.phase === "failed") {
-            startupFailureCode = knownFailureCode(next.failureCode);
-            error();
-          }
-        };
-        const finish = (failure?: Error) => {
-          clearTimeout(timer);
-          options.signal?.removeEventListener("abort", abort);
-          child.off("exit", exit);
-          child.off("error", error);
-          child.off("message", message);
-          if (failure) reject(failure);
-          else resolve();
-        };
-        child.once("exit", exit);
-        child.once("error", error);
-        child.on("message", message);
-        options.signal?.addEventListener("abort", abort, { once: true });
-        if (options.signal?.aborted) abort();
-      });
+    // The supervisor's own code, read before a stop makes it rewrite it.
+    let supervisorFailureCode: BackgroundListenFailureCode | null = null;
+    // "kept": not confirmed, but the supervisor is left running because it
+    // holds the receiver (or, when its records cannot be read, is alive).
+    // Anything that throws before a reason is chosen could not be confirmed.
+    let decision: "started" | "kept" | StartFailureReason = "unverifiable";
+    let keptReason: "timed-out" | "unverifiable" = "timed-out";
+    // How the wait for a ready report ended.
+    let outcome: "ready" | StartFailureReason | null = null;
+    // The supervisor this call spawned is alive and still holds the receiver
+    // it was started for. From then on it, not this call, restarts the
+    // worker. The unreaped child handle and its PID already show which
+    // process that is, so only a definite identity mismatch counts against it.
+    const holds = (supervisor: SupervisorState | null): boolean =>
+      child.exitCode === null &&
+      child.signalCode === null &&
+      supervisor?.token === token &&
+      supervisor.pid === child.pid &&
+      (supervisor.phase === "starting" || supervisor.phase === "running") &&
+      owner(supervisor) !== "gone";
+    const confirm = (
+      waited: "ready" | "timed-out",
+    ): "started" | "kept" | StartFailureReason => {
       const current = readState(paths.state);
-      const supervisor = readSupervisor(paths.supervisor);
+      // A stopped record from an earlier generation is not an owner; a live
+      // worker of another generation is.
       if (
-        current?.token !== token ||
-        supervisor?.token !== token ||
-        current.configuration !== configuration ||
-        !current.detached ||
-        !backgroundListenStatus(options).healthy
+        current &&
+        current.token !== token &&
+        current.phase !== "stopped" &&
+        current.phase !== "failed" &&
+        owner(current) !== "gone"
       )
-        throw new ListenStateError(
-          "Background listener ownership changed during startup.",
-        );
-      return { started: true, status: backgroundListenStatus(options) };
+        return "ownership-changed";
+      const mine = current?.token === token ? current : null;
+      if (mine && (mine.configuration !== configuration || !mine.detached))
+        return "options-changed";
+      const supervisor = readSupervisor(paths.supervisor);
+      const own = supervisor?.token === token ? supervisor : null;
+      supervisorFailureCode = own?.failureCode ?? null;
+      if (
+        mine &&
+        own &&
+        (waited === "ready" ||
+          mine.phase === "receiving" ||
+          mine.phase === "reconnecting") &&
+        backgroundListenStatus(options).healthy
+      )
+        return "started";
+      // A worker that died, or is not healthy yet, is its supervisor's to
+      // restart. A stop here would leave the receiver stopped with nobody
+      // watching, so this start never writes one while the supervisor holds.
+      if (holds(supervisor)) return waited === "ready" ? "started" : "kept";
+      if (own?.phase === "failed")
+        return own.failureCode === "crashed"
+          ? "supervisor-exited"
+          : "worker-failed";
+      if (own?.phase === "stopped") return "cancelled";
+      if (child.exitCode !== null || child.signalCode !== null)
+        return "supervisor-exited";
+      return waited === "ready" ? "ownership-changed" : "timed-out";
+    };
+    try {
+      const waited = await new Promise<"ready" | StartFailureReason>(
+        (resolve) => {
+          const timer = setTimeout(() => finish("timed-out"), timeout);
+          const abort = () => finish("cancelled");
+          const exit = () => finish("supervisor-exited");
+          const error = () => finish("spawn-failed");
+          const message = (value: unknown) => {
+            if (!value || typeof value !== "object") return;
+            const next = value as Record<string, unknown>;
+            if (next.type !== "primitive-listen-state" || next.token !== token)
+              return;
+            if (next.phase === "receiving" || next.phase === "reconnecting")
+              finish("ready");
+            else if (next.phase === "failed") {
+              startupFailureCode = knownFailureCode(next.failureCode);
+              finish("worker-failed");
+            }
+          };
+          const finish = (outcome: "ready" | StartFailureReason) => {
+            clearTimeout(timer);
+            options.signal?.removeEventListener("abort", abort);
+            child.off("exit", exit);
+            child.off("error", error);
+            child.off("message", message);
+            resolve(outcome);
+          };
+          child.once("exit", exit);
+          child.once("error", error);
+          child.on("message", message);
+          options.signal?.addEventListener("abort", abort, { once: true });
+          if (options.signal?.aborted) abort();
+        },
+      );
+      outcome = waited;
+      if (waited === "timed-out") decision = "timed-out";
+      if (waited === "ready") await options.beforeStartupCheck?.();
+      decision =
+        waited === "ready" || waited === "timed-out" ? confirm(waited) : waited;
     } catch {
+      // The records could not be read to confirm the start. A supervisor
+      // that is still running most likely holds them, and stopping it on a
+      // failed read is the outcome this check exists to avoid.
+      if (
+        (outcome === "ready" || outcome === "timed-out") &&
+        child.exitCode === null &&
+        child.signalCode === null
+      ) {
+        decision = "kept";
+        keptReason = "unverifiable";
+      }
+    }
+    try {
+      if (decision === "started") {
+        clearStartFailure(paths);
+        return { started: true, status: backgroundListenStatus(options) };
+      }
+      if (decision === "kept") {
+        // Nobody may be reading this error, so status keeps it too. After a
+        // ready report under a running supervisor the start most likely
+        // worked, and its supervisor has already cleared old records, so a
+        // record here would outlive a working receiver.
+        if (outcome !== "ready")
+          recordStartFailure(paths, keptReason, supervisorFailureCode);
+        // The worker may have reached receiving after the check above, and
+        // after its supervisor cleared any earlier record.
+        try {
+          const now = readState(paths.state);
+          if (now?.token === token && now.phase === "receiving") {
+            clearStartFailure(paths);
+            return { started: true, status: backgroundListenStatus(options) };
+          }
+        } catch {
+          /* The record stands until the worker reports receiving. */
+        }
+        const guidance = supervisorFailureCode
+          ? ` ${failureGuidance(supervisorFailureCode)}`
+          : "";
+        throw new ListenStateError(
+          `${
+            keptReason === "timed-out"
+              ? "Background listener was not ready before the startup timeout."
+              : "Background listener startup could not be confirmed because its records could not be read."
+          } Its supervisor is still running and keeps the receiver, restarting it if it exits, so it was not stopped. Inspect status, or stop it before starting again.${guidance}`,
+        );
+      }
       // The token also reaches a child that has not written its first state yet.
       writeMailJson(paths.stop, { token });
       const until = Date.now() + 2000;
@@ -1317,6 +1599,11 @@ export async function startBackgroundListen(
       const code =
         startupFailureCode ??
         (current?.token === token ? current.failureCode : null);
+      // A detached start, such as a worker replacing its lost supervisor,
+      // has nobody reading this error, so status keeps the reason. The
+      // supervisor's code goes only into the record: the message below
+      // describes a receiver that was just stopped, not one being restarted.
+      recordStartFailure(paths, decision, code ?? supervisorFailureCode);
       const guidance = code
         ? unconfirmed && code === "receiving-failed"
           ? ""

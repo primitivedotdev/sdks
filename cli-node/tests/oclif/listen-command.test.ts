@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -11,7 +11,9 @@ import {
   agentProfileDirectory,
   saveConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
+import { startBackgroundListen } from "../../src/oclif/listen-background.js";
 import { AGENT_CONNECTION_REQUIRED_MESSAGE } from "../../src/oclif/listen-credential.js";
+import { notificationScope } from "../../src/oclif/notify-session.js";
 import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 const root = resolve(import.meta.dirname, "../..");
@@ -61,6 +63,64 @@ describe("native listener command transport", () => {
       rmSync(directory, { recursive: true, force: true });
     }
   });
+  it("status shows the last failed background start with its reason in words", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "primitive-listen-failed-"));
+    const output: string[] = [];
+    const log = vi
+      .spyOn(console, "log")
+      .mockImplementation((value: unknown) => {
+        output.push(String(value));
+      });
+    try {
+      vi.stubEnv("PRIMITIVE_CONFIG_DIR", directory);
+      vi.stubEnv("PRIMITIVE_AGENT_PROFILE", "failed-start");
+      const apiKey = ["pconn", "e".repeat(48)].join("_");
+      saveConnectedAgentProfile(directory, "failed-start", {
+        version: 1,
+        auth_method: "agent_connection",
+        api_key: apiKey,
+        api_base_url: "https://api.primitive.dev/v1",
+        org_id: session,
+        agent_address: "agent@example.com",
+        owner_address: "owner@example.com",
+        invitation_hash: "f".repeat(64),
+        created_at: new Date().toISOString(),
+      });
+      // A start whose supervisor exits before the receiver is ready.
+      const exits = join(directory, "exits.mjs");
+      writeFileSync(exits, "process.exit(0);");
+      await expect(
+        startBackgroundListen({
+          configDir: directory,
+          scope: notificationScope("https://api.primitive.dev/v1", apiKey),
+          threadId: session,
+          argv: [exits],
+          startupTimeoutMs: 5000,
+        }),
+      ).rejects.toThrow("did not become ready");
+      await ListenCommand.run(
+        ["--status", "--notify-session", session, "--json"],
+        { root },
+      );
+      const { listener } = JSON.parse(output[0] ?? "");
+      expect(listener).toMatchObject({
+        healthy: false,
+        reason: "absent",
+        lastStartFailure: {
+          at: expect.any(Number),
+          reason: "supervisor-exited",
+          failureCode: null,
+        },
+      });
+      expect(listener.detail).toContain(
+        "failed: its supervisor exited before the receiver was ready. Start it again with the same listen command",
+      );
+    } finally {
+      log.mockRestore();
+      vi.unstubAllEnvs();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  }, 15_000);
   it("status for a hook-receiving Claude session names the hook receiver and its status command", async () => {
     const directory = mkdtempSync(join(tmpdir(), "primitive-listen-hook-"));
     const output: string[] = [];
