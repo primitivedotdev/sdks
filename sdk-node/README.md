@@ -598,6 +598,10 @@ for (const rule of matchedRules(email)) {
 
 The Email Rules operations (`compileEmailRule`, `createEmailRule`, `listEmailRules`, `getEmailRule`, `updateEmailRule`, `deleteEmailRule`, `listEmailRuleDecisions`) need a member's own OAuth token that is not narrowed, such as the one `primitive login` stores. API keys and connected agent credentials are refused.
 
+### Rule request webhook events
+
+When one member asks another for an email rule over their mail, the person who did not act is told: `email_rule_request.created` and `email_rule_request.withdrawn` go to the member asked, and `email_rule_request.accepted` and `email_rule_request.declined` go to the member who asked. They are opt-in. A webhook receives them only when it lists them (with the CLI, `--event-types email_rule_request.*` when creating it) and was made by its owner, as a person. Each body carries `type` but not `event`, so pass the `X-Webhook-Event` header to the parser; `isEmailRuleRequestEvent` narrows the result to `EmailRuleRequestEvent`. The body names the request, its status and times, the asker's message and a decline's reason. Read the request with `getEmailRuleRequest` for the rest.
+
 ### Interaction webhook events
 
 Webhooks are not email-only. The same endpoint also receives `interaction.*` events. The event name is carried in the **`X-Webhook-Event` header** for every family. The body is sent verbatim with no envelope, so it is the header (not a body field) that names the event: an `email.*` body carries `event`, and an `interaction.*` body is just `{ interaction: { ... } }` with no event/type field at all.
@@ -622,6 +626,7 @@ The full catalog of header values is the `WebhookEventType` union, also exported
 
 - `email.received`, `email.bounced`, `email.tls_report`, `email.dmarc_report`, `email.dmarc_failure`
 - `sent_email.accepted`, `sent_email.delivered`, `sent_email.failed`, `sent_email.completed` (opt-in)
+- `email_rule_request.created`, `email_rule_request.accepted`, `email_rule_request.declined`, `email_rule_request.withdrawn` (opt-in)
 - `interaction.ack.received`, `interaction.ack.requested`, `interaction.ack.acked`, `interaction.ack.canceled`, `interaction.ack.expired`
 
 Signature verification runs on the raw body and is independent of the event type, so it works identically for `sent_email.*` and `interaction.*` bodies. Each delivery is signed once; the same `t=...,v1=...` value is sent on the primary `Primitive-Signature` header plus `X-Primitive-Signature` and `X-Webhook-Signature` for non-SDK consumers. The SDK verifies `Primitive-Signature`, and still accepts the retired `MyMX-Signature` header name when verifying older captured deliveries. `handleWebhook` remains hard-typed to `email.received` for backward compatibility; reach for `handleWebhookEvent` when you need the full event union.

@@ -538,7 +538,9 @@ date-time is kept as null and sorts last. A sync stops with an error after
 - `createEmailRuleRequest` takes `message`, up to 500 characters, telling the
   member asked why you are asking. `declineEmailRuleRequest` takes an optional
   body with `reason`, up to 500 characters (`DeclineEmailRuleRequestRequest`).
-  A rule request carries both as `message` and `decline_reason`.
+  A rule request carries both as `message` and `decline_reason`. In Go,
+  `DeclineEmailRuleRequest` takes the body as a new argument: pass
+  `api.OptDeclineEmailRuleRequestRequest{}` to decline without a reason.
 - `Primitive-Step-Up` is a declared header parameter on the 36 operations that
   accept a step-up confirmation token, so a client can send the confirmation
   token through the generated call: `headers: { "Primitive-Step-Up": token }`
@@ -739,12 +741,16 @@ downgrading, or sign in again afterwards.
 
 #### Rule request webhook events
 
-- The Node SDK's catalog lists `email_rule_request.created`, `accepted`,
-  `declined` and `withdrawn` (`EMAIL_RULE_REQUEST_EVENT_TYPES`), with the
-  body's shape (`EmailRuleRequestEvent`) and a type guard
-  (`isEmailRuleRequestEvent`). Each goes to the person who did not act, only
+- The catalogs list `email_rule_request.created`, `accepted`, `declined` and
+  `withdrawn` (`EMAIL_RULE_REQUEST_EVENT_TYPES` in Node and Python,
+  `EmailRuleRequestEventTypes` in Go). The Node SDK also has the body's shape
+  (`EmailRuleRequestEvent`) and a type guard (`isEmailRuleRequestEvent`). Each goes to the person who did not act, only
   to a webhook that person made for them, and only when the webhook lists
-  them.
+  them. The body carries the asker's `message` and a decline's
+  `decline_reason`, and `type` but not `event`, so parse it with the
+  `X-Webhook-Event` header.
+- `--event-types email_rule_request.*` expands to the four events, as
+  `sent_email.*` does.
 
 #### Values the API adds later
 

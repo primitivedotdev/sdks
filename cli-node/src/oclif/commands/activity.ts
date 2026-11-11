@@ -11,10 +11,11 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 
-// What you created, read from GET /activity/objects. A key, an app or an agent
-// sees what it created itself; a person signed in with `primitive login` sees
-// what they created through any credential of theirs. Ids, names and states
-// only: never a webhook URL or mail content.
+// What you created, or what other members asked of you (relation=asked), read
+// from GET /activity/objects. A key, an app or an agent sees what it created
+// itself; a person signed in with `primitive login` sees what they created
+// through any credential of theirs, and the rule requests made to them. Ids,
+// names and states only: never a webhook URL or mail content.
 
 const API_KEY_FLAG = Flags.string({
   description:
@@ -128,9 +129,18 @@ export function formatActivityRows(
   return [line(header), ...rows.map(line)].join("\n");
 }
 
-/** One line per request asked of you: its state, when it was asked, its name, and who asked. */
-export function formatAskedRows(items: readonly ActivityItem[]): string {
-  if (items.length === 0) return "Nobody has asked you for anything.";
+/**
+ * One line per request asked of you: its state, when it was asked, its name,
+ * and who asked. `complete` says the listing is the whole of it (every state,
+ * from the first page, nothing withheld), the only time an empty one means
+ * nobody has asked.
+ */
+export function formatAskedRows(
+  items: readonly ActivityItem[],
+  complete = false,
+): string {
+  if (items.length === 0)
+    return complete ? "Nobody has asked you for anything." : "Nothing to show.";
   const rows = items.map((item) => [
     item.state,
     minute(item.created_at),
@@ -259,7 +269,10 @@ async function runActivityList(
   }
   command.log(
     relation === "asked"
-      ? formatAskedRows(items)
+      ? formatAskedRows(
+          items,
+          flags.state === "all" && !flags.cursor && withheld.length === 0,
+        )
       : formatActivityRows(covers, items),
   );
   const notShown = formatWithheld(withheld);

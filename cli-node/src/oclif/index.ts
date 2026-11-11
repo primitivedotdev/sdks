@@ -803,8 +803,9 @@ export const COMMANDS: Record<string, typeof Command> = {
   // API keys. Writes go through these commands, which handle browser approval
   // when it is required, not generated ones; see KEY_WRITE_OPERATION_IDS in
   // cli-operations.ts.
-  // What you created, with where each object stands now. The generated
-  // `activity:list-activity-objects` stays available for raw API parity.
+  // What you created, and the rule requests other members made to you, with
+  // where each stands now. The generated `activity:list-activity-objects`
+  // stays available for raw API parity.
   "activity:asked": ActivityAskedCommand,
   "activity:created": ActivityCreatedCommand,
   "keys:list": KeysListCommand,

@@ -4,7 +4,8 @@
  *
  * Primitive posts every webhook with the event name in the `X-Webhook-Event`
  * HEADER, not in the body. The stored payload is sent verbatim with no
- * envelope: an `email.*` or `sent_email.*` body carries `event`, and an
+ * envelope: an `email.*` or `sent_email.*` body carries `event`, an
+ * `email_rule_request.*` body carries `type` but not `event`, and an
  * `interaction.*` body is just
  * `{ interaction: { ... } }` with no event/type field at all. The HEADER is
  * therefore the only reliable discriminator across all the families, which is
@@ -134,9 +135,12 @@ export function isEmailReceivedEvent(
 // -----------------------------------------------------------------------------
 
 /**
- * The body of an `email_rule_request.*` webhook. It names the request and
- * where it stands, never the rule itself or anything read from mail: read the
- * request with `getEmailRuleRequest` for the rest.
+ * The body of an `email_rule_request.*` webhook. It names the request, says
+ * where it stands, and carries the asker's message and a decline's reason when
+ * there are any. It does not carry the rule or anything read from mail: read
+ * the request with `getEmailRuleRequest` for the rest. Pass the
+ * `X-Webhook-Event` header to the parser, since the body has `type` and no
+ * `event`.
  */
 export interface EmailRuleRequestEvent {
   /** The event name, overlaid from the `X-Webhook-Event` header by the parser. */
@@ -156,6 +160,10 @@ export interface EmailRuleRequestEvent {
     share_id?: string;
     /** On `accepted`: whether the member asked changed the rule first. */
     edited_on_accept?: boolean;
+    /** What the member asking wrote about why; null when they wrote nothing. Absent from servers that predate it. */
+    message?: string | null;
+    /** Why the member asked declined; null unless they gave a reason. Absent from servers that predate it. */
+    decline_reason?: string | null;
     [key: string]: unknown;
   };
   /** On `created` and `withdrawn`: the member who asked. */
@@ -164,11 +172,12 @@ export interface EmailRuleRequestEvent {
 }
 
 /** True when `event` is an `email_rule_request.*` event. */
-export function isEmailRuleRequestEvent(event: {
-  event?: unknown;
-}): event is EmailRuleRequestEvent {
+export function isEmailRuleRequestEvent(
+  event: unknown,
+): event is EmailRuleRequestEvent {
+  const name = eventName(event);
   return (
-    typeof event.event === "string" &&
-    (EMAIL_RULE_REQUEST_EVENT_TYPES as readonly string[]).includes(event.event)
+    name !== undefined &&
+    (EMAIL_RULE_REQUEST_EVENT_TYPES as readonly string[]).includes(name)
   );
 }

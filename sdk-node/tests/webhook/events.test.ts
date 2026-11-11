@@ -79,14 +79,28 @@ describe("header-keyed event parsing", () => {
         status: "pending",
         created_at: "2026-11-11T03:16:16.848Z",
         decided_at: null,
+        message: "For the vendor invoices only, please.",
+        decline_reason: null,
       },
-      proposer: { user_id: "user_1", name: "Ethan" },
+      proposer: { user_id: "user_1", name: "Sam Rivera" },
     };
     const event = parseWebhookEvent(body, "email_rule_request.created");
     expect(isEmailRuleRequestEvent(event)).toBe(true);
     if (isEmailRuleRequestEvent(event)) {
       expect(event.email_rule_request.name).toBe("Vendor billing");
-      expect(event.proposer?.name).toBe("Ethan");
+      expect(event.email_rule_request.message).toBe(
+        "For the vendor invoices only, please.",
+      );
+      expect(event.email_rule_request.decline_reason).toBeNull();
+      expect(event.proposer?.name).toBe("Sam Rivera");
+    }
+    for (const notAnEvent of [
+      null,
+      undefined,
+      "email_rule_request.created",
+      42,
+    ]) {
+      expect(isEmailRuleRequestEvent(notAnEvent)).toBe(false);
     }
     expect(
       isEmailRuleRequestEvent(

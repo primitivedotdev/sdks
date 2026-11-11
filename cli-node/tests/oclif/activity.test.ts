@@ -313,7 +313,7 @@ describe("activity asked command", () => {
             name: "Vendor billing",
             state: "pending",
             owned_now: "someone_else",
-            created_through: { kind: "member", id: "u-1", name: "Ethan Byrd" },
+            created_through: { kind: "member", id: "u-1", name: "Sam Rivera" },
           }),
         ],
         null,
@@ -334,10 +334,51 @@ describe("activity asked command", () => {
     const out = lines.join("\n");
     expect(out).toMatch(/^STATE\s+ASKED \(UTC\)\s+NAME\s+FROM\s+ID$/m);
     expect(out).toContain("Vendor billing");
-    expect(out).toContain("Ethan Byrd");
+    expect(out).toContain("Sam Rivera");
   });
 
-  it("says so when nobody has asked for anything", () => {
-    expect(formatAskedRows([])).toBe("Nobody has asked you for anything.");
+  it("says nobody has asked only when the listing is the whole of it", () => {
+    expect(formatAskedRows([], true)).toBe(
+      "Nobody has asked you for anything.",
+    );
+    expect(formatAskedRows([])).toBe("Nothing to show.");
+  });
+
+  it("names who asked by id when it has no name, and continues with activity asked", async () => {
+    useApi([
+      page(
+        [
+          item({
+            kind: "email_rule_request",
+            name: "Vendor billing",
+            state: "pending",
+            created_through: { kind: "member", id: "u-9", name: null },
+          }),
+        ],
+        "next-page",
+      ),
+    ]);
+    const lines: string[] = [];
+    vi.spyOn(ActivityAskedCommand.prototype, "log").mockImplementation(
+      (message?: string) => {
+        lines.push(message ?? "");
+      },
+    );
+    await ActivityAskedCommand.run([], { root });
+    const out = lines.join("\n");
+    expect(out).toContain("u-9");
+    expect(out).toMatch(/More: \S+ activity asked --cursor next-page$/m);
+  });
+
+  it("says nothing to show, not that nobody asked, for a filtered listing", async () => {
+    useApi([page([], null)]);
+    const lines: string[] = [];
+    vi.spyOn(ActivityAskedCommand.prototype, "log").mockImplementation(
+      (message?: string) => {
+        lines.push(message ?? "");
+      },
+    );
+    await ActivityAskedCommand.run(["--state", "ended"], { root });
+    expect(lines.join("\n")).toContain("Nothing to show.");
   });
 });
