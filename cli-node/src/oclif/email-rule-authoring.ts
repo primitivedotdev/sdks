@@ -660,7 +660,12 @@ function expectationsCheckLine(
     undecided.length > 0
       ? ` To decide the rest, run \`primitive email-rules test-email-rule --rule-id ${ruleId}\`.`
       : "";
-  return `Expectations on ${on}: ${parts.length > 0 ? parts.join(", ") : "not passed"}.${rest}`;
+  // On an update that saved a version that did not pass: saved anyway, and whether it is live.
+  const note =
+    typeof check.note === "string" && check.note.trim()
+      ? ` ${check.note.trim()}`
+      : "";
+  return `Expectations on ${on}: ${parts.length > 0 ? parts.join(", ") : "not passed"}.${rest}${note}`;
 }
 
 /** The flag that makes a rule write's exit code follow its expectations_check. */
@@ -678,6 +683,8 @@ function writtenExpectationsOutcome(
   check: unknown,
   sentExpectations: boolean,
   ruleId: string,
+  /** Said first on update, where the same codes also mean a refused write. */
+  saved = "",
 ): Pick<OperationReport, "exitCode" | "error"> {
   const test = `\`primitive email-rules test-email-rule --rule-id ${ruleId}\``;
   if (!isRecord(check)) {
@@ -686,7 +693,7 @@ function writtenExpectationsOutcome(
       exitCode: EXIT_EXPECTATION_UNDECIDED,
       error: {
         code: "expectations_unchecked",
-        message: `The expectations this write sent were not checked on it. Test them with ${test}.`,
+        message: `${saved}The expectations this write sent were not checked on it. Test them with ${test}.`,
       },
     };
   }
@@ -697,7 +704,7 @@ function writtenExpectationsOutcome(
       exitCode: EXIT_EXPECTATION_FAILED,
       error: {
         code: "expectations_failed",
-        message: `${plural(failed.length, "expectation", "expectations")} failed on this write: ${failed.join(", ")}.`,
+        message: `${saved}${plural(failed.length, "expectation", "expectations")} failed on this write: ${failed.join(", ")}.`,
       },
     };
   if (undecided.length > 0)
@@ -705,7 +712,7 @@ function writtenExpectationsOutcome(
       exitCode: EXIT_EXPECTATION_UNDECIDED,
       error: {
         code: "expectations_undecided",
-        message: `${plural(undecided.length, "expectation is", "expectations are")} undecided on this write, which judges them without classifying mail or asking the rule's questions: ${undecided.join(", ")}. Test them with ${test}.`,
+        message: `${saved}${plural(undecided.length, "expectation is", "expectations are")} undecided on this write, which judges them without classifying mail or asking the rule's questions: ${undecided.join(", ")}. Test them with ${test}.`,
       },
     };
   // Fail closed: a check that names nothing failed or undecided yet did not pass.
@@ -714,16 +721,79 @@ function writtenExpectationsOutcome(
       exitCode: EXIT_EXPECTATION_FAILED,
       error: {
         code: "expectations_failed",
-        message: "The write's expectations check did not pass.",
+        message: `${saved}The write's expectations check did not pass.`,
       },
     };
   return {};
 }
 
+/**
+ * update-email-rule's post-save outcome says the write was saved: the server
+ * judges a write before saving only when it saves a version or turns the
+ * rule active, and refuses with these same codes, saving nothing.
+ */
+const SAVED_UNJUDGED =
+  "The write was saved: the server judges a write before saving only when it saves a version or turns the rule active, so not this one. ";
+
+/** What a restore_version write saved, as its answer says. */
+function restoredLine(
+  restored: unknown,
+  currentVersion: unknown,
+): string | undefined {
+  if (!isRecord(restored) || typeof restored.version !== "number")
+    return undefined;
+  const note =
+    typeof restored.note === "string" && restored.note.trim()
+      ? ` ${restored.note.trim()}`
+      : "";
+  const as =
+    typeof currentVersion === "number"
+      ? `as version ${currentVersion}, now current`
+      : "as the current version";
+  return `Saved version ${restored.version} again ${as}.${note}`;
+}
+
+/**
+ * Who an update that saved a version reaches, as its answer counts them: the
+ * keys listing the rule, the webhooks those keys own, and the shares the
+ * write ended.
+ */
+export function affectsLine(affects: unknown): string | undefined {
+  if (!isRecord(affects)) return undefined;
+  const count = (value: unknown) =>
+    typeof value === "number" && Number.isFinite(value) ? value : undefined;
+  const keys = count(affects.keys);
+  const endpoints = count(affects.endpoints);
+  const shares = count(affects.shares_ended);
+  if (keys === undefined || endpoints === undefined || shares === undefined)
+    return undefined;
+  return `This version reaches ${plural(keys, "API key", "API keys")} listing the rule and ${plural(endpoints, "webhook", "webhooks")} those keys own; it ended ${plural(shares, "share", "shares")}. The rule keeps its state.`;
+}
+
+/** The rule's author, by name and email where the answer gives them. */
+export function authorLine(author: unknown): string | undefined {
+  if (!isRecord(author) || typeof author.user_id !== "string") return undefined;
+  const name =
+    typeof author.name === "string" && author.name.trim()
+      ? author.name.trim()
+      : null;
+  const email =
+    typeof author.email === "string" && author.email.trim()
+      ? author.email.trim()
+      : null;
+  if (name && email) return `Author: ${name} <${email}>`;
+  if (name || email) return `Author: ${name ?? email}`;
+  return `Author: user ${author.user_id} (name and email not shown to you)`;
+}
+
 /** The stderr report of a rule written by create-email-rule or update-email-rule. */
 export function writtenEmailRuleReport(
   data: unknown,
-  request: { body: unknown; flags?: Record<string, unknown> },
+  request: {
+    body: unknown;
+    path?: Record<string, unknown>;
+    flags?: Record<string, unknown>;
+  },
 ): OperationReport {
   if (!isRecord(data)) return { lines: [] };
   const rule = data as Partial<EmailRuleWritten>;
@@ -734,6 +804,10 @@ export function writtenEmailRuleReport(
     lines.unshift(
       `This rule blocks sharing (kind do_not_share): while it is active, no rule shares an email it matches.${typeof rule.state === "string" && rule.state !== "active" ? " It blocks nothing until it is active." : ""}`,
     );
+  const restored = restoredLine(rule.restored_from, rule.current_version);
+  if (restored) lines.push(restored);
+  const reach = affectsLine(rule.affects);
+  if (reach) lines.push(reach);
   const sentExpectations =
     isRecord(request.body) && isRecord(request.body.expectations);
   const checked = expectationsCheckLine(rule.expectations_check, ruleId);
@@ -749,8 +823,14 @@ export function writtenEmailRuleReport(
       rule.expectations_check,
       sentExpectations,
       ruleId,
+      isUpdate(request) ? SAVED_UNJUDGED : "",
     ),
   };
+}
+
+/** Whether a rule write is an update: it names the rule in its path. */
+function isUpdate(request: { path?: Record<string, unknown> }): boolean {
+  return typeof request.path?.id === "string";
 }
 
 /**
@@ -888,14 +968,165 @@ export function versionMovedHint(
     : `Hint: the rule's current version is ${current}, not the if_version you sent, so nothing was saved. ${read}, then retry with --if-version ${current}.`;
 }
 
+/** The read-again advice every conflict ends with. */
+function readAgain(id: string): string {
+  return `Read it again with \`primitive email-rules get-email-rule ${id}\` and send the write again`;
+}
+
+/**
+ * The hint for update-email-rule's refusals: an email_rule_conflict by its
+ * details.reason (version_moved, revision_moved, expectations_moved,
+ * rule_changed), and the expectations guard's expectations_failed,
+ * expectations_undecided and no_expectations. Nothing was saved in any of
+ * them.
+ */
+export function updateEmailRuleErrorHint(
+  code: string | undefined,
+  payload: unknown,
+  ruleId: unknown,
+  body?: unknown,
+): string | undefined {
+  const id = typeof ruleId === "string" && ruleId ? ruleId : "<rule-id>";
+  const details = errorDetails(payload);
+  const guarded = isRecord(body) && body.if_expectations_pass === true;
+  if (code === "email_rule_conflict") {
+    switch (details.reason) {
+      case "version_moved":
+        return versionMovedHint(payload, ruleId);
+      case "revision_moved": {
+        const current =
+          typeof details.current_revision === "number"
+            ? details.current_revision
+            : undefined;
+        return current === undefined
+          ? `Hint: the rule was updated since the if_revision you sent, so nothing was saved. ${readAgain(id)} with --if-revision set to its revision.`
+          : `Hint: the rule is now at revision ${current}, not the if_revision you sent, so nothing was saved. ${readAgain(id)}, reapplying your change to what it shows, with --if-revision ${current}.`;
+      }
+      case "expectations_moved":
+        return `Hint: the rule's saved expectations changed while this write was checked against them, so nothing was saved. ${readAgain(id)}.`;
+      case "rule_changed":
+        return guarded
+          ? `Hint: the rule changed after this write was judged against its expectations and before it was saved, so saving it would have gone unchecked; nothing was saved. ${readAgain(id)}.`
+          : `Hint: the rule changed while this write was being saved, so nothing was saved. ${readAgain(id)}.`;
+      default:
+        return undefined;
+    }
+  }
+  if (code === "expectations_failed" || code === "expectations_undecided") {
+    const check = isRecord(details.expectations_check)
+      ? details.expectations_check
+      : {};
+    const failed = Array.isArray(check.failed) ? check.failed : [];
+    const undecided = Array.isArray(check.undecided) ? check.undecided : [];
+    const parts = [
+      ...(failed.length > 0 ? [`failed: ${failed.join(", ")}`] : []),
+      ...(undecided.length > 0 ? [`undecided: ${undecided.join(", ")}`] : []),
+    ];
+    const which = parts.length > 0 ? ` Expectations ${parts.join("; ")}.` : "";
+    const next =
+      code === "expectations_failed"
+        ? ""
+        : ` ${UNDECIDED_NEXT_STEP[String(details.reason)] ?? UNDECIDED_NEXT_STEP.none}`;
+    return `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved.${which}${next} The command exits ${updateEmailRuleErrorExitCode(payload) ?? EXIT_EXPECTATION_FAILED}.`;
+  }
+  if (code === "no_expectations")
+    return "Hint: nothing was saved. Give the rule expectations with --expectations-file (in this write or before it), or send the write without if_expectations_pass (--fail-on-expectations or --if-expectations-pass).";
+  return undefined;
+}
+
+/** What to do about an undecided judgment, by details.reason ("none": no reason given). */
+const UNDECIDED_NEXT_STEP: Readonly<Record<string, string>> = {
+  none: "Some could not be decided yet (mail not classified yet, or a question not answered yet); send the write again later.",
+  deadline: "The judgment ran out of time; send the write again.",
+  error: "The judgment could not finish; send the write again.",
+  client_gone: "The request ended before the write was saved; send it again.",
+  author_unresolvable:
+    "The rule cannot run as its author over the mail it would cover (details.author_reason), so sending the write again will not decide them.",
+};
+
+/**
+ * update-email-rule's exit code for the expectations guard's refusals: 1 when
+ * one failed, or when they cannot be decided by trying again (the rule cannot
+ * run as its author); 3 when trying again later can decide them.
+ */
+export function updateEmailRuleErrorExitCode(
+  payload: unknown,
+): number | undefined {
+  const code = isRecord(payload) ? payload.code : undefined;
+  if (code === "expectations_failed") return EXIT_EXPECTATION_FAILED;
+  if (code !== "expectations_undecided") return undefined;
+  return errorDetails(payload).reason === "author_unresolvable"
+    ? EXIT_EXPECTATION_FAILED
+    : EXIT_EXPECTATION_UNDECIDED;
+}
+
+// compile-email-rule
+
+/** The stderr report of compile-email-rule: how many recent emails it holds for. */
+export function compileEmailRuleReport(data: unknown): OperationReport {
+  if (!isRecord(data)) return { lines: [] };
+  const breadth = data.breadth;
+  if (
+    !isRecord(breadth) ||
+    typeof breadth.checked !== "number" ||
+    typeof breadth.matched !== "number"
+  )
+    return { lines: [] };
+  return {
+    lines: [
+      `Breadth: its conditions hold for ${breadth.matched} of ${plural(breadth.checked, "recent email", "recent emails")} checked in your own mailboxes, whatever scope you save it with.`,
+    ],
+  };
+}
+
+// get-email-rule
+
+/** The stderr report of get-email-rule: who wrote it, and its revision. */
+export function getEmailRuleReport(data: unknown): OperationReport {
+  if (!isRecord(data)) return { lines: [] };
+  const lines: string[] = [];
+  const author = authorLine(data.author);
+  if (author) lines.push(author);
+  if (typeof data.revision === "number")
+    lines.push(
+      `Revision ${data.revision}: pass --if-revision ${data.revision} to update-email-rule so a change made since is never replaced unseen.`,
+    );
+  return { lines };
+}
+
 // The flags and reports, by generated operation
 
-/** A write's --fail-on-expectations, the same on create and update. */
+/** create-email-rule's --fail-on-expectations: the exit code follows the check made after saving. */
 const FAIL_ON_EXPECTATIONS_HELP =
   "Exit 1 when an expectation in the answer's expectations_check failed, and 3 when none failed but one is undecided or the expectations this write sent were not checked (test the rule to decide). Without it the command exits 0 whatever the check says.";
 
+/** update-email-rule's --fail-on-expectations: the server refuses the write. */
+const UPDATE_FAIL_ON_EXPECTATIONS_HELP =
+  "Refuse the write unless the rule, as this write would leave it, passes its expectations. It sends if_expectations_pass (over any in --body-file or --raw-body), so the server judges a new version, a restored one, a new scope or turning the rule active before saving, and saves nothing when one failed (exit 1), one is undecided (exit 3, or 1 when the rule cannot run as its author) or the rule has none (exit 1). It can take as long as a test of the rule; the command waits for it. Judging needs a credential that reads the mail's content. A write the server does not judge (one changing only expectations, say) is saved, and the exit code then follows the answer's expectations_check, as on create. With --json, a refused write's document holds the API's error alone; a saved write's holds the rule.";
+
 const EXPECTATION_FLAG_NOTE =
   "Replaces any expect in --body-file or --raw-body. The answer reports them in expectations (passed, counts, results) and the exit code follows it; see --help-full.";
+
+/**
+ * update-email-rule's --fail-on-expectations sends if_expectations_pass, over
+ * any in the body. Asking for it while turning it off is refused.
+ */
+function expectationsGuardBodyFields(
+  flags: Record<string, unknown>,
+): ExtensionBodyField[] {
+  if (flags[FAIL_ON_EXPECTATIONS_FLAG] !== true) return [];
+  if (flags["if-expectations-pass"] === false)
+    throw usageError(
+      "--fail-on-expectations asks the server to judge the write before saving it; it cannot be combined with --no-if-expectations-pass.",
+    );
+  return [
+    {
+      flag: `--${FAIL_ON_EXPECTATIONS_FLAG}`,
+      property: "if_expectations_pass",
+      value: true,
+    },
+  ];
+}
 
 export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
   string,
@@ -954,13 +1185,25 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
           'A JSON file holding the emails the rule must match and must not, such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}, replacing its saved expectations; a file holding null removes them. Sets expectations, over any in --body-file or --raw-body; the answer judges them in expectations_check (passed, decided, failed, undecided); the report test-email-rule answers with is named expectations instead.',
       }),
       [FAIL_ON_EXPECTATIONS_FLAG]: Flags.boolean({
-        description: FAIL_ON_EXPECTATIONS_HELP,
+        description: UPDATE_FAIL_ON_EXPECTATIONS_HELP,
       }),
     },
-    bodyFields: expectationsBodyFields(true),
+    bodyFields: (flags) => [
+      ...expectationsBodyFields(true)(flags),
+      ...expectationsGuardBodyFields(flags),
+    ],
     bodyProperties: ["expectations"],
+    errorExitCode: updateEmailRuleErrorExitCode,
     fallbackExitCode: writtenFallbackExitCode,
     report: writtenEmailRuleReport,
+  },
+  compileEmailRule: {
+    flags: {},
+    report: compileEmailRuleReport,
+  },
+  getEmailRule: {
+    flags: {},
+    report: getEmailRuleReport,
   },
   getEmailRuleScope: {
     flags: {},

@@ -66,6 +66,11 @@ export type OperationExtension = {
     request: { body: unknown; flags: Record<string, unknown> },
   ) => number | undefined;
   /**
+   * The exit code for an error answer, read from its payload (the error
+   * object); undefined keeps the usual 1.
+   */
+  errorExitCode?: (payload: unknown) => number | undefined;
+  /**
    * Read the answer's data, given the request body and path that were sent
    * and the command's parsed flags.
    */
