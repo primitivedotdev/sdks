@@ -30,7 +30,7 @@ export const EVENT_TYPES_FLAG_OPERATIONS = new Set([
 ]);
 
 export const EVENT_TYPES_FLAG_DESCRIPTION =
-  "Event types this endpoint subscribes to, comma separated or repeated (sets rules.event_types). Omitting the subscription means every event type except the opt-in sent_email.* events, which an endpoint receives only when it lists them; sent_email.* expands to all four. Keep email.received in the list if the endpoint also handles inbound mail. On update, the endpoint's other rules are kept.";
+  "Event types this endpoint subscribes to, comma separated or repeated (sets rules.event_types). Omitting the subscription means every event type except the opt-in sent_email.* and email_rule_request.* events, which an endpoint receives only when it lists them; sent_email.* expands to all four. Rule request events can be listed only when the webhook is created. Keep email.received in the list if the endpoint also handles inbound mail. On update, the endpoint's other rules are kept.";
 
 export const MAX_EVENT_TYPES = 50;
 

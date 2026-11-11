@@ -533,6 +533,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
 
 - `rotateKey` takes `expires_at`: the new key's expiry, a time or null for
   none, instead of the old key's.
+- `listActivityObjects` takes `relation`: `created` (the default) or `asked`,
+  what other members asked of you.
 - `Primitive-Step-Up` is a declared header parameter on the 36 operations that
   accept a step-up confirmation token, so a client can send the confirmation
   token through the generated call: `headers: { "Primitive-Step-Up": token }`
@@ -731,6 +733,15 @@ downgrading, or sign in again afterwards.
   never saves it. `keys revoke` asks for confirmation unless `--yes` is
   passed.
 
+#### Rule request webhook events
+
+- The Node SDK's catalog lists `email_rule_request.created`, `accepted`,
+  `declined` and `withdrawn` (`EMAIL_RULE_REQUEST_EVENT_TYPES`), with the
+  body's shape (`EmailRuleRequestEvent`) and a type guard
+  (`isEmailRuleRequestEvent`). Each goes to the person who did not act, only
+  to a webhook that person made for them, and only when the webhook lists
+  them.
+
 #### Values the API adds later
 
 The generated Python and Go clients now keep an enum value they do not know
@@ -775,6 +786,10 @@ parsers.
   says why: only an invitation sent from the dashboard can offer that role
   (and there every Member reads all of its mail), so from the CLI invite
   with `--role none` and give a role once they have joined.
+- `primitive activity asked` lists what other members asked of you, newest
+  first, open or answered: the rule requests made to you, each with its
+  state, who asked and its id. It takes `--state`, `--limit`, `--cursor`,
+  `--all` and `--json`.
 - `primitive activity created` lists what you created, newest first, with
   where each object stands now. Signed in with `primitive login`, it covers
   what you created through any credential of yours, names the credential on
