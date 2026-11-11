@@ -131,6 +131,74 @@ describe("whoami command", () => {
     expect(lines.some((line) => /role/i.test(line))).toBe(false);
   });
 
+  it("names a key's email rules and its key id on the Grant line", () => {
+    const keyGrant = (mail_scope: unknown, credential_kind = "org_key") => ({
+      auth_method: "api_key",
+      key_id: "key-1",
+      org_id: "org-1",
+      role: "member",
+      grant: {
+        credential_kind,
+        grant_type: "concrete",
+        template: null,
+        permissions: ["mail:read"],
+        mail_scope,
+        expires_at: null,
+        catalog_version: "v",
+      },
+    });
+    const rules = (ids: string[], addresses: string[] = []) => ({
+      addresses,
+      domains: [],
+      rules: ids,
+      depth: "content",
+    });
+    const head = "Grant: concrete with 1 permissions,";
+    for (const [scope, text] of [
+      [
+        rules(["rule-1"]),
+        "mail that email rule rule-1 granted, while it stays active",
+      ],
+      [
+        rules(["rule-1", "rule-2"]),
+        "mail that email rules rule-1 and rule-2 granted, while each stays active",
+      ],
+      [
+        rules(["rule-1", "rule-2", "rule-3", "rule-4", "rule-5"]),
+        "mail that email rules rule-1, rule-2, rule-3 and 2 more granted, while each stays active (`primitive whoami --json --grant` lists every rule)",
+      ],
+      [
+        rules(["rule-1"], ["a@acme.test"]),
+        "a narrowed mail scope, plus mail that email rule rule-1 granted, while it stays active",
+      ],
+      [rules([], ["a@acme.test"]), "a narrowed mail scope"],
+      [
+        rules([]),
+        "no mail through its grant, which names no mailbox, domain or email rule",
+      ],
+      ["unreadable", "a mail scope the server could not read, so no mail"],
+      [{ addresses: [1], domains: [], rules: [] }, "a narrowed mail scope"],
+      ["org", "all mail in the organization"],
+    ] as const) {
+      expect(formatGrantLines(keyGrant(scope) as never)).toContain(
+        `${head} ${text} (org_key, key id key-1)`,
+      );
+    }
+    expect(
+      formatGrantLines(keyGrant(rules(["rule-1"]), "function_key") as never),
+    ).toContain(
+      `${head} mail that email rule rule-1 granted, while it stays active (function_key, key id key-1)`,
+    );
+    // A person's login has no key id to show.
+    expect(
+      formatGrantLines({
+        ...keyGrant("org", "cli_user_access"),
+        auth_method: "oauth",
+        key_id: null,
+      } as never),
+    ).toContain(`${head} all mail in the organization (cli_user_access)`);
+  });
+
   it("says only what the server reported", () => {
     expect(
       formatWhoamiSummary(makeAccount(), null, null, {
@@ -296,6 +364,103 @@ describe("whoami command", () => {
     expect(text).toContain("lacks org:read");
     expect(text).toContain("Organization: Acme (org-1)");
     expect(text).toContain("grant with 1 permissions, a narrowed mail scope");
+  });
+
+  it("names the rules and key id of a key on the summary", async () => {
+    const identity = {
+      member_address: null,
+      member_address_suggestion: null,
+      org_id: "acct-1",
+      role: "member",
+      auth_method: "api_key",
+      key_id: "key-7",
+      grant: {
+        credential_kind: "org_key",
+        grant_type: "concrete",
+        template: null,
+        permissions: ["mail:read"],
+        mail_scope: {
+          addresses: [],
+          domains: [],
+          rules: ["rule-1"],
+          depth: "content",
+        },
+        resources: null,
+        expires_at: null,
+      },
+    };
+    const get = vi.fn(async (options: { url: string }) =>
+      options.url === "/whoami"
+        ? { data: { success: true, data: identity } }
+        : { error: { error: { code: "not_found", message: "Not found" } } },
+    );
+    mocks.auth.mockResolvedValue({
+      apiClient: { client: { get } },
+      auth: { credentials: null },
+      baseUrlOverridden: false,
+    });
+    mocks.account.mockResolvedValue({ data: { data: makeAccount() } });
+    const output: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((value: unknown) => {
+      output.push(String(value));
+    });
+
+    await WhoamiCommand.run([], {
+      root: resolve(import.meta.dirname, "../.."),
+    });
+
+    const lines = output.join("\n").split("\n");
+    expect(lines[0]).toBe("Authenticated (API keys have no member address)");
+    expect(lines).toContain(
+      "Grant: concrete with 1 permissions, mail that email rule rule-1 granted, while it stays active (org_key, key id key-7)",
+    );
+  });
+
+  it("names the rules and key id of a key refused the account", async () => {
+    mocks.auth.mockResolvedValue({
+      apiClient: { client: {} },
+      auth: { credentials: null },
+      baseUrlOverridden: false,
+    });
+    mocks.account.mockResolvedValue({
+      error: {
+        success: false,
+        error: { code: "grant_forbidden", message: "Not allowed" },
+      },
+    });
+    mocks.ownGrant.mockResolvedValue({
+      data: {
+        data: {
+          org_id: "org-1",
+          auth_method: "api_key",
+          key_id: "key-9",
+          grant: {
+            credential_kind: "org_key",
+            grant_type: "concrete",
+            template: null,
+            permissions: ["mail:read"],
+            mail_scope: {
+              addresses: [],
+              domains: [],
+              rules: ["rule-1"],
+              depth: "content",
+            },
+            resources: null,
+            expires_at: null,
+          },
+        },
+      },
+    });
+    const output: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((value: unknown) => {
+      output.push(String(value));
+    });
+    const root = resolve(import.meta.dirname, "../..");
+    await WhoamiCommand.run([], { root });
+    expect(process.exitCode ?? 0).toBe(0);
+    expect(output.join("\n")).toContain(
+      "Grant: concrete with 1 permissions, mail that email rule rule-1 granted, while it stays active (org_key, key id key-9)",
+    );
   });
 
   it("names the organization when the saved login recorded its name", () => {

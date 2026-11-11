@@ -23,6 +23,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { mailReach } from "../empty-mail-hint.js";
 import {
   failedSessionRegistration,
   registrationSummaryLine,
@@ -75,15 +76,69 @@ type GrantLineFields = Pick<
   "credential_kind" | "expires_at" | "grant_type" | "mail_scope" | "template"
 > & { permissions: readonly string[] };
 
-function formatGrant(grant: GrantLineFields): string[] {
+/** How many rule ids the Grant line names before it says how many more. */
+const GRANT_LINE_RULES = 3;
+
+/** Rule ids for the Grant line: the first few, then how many more. */
+function ruleIdList(rules: readonly string[]): string {
+  const shown = rules.slice(0, GRANT_LINE_RULES);
+  const rest = rules.length - shown.length;
+  const all = rest > 0 ? [...shown, `${rest} more`] : shown;
+  return all.length <= 1
+    ? (all[0] ?? "")
+    : `${all.slice(0, -1).join(", ")} and ${all[all.length - 1]}`;
+}
+
+/**
+ * The mail a grant reaches, for the Grant line. A key cannot read email
+ * rules, so a scope that lists them names them by id. A rule grants mail it
+ * matches as the mail arrives, while the rule is active, and the key reads it
+ * only while the rule stays active.
+ */
+function grantScopeText(scope: unknown): string {
+  // An older server that describes no scope: as before.
+  if (scope === undefined) return "all mail in the organization";
+  const reach = mailReach(scope);
+  switch (reach.kind) {
+    case "org":
+      return "all mail in the organization";
+    case "unreadable":
+      return "a mail scope the server could not read, so no mail";
+    case "none":
+      return "no mail through its grant, which names no mailbox, domain or email rule";
+    case "rules_only":
+    case "mailboxes": {
+      if (reach.rules.length === 0) return "a narrowed mail scope";
+      const granted =
+        reach.rules.length === 1
+          ? `mail that email rule ${ruleIdList(reach.rules)} granted, while it stays active`
+          : `mail that email rules ${ruleIdList(reach.rules)} granted, while each stays active`;
+      const more =
+        reach.rules.length > GRANT_LINE_RULES
+          ? " (`primitive whoami --json --grant` lists every rule)"
+          : "";
+      return reach.kind === "mailboxes"
+        ? `a narrowed mail scope, plus ${granted}${more}`
+        : `${granted}${more}`;
+    }
+    default:
+      return "a narrowed mail scope";
+  }
+}
+
+function formatGrant(
+  grant: GrantLineFields,
+  keyId: string | null | undefined = null,
+): string[] {
   const what = grant.template
     ? `template ${grant.template}`
     : `${grant.grant_type ?? "grant"} with ${grant.permissions.length} permissions`;
-  const scope =
-    grant.mail_scope === "org" || grant.mail_scope === undefined
-      ? "all mail in the organization"
-      : "a narrowed mail scope";
-  const lines = [`Grant: ${what}, ${scope} (${grant.credential_kind})`];
+  const credential = keyId
+    ? `${grant.credential_kind}, key id ${keyId}`
+    : grant.credential_kind;
+  const lines = [
+    `Grant: ${what}, ${grantScopeText(grant.mail_scope)} (${credential})`,
+  ];
   if (grant.expires_at) lines.push(`Credential expires: ${grant.expires_at}`);
   return lines;
 }
@@ -113,7 +168,7 @@ export function formatGrantLines(
     );
   }
   const grant = identity.grant as GrantDescription | null | undefined;
-  if (grant) lines.push(...formatGrant(grant));
+  if (grant) lines.push(...formatGrant(grant, identity.key_id));
   if (options.userLogin) {
     lines.push(
       "Signed in as yourself. Switch organizations with `primitive org use <org>`.",
@@ -226,7 +281,7 @@ export function formatOwnGrantSummary(
     orgName
       ? `Organization: ${orgName} (${own.org_id})`
       : `Organization id: ${own.org_id}`,
-    ...(own.grant ? formatGrant(own.grant as GrantLineFields) : []),
+    ...(own.grant ? formatGrant(own.grant as GrantLineFields, own.key_id) : []),
   ].join("\n");
 }
 

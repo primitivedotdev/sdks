@@ -468,6 +468,12 @@ Go (package `api`):
   `role restricted`, followed by a `role restricted:` note line when a row
   is restricted, `org use` labels the role the same way, and `roles groups`
   rows read `role id`.
+- For an API key, the `Grant:` line of `primitive whoami` names the key id.
+  For a key whose scope lists email rules it names them by id (`mail that
+  email rule <id> granted, while it stays active`, the first three and how
+  many more) instead of `a narrowed mail scope`, since a key cannot read the
+  rules themselves. A scope the server could not read, or one that names no
+  mailbox, domain or rule, says it reaches no mail.
 
 ### Additions
 
