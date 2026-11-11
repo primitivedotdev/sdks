@@ -16,39 +16,49 @@ the same OpenAPI spec. See `RELEASE.md`.
 OpenAPI document the API serves, and every client is regenerated from it. Most
 of the changes below follow from that document.
 
-Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.6` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.6`), and `3.0.0rc6` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
+Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.7` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.7`), and `3.0.0rc7` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.6` (`3.0.0rc6`), which added key expiry and rule changes to `keys update` and the email rule request webhook events, `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
 
-What `3.0.0-preview.6` (`3.0.0rc6`) changes from `3.0.0-preview.5`:
+What `3.0.0-preview.7` (`3.0.0rc7`) changes from `3.0.0-preview.6`:
 
-- The spec follows the API's current release. Among the new fields: whether a
-  webhook delivery will be retried (`retry_scheduled`), whether an endpoint is
-  being sent mail and why not (`delivery`), an endpoint test's `reachable` and
-  `delivery`, rotation links on keys, revoked keys and repeat revokes, which
-  do-not-share rules kept a match back (`withheld_by`), the email each rule
-  result is about, a rule request's message and decline reason, and the email
-  rule request webhook events. `operator` is no longer a built-in role key.
-  The breaking changes are listed below.
-- Keys: `keys update` and `keys rotate` take `--expires-at` and `--no-expiry`;
-  `keys update` takes `--add-rule` and `--remove-rule`, restates a grant only
-  when the key read shows its resource limits, and takes ended rules off;
-  `keys get` shows when a revoked key was revoked.
-- `email-rules delete-email-rule` asks before deleting (`--yes` without a
-  terminal) and reports the shares it ended and the keys still listing the
-  rule.
-- `primitive activity asked` lists the rule requests made to you.
-- `whoami` names you by your member address and shows the account email apart;
-  role lines say what kind of role they are.
-- `emails wait` and `emails watch` report mail that becomes readable after a
-  later email was already reported.
-- Without a terminal, email-code login, signup and other prompting commands
-  refuse at once and name the flag to pass; an address on a domain managed by
-  Primitive is pointed at `primitive login browser`.
-- A background listener keeps receiving across a CLI upgrade, and keeps its
-  supervisor when a new worker exits right after starting.
-- An empty email list says what the credential can read, and giving a role
-  that reads every mailbox says so.
-- Creating an endpoint at a deleted endpoint's URL makes a new endpoint, and
-  a URL already held on the same domain is refused.
+- The spec follows the API's current release. Email rules carry `revision`
+  and `author`; `compileEmailRule` answers `breadth`, which the write bodies
+  take back as `EmailRuleBreadth` or null and ignore; `updateEmailRule` takes
+  `if_revision`, `if_expectations_pass` and `restore_version`, and answers
+  `affects`, `restored_from` and the check's `note`; and there are new error
+  codes (`expectations_failed`, `expectations_undecided`, `no_expectations`)
+  and conflict reasons (`revision_moved`, `expectations_moved`,
+  `rule_changed`). A rule-granted delivery reports `retry_scheduled` and
+  `next_attempt_at`.
+- `email-rules update-email-rule --fail-on-expectations` now has the server
+  judge the rule as the write would leave it before saving, for a write that
+  saves a version or turns the rule active: an expectation that failed (exit
+  1) or is undecided (exit 3, or 1 when the rule cannot run as its author),
+  or a rule with none (exit 1), means nothing is saved.
+  `--restore-version` saves an earlier version again and `--if-revision`
+  refuses a write when the rule changed since you read it; a refused update
+  says what moved. Without `--json`, an update says whom a new version
+  reaches and what a restore saved, `compile-email-rule` says how many of
+  your recent emails its conditions hold for, and `get-email-rule` names the
+  author and the revision.
+- `primitive wait` without `--include-existing` no longer returns the newest
+  email already received as if it were new. It counts mail that became
+  visible after it started, including an email sent before and accepted
+  after, and `inbox next --wait` no longer wakes once for nothing.
+- `send` and `chat` with a credential that has no `mail:send` name that
+  permission and how to add it, with code `grant_forbidden`, instead of
+  asking for `--from`. When `send`, `reply` or `chat` stops on an error of
+  the CLI's own, the `--json` envelope keeps that error's `code` and
+  `details`.
+- `emails facts` works with an API key, agent key or narrowed token, reading
+  the facts from the email itself.
+- The `whoami` Grant line names an API key's id and its email rules (listed
+  under breaking changes).
+- Keys: a permission the API refuses for a key gets a hint saying whether it
+  is a permission at all and what a key can hold; `keys update --rule` help
+  starts with "Replaces the key's rules"; `keys list --include-revoked` lists
+  revoked keys too.
+- `matchedRules` (Node) returns no rules for a missing or non-object argument
+  instead of throwing, and Python's `matched_rules` accepts `None`.
 
 ### Breaking changes
 
@@ -58,7 +68,7 @@ What `3.0.0-preview.6` (`3.0.0rc6`) changes from `3.0.0-preview.5`:
   CLI moves from 1.75.0.
 - The Go module path is `github.com/primitivedotdev/sdks/sdk-go/v3`. Update
   imports from `.../sdk-go/v2` and `.../sdk-go/v2/api`.
-- `primitive functions init` scaffolds projects on `^3.0.0-preview.6` of both
+- `primitive functions init` scaffolds projects on `^3.0.0-preview.7` of both
   `@primitivedotdev/sdk` and `primitive`.
 
 #### Removed code
