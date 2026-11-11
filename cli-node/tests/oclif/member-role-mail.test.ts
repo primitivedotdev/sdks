@@ -149,6 +149,21 @@ describe("roleReadsAllMailWarning", () => {
     expect(roleReadsAllMailWarning("read_only", ROLES)).toContain(
       'Warning: the role "Read only" reads all of this organization\'s mail',
     );
+    // As the declared shape gives a template, with no mail scope: the server's default, the whole organization.
+    const bare = {
+      ...ROLES,
+      templates: [
+        {
+          key: "operator",
+          name: "Operator",
+          description: "Run things.",
+          permissions: ["mail:read"],
+        },
+      ],
+    };
+    expect(roleReadsAllMailWarning("operator", bare)).toContain(
+      'the role "Operator" reads all',
+    );
     const { invitations: _, ...unsaid } = ROLES;
     expect(roleReadsAllMailWarning("member", unsaid)).toContain(
       'the role "Member" reads all',

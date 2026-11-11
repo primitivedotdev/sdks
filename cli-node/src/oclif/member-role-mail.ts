@@ -110,7 +110,9 @@ export function roleReadsAllMailWarning(
   const readsMail =
     Array.isArray(found?.permissions) &&
     found.permissions.includes("mail:read");
-  if (found?.mail_scope !== "org" || !readsMail) return null;
+  // A role or template the answer gives no mail scope has the server's default, the whole organization.
+  if (!found || (found.mail_scope ?? "org") !== "org" || !readsMail)
+    return null;
   const cleaned = Array.from(
     (typeof found.name === "string" ? found.name : "")
       .replace(UNPRINTABLE, " ")
