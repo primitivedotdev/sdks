@@ -13,6 +13,7 @@ import {
   agentProfileDirectory,
   saveConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
+import { MissingSendPermissionError } from "../../src/oclif/outbound-defaults.js";
 import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 const mocks = vi.hoisted(() => ({
@@ -738,6 +739,32 @@ describe("chat send outcomes", () => {
     });
     expect(envelope.error.message).toContain("No prior inbound email");
     expect(mocks.replyToEmail).not.toHaveBeenCalled();
+  });
+
+  it("keeps a refusal's code and details in the not_sent envelope", async () => {
+    mocks.pickDefaultFromAddress.mockRejectedValue(
+      new MissingSendPermissionError({
+        credentialKind: "org_key",
+        keyId: "key-1",
+        replies: false,
+      }),
+    );
+
+    const result = await run("chat", ["help@agent.example", "hello", "--json"]);
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(1);
+    expect(envelope).toMatchObject({
+      outcome: "not_sent",
+      exit_code: 1,
+      sent: null,
+      error: {
+        code: "grant_forbidden",
+        details: { permission: "mail:send", reason: "permission_missing" },
+      },
+    });
+    expect(envelope.error.message).toMatch(/^This key has no mail:send/);
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
   });
 
   it("emits a not_sent envelope when chat reply has no open chat", async () => {

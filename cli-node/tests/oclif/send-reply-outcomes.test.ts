@@ -719,6 +719,48 @@ describe("send outcomes", () => {
     expect(result.error).not.toContain("agent@");
   });
 
+  it("refuses a key without mail:send by the permission, with the send route's code, and no --from hint", async () => {
+    mocks.getSendFrom.mockResolvedValue({
+      data: {
+        data: {
+          default_from: null,
+          default_source: null,
+          addresses: [],
+          domains: [],
+          reason: "This credential cannot send mail.",
+        },
+      },
+    });
+    mocks.getOwnGrant.mockResolvedValue({
+      data: {
+        data: {
+          key_id: "key-1",
+          grant: { credential_kind: "org_key", permissions: ["mail:read"] },
+        },
+      },
+    });
+    const message =
+      "This key has no mail:send, so it cannot send new mail from any address; --from does not change that. To send, add the permission to the key (a member who manages keys runs `primitive keys update key-1 --add mail:send`), or use a credential that holds mail:send.";
+
+    const json = await run("send", [...noFromArgs, "--json"]);
+    expect(json.exitCode).toBe(1);
+    expect(json.stderr).toBe("");
+    expect(JSON.parse(json.stdout)).toMatchObject({
+      outcome: "not_sent",
+      exit_code: 1,
+      error: {
+        message,
+        code: "grant_forbidden",
+        details: { permission: "mail:send", reason: "permission_missing" },
+      },
+    });
+
+    const plain = await run("send", noFromArgs);
+    expect(plain.exitCode).toBe(1);
+    expect(plain.error).toBe(message);
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+  });
+
   it("keeps stdout byte-compatible and summarises the send on stderr", async () => {
     const result = await run("send", sendArgs());
 

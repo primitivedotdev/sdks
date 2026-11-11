@@ -12,6 +12,7 @@ import { cliInvocation } from "./agent-identity-suggestions.js";
 import { extractErrorPayload } from "./api-command.js";
 import { AGENT_PROFILE_ENV } from "./connected-agent-profile.js";
 import { formatAlreadySentNotice } from "./idempotent-replay-banner.js";
+import { thrownErrorBody } from "./json-output.js";
 
 /**
  * One outcome vocabulary for every command that puts mail on the wire
@@ -839,8 +840,6 @@ export function buildThrownSendFailureEnvelope(params: {
   noun: "Message" | "Reply";
   requestStarted: boolean;
 }): SendCommandEnvelope & Record<string, unknown> {
-  const message =
-    params.error instanceof Error ? params.error.message : String(params.error);
   const outcome: FailedSendOutcome = params.requestStarted
     ? "uncertain"
     : "not_sent";
@@ -856,7 +855,7 @@ export function buildThrownSendFailureEnvelope(params: {
     }),
     sent: null,
     http_status: null,
-    error: { message },
+    error: thrownErrorBody(params.error),
     follow_up_commands:
       params.requestStarted && params.attemptStartedAtIso
         ? buildSendCommandFollowUps({

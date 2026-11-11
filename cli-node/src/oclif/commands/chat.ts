@@ -58,6 +58,7 @@ import {
 } from "../connected-reply-wait.js";
 import { contactRequestSessionKey } from "../contact-request-commands.js";
 import { formatAlreadySentNotice } from "../idempotent-replay-banner.js";
+import { thrownErrorBody } from "../json-output.js";
 import { currentMailSessionKey } from "../mail-session.js";
 import {
   deriveChatSubject,
@@ -1395,7 +1396,7 @@ class ChatCommand extends Command {
     }),
     from: Flags.string({
       description:
-        "Sender address. Defaults to the selected connected profile's pinned address; on your own login, to your member address when you may send from it; with a key whose grant names exactly one address, to that address. Otherwise the command asks for --from. A connected profile rejects another sender.",
+        "Sender address. Defaults to the selected connected profile's pinned address; on your own login, to your member address when you may send from it; with a key whose grant names exactly one address, to that address. Otherwise the command asks for --from, except that a credential without mail:send is refused by that permission. A connected profile rejects another sender.",
     }),
     subject: Flags.string({
       description:
@@ -1540,7 +1541,7 @@ class ChatCommand extends Command {
         this.log(
           JSON.stringify(
             buildChatSendFailureEnvelope({
-              error: { message: detail },
+              error: thrownErrorBody(error),
               exitCode:
                 outcome === "not_sent" ? thrownErrorExitCode(error) : undefined,
               idempotencyKey: this.chatProgress.idempotencyKey,
@@ -2760,11 +2761,10 @@ export class ChatReplyCommand extends Command {
       // earlier failure (no open chat, busy chat, bad input) sent
       // nothing, and --json still owes stdout an envelope.
       if (flags.json && !this.delegatedToChat) {
-        const detail = error instanceof Error ? error.message : String(error);
         this.log(
           JSON.stringify(
             buildChatSendFailureEnvelope({
-              error: { message: detail },
+              error: thrownErrorBody(error),
               exitCode: thrownErrorExitCode(error),
               noun: "Reply",
               outcome: "not_sent",

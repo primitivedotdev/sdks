@@ -944,6 +944,15 @@ parsers.
 
 #### CLI
 
+- `send` and `chat` without `--from`, for a credential whose grant has no
+  `mail:send`, say that it has no `mail:send` and what would give it the
+  permission (for an API key, `keys update <key id> --add mail:send`), and
+  exit 1 with `code` `grant_forbidden` and `details` `{ "permission":
+  "mail:send", "reason": "permission_missing" }`, as the send itself refuses
+  it. They do not ask for `--from`, which could not help. When `send`,
+  `reply` or `chat` stops on an error of the CLI's own rather than an API
+  answer, the `--json` envelope's `error` keeps that error's `code` and
+  `details`.
 - An empty `emails list` or `emails latest` says what the credential reads
   instead of "No inbound emails received yet on this account", which is true
   only for a credential that reads every mailbox: a key limited to email

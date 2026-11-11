@@ -66,7 +66,8 @@ import {
 //      address when the API would let them send from it, and an org or
 //      function key whose grant names exactly one address as that
 //      address. Anything else gets no default: the command lists what
-//      the credential may send from and asks for --from. The From is
+//      the credential may send from and asks for --from, or, for a
+//      credential without mail:send, names that permission. The From is
 //      never guessed from the organization's domains, as agent@ at the
 //      first verified one used to be.
 //   2. `--subject` defaults to the first non-empty line of the body
@@ -99,7 +100,9 @@ class SendCommand extends Command {
   \`primitive account whoami\` reports) when you may send from it; a key
   whose grant names exactly one address sends from that address. Otherwise
   there is no default: the command lists the addresses you may send from
-  and asks for --from. Without --json, stderr names the From it used.
+  and asks for --from. A credential without mail:send is refused with
+  grant_forbidden naming mail:send instead, since no --from would help.
+  Without --json, stderr names the From it used.
   --subject defaults to the first line of the body when omitted.
   --attachment attaches a file; repeat it to attach multiple files.
   --header adds a custom header such as "X-Campaign-Id: spring-sale";
@@ -161,7 +164,7 @@ class SendCommand extends Command {
     }),
     from: Flags.string({
       description:
-        "Sender address. Without it: a connected agent's own address, your member address on your own login, or a key's one granted address; otherwise the command asks for --from.",
+        "Sender address. Without it: a connected agent's own address, your member address on your own login, or a key's one granted address; otherwise the command asks for --from, except that a credential without mail:send is refused by that permission.",
     }),
     subject: Flags.string({
       description:

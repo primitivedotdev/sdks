@@ -362,6 +362,29 @@ describe("composeJsonDocument", () => {
     });
   });
 
+  it("keeps a thrown refusal's code and details", () => {
+    const error = Object.assign(new Error("This key has no mail:send."), {
+      code: "grant_forbidden",
+      details: { permission: "mail:send", reason: "permission_missing" },
+      oclif: { exit: 1 },
+    });
+    expect(
+      composeJsonDocument({
+        exitCode: 1,
+        stderr: [],
+        stdout: "",
+        thrown: { error },
+      }),
+    ).toEqual({
+      error: {
+        message: "This key has no mail:send.",
+        code: "grant_forbidden",
+        details: { permission: "mail:send", reason: "permission_missing" },
+      },
+      exit_code: 1,
+    });
+  });
+
   it("adds the failure to a document that lacks one and keeps one it has", () => {
     expect(
       composeJsonDocument({

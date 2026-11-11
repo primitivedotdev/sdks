@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkAccount } from "../../src/oclif/commands/doctor.js";
 import {
   legacyDefaultFromAddress,
+  MissingSendPermissionError,
   pickDefaultFromAddress,
   resolveDefaultFrom,
 } from "../../src/oclif/outbound-defaults.js";
@@ -615,9 +616,142 @@ describe("resolveDefaultFrom from the API's own answer", () => {
     await expect(
       pickDefaultFromAddress(client, authContext, { purpose: "reply" }),
     ).resolves.toBe("me@example.test");
-    await expect(pickDefaultFromAddress(client, authContext)).rejects.toThrow(
-      "This credential can only reply to mail it received; it cannot send new mail.",
+    const error = await pickDefaultFromAddress(client, authContext).then(
+      () => null,
+      (thrown: unknown) => thrown,
     );
+    expect((error as Error).message).toBe(
+      "This key has no mail:send, so it cannot send new mail from any address; --from does not change that. It can still reply to mail it received. To send, add the permission to the key (a member who manages keys runs `primitive keys update k1 --add mail:send`), or use a credential that holds mail:send.",
+    );
+  });
+
+  describe("a credential without mail:send", () => {
+    const cannotSend = answer({ reason: "This credential cannot send mail." });
+    const ownGrant = (grant: Record<string, unknown>, keyId: string | null) =>
+      Response.json({
+        success: true,
+        data: {
+          org_id: ACCOUNT_ID,
+          auth_method: keyId ? "api_key" : "user_grant",
+          key_id: keyId,
+          grant: {
+            template: null,
+            mail_scope: { addresses: [], domains: [], rules: ["r1"] },
+            resources: null,
+            expires_at: null,
+            ...grant,
+          },
+        },
+      });
+
+    it("names the missing permission, with the send route's code, and never --from", async () => {
+      const { client, requests } = recordingClient({
+        "/whoami/send-from": cannotSend,
+        "/whoami/grant": () =>
+          ownGrant(
+            { credential_kind: "org_key", permissions: ["mail:read"] },
+            "k1",
+          ),
+      });
+      const error = await resolveDefaultFrom(client, authContext).then(
+        () => null,
+        (thrown: unknown) => thrown,
+      );
+      expect(error).toBeInstanceOf(MissingSendPermissionError);
+      expect(error).toMatchObject({
+        code: "grant_forbidden",
+        details: { permission: "mail:send", reason: "permission_missing" },
+        oclif: { exit: 1 },
+        message:
+          "This key has no mail:send, so it cannot send new mail from any address; --from does not change that. To send, add the permission to the key (a member who manages keys runs `primitive keys update k1 --add mail:send`), or use a credential that holds mail:send.",
+      });
+      expect(requests.map((request) => request.path)).toEqual([
+        "/v1/whoami/send-from",
+        "/v1/whoami/grant",
+      ]);
+    });
+
+    it("suggests the key update only for an API key whose id it knows", async () => {
+      for (const [grant, keyId, expected] of [
+        [
+          { credential_kind: "oauth", permissions: ["mail:read"] },
+          null,
+          "This credential has no mail:send, so it cannot send new mail from any address; --from does not change that. To send, ask an organization admin for a role that includes mail:send.",
+        ],
+        [
+          { credential_kind: "member", permissions: [] },
+          null,
+          "This credential has no mail:send, so it cannot send new mail from any address; --from does not change that. To send, ask an organization admin for a role that includes mail:send.",
+        ],
+        [
+          { credential_kind: "agent_delegate", permissions: ["mail:read"] },
+          null,
+          "This credential has no mail:send, so it cannot send new mail from any address; --from does not change that. To send, use a credential that holds mail:send.",
+        ],
+        [
+          { credential_kind: "function_key", permissions: [] },
+          "k2",
+          "This key has no mail:send, so it cannot send new mail from any address; --from does not change that. To send, use a credential that holds mail:send.",
+        ],
+        [
+          { credential_kind: "org_key", permissions: ["mail:read"] },
+          null,
+          "This key has no mail:send, so it cannot send new mail from any address; --from does not change that. To send, use a credential that holds mail:send.",
+        ],
+      ] as const) {
+        const { client } = recordingClient({
+          "/whoami/send-from": cannotSend,
+          "/whoami/grant": () => ownGrant(grant, keyId),
+        });
+        const error = await resolveDefaultFrom(client, authContext).then(
+          () => null,
+          (thrown: unknown) => thrown,
+        );
+        expect(error).toBeInstanceOf(MissingSendPermissionError);
+        expect((error as Error).message).toBe(expected);
+      }
+    });
+
+    it("keeps the API's reason and the --from hint when the grant holds mail:send or cannot be read", async () => {
+      const held: Array<() => Response> = [
+        () =>
+          ownGrant(
+            { credential_kind: "org_key", permissions: ["mail:send"] },
+            "k1",
+          ),
+        () =>
+          ownGrant(
+            {
+              credential_kind: "member",
+              permissions: ["mail:read"],
+              scoped_permissions: { "mail:send": scope(["me@acme.example"]) },
+            },
+            null,
+          ),
+        // Permissions left out: nothing is claimed about them.
+        () => ownGrant({ credential_kind: "org_key" }, "k1"),
+        () => refusal(),
+        () => {
+          throw new TypeError("network down");
+        },
+      ];
+      for (const grant of held) {
+        const { client } = recordingClient({
+          "/whoami/send-from": answer({
+            reason: "This credential cannot send from any address right now.",
+          }),
+          "/whoami/grant": grant,
+        });
+        const error = await resolveDefaultFrom(client, authContext).then(
+          () => null,
+          (thrown: unknown) => thrown,
+        );
+        expect(error).not.toBeInstanceOf(MissingSendPermissionError);
+        expect((error as Error).message).toBe(
+          "This credential cannot send from any address right now. Pass the address to use with --from <address>.",
+        );
+      }
+    });
   });
 
   it("works the default out itself only where the API has no answer", async () => {
