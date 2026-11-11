@@ -2,6 +2,7 @@ import { Args, Command, Errors, Flags } from "@oclif/core";
 import { acquireCliCredentialsLock } from "../auth.js";
 import BrowserLoginCommand, { type LoginFlags } from "./login.js";
 import {
+  refuseEmailCodeStartWithoutTerminal,
   runSignupConfirmWithCredentialLock,
   runSignupResendWithCredentialLock,
   runSignupStartWithCredentialLock,
@@ -13,11 +14,16 @@ function cliError(message: string): Errors.CLIError {
   return new Errors.CLIError(message, { exit: 1 });
 }
 
+function usageError(message: string): Errors.CLIError {
+  return new Errors.CLIError(message, { exit: 2 });
+}
+
 // The email-code auth flows (signin / login / otp) reuse the signup
 // start helper with their own command copy.
 const SIGNIN_OTP_COPY: SignupCommandCopy = {
   actionNoun: "sign-in",
   actionGerund: "signing in",
+  browserLoginCommand: "signin browser",
   confirmCommand: (email) => `signin otp confirm ${email} <code>`,
   resendCommand: (email) => `signin otp resend ${email}`,
   startCommand: (email) => `signin otp ${email}`,
@@ -26,6 +32,7 @@ const SIGNIN_OTP_COPY: SignupCommandCopy = {
 const SIGNIN_EMAIL_COPY: SignupCommandCopy = {
   actionNoun: "sign-in",
   actionGerund: "signing in",
+  browserLoginCommand: "signin browser",
   confirmCommand: (email) => `signin confirm ${email} <code>`,
   resendCommand: (email) => `signin resend ${email}`,
   startCommand: (email) => `signin ${email}`,
@@ -34,6 +41,7 @@ const SIGNIN_EMAIL_COPY: SignupCommandCopy = {
 const LOGIN_EMAIL_COPY: SignupCommandCopy = {
   actionNoun: "login",
   actionGerund: "logging in",
+  browserLoginCommand: "login browser",
   confirmCommand: (email) => `login confirm ${email} <code>`,
   resendCommand: (email) => `login resend ${email}`,
   startCommand: (email) => `login ${email}`,
@@ -42,6 +50,7 @@ const LOGIN_EMAIL_COPY: SignupCommandCopy = {
 const LOGIN_OTP_COPY: SignupCommandCopy = {
   actionNoun: "login",
   actionGerund: "logging in",
+  browserLoginCommand: "login browser",
   confirmCommand: (email) => `login otp confirm ${email} <code>`,
   resendCommand: (email) => `login otp resend ${email}`,
   startCommand: (email) => `login otp ${email}`,
@@ -50,10 +59,15 @@ const LOGIN_OTP_COPY: SignupCommandCopy = {
 const OTP_COPY: SignupCommandCopy = {
   actionNoun: "email-code auth",
   actionGerund: "authenticating",
+  browserLoginCommand: "login browser",
   confirmCommand: (email) => `otp confirm ${email} <code>`,
   resendCommand: (email) => `otp resend ${email}`,
   startCommand: (email) => `otp ${email}`,
 };
+
+// What an emailed code does, which the email-code commands' help shares.
+const EMAIL_CODE_ACCOUNT_NOTE =
+  "The code logs you in to the account that uses the address, or creates a new account when none does. Primitive sends no emailed code to an address on a domain it receives mail for: use browser login instead.";
 
 function acquireCredentialsLock(configDir: string): () => void {
   try {
@@ -68,7 +82,7 @@ function commonOtpStartFlags() {
   return {
     "accept-terms": Flags.boolean({
       description:
-        "Confirm acceptance of Primitive's Terms of Service and Privacy Policy",
+        "Confirm acceptance of Primitive's Terms of Service and Privacy Policy. Required when there is no terminal to ask in.",
     }),
     "api-base-url": Flags.string({
       description:
@@ -91,17 +105,18 @@ export class SigninCommand extends BrowserLoginCommand {
   static args = {
     email: Args.string({
       description:
-        "Email address for email-code sign-in. Omit it to use browser approval.",
+        "Email address for email-code auth, which logs in to the account that uses it or creates one when none does. Omit it to use browser approval.",
       required: false,
     }),
   };
 
-  static description =
-    `Sign in or log in to an existing Primitive account and save an org-scoped OAuth session locally.
+  static description = `Sign in to Primitive and save the session locally.
 
-Run \`primitive signin <email> --accept-terms\` for email-code sign-in, then \`primitive signin confirm <email> <code>\`. Run \`primitive signin\` with no email to use browser approval; \`primitive signin browser\` is the explicit browser form. \`primitive login\` supports the same flows with login-shaped commands. \`primitive otp <email>\` is the shortest email-code auth form. For new account creation, use \`primitive signup <email>\`. Browser approval logs you in as yourself where the server supports it, so you can switch organizations with \`primitive org use <org>\` or \`--org <org>\` on any command.`;
+Run \`primitive signin\` with no email to use browser approval; \`primitive signin browser\` is the explicit browser form. Browser approval logs you in as yourself where the server supports it, so you can switch organizations with \`primitive org use <org>\` or \`--org <org>\` on any command.
 
-  static summary = "Sign in to an existing account";
+Run \`primitive signin <email> --accept-terms\` for email-code sign-in, then \`primitive signin confirm <email> <code>\`. ${EMAIL_CODE_ACCOUNT_NOTE} \`primitive login\` supports the same flows with login-shaped commands. \`primitive otp <email>\` is the shortest email-code auth form; \`primitive signup <email>\` is the same flow, worded for creating an account.`;
+
+  static summary = "Sign in with browser approval or an emailed code";
 
   static examples = [
     "<%= config.bin %> signin",
@@ -128,13 +143,13 @@ Run \`primitive signin <email> --accept-terms\` for email-code sign-in, then \`p
     const { args, flags } = await this.parse(commandClass);
 
     if (args.email && (flags as LoginFlags).permission?.length) {
-      throw cliError(
+      throw usageError(
         "--permission applies to browser login. Run the command without an email to use it.",
       );
     }
     if (!args.email) {
       if (flags["accept-terms"]) {
-        throw cliError(
+        throw usageError(
           `Email-code auth needs an email address. Run \`primitive ${this.emailCodeCopy().startCommand("<email>")} --accept-terms\`.`,
         );
       }
@@ -142,6 +157,11 @@ Run \`primitive signin <email> --accept-terms\` for email-code sign-in, then \`p
       return;
     }
 
+    refuseEmailCodeStartWithoutTerminal({
+      copy: this.emailCodeCopy(),
+      email: args.email,
+      flags,
+    });
     const releaseCredentialsLock = acquireCredentialsLock(
       this.config.configDir,
     );
@@ -169,12 +189,13 @@ Run \`primitive signin <email> --accept-terms\` for email-code sign-in, then \`p
 export class LoginCommand extends SigninCommand {
   static args = SigninCommand.args;
 
-  static description =
-    `Log in or sign in to an existing Primitive account and save an org-scoped OAuth session locally.
+  static description = `Log in to Primitive and save the session locally.
 
-Run \`primitive login <email> --accept-terms\` for email-code login, then \`primitive login confirm <email> <code>\`. Run \`primitive login\` with no email to use browser approval; \`primitive login browser\` is the explicit browser form. \`primitive signin\` supports the same flows with signin-shaped commands. \`primitive otp <email>\` is the shortest email-code auth form. For new account creation, use \`primitive signup <email>\`. Browser approval logs you in as yourself where the server supports it, so you can switch organizations with \`primitive org use <org>\` or \`--org <org>\` on any command.`;
+Run \`primitive login\` with no email to use browser approval; \`primitive login browser\` is the explicit browser form. Browser approval logs you in as yourself where the server supports it, so you can switch organizations with \`primitive org use <org>\` or \`--org <org>\` on any command.
 
-  static summary = "Log in to an existing account";
+Run \`primitive login <email> --accept-terms\` for email-code login, then \`primitive login confirm <email> <code>\`. ${EMAIL_CODE_ACCOUNT_NOTE} \`primitive signin\` supports the same flows with signin-shaped commands. \`primitive otp <email>\` is the shortest email-code auth form; \`primitive signup <email>\` is the same flow, worded for creating an account.`;
+
+  static summary = "Log in with browser approval or an emailed code";
 
   static examples = [
     "<%= config.bin %> login",
@@ -242,7 +263,7 @@ export class SigninOtpCommand extends Command {
   };
 
   static description =
-    "Start email-code sign-in using Primitive's signup/auth OTP flow, send a verification code, and save the pending token locally.";
+    `Start email-code sign-in using Primitive's signup/auth OTP flow, send a verification code, and save the pending token locally. ${EMAIL_CODE_ACCOUNT_NOTE}`;
 
   static summary = "Start OTP sign-in";
 
@@ -256,6 +277,11 @@ export class SigninOtpCommand extends Command {
   async run(): Promise<void> {
     const commandClass = this.constructor as typeof SigninOtpCommand;
     const { args, flags } = await this.parse(commandClass);
+    refuseEmailCodeStartWithoutTerminal({
+      copy: this.emailCodeCopy(),
+      email: args.email,
+      flags,
+    });
     const releaseCredentialsLock = acquireCredentialsLock(
       this.config.configDir,
     );
@@ -280,7 +306,7 @@ export class LoginOtpCommand extends SigninOtpCommand {
   static args = SigninOtpCommand.args;
 
   static description =
-    "Start email-code login using Primitive's signup/auth OTP flow, send a verification code, and save the pending token locally.";
+    `Start email-code login using Primitive's signup/auth OTP flow, send a verification code, and save the pending token locally. ${EMAIL_CODE_ACCOUNT_NOTE}`;
 
   static summary = "Start OTP login";
 
@@ -300,7 +326,7 @@ export class OtpCommand extends SigninOtpCommand {
   static args = SigninOtpCommand.args;
 
   static description =
-    "Start email-code authentication, send a verification code, and save the pending token locally.";
+    `Start email-code authentication, send a verification code, and save the pending token locally. ${EMAIL_CODE_ACCOUNT_NOTE}`;
 
   static summary = "Start email-code auth";
 

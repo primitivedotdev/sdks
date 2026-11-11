@@ -1,6 +1,7 @@
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Errors } from "@oclif/core";
 import { DEFAULT_API_BASE_URL } from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -10,8 +11,10 @@ import {
 } from "../../src/oclif/auth.js";
 import { chatStatePath } from "../../src/oclif/chat-state.js";
 import {
+  DEFAULT_SIGNUP_COMMAND_COPY,
   formatSignupSeconds,
   loadPendingAgentSignup,
+  managedDomainLoginError,
   resolveVerificationCode,
   retryAfterSeconds,
   runSignupConfirmWithCredentialLock,
@@ -82,6 +85,7 @@ function promptRequiredFrom(answers: string[]) {
 
 function flowDeps(params: {
   confirmTerms?: unknown;
+  interactive?: boolean;
   promptAnswers?: string[];
   resendAgentSignupVerification?: unknown;
   startAgentSignup?: unknown;
@@ -89,6 +93,7 @@ function flowDeps(params: {
 }) {
   return {
     confirmTerms: params.confirmTerms ?? vi.fn(async () => undefined),
+    interactive: params.interactive ?? true,
     promptRequired: promptRequiredFrom(params.promptAnswers ?? []),
     resendAgentSignupVerification:
       params.resendAgentSignupVerification ??
@@ -806,5 +811,312 @@ describe("agent signup commands", () => {
     expect(
       loadPendingAgentSignup(tempDir, DEFAULT_API_BASE_URL)?.signup_token,
     ).toBe(START_RESULT.signup_token);
+  });
+});
+
+const MANAGED_DOMAIN_REFUSAL = {
+  error: {
+    error: {
+      code: "managed_domain",
+      message:
+        "You can't sign up with an email address on a domain that's managed by Primitive. Use a different email address.",
+    },
+  },
+};
+
+const LOGIN_COPY = {
+  ...DEFAULT_SIGNUP_COMMAND_COPY,
+  actionNoun: "login",
+  actionGerund: "logging in",
+  browserLoginCommand: "login browser",
+  startCommand: (email: string) => `login otp ${email}`,
+};
+
+async function cliErrorFrom(
+  promise: Promise<unknown>,
+): Promise<Errors.CLIError> {
+  const error = await promise.then(
+    () => null,
+    (caught: unknown) => caught,
+  );
+  if (!(error instanceof Errors.CLIError)) {
+    throw new Error(`expected a CLIError, got ${String(error)}`);
+  }
+  return error;
+}
+
+// Set whether stdin and stderr are terminals; returns the undo.
+function setTerminals(
+  stdin: boolean | undefined,
+  stderr: boolean | undefined,
+): () => void {
+  const saved = [
+    [process.stdin, Object.getOwnPropertyDescriptor(process.stdin, "isTTY")],
+    [process.stderr, Object.getOwnPropertyDescriptor(process.stderr, "isTTY")],
+  ] as const;
+  Object.defineProperty(process.stdin, "isTTY", {
+    configurable: true,
+    value: stdin,
+  });
+  Object.defineProperty(process.stderr, "isTTY", {
+    configurable: true,
+    value: stderr,
+  });
+  return () => {
+    for (const [stream, descriptor] of saved) {
+      if (descriptor) Object.defineProperty(stream, "isTTY", descriptor);
+      else delete (stream as { isTTY?: boolean }).isTTY;
+    }
+  };
+}
+
+// The flows below resolve the API client; keep this shell's own agent
+// profile or API key out of them.
+function isolateFromShell(): void {
+  vi.stubEnv("PRIMITIVE_AGENT_PROFILE", undefined);
+  vi.stubEnv("PRIMITIVE_AGENT_ADDRESS", undefined);
+  vi.stubEnv("PRIMITIVE_API_KEY", undefined);
+}
+
+describe("email-code prompts without a terminal", () => {
+  let tempDir: string;
+  let writeSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    isolateFromShell();
+    tempDir = mkdtempSync(join(tmpdir(), "primitive-cli-signup-tty-test-"));
+    writeSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  });
+
+  afterEach(() => {
+    writeSpy.mockRestore();
+    vi.unstubAllEnvs();
+    rmSync(tempDir, { force: true, recursive: true });
+  });
+
+  it("refuses unaccepted terms before checking a saved login or calling the API", async () => {
+    saveCliCredentials(tempDir, EXISTING_CREDENTIALS);
+    const checkExistingLogin = vi.fn(async () => ({
+      status: "valid" as const,
+    }));
+    const deps = {
+      ...flowDeps({ interactive: false }),
+      checkExistingLogin,
+    };
+
+    const error = await cliErrorFrom(
+      runSignupStartWithCredentialLock({
+        configDir: tempDir,
+        copy: LOGIN_COPY,
+        deps,
+        email: "member@example.com",
+        flags: {},
+      }),
+    );
+
+    expect(error.oclif.exit).toBe(2);
+    expect(error.message).toBe(
+      "Not starting login: no terminal to accept the terms in. To accept Primitive's Terms of Service (https://primitive.dev/terms) and Privacy Policy (https://primitive.dev/privacy), add --accept-terms to the same command, for example `primitive login otp member@example.com --accept-terms`.",
+    );
+    expect(deps.confirmTerms).not.toHaveBeenCalled();
+    expect(checkExistingLogin).not.toHaveBeenCalled();
+    expect(deps.startAgentSignup).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["no email", undefined],
+    ["a blank email", "  "],
+  ])("refuses %s instead of prompting for one", async (_case, email) => {
+    const deps = flowDeps({ interactive: false });
+
+    const error = await cliErrorFrom(
+      runSignupStartWithCredentialLock({
+        configDir: tempDir,
+        deps,
+        email,
+        flags: { "accept-terms": true },
+      }),
+    );
+
+    expect(error.oclif.exit).toBe(2);
+    expect(error.message).toContain(
+      "for example `primitive signup <email> --accept-terms`",
+    );
+    expect(deps.promptRequired).not.toHaveBeenCalled();
+    expect(deps.startAgentSignup).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["stdin and stderr are terminals", true, true, true],
+    ["only stdin is a terminal", true, undefined, false],
+    ["only stderr is a terminal", undefined, true, false],
+  ])(
+    "prompts for the terms only when %s",
+    async (_case, stdinTTY, stderrTTY, prompts) => {
+      const restore = setTerminals(stdinTTY, stderrTTY);
+      try {
+        const { interactive: _unset, ...deps } = flowDeps({});
+        const started = runSignupStartWithCredentialLock({
+          configDir: tempDir,
+          deps,
+          email: "test@example.com",
+          flags: {},
+        });
+        if (prompts) {
+          await started;
+          expect(deps.confirmTerms).toHaveBeenCalledOnce();
+        } else {
+          expect((await cliErrorFrom(started)).oclif.exit).toBe(2);
+          expect(deps.confirmTerms).not.toHaveBeenCalled();
+        }
+      } finally {
+        restore();
+      }
+    },
+  );
+
+  it("starts without a terminal when the email and --accept-terms are given", async () => {
+    const deps = flowDeps({ interactive: false });
+
+    await runSignupStartWithCredentialLock({
+      configDir: tempDir,
+      deps,
+      email: "test@example.com",
+      flags: { "accept-terms": true },
+    });
+
+    expect(deps.confirmTerms).not.toHaveBeenCalled();
+    expect(deps.startAgentSignup).toHaveBeenCalledOnce();
+  });
+
+  it("refuses interactive signup before asking anything", async () => {
+    const deps = flowDeps({ interactive: false });
+
+    const error = await cliErrorFrom(
+      runSignupInteractiveWithCredentialLock({
+        configDir: tempDir,
+        deps,
+        flags: { "accept-terms": true },
+      }),
+    );
+
+    expect(error.oclif.exit).toBe(2);
+    expect(error.message).toContain(
+      "Run `primitive signup <email> --accept-terms`, then `primitive signup confirm <email> <code>`.",
+    );
+    expect(deps.promptRequired).not.toHaveBeenCalled();
+    expect(deps.startAgentSignup).not.toHaveBeenCalled();
+  });
+});
+
+describe("email-code login on a domain Primitive receives mail for", () => {
+  let tempDir: string;
+  let writeSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    isolateFromShell();
+    tempDir = mkdtempSync(join(tmpdir(), "primitive-cli-signup-managed-test-"));
+    writeSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  });
+
+  afterEach(() => {
+    writeSpy.mockRestore();
+    vi.unstubAllEnvs();
+    rmSync(tempDir, { force: true, recursive: true });
+  });
+
+  function stderr(): string {
+    return writeSpy.mock.calls
+      .map((call: unknown[]) => String(call[0]))
+      .join("");
+  }
+
+  it("points a login at browser approval instead of the signup refusal", async () => {
+    const deps = flowDeps({
+      startAgentSignup: vi.fn(async () => MANAGED_DOMAIN_REFUSAL),
+    });
+
+    const error = await cliErrorFrom(
+      runSignupStartWithCredentialLock({
+        configDir: tempDir,
+        copy: LOGIN_COPY,
+        deps,
+        email: "member@Managed.example",
+        flags: { "accept-terms": true },
+      }),
+    );
+
+    expect(error.oclif.exit).toBe(1);
+    expect(error.code).toBe("managed_domain");
+    expect(error.message).toBe(
+      "Primitive sends no emailed code to addresses on managed.example, a domain it receives mail for. Use browser login instead: run `primitive login browser`.",
+    );
+    expect(stderr()).not.toContain("You can't sign up");
+    expect(loadPendingAgentSignup(tempDir, DEFAULT_API_BASE_URL)).toBeNull();
+  });
+
+  it("adds --no-browser when there is no terminal", () => {
+    const error = managedDomainLoginError({
+      browserLoginCommand: "signin browser",
+      email: "member@managed.example",
+      interactive: false,
+    });
+
+    expect(error.message).toBe(
+      "Primitive sends no emailed code to addresses on managed.example, a domain it receives mail for. Use browser login instead: run `primitive signin browser --no-browser` and open the link it prints.",
+    );
+  });
+
+  it("gives the same guidance, and keeps the pending code, when the code is refused at confirmation", async () => {
+    const deps = flowDeps({
+      interactive: false,
+      verifyAgentSignup: vi.fn(async () => MANAGED_DOMAIN_REFUSAL),
+    });
+    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL);
+
+    const error = await cliErrorFrom(
+      runSignupConfirmWithCredentialLock({
+        code: "123456",
+        configDir: tempDir,
+        copy: LOGIN_COPY,
+        deps,
+        email: "test@example.com",
+        flags: {},
+      }),
+    );
+
+    expect(error.code).toBe("managed_domain");
+    expect(error.message).toContain(
+      "Primitive sends no emailed code to addresses on example.com",
+    );
+    expect(error.message).toContain(
+      "run `primitive login browser --no-browser` and open the link it prints.",
+    );
+    // The server gives the same answer when it could not tell, so the code
+    // may still finish on a retry.
+    expect(
+      loadPendingAgentSignup(tempDir, DEFAULT_API_BASE_URL)?.signup_token,
+    ).toBe(START_RESULT.signup_token);
+  });
+
+  it("keeps the server's refusal for signup", async () => {
+    const deps = flowDeps({
+      startAgentSignup: vi.fn(async () => MANAGED_DOMAIN_REFUSAL),
+    });
+
+    const error = await cliErrorFrom(
+      runSignupStartWithCredentialLock({
+        configDir: tempDir,
+        deps,
+        email: "member@managed.example",
+        flags: { "accept-terms": true },
+      }),
+    );
+
+    expect(error.message).toBe("Could not start Primitive signup.");
+    expect(error.code).toBeUndefined();
+    expect(stderr()).toContain(
+      "You can't sign up with an email address on a domain that's managed by Primitive.",
+    );
   });
 });

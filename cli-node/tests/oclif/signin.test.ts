@@ -1,4 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { Errors } from "@oclif/core";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   LoginBrowserCommand,
   LoginCommand,
@@ -18,6 +22,9 @@ import {
   SigninOtpResendCommand,
   SigninResendCommand,
 } from "../../src/oclif/commands/signin.js";
+import SignupCommand, {
+  SignupInteractiveCommand,
+} from "../../src/oclif/commands/signup.js";
 import { COMMANDS } from "../../src/oclif/index.js";
 
 describe("signin commands", () => {
@@ -76,6 +83,27 @@ describe("signin commands", () => {
     );
   });
 
+  it("says that an email address can create an account, and which addresses need the browser", () => {
+    for (const command of [LoginCommand, SigninCommand]) {
+      expect(command.summary).not.toContain("existing account");
+      expect(command.description).not.toContain("existing Primitive account");
+      expect(command.description).toContain(
+        "or creates a new account when none does",
+      );
+      expect(command.description).toContain(
+        "Primitive sends no emailed code to an address on a domain it receives mail for",
+      );
+    }
+    for (const command of [LoginOtpCommand, SigninOtpCommand, OtpCommand]) {
+      expect(command.description).toContain(
+        "or creates a new account when none does",
+      );
+    }
+    expect(SigninCommand.args.email.description).toContain(
+      "or creates one when none does",
+    );
+  });
+
   it("documents the OTP sign-in command family", () => {
     expect(SigninOtpCommand.description).toContain("signup/auth OTP flow");
     expect(SigninOtpCommand.description).not.toContain("signup code");
@@ -123,4 +151,184 @@ describe("signin commands", () => {
     expect(OtpConfirmCommand.flags["org-id"]).toBeDefined();
     expect(SigninOtpConfirmCommand.flags["org-id"]).toBeDefined();
   });
+});
+
+const root = resolve(import.meta.dirname, "../..");
+const API_BASE_URL = "https://api.example.test/v1";
+
+// Run the commands as a script or an agent does: no terminal on stdin or
+// stderr, and an API that refuses an emailed code for a managed domain.
+describe("email-code login from a script", () => {
+  let configDir: string;
+  let fetchMock: ReturnType<typeof vi.fn<typeof globalThis.fetch>>;
+  let stdinTTY: PropertyDescriptor | undefined;
+  let stderrTTY: PropertyDescriptor | undefined;
+
+  beforeEach(() => {
+    configDir = mkdtempSync(join(tmpdir(), "primitive-cli-signin-test-"));
+    vi.stubEnv("PRIMITIVE_CONFIG_DIR", configDir);
+    // Keep this shell's own agent profile or API key out of the commands.
+    vi.stubEnv("PRIMITIVE_AGENT_PROFILE", undefined);
+    vi.stubEnv("PRIMITIVE_AGENT_ADDRESS", undefined);
+    vi.stubEnv("PRIMITIVE_API_KEY", undefined);
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    stdinTTY = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
+    stderrTTY = Object.getOwnPropertyDescriptor(process.stderr, "isTTY");
+    Object.defineProperty(process.stdin, "isTTY", {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(process.stderr, "isTTY", {
+      configurable: true,
+      value: undefined,
+    });
+    fetchMock = vi.fn<typeof globalThis.fetch>(
+      async () =>
+        new Response(
+          JSON.stringify({
+            success: false,
+            error: {
+              code: "managed_domain",
+              message:
+                "You can't sign up with an email address on a domain that's managed by Primitive. Use a different email address.",
+            },
+          }),
+          { status: 400, headers: { "content-type": "application/json" } },
+        ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    for (const [stream, descriptor] of [
+      [process.stdin, stdinTTY],
+      [process.stderr, stderrTTY],
+    ] as const) {
+      if (descriptor) Object.defineProperty(stream, "isTTY", descriptor);
+      else delete (stream as { isTTY?: boolean }).isTTY;
+    }
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+    rmSync(configDir, { force: true, recursive: true });
+  });
+
+  async function runFails(
+    command: {
+      run: (argv: string[], opts: { root: string }) => Promise<unknown>;
+    },
+    argv: string[],
+  ): Promise<Errors.CLIError> {
+    const error = await command
+      .run([...argv, "--api-base-url", API_BASE_URL], { root })
+      .then(
+        () => null,
+        (caught: unknown) => caught,
+      );
+    if (!(error instanceof Errors.CLIError)) {
+      throw new Error(`expected a CLIError, got ${String(error)}`);
+    }
+    return error;
+  }
+
+  it.each([
+    ["login otp", LoginOtpCommand],
+    ["login", LoginCommand],
+    ["signin", SigninCommand],
+    ["signin otp", SigninOtpCommand],
+    ["otp", OtpCommand],
+    ["signup", SignupCommand],
+  ] as const)(
+    "%s <email> without --accept-terms refuses with exit 2 before touching anything",
+    async (name, command) => {
+      // A config directory that does not exist yet: the refusal comes before
+      // the credentials lock would create it.
+      const fresh = join(configDir, "fresh");
+      vi.stubEnv("PRIMITIVE_CONFIG_DIR", fresh);
+
+      const error = await runFails(command, ["member@managed.example"]);
+
+      expect(error.oclif.exit).toBe(2);
+      expect(error.message).toContain(
+        `add --accept-terms to the same command, for example \`primitive ${name} member@managed.example --accept-terms\`.`,
+      );
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(existsSync(fresh)).toBe(false);
+    },
+  );
+
+  it.each([
+    ["login otp", LoginOtpCommand],
+    ["signin otp", SigninOtpCommand],
+    ["otp", OtpCommand],
+    ["signup", SignupCommand],
+  ] as const)(
+    "%s without an email refuses with exit 2 instead of prompting",
+    async (name, command) => {
+      const fresh = join(configDir, "fresh");
+      vi.stubEnv("PRIMITIVE_CONFIG_DIR", fresh);
+
+      const error = await runFails(command, ["--accept-terms"]);
+
+      expect(error.oclif.exit).toBe(2);
+      expect(error.message).toContain(
+        `\`primitive ${name} <email> --accept-terms\``,
+      );
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(existsSync(fresh)).toBe(false);
+    },
+  );
+
+  it("signup interactive refuses with exit 2 before touching anything", async () => {
+    const fresh = join(configDir, "fresh");
+    vi.stubEnv("PRIMITIVE_CONFIG_DIR", fresh);
+
+    const error = await runFails(SignupInteractiveCommand, ["--accept-terms"]);
+
+    expect(error.oclif.exit).toBe(2);
+    expect(error.message).toContain(
+      "`primitive signup interactive` needs a terminal",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(existsSync(fresh)).toBe(false);
+  });
+
+  it.each([
+    ["login --accept-terms", ["--accept-terms"]],
+    [
+      "login <email> --permission",
+      ["member@example.com", "--accept-terms", "--permission", "mail:read"],
+    ],
+  ])("%s is a usage error (exit 2)", async (_case, argv) => {
+    const error = await runFails(LoginCommand, argv);
+
+    expect(error.oclif.exit).toBe(2);
+    expect(error.message).toMatch(
+      /needs an email address|--permission applies to browser login/,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["login otp", "login browser", LoginOtpCommand],
+    ["login", "login browser", LoginCommand],
+    ["otp", "login browser", OtpCommand],
+    ["signin", "signin browser", SigninCommand],
+    ["signin otp", "signin browser", SigninOtpCommand],
+  ] as const)(
+    "%s <email> answers managed_domain with %s",
+    async (_name, browser, command) => {
+      const error = await runFails(command, [
+        "member@managed.example",
+        "--accept-terms",
+      ]);
+
+      expect(fetchMock).toHaveBeenCalledOnce();
+      expect(error.oclif.exit).toBe(1);
+      expect(error.code).toBe("managed_domain");
+      expect(error.message).toBe(
+        `Primitive sends no emailed code to addresses on managed.example, a domain it receives mail for. Use browser login instead: run \`primitive ${browser} --no-browser\` and open the link it prints.`,
+      );
+    },
+  );
 });

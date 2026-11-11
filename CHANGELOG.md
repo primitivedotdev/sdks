@@ -381,6 +381,13 @@ Go (package `api`):
   message, `chat` stops with outcome `uncertain` (exit 4) instead of sending
   it again, and names that chat's From and idempotency key.
 
+#### CLI email-code commands without a terminal
+
+- Unless stdin and stderr are both terminals, `primitive login <email>`,
+  `signin <email>`, `login otp`, `signin otp`, `otp` and `signup` need
+  `--accept-terms`. An answer piped on stdin (`echo yes | ...`) no longer
+  accepts the terms, and continuing a pending code also needs the flag.
+
 ### Additions
 
 #### Conversation sync helper
@@ -945,3 +952,23 @@ parsers.
   restarting it. Status from this version shows `unrecognized`; the newer CLI
   reads its own code back, so it can restart the receiver when that code
   allows.
+- Unless stdin and stderr are both terminals, the email-code commands no longer
+  wait on a prompt nobody can answer (before, Node exited with an unsettled
+  top-level await). `primitive login <email>`, `signin <email>`, `login otp`,
+  `signin otp`, `otp` and `signup` exit 2 before doing anything when
+  `--accept-terms` is missing, and `login otp`, `signin otp`, `otp` and
+  `signup` exit 2 when the email address is missing. The message names the
+  command to run. `primitive signup interactive` always refuses without a
+  terminal and names `primitive signup <email> --accept-terms` instead. What
+  this changes for scripts is under Breaking changes.
+- `login --accept-terms` without an email, and `login <email> --permission`,
+  are usage errors and exit 2 (and the same for `signin`).
+- When email-code login, sign-in or `otp` is refused because the address is
+  on a domain Primitive receives mail for, the CLI says no emailed code is
+  sent there and gives the browser login to use (`primitive login browser`,
+  or `signin browser`, with `--no-browser` when there is no terminal). It
+  exits 1 with the code `managed_domain`. `primitive signup` still prints the
+  server's refusal.
+- `primitive login --help` and `signin --help` no longer say they are only
+  for existing accounts: an emailed code logs in to the account that uses
+  the address, or creates a new account when none does.
