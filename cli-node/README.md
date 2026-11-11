@@ -247,7 +247,7 @@ Against a server without organization switching, and for logins saved by earlier
 
 ### Grants and keys
 
-`primitive whoami` shows your organization, role and grant when the server reports them. `primitive whoami --check mail:send` asks whether the current credential may use a permission, prints the decision, and exits 1 when it may not; nothing is enforced by asking. A request refused because the credential's grant lacks a permission fails with `grant_forbidden`, and the CLI names the permission.
+`primitive whoami` shows your member address, your organization, your built-in role and the credential's grant when the server reports them; only a person's own login has a role line. `primitive whoami --check mail:send` asks whether the current credential may use a permission, prints the decision, and exits 1 when it may not; nothing is enforced by asking. A request refused because the credential's grant lacks a permission fails with `grant_forbidden`, and the CLI names the permission.
 
 ```bash
 primitive keys list
@@ -264,7 +264,7 @@ primitive keys revoke <id>
 
 Creating, rotating and changing a key run directly. If your organization requires approval, the command prints the approval link, opens it where it can, and waits for the one-time token the page shows. In a script it prints the link and exits: approve, then run it again with `--step-up-token`. The new secret is printed once, alone on stdout (or in the JSON with `--json`), and the CLI never saves it, so store it right away. `keys revoke` asks for confirmation; pass `--yes` in scripts.
 
-`primitive roles list`, `primitive roles groups`, `primitive roles mailbox-access` and `primitive roles access-mode` read roles, groups, mailbox access and the access mode. `primitive roles members` (also `primitive members list`) lists the members and their roles. Where the server has not enabled them, they print `feature_disabled`. The built-in roles are `owner`, `admin`, `operator` and `member`. `operator` has every permission `admin` has except managing members, changing roles, sending invitations and billing. By default, owners, admins and operators may use the CLI. An organization can open it to every member by setting `cli_access` to `all_members` in its credential policy.
+`primitive roles list`, `primitive roles groups`, `primitive roles mailbox-access` and `primitive roles access-mode` read roles, groups, mailbox access and the access mode. `primitive roles members` (also `primitive members list`) lists the members and their roles. Where the server has not enabled them, they print `feature_disabled`. The built-in roles are `owner`, `admin` and `member`. Operator is a template with every permission `admin` has except managing members, changing roles, managing mailbox delegations, sending invitations and billing. By default, owners, admins and operators may use the CLI. An organization can open it to every member by setting `cli_access` to `all_members` in its credential policy.
 
 ### Trying the preview
 

@@ -916,7 +916,7 @@ describe("roles commands", () => {
             catalog_version: null,
             description: null,
             key: "operator",
-            kind: "builtin",
+            kind: "template",
             mail_scope: "org",
             name: "Operator",
             permissions: ["a:b", "c:d"],
@@ -948,7 +948,7 @@ describe("roles commands", () => {
     ).toBe(
       [
         "owner  builtin  Owner  1 permissions",
-        "operator  builtin  Operator  2 permissions",
+        "operator  template  Operator  2 permissions",
         "custom_1  custom  Support  0 permissions  (r2)",
         "",
         "Templates:",
@@ -958,6 +958,17 @@ describe("roles commands", () => {
       ].join("\n"),
     );
     expect(formatGroups({ groups: [] })).toBe("No groups.");
+    // The id of the group's role, labelled as an id, not as the role.
+    expect(
+      formatGroups({
+        groups: [{ id: "g1", name: "Support", members: [], role_id: "r1" }],
+      } as never),
+    ).toBe("g1  Support  0 members  role id r1");
+    expect(
+      formatGroups({
+        groups: [{ id: "g2", name: "Nobody", members: [], role_id: null }],
+      } as never),
+    ).toBe("g2  Nobody  0 members  role id none");
     expect(
       formatAccessMode({ changed_at: null, mode: "whole_org", version: 0 }),
     ).toBe("Access mode: whole_org (version 0).");
@@ -1075,9 +1086,9 @@ describe("roles commands", () => {
     expect(result.stderr).toContain("Not a signed-in member");
   });
 
-  it("names the built-in roles, operator included, in roles list help", () => {
+  it("names the built-in roles in roles list help, and Operator as a template", () => {
     expect(RolesListCommand.description).toContain(
-      "owner, admin, operator and member",
+      "The built-in roles are owner, admin and member. Operator is a template",
     );
   });
 

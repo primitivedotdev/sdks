@@ -46,6 +46,7 @@ import {
   CliOrgRefusedError,
   credentialsFromUserLogin,
   fetchCliOrgs,
+  roleKeyText,
   switchCurrentOrg,
 } from "../user-grant.js";
 
@@ -621,7 +622,7 @@ class LoginCommand extends Command {
     if (login.org) {
       const name = login.org.org_name ? ` (${login.org.org_name})` : "";
       process.stderr.write(
-        `Current organization: ${login.org.org_id}${name}, role ${login.org.role}.\n`,
+        `Current organization: ${login.org.org_id}${name}, ${login.org.role ? roleKeyText(login.org.role) : "role unknown"}.\n`,
       );
     } else if (login.org_refusal) {
       process.stderr.write(
@@ -647,7 +648,7 @@ class LoginCommand extends Command {
         });
         const name = org.org_name ? ` (${org.org_name})` : "";
         process.stderr.write(
-          `Switched to organization ${org.org_id}${name}, role ${org.role ?? "unknown"}.\n`,
+          `Switched to organization ${org.org_id}${name}, ${org.role ? roleKeyText(org.role) : "role unknown"}.\n`,
         );
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);

@@ -115,19 +115,22 @@ describe("root signup hint", () => {
       argv: [],
       env: { XDG_CONFIG_HOME: tempDir },
       fetch: async (input, init) => {
-        expect(String(input)).toBe("https://api.example.test/v1/account");
+        expect(String(input)).toBe("https://api.example.test/v1/whoami");
         expect(
           (init?.headers as Record<string, string> | undefined)?.authorization,
         ).toBe("Bearer prim_oat_root");
         return Response.json({
-          data: { email: "agent@example.com", id: "org_123" },
+          data: {
+            member_address: { address: "member@example.com", name: null },
+            org_id: "org_123",
+          },
         });
       },
       home: tempDir,
       timeoutMs: 50,
     });
 
-    expect(summary).toBe("Signed in as agent@example.com (org org_123)\n\n");
+    expect(summary).toBe("Signed in as member@example.com (org org_123)\n\n");
   });
 
   it("formats a signed-in account line from an explicit API key", async () => {
@@ -150,21 +153,21 @@ describe("root signup hint", () => {
         XDG_CONFIG_HOME: tempDir,
       },
       fetch: async (input, init) => {
-        expect(String(input)).toBe("https://api-key.example.test/v1/account");
+        expect(String(input)).toBe("https://api-key.example.test/v1/whoami");
         expect(
           (init?.headers as Record<string, string> | undefined)?.authorization,
         ).toBe("Bearer prim_explicit_root");
+        // A key has no member address; the account's email, which an
+        // older line printed here, is not necessarily the caller's.
         return Response.json({
-          data: { email: "api-key@example.com", id: "org_api_key" },
+          data: { member_address: null, org_id: "org_api_key" },
         });
       },
       home: tempDir,
       timeoutMs: 50,
     });
 
-    expect(summary).toBe(
-      "Signed in as api-key@example.com (org org_api_key)\n\n",
-    );
+    expect(summary).toBe("Signed in (org org_api_key)\n\n");
   });
 
   it("does not fetch a signed-in account for subcommands", async () => {
@@ -198,7 +201,10 @@ describe("root signup hint", () => {
       env: { XDG_CONFIG_HOME: tempDir },
       fetch: async () =>
         Response.json({
-          data: { email: "agent@example.com", id: "org_123" },
+          data: {
+            member_address: { address: "member@example.com", name: null },
+            org_id: "org_123",
+          },
         }),
       home: tempDir,
       timeoutMs: 50,
@@ -206,7 +212,7 @@ describe("root signup hint", () => {
     });
 
     expect(writes.join("")).toBe(
-      "Signed in as agent@example.com (org org_123)\n\n",
+      "Signed in as member@example.com (org org_123)\n\n",
     );
   });
 

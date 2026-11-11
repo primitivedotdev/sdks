@@ -25,9 +25,12 @@ type RootCredentials = {
   apiBaseUrl: string;
 };
 
-type RootAccount = {
-  email: string;
-  id: string;
+// Who is signed in, from GET /whoami: the caller's own member address and
+// organization. The account's email is the email it was opened with, which
+// is not necessarily the caller's.
+type RootIdentity = {
+  memberAddress: string | null;
+  orgId: string;
 };
 
 type RootRequestConfig = {
@@ -74,11 +77,11 @@ function readRootCredentials(configDir: string): RootCredentials | null {
   }
 }
 
-function accountEndpoint(apiBaseUrl: string): string {
-  return `${apiBaseUrl.replace(/\/+$/, "")}/account`;
+function whoamiEndpoint(apiBaseUrl: string): string {
+  return `${apiBaseUrl.replace(/\/+$/, "")}/whoami`;
 }
 
-function parseRootAccount(payload: unknown): RootAccount | null {
+function parseRootIdentity(payload: unknown): RootIdentity | null {
   if (
     payload === null ||
     typeof payload !== "object" ||
@@ -90,14 +93,22 @@ function parseRootAccount(payload: unknown): RootAccount | null {
   if (data === null || typeof data !== "object" || Array.isArray(data)) {
     return null;
   }
-  const account = data as { email?: unknown; id?: unknown };
-  if (typeof account.email !== "string" || !account.email.trim()) return null;
-  if (typeof account.id !== "string" || !account.id.trim()) return null;
-  return { email: account.email, id: account.id };
+  const identity = data as { member_address?: unknown; org_id?: unknown };
+  if (typeof identity.org_id !== "string" || !identity.org_id.trim()) {
+    return null;
+  }
+  const member = identity.member_address as { address?: unknown } | null;
+  const address =
+    member && typeof member.address === "string" && member.address.trim()
+      ? member.address
+      : null;
+  return { memberAddress: address, orgId: identity.org_id };
 }
 
-function rootAuthLine(account: RootAccount): string {
-  return `Signed in as ${account.email} (org ${account.id})\n\n`;
+function rootAuthLine(identity: RootIdentity): string {
+  return identity.memberAddress
+    ? `Signed in as ${identity.memberAddress} (org ${identity.orgId})\n\n`
+    : `Signed in (org ${identity.orgId})\n\n`;
 }
 
 function rootRequestConfig(
@@ -124,17 +135,17 @@ function rootRequestConfig(
   };
 }
 
-async function fetchRootAccount(params: {
+async function fetchRootIdentity(params: {
   apiBaseUrl: string;
   apiKey: string;
   fetch: typeof fetch;
   headers?: Record<string, string>;
   timeoutMs: number;
-}): Promise<RootAccount | null> {
+}): Promise<RootIdentity | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), params.timeoutMs);
   try {
-    const response = await params.fetch(accountEndpoint(params.apiBaseUrl), {
+    const response = await params.fetch(whoamiEndpoint(params.apiBaseUrl), {
       headers: {
         ...(params.headers ?? {}),
         accept: "application/json",
@@ -143,7 +154,7 @@ async function fetchRootAccount(params: {
       signal: controller.signal,
     });
     if (!response.ok) return null;
-    return parseRootAccount(await response.json().catch(() => null));
+    return parseRootIdentity(await response.json().catch(() => null));
   } catch {
     return null;
   } finally {
@@ -172,14 +183,14 @@ export async function rootSignedInSummary(
   const apiKey = explicitApiKey || stored?.accessToken;
   if (!apiKey) return null;
 
-  const account = await fetchRootAccount({
+  const identity = await fetchRootIdentity({
     apiBaseUrl: stored?.apiBaseUrl ?? requestConfig.apiBaseUrl,
     apiKey,
     fetch: options.fetch ?? fetch,
     headers: requestConfig.headers,
     timeoutMs: options.timeoutMs ?? ROOT_AUTH_TIMEOUT_MS,
   });
-  return account ? rootAuthLine(account) : null;
+  return identity ? rootAuthLine(identity) : null;
 }
 
 export function shouldShowLoggedOutSignupHint(

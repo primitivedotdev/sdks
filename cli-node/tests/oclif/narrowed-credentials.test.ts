@@ -792,6 +792,10 @@ describe("doctor checkAccount", () => {
 
     expect(outcome.status).toBe("ok");
     expect(outcome.message).not.toContain("null");
+    // Labelled as the account's email, never presented as the caller.
+    expect(outcome.message).toBe(
+      `account email not visible to this credential (plan: pro, id: ${ACCOUNT_ID})`,
+    );
   });
 
   it("warns instead of reporting a rejected key on a grant refusal", async () => {

@@ -109,7 +109,7 @@ export function formatGroups(list: GroupList): string {
   return list.groups
     .map(
       (group) =>
-        `${group.id}  ${group.name}  ${group.members.length} members  role ${group.role_id ?? "none"}`,
+        `${group.id}  ${group.name}  ${group.members.length} members  role id ${group.role_id ?? "none"}`,
     )
     .join("\n");
 }
@@ -170,7 +170,7 @@ export function formatAccessMode(mode: AccessMode): string {
 
 export class RolesListCommand extends Command {
   static description =
-    "List the organization's roles (built-in, template and custom) with their permission counts, the templates that can be assigned, and whether role assignment is available. The built-in roles are owner, admin, operator and member; operator has every permission admin has except managing members, changing roles, sending invitations and billing.";
+    "List the organization's roles (built-in, template and custom) with their permission counts, the templates that can be assigned, and whether role assignment is available. The built-in roles are owner, admin and member. Operator is a template with every permission admin has except managing members, changing roles, managing mailbox delegations, sending invitations and billing.";
 
   static summary = "List roles";
 

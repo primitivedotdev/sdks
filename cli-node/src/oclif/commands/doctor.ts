@@ -292,7 +292,7 @@ export async function checkAccount(
     return {
       outcome: {
         status: "ok",
-        message: `${account.email ?? "account email not visible to this credential"} (plan: ${account.plan}, id: ${account.id})`,
+        message: `account email ${account.email ?? "not visible to this credential"} (plan: ${account.plan}, id: ${account.id})`,
       },
       account,
     };

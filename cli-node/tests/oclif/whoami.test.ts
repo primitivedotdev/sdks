@@ -23,6 +23,7 @@ vi.mock("@primitivedotdev/api-core", async (original) => ({
 }));
 
 import WhoamiCommand, {
+  formatGrantLines,
   formatWhoamiSummary,
 } from "../../src/oclif/commands/whoami.js";
 import { COMMANDS } from "../../src/oclif/index.js";
@@ -63,7 +64,10 @@ describe("whoami command", () => {
   it("formats a concise summary without setup or billing internals", () => {
     const output = formatWhoamiSummary(makeAccount(), null);
 
-    expect(output).toContain("Authenticated as cli@example.com");
+    expect(output.split("\n")[0]).toBe("Authenticated");
+    expect(output).toContain(
+      "Account email: cli@example.com (the email the account was opened with)",
+    );
     expect(output).toContain("Organization id: acct-1");
     expect(output).toContain("Plan: pro");
     expect(output).not.toContain("onboarding");
@@ -72,11 +76,184 @@ describe("whoami command", () => {
     expect(output).not.toContain("Managed inbox");
   });
 
-  it("does not print null when the credential may not see the email", () => {
+  it("leaves out the account email when the credential may not see it", () => {
     const output = formatWhoamiSummary(makeAccount({ email: null }), null);
 
-    expect(output).toContain("Authenticated (");
+    expect(output).not.toContain("Account email");
     expect(output).not.toContain("null");
+  });
+
+  it("names the caller by their member address, never by the account email", () => {
+    const output = formatWhoamiSummary(makeAccount(), null, null, {
+      auth_method: "oauth",
+      key_id: null,
+      member_address: { address: "member@managed.test", name: null },
+      member_address_suggestion: null,
+    });
+
+    expect(output.split("\n")).toEqual([
+      "Authenticated as member@managed.test (your member address)",
+      "Organization id: acct-1",
+      "Account email: cli@example.com (the email the account was opened with)",
+      "Plan: pro",
+    ]);
+  });
+
+  it("tells a person without a member address how to set one", () => {
+    const output = formatWhoamiSummary(makeAccount(), null, null, {
+      auth_method: "oauth",
+      key_id: null,
+      member_address: null,
+      member_address_suggestion: "member@managed.test",
+    });
+
+    expect(output.split("\n")[0]).toBe(
+      "Authenticated (you have no member address in this organization; `primitive account provision-member-address --address member@managed.test` sets one)",
+    );
+    expect(output).not.toContain("Authenticated as cli@example.com");
+  });
+
+  it("says an API key has no member address and gives it no role line", () => {
+    const identity = {
+      auth_method: "api_key",
+      key_id: "key-1",
+      member_address: null,
+      member_address_suggestion: null,
+      org_id: "org-1",
+      role: "member",
+    };
+    const output = formatWhoamiSummary(makeAccount(), null, null, identity);
+
+    expect(output.split("\n")[0]).toBe(
+      "Authenticated (API keys have no member address)",
+    );
+    const lines = formatGrantLines(identity as never);
+    expect(lines.some((line) => /role/i.test(line))).toBe(false);
+  });
+
+  it("says only what the server reported", () => {
+    expect(
+      formatWhoamiSummary(makeAccount(), null, null, {
+        auth_method: "oauth",
+        key_id: null,
+      } as never).split("\n")[0],
+    ).toBe("Authenticated");
+    // A role value that names no built-in role is shown as the key it is.
+    expect(
+      formatGrantLines({
+        auth_method: "oauth",
+        key_id: null,
+        org_id: "org-1",
+        role: "operator",
+      } as never),
+    ).toContain("Role key: operator");
+  });
+
+  it("uses neutral wording for a credential that is neither a key nor a person", () => {
+    const identity = {
+      auth_method: "signed_token",
+      key_id: null,
+      member_address: null,
+      member_address_suggestion: null,
+      org_id: "org-1",
+      role: "member",
+    };
+    const output = formatWhoamiSummary(makeAccount(), null, null, identity);
+
+    expect(output.split("\n")[0]).toBe(
+      "Authenticated (this credential has no member address)",
+    );
+    expect(
+      formatGrantLines(identity as never).some((line) => /role/i.test(line)),
+    ).toBe(false);
+  });
+
+  it.each([
+    [
+      "member",
+      "Built-in role: member (also shown for a template or custom role that does not fully include member; the Grant line is what this login can do)",
+    ],
+    ["admin", "Built-in role: admin"],
+  ])(
+    "labels a person's %s role from GET /whoami as their built-in role",
+    (role, line) => {
+      const lines = formatGrantLines({
+        auth_method: "oauth",
+        key_id: null,
+        org_id: "org-1",
+        role,
+      } as never);
+
+      expect(lines).toContain(line);
+      expect(lines.some((text) => text.startsWith("Role: "))).toBe(false);
+    },
+  );
+
+  it("shows the account email apart from the member's own address", async () => {
+    const identity = {
+      member_address: { address: "member@managed.test", name: null },
+      member_address_suggestion: null,
+      org_id: "acct-1",
+      user_id: "user-1",
+      role: "member",
+      request_id: "req-1",
+      auth_method: "oauth",
+      key_id: null,
+      grant: {
+        credential_kind: "cli_user_access",
+        grant_type: "computed",
+        template: null,
+        permissions: ["members:read"],
+        mail_scope: "org",
+        resources: null,
+        expires_at: null,
+      },
+    };
+    // Answers GET /whoami only; any other read is refused.
+    const get = vi.fn(async (options: { url: string }) =>
+      options.url === "/whoami"
+        ? { data: { success: true, data: identity } }
+        : { error: { error: { code: "not_found", message: "Not found" } } },
+    );
+    mocks.auth.mockResolvedValue({
+      apiClient: { client: { get } },
+      auth: {
+        credentials: {
+          auth_method: "user_grant",
+          org_id: "acct-1",
+          org_name: "Managed",
+        },
+      },
+      baseUrlOverridden: false,
+    });
+    mocks.account.mockResolvedValue({
+      data: { data: makeAccount({ email: "owner@managed.test" }) },
+    });
+    const output: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((value: unknown) => {
+      output.push(String(value));
+    });
+
+    await WhoamiCommand.run([], {
+      root: resolve(import.meta.dirname, "../.."),
+    });
+
+    expect(get).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "/whoami" }),
+    );
+    const lines = output.join("\n").split("\n");
+    expect(lines[0]).toBe(
+      "Authenticated as member@managed.test (your member address)",
+    );
+    expect(lines).toContain(
+      "Account email: owner@managed.test (the email the account was opened with)",
+    );
+    expect(lines.join("\n")).not.toContain(
+      "Authenticated as owner@managed.test",
+    );
+    expect(lines.some((line) => line.startsWith("Built-in role: member"))).toBe(
+      true,
+    );
   });
 
   it("reports the credential's own grant when refused the account", async () => {

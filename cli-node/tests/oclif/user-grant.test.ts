@@ -38,6 +38,8 @@ import {
   credentialsFromUserLogin,
   ensureUserGrantSession,
   matchOrg,
+  roleKeyLabel,
+  roleKeyText,
   switchCurrentOrg,
 } from "../../src/oclif/user-grant.js";
 
@@ -73,7 +75,9 @@ const ORGS: Record<string, OrgSpec> = {
     refusal: "role_insufficient",
   },
   [REVOKED_ORG]: { name: "Gone", role: "admin", refusal: "cli_access_revoked" },
-  [OPERATOR_ORG]: { name: "Ops", role: "operator", refusal: null },
+  // The server stores an Operator as restricted: the template lacks some
+  // member permissions, so it fully includes no built-in role.
+  [OPERATOR_ORG]: { name: "Ops", role: "restricted", refusal: null },
 };
 
 const REFUSAL_MESSAGES: Record<string, string> = {
@@ -353,7 +357,9 @@ class MockPrimitive {
         success: true,
         data: {
           id: orgId,
-          email: "person@example.test",
+          // The account's email, which a restricted person may not see.
+          email:
+            ORGS[orgId]?.role === "restricted" ? null : "person@example.test",
           plan: "developer",
         },
       });
@@ -365,7 +371,11 @@ class MockPrimitive {
         data: {
           org_id: orgId,
           user_id: USER_ID,
-          role: ORGS[orgId]?.role ?? "member",
+          // GET /whoami answers member for a restricted person.
+          role:
+            ORGS[orgId]?.role === "restricted"
+              ? "member"
+              : (ORGS[orgId]?.role ?? "member"),
           request_id: "req",
           auth_method: "oauth",
           key_id: null,
@@ -598,7 +608,7 @@ describe("CLI login as the person, against a mock server", () => {
     expect(result.exitCode).toBeUndefined();
     expect(result.stderr).toContain("Logged in as yourself");
     expect(result.stderr).toContain(
-      `Switched to organization ${MEMBER_ORG} (Beta)`,
+      `Switched to organization ${MEMBER_ORG} (Beta), built-in role member.`,
     );
     const saved = loadCliCredentials(configDir) as StoredCliCredentials;
     expect(saved.auth_method).toBe("user_grant");
@@ -892,16 +902,21 @@ describe("CLI login as the person, against a mock server", () => {
     );
     const listed = await capture(() => OrgsCommand.run([], { root: CLI_ROOT }));
     expect(listed.error).toBeNull();
-    expect(listed.stdout).toContain(`* Acme (${OWNER_ORG}) owner, available`);
     expect(listed.stdout).toContain(
-      `  Closed (${OFF_ORG}) admin, unavailable: This organization does not allow CLI access. [cli_access_disabled_by_org]`,
+      `* Acme (${OWNER_ORG}) built-in role owner, available`,
+    );
+    expect(listed.stdout).toContain(
+      `  Closed (${OFF_ORG}) built-in role admin, unavailable: This organization does not allow CLI access. [cli_access_disabled_by_org]`,
     );
     const json = await capture(() =>
       OrgsCommand.run(["--json"], { root: CLI_ROOT }),
     );
     expect(JSON.parse(json.stdout).orgs).toHaveLength(Object.keys(ORGS).length);
     expect(listed.stdout).toContain(
-      `  Ops (${OPERATOR_ORG}) operator, available`,
+      `  Ops (${OPERATOR_ORG}) role restricted, available`,
+    );
+    expect(listed.stdout).toContain(
+      "role restricted: no role at all, or a template or custom role that does not fully include member, because it lacks some member permission (as Operator does) or reaches only some mailboxes.",
     );
 
     const operator = await capture(() =>
@@ -909,7 +924,7 @@ describe("CLI login as the person, against a mock server", () => {
     );
     expect(operator.error).toBeNull();
     expect(operator.stdout).toContain(
-      `Now using Ops (${OPERATOR_ORG}), role operator.`,
+      `Now using Ops (${OPERATOR_ORG}), role restricted (a template or custom role that does not fully include member, because it lacks some member permission (as Operator does) or reaches only some mailboxes).`,
     );
 
     const used = await capture(() =>
@@ -917,7 +932,7 @@ describe("CLI login as the person, against a mock server", () => {
     );
     expect(used.error).toBeNull();
     expect(used.stdout).toContain(
-      `Now using Beta (${MEMBER_ORG}), role member.`,
+      `Now using Beta (${MEMBER_ORG}), built-in role member.`,
     );
     expect(loadCliCredentials(configDir)?.org_id).toBe(MEMBER_ORG);
 
@@ -942,6 +957,30 @@ describe("CLI login as the person, against a mock server", () => {
     expect(formatOrgRows([])).toBe("You do not belong to any organization.");
   });
 
+  it("says what the restricted role key means and leaves built-in keys alone", () => {
+    expect(roleKeyText("restricted")).toBe(
+      "role restricted (a template or custom role that does not fully include member, because it lacks some member permission (as Operator does) or reaches only some mailboxes)",
+    );
+    expect(roleKeyText("admin")).toBe("built-in role admin");
+    expect(roleKeyLabel("restricted")).toBe("role restricted");
+    expect(roleKeyLabel("owner")).toBe("built-in role owner");
+  });
+
+  it("shows a restricted person's built-in role in whoami and explains it", async () => {
+    saveCliCredentials(
+      configDir,
+      userLogin(mock, mock.issueOrgToken(OPERATOR_ORG)),
+    );
+    const summary = await capture(() =>
+      WhoamiCommand.run([], { root: CLI_ROOT }),
+    );
+    expect(summary.error).toBeNull();
+    expect(summary.stdout).toContain(
+      "Built-in role: member (also shown for a template or custom role that does not fully include member; the Grant line is what this login can do)",
+    );
+    expect(summary.stdout).not.toContain("Role: ");
+  });
+
   it("shows the grant in whoami and answers --check", async () => {
     saveCliCredentials(
       configDir,
@@ -952,7 +991,17 @@ describe("CLI login as the person, against a mock server", () => {
     );
     expect(summary.error).toBeNull();
     expect(summary.stdout).toContain(`Organization: Acme (${OWNER_ORG})`);
-    expect(summary.stdout).toContain("Role: owner");
+    expect(summary.stdout).toContain("Built-in role: owner\n");
+    // The account's email is the one it was opened with, not necessarily the caller's.
+    expect(summary.stdout).toContain(
+      "Account email: person@example.test (the email the account was opened with)",
+    );
+    expect(summary.stdout).not.toContain(
+      "Authenticated as person@example.test",
+    );
+    expect(summary.stdout).toContain(
+      "Authenticated (you have no member address in this organization)",
+    );
     expect(summary.stdout).toContain(
       "Grant: computed with 2 permissions, all mail in the organization (oauth)",
     );
