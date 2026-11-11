@@ -952,6 +952,52 @@ describe("keys commands", () => {
       expires_at: "2027-02-08T00:00:00Z",
     });
     expect(expiring.stdout).toContain("Expires: 2027-02-08T00:00:00Z");
+    // So is --no-expiry, which removes it.
+    const unexpiring = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--add-rule",
+      B,
+      "--no-expiry",
+    ]);
+    expect(unexpiring.exitCode).toBeUndefined();
+    const second = requests.filter((r) => r.method === "PATCH");
+    expect(await (second[1] as Request).json()).toEqual({ expires_at: null });
+    // A rule change that does change the grant goes in the same request as the expiry, guarded by the grant it read.
+    requests = useServer((request) =>
+      request.method === "GET"
+        ? Response.json({ success: true, data: withAddress })
+        : Response.json({
+            success: true,
+            data: {
+              id: KEY_ID,
+              changed: ["grant", "expires_at"],
+              warnings: [],
+            },
+          }),
+    );
+    const both = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--remove-rule",
+      B,
+      "--expires-at",
+      "2027-02-08T00:00:00Z",
+      "--step-up-token",
+      "pstep_both",
+    ]);
+    expect(both.exitCode).toBeUndefined();
+    const combined = requests.filter((r) => r.method === "PATCH");
+    expect(combined).toHaveLength(1);
+    const sent = (await (combined[0] as Request).json()) as {
+      grant: { rules?: string[]; addresses?: string[] };
+    };
+    expect(sent).toMatchObject({
+      expires_at: "2027-02-08T00:00:00Z",
+      expected_grant_ref: withAddress.grant.ref,
+      grant: { addresses: ["a@example.com"] },
+    });
+    expect(sent.grant.rules ?? []).not.toContain(B);
+    expect(both.stdout).toContain(`Rules taken off: ${B}`);
+    expect(both.stdout).toContain("Expires: 2027-02-08T00:00:00Z");
   });
 
   it("update --json says which rules a change took off and which were not on the key", async () => {
@@ -1224,7 +1270,8 @@ describe("keys commands", () => {
       "Note: the server did not say which grant this key holds, so this change is not checked against changes made since it was read.",
     );
     const patch = requests.find((r) => r.method === "PATCH") as Request;
-    expect(await patch.json()).not.toHaveProperty("expected_grant_ref"); // Under --json the note stays out of stderr.
+    expect(await patch.json()).not.toHaveProperty("expected_grant_ref");
+    // Under --json the note stays out of stderr.
     const json = await run(KeysUpdateCommand, [
       KEY_ID,
       "--add",

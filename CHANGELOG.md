@@ -741,8 +741,9 @@ downgrading, or sign in again afterwards.
   every rule the key has, says so in its help, and cannot be combined with
   them. The output lists any rules a change took off (`rules_removed` with
   `--json`) and any asked to be taken off that the key did not have
-  (`rules_not_on_key`); a change that leaves the grant as it is sends
-  nothing.
+  (`rules_not_on_key`); a change that leaves the grant as it is sends no
+  grant change, and nothing at all unless `--name`, `--expires-at` or
+  `--no-expiry` is also given.
 
 #### Values the API adds later
 
