@@ -131,6 +131,21 @@ function printable(text: string): string {
   return text.replace(CONTROL_CHARACTERS, " ");
 }
 
+/**
+ * What a member's access lets them do with mail, from mail_access: shown to
+ * a caller who can list members, and absent when it could not be read.
+ */
+function mailAccessText(person: object): string {
+  const access = (person as { mail_access?: unknown }).mail_access;
+  if (!access || typeof access !== "object") return "";
+  const { read, send } = access as { read?: unknown; send?: unknown };
+  if (typeof read !== "boolean" || typeof send !== "boolean") return "";
+  if (read && send) return "  mail: read and send";
+  if (read) return "  mail: read only";
+  if (send) return "  mail: send only";
+  return "  mail: none";
+}
+
 export function formatMembers(
   list: ProjectsListOrganizationPeopleResult,
 ): string {
@@ -144,7 +159,7 @@ export function formatMembers(
         person.agents.length > 0
           ? `  ${person.agents.length} agent${person.agents.length === 1 ? "" : "s"}`
           : "";
-      return `${printable(person.name)}  ${person.work_email ?? "no work email"}  ${role}  ${person.user_id}${agents}`;
+      return `${printable(person.name)}  ${person.work_email ?? "no work email"}  ${role}  ${person.user_id}${agents}${mailAccessText(person)}`;
     })
     .join("\n");
 }
@@ -179,7 +194,7 @@ export class RolesListCommand extends Command {
 
 export class RolesMembersCommand extends Command {
   static description =
-    "List the organization's members with their roles: name, work email, role, user id and how many directory agents each has. Use it to see each member's role before you ask someone for something, for example before sending an email rule request. With --json, prints the response data, including each member's role key, role id, agents and the next page's cursor.";
+    "List the organization's members with their roles: name, work email, role, user id, how many directory agents each has, and what their access lets them do with mail (read, send, both or none), where you can see it. Use it to see each member's role before you ask someone for something, for example before sending an email rule request. With --json, prints the response data, including each member's role key, role id, agents and the next page's cursor.";
 
   static summary = "List members and their roles";
 

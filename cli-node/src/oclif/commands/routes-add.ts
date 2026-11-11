@@ -1,5 +1,6 @@
 import { Args, Command, Flags } from "@oclif/core";
 import { createRoute } from "@primitivedotdev/api-core";
+import { routeWarningLines } from "../answer-reports.js";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   API_BASE_URL_FLAG_DESCRIPTION,
@@ -140,9 +141,13 @@ class RoutesAddCommand extends Command {
         return;
       }
 
-      this.log(
-        JSON.stringify((result.data as { data: unknown }).data, null, 2),
-      );
+      const data = (result.data as { data: unknown }).data;
+      this.log(JSON.stringify(data, null, 2));
+      // What the route may not do as written, which the JSON alone buries.
+      // Under --json the document already carries them in its own warnings.
+      if (!flags.json)
+        for (const line of routeWarningLines(data))
+          process.stderr.write(`${line}\n`);
     });
   }
 }

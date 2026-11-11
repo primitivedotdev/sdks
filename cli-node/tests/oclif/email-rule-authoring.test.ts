@@ -1189,6 +1189,38 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
     ]);
   });
 
+  it("says none failed when the rest are undecided, and that a do_not_share rule blocks sharing", async () => {
+    answer({
+      ...written,
+      kind: "do_not_share",
+      expectations_check: {
+        version: 4,
+        passed: null,
+        decided: false,
+        failed: [],
+        undecided: [D],
+      },
+    });
+    const result = await run("email-rules:update-email-rule", [
+      RULE,
+      "--expectations-file",
+      tempFile("e.json", JSON.stringify({ no_match: [D] })),
+    ]);
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(stderrLines(result)).toEqual([
+      "This rule blocks sharing (kind do_not_share): while it is active, no rule shares an email it matches.",
+      `Expectations on version 4: none failed, 1 undecided (${D}). To decide the rest, run \`primitive email-rules test-email-rule --rule-id ${RULE}\`.`,
+    ]);
+    // A grant rule adds no line for its kind.
+    answer({ ...written, kind: "grant" });
+    const grant = await run("email-rules:update-email-rule", [
+      RULE,
+      "--name",
+      "n",
+    ]);
+    expect(grant.stderr).toBe("");
+  });
+
   it("says when expectations it sent were not checked", async () => {
     answer(written);
     const result = await run("email-rules:update-email-rule", [
