@@ -333,11 +333,59 @@ const RESTATABLE_SCOPE_FIELDS = new Set([
   "depth",
 ]);
 
-export type GrantChange = { add: string[]; remove: string[]; rules?: string[] };
+export type GrantChange = {
+  add: string[];
+  remove: string[];
+  /** Replaces the key's rules. */
+  rules?: string[];
+  /** Added to the rules the key has, which stay. */
+  addRules?: string[];
+  /** Taken off the rules the key has; the others stay. */
+  removeRules?: string[];
+};
+
+/** Whether a change touches the key's email rules at all. */
+function changesRules(change: GrantChange): boolean {
+  return (
+    change.rules !== undefined ||
+    (change.addRules?.length ?? 0) > 0 ||
+    (change.removeRules?.length ?? 0) > 0
+  );
+}
+
+/**
+ * The rules a key lists after `change`: replaced by --rule, or the ones it has
+ * with --add-rule added and --remove-rule taken off. The API takes a key's
+ * whole grant, so a partial change is made here on the grant just read, and
+ * the update is guarded by that grant's ref. Rule ids are compared as the
+ * server stores them, lowercase.
+ */
+export function nextRules(
+  current: readonly string[],
+  change: GrantChange,
+): string[] {
+  if (change.rules) return change.rules;
+  const removing = new Set(
+    (change.removeRules ?? []).map((r) => r.toLowerCase()),
+  );
+  const kept = current.filter((r) => !removing.has(r.toLowerCase()));
+  const adding = (change.addRules ?? []).filter(
+    (r) => !kept.some((k) => k.toLowerCase() === r.toLowerCase()),
+  );
+  return [...kept, ...adding];
+}
+
+/** The rules a key's grant lists, or none. */
+function keyRules(grant: KeyGrantView): string[] {
+  const scope = grant.mail_scope;
+  if (!scope || typeof scope !== "object" || Array.isArray(scope)) return [];
+  return stringList((scope as Record<string, unknown>).rules ?? []) ?? [];
+}
 
 /**
  * The grant that restates a key's current grant with permissions added or
- * removed, or its email rules replaced, and everything else as it is. Only a
+ * removed, or its email rules replaced, added to or taken off (nextRules), and
+ * everything else as it is. Only a
  * key with a permission list and a mail scope the CLI can restate exactly;
  * anything else is changed in the dashboard.
  */
@@ -402,7 +450,7 @@ export function buildUpdatedGrant(
   }
   const scope = current.mail_scope;
   if (scope === "org") {
-    if (change.rules) {
+    if (changesRules(change)) {
       return {
         ok: false,
         message:
@@ -425,7 +473,8 @@ export function buildUpdatedGrant(
   const record = scope as Record<string, unknown>;
   const addresses = stringList(record.addresses ?? []);
   const domains = stringList(record.domains ?? []);
-  const rules = change.rules ?? stringList(record.rules ?? []);
+  const heldRules = stringList(record.rules ?? []);
+  const rules = heldRules ? nextRules(heldRules, change) : null;
   if (
     !addresses ||
     !domains ||
@@ -804,7 +853,7 @@ export class KeysUpdateCommand extends Command {
   static description =
     `Change an API key's permissions, email rules or name. It keeps its id and secret.
 
-  --add and --remove take permissions (repeatable, or comma-separated). --rule sets the email rules the key reaches, replacing the ones it has. Everything else about the key stays as it is.
+  --add and --remove take permissions (repeatable, or comma-separated). --add-rule and --remove-rule add email rules to the key or take them off, and keep its other rules. --rule replaces every rule the key has with the ones given, so pass all the rules it should keep; it cannot be combined with --add-rule or --remove-rule. Everything else about the key stays as it is, and the output lists any rules a change took off.
 
   The change runs directly; if your organization requires approval, the command prints the approval link and takes --step-up-token, as for a new key. A key never holds more than you do.
 
@@ -815,6 +864,8 @@ export class KeysUpdateCommand extends Command {
   static examples = [
     "<%= config.bin %> keys update 0f0e0d0c-0b0a-4908-8706-050403020100 --add mail:send,mail:reply",
     "<%= config.bin %> keys update 0f0e0d0c-0b0a-4908-8706-050403020100 --remove mail:send",
+    "<%= config.bin %> keys update 0f0e0d0c-0b0a-4908-8706-050403020100 --add-rule 3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f",
+    "<%= config.bin %> keys update 0f0e0d0c-0b0a-4908-8706-050403020100 --remove-rule 3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f",
     "<%= config.bin %> keys update 0f0e0d0c-0b0a-4908-8706-050403020100 --rule 3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f",
   ];
 
@@ -835,7 +886,18 @@ export class KeysUpdateCommand extends Command {
     }),
     rule: Flags.string({
       description:
-        "An email rule id the key reaches (repeatable). Replaces the key's rules.",
+        "An email rule id the key reaches (repeatable, or comma-separated). Replaces every rule the key has: pass all the rules it should keep, or use --add-rule and --remove-rule.",
+      multiple: true,
+      exclusive: ["add-rule", "remove-rule"],
+    }),
+    "add-rule": Flags.string({
+      description:
+        "An email rule id to add to the key (repeatable, or comma-separated). Its other rules stay.",
+      multiple: true,
+    }),
+    "remove-rule": Flags.string({
+      description:
+        "An email rule id to take off the key (repeatable, or comma-separated). Its other rules stay.",
       multiple: true,
     }),
     name: Flags.string({ description: "A new name for the key." }),
@@ -848,16 +910,35 @@ export class KeysUpdateCommand extends Command {
     const add = listFlag(flags.add);
     const remove = listFlag(flags.remove);
     const rules = flags.rule ? listFlag(flags.rule) : undefined;
+    const addRules = listFlag(flags["add-rule"]);
+    const removeRules = listFlag(flags["remove-rule"]);
     const both = add.filter((p) => remove.includes(p));
     if (both.length > 0) {
       this.error(`Both added and removed: ${both.join(", ")}.`, { exit: 2 });
     }
-    const changesGrant = add.length > 0 || remove.length > 0 || !!rules;
-    if (!changesGrant && flags.name === undefined) {
-      this.error("Nothing to change: pass --add, --remove, --rule or --name.", {
+    const bothRules = addRules.filter((r) =>
+      removeRules.some((x) => x.toLowerCase() === r.toLowerCase()),
+    );
+    if (bothRules.length > 0) {
+      this.error(`Both added and removed: ${bothRules.join(", ")}.`, {
         exit: 2,
       });
     }
+    const ruleChange = {
+      ...(rules ? { rules } : {}),
+      ...(addRules.length > 0 ? { addRules } : {}),
+      ...(removeRules.length > 0 ? { removeRules } : {}),
+    };
+    const changesGrant =
+      add.length > 0 || remove.length > 0 || Object.keys(ruleChange).length > 0;
+    if (!changesGrant && flags.name === undefined) {
+      this.error(
+        "Nothing to change: pass --add, --remove, --add-rule, --remove-rule, --rule or --name.",
+        { exit: 2 },
+      );
+    }
+    // The rules the key listed before the change, to say which a change took off.
+    let rulesBefore: string[] = [];
     const auth = await authenticate(this, flags);
     const body: CredentialsUpdateKeyInput = {
       ...(flags.name !== undefined ? { name: flags.name } : {}),
@@ -870,10 +951,19 @@ export class KeysUpdateCommand extends Command {
         reportKeysError(this, current, auth, Boolean(flags.json));
         return;
       }
+      rulesBefore = keyRules(current.data.grant);
+      const missing = removeRules.filter(
+        (r) => !rulesBefore.some((k) => k.toLowerCase() === r.toLowerCase()),
+      );
+      if (missing.length > 0 && !flags.json) {
+        process.stderr.write(
+          `Not on this key, so nothing to take off: ${missing.join(", ")}.\n`,
+        );
+      }
       const next = buildUpdatedGrant(current.data.grant, {
         add,
         remove,
-        ...(rules ? { rules } : {}),
+        ...ruleChange,
       });
       if (!next.ok) {
         this.error(next.message, { exit: 2 });
@@ -940,6 +1030,13 @@ export class KeysUpdateCommand extends Command {
     if (after?.ok) {
       this.log(`Permissions: ${describePermissions(after.data.grant)}`);
       this.log(`Mail: ${describeMailScope(after.data.grant)}`);
+      // A rule taken off stops the key reading what it granted, so it is named.
+      const rulesAfter = keyRules(after.data.grant);
+      const dropped = rulesBefore.filter(
+        (r) => !rulesAfter.some((k) => k.toLowerCase() === r.toLowerCase()),
+      );
+      if (dropped.length > 0)
+        this.log(`Rules taken off: ${dropped.join(", ")}`);
     }
     if (grantChanged) process.stderr.write(`${HELD_REQUEST_NOTICE}\n`);
   }
