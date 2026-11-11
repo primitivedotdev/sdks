@@ -24,6 +24,7 @@ vi.mock("node:child_process", async (original) => {
   };
 });
 
+import { OPERATION_EXTENSIONS } from "../../src/oclif/api-command.js";
 import {
   claimAutoRead,
   readWorkingLease,
@@ -544,6 +545,9 @@ function operationArgv(operation: PrimitiveOperationManifest): string[] {
   if (operation.hasJsonBody && operation.bodyRequired) {
     argv.push("--raw-body", "{}");
   }
+  // A command that asks before it acts needs --yes under --json.
+  if (OPERATION_EXTENSIONS[operation.sdkName ?? ""]?.confirm)
+    argv.push("--yes");
   argv.push("--json");
   return argv;
 }

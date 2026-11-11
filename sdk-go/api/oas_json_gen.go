@@ -57212,10 +57212,39 @@ func (s *DeleteEmailRuleResult) encodeFields(e *jx.Encoder) {
 		e.FieldStart("deleted")
 		e.Bool(s.Deleted)
 	}
+	{
+		if s.EndedShares != nil {
+			e.FieldStart("ended_shares")
+			e.ArrStart()
+			for _, elem := range s.EndedShares {
+				json.EncodeUUID(e, elem)
+			}
+			e.ArrEnd()
+		}
+	}
+	{
+		if s.Keys != nil {
+			e.FieldStart("keys")
+			e.ArrStart()
+			for _, elem := range s.Keys {
+				elem.Encode(e)
+			}
+			e.ArrEnd()
+		}
+	}
+	{
+		if s.OtherKeys.Set {
+			e.FieldStart("other_keys")
+			s.OtherKeys.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfDeleteEmailRuleResult = [1]string{
+var jsonFieldsNameOfDeleteEmailRuleResult = [4]string{
 	0: "deleted",
+	1: "ended_shares",
+	2: "keys",
+	3: "other_keys",
 }
 
 // Decode decodes DeleteEmailRuleResult from json.
@@ -57238,6 +57267,52 @@ func (s *DeleteEmailRuleResult) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"deleted\"")
+			}
+		case "ended_shares":
+			if err := func() error {
+				s.EndedShares = make([]uuid.UUID, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem uuid.UUID
+					v, err := json.DecodeUUID(d)
+					elem = v
+					if err != nil {
+						return err
+					}
+					s.EndedShares = append(s.EndedShares, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"ended_shares\"")
+			}
+		case "keys":
+			if err := func() error {
+				s.Keys = make([]DeleteEmailRuleResultKeysItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem DeleteEmailRuleResultKeysItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Keys = append(s.Keys, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"keys\"")
+			}
+		case "other_keys":
+			if err := func() error {
+				s.OtherKeys.Reset()
+				if err := s.OtherKeys.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"other_keys\"")
 			}
 		default:
 			return d.Skip()
@@ -57291,6 +57366,134 @@ func (s *DeleteEmailRuleResult) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *DeleteEmailRuleResult) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *DeleteEmailRuleResultKeysItem) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *DeleteEmailRuleResultKeysItem) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("id")
+		json.EncodeUUID(e, s.ID)
+	}
+	{
+		e.FieldStart("name")
+		s.Name.Encode(e)
+	}
+	{
+		e.FieldStart("key_prefix")
+		e.Str(s.KeyPrefix)
+	}
+}
+
+var jsonFieldsNameOfDeleteEmailRuleResultKeysItem = [3]string{
+	0: "id",
+	1: "name",
+	2: "key_prefix",
+}
+
+// Decode decodes DeleteEmailRuleResultKeysItem from json.
+func (s *DeleteEmailRuleResultKeysItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode DeleteEmailRuleResultKeysItem to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.ID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"id\"")
+			}
+		case "name":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Name.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"name\"")
+			}
+		case "key_prefix":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.KeyPrefix = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"key_prefix\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode DeleteEmailRuleResultKeysItem")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfDeleteEmailRuleResultKeysItem) {
+					name = jsonFieldsNameOfDeleteEmailRuleResultKeysItem[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *DeleteEmailRuleResultKeysItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *DeleteEmailRuleResultKeysItem) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -73577,6 +73780,8 @@ func (s *EmailRuleShareEndReason) Decode(d *jx.Decoder) error {
 		*s = EmailRuleShareEndReasonStoppedByAdmin
 	case EmailRuleShareEndReasonRuleChanged:
 		*s = EmailRuleShareEndReasonRuleChanged
+	case EmailRuleShareEndReasonRuleDeleted:
+		*s = EmailRuleShareEndReasonRuleDeleted
 	default:
 		*s = EmailRuleShareEndReason(v)
 	}

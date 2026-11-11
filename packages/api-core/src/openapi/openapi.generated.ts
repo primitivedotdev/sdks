@@ -36070,7 +36070,7 @@ export const openapiDocument: Record<string, unknown> = {
       "delete": {
         "operationId": "deleteEmailRule",
         "summary": "Delete a rule",
-        "description": "Deletes a rule with its versions, its decisions and the access it granted. The author, or a caller who reads the whole organization's mail, may delete it; while it is shared with another member, only the author or someone who manages members from the dashboard. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+        "description": "Deletes a rule with its versions, its decisions and the access it granted. A rule that was ever shared with another member keeps the record of its share: the share ends with end_reason rule_deleted, and the member who shared can still list what it handed over, while the rule is no longer shown and reads nothing. The answer lists the shares the delete ended (ended_shares) and the keys, not revoked, that still list the rule, which now read nothing through it: those you may read as key metadata by id, name and prefix (keys), and how many others (other_keys). keys and other_keys are left out when the keys could not be read. The author, or a caller who reads the whole organization's mail, may delete it; while it is shared with another member, only the author or someone who manages members from the dashboard. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
         "tags": [
           "Email Rules"
         ],
@@ -51543,7 +51543,7 @@ export const openapiDocument: Record<string, unknown> = {
             "BearerAuth": []
           }
         ],
-        "description": "Every credential that can act in the organization: API keys, Function keys, agent connection keys, connected apps (OAuth), agent delegates and, where enabled, CLI logins. Secrets are never returned. A key's grant.mail_scope.depth is raw only when it holds mail.raw:read and its scope lists an address or a domain, otherwise content. Filter with kind. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session. The person's role must hold credentials:read. API keys, agent connection keys and agents are refused.",
+        "description": "Every credential that can act in the organization: API keys, Function keys, agent connection keys, connected apps (OAuth), agent delegates and, where enabled, CLI logins. Secrets are never returned. A key's grant.mail_scope.depth is raw only when it holds mail.raw:read and its scope lists an address or a domain, otherwise content. A rule the key lists that reads nothing any more (a deleted rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its id and reason (rule_deleted or share_ended), and not under rules. Filter with kind. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session. The person's role must hold credentials:read. API keys, agent connection keys and agents are refused.",
         "x-primitive-person-only": {
           "access": "session"
         },
@@ -53217,7 +53217,7 @@ export const openapiDocument: Record<string, unknown> = {
             "BearerAuth": []
           }
         ],
-        "description": "Key metadata, never a secret: name, prefix, grant, creator, last use, expiry, suspension and whether each key works now (status). Revoked keys are left out unless include_revoked is true, which lists them too with status revoked, revoked_at and revoked_by, under the same access rules as keys that work. A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain, otherwise content. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.",
+        "description": "Key metadata, never a secret: name, prefix, grant, creator, last use, expiry, suspension and whether each key works now (status). Revoked keys are left out unless include_revoked is true, which lists them too with status revoked, revoked_at and revoked_by, under the same access rules as keys that work. A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain, otherwise content. A rule the key lists that reads nothing any more (a deleted rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its id and reason (rule_deleted or share_ended), and not under rules. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.",
         "x-primitive-person-only": {
           "access": "session_or_cli"
         },
@@ -53890,7 +53890,7 @@ export const openapiDocument: Record<string, unknown> = {
             "BearerAuth": []
           }
         ],
-        "description": "One key's metadata, never its secret, with whether it works now (status). A revoked key whose record is kept is answered too, with status revoked, revoked_at and revoked_by, under the same access rules as a key that works: one the caller may not read is 404, revoked or not. Its grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain, otherwise content. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.",
+        "description": "One key's metadata, never its secret, with whether it works now (status). A revoked key whose record is kept is answered too, with status revoked, revoked_at and revoked_by, under the same access rules as a key that works: one the caller may not read is 404, revoked or not. Its grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain, otherwise content. A rule the key lists that reads nothing any more (a deleted rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its id and reason (rule_deleted or share_ended), and not under rules. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.",
         "x-primitive-person-only": {
           "access": "session_or_cli"
         },
@@ -78056,6 +78056,45 @@ export const openapiDocument: Record<string, unknown> = {
         "properties": {
           "deleted": {
             "type": "boolean"
+          },
+          "ended_shares": {
+            "description": "The shares of this rule that the delete ended (end_reason rule_deleted). Each keeps its record.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "keys": {
+            "description": "The API keys, not revoked, that still list the rule and that you may read (GET /v1/keys). They now read nothing through it; edit or revoke them. Left out, with other_keys, when the keys could not be read.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "key_prefix": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "key_prefix"
+              ]
+            }
+          },
+          "other_keys": {
+            "description": "How many more keys, not revoked, list the rule that you may not read. They are not named.",
+            "type": "integer"
           }
         },
         "required": [
@@ -79258,8 +79297,10 @@ export const openapiDocument: Record<string, unknown> = {
               "removed_by_beneficiary",
               "stopped_by_admin",
               "rule_changed",
+              "rule_deleted",
               null
-            ]
+            ],
+            "description": "Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin, rule_changed (a new version of the rule was saved) or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not."
           },
           "accepted_rule_version": {
             "type": "integer",

@@ -22,6 +22,7 @@
 import { readFileSync } from "node:fs";
 import { Errors, Flags } from "@oclif/core";
 import type {
+  DeleteEmailRuleResult,
   EmailRuleScopeWarning,
   EmailRuleWritten,
   GetEmailRuleScopeResult,
@@ -789,6 +790,72 @@ export function emailRuleScopeReport(data: unknown): OperationReport {
   return { lines };
 }
 
+// delete-email-rule
+
+/** The delete-email-rule question, naming the rule. */
+function deleteEmailRuleQuestion(flags: Record<string, unknown>): string {
+  const id = typeof flags.id === "string" ? flags.id : "this rule";
+  return `Delete email rule ${id}? Its versions and decisions are deleted with it. [y/N] `;
+}
+
+/**
+ * What a rule's delete left behind, read from the answer: the shares it
+ * ended, and the keys that still list the rule and now read nothing through
+ * it. An answer without these fields (an older server) prints nothing.
+ */
+export function deleteEmailRuleReport(
+  data: unknown,
+  request: { path: Record<string, unknown> },
+): OperationReport {
+  if (!isRecord(data)) return { lines: [] };
+  const answer = data as Partial<DeleteEmailRuleResult>;
+  const lines: string[] = [];
+  const ended = Array.isArray(answer.ended_shares)
+    ? answer.ended_shares.length
+    : 0;
+  if (ended > 0) {
+    lines.push(
+      `Ended ${ended === 1 ? "1 share" : `${ended} shares`} of this rule (end_reason rule_deleted). ${ended === 1 ? "It keeps its record" : "Each keeps its record"}.`,
+    );
+  }
+  const keys = Array.isArray(answer.keys) ? answer.keys : [];
+  const others =
+    typeof answer.other_keys === "number" && answer.other_keys > 0
+      ? answer.other_keys
+      : 0;
+  const ruleId =
+    typeof request.path.id === "string" ? request.path.id : "<rule-id>";
+  if (keys.length > 0) {
+    lines.push(
+      `${keys.length === 1 ? "1 key still lists" : `${keys.length} keys still list`} this rule and now ${keys.length === 1 ? "reads" : "read"} nothing through it:`,
+    );
+    for (const key of keys) {
+      lines.push(`  ${key.id}  ${key.name ?? "(no name)"}  ${key.key_prefix}`);
+    }
+    lines.push(
+      keys.length === 1
+        ? `Take the rule off with \`primitive keys update ${keys[0]?.id} --remove-rule ${ruleId}\`, or revoke the key.`
+        : `Take the rule off each with \`primitive keys update <key-id> --remove-rule ${ruleId}\`, or revoke them.`,
+    );
+  }
+  if (others > 0) {
+    lines.push(
+      keys.length > 0
+        ? `${others === 1 ? "1 more key" : `${others} more keys`} you cannot read ${others === 1 ? "lists" : "list"} this rule too.`
+        : `${others === 1 ? "1 key" : `${others} keys`} you cannot read ${others === 1 ? "lists" : "list"} this rule and now ${others === 1 ? "reads" : "read"} nothing through it.`,
+    );
+  }
+  // A server that says what a delete left but could not read the keys leaves them out.
+  if (
+    Array.isArray(answer.ended_shares) &&
+    answer.keys === undefined &&
+    answer.other_keys === undefined
+  ) {
+    lines.push("Could not check which keys list this rule.");
+  }
+  return { lines };
+}
+
 // update-email-rule's 409
 
 function errorDetails(payload: unknown): Record<string, unknown> {
@@ -898,6 +965,22 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
   getEmailRuleScope: {
     flags: {},
     report: emailRuleScopeReport,
+  },
+  deleteEmailRule: {
+    flags: {
+      yes: Flags.boolean({
+        char: "y",
+        description:
+          "Delete without asking for confirmation. Needed without a terminal, and with --json.",
+      }),
+    },
+    confirm: {
+      question: deleteEmailRuleQuestion,
+      noTerminal:
+        "Not deleting: no terminal to confirm in. Pass --yes to delete the rule without a prompt.",
+      cancelled: "Cancelled. The rule was not deleted.",
+    },
+    report: deleteEmailRuleReport,
   },
 };
 

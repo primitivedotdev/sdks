@@ -122,9 +122,12 @@ def sync_detailed(
     each key works now (status). Revoked keys are left out unless include_revoked is true, which lists
     them too with status revoked, revoked_at and revoked_by, under the same access rules as keys that
     work. A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an
-    address or a domain, otherwise content. The person needs access to the whole organization's mail.
-    Needs the organization's credential features to be enabled; while they are not, this answers 404
-    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
+    address or a domain, otherwise content. A rule the key lists that reads nothing any more (a deleted
+    rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its id and
+    reason (rule_deleted or share_ended), and not under rules. The person needs access to the whole
+    organization's mail. Needs the organization's credential features to be enabled; while they are not,
+    this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to
+    turn them on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.
@@ -167,9 +170,12 @@ def sync(
     each key works now (status). Revoked keys are left out unless include_revoked is true, which lists
     them too with status revoked, revoked_at and revoked_by, under the same access rules as keys that
     work. A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an
-    address or a domain, otherwise content. The person needs access to the whole organization's mail.
-    Needs the organization's credential features to be enabled; while they are not, this answers 404
-    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
+    address or a domain, otherwise content. A rule the key lists that reads nothing any more (a deleted
+    rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its id and
+    reason (rule_deleted or share_ended), and not under rules. The person needs access to the whole
+    organization's mail. Needs the organization's credential features to be enabled; while they are not,
+    this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to
+    turn them on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.
@@ -207,9 +213,12 @@ async def asyncio_detailed(
     each key works now (status). Revoked keys are left out unless include_revoked is true, which lists
     them too with status revoked, revoked_at and revoked_by, under the same access rules as keys that
     work. A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an
-    address or a domain, otherwise content. The person needs access to the whole organization's mail.
-    Needs the organization's credential features to be enabled; while they are not, this answers 404
-    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
+    address or a domain, otherwise content. A rule the key lists that reads nothing any more (a deleted
+    rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its id and
+    reason (rule_deleted or share_ended), and not under rules. The person needs access to the whole
+    organization's mail. Needs the organization's credential features to be enabled; while they are not,
+    this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to
+    turn them on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.
@@ -252,9 +261,12 @@ async def asyncio(
     each key works now (status). Revoked keys are left out unless include_revoked is true, which lists
     them too with status revoked, revoked_at and revoked_by, under the same access rules as keys that
     work. A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an
-    address or a domain, otherwise content. The person needs access to the whole organization's mail.
-    Needs the organization's credential features to be enabled; while they are not, this answers 404
-    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
+    address or a domain, otherwise content. A rule the key lists that reads nothing any more (a deleted
+    rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its id and
+    reason (rule_deleted or share_ended), and not under rules. The person needs access to the whole
+    organization's mail. Needs the organization's credential features to be enabled; while they are not,
+    this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to
+    turn them on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:read. API keys, agent connection keys and agents are refused.

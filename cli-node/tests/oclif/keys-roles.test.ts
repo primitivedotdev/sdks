@@ -21,6 +21,7 @@ import {
 import {
   buildCreateGrant,
   buildUpdatedGrant,
+  describeMailScope,
   expiryFromFlags,
   formatKeyDetail,
   formatKeyRows,
@@ -1074,6 +1075,135 @@ describe("keys commands", () => {
       changed: ["grant"],
     });
     expect(result.stderr).not.toContain("Not on this key");
+  });
+
+  it("update --remove-rule takes off a rule that reads nothing any more, shown under ended_rules", async () => {
+    const B = "9c1d2e3f-4a5b-4c6d-8e7f-0a1b2c3d4e5f";
+    const DELETED = "5e5e5e5e-0000-4000-8000-000000000004";
+    const withEnded = keyRow({
+      template: null,
+      permissions: ["mail:read"],
+      mail_scope: {
+        addresses: [],
+        domains: [],
+        rules: [B],
+        ended_rules: [{ id: DELETED, reason: "rule_deleted" }],
+        depth: "content",
+      },
+      ref: "grant-9",
+    });
+    let reads = 0;
+    const requests = useServer((request) => {
+      if (request.method === "GET") {
+        reads += 1;
+        return Response.json({
+          success: true,
+          data:
+            reads === 1
+              ? withEnded
+              : keyRow({
+                  template: null,
+                  permissions: ["mail:read"],
+                  mail_scope: {
+                    addresses: [],
+                    domains: [],
+                    rules: [B],
+                    depth: "content",
+                  },
+                  ref: "grant-10",
+                }),
+        });
+      }
+      return Response.json({
+        success: true,
+        data: { id: KEY_ID, changed: ["grant"], warnings: [] },
+      });
+    });
+    const removed = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--remove-rule",
+      DELETED,
+      "--step-up-token",
+      "pstep_d",
+    ]);
+    expect(removed.exitCode).toBeUndefined();
+    // The key is restated without it: ended_rules is never sent back.
+    expect(
+      await (requests.find((r) => r.method === "PATCH") as Request).json(),
+    ).toEqual({
+      grant: { preset: "custom", permissions: ["mail:read"], rules: [B] },
+      expected_grant_ref: "grant-9",
+    });
+    expect(removed.stderr).not.toContain("Not on this key");
+    expect(removed.stdout).toContain(`Rules taken off: ${DELETED}`);
+  });
+
+  it("update refuses to put back a rule that reads nothing any more, and says when a key reads no mail at all", () => {
+    const DELETED = "5e5e5e5e-0000-4000-8000-000000000004";
+    const onlyEnded = keyRow({
+      template: null,
+      permissions: ["mail:read"],
+      mail_scope: {
+        addresses: [],
+        domains: [],
+        rules: [],
+        ended_rules: [{ id: DELETED, reason: "rule_deleted" }],
+        depth: "content",
+      },
+    });
+    expect(
+      buildUpdatedGrant(onlyEnded.grant, {
+        add: [],
+        remove: [],
+        removeRules: [DELETED],
+      }),
+    ).toEqual({
+      ok: false,
+      message:
+        "This key reads no mail any more: its only rules were deleted or their shares ended. Revoke it with `primitive keys revoke <key-id>`.",
+    });
+    for (const change of [
+      { addRules: [DELETED.toUpperCase()] },
+      { rules: [DELETED] },
+    ]) {
+      expect(
+        buildUpdatedGrant(onlyEnded.grant, { add: [], remove: [], ...change }),
+      ).toEqual({
+        ok: false,
+        message: `${DELETED} reads nothing any more (rule_deleted), so it cannot be added back to the key.`,
+      });
+    }
+    expect(describeMailScope(onlyEnded.grant)).toBe(
+      `no mailbox; ended rules ${DELETED} (rule_deleted)`,
+    );
+  });
+
+  it("update restates a key with ended rules for any grant change, leaving them off", async () => {
+    const DELETED = "5e5e5e5e-0000-4000-8000-000000000004";
+    const withEnded = keyRow({
+      template: null,
+      permissions: ["mail:read"],
+      mail_scope: {
+        addresses: ["a@example.com"],
+        domains: [],
+        rules: [],
+        ended_rules: [{ id: DELETED, reason: "share_ended" }],
+        depth: "content",
+      },
+    });
+    const next = buildUpdatedGrant(withEnded.grant, {
+      add: ["mail:send"],
+      remove: [],
+    });
+    expect(next).toEqual({
+      ok: true,
+      grant: {
+        preset: "custom",
+        permissions: ["mail:read", "mail:send"],
+        addresses: ["a@example.com"],
+      },
+      permissions: ["mail:read", "mail:send"],
+    });
   });
 
   it("update refuses --rule with --add-rule or --remove-rule, and a rule both added and removed, sending nothing", async () => {

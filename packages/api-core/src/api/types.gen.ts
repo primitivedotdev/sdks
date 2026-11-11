@@ -6887,6 +6887,22 @@ export type UpdateEmailRuleResult = EmailRuleWritten;
 
 export type DeleteEmailRuleResult = {
     deleted: boolean;
+    /**
+     * The shares of this rule that the delete ended (end_reason rule_deleted). Each keeps its record.
+     */
+    ended_shares?: Array<string>;
+    /**
+     * The API keys, not revoked, that still list the rule and that you may read (GET /v1/keys). They now read nothing through it; edit or revoke them. Left out, with other_keys, when the keys could not be read.
+     */
+    keys?: Array<{
+        id: string;
+        name: string | null;
+        key_prefix: string;
+    }>;
+    /**
+     * How many more keys, not revoked, list the rule that you may not read. They are not named.
+     */
+    other_keys?: number;
 };
 
 export type EmailRuleWithheldBy = {
@@ -7345,7 +7361,10 @@ export type EmailRuleShare = {
     request_id: string;
     created_at: string;
     ended_at: string | null;
-    end_reason: 'stopped_by_granter' | 'removed_by_beneficiary' | 'stopped_by_admin' | 'rule_changed' | null;
+    /**
+     * Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin, rule_changed (a new version of the rule was saved) or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not.
+     */
+    end_reason: 'stopped_by_granter' | 'removed_by_beneficiary' | 'stopped_by_admin' | 'rule_changed' | 'rule_deleted' | null;
     /**
      * The version of the rule that was accepted. A new version of the rule ends the share.
      */

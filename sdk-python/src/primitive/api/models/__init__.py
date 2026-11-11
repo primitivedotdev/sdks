@@ -378,6 +378,7 @@ from .delete_email_rule_request_response_200 import DeleteEmailRuleRequestRespon
 from .delete_email_rule_request_result import DeleteEmailRuleRequestResult
 from .delete_email_rule_response_200 import DeleteEmailRuleResponse200
 from .delete_email_rule_result import DeleteEmailRuleResult
+from .delete_email_rule_result_keys_item import DeleteEmailRuleResultKeysItem
 from .delete_endpoint_response_200 import DeleteEndpointResponse200
 from .delete_endpoint_response_200_data import DeleteEndpointResponse200Data
 from .delete_filter_response_200 import DeleteFilterResponse200
@@ -2111,6 +2112,7 @@ __all__ = (
     "DeleteEmailRuleRequestResult",
     "DeleteEmailRuleResponse200",
     "DeleteEmailRuleResult",
+    "DeleteEmailRuleResultKeysItem",
     "DeleteEndpointResponse200",
     "DeleteEndpointResponse200Data",
     "DeleteFilterResponse200",

@@ -94,11 +94,16 @@ def sync_detailed(
 ) -> Response[DeleteEmailRuleResponse200 | ErrorResponse]:
     """ Delete a rule
 
-     Deletes a rule with its versions, its decisions and the access it granted. The author, or a caller
-    who reads the whole organization's mail, may delete it; while it is shared with another member, only
-    the author or someone who manages members from the dashboard. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature.
+     Deletes a rule with its versions, its decisions and the access it granted. A rule that was ever
+    shared with another member keeps the record of its share: the share ends with end_reason
+    rule_deleted, and the member who shared can still list what it handed over, while the rule is no
+    longer shown and reads nothing. The answer lists the shares the delete ended (ended_shares) and the
+    keys, not revoked, that still list the rule, which now read nothing through it: those you may read
+    as key metadata by id, name and prefix (keys), and how many others (other_keys). keys and other_keys
+    are left out when the keys could not be read. The author, or a caller who reads the whole
+    organization's mail, may delete it; while it is shared with another member, only the author or
+    someone who manages members from the dashboard. Needs mail:read, a member's own credential with
+    their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -131,11 +136,16 @@ def sync(
 ) -> DeleteEmailRuleResponse200 | ErrorResponse | None:
     """ Delete a rule
 
-     Deletes a rule with its versions, its decisions and the access it granted. The author, or a caller
-    who reads the whole organization's mail, may delete it; while it is shared with another member, only
-    the author or someone who manages members from the dashboard. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature.
+     Deletes a rule with its versions, its decisions and the access it granted. A rule that was ever
+    shared with another member keeps the record of its share: the share ends with end_reason
+    rule_deleted, and the member who shared can still list what it handed over, while the rule is no
+    longer shown and reads nothing. The answer lists the shares the delete ended (ended_shares) and the
+    keys, not revoked, that still list the rule, which now read nothing through it: those you may read
+    as key metadata by id, name and prefix (keys), and how many others (other_keys). keys and other_keys
+    are left out when the keys could not be read. The author, or a caller who reads the whole
+    organization's mail, may delete it; while it is shared with another member, only the author or
+    someone who manages members from the dashboard. Needs mail:read, a member's own credential with
+    their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -163,11 +173,16 @@ async def asyncio_detailed(
 ) -> Response[DeleteEmailRuleResponse200 | ErrorResponse]:
     """ Delete a rule
 
-     Deletes a rule with its versions, its decisions and the access it granted. The author, or a caller
-    who reads the whole organization's mail, may delete it; while it is shared with another member, only
-    the author or someone who manages members from the dashboard. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature.
+     Deletes a rule with its versions, its decisions and the access it granted. A rule that was ever
+    shared with another member keeps the record of its share: the share ends with end_reason
+    rule_deleted, and the member who shared can still list what it handed over, while the rule is no
+    longer shown and reads nothing. The answer lists the shares the delete ended (ended_shares) and the
+    keys, not revoked, that still list the rule, which now read nothing through it: those you may read
+    as key metadata by id, name and prefix (keys), and how many others (other_keys). keys and other_keys
+    are left out when the keys could not be read. The author, or a caller who reads the whole
+    organization's mail, may delete it; while it is shared with another member, only the author or
+    someone who manages members from the dashboard. Needs mail:read, a member's own credential with
+    their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -200,11 +215,16 @@ async def asyncio(
 ) -> DeleteEmailRuleResponse200 | ErrorResponse | None:
     """ Delete a rule
 
-     Deletes a rule with its versions, its decisions and the access it granted. The author, or a caller
-    who reads the whole organization's mail, may delete it; while it is shared with another member, only
-    the author or someone who manages members from the dashboard. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature.
+     Deletes a rule with its versions, its decisions and the access it granted. A rule that was ever
+    shared with another member keeps the record of its share: the share ends with end_reason
+    rule_deleted, and the member who shared can still list what it handed over, while the rule is no
+    longer shown and reads nothing. The answer lists the shares the delete ended (ended_shares) and the
+    keys, not revoked, that still list the rule, which now read nothing through it: those you may read
+    as key metadata by id, name and prefix (keys), and how many others (other_keys). keys and other_keys
+    are left out when the keys could not be read. The author, or a caller who reads the whole
+    organization's mail, may delete it; while it is shared with another member, only the author or
+    someone who manages members from the dashboard. Needs mail:read, a member's own credential with
+    their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
