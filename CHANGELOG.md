@@ -995,6 +995,24 @@ parsers.
 
 #### CLI
 
+- `email-rules update-email-rule --fail-on-expectations` sends
+  `if_expectations_pass`: the server judges the rule as the write would
+  leave it before saving, and saves nothing when an expectation failed (exit
+  1), one is undecided (exit 3, or 1 when the rule cannot run as its author)
+  or the rule has none (exit 1), with a hint naming them and what to do. It
+  can take as long as a test of the rule. A write the server does not judge
+  (one changing only expectations, say) is saved, and its exit code follows
+  the check made after saving, which now says so. `create-email-rule
+  --fail-on-expectations` still sets the exit code from the check made after
+  saving. `--if-revision`, `--restore-version` and `--if-expectations-pass`
+  come from the spec. A refused update says what moved: the version (retry
+  with `--if-version`), the revision (retry with `--if-revision`), the saved
+  expectations, or the rule while it was saved. Without `--json`, an update
+  that saved a version says how many keys, webhooks and ended shares it
+  reaches, what a restore saved, and the check's note when a saved version
+  did not pass; `compile-email-rule` says how many of your recent emails the
+  conditions hold for; and `get-email-rule` names the author and the
+  revision to guard an update with.
 - `send` and `chat` without `--from`, for a credential whose grant has no
   `mail:send`, say that it has no `mail:send` and what would give it the
   permission (for an API key, `keys update <key id> --add mail:send`), and

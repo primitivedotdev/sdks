@@ -33,7 +33,7 @@ import {
 import { requireDefaultLoginProfile } from "./connected-agent-profile.js";
 import {
   EMAIL_RULE_OPERATION_EXTENSIONS,
-  versionMovedHint,
+  updateEmailRuleErrorHint,
 } from "./email-rule-authoring.js";
 import {
   emptyEmailListHint,
@@ -1542,10 +1542,8 @@ export const OPERATION_ERROR_HINTS: Record<
     createEndpointRuleRequestHint(code, body, payload),
   updateEndpoint: (code, body, payload) =>
     updateEndpointRuleRequestHint(code, body, payload),
-  updateEmailRule: (code, _body, payload, path) =>
-    code === "email_rule_conflict"
-      ? versionMovedHint(payload, path?.id)
-      : undefined,
+  updateEmailRule: (code, body, payload, path) =>
+    updateEmailRuleErrorHint(code, payload, path?.id, body),
   verifyDomain: (code, _body, payload) =>
     code === "dns_verification_failed"
       ? domainVerificationFailedHint(payload)
@@ -2072,7 +2070,8 @@ export function createOperationCommand(
               this.config.configDir,
               parsedFlags.id,
             );
-          process.exitCode = 1;
+          // A hook never turns a failed request into exit 0.
+          process.exitCode = extension?.errorExitCode?.(errorPayload) || 1;
           return;
         }
 
