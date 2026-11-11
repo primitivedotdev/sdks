@@ -26,7 +26,8 @@ class UpdateEmailRuleResultExpectationsCheck:
     stored classifications without asking its questions. Undecided: one that needs answers not yet kept for that
     version, is unclassified, skipped or not reached, or that its author does not read. Absent when it could not be
     judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish
-    in time, or the check failed). Test by rule_id for the rest.
+    in time, or the check failed). Test by rule_id for the rest. With if_expectations_pass, the judgment made before the
+    save, which passed.
 
         Attributes:
             version (int | None):
@@ -36,6 +37,8 @@ class UpdateEmailRuleResultExpectationsCheck:
             undecided (list[UUID]):
             decided (bool | Unset): Whether every expectation was judged (undecided is empty). Absent from a server that
                 predates it.
+            note (str | Unset): On an update that saved a version that did not pass: that it was saved anyway, is current,
+                and whether it is live.
      """
 
     version: int | None
@@ -43,6 +46,7 @@ class UpdateEmailRuleResultExpectationsCheck:
     failed: list[UUID]
     undecided: list[UUID]
     decided: bool | Unset = UNSET
+    note: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -72,6 +76,8 @@ class UpdateEmailRuleResultExpectationsCheck:
 
         decided = self.decided
 
+        note = self.note
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -83,6 +89,8 @@ class UpdateEmailRuleResultExpectationsCheck:
         })
         if decided is not UNSET:
             field_dict["decided"] = decided
+        if note is not UNSET:
+            field_dict["note"] = note
 
         return field_dict
 
@@ -129,12 +137,15 @@ class UpdateEmailRuleResultExpectationsCheck:
 
         decided = d.pop("decided", UNSET)
 
+        note = d.pop("note", UNSET)
+
         update_email_rule_result_expectations_check = cls(
             version=version,
             passed=passed,
             failed=failed,
             undecided=undecided,
             decided=decided,
+            note=note,
         )
 
 

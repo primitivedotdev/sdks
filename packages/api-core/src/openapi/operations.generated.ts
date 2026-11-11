@@ -16462,6 +16462,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "string",
           "minLength": 1,
           "maxLength": 64
+        },
+        "breadth": {
+          "description": "Ignored (the compile answer's breadth)."
         }
       },
       "additionalProperties": false
@@ -16772,9 +16775,42 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ],
               "exclusiveMinimum": 0
             },
+            "revision": {
+              "description": "Moves on by one with every update. Send it as if_revision.",
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
             "author_user_id": {
               "type": "string",
               "format": "uuid"
+            },
+            "author": {
+              "type": "object",
+              "properties": {
+                "user_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "description": "Their name; null unless you can list members or this is you, and when they have none set.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "email": {
+                  "description": "Sign-in email; null unless you can list member emails or this is you.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "user_id",
+                "name",
+                "email"
+              ]
             },
             "is_author": {
               "type": "boolean",
@@ -16789,6 +16825,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "format": "date-time"
             },
             "current": {
+              "description": "Its current version: its text (english, tree, explanation, assumptions, warnings) and who compiled it. current_version is its number. GET /email-rules lists rules without it.",
               "anyOf": [
                 {
                   "type": "object",
@@ -17234,7 +17271,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "compile-email-rule",
-    "description": "Turns a plain-English description of which received emails to match into a rule tree over the published column contract, with a plain-English explanation of what it matches, the assumptions made, and warnings for anything the columns cannot express. Where the columns fall short the rule may carry up to three yes/no questions, asked about an email only after its conditions match. Nothing is saved. A rule with no questions has its conditions counted, read only, over the caller's recent classified mail (what a test of it covers by default), so a warning can say when it matches nearly all of it. The SQL the rule renders to is returned only when include_sql is true. kind do_not_share compiles a do-not-share rule for recall: conditions only as narrow as the description says, the judgement of what it describes put into questions, and with nothing a column decides for certain, conditions that hold for every email. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Turns a plain-English description of which received emails to match into a rule tree over the published column contract, with a plain-English explanation of what it matches, the assumptions made, and warnings for anything the columns cannot express. Where the columns fall short the rule may carry up to three yes/no questions, asked about an email only after its conditions match. Nothing is saved. A rule with no questions has its conditions counted, read only, over the caller's recent classified mail (what a test of it covers by default): breadth is that count, and a warning says when it matches nearly all of it. The SQL the rule renders to is returned only when include_sql is true. kind do_not_share compiles a do-not-share rule for recall: conditions only as narrow as the description says, the judgement of what it describes put into questions, and with nothing a column decides for certain, conditions that hold for every email. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "compileEmailRule",
@@ -17320,7 +17357,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "explanation": {
           "type": "string",
-          "description": "What the rule matches, in plain English."
+          "description": "What the rule matches, in plain English: only which emails, not what it grants or shares, which follows from its state, its scope and the keys, webhooks and people it reaches. The compiler leaves out a sentence that plainly says what the rule hands over."
         },
         "assumptions": {
           "type": "array",
@@ -17339,6 +17376,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "compiled_by": {
           "type": "string",
           "description": "An opaque name for the version of the rule compiler that produced the rule, such as rule-compiler-v1. Send it back as compiled_by when you save the rule."
+        },
+        "breadth": {
+          "description": "How many of your recent emails its conditions hold for, counted over your own mailboxes whatever scope you save it with, warning or not. Null when not counted in full: a rule with questions, headers-only access, no test of it possible as you, or a count that failed or ran out of time. Writes ignore it, so a compile answer (without include_sql) can be sent back unchanged.",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "checked": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                },
+                "matched": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Of those, how many they hold for (for a do-not-share rule, one they cannot decide counts)."
+                }
+              },
+              "required": [
+                "checked",
+                "matched"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "sql": {
           "description": "Present only when include_sql was true.",
@@ -17552,6 +17616,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "string",
           "minLength": 1,
           "maxLength": 64
+        },
+        "breadth": {
+          "description": "Ignored (the compile answer's breadth)."
         }
       },
       "required": [
@@ -17632,9 +17699,42 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ],
           "exclusiveMinimum": 0
         },
+        "revision": {
+          "description": "Moves on by one with every update. Send it as if_revision.",
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
         "author_user_id": {
           "type": "string",
           "format": "uuid"
+        },
+        "author": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "description": "Their name; null unless you can list members or this is you, and when they have none set.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "email": {
+              "description": "Sign-in email; null unless you can list member emails or this is you.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "user_id",
+            "name",
+            "email"
+          ]
         },
         "is_author": {
           "type": "boolean",
@@ -17649,6 +17749,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "format": "date-time"
         },
         "current": {
+          "description": "Its current version: its text (english, tree, explanation, assumptions, warnings) and who compiled it. current_version is its number. GET /email-rules lists rules without it.",
           "anyOf": [
             {
               "type": "object",
@@ -17795,7 +17896,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "expectations_check": {
-          "description": "After a write that saved a version or changed its expectations, if it has some: them, judged on that version from stored classifications without asking its questions. Undecided: one that needs answers not yet kept for that version, is unclassified, skipped or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed). Test by rule_id for the rest.",
+          "description": "After a write that saved a version or changed its expectations, if it has some: them, judged on that version from stored classifications without asking its questions. Undecided: one that needs answers not yet kept for that version, is unclassified, skipped or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed). Test by rule_id for the rest. With if_expectations_pass, the judgment made before the save, which passed.",
           "type": "object",
           "properties": {
             "version": {
@@ -17829,6 +17930,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "string",
                 "format": "uuid"
               }
+            },
+            "note": {
+              "description": "On an update that saved a version that did not pass: that it was saved anyway, is current, and whether it is live.",
+              "type": "string"
             }
           },
           "required": [
@@ -17836,6 +17941,46 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "passed",
             "failed",
             "undecided"
+          ]
+        },
+        "restored_from": {
+          "description": "When this write saved an earlier version again (restore_version): which, and that the scope is not part of a version.",
+          "type": "object",
+          "properties": {
+            "version": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "note": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "version",
+            "note"
+          ]
+        },
+        "affects": {
+          "description": "After an update that saved a version: API keys listing the rule, the webhooks they own, and shares this write ended. The rule keeps its state. Absent if not read.",
+          "type": "object",
+          "properties": {
+            "keys": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "endpoints": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "shares_ended": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "keys",
+            "endpoints",
+            "shares_ended"
           ]
         }
       },
@@ -17981,6 +18126,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "string",
           "minLength": 1,
           "maxLength": 64
+        },
+        "breadth": {
+          "description": "Ignored (the compile answer's breadth)."
         }
       },
       "required": [
@@ -18689,7 +18837,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email-rule",
-    "description": "A rule, its scope (evaluation_scope, and scope_selection for a selected rule), its current version and its saved expectations. What the scope comes to for its author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when include_sql is true. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "A rule, its scope (evaluation_scope, and scope_selection for a selected rule), its current version and its saved expectations. The current version's text (english, tree, explanation, assumptions, warnings) is under current, and current_version is its number. What the scope comes to for its author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when include_sql is true. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEmailRule",
@@ -18792,9 +18940,42 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ],
           "exclusiveMinimum": 0
         },
+        "revision": {
+          "description": "Moves on by one with every update. Send it as if_revision.",
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
         "author_user_id": {
           "type": "string",
           "format": "uuid"
+        },
+        "author": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "description": "Their name; null unless you can list members or this is you, and when they have none set.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "email": {
+              "description": "Sign-in email; null unless you can list member emails or this is you.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "user_id",
+            "name",
+            "email"
+          ]
         },
         "is_author": {
           "type": "boolean",
@@ -18809,6 +18990,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "format": "date-time"
         },
         "current": {
+          "description": "Its current version: its text (english, tree, explanation, assumptions, warnings) and who compiled it. current_version is its number. GET /email-rules lists rules without it.",
           "anyOf": [
             {
               "type": "object",
@@ -21719,7 +21901,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rules",
-    "description": "The rules the caller can see, newest first: their own, or every member's rules for a caller who reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection for a selected rule). With matched_email_id, only the rules that matched that email. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "The rules the caller can see, newest first: their own, or every member's rules for a caller who reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection for a selected rule) and current_version, but not the version's text: read that under current from GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRules",
@@ -21830,9 +22012,42 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ],
             "exclusiveMinimum": 0
           },
+          "revision": {
+            "description": "Moves on by one with every update. Send it as if_revision.",
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
           "author_user_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "author": {
+            "type": "object",
+            "properties": {
+              "user_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "description": "Their name; null unless you can list members or this is you, and when they have none set.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "email": {
+                "description": "Sign-in email; null unless you can list member emails or this is you.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "user_id",
+              "name",
+              "email"
+            ]
           },
           "is_author": {
             "type": "boolean",
@@ -23266,7 +23481,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "update-email-rule",
-    "description": "Renames the rule, saves a new version (english and tree together, with an explanation or one the server writes; earlier versions stay), changes its state (draft is off; observe; active), whose mail it runs over (evaluation_scope, with scope_selection when selected) or its saved expectations (each saved version and new set is judged in expectations_check). Anyone but its author who sees it may only disable it (state draft), and while it is shared only if they manage members from the dashboard. Without evaluation_scope the scope stays; a scope change saves a new version with the same conditions, and what was granted stays. A shared rule keeps its scope; a kind never changes. Send if_version, the current_version you read, so a write never replaces a version saved since. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Renames the rule, saves a new version (english and tree together, with an explanation or one the server writes; earlier versions stay) or an earlier one again (restore_version), changes its state (draft is off; observe; active), whose mail it runs over (evaluation_scope, with scope_selection when selected) or its saved expectations (each saved version and new set is judged in expectations_check). Anyone but its author who sees it may only disable it (state draft), and while it is shared only if they manage members from the dashboard. Without evaluation_scope the scope stays; a scope change saves a new version with the same conditions, and what was granted stays. A shared rule keeps its scope; a kind never changes. A saved version takes effect at once (an active rule stays active); affects counts what it reaches. Send if_version, the current_version you read, so a write never replaces a version saved since, or if_revision to refuse it after any update. Without if_expectations_pass a version is saved even when its expectations_check fails. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": true,
     "method": "PATCH",
     "operationId": "updateEmailRule",
@@ -23376,6 +23591,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "minLength": 1,
           "maxLength": 64
         },
+        "breadth": {
+          "description": "Ignored (the compile answer's breadth)."
+        },
         "evaluation_scope": {
           "type": "string",
           "enum": [
@@ -23413,7 +23631,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "description": "For a selected rule: inboxes, and domains (each address at them the author reads); each one you can read."
         },
         "if_version": {
-          "description": "The current_version you read. If the rule's now differs, nothing changes: 409 email_rule_conflict, details.reason version_moved and details.current_version. Send it with a new version so a concurrent edit is never replaced unseen. It guards versions only: a change to expectations alone saves none.",
+          "description": "The current_version you read: if it has moved, nothing is saved (409 email_rule_conflict, version_moved). It guards versions only; if_revision guards every update.",
           "type": "integer",
           "minimum": 1
         },
@@ -23442,6 +23660,22 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "additionalProperties": false,
           "description": "Replaces its saved expectations (author only); null removes them."
+        },
+        "if_revision": {
+          "description": "The revision you read: if the rule was updated since, nothing is saved (409 email_rule_conflict, revision_moved).",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "if_expectations_pass": {
+          "description": "true: judge the rule as this write leaves it (new tree, restored version, new scope, or the version it activates) against the expectations it leaves, as POST /email-rules/test would, before saving; it can take as long as a test. Failed: 409 expectations_failed; undecided: 409 expectations_undecided (both with details.expectations_check); none to judge: 400 no_expectations. Refused writes save nothing; a pass saves unless the rule moved meanwhile (409 email_rule_conflict). Only writes that save a version or activate the rule are judged.",
+          "type": "boolean"
+        },
+        "restore_version": {
+          "description": "Save version n again as the next version (author only): its english, tree, explanation, assumptions, warnings and compiled_by. A version carries no scope: the rule keeps its own unless evaluation_scope is sent. 404 version_not_found; 400 already_current or version_not_renderable. Not with a version's own fields.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
         }
       },
       "additionalProperties": false
@@ -23517,9 +23751,42 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ],
           "exclusiveMinimum": 0
         },
+        "revision": {
+          "description": "Moves on by one with every update. Send it as if_revision.",
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
         "author_user_id": {
           "type": "string",
           "format": "uuid"
+        },
+        "author": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "description": "Their name; null unless you can list members or this is you, and when they have none set.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "email": {
+              "description": "Sign-in email; null unless you can list member emails or this is you.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "user_id",
+            "name",
+            "email"
+          ]
         },
         "is_author": {
           "type": "boolean",
@@ -23534,6 +23801,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "format": "date-time"
         },
         "current": {
+          "description": "Its current version: its text (english, tree, explanation, assumptions, warnings) and who compiled it. current_version is its number. GET /email-rules lists rules without it.",
           "anyOf": [
             {
               "type": "object",
@@ -23680,7 +23948,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "expectations_check": {
-          "description": "After a write that saved a version or changed its expectations, if it has some: them, judged on that version from stored classifications without asking its questions. Undecided: one that needs answers not yet kept for that version, is unclassified, skipped or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed). Test by rule_id for the rest.",
+          "description": "After a write that saved a version or changed its expectations, if it has some: them, judged on that version from stored classifications without asking its questions. Undecided: one that needs answers not yet kept for that version, is unclassified, skipped or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed). Test by rule_id for the rest. With if_expectations_pass, the judgment made before the save, which passed.",
           "type": "object",
           "properties": {
             "version": {
@@ -23714,6 +23982,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "string",
                 "format": "uuid"
               }
+            },
+            "note": {
+              "description": "On an update that saved a version that did not pass: that it was saved anyway, is current, and whether it is live.",
+              "type": "string"
             }
           },
           "required": [
@@ -23721,6 +23993,46 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "passed",
             "failed",
             "undecided"
+          ]
+        },
+        "restored_from": {
+          "description": "When this write saved an earlier version again (restore_version): which, and that the scope is not part of a version.",
+          "type": "object",
+          "properties": {
+            "version": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "note": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "version",
+            "note"
+          ]
+        },
+        "affects": {
+          "description": "After an update that saved a version: API keys listing the rule, the webhooks they own, and shares this write ended. The rule keeps its state. Absent if not read.",
+          "type": "object",
+          "properties": {
+            "keys": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "endpoints": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "shares_ended": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "keys",
+            "endpoints",
+            "shares_ended"
           ]
         }
       },
@@ -59382,14 +59694,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "description": "Whether this is the latest attempt of its delivery: the one recorded last, where a record of no attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A retry is recorded as a new attempt with its own id and attempt_count (not always higher than the one before), so an earlier attempt never changes: follow the latest one, or read attempts on any of them."
         },
         "retry_scheduled": {
-          "description": "Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. Null on every attempt of a delivery retried or settled on a schedule of its own, which this does not report: a held one (its release settles it, including the attempts it makes itself), a pull attempt, a rule-granted one, and a sent email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the message, reads false) and has not received the email by another delivery: null while a delivery pass for the email is running (whether another follows is decided when it ends), true when the email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no automatic retry of the email's delivery will try it again, which does not mean nothing else ever will.",
+          "description": "Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. A rule-granted delivery is retried on a schedule of its own, to the same endpoint, deciding it afresh: on its latest attempt true while another attempt is to come (the delivery's next_attempt_at says when); null while an attempt is under way (read it again shortly), while it waits on an owner who cannot receive mail or on a held endpoint (checked again hourly, and sent once that clears), when it is past its 7-day limit, or when that could not be read just now; and false otherwise, including once the endpoint is off or already has the email. Null on every attempt of a delivery retried or settled on a schedule of its own that this does not report: a held one (its release settles it, including the attempts it makes itself), a pull attempt, and a sent email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the message, reads false) and has not received the email by another delivery: null while a delivery pass for the email is running (whether another follows is decided when it ends), true when the email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no automatic retry of the email's delivery will try it again, which does not mean nothing else ever will.",
           "type": [
             "boolean",
             "null"
           ]
         },
         "next_attempt_at": {
-          "description": "When the next automatic retry of this delivery is due. Not reported: always null. Whether one is coming is retry_scheduled.",
+          "description": "When the next automatic attempt of a rule-granted delivery is due: set on its latest attempt while retry_scheduled is true. The attempt runs at the first retry pass at or after this time (one runs every few minutes), so a time already past means it is due now. Null otherwise, and on every delivery that is not rule-granted, whose retries are passes for the email with no time reported (whether one is coming is retry_scheduled).",
           "type": [
             "string",
             "null"
@@ -59449,7 +59761,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ]
               },
               "retry_scheduled": {
-                "description": "Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. Null on every attempt of a delivery retried or settled on a schedule of its own, which this does not report: a held one (its release settles it, including the attempts it makes itself), a pull attempt, a rule-granted one, and a sent email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the message, reads false) and has not received the email by another delivery: null while a delivery pass for the email is running (whether another follows is decided when it ends), true when the email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no automatic retry of the email's delivery will try it again, which does not mean nothing else ever will.",
+                "description": "Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. A rule-granted delivery is retried on a schedule of its own, to the same endpoint, deciding it afresh: on its latest attempt true while another attempt is to come (the delivery's next_attempt_at says when); null while an attempt is under way (read it again shortly), while it waits on an owner who cannot receive mail or on a held endpoint (checked again hourly, and sent once that clears), when it is past its 7-day limit, or when that could not be read just now; and false otherwise, including once the endpoint is off or already has the email. Null on every attempt of a delivery retried or settled on a schedule of its own that this does not report: a held one (its release settles it, including the attempts it makes itself), a pull attempt, and a sent email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the message, reads false) and has not received the email by another delivery: null while a delivery pass for the email is running (whether another follows is decided when it ends), true when the email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no automatic retry of the email's delivery will try it again, which does not mean nothing else ever will.",
                 "type": [
                   "boolean",
                   "null"
@@ -59718,7 +60030,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "boolean",
               "null"
             ],
-            "description": "Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. Null on every attempt of a delivery retried or settled on a schedule of its own, which this does not report: a held one (its release settles it, including the attempts it makes itself), a pull attempt, a rule-granted one, and a sent email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the message, reads false) and has not received the email by another delivery: null while a delivery pass for the email is running (whether another follows is decided when it ends), true when the email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no automatic retry of the email's delivery will try it again, which does not mean nothing else ever will."
+            "description": "Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. A rule-granted delivery is retried on a schedule of its own, to the same endpoint, deciding it afresh: on its latest attempt true while another attempt is to come (the delivery's next_attempt_at says when); null while an attempt is under way (read it again shortly), while it waits on an owner who cannot receive mail or on a held endpoint (checked again hourly, and sent once that clears), when it is past its 7-day limit, or when that could not be read just now; and false otherwise, including once the endpoint is off or already has the email. Null on every attempt of a delivery retried or settled on a schedule of its own that this does not report: a held one (its release settles it, including the attempts it makes itself), a pull attempt, and a sent email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the message, reads false) and has not received the email by another delivery: null while a delivery pass for the email is running (whether another follows is decided when it ends), true when the email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no automatic retry of the email's delivery will try it again, which does not mean nothing else ever will."
           },
           "next_attempt_at": {
             "type": [
@@ -59726,7 +60038,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "null"
             ],
             "format": "date-time",
-            "description": "When the next automatic retry of this delivery is due. Not reported: always null. Whether one is coming is retry_scheduled."
+            "description": "When the next automatic attempt of a rule-granted delivery is due: set on its latest attempt while retry_scheduled is true. The attempt runs at the first retry pass at or after this time (one runs every few minutes), so a time already past means it is due now. Null otherwise, and on every delivery that is not rule-granted, whose retries are passes for the email with no time reported (whether one is coming is retry_scheduled)."
           }
         },
         "required": [

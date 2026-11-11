@@ -661,6 +661,29 @@ date-time is kept as null and sorts last. A sync stops with an error after
     `if_version`: a stale version is refused with `409` and
     `details.reason` `version_moved`.
   - `getEmailRule` carries `expectations`.
+  - A rule carries `revision`, which moves on with every update, and
+    `author` (`EmailRuleAuthor`: `user_id`, and `name` and `email` when you
+    may see them).
+  - `compileEmailRule` answers `breadth` (`EmailRuleBreadth`: of your
+    recent emails, how many were `checked` and how many the conditions
+    `matched`), null when not counted in full. The create, update, request
+    and accept bodies take it back and ignore it.
+  - `updateEmailRule` takes `if_revision`, refused with `409`
+    `email_rule_conflict`, `details.reason` `revision_moved` and
+    `details.current_revision` when the rule was updated since.
+  - `updateEmailRule` takes `if_expectations_pass`: it judges the rule as
+    the write would leave it against its expectations before saving, and
+    refuses with `409` `expectations_failed` or `expectations_undecided`
+    (with `details.expectations_check`) or `400` `no_expectations`, saving
+    nothing. Only a write that saves a version or turns the rule active is
+    judged.
+  - `updateEmailRule` takes `restore_version`, which saves an earlier
+    version again as the next one; its answer then carries `restored_from`.
+  - After a write that saved a version, the `updateEmailRule` answer
+    carries `affects` (`keys`, `endpoints`, `shares_ended`), and
+    `expectations_check.note` when the saved version did not pass.
+  - An `email_rule_conflict` can also have `details.reason`
+    `expectations_moved` or `rule_changed`.
   - `testEmailRule` takes `expect` and answers with `expectations`,
     `scope_warnings` and `summary`. Its results carry `values` and
     `question_answers_source`, and `testEmailRuleOnSample` answers with
@@ -796,11 +819,17 @@ date-time is kept as null and sorts last. A sync stops with an error after
 - `listDeliveries` and `getDelivery`, and each of `getDelivery`'s
   `attempts`, carry `retry_scheduled`: true when the email has another
   automatic delivery pass to come, false when no automatic retry will try it
-  again, and null while a delivery pass for the email is running now. It is
-  also null on every attempt of a delivery that is retried or settled on a
-  schedule of its own: a held one, a pull attempt, a rule-granted one, and a
-  sent email's or other event's delivery. Null is not false: in Go it is a
-  `NilBool` and in Python `bool | None`. `next_attempt_at` stays null.
+  again, and null while a delivery pass for the email is running now. A
+  rule-granted delivery, retried on a schedule of its own, reports it on its
+  latest attempt: true while another attempt is to come, with
+  `next_attempt_at` saying when (at the first retry pass at or after it);
+  null while an attempt is under way, while it waits on an owner who cannot
+  receive mail or on a held endpoint, past its 7-day limit, or when that
+  could not be read; and false otherwise. It is null on every attempt of a
+  held delivery, a pull attempt, and a sent email's or other event's
+  delivery. Null is not false: in Go it is a `NilBool` and in Python
+  `bool | None`. `next_attempt_at` is null on every delivery that is not
+  rule-granted.
 
 #### Node SDK
 

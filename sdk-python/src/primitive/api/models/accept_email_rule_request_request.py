@@ -37,6 +37,7 @@ class AcceptEmailRuleRequestRequest:
                 returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
             compiled_by (str | Unset): Who produced the tree (not verified): the compile response's compiled_by, or member
                 (the default) for a tree you wrote or edited.
+            breadth (Any | Unset): Ignored (the compile answer's breadth).
      """
 
     name: str | Unset = UNSET
@@ -46,6 +47,7 @@ class AcceptEmailRuleRequestRequest:
     assumptions: list[str] | Unset = UNSET
     warnings: list[str] | Unset = UNSET
     compiled_by: str | Unset = UNSET
+    breadth: Any | Unset = UNSET
 
 
 
@@ -77,6 +79,8 @@ class AcceptEmailRuleRequestRequest:
 
         compiled_by = self.compiled_by
 
+        breadth = self.breadth
+
 
         field_dict: dict[str, Any] = {}
 
@@ -96,6 +100,8 @@ class AcceptEmailRuleRequestRequest:
             field_dict["warnings"] = warnings
         if compiled_by is not UNSET:
             field_dict["compiled_by"] = compiled_by
+        if breadth is not UNSET:
+            field_dict["breadth"] = breadth
 
         return field_dict
 
@@ -129,6 +135,8 @@ class AcceptEmailRuleRequestRequest:
 
         compiled_by = d.pop("compiled_by", UNSET)
 
+        breadth = d.pop("breadth", UNSET)
+
         accept_email_rule_request_request = cls(
             name=name,
             english=english,
@@ -137,6 +145,7 @@ class AcceptEmailRuleRequestRequest:
             assumptions=assumptions,
             warnings=warnings,
             compiled_by=compiled_by,
+            breadth=breadth,
         )
 
         return accept_email_rule_request_request

@@ -106,7 +106,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'ownership_proof_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'access_mode_unavailable' | 'agent_account_managed_domain_only' | 'agent_changed' | 'agent_limit' | 'agent_misconfigured' | 'agent_work_agreement_replay_conflict' | 'agent_work_deadline_not_future' | 'agent_work_inactive' | 'agent_work_not_found' | 'agent_work_replay_conflict' | 'agent_work_version_conflict' | 'already_claimed' | 'already_member' | 'archive_busy' | 'archive_invalid' | 'archive_limit_exceeded' | 'archive_unsafe_path' | 'archive_unsupported' | 'attachment_name_ambiguous' | 'attachment_not_archive' | 'authorization_unavailable' | 'bad_request' | 'body_not_supported' | 'build_failed' | 'builder_unavailable' | 'builtin_role' | 'chunk_too_large' | 'chunks_missing' | 'claim_failed' | 'claim_not_pending' | 'cleanup_incomplete' | 'cli_access_refused' | 'code_expired' | 'confirmation_required' | 'connection_already_claimed' | 'connection_cleanup_pending' | 'connection_create_request_conflict' | 'connection_owner_address_required' | 'connection_removed' | 'connection_revoked' | 'contact_request_invalid' | 'contact_request_not_ready' | 'contact_request_unauthenticated' | 'contact_request_unavailable' | 'cursor_expired' | 'delete_failed' | 'delivery_held' | 'delivery_unavailable' | 'deploy_failed' | 'deploy_outcome_unknown' | 'direct_delivery_failed' | 'direct_delivery_unavailable' | 'directory_limit' | 'dns_publication_failed' | 'dns_publication_pending' | 'dns_verification_failed' | 'download_token_expired' | 'download_token_invalid' | 'email_admission_unavailable' | 'email_in_use' | 'email_rule_author_only' | 'email_rule_author_unresolvable' | 'email_rule_compiler_unavailable' | 'email_rule_conflict' | 'email_rule_not_compiled' | 'email_rule_request_limit' | 'email_rule_request_not_pending' | 'email_rule_request_not_withdrawn' | 'email_rule_request_party_left' | 'email_rule_request_proposer_only' | 'email_rule_request_target_only' | 'email_rule_scope_locked' | 'email_rule_scope_not_readable' | 'email_rule_share_ended' | 'email_rule_share_limit' | 'embedding_provider_unavailable' | 'entitlement' | 'expired' | 'feature_not_enabled' | 'fresh_send_not_authorized' | 'function_cannot_receive_mail' | 'function_delivery_refused' | 'function_effect_email_mismatch' | 'function_effect_mismatch' | 'function_forked' | 'function_github_linked' | 'function_key_missing' | 'function_key_runtime_only' | 'function_not_deployed' | 'function_scope_forbidden' | 'function_signing_secret_missing' | 'function_suspended' | 'github_binding_owner_changed' | 'github_binding_paused' | 'grant_forbidden' | 'grant_not_available' | 'hash_mismatch' | 'hipaa_mode' | 'hipaa_mode_check_unavailable' | 'hipaa_mode_external_send_blocked' | 'host_key_limit' | 'idempotency_conflict' | 'idempotency_key_invalid' | 'invalid_code' | 'invalid_cursor' | 'invalid_email' | 'invalid_payload_reference' | 'invalid_request' | 'invalid_signature' | 'invalid_step' | 'invalid_token' | 'invalid_topic_sources' | 'invitation_accepted' | 'invitation_accepting' | 'invitation_address_not_allowed' | 'invitation_changed' | 'invitation_pending' | 'invitation_sending' | 'invitation_unconfirmed' | 'invitations_pending' | 'ip_not_allowed' | 'keep_refused' | 'key_change_superseded' | 'key_recently_created' | 'last_owner' | 'latest_message_mismatch' | 'latest_message_thread_unresolved' | 'load_test_recipient_not_allowed' | 'mail_relay_unavailable' | 'mail_routing_conflict' | 'mail_topic_edit_conflict' | 'mail_topic_generation_conflict' | 'mailbox_not_claimable' | 'mailbox_not_found' | 'mailbox_shared_with_others' | 'managed_build_failed' | 'managed_domain' | 'member_address_domain_unavailable' | 'member_address_history_confirmation_required' | 'member_address_immutable' | 'member_address_reserved' | 'member_address_unavailable' | 'member_changed' | 'message_not_found' | 'name_taken' | 'network_member_excluded' | 'network_member_not_found' | 'network_peer_not_found' | 'network_view_denied' | 'no_code' | 'no_endpoint' | 'no_mail_read' | 'not_a_template_install' | 'not_available' | 'not_claimable' | 'not_held' | 'not_pending' | 'object_suspended' | 'onboarding_key_in_use' | 'outbound_edge_rejected' | 'outbound_email_limit_exceeded' | 'outbound_relay_timeout' | 'outbound_relay_unavailable' | 'outside_key_scope' | 'path_invalid' | 'payload_too_large' | 'pending_owner_confirmation' | 'plan_required' | 'policy_forbidden' | 'presence_admission_busy' | 'presence_idempotency_conflict' | 'presence_probe_stale' | 'pro_plan_required' | 'project_changed' | 'pull_subscription_requires_agent_connection' | 'query_invalid' | 'recipient_changed' | 'recipient_suppressed' | 'redeploy_failed' | 'removal_failed' | 'removal_timeout' | 'request_expired' | 'resend_limit_exceeded' | 'resend_too_soon' | 'role_assigned' | 'role_assignment_unavailable' | 'role_key_taken' | 'rotate_instead' | 'rotation_in_progress' | 'rotation_incomplete' | 'rotation_refused' | 'rotation_unconfirmed' | 'runtime_grant_unavailable' | 'schedule_allowlist_not_provided' | 'schedule_sender_collision' | 'schedule_wake_disabled' | 'scheduled_at_required' | 'scheduled_payload_invalid' | 'search_unavailable' | 'semantic_search_not_enabled' | 'send_failed' | 'sender_not_authorized' | 'sent_email_tail_unavailable' | 'sent_mail_search_unavailable' | 'shopping_binding_conflict' | 'shopping_decision_conflict' | 'shopping_identity_conflict' | 'shopping_not_found' | 'shopping_owner_mail_required' | 'shopping_package_not_found' | 'shopping_proposal_expired' | 'shopping_replay_conflict' | 'shopping_source_unavailable' | 'shopping_too_many_shipments' | 'shopping_tracking_invalid' | 'shopping_version_conflict' | 'shopping_wake_unavailable' | 'shredded' | 'sign_in_email_change_required' | 'signal_not_allowed' | 'signal_parent_not_ready' | 'signal_sender_unauthenticated' | 'signing_secret_unavailable' | 'signup_failed' | 'standing_owner_revoked' | 'step_up_invalid' | 'step_up_not_accepted' | 'step_up_refused' | 'step_up_required' | 'stop_changed' | 'storage_error' | 'storage_limit_exceeded' | 'suspension_undecided' | 'template_role' | 'template_unavailable' | 'template_update_failed' | 'terms_not_accepted' | 'thread_busy' | 'too_many_attempts' | 'too_many_concurrent_builds' | 'too_many_resends' | 'topic_edit_too_large' | 'topic_generation_too_large' | 'unavailable' | 'unknown_chunk' | 'update_needs_input' | 'upstream_unavailable' | 'usage_limit_exceeded';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'ownership_proof_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'access_mode_unavailable' | 'agent_account_managed_domain_only' | 'agent_changed' | 'agent_limit' | 'agent_misconfigured' | 'agent_work_agreement_replay_conflict' | 'agent_work_deadline_not_future' | 'agent_work_inactive' | 'agent_work_not_found' | 'agent_work_replay_conflict' | 'agent_work_version_conflict' | 'already_claimed' | 'already_member' | 'archive_busy' | 'archive_invalid' | 'archive_limit_exceeded' | 'archive_unsafe_path' | 'archive_unsupported' | 'attachment_name_ambiguous' | 'attachment_not_archive' | 'authorization_unavailable' | 'bad_request' | 'body_not_supported' | 'build_failed' | 'builder_unavailable' | 'builtin_role' | 'chunk_too_large' | 'chunks_missing' | 'claim_failed' | 'claim_not_pending' | 'cleanup_incomplete' | 'cli_access_refused' | 'code_expired' | 'confirmation_required' | 'connection_already_claimed' | 'connection_cleanup_pending' | 'connection_create_request_conflict' | 'connection_owner_address_required' | 'connection_removed' | 'connection_revoked' | 'contact_request_invalid' | 'contact_request_not_ready' | 'contact_request_unauthenticated' | 'contact_request_unavailable' | 'cursor_expired' | 'delete_failed' | 'delivery_held' | 'delivery_unavailable' | 'deploy_failed' | 'deploy_outcome_unknown' | 'direct_delivery_failed' | 'direct_delivery_unavailable' | 'directory_limit' | 'dns_publication_failed' | 'dns_publication_pending' | 'dns_verification_failed' | 'download_token_expired' | 'download_token_invalid' | 'email_admission_unavailable' | 'email_in_use' | 'email_rule_author_only' | 'email_rule_author_unresolvable' | 'email_rule_compiler_unavailable' | 'email_rule_conflict' | 'email_rule_not_compiled' | 'email_rule_request_limit' | 'email_rule_request_not_pending' | 'email_rule_request_not_withdrawn' | 'email_rule_request_party_left' | 'email_rule_request_proposer_only' | 'email_rule_request_target_only' | 'email_rule_scope_locked' | 'email_rule_scope_not_readable' | 'email_rule_share_ended' | 'email_rule_share_limit' | 'embedding_provider_unavailable' | 'entitlement' | 'expectations_failed' | 'expectations_undecided' | 'expired' | 'feature_not_enabled' | 'fresh_send_not_authorized' | 'function_cannot_receive_mail' | 'function_delivery_refused' | 'function_effect_email_mismatch' | 'function_effect_mismatch' | 'function_forked' | 'function_github_linked' | 'function_key_missing' | 'function_key_runtime_only' | 'function_not_deployed' | 'function_scope_forbidden' | 'function_signing_secret_missing' | 'function_suspended' | 'github_binding_owner_changed' | 'github_binding_paused' | 'grant_forbidden' | 'grant_not_available' | 'hash_mismatch' | 'hipaa_mode' | 'hipaa_mode_check_unavailable' | 'hipaa_mode_external_send_blocked' | 'host_key_limit' | 'idempotency_conflict' | 'idempotency_key_invalid' | 'invalid_code' | 'invalid_cursor' | 'invalid_email' | 'invalid_payload_reference' | 'invalid_request' | 'invalid_signature' | 'invalid_step' | 'invalid_token' | 'invalid_topic_sources' | 'invitation_accepted' | 'invitation_accepting' | 'invitation_address_not_allowed' | 'invitation_changed' | 'invitation_pending' | 'invitation_sending' | 'invitation_unconfirmed' | 'invitations_pending' | 'ip_not_allowed' | 'keep_refused' | 'key_change_superseded' | 'key_recently_created' | 'last_owner' | 'latest_message_mismatch' | 'latest_message_thread_unresolved' | 'load_test_recipient_not_allowed' | 'mail_relay_unavailable' | 'mail_routing_conflict' | 'mail_topic_edit_conflict' | 'mail_topic_generation_conflict' | 'mailbox_not_claimable' | 'mailbox_not_found' | 'mailbox_shared_with_others' | 'managed_build_failed' | 'managed_domain' | 'member_address_domain_unavailable' | 'member_address_history_confirmation_required' | 'member_address_immutable' | 'member_address_reserved' | 'member_address_unavailable' | 'member_changed' | 'message_not_found' | 'name_taken' | 'network_member_excluded' | 'network_member_not_found' | 'network_peer_not_found' | 'network_view_denied' | 'no_code' | 'no_endpoint' | 'no_expectations' | 'no_mail_read' | 'not_a_template_install' | 'not_available' | 'not_claimable' | 'not_held' | 'not_pending' | 'object_suspended' | 'onboarding_key_in_use' | 'outbound_edge_rejected' | 'outbound_email_limit_exceeded' | 'outbound_relay_timeout' | 'outbound_relay_unavailable' | 'outside_key_scope' | 'path_invalid' | 'payload_too_large' | 'pending_owner_confirmation' | 'plan_required' | 'policy_forbidden' | 'presence_admission_busy' | 'presence_idempotency_conflict' | 'presence_probe_stale' | 'pro_plan_required' | 'project_changed' | 'pull_subscription_requires_agent_connection' | 'query_invalid' | 'recipient_changed' | 'recipient_suppressed' | 'redeploy_failed' | 'removal_failed' | 'removal_timeout' | 'request_expired' | 'resend_limit_exceeded' | 'resend_too_soon' | 'role_assigned' | 'role_assignment_unavailable' | 'role_key_taken' | 'rotate_instead' | 'rotation_in_progress' | 'rotation_incomplete' | 'rotation_refused' | 'rotation_unconfirmed' | 'runtime_grant_unavailable' | 'schedule_allowlist_not_provided' | 'schedule_sender_collision' | 'schedule_wake_disabled' | 'scheduled_at_required' | 'scheduled_payload_invalid' | 'search_unavailable' | 'semantic_search_not_enabled' | 'send_failed' | 'sender_not_authorized' | 'sent_email_tail_unavailable' | 'sent_mail_search_unavailable' | 'shopping_binding_conflict' | 'shopping_decision_conflict' | 'shopping_identity_conflict' | 'shopping_not_found' | 'shopping_owner_mail_required' | 'shopping_package_not_found' | 'shopping_proposal_expired' | 'shopping_replay_conflict' | 'shopping_source_unavailable' | 'shopping_too_many_shipments' | 'shopping_tracking_invalid' | 'shopping_version_conflict' | 'shopping_wake_unavailable' | 'shredded' | 'sign_in_email_change_required' | 'signal_not_allowed' | 'signal_parent_not_ready' | 'signal_sender_unauthenticated' | 'signing_secret_unavailable' | 'signup_failed' | 'standing_owner_revoked' | 'step_up_invalid' | 'step_up_not_accepted' | 'step_up_refused' | 'step_up_required' | 'stop_changed' | 'storage_error' | 'storage_limit_exceeded' | 'suspension_undecided' | 'template_role' | 'template_unavailable' | 'template_update_failed' | 'terms_not_accepted' | 'thread_busy' | 'too_many_attempts' | 'too_many_concurrent_builds' | 'too_many_resends' | 'topic_edit_too_large' | 'topic_generation_too_large' | 'unavailable' | 'unknown_chunk' | 'update_needs_input' | 'upstream_unavailable' | 'usage_limit_exceeded';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -4722,11 +4722,11 @@ export type DeliverySummary = {
      */
     latest_attempt: boolean;
     /**
-     * Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. Null on every attempt of a delivery retried or settled on a schedule of its own, which this does not report: a held one (its release settles it, including the attempts it makes itself), a pull attempt, a rule-granted one, and a sent email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the message, reads false) and has not received the email by another delivery: null while a delivery pass for the email is running (whether another follows is decided when it ends), true when the email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no automatic retry of the email's delivery will try it again, which does not mean nothing else ever will.
+     * Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. A rule-granted delivery is retried on a schedule of its own, to the same endpoint, deciding it afresh: on its latest attempt true while another attempt is to come (the delivery's next_attempt_at says when); null while an attempt is under way (read it again shortly), while it waits on an owner who cannot receive mail or on a held endpoint (checked again hourly, and sent once that clears), when it is past its 7-day limit, or when that could not be read just now; and false otherwise, including once the endpoint is off or already has the email. Null on every attempt of a delivery retried or settled on a schedule of its own that this does not report: a held one (its release settles it, including the attempts it makes itself), a pull attempt, and a sent email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the message, reads false) and has not received the email by another delivery: null while a delivery pass for the email is running (whether another follows is decided when it ends), true when the email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no automatic retry of the email's delivery will try it again, which does not mean nothing else ever will.
      */
     retry_scheduled: boolean | null;
     /**
-     * When the next automatic retry of this delivery is due. Not reported: always null. Whether one is coming is retry_scheduled.
+     * When the next automatic attempt of a rule-granted delivery is due: set on its latest attempt while retry_scheduled is true. The attempt runs at the first retry pass at or after this time (one runs every few minutes), so a time already past means it is due now. Null otherwise, and on every delivery that is not rule-granted, whose retries are passes for the email with no time reported (whether one is coming is retry_scheduled).
      */
     next_attempt_at: string | null;
 };
@@ -6228,6 +6228,17 @@ export type EmailRuleTree = {
     questions: Array<string>;
 };
 
+export type EmailRuleBreadth = {
+    /**
+     * Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read.
+     */
+    checked: number;
+    /**
+     * Of those, how many they hold for (for a do-not-share rule, one they cannot decide counts).
+     */
+    matched: number;
+};
+
 export type CompileEmailRuleRequest = {
     /**
      * What the rule should match, in plain English.
@@ -6246,7 +6257,7 @@ export type CompileEmailRuleRequest = {
 export type CompileEmailRuleResult = {
     tree: EmailRuleTree;
     /**
-     * What the rule matches, in plain English.
+     * What the rule matches, in plain English: only which emails, not what it grants or shares, which follows from its state, its scope and the keys, webhooks and people it reaches. The compiler leaves out a sentence that plainly says what the rule hands over.
      */
     explanation: string;
     /**
@@ -6261,6 +6272,10 @@ export type CompileEmailRuleResult = {
      * An opaque name for the version of the rule compiler that produced the rule, such as rule-compiler-v1. Send it back as compiled_by when you save the rule.
      */
     compiled_by: string;
+    /**
+     * How many of your recent emails its conditions hold for, counted over your own mailboxes whatever scope you save it with, warning or not. Null when not counted in full: a rule with questions, headers-only access, no test of it possible as you, or a count that failed or ran out of time. Writes ignore it, so a compile answer (without include_sql) can be sent back unchanged.
+     */
+    breadth?: EmailRuleBreadth | null;
     /**
      * Present only when include_sql was true.
      */
@@ -6655,20 +6670,28 @@ export type EmailRuleWritten = {
      */
     scope_selection?: EmailRuleScopeNames | null;
     current_version: number | null;
+    /**
+     * Moves on by one with every update. Send it as if_revision.
+     */
+    revision?: number;
     author_user_id: string;
+    author?: EmailRuleAuthor;
     /**
      * Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members).
      */
     is_author: boolean;
     created_at: string;
     updated_at: string;
+    /**
+     * Its current version: its text (english, tree, explanation, assumptions, warnings) and who compiled it. current_version is its number. GET /email-rules lists rules without it.
+     */
     current: EmailRuleVersion | null;
     /**
      * Names in scope_selection that match nothing this organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.
      */
     scope_warnings?: Array<EmailRuleScopeWarning>;
     /**
-     * After a write that saved a version or changed its expectations, if it has some: them, judged on that version from stored classifications without asking its questions. Undecided: one that needs answers not yet kept for that version, is unclassified, skipped or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed). Test by rule_id for the rest.
+     * After a write that saved a version or changed its expectations, if it has some: them, judged on that version from stored classifications without asking its questions. Undecided: one that needs answers not yet kept for that version, is unclassified, skipped or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed). Test by rule_id for the rest. With if_expectations_pass, the judgment made before the save, which passed.
      */
     expectations_check?: {
         version: number | null;
@@ -6682,12 +6705,43 @@ export type EmailRuleWritten = {
         decided?: boolean;
         failed: Array<string>;
         undecided: Array<string>;
+        /**
+         * On an update that saved a version that did not pass: that it was saved anyway, is current, and whether it is live.
+         */
+        note?: string;
+    };
+    /**
+     * When this write saved an earlier version again (restore_version): which, and that the scope is not part of a version.
+     */
+    restored_from?: {
+        version: number;
+        note: string;
+    };
+    /**
+     * After an update that saved a version: API keys listing the rule, the webhooks they own, and shares this write ended. The rule keeps its state. Absent if not read.
+     */
+    affects?: {
+        keys: number;
+        endpoints: number;
+        shares_ended: number;
     };
 };
 
 export type EmailRuleScopeNames = {
     addresses: Array<string>;
     domains: Array<string>;
+};
+
+export type EmailRuleAuthor = {
+    user_id: string;
+    /**
+     * Their name; null unless you can list members or this is you, and when they have none set.
+     */
+    name: string | null;
+    /**
+     * Sign-in email; null unless you can list member emails or this is you.
+     */
+    email: string | null;
 };
 
 export type EmailRuleVersion = {
@@ -6764,6 +6818,10 @@ export type CreateEmailRuleRequest = {
      * Who produced the tree (not verified): the compile response's compiled_by, or member (the default) for a tree you wrote or edited.
      */
     compiled_by?: string;
+    /**
+     * Ignored (the compile answer's breadth).
+     */
+    breadth?: unknown;
 };
 
 export type CreateEmailRuleResult = EmailRuleWritten;
@@ -6785,7 +6843,12 @@ export type EmailRule = {
      */
     scope_selection?: EmailRuleScopeNames | null;
     current_version: number | null;
+    /**
+     * Moves on by one with every update. Send it as if_revision.
+     */
+    revision?: number;
     author_user_id: string;
+    author?: EmailRuleAuthor;
     /**
      * Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members).
      */
@@ -6827,13 +6890,21 @@ export type EmailRuleRead = {
      */
     scope_selection?: EmailRuleScopeNames | null;
     current_version: number | null;
+    /**
+     * Moves on by one with every update. Send it as if_revision.
+     */
+    revision?: number;
     author_user_id: string;
+    author?: EmailRuleAuthor;
     /**
      * Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members).
      */
     is_author: boolean;
     created_at: string;
     updated_at: string;
+    /**
+     * Its current version: its text (english, tree, explanation, assumptions, warnings) and who compiled it. current_version is its number. GET /email-rules lists rules without it.
+     */
     current: EmailRuleVersion | null;
     /**
      * Its saved expectations, each list by email id.
@@ -6877,12 +6948,16 @@ export type UpdateEmailRuleRequest = {
      */
     compiled_by?: string;
     /**
+     * Ignored (the compile answer's breadth).
+     */
+    breadth?: unknown;
+    /**
      * own_mailboxes: mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names. Left out, the scope stays. A change saves a new version with the same conditions, and is refused while the rule is shared.
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
     scope_selection?: EmailRuleScopeSelection;
     /**
-     * The current_version you read. If the rule's now differs, nothing changes: 409 email_rule_conflict, details.reason version_moved and details.current_version. Send it with a new version so a concurrent edit is never replaced unseen. It guards versions only: a change to expectations alone saves none.
+     * The current_version you read: if it has moved, nothing is saved (409 email_rule_conflict, version_moved). It guards versions only; if_revision guards every update.
      */
     if_version?: number;
     /**
@@ -6892,6 +6967,18 @@ export type UpdateEmailRuleRequest = {
         match?: Array<string>;
         no_match?: Array<string>;
     } | null;
+    /**
+     * The revision you read: if the rule was updated since, nothing is saved (409 email_rule_conflict, revision_moved).
+     */
+    if_revision?: number;
+    /**
+     * true: judge the rule as this write leaves it (new tree, restored version, new scope, or the version it activates) against the expectations it leaves, as POST /email-rules/test would, before saving; it can take as long as a test. Failed: 409 expectations_failed; undecided: 409 expectations_undecided (both with details.expectations_check); none to judge: 400 no_expectations. Refused writes save nothing; a pass saves unless the rule moved meanwhile (409 email_rule_conflict). Only writes that save a version or activate the rule are judged.
+     */
+    if_expectations_pass?: boolean;
+    /**
+     * Save version n again as the next version (author only): its english, tree, explanation, assumptions, warnings and compiled_by. A version carries no scope: the rule keeps its own unless evaluation_scope is sent. 404 version_not_found; 400 already_current or version_not_renderable. Not with a version's own fields.
+     */
+    restore_version?: number;
 };
 
 export type UpdateEmailRuleResult = EmailRuleWritten;
@@ -7220,6 +7307,10 @@ export type CreateEmailRuleRequestRequest = {
      * Who produced the tree (not verified): the compile response's compiled_by, or member (the default) for a tree you wrote or edited.
      */
     compiled_by?: string;
+    /**
+     * Ignored (the compile answer's breadth).
+     */
+    breadth?: unknown;
 };
 
 export type CreateEmailRuleRequestResult = {
@@ -7383,13 +7474,21 @@ export type EmailRuleWithVersion = {
      */
     scope_selection?: EmailRuleScopeNames | null;
     current_version: number | null;
+    /**
+     * Moves on by one with every update. Send it as if_revision.
+     */
+    revision?: number;
     author_user_id: string;
+    author?: EmailRuleAuthor;
     /**
      * Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members).
      */
     is_author: boolean;
     created_at: string;
     updated_at: string;
+    /**
+     * Its current version: its text (english, tree, explanation, assumptions, warnings) and who compiled it. current_version is its number. GET /email-rules lists rules without it.
+     */
     current: EmailRuleVersion | null;
 };
 
@@ -7497,6 +7596,10 @@ export type AcceptEmailRuleRequestRequest = {
      * Who produced the tree (not verified): the compile response's compiled_by, or member (the default) for a tree you wrote or edited.
      */
     compiled_by?: string;
+    /**
+     * Ignored (the compile answer's breadth).
+     */
+    breadth?: unknown;
 };
 
 export type AcceptEmailRuleRequestResult = {
@@ -8378,11 +8481,11 @@ export type GetDeliveryResult = {
      */
     latest_attempt: boolean;
     /**
-     * Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. Null on every attempt of a delivery retried or settled on a schedule of its own, which this does not report: a held one (its release settles it, including the attempts it makes itself), a pull attempt, a rule-granted one, and a sent email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the message, reads false) and has not received the email by another delivery: null while a delivery pass for the email is running (whether another follows is decided when it ends), true when the email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no automatic retry of the email's delivery will try it again, which does not mean nothing else ever will.
+     * Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. A rule-granted delivery is retried on a schedule of its own, to the same endpoint, deciding it afresh: on its latest attempt true while another attempt is to come (the delivery's next_attempt_at says when); null while an attempt is under way (read it again shortly), while it waits on an owner who cannot receive mail or on a held endpoint (checked again hourly, and sent once that clears), when it is past its 7-day limit, or when that could not be read just now; and false otherwise, including once the endpoint is off or already has the email. Null on every attempt of a delivery retried or settled on a schedule of its own that this does not report: a held one (its release settles it, including the attempts it makes itself), a pull attempt, and a sent email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the message, reads false) and has not received the email by another delivery: null while a delivery pass for the email is running (whether another follows is decided when it ends), true when the email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no automatic retry of the email's delivery will try it again, which does not mean nothing else ever will.
      */
     retry_scheduled: boolean | null;
     /**
-     * When the next automatic retry of this delivery is due. Not reported: always null. Whether one is coming is retry_scheduled.
+     * When the next automatic attempt of a rule-granted delivery is due: set on its latest attempt while retry_scheduled is true. The attempt runs at the first retry pass at or after this time (one runs every few minutes), so a time already past means it is due now. Null otherwise, and on every delivery that is not rule-granted, whose retries are passes for the email with no time reported (whether one is coming is retry_scheduled).
      */
     next_attempt_at: string | null;
     /**
@@ -8404,7 +8507,7 @@ export type GetDeliveryResult = {
          */
         response_body: string | null;
         /**
-         * Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. Null on every attempt of a delivery retried or settled on a schedule of its own, which this does not report: a held one (its release settles it, including the attempts it makes itself), a pull attempt, a rule-granted one, and a sent email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the message, reads false) and has not received the email by another delivery: null while a delivery pass for the email is running (whether another follows is decided when it ends), true when the email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no automatic retry of the email's delivery will try it again, which does not mean nothing else ever will.
+         * Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. A rule-granted delivery is retried on a schedule of its own, to the same endpoint, deciding it afresh: on its latest attempt true while another attempt is to come (the delivery's next_attempt_at says when); null while an attempt is under way (read it again shortly), while it waits on an owner who cannot receive mail or on a held endpoint (checked again hourly, and sent once that clears), when it is past its 7-day limit, or when that could not be read just now; and false otherwise, including once the endpoint is off or already has the email. Null on every attempt of a delivery retried or settled on a schedule of its own that this does not report: a held one (its release settles it, including the attempts it makes itself), a pull attempt, and a sent email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the message, reads false) and has not received the email by another delivery: null while a delivery pass for the email is running (whether another follows is decided when it ends), true when the email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no automatic retry of the email's delivery will try it again, which does not mean nothing else ever will.
          */
         retry_scheduled: boolean | null;
     }>;
@@ -20458,7 +20561,7 @@ export type UpdateEmailRuleData = {
 
 export type UpdateEmailRuleErrors = {
     /**
-     * Invalid request parameters
+     * validation_error: invalid body or tree (details.errors), too large (too_large), a version that no longer renders (version_not_renderable), or restore_version names the current version (already_current). no_expectations: if_expectations_pass with no expectations to judge; nothing was saved.
      */
     400: ErrorResponse;
     /**
@@ -20466,15 +20569,15 @@ export type UpdateEmailRuleErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. email_rule_author_only: only the rule's author may make this change. forbidden with details.reason rule_shared: the rule is shared with another member, so only its author, or someone who manages members from the dashboard, can turn it off. email_rule_scope_not_readable: scope_selection names something you cannot read.
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. email_rule_author_only: only the rule's author may make this change. forbidden (rule_shared): the rule is shared, so only its author or a member manager can turn it off. email_rule_scope_not_readable: scope_selection names something you cannot read. grant_forbidden (mail_depth): if_expectations_pass needs content access to mail.
      */
     403: ErrorResponse;
     /**
-     * Resource not found
+     * not_found: no such rule you can see, or restore_version names no version of it (details.reason version_not_found).
      */
     404: ErrorResponse;
     /**
-     * email_rule_conflict: the rule changed while saving, or (details.reason version_moved, with details.current_version) its current version differs from if_version; read it again and retry. email_rule_scope_locked: the rule is shared. email_rule_author_unresolvable: the rule could not run as you over the chosen scope.
+     * email_rule_conflict: the rule changed (details.reason version_moved with current_version, revision_moved with current_revision, expectations_moved or rule_changed); read it again and retry. email_rule_scope_locked: the rule is shared. email_rule_author_unresolvable: the rule could not run as you over the chosen scope. expectations_failed or expectations_undecided (if_expectations_pass): nothing was saved; details carries current_version, state and expectations_check.
      */
     409: ErrorResponse;
     /**

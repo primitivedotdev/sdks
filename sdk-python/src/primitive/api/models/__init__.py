@@ -187,9 +187,11 @@ from .create_email_rule_request_result_status import CreateEmailRuleRequestResul
 from .create_email_rule_request_state import CreateEmailRuleRequestState
 from .create_email_rule_response_201 import CreateEmailRuleResponse201
 from .create_email_rule_result import CreateEmailRuleResult
+from .create_email_rule_result_affects import CreateEmailRuleResultAffects
 from .create_email_rule_result_evaluation_scope import CreateEmailRuleResultEvaluationScope
 from .create_email_rule_result_expectations_check import CreateEmailRuleResultExpectationsCheck
 from .create_email_rule_result_kind import CreateEmailRuleResultKind
+from .create_email_rule_result_restored_from import CreateEmailRuleResultRestoredFrom
 from .create_email_rule_result_state import CreateEmailRuleResultState
 from .create_endpoint_input import CreateEndpointInput
 from .create_endpoint_input_kind import CreateEndpointInputKind
@@ -457,6 +459,8 @@ from .email_readable_parse_status_type_1 import EmailReadableParseStatusType1
 from .email_readable_parse_status_type_2_type_1 import EmailReadableParseStatusType2Type1
 from .email_readable_parse_status_type_3_type_1 import EmailReadableParseStatusType3Type1
 from .email_rule import EmailRule
+from .email_rule_author import EmailRuleAuthor
+from .email_rule_breadth import EmailRuleBreadth
 from .email_rule_evaluation_scope import EmailRuleEvaluationScope
 from .email_rule_kind import EmailRuleKind
 from .email_rule_read import EmailRuleRead
@@ -498,9 +502,11 @@ from .email_rule_with_version_state import EmailRuleWithVersionState
 from .email_rule_withheld_by import EmailRuleWithheldBy
 from .email_rule_withheld_by_reason import EmailRuleWithheldByReason
 from .email_rule_written import EmailRuleWritten
+from .email_rule_written_affects import EmailRuleWrittenAffects
 from .email_rule_written_evaluation_scope import EmailRuleWrittenEvaluationScope
 from .email_rule_written_expectations_check import EmailRuleWrittenExpectationsCheck
 from .email_rule_written_kind import EmailRuleWrittenKind
+from .email_rule_written_restored_from import EmailRuleWrittenRestoredFrom
 from .email_rule_written_state import EmailRuleWrittenState
 from .email_search_facet_bucket import EmailSearchFacetBucket
 from .email_search_facets import EmailSearchFacets
@@ -1657,9 +1663,11 @@ from .update_email_rule_request_expectations_type_0 import UpdateEmailRuleReques
 from .update_email_rule_request_state import UpdateEmailRuleRequestState
 from .update_email_rule_response_200 import UpdateEmailRuleResponse200
 from .update_email_rule_result import UpdateEmailRuleResult
+from .update_email_rule_result_affects import UpdateEmailRuleResultAffects
 from .update_email_rule_result_evaluation_scope import UpdateEmailRuleResultEvaluationScope
 from .update_email_rule_result_expectations_check import UpdateEmailRuleResultExpectationsCheck
 from .update_email_rule_result_kind import UpdateEmailRuleResultKind
+from .update_email_rule_result_restored_from import UpdateEmailRuleResultRestoredFrom
 from .update_email_rule_result_state import UpdateEmailRuleResultState
 from .update_endpoint_input import UpdateEndpointInput
 from .update_endpoint_input_rules import UpdateEndpointInputRules
@@ -1925,9 +1933,11 @@ __all__ = (
     "CreateEmailRuleRequestState",
     "CreateEmailRuleResponse201",
     "CreateEmailRuleResult",
+    "CreateEmailRuleResultAffects",
     "CreateEmailRuleResultEvaluationScope",
     "CreateEmailRuleResultExpectationsCheck",
     "CreateEmailRuleResultKind",
+    "CreateEmailRuleResultRestoredFrom",
     "CreateEmailRuleResultState",
     "CreateEndpointInput",
     "CreateEndpointInputKind",
@@ -2195,6 +2205,8 @@ __all__ = (
     "EmailReadableParseStatusType2Type1",
     "EmailReadableParseStatusType3Type1",
     "EmailRule",
+    "EmailRuleAuthor",
+    "EmailRuleBreadth",
     "EmailRuleEvaluationScope",
     "EmailRuleKind",
     "EmailRuleRead",
@@ -2236,9 +2248,11 @@ __all__ = (
     "EmailRuleWithVersionKind",
     "EmailRuleWithVersionState",
     "EmailRuleWritten",
+    "EmailRuleWrittenAffects",
     "EmailRuleWrittenEvaluationScope",
     "EmailRuleWrittenExpectationsCheck",
     "EmailRuleWrittenKind",
+    "EmailRuleWrittenRestoredFrom",
     "EmailRuleWrittenState",
     "EmailSearchFacetBucket",
     "EmailSearchFacets",
@@ -3398,9 +3412,11 @@ __all__ = (
     "UpdateEmailRuleRequestState",
     "UpdateEmailRuleResponse200",
     "UpdateEmailRuleResult",
+    "UpdateEmailRuleResultAffects",
     "UpdateEmailRuleResultEvaluationScope",
     "UpdateEmailRuleResultExpectationsCheck",
     "UpdateEmailRuleResultKind",
+    "UpdateEmailRuleResultRestoredFrom",
     "UpdateEmailRuleResultState",
     "UpdateEndpointInput",
     "UpdateEndpointInputRules",

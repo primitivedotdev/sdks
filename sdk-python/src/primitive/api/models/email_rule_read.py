@@ -16,6 +16,7 @@ from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
+  from ..models.email_rule_author import EmailRuleAuthor
   from ..models.email_rule_read_expectations import EmailRuleReadExpectations
   from ..models.email_rule_scope_names import EmailRuleScopeNames
   from ..models.email_rule_version import EmailRuleVersion
@@ -41,12 +42,15 @@ class EmailRuleRead:
                 see it may only disable or delete it (while shared, only if they manage members).
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
-            current (EmailRuleVersion | None):
+            current (EmailRuleVersion | None): Its current version: its text (english, tree, explanation, assumptions,
+                warnings) and who compiled it. current_version is its number. GET /email-rules lists rules without it.
             kind (EmailRuleReadKind | Unset): grant: what it matches can be shared. do_not_share: it blocks sharing what it
                 matches. Optional only for an older core-api: every answer carries it.
             evaluation_scope (EmailRuleReadEvaluationScope | Unset): Whose mail it runs over, as stored (GET /email-
                 rules/{id}/scope: what that is now).
             scope_selection (EmailRuleScopeNames | None | Unset): What a selected rule names; null for any other scope.
+            revision (int | Unset): Moves on by one with every update. Send it as if_revision.
+            author (EmailRuleAuthor | Unset):
             expectations (EmailRuleReadExpectations | Unset): Its saved expectations, each list by email id.
      """
 
@@ -62,6 +66,8 @@ class EmailRuleRead:
     kind: EmailRuleReadKind | Unset = UNSET
     evaluation_scope: EmailRuleReadEvaluationScope | Unset = UNSET
     scope_selection: EmailRuleScopeNames | None | Unset = UNSET
+    revision: int | Unset = UNSET
+    author: EmailRuleAuthor | Unset = UNSET
     expectations: EmailRuleReadExpectations | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -70,6 +76,7 @@ class EmailRuleRead:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_rule_author import EmailRuleAuthor # noqa: PLC0415
         from ..models.email_rule_read_expectations import EmailRuleReadExpectations # noqa: PLC0415
         from ..models.email_rule_scope_names import EmailRuleScopeNames # noqa: PLC0415
         from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
@@ -114,6 +121,12 @@ class EmailRuleRead:
         else:
             scope_selection = self.scope_selection
 
+        revision = self.revision
+
+        author: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.author, Unset):
+            author = self.author.to_dict()
+
         expectations: dict[str, Any] | Unset = UNSET
         if not isinstance(self.expectations, Unset):
             expectations = self.expectations.to_dict()
@@ -138,6 +151,10 @@ class EmailRuleRead:
             field_dict["evaluation_scope"] = evaluation_scope
         if scope_selection is not UNSET:
             field_dict["scope_selection"] = scope_selection
+        if revision is not UNSET:
+            field_dict["revision"] = revision
+        if author is not UNSET:
+            field_dict["author"] = author
         if expectations is not UNSET:
             field_dict["expectations"] = expectations
 
@@ -147,6 +164,7 @@ class EmailRuleRead:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_rule_author import EmailRuleAuthor # noqa: PLC0415
         from ..models.email_rule_read_expectations import EmailRuleReadExpectations # noqa: PLC0415
         from ..models.email_rule_scope_names import EmailRuleScopeNames # noqa: PLC0415
         from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
@@ -246,6 +264,18 @@ class EmailRuleRead:
         scope_selection = _parse_scope_selection(d.pop("scope_selection", UNSET))
 
 
+        revision = d.pop("revision", UNSET)
+
+        _author = d.pop("author", UNSET)
+        author: EmailRuleAuthor | Unset
+        if isinstance(_author,  Unset):
+            author = UNSET
+        else:
+            author = EmailRuleAuthor.from_dict(_author)
+
+
+
+
         _expectations = d.pop("expectations", UNSET)
         expectations: EmailRuleReadExpectations | Unset
         if isinstance(_expectations,  Unset):
@@ -269,6 +299,8 @@ class EmailRuleRead:
             kind=kind,
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,
+            revision=revision,
+            author=author,
             expectations=expectations,
         )
 

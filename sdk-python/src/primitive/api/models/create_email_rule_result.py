@@ -16,7 +16,10 @@ from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
+  from ..models.create_email_rule_result_affects import CreateEmailRuleResultAffects
   from ..models.create_email_rule_result_expectations_check import CreateEmailRuleResultExpectationsCheck
+  from ..models.create_email_rule_result_restored_from import CreateEmailRuleResultRestoredFrom
+  from ..models.email_rule_author import EmailRuleAuthor
   from ..models.email_rule_scope_names import EmailRuleScopeNames
   from ..models.email_rule_scope_warning import EmailRuleScopeWarning
   from ..models.email_rule_version import EmailRuleVersion
@@ -42,12 +45,15 @@ class CreateEmailRuleResult:
                 see it may only disable or delete it (while shared, only if they manage members).
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
-            current (EmailRuleVersion | None):
+            current (EmailRuleVersion | None): Its current version: its text (english, tree, explanation, assumptions,
+                warnings) and who compiled it. current_version is its number. GET /email-rules lists rules without it.
             kind (CreateEmailRuleResultKind | Unset): grant: what it matches can be shared. do_not_share: it blocks sharing
                 what it matches. Optional only for an older core-api: every answer carries it.
             evaluation_scope (CreateEmailRuleResultEvaluationScope | Unset): Whose mail it runs over, as stored (GET /email-
                 rules/{id}/scope: what that is now).
             scope_selection (EmailRuleScopeNames | None | Unset): What a selected rule names; null for any other scope.
+            revision (int | Unset): Moves on by one with every update. Send it as if_revision.
+            author (EmailRuleAuthor | Unset):
             scope_warnings (list[EmailRuleScopeWarning] | Unset): Names in scope_selection that match nothing this
                 organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.
             expectations_check (CreateEmailRuleResultExpectationsCheck | Unset): After a write that saved a version or
@@ -55,7 +61,12 @@ class CreateEmailRuleResult:
                 asking its questions. Undecided: one that needs answers not yet kept for that version, is unclassified, skipped
                 or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again,
                 its author cannot be resolved, your access shows headers only, it could not finish in time, or the check
-                failed). Test by rule_id for the rest.
+                failed). Test by rule_id for the rest. With if_expectations_pass, the judgment made before the save, which
+                passed.
+            restored_from (CreateEmailRuleResultRestoredFrom | Unset): When this write saved an earlier version again
+                (restore_version): which, and that the scope is not part of a version.
+            affects (CreateEmailRuleResultAffects | Unset): After an update that saved a version: API keys listing the rule,
+                the webhooks they own, and shares this write ended. The rule keeps its state. Absent if not read.
      """
 
     id: UUID
@@ -70,8 +81,12 @@ class CreateEmailRuleResult:
     kind: CreateEmailRuleResultKind | Unset = UNSET
     evaluation_scope: CreateEmailRuleResultEvaluationScope | Unset = UNSET
     scope_selection: EmailRuleScopeNames | None | Unset = UNSET
+    revision: int | Unset = UNSET
+    author: EmailRuleAuthor | Unset = UNSET
     scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
     expectations_check: CreateEmailRuleResultExpectationsCheck | Unset = UNSET
+    restored_from: CreateEmailRuleResultRestoredFrom | Unset = UNSET
+    affects: CreateEmailRuleResultAffects | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -79,7 +94,10 @@ class CreateEmailRuleResult:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.create_email_rule_result_affects import CreateEmailRuleResultAffects # noqa: PLC0415
         from ..models.create_email_rule_result_expectations_check import CreateEmailRuleResultExpectationsCheck # noqa: PLC0415
+        from ..models.create_email_rule_result_restored_from import CreateEmailRuleResultRestoredFrom # noqa: PLC0415
+        from ..models.email_rule_author import EmailRuleAuthor # noqa: PLC0415
         from ..models.email_rule_scope_names import EmailRuleScopeNames # noqa: PLC0415
         from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
@@ -124,6 +142,12 @@ class CreateEmailRuleResult:
         else:
             scope_selection = self.scope_selection
 
+        revision = self.revision
+
+        author: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.author, Unset):
+            author = self.author.to_dict()
+
         scope_warnings: list[dict[str, Any]] | Unset = UNSET
         if not isinstance(self.scope_warnings, Unset):
             scope_warnings = []
@@ -136,6 +160,14 @@ class CreateEmailRuleResult:
         expectations_check: dict[str, Any] | Unset = UNSET
         if not isinstance(self.expectations_check, Unset):
             expectations_check = self.expectations_check.to_dict()
+
+        restored_from: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.restored_from, Unset):
+            restored_from = self.restored_from.to_dict()
+
+        affects: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.affects, Unset):
+            affects = self.affects.to_dict()
 
 
         field_dict: dict[str, Any] = {}
@@ -157,10 +189,18 @@ class CreateEmailRuleResult:
             field_dict["evaluation_scope"] = evaluation_scope
         if scope_selection is not UNSET:
             field_dict["scope_selection"] = scope_selection
+        if revision is not UNSET:
+            field_dict["revision"] = revision
+        if author is not UNSET:
+            field_dict["author"] = author
         if scope_warnings is not UNSET:
             field_dict["scope_warnings"] = scope_warnings
         if expectations_check is not UNSET:
             field_dict["expectations_check"] = expectations_check
+        if restored_from is not UNSET:
+            field_dict["restored_from"] = restored_from
+        if affects is not UNSET:
+            field_dict["affects"] = affects
 
         return field_dict
 
@@ -168,7 +208,10 @@ class CreateEmailRuleResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.create_email_rule_result_affects import CreateEmailRuleResultAffects # noqa: PLC0415
         from ..models.create_email_rule_result_expectations_check import CreateEmailRuleResultExpectationsCheck # noqa: PLC0415
+        from ..models.create_email_rule_result_restored_from import CreateEmailRuleResultRestoredFrom # noqa: PLC0415
+        from ..models.email_rule_author import EmailRuleAuthor # noqa: PLC0415
         from ..models.email_rule_scope_names import EmailRuleScopeNames # noqa: PLC0415
         from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
@@ -268,6 +311,18 @@ class CreateEmailRuleResult:
         scope_selection = _parse_scope_selection(d.pop("scope_selection", UNSET))
 
 
+        revision = d.pop("revision", UNSET)
+
+        _author = d.pop("author", UNSET)
+        author: EmailRuleAuthor | Unset
+        if isinstance(_author,  Unset):
+            author = UNSET
+        else:
+            author = EmailRuleAuthor.from_dict(_author)
+
+
+
+
         _scope_warnings = d.pop("scope_warnings", UNSET)
         scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
         if _scope_warnings is not UNSET:
@@ -290,6 +345,26 @@ class CreateEmailRuleResult:
 
 
 
+        _restored_from = d.pop("restored_from", UNSET)
+        restored_from: CreateEmailRuleResultRestoredFrom | Unset
+        if isinstance(_restored_from,  Unset):
+            restored_from = UNSET
+        else:
+            restored_from = CreateEmailRuleResultRestoredFrom.from_dict(_restored_from)
+
+
+
+
+        _affects = d.pop("affects", UNSET)
+        affects: CreateEmailRuleResultAffects | Unset
+        if isinstance(_affects,  Unset):
+            affects = UNSET
+        else:
+            affects = CreateEmailRuleResultAffects.from_dict(_affects)
+
+
+
+
         create_email_rule_result = cls(
             id=id,
             name=name,
@@ -303,8 +378,12 @@ class CreateEmailRuleResult:
             kind=kind,
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,
+            revision=revision,
+            author=author,
             scope_warnings=scope_warnings,
             expectations_check=expectations_check,
+            restored_from=restored_from,
+            affects=affects,
         )
 
 

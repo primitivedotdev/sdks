@@ -76,6 +76,8 @@ type AcceptEmailRuleRequestRequest struct {
 	// Who produced the tree (not verified): the compile response's compiled_by, or member (the default)
 	// for a tree you wrote or edited.
 	CompiledBy OptString `json:"compiled_by"`
+	// Ignored (the compile answer's breadth).
+	Breadth jx.Raw `json:"breadth"`
 }
 
 // GetName returns the value of Name.
@@ -113,6 +115,11 @@ func (s *AcceptEmailRuleRequestRequest) GetCompiledBy() OptString {
 	return s.CompiledBy
 }
 
+// GetBreadth returns the value of Breadth.
+func (s *AcceptEmailRuleRequestRequest) GetBreadth() jx.Raw {
+	return s.Breadth
+}
+
 // SetName sets the value of Name.
 func (s *AcceptEmailRuleRequestRequest) SetName(val OptString) {
 	s.Name = val
@@ -146,6 +153,11 @@ func (s *AcceptEmailRuleRequestRequest) SetWarnings(val []string) {
 // SetCompiledBy sets the value of CompiledBy.
 func (s *AcceptEmailRuleRequestRequest) SetCompiledBy(val OptString) {
 	s.CompiledBy = val
+}
+
+// SetBreadth sets the value of Breadth.
+func (s *AcceptEmailRuleRequestRequest) SetBreadth(val jx.Raw) {
+	s.Breadth = val
 }
 
 // Ref: #/components/schemas/AcceptEmailRuleRequestResult
@@ -9853,7 +9865,9 @@ func (s *CompileEmailRuleRequestKind) UnmarshalText(data []byte) error {
 // Ref: #/components/schemas/CompileEmailRuleResult
 type CompileEmailRuleResult struct {
 	Tree EmailRuleTree `json:"tree"`
-	// What the rule matches, in plain English.
+	// What the rule matches, in plain English: only which emails, not what it grants or shares, which
+	// follows from its state, its scope and the keys, webhooks and people it reaches. The compiler
+	// leaves out a sentence that plainly says what the rule hands over.
 	Explanation string `json:"explanation"`
 	// Readings the compiler chose where the description was open to more than one. Whenever the rule
 	// holds a condition, question or confidence bar that no words of the description call for, this list
@@ -9871,6 +9885,11 @@ type CompileEmailRuleResult struct {
 	// An opaque name for the version of the rule compiler that produced the rule, such as
 	// rule-compiler-v1. Send it back as compiled_by when you save the rule.
 	CompiledBy string `json:"compiled_by"`
+	// How many of your recent emails its conditions hold for, counted over your own mailboxes whatever
+	// scope you save it with, warning or not. Null when not counted in full: a rule with questions,
+	// headers-only access, no test of it possible as you, or a count that failed or ran out of time.
+	// Writes ignore it, so a compile answer (without include_sql) can be sent back unchanged.
+	Breadth OptNilEmailRuleBreadth `json:"breadth"`
 	// Present only when include_sql was true.
 	SQL OptCompileEmailRuleResultSQL `json:"sql"`
 }
@@ -9898,6 +9917,11 @@ func (s *CompileEmailRuleResult) GetWarnings() []string {
 // GetCompiledBy returns the value of CompiledBy.
 func (s *CompileEmailRuleResult) GetCompiledBy() string {
 	return s.CompiledBy
+}
+
+// GetBreadth returns the value of Breadth.
+func (s *CompileEmailRuleResult) GetBreadth() OptNilEmailRuleBreadth {
+	return s.Breadth
 }
 
 // GetSQL returns the value of SQL.
@@ -9928,6 +9952,11 @@ func (s *CompileEmailRuleResult) SetWarnings(val []string) {
 // SetCompiledBy sets the value of CompiledBy.
 func (s *CompileEmailRuleResult) SetCompiledBy(val string) {
 	s.CompiledBy = val
+}
+
+// SetBreadth sets the value of Breadth.
+func (s *CompileEmailRuleResult) SetBreadth(val OptNilEmailRuleBreadth) {
+	s.Breadth = val
 }
 
 // SetSQL sets the value of SQL.
@@ -12569,6 +12598,8 @@ type CreateEmailRuleRequest struct {
 	// Who produced the tree (not verified): the compile response's compiled_by, or member (the default)
 	// for a tree you wrote or edited.
 	CompiledBy OptString `json:"compiled_by"`
+	// Ignored (the compile answer's breadth).
+	Breadth jx.Raw `json:"breadth"`
 }
 
 // GetName returns the value of Name.
@@ -12631,6 +12662,11 @@ func (s *CreateEmailRuleRequest) GetCompiledBy() OptString {
 	return s.CompiledBy
 }
 
+// GetBreadth returns the value of Breadth.
+func (s *CreateEmailRuleRequest) GetBreadth() jx.Raw {
+	return s.Breadth
+}
+
 // SetName sets the value of Name.
 func (s *CreateEmailRuleRequest) SetName(val string) {
 	s.Name = val
@@ -12689,6 +12725,11 @@ func (s *CreateEmailRuleRequest) SetWarnings(val []string) {
 // SetCompiledBy sets the value of CompiledBy.
 func (s *CreateEmailRuleRequest) SetCompiledBy(val OptString) {
 	s.CompiledBy = val
+}
+
+// SetBreadth sets the value of Breadth.
+func (s *CreateEmailRuleRequest) SetBreadth(val jx.Raw) {
+	s.Breadth = val
 }
 
 type CreateEmailRuleRequestBadRequest ErrorResponse
@@ -12886,6 +12927,8 @@ type CreateEmailRuleRequestRequest struct {
 	// Who produced the tree (not verified): the compile response's compiled_by, or member (the default)
 	// for a tree you wrote or edited.
 	CompiledBy OptString `json:"compiled_by"`
+	// Ignored (the compile answer's breadth).
+	Breadth jx.Raw `json:"breadth"`
 }
 
 // GetTargetUserID returns the value of TargetUserID.
@@ -12938,6 +12981,11 @@ func (s *CreateEmailRuleRequestRequest) GetCompiledBy() OptString {
 	return s.CompiledBy
 }
 
+// GetBreadth returns the value of Breadth.
+func (s *CreateEmailRuleRequestRequest) GetBreadth() jx.Raw {
+	return s.Breadth
+}
+
 // SetTargetUserID sets the value of TargetUserID.
 func (s *CreateEmailRuleRequestRequest) SetTargetUserID(val OptUUID) {
 	s.TargetUserID = val
@@ -12986,6 +13034,11 @@ func (s *CreateEmailRuleRequestRequest) SetWarnings(val []string) {
 // SetCompiledBy sets the value of CompiledBy.
 func (s *CreateEmailRuleRequestRequest) SetCompiledBy(val OptString) {
 	s.CompiledBy = val
+}
+
+// SetBreadth sets the value of Breadth.
+func (s *CreateEmailRuleRequestRequest) SetBreadth(val jx.Raw) {
+	s.Breadth = val
 }
 
 // Ref: #/components/schemas/CreateEmailRuleRequestResult
@@ -25966,21 +26019,30 @@ type DeliverySummary struct {
 	// it sends again to the endpoint the email's routing resolves then (its recorded route, or the
 	// current endpoint for its domain), unless the email already reached it, deciding it afresh (its
 	// rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to
-	// this endpoint. Null on every attempt of a delivery retried or settled on a schedule of its own,
-	// which this does not report: a held one (its release settles it, including the attempts it makes
-	// itself), a pull attempt, a rule-granted one, and a sent email's or other event's delivery. On the
-	// latest attempt that failed, is pending or was skipped in a way still owed, of an email that was
-	// not rejected and still has its content, to an endpoint that is still on, takes the event, has an
-	// owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the
-	// message, reads false) and has not received the email by another delivery: null while a delivery
-	// pass for the email is running (whether another follows is decided when it ends), true when the
-	// email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped,
-	// or the recovery of a first pass that did not finish), and false otherwise. False on every other
-	// attempt, including every attempt a later one followed: no automatic retry of the email's delivery
-	// will try it again, which does not mean nothing else ever will.
+	// this endpoint. A rule-granted delivery is retried on a schedule of its own, to the same endpoint,
+	// deciding it afresh: on its latest attempt true while another attempt is to come (the delivery's
+	// next_attempt_at says when); null while an attempt is under way (read it again shortly), while it
+	// waits on an owner who cannot receive mail or on a held endpoint (checked again hourly, and sent
+	// once that clears), when it is past its 7-day limit, or when that could not be read just now; and
+	// false otherwise, including once the endpoint is off or already has the email. Null on every
+	// attempt of a delivery retried or settled on a schedule of its own that this does not report: a
+	// held one (its release settles it, including the attempts it makes itself), a pull attempt, and a
+	// sent email's or other event's delivery. On the latest attempt that failed, is pending or was
+	// skipped in a way still owed, of an email that was not rejected and still has its content, to an
+	// endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or
+	// suspended key, or an owner that may not receive the message, reads false) and has not received the
+	// email by another delivery: null while a delivery pass for the email is running (whether another
+	// follows is decided when it ends), true when the email has another automatic pass to come (a
+	// scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not
+	// finish), and false otherwise. False on every other attempt, including every attempt a later one
+	// followed: no automatic retry of the email's delivery will try it again, which does not mean
+	// nothing else ever will.
 	RetryScheduled NilBool `json:"retry_scheduled"`
-	// When the next automatic retry of this delivery is due. Not reported: always null. Whether one is
-	// coming is retry_scheduled.
+	// When the next automatic attempt of a rule-granted delivery is due: set on its latest attempt while
+	// retry_scheduled is true. The attempt runs at the first retry pass at or after this time (one runs
+	// every few minutes), so a time already past means it is due now. Null otherwise, and on every
+	// delivery that is not rule-granted, whose retries are passes for the email with no time reported
+	// (whether one is coming is retry_scheduled).
 	NextAttemptAt NilDateTime `json:"next_attempt_at"`
 }
 
@@ -31851,7 +31913,11 @@ type EmailRule struct {
 	// What a selected rule names; null for any other scope.
 	ScopeSelection OptNilEmailRuleScopeNames `json:"scope_selection"`
 	CurrentVersion NilInt                    `json:"current_version"`
-	AuthorUserID   uuid.UUID                 `json:"author_user_id"`
+	// Moves on by one with every update. Send it as if_revision.
+	Revision     OptInt    `json:"revision"`
+	AuthorUserID uuid.UUID `json:"author_user_id"`
+	// Who wrote it: author_user_id with their name and sign-in email.
+	Author OptEmailRuleAuthor `json:"author"`
 	// Whether you are its author, in your current membership. Only its author edits it; others who see
 	// it may only disable or delete it (while shared, only if they manage members).
 	IsAuthor  bool      `json:"is_author"`
@@ -31894,9 +31960,19 @@ func (s *EmailRule) GetCurrentVersion() NilInt {
 	return s.CurrentVersion
 }
 
+// GetRevision returns the value of Revision.
+func (s *EmailRule) GetRevision() OptInt {
+	return s.Revision
+}
+
 // GetAuthorUserID returns the value of AuthorUserID.
 func (s *EmailRule) GetAuthorUserID() uuid.UUID {
 	return s.AuthorUserID
+}
+
+// GetAuthor returns the value of Author.
+func (s *EmailRule) GetAuthor() OptEmailRuleAuthor {
+	return s.Author
 }
 
 // GetIsAuthor returns the value of IsAuthor.
@@ -31949,9 +32025,19 @@ func (s *EmailRule) SetCurrentVersion(val NilInt) {
 	s.CurrentVersion = val
 }
 
+// SetRevision sets the value of Revision.
+func (s *EmailRule) SetRevision(val OptInt) {
+	s.Revision = val
+}
+
 // SetAuthorUserID sets the value of AuthorUserID.
 func (s *EmailRule) SetAuthorUserID(val uuid.UUID) {
 	s.AuthorUserID = val
+}
+
+// SetAuthor sets the value of Author.
+func (s *EmailRule) SetAuthor(val OptEmailRuleAuthor) {
+	s.Author = val
 }
 
 // SetIsAuthor sets the value of IsAuthor.
@@ -31967,6 +32053,74 @@ func (s *EmailRule) SetCreatedAt(val time.Time) {
 // SetUpdatedAt sets the value of UpdatedAt.
 func (s *EmailRule) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
+}
+
+// Ref: #/components/schemas/EmailRuleAuthor
+type EmailRuleAuthor struct {
+	UserID uuid.UUID `json:"user_id"`
+	// Their name; null unless you can list members or this is you, and when they have none set.
+	Name NilString `json:"name"`
+	// Sign-in email; null unless you can list member emails or this is you.
+	Email NilString `json:"email"`
+}
+
+// GetUserID returns the value of UserID.
+func (s *EmailRuleAuthor) GetUserID() uuid.UUID {
+	return s.UserID
+}
+
+// GetName returns the value of Name.
+func (s *EmailRuleAuthor) GetName() NilString {
+	return s.Name
+}
+
+// GetEmail returns the value of Email.
+func (s *EmailRuleAuthor) GetEmail() NilString {
+	return s.Email
+}
+
+// SetUserID sets the value of UserID.
+func (s *EmailRuleAuthor) SetUserID(val uuid.UUID) {
+	s.UserID = val
+}
+
+// SetName sets the value of Name.
+func (s *EmailRuleAuthor) SetName(val NilString) {
+	s.Name = val
+}
+
+// SetEmail sets the value of Email.
+func (s *EmailRuleAuthor) SetEmail(val NilString) {
+	s.Email = val
+}
+
+// Ref: #/components/schemas/EmailRuleBreadth
+type EmailRuleBreadth struct {
+	// Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your
+	// own mailboxes (for a grant rule, those you may share), the ones you can still read.
+	Checked int `json:"checked"`
+	// Of those, how many they hold for (for a do-not-share rule, one they cannot decide counts).
+	Matched int `json:"matched"`
+}
+
+// GetChecked returns the value of Checked.
+func (s *EmailRuleBreadth) GetChecked() int {
+	return s.Checked
+}
+
+// GetMatched returns the value of Matched.
+func (s *EmailRuleBreadth) GetMatched() int {
+	return s.Matched
+}
+
+// SetChecked sets the value of Checked.
+func (s *EmailRuleBreadth) SetChecked(val int) {
+	s.Checked = val
+}
+
+// SetMatched sets the value of Matched.
+func (s *EmailRuleBreadth) SetMatched(val int) {
+	s.Matched = val
 }
 
 // Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
@@ -32074,13 +32228,19 @@ type EmailRuleRead struct {
 	// What a selected rule names; null for any other scope.
 	ScopeSelection OptNilEmailRuleScopeNames `json:"scope_selection"`
 	CurrentVersion NilInt                    `json:"current_version"`
-	AuthorUserID   uuid.UUID                 `json:"author_user_id"`
+	// Moves on by one with every update. Send it as if_revision.
+	Revision     OptInt    `json:"revision"`
+	AuthorUserID uuid.UUID `json:"author_user_id"`
+	// Who wrote it: author_user_id with their name and sign-in email.
+	Author OptEmailRuleAuthor `json:"author"`
 	// Whether you are its author, in your current membership. Only its author edits it; others who see
 	// it may only disable or delete it (while shared, only if they manage members).
-	IsAuthor  bool                `json:"is_author"`
-	CreatedAt time.Time           `json:"created_at"`
-	UpdatedAt time.Time           `json:"updated_at"`
-	Current   NilEmailRuleVersion `json:"current"`
+	IsAuthor  bool      `json:"is_author"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	// Its current version: its text (english, tree, explanation, assumptions, warnings) and who compiled
+	// it. current_version is its number. GET /email-rules lists rules without it.
+	Current NilEmailRuleVersion `json:"current"`
 	// Its saved expectations, each list by email id.
 	Expectations OptEmailRuleReadExpectations `json:"expectations"`
 }
@@ -32120,9 +32280,19 @@ func (s *EmailRuleRead) GetCurrentVersion() NilInt {
 	return s.CurrentVersion
 }
 
+// GetRevision returns the value of Revision.
+func (s *EmailRuleRead) GetRevision() OptInt {
+	return s.Revision
+}
+
 // GetAuthorUserID returns the value of AuthorUserID.
 func (s *EmailRuleRead) GetAuthorUserID() uuid.UUID {
 	return s.AuthorUserID
+}
+
+// GetAuthor returns the value of Author.
+func (s *EmailRuleRead) GetAuthor() OptEmailRuleAuthor {
+	return s.Author
 }
 
 // GetIsAuthor returns the value of IsAuthor.
@@ -32185,9 +32355,19 @@ func (s *EmailRuleRead) SetCurrentVersion(val NilInt) {
 	s.CurrentVersion = val
 }
 
+// SetRevision sets the value of Revision.
+func (s *EmailRuleRead) SetRevision(val OptInt) {
+	s.Revision = val
+}
+
 // SetAuthorUserID sets the value of AuthorUserID.
 func (s *EmailRuleRead) SetAuthorUserID(val uuid.UUID) {
 	s.AuthorUserID = val
+}
+
+// SetAuthor sets the value of Author.
+func (s *EmailRuleRead) SetAuthor(val OptEmailRuleAuthor) {
+	s.Author = val
 }
 
 // SetIsAuthor sets the value of IsAuthor.
@@ -33866,13 +34046,19 @@ type EmailRuleWithVersion struct {
 	// What a selected rule names; null for any other scope.
 	ScopeSelection OptNilEmailRuleScopeNames `json:"scope_selection"`
 	CurrentVersion NilInt                    `json:"current_version"`
-	AuthorUserID   uuid.UUID                 `json:"author_user_id"`
+	// Moves on by one with every update. Send it as if_revision.
+	Revision     OptInt    `json:"revision"`
+	AuthorUserID uuid.UUID `json:"author_user_id"`
+	// Who wrote it: author_user_id with their name and sign-in email.
+	Author OptEmailRuleAuthor `json:"author"`
 	// Whether you are its author, in your current membership. Only its author edits it; others who see
 	// it may only disable or delete it (while shared, only if they manage members).
-	IsAuthor  bool                `json:"is_author"`
-	CreatedAt time.Time           `json:"created_at"`
-	UpdatedAt time.Time           `json:"updated_at"`
-	Current   NilEmailRuleVersion `json:"current"`
+	IsAuthor  bool      `json:"is_author"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	// Its current version: its text (english, tree, explanation, assumptions, warnings) and who compiled
+	// it. current_version is its number. GET /email-rules lists rules without it.
+	Current NilEmailRuleVersion `json:"current"`
 }
 
 // GetID returns the value of ID.
@@ -33910,9 +34096,19 @@ func (s *EmailRuleWithVersion) GetCurrentVersion() NilInt {
 	return s.CurrentVersion
 }
 
+// GetRevision returns the value of Revision.
+func (s *EmailRuleWithVersion) GetRevision() OptInt {
+	return s.Revision
+}
+
 // GetAuthorUserID returns the value of AuthorUserID.
 func (s *EmailRuleWithVersion) GetAuthorUserID() uuid.UUID {
 	return s.AuthorUserID
+}
+
+// GetAuthor returns the value of Author.
+func (s *EmailRuleWithVersion) GetAuthor() OptEmailRuleAuthor {
+	return s.Author
 }
 
 // GetIsAuthor returns the value of IsAuthor.
@@ -33970,9 +34166,19 @@ func (s *EmailRuleWithVersion) SetCurrentVersion(val NilInt) {
 	s.CurrentVersion = val
 }
 
+// SetRevision sets the value of Revision.
+func (s *EmailRuleWithVersion) SetRevision(val OptInt) {
+	s.Revision = val
+}
+
 // SetAuthorUserID sets the value of AuthorUserID.
 func (s *EmailRuleWithVersion) SetAuthorUserID(val uuid.UUID) {
 	s.AuthorUserID = val
+}
+
+// SetAuthor sets the value of Author.
+func (s *EmailRuleWithVersion) SetAuthor(val OptEmailRuleAuthor) {
+	s.Author = val
 }
 
 // SetIsAuthor sets the value of IsAuthor.
@@ -34237,13 +34443,19 @@ type EmailRuleWritten struct {
 	// What a selected rule names; null for any other scope.
 	ScopeSelection OptNilEmailRuleScopeNames `json:"scope_selection"`
 	CurrentVersion NilInt                    `json:"current_version"`
-	AuthorUserID   uuid.UUID                 `json:"author_user_id"`
+	// Moves on by one with every update. Send it as if_revision.
+	Revision     OptInt    `json:"revision"`
+	AuthorUserID uuid.UUID `json:"author_user_id"`
+	// Who wrote it: author_user_id with their name and sign-in email.
+	Author OptEmailRuleAuthor `json:"author"`
 	// Whether you are its author, in your current membership. Only its author edits it; others who see
 	// it may only disable or delete it (while shared, only if they manage members).
-	IsAuthor  bool                `json:"is_author"`
-	CreatedAt time.Time           `json:"created_at"`
-	UpdatedAt time.Time           `json:"updated_at"`
-	Current   NilEmailRuleVersion `json:"current"`
+	IsAuthor  bool      `json:"is_author"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	// Its current version: its text (english, tree, explanation, assumptions, warnings) and who compiled
+	// it. current_version is its number. GET /email-rules lists rules without it.
+	Current NilEmailRuleVersion `json:"current"`
 	// Names in scope_selection that match nothing this organization receives mail at (a typo, or an
 	// inbox not yet in use). Present only when there are some.
 	ScopeWarnings []EmailRuleScopeWarning `json:"scope_warnings"`
@@ -34252,8 +34464,15 @@ type EmailRuleWritten struct {
 	// answers not yet kept for that version, is unclassified, skipped or not reached, or that its author
 	// does not read. Absent when it could not be judged (the rule changed again, its author cannot be
 	// resolved, your access shows headers only, it could not finish in time, or the check failed). Test
-	// by rule_id for the rest.
+	// by rule_id for the rest. With if_expectations_pass, the judgment made before the save, which
+	// passed.
 	ExpectationsCheck OptEmailRuleWrittenExpectationsCheck `json:"expectations_check"`
+	// When this write saved an earlier version again (restore_version): which, and that the scope is not
+	// part of a version.
+	RestoredFrom OptEmailRuleWrittenRestoredFrom `json:"restored_from"`
+	// After an update that saved a version: API keys listing the rule, the webhooks they own, and shares
+	// this write ended. The rule keeps its state. Absent if not read.
+	Affects OptEmailRuleWrittenAffects `json:"affects"`
 }
 
 // GetID returns the value of ID.
@@ -34291,9 +34510,19 @@ func (s *EmailRuleWritten) GetCurrentVersion() NilInt {
 	return s.CurrentVersion
 }
 
+// GetRevision returns the value of Revision.
+func (s *EmailRuleWritten) GetRevision() OptInt {
+	return s.Revision
+}
+
 // GetAuthorUserID returns the value of AuthorUserID.
 func (s *EmailRuleWritten) GetAuthorUserID() uuid.UUID {
 	return s.AuthorUserID
+}
+
+// GetAuthor returns the value of Author.
+func (s *EmailRuleWritten) GetAuthor() OptEmailRuleAuthor {
+	return s.Author
 }
 
 // GetIsAuthor returns the value of IsAuthor.
@@ -34324,6 +34553,16 @@ func (s *EmailRuleWritten) GetScopeWarnings() []EmailRuleScopeWarning {
 // GetExpectationsCheck returns the value of ExpectationsCheck.
 func (s *EmailRuleWritten) GetExpectationsCheck() OptEmailRuleWrittenExpectationsCheck {
 	return s.ExpectationsCheck
+}
+
+// GetRestoredFrom returns the value of RestoredFrom.
+func (s *EmailRuleWritten) GetRestoredFrom() OptEmailRuleWrittenRestoredFrom {
+	return s.RestoredFrom
+}
+
+// GetAffects returns the value of Affects.
+func (s *EmailRuleWritten) GetAffects() OptEmailRuleWrittenAffects {
+	return s.Affects
 }
 
 // SetID sets the value of ID.
@@ -34361,9 +34600,19 @@ func (s *EmailRuleWritten) SetCurrentVersion(val NilInt) {
 	s.CurrentVersion = val
 }
 
+// SetRevision sets the value of Revision.
+func (s *EmailRuleWritten) SetRevision(val OptInt) {
+	s.Revision = val
+}
+
 // SetAuthorUserID sets the value of AuthorUserID.
 func (s *EmailRuleWritten) SetAuthorUserID(val uuid.UUID) {
 	s.AuthorUserID = val
+}
+
+// SetAuthor sets the value of Author.
+func (s *EmailRuleWritten) SetAuthor(val OptEmailRuleAuthor) {
+	s.Author = val
 }
 
 // SetIsAuthor sets the value of IsAuthor.
@@ -34394,6 +34643,54 @@ func (s *EmailRuleWritten) SetScopeWarnings(val []EmailRuleScopeWarning) {
 // SetExpectationsCheck sets the value of ExpectationsCheck.
 func (s *EmailRuleWritten) SetExpectationsCheck(val OptEmailRuleWrittenExpectationsCheck) {
 	s.ExpectationsCheck = val
+}
+
+// SetRestoredFrom sets the value of RestoredFrom.
+func (s *EmailRuleWritten) SetRestoredFrom(val OptEmailRuleWrittenRestoredFrom) {
+	s.RestoredFrom = val
+}
+
+// SetAffects sets the value of Affects.
+func (s *EmailRuleWritten) SetAffects(val OptEmailRuleWrittenAffects) {
+	s.Affects = val
+}
+
+// After an update that saved a version: API keys listing the rule, the webhooks they own, and shares
+// this write ended. The rule keeps its state. Absent if not read.
+type EmailRuleWrittenAffects struct {
+	Keys        int `json:"keys"`
+	Endpoints   int `json:"endpoints"`
+	SharesEnded int `json:"shares_ended"`
+}
+
+// GetKeys returns the value of Keys.
+func (s *EmailRuleWrittenAffects) GetKeys() int {
+	return s.Keys
+}
+
+// GetEndpoints returns the value of Endpoints.
+func (s *EmailRuleWrittenAffects) GetEndpoints() int {
+	return s.Endpoints
+}
+
+// GetSharesEnded returns the value of SharesEnded.
+func (s *EmailRuleWrittenAffects) GetSharesEnded() int {
+	return s.SharesEnded
+}
+
+// SetKeys sets the value of Keys.
+func (s *EmailRuleWrittenAffects) SetKeys(val int) {
+	s.Keys = val
+}
+
+// SetEndpoints sets the value of Endpoints.
+func (s *EmailRuleWrittenAffects) SetEndpoints(val int) {
+	s.Endpoints = val
+}
+
+// SetSharesEnded sets the value of SharesEnded.
+func (s *EmailRuleWrittenAffects) SetSharesEnded(val int) {
+	s.SharesEnded = val
 }
 
 // Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
@@ -34450,7 +34747,8 @@ func (s *EmailRuleWrittenEvaluationScope) UnmarshalText(data []byte) error {
 // answers not yet kept for that version, is unclassified, skipped or not reached, or that its author
 // does not read. Absent when it could not be judged (the rule changed again, its author cannot be
 // resolved, your access shows headers only, it could not finish in time, or the check failed). Test
-// by rule_id for the rest.
+// by rule_id for the rest. With if_expectations_pass, the judgment made before the save, which
+// passed.
 type EmailRuleWrittenExpectationsCheck struct {
 	Version NilInt `json:"version"`
 	// False when any failed, true when every one passed, null when none failed but some are undecided
@@ -34460,6 +34758,9 @@ type EmailRuleWrittenExpectationsCheck struct {
 	Decided   OptBool     `json:"decided"`
 	Failed    []uuid.UUID `json:"failed"`
 	Undecided []uuid.UUID `json:"undecided"`
+	// On an update that saved a version that did not pass: that it was saved anyway, is current, and
+	// whether it is live.
+	Note OptString `json:"note"`
 }
 
 // GetVersion returns the value of Version.
@@ -34487,6 +34788,11 @@ func (s *EmailRuleWrittenExpectationsCheck) GetUndecided() []uuid.UUID {
 	return s.Undecided
 }
 
+// GetNote returns the value of Note.
+func (s *EmailRuleWrittenExpectationsCheck) GetNote() OptString {
+	return s.Note
+}
+
 // SetVersion sets the value of Version.
 func (s *EmailRuleWrittenExpectationsCheck) SetVersion(val NilInt) {
 	s.Version = val
@@ -34510,6 +34816,11 @@ func (s *EmailRuleWrittenExpectationsCheck) SetFailed(val []uuid.UUID) {
 // SetUndecided sets the value of Undecided.
 func (s *EmailRuleWrittenExpectationsCheck) SetUndecided(val []uuid.UUID) {
 	s.Undecided = val
+}
+
+// SetNote sets the value of Note.
+func (s *EmailRuleWrittenExpectationsCheck) SetNote(val OptString) {
+	s.Note = val
 }
 
 // Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
@@ -34553,6 +34864,33 @@ func (s *EmailRuleWrittenKind) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// When this write saved an earlier version again (restore_version): which, and that the scope is not
+// part of a version.
+type EmailRuleWrittenRestoredFrom struct {
+	Version int    `json:"version"`
+	Note    string `json:"note"`
+}
+
+// GetVersion returns the value of Version.
+func (s *EmailRuleWrittenRestoredFrom) GetVersion() int {
+	return s.Version
+}
+
+// GetNote returns the value of Note.
+func (s *EmailRuleWrittenRestoredFrom) GetNote() string {
+	return s.Note
+}
+
+// SetVersion sets the value of Version.
+func (s *EmailRuleWrittenRestoredFrom) SetVersion(val int) {
+	s.Version = val
+}
+
+// SetNote sets the value of Note.
+func (s *EmailRuleWrittenRestoredFrom) SetNote(val string) {
+	s.Note = val
 }
 
 type EmailRuleWrittenState string
@@ -39300,6 +39638,8 @@ const (
 	ErrorResponseErrorCodeEmailRuleShareLimit                      ErrorResponseErrorCode = "email_rule_share_limit"
 	ErrorResponseErrorCodeEmbeddingProviderUnavailable             ErrorResponseErrorCode = "embedding_provider_unavailable"
 	ErrorResponseErrorCodeEntitlement                              ErrorResponseErrorCode = "entitlement"
+	ErrorResponseErrorCodeExpectationsFailed                       ErrorResponseErrorCode = "expectations_failed"
+	ErrorResponseErrorCodeExpectationsUndecided                    ErrorResponseErrorCode = "expectations_undecided"
 	ErrorResponseErrorCodeExpired                                  ErrorResponseErrorCode = "expired"
 	ErrorResponseErrorCodeFeatureNotEnabled                        ErrorResponseErrorCode = "feature_not_enabled"
 	ErrorResponseErrorCodeFreshSendNotAuthorized                   ErrorResponseErrorCode = "fresh_send_not_authorized"
@@ -39374,6 +39714,7 @@ const (
 	ErrorResponseErrorCodeNetworkViewDenied                        ErrorResponseErrorCode = "network_view_denied"
 	ErrorResponseErrorCodeNoCode                                   ErrorResponseErrorCode = "no_code"
 	ErrorResponseErrorCodeNoEndpoint                               ErrorResponseErrorCode = "no_endpoint"
+	ErrorResponseErrorCodeNoExpectations                           ErrorResponseErrorCode = "no_expectations"
 	ErrorResponseErrorCodeNoMailRead                               ErrorResponseErrorCode = "no_mail_read"
 	ErrorResponseErrorCodeNotATemplateInstall                      ErrorResponseErrorCode = "not_a_template_install"
 	ErrorResponseErrorCodeNotAvailable                             ErrorResponseErrorCode = "not_available"
@@ -39639,6 +39980,8 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeEmailRuleShareLimit,
 		ErrorResponseErrorCodeEmbeddingProviderUnavailable,
 		ErrorResponseErrorCodeEntitlement,
+		ErrorResponseErrorCodeExpectationsFailed,
+		ErrorResponseErrorCodeExpectationsUndecided,
 		ErrorResponseErrorCodeExpired,
 		ErrorResponseErrorCodeFeatureNotEnabled,
 		ErrorResponseErrorCodeFreshSendNotAuthorized,
@@ -39713,6 +40056,7 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeNetworkViewDenied,
 		ErrorResponseErrorCodeNoCode,
 		ErrorResponseErrorCodeNoEndpoint,
+		ErrorResponseErrorCodeNoExpectations,
 		ErrorResponseErrorCodeNoMailRead,
 		ErrorResponseErrorCodeNotATemplateInstall,
 		ErrorResponseErrorCodeNotAvailable,
@@ -40142,6 +40486,10 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 		return []byte(s), nil
 	case ErrorResponseErrorCodeEntitlement:
 		return []byte(s), nil
+	case ErrorResponseErrorCodeExpectationsFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeExpectationsUndecided:
+		return []byte(s), nil
 	case ErrorResponseErrorCodeExpired:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeFeatureNotEnabled:
@@ -40289,6 +40637,8 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeNoCode:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeNoEndpoint:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeNoExpectations:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeNoMailRead:
 		return []byte(s), nil
@@ -40981,6 +41331,12 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 	case ErrorResponseErrorCodeEntitlement:
 		*s = ErrorResponseErrorCodeEntitlement
 		return nil
+	case ErrorResponseErrorCodeExpectationsFailed:
+		*s = ErrorResponseErrorCodeExpectationsFailed
+		return nil
+	case ErrorResponseErrorCodeExpectationsUndecided:
+		*s = ErrorResponseErrorCodeExpectationsUndecided
+		return nil
 	case ErrorResponseErrorCodeExpired:
 		*s = ErrorResponseErrorCodeExpired
 		return nil
@@ -41202,6 +41558,9 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeNoEndpoint:
 		*s = ErrorResponseErrorCodeNoEndpoint
+		return nil
+	case ErrorResponseErrorCodeNoExpectations:
+		*s = ErrorResponseErrorCodeNoExpectations
 		return nil
 	case ErrorResponseErrorCodeNoMailRead:
 		*s = ErrorResponseErrorCodeNoMailRead
@@ -46743,21 +47102,30 @@ type GetDeliveryResult struct {
 	// it sends again to the endpoint the email's routing resolves then (its recorded route, or the
 	// current endpoint for its domain), unless the email already reached it, deciding it afresh (its
 	// rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to
-	// this endpoint. Null on every attempt of a delivery retried or settled on a schedule of its own,
-	// which this does not report: a held one (its release settles it, including the attempts it makes
-	// itself), a pull attempt, a rule-granted one, and a sent email's or other event's delivery. On the
-	// latest attempt that failed, is pending or was skipped in a way still owed, of an email that was
-	// not rejected and still has its content, to an endpoint that is still on, takes the event, has an
-	// owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the
-	// message, reads false) and has not received the email by another delivery: null while a delivery
-	// pass for the email is running (whether another follows is decided when it ends), true when the
-	// email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped,
-	// or the recovery of a first pass that did not finish), and false otherwise. False on every other
-	// attempt, including every attempt a later one followed: no automatic retry of the email's delivery
-	// will try it again, which does not mean nothing else ever will.
+	// this endpoint. A rule-granted delivery is retried on a schedule of its own, to the same endpoint,
+	// deciding it afresh: on its latest attempt true while another attempt is to come (the delivery's
+	// next_attempt_at says when); null while an attempt is under way (read it again shortly), while it
+	// waits on an owner who cannot receive mail or on a held endpoint (checked again hourly, and sent
+	// once that clears), when it is past its 7-day limit, or when that could not be read just now; and
+	// false otherwise, including once the endpoint is off or already has the email. Null on every
+	// attempt of a delivery retried or settled on a schedule of its own that this does not report: a
+	// held one (its release settles it, including the attempts it makes itself), a pull attempt, and a
+	// sent email's or other event's delivery. On the latest attempt that failed, is pending or was
+	// skipped in a way still owed, of an email that was not rejected and still has its content, to an
+	// endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or
+	// suspended key, or an owner that may not receive the message, reads false) and has not received the
+	// email by another delivery: null while a delivery pass for the email is running (whether another
+	// follows is decided when it ends), true when the email has another automatic pass to come (a
+	// scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not
+	// finish), and false otherwise. False on every other attempt, including every attempt a later one
+	// followed: no automatic retry of the email's delivery will try it again, which does not mean
+	// nothing else ever will.
 	RetryScheduled NilBool `json:"retry_scheduled"`
-	// When the next automatic retry of this delivery is due. Not reported: always null. Whether one is
-	// coming is retry_scheduled.
+	// When the next automatic attempt of a rule-granted delivery is due: set on its latest attempt while
+	// retry_scheduled is true. The attempt runs at the first retry pass at or after this time (one runs
+	// every few minutes), so a time already past means it is due now. Null otherwise, and on every
+	// delivery that is not rule-granted, whose retries are passes for the email with no time reported
+	// (whether one is coming is retry_scheduled).
 	NextAttemptAt NilString `json:"next_attempt_at"`
 	// Every attempt of this delivery in the order recorded, oldest first, this one included: the same
 	// endpoint, and the same event (or, for an attempt recorded without one, the same email). Each
@@ -46999,18 +47367,24 @@ type GetDeliveryResultAttemptsItem struct {
 	// it sends again to the endpoint the email's routing resolves then (its recorded route, or the
 	// current endpoint for its domain), unless the email already reached it, deciding it afresh (its
 	// rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to
-	// this endpoint. Null on every attempt of a delivery retried or settled on a schedule of its own,
-	// which this does not report: a held one (its release settles it, including the attempts it makes
-	// itself), a pull attempt, a rule-granted one, and a sent email's or other event's delivery. On the
-	// latest attempt that failed, is pending or was skipped in a way still owed, of an email that was
-	// not rejected and still has its content, to an endpoint that is still on, takes the event, has an
-	// owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the
-	// message, reads false) and has not received the email by another delivery: null while a delivery
-	// pass for the email is running (whether another follows is decided when it ends), true when the
-	// email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped,
-	// or the recovery of a first pass that did not finish), and false otherwise. False on every other
-	// attempt, including every attempt a later one followed: no automatic retry of the email's delivery
-	// will try it again, which does not mean nothing else ever will.
+	// this endpoint. A rule-granted delivery is retried on a schedule of its own, to the same endpoint,
+	// deciding it afresh: on its latest attempt true while another attempt is to come (the delivery's
+	// next_attempt_at says when); null while an attempt is under way (read it again shortly), while it
+	// waits on an owner who cannot receive mail or on a held endpoint (checked again hourly, and sent
+	// once that clears), when it is past its 7-day limit, or when that could not be read just now; and
+	// false otherwise, including once the endpoint is off or already has the email. Null on every
+	// attempt of a delivery retried or settled on a schedule of its own that this does not report: a
+	// held one (its release settles it, including the attempts it makes itself), a pull attempt, and a
+	// sent email's or other event's delivery. On the latest attempt that failed, is pending or was
+	// skipped in a way still owed, of an email that was not rejected and still has its content, to an
+	// endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or
+	// suspended key, or an owner that may not receive the message, reads false) and has not received the
+	// email by another delivery: null while a delivery pass for the email is running (whether another
+	// follows is decided when it ends), true when the email has another automatic pass to come (a
+	// scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not
+	// finish), and false otherwise. False on every other attempt, including every attempt a later one
+	// followed: no automatic retry of the email's delivery will try it again, which does not mean
+	// nothing else ever will.
 	RetryScheduled NilBool `json:"retry_scheduled"`
 }
 
@@ -78041,6 +78415,52 @@ func (o OptEmailDetailUnderstandingFacts) Or(d EmailDetailUnderstandingFacts) Em
 	return d
 }
 
+// NewOptEmailRuleAuthor returns new OptEmailRuleAuthor with value set to v.
+func NewOptEmailRuleAuthor(v EmailRuleAuthor) OptEmailRuleAuthor {
+	return OptEmailRuleAuthor{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptEmailRuleAuthor is optional EmailRuleAuthor.
+type OptEmailRuleAuthor struct {
+	Value EmailRuleAuthor
+	Set   bool
+}
+
+// IsSet returns true if OptEmailRuleAuthor was set.
+func (o OptEmailRuleAuthor) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptEmailRuleAuthor) Reset() {
+	var v EmailRuleAuthor
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptEmailRuleAuthor) SetTo(v EmailRuleAuthor) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptEmailRuleAuthor) Get() (v EmailRuleAuthor, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptEmailRuleAuthor) Or(d EmailRuleAuthor) EmailRuleAuthor {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptEmailRuleEvaluationScope returns new OptEmailRuleEvaluationScope with value set to v.
 func NewOptEmailRuleEvaluationScope(v EmailRuleEvaluationScope) OptEmailRuleEvaluationScope {
 	return OptEmailRuleEvaluationScope{
@@ -78501,6 +78921,52 @@ func (o OptEmailRuleWithVersionKind) Or(d EmailRuleWithVersionKind) EmailRuleWit
 	return d
 }
 
+// NewOptEmailRuleWrittenAffects returns new OptEmailRuleWrittenAffects with value set to v.
+func NewOptEmailRuleWrittenAffects(v EmailRuleWrittenAffects) OptEmailRuleWrittenAffects {
+	return OptEmailRuleWrittenAffects{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptEmailRuleWrittenAffects is optional EmailRuleWrittenAffects.
+type OptEmailRuleWrittenAffects struct {
+	Value EmailRuleWrittenAffects
+	Set   bool
+}
+
+// IsSet returns true if OptEmailRuleWrittenAffects was set.
+func (o OptEmailRuleWrittenAffects) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptEmailRuleWrittenAffects) Reset() {
+	var v EmailRuleWrittenAffects
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptEmailRuleWrittenAffects) SetTo(v EmailRuleWrittenAffects) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptEmailRuleWrittenAffects) Get() (v EmailRuleWrittenAffects, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptEmailRuleWrittenAffects) Or(d EmailRuleWrittenAffects) EmailRuleWrittenAffects {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptEmailRuleWrittenEvaluationScope returns new OptEmailRuleWrittenEvaluationScope with value set to v.
 func NewOptEmailRuleWrittenEvaluationScope(v EmailRuleWrittenEvaluationScope) OptEmailRuleWrittenEvaluationScope {
 	return OptEmailRuleWrittenEvaluationScope{
@@ -78633,6 +79099,52 @@ func (o OptEmailRuleWrittenKind) Get() (v EmailRuleWrittenKind, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptEmailRuleWrittenKind) Or(d EmailRuleWrittenKind) EmailRuleWrittenKind {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptEmailRuleWrittenRestoredFrom returns new OptEmailRuleWrittenRestoredFrom with value set to v.
+func NewOptEmailRuleWrittenRestoredFrom(v EmailRuleWrittenRestoredFrom) OptEmailRuleWrittenRestoredFrom {
+	return OptEmailRuleWrittenRestoredFrom{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptEmailRuleWrittenRestoredFrom is optional EmailRuleWrittenRestoredFrom.
+type OptEmailRuleWrittenRestoredFrom struct {
+	Value EmailRuleWrittenRestoredFrom
+	Set   bool
+}
+
+// IsSet returns true if OptEmailRuleWrittenRestoredFrom was set.
+func (o OptEmailRuleWrittenRestoredFrom) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptEmailRuleWrittenRestoredFrom) Reset() {
+	var v EmailRuleWrittenRestoredFrom
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptEmailRuleWrittenRestoredFrom) SetTo(v EmailRuleWrittenRestoredFrom) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptEmailRuleWrittenRestoredFrom) Get() (v EmailRuleWrittenRestoredFrom, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptEmailRuleWrittenRestoredFrom) Or(d EmailRuleWrittenRestoredFrom) EmailRuleWrittenRestoredFrom {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -85544,6 +86056,69 @@ func (o OptNilEmailDetailUnderstanding) Get() (v EmailDetailUnderstanding, ok bo
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilEmailDetailUnderstanding) Or(d EmailDetailUnderstanding) EmailDetailUnderstanding {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilEmailRuleBreadth returns new OptNilEmailRuleBreadth with value set to v.
+func NewOptNilEmailRuleBreadth(v EmailRuleBreadth) OptNilEmailRuleBreadth {
+	return OptNilEmailRuleBreadth{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailRuleBreadth is optional nullable EmailRuleBreadth.
+type OptNilEmailRuleBreadth struct {
+	Value EmailRuleBreadth
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailRuleBreadth was set.
+func (o OptNilEmailRuleBreadth) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailRuleBreadth) Reset() {
+	var v EmailRuleBreadth
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailRuleBreadth) SetTo(v EmailRuleBreadth) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailRuleBreadth) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailRuleBreadth) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailRuleBreadth
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailRuleBreadth) Get() (v EmailRuleBreadth, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailRuleBreadth) Or(d EmailRuleBreadth) EmailRuleBreadth {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -127757,19 +128332,34 @@ type UpdateEmailRuleRequest struct {
 	// Who produced the tree (not verified): the compile response's compiled_by, or member (the default)
 	// for a tree you wrote or edited.
 	CompiledBy OptString `json:"compiled_by"`
+	// Ignored (the compile answer's breadth).
+	Breadth jx.Raw `json:"breadth"`
 	// Own_mailboxes: mail to your own addresses and agents (for a rule that shares, those mail:share_own
 	// lets you share). author: all you can read, inboxes added later included. selected: what
 	// scope_selection names. Left out, the scope stays. A change saves a new version with the same
 	// conditions, and is refused while the rule is shared.
 	EvaluationScope OptUpdateEmailRuleRequestEvaluationScope `json:"evaluation_scope"`
 	ScopeSelection  OptEmailRuleScopeSelection               `json:"scope_selection"`
-	// The current_version you read. If the rule's now differs, nothing changes: 409 email_rule_conflict,
-	// details.reason version_moved and details.current_version. Send it with a new version so a
-	// concurrent edit is never replaced unseen. It guards versions only: a change to expectations alone
-	// saves none.
+	// The current_version you read: if it has moved, nothing is saved (409 email_rule_conflict,
+	// version_moved). It guards versions only; if_revision guards every update.
 	IfVersion OptInt `json:"if_version"`
 	// Replaces its saved expectations (author only); null removes them.
 	Expectations OptNilUpdateEmailRuleRequestExpectations `json:"expectations"`
+	// The revision you read: if the rule was updated since, nothing is saved (409 email_rule_conflict,
+	// revision_moved).
+	IfRevision OptInt `json:"if_revision"`
+	// True: judge the rule as this write leaves it (new tree, restored version, new scope, or the
+	// version it activates) against the expectations it leaves, as POST /email-rules/test would, before
+	// saving; it can take as long as a test. Failed: 409 expectations_failed; undecided: 409
+	// expectations_undecided (both with details.expectations_check); none to judge: 400 no_expectations.
+	// Refused writes save nothing; a pass saves unless the rule moved meanwhile (409
+	// email_rule_conflict). Only writes that save a version or activate the rule are judged.
+	IfExpectationsPass OptBool `json:"if_expectations_pass"`
+	// Save version n again as the next version (author only): its english, tree, explanation,
+	// assumptions, warnings and compiled_by. A version carries no scope: the rule keeps its own unless
+	// evaluation_scope is sent. 404 version_not_found; 400 already_current or version_not_renderable.
+	// Not with a version's own fields.
+	RestoreVersion OptInt `json:"restore_version"`
 }
 
 // GetName returns the value of Name.
@@ -127812,6 +128402,11 @@ func (s *UpdateEmailRuleRequest) GetCompiledBy() OptString {
 	return s.CompiledBy
 }
 
+// GetBreadth returns the value of Breadth.
+func (s *UpdateEmailRuleRequest) GetBreadth() jx.Raw {
+	return s.Breadth
+}
+
 // GetEvaluationScope returns the value of EvaluationScope.
 func (s *UpdateEmailRuleRequest) GetEvaluationScope() OptUpdateEmailRuleRequestEvaluationScope {
 	return s.EvaluationScope
@@ -127830,6 +128425,21 @@ func (s *UpdateEmailRuleRequest) GetIfVersion() OptInt {
 // GetExpectations returns the value of Expectations.
 func (s *UpdateEmailRuleRequest) GetExpectations() OptNilUpdateEmailRuleRequestExpectations {
 	return s.Expectations
+}
+
+// GetIfRevision returns the value of IfRevision.
+func (s *UpdateEmailRuleRequest) GetIfRevision() OptInt {
+	return s.IfRevision
+}
+
+// GetIfExpectationsPass returns the value of IfExpectationsPass.
+func (s *UpdateEmailRuleRequest) GetIfExpectationsPass() OptBool {
+	return s.IfExpectationsPass
+}
+
+// GetRestoreVersion returns the value of RestoreVersion.
+func (s *UpdateEmailRuleRequest) GetRestoreVersion() OptInt {
+	return s.RestoreVersion
 }
 
 // SetName sets the value of Name.
@@ -127872,6 +128482,11 @@ func (s *UpdateEmailRuleRequest) SetCompiledBy(val OptString) {
 	s.CompiledBy = val
 }
 
+// SetBreadth sets the value of Breadth.
+func (s *UpdateEmailRuleRequest) SetBreadth(val jx.Raw) {
+	s.Breadth = val
+}
+
 // SetEvaluationScope sets the value of EvaluationScope.
 func (s *UpdateEmailRuleRequest) SetEvaluationScope(val OptUpdateEmailRuleRequestEvaluationScope) {
 	s.EvaluationScope = val
@@ -127890,6 +128505,21 @@ func (s *UpdateEmailRuleRequest) SetIfVersion(val OptInt) {
 // SetExpectations sets the value of Expectations.
 func (s *UpdateEmailRuleRequest) SetExpectations(val OptNilUpdateEmailRuleRequestExpectations) {
 	s.Expectations = val
+}
+
+// SetIfRevision sets the value of IfRevision.
+func (s *UpdateEmailRuleRequest) SetIfRevision(val OptInt) {
+	s.IfRevision = val
+}
+
+// SetIfExpectationsPass sets the value of IfExpectationsPass.
+func (s *UpdateEmailRuleRequest) SetIfExpectationsPass(val OptBool) {
+	s.IfExpectationsPass = val
+}
+
+// SetRestoreVersion sets the value of RestoreVersion.
+func (s *UpdateEmailRuleRequest) SetRestoreVersion(val OptInt) {
+	s.RestoreVersion = val
 }
 
 // Own_mailboxes: mail to your own addresses and agents (for a rule that shares, those mail:share_own

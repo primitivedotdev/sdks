@@ -302,13 +302,13 @@ type Invoker interface {
 	// made, and warnings for anything the columns cannot express. Where the columns fall short the rule
 	// may carry up to three yes/no questions, asked about an email only after its conditions match.
 	// Nothing is saved. A rule with no questions has its conditions counted, read only, over the
-	// caller's recent classified mail (what a test of it covers by default), so a warning can say when
-	// it matches nearly all of it. The SQL the rule renders to is returned only when include_sql is true.
-	//  kind do_not_share compiles a do-not-share rule for recall: conditions only as narrow as the
-	// description says, the judgement of what it describes put into questions, and with nothing a column
-	// decides for certain, conditions that hold for every email. Needs mail:read, a member's own
-	// credential with their full access (not an API key, agent key or narrowed token), and the email
-	// rules feature.
+	// caller's recent classified mail (what a test of it covers by default): breadth is that count, and
+	// a warning says when it matches nearly all of it. The SQL the rule renders to is returned only when
+	// include_sql is true. kind do_not_share compiles a do-not-share rule for recall: conditions only as
+	// narrow as the description says, the judgement of what it describes put into questions, and with
+	// nothing a column decides for certain, conditions that hold for every email. Needs mail:read, a
+	// member's own credential with their full access (not an API key, agent key or narrowed token), and
+	// the email rules feature.
 	//
 	// POST /email-rules/compile
 	CompileEmailRule(ctx context.Context, request *CompileEmailRuleRequest, params CompileEmailRuleParams) (CompileEmailRuleRes, error)
@@ -1278,10 +1278,11 @@ type Invoker interface {
 	// GetEmailRule invokes getEmailRule operation.
 	//
 	// A rule, its scope (evaluation_scope, and scope_selection for a selected rule), its current version
-	// and its saved expectations. What the scope comes to for its author now is GET
-	// /email-rules/{id}/scope. The SQL the version renders to is included only when include_sql is true.
-	// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-	// narrowed token), and the email rules feature.
+	// and its saved expectations. The current version's text (english, tree, explanation, assumptions,
+	// warnings) is under current, and current_version is its number. What the scope comes to for its
+	// author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when
+	// include_sql is true. Needs mail:read, a member's own credential with their full access (not an API
+	// key, agent key or narrowed token), and the email rules feature.
 	//
 	// GET /email-rules/{id}
 	GetEmailRule(ctx context.Context, params GetEmailRuleParams) (GetEmailRuleRes, error)
@@ -2121,7 +2122,8 @@ type Invoker interface {
 	//
 	// The rules the caller can see, newest first: their own, or every member's rules for a caller who
 	// reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
-	// for a selected rule). With matched_email_id, only the rules that matched that email. Needs
+	// for a selected rule) and current_version, but not the version's text: read that under current from
+	// GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs
 	// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
 	// token), and the email rules feature.
 	//
@@ -3540,15 +3542,18 @@ type Invoker interface {
 	// UpdateEmailRule invokes updateEmailRule operation.
 	//
 	// Renames the rule, saves a new version (english and tree together, with an explanation or one the
-	// server writes; earlier versions stay), changes its state (draft is off; observe; active), whose
-	// mail it runs over (evaluation_scope, with scope_selection when selected) or its saved expectations
-	// (each saved version and new set is judged in expectations_check). Anyone but its author who sees
-	// it may only disable it (state draft), and while it is shared only if they manage members from the
-	// dashboard. Without evaluation_scope the scope stays; a scope change saves a new version with the
-	// same conditions, and what was granted stays. A shared rule keeps its scope; a kind never changes.
-	// Send if_version, the current_version you read, so a write never replaces a version saved since.
-	// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-	// narrowed token), and the email rules feature.
+	// server writes; earlier versions stay) or an earlier one again (restore_version), changes its state
+	// (draft is off; observe; active), whose mail it runs over (evaluation_scope, with scope_selection
+	// when selected) or its saved expectations (each saved version and new set is judged in
+	// expectations_check). Anyone but its author who sees it may only disable it (state draft), and
+	// while it is shared only if they manage members from the dashboard. Without evaluation_scope the
+	// scope stays; a scope change saves a new version with the same conditions, and what was granted
+	// stays. A shared rule keeps its scope; a kind never changes. A saved version takes effect at once
+	// (an active rule stays active); affects counts what it reaches. Send if_version, the
+	// current_version you read, so a write never replaces a version saved since, or if_revision to
+	// refuse it after any update. Without if_expectations_pass a version is saved even when its
+	// expectations_check fails. Needs mail:read, a member's own credential with their full access (not
+	// an API key, agent key or narrowed token), and the email rules feature.
 	//
 	// PATCH /email-rules/{id}
 	UpdateEmailRule(ctx context.Context, request *UpdateEmailRuleRequest, params UpdateEmailRuleParams) (UpdateEmailRuleRes, error)
@@ -7192,15 +7197,13 @@ func (c *Client) sendCliLogout(ctx context.Context, request OptCliLogoutInput, p
 // made, and warnings for anything the columns cannot express. Where the columns fall short the rule
 // may carry up to three yes/no questions, asked about an email only after its conditions match.
 // Nothing is saved. A rule with no questions has its conditions counted, read only, over the
-// caller's recent classified mail (what a test of it covers by default), so a warning can say when
-// it matches nearly all of it. The SQL the rule renders to is returned only when include_sql is true.
-//
-//	kind do_not_share compiles a do-not-share rule for recall: conditions only as narrow as the
-//
-// description says, the judgement of what it describes put into questions, and with nothing a column
-// decides for certain, conditions that hold for every email. Needs mail:read, a member's own
-// credential with their full access (not an API key, agent key or narrowed token), and the email
-// rules feature.
+// caller's recent classified mail (what a test of it covers by default): breadth is that count, and
+// a warning says when it matches nearly all of it. The SQL the rule renders to is returned only when
+// include_sql is true. kind do_not_share compiles a do-not-share rule for recall: conditions only as
+// narrow as the description says, the judgement of what it describes put into questions, and with
+// nothing a column decides for certain, conditions that hold for every email. Needs mail:read, a
+// member's own credential with their full access (not an API key, agent key or narrowed token), and
+// the email rules feature.
 //
 // POST /email-rules/compile
 func (c *Client) CompileEmailRule(ctx context.Context, request *CompileEmailRuleRequest, params CompileEmailRuleParams) (CompileEmailRuleRes, error) {
@@ -17473,10 +17476,11 @@ func (c *Client) sendGetEmailReadable(ctx context.Context, params GetEmailReadab
 // GetEmailRule invokes getEmailRule operation.
 //
 // A rule, its scope (evaluation_scope, and scope_selection for a selected rule), its current version
-// and its saved expectations. What the scope comes to for its author now is GET
-// /email-rules/{id}/scope. The SQL the version renders to is included only when include_sql is true.
-// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-// narrowed token), and the email rules feature.
+// and its saved expectations. The current version's text (english, tree, explanation, assumptions,
+// warnings) is under current, and current_version is its number. What the scope comes to for its
+// author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when
+// include_sql is true. Needs mail:read, a member's own credential with their full access (not an API
+// key, agent key or narrowed token), and the email rules feature.
 //
 // GET /email-rules/{id}
 func (c *Client) GetEmailRule(ctx context.Context, params GetEmailRuleParams) (GetEmailRuleRes, error) {
@@ -28297,7 +28301,8 @@ func (c *Client) sendListEmailRuleVersions(ctx context.Context, params ListEmail
 //
 // The rules the caller can see, newest first: their own, or every member's rules for a caller who
 // reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
-// for a selected rule). With matched_email_id, only the rules that matched that email. Needs
+// for a selected rule) and current_version, but not the version's text: read that under current from
+// GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs
 // mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
 // token), and the email rules feature.
 //
@@ -46630,15 +46635,18 @@ func (c *Client) sendUpdateDomain(ctx context.Context, request *UpdateDomainInpu
 // UpdateEmailRule invokes updateEmailRule operation.
 //
 // Renames the rule, saves a new version (english and tree together, with an explanation or one the
-// server writes; earlier versions stay), changes its state (draft is off; observe; active), whose
-// mail it runs over (evaluation_scope, with scope_selection when selected) or its saved expectations
-// (each saved version and new set is judged in expectations_check). Anyone but its author who sees
-// it may only disable it (state draft), and while it is shared only if they manage members from the
-// dashboard. Without evaluation_scope the scope stays; a scope change saves a new version with the
-// same conditions, and what was granted stays. A shared rule keeps its scope; a kind never changes.
-// Send if_version, the current_version you read, so a write never replaces a version saved since.
-// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-// narrowed token), and the email rules feature.
+// server writes; earlier versions stay) or an earlier one again (restore_version), changes its state
+// (draft is off; observe; active), whose mail it runs over (evaluation_scope, with scope_selection
+// when selected) or its saved expectations (each saved version and new set is judged in
+// expectations_check). Anyone but its author who sees it may only disable it (state draft), and
+// while it is shared only if they manage members from the dashboard. Without evaluation_scope the
+// scope stays; a scope change saves a new version with the same conditions, and what was granted
+// stays. A shared rule keeps its scope; a kind never changes. A saved version takes effect at once
+// (an active rule stays active); affects counts what it reaches. Send if_version, the
+// current_version you read, so a write never replaces a version saved since, or if_revision to
+// refuse it after any update. Without if_expectations_pass a version is saved even when its
+// expectations_check fails. Needs mail:read, a member's own credential with their full access (not
+// an API key, agent key or narrowed token), and the email rules feature.
 //
 // PATCH /email-rules/{id}
 func (c *Client) UpdateEmailRule(ctx context.Context, request *UpdateEmailRuleRequest, params UpdateEmailRuleParams) (UpdateEmailRuleRes, error) {

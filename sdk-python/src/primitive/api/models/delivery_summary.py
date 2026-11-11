@@ -58,19 +58,27 @@ class DeliverySummary:
             retry_scheduled (bool | None): Whether an automatic retry will try this delivery again. A retry is a delivery
                 pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the
                 current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its
-                owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. Null on every
-                attempt of a delivery retried or settled on a schedule of its own, which this does not report: a held one (its
-                release settles it, including the attempts it makes itself), a pull attempt, a rule-granted one, and a sent
-                email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still
-                owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the
-                event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the
-                message, reads false) and has not received the email by another delivery: null while a delivery pass for the
-                email is running (whether another follows is decided when it ends), true when the email has another automatic
-                pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did
-                not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no
-                automatic retry of the email's delivery will try it again, which does not mean nothing else ever will.
-            next_attempt_at (datetime.datetime | None): When the next automatic retry of this delivery is due. Not reported:
-                always null. Whether one is coming is retry_scheduled.
+                owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. A rule-
+                granted delivery is retried on a schedule of its own, to the same endpoint, deciding it afresh: on its latest
+                attempt true while another attempt is to come (the delivery's next_attempt_at says when); null while an attempt
+                is under way (read it again shortly), while it waits on an owner who cannot receive mail or on a held endpoint
+                (checked again hourly, and sent once that clears), when it is past its 7-day limit, or when that could not be
+                read just now; and false otherwise, including once the endpoint is off or already has the email. Null on every
+                attempt of a delivery retried or settled on a schedule of its own that this does not report: a held one (its
+                release settles it, including the attempts it makes itself), a pull attempt, and a sent email's or other event's
+                delivery. On the latest attempt that failed, is pending or was skipped in a way still owed, of an email that was
+                not rejected and still has its content, to an endpoint that is still on, takes the event, has an owner the pass
+                would deliver to (a revoked or suspended key, or an owner that may not receive the message, reads false) and has
+                not received the email by another delivery: null while a delivery pass for the email is running (whether another
+                follows is decided when it ends), true when the email has another automatic pass to come (a scheduled retry, the
+                reclaim of a pass that stopped, or the recovery of a first pass that did not finish), and false otherwise. False
+                on every other attempt, including every attempt a later one followed: no automatic retry of the email's delivery
+                will try it again, which does not mean nothing else ever will.
+            next_attempt_at (datetime.datetime | None): When the next automatic attempt of a rule-granted delivery is due:
+                set on its latest attempt while retry_scheduled is true. The attempt runs at the first retry pass at or after
+                this time (one runs every few minutes), so a time already past means it is due now. Null otherwise, and on every
+                delivery that is not rule-granted, whose retries are passes for the email with no time reported (whether one is
+                coming is retry_scheduled).
             duration_ms (int | None | Unset):
             last_error (None | str | Unset):
             email (DeliverySummaryEmailType0 | None | Unset):
