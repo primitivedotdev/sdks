@@ -202,7 +202,14 @@ function childFiles() {
     if (process.argv.includes('--background')) {
       const { startBackgroundListen } = await import('./listen-background.js');
       const relaunchTarget = JSON.parse(process.env.TEST_LISTEN_TARGET);
-      await startBackgroundListen({ ...relaunchTarget, argv: [process.argv[1]], startupTimeoutMs: 5000 });
+      const startedAt = Date.now();
+      try {
+        await startBackgroundListen({ ...relaunchTarget, argv: [process.argv[1]], startupTimeoutMs: 5000 });
+      } catch (error) {
+        const { appendFileSync } = await import('node:fs');
+        appendFileSync(process.env.TEST_RELAUNCH_LOG ?? '/dev/null', JSON.stringify({ after: Date.now() - startedAt, error: String(error?.message ?? error) }) + '\\n');
+        throw error;
+      }
       process.exit(0);
     }
     import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
@@ -1231,31 +1238,65 @@ describe("detached synthetic listener processes", () => {
     "replaces a supervisor that was killed while its worker kept receiving",
     async () => {
       const child = childFiles();
+      const relaunchLog = join(directory, "relaunch.log");
       const result = await startBackgroundListen({
         ...target,
         argv: [child],
-        env: { TEST_LISTEN_TARGET: JSON.stringify(target) },
+        env: {
+          TEST_LISTEN_TARGET: JSON.stringify(target),
+          TEST_RELAUNCH_LOG: relaunchLog,
+        },
         startupTimeoutMs: 5000,
       });
       const supervisorPid = result.status.supervisorPid as number;
       expect(supervisorPid).toBeGreaterThan(0);
+      const startedAt = Date.now();
+      // Everything that says why the replacement is not healthy, for a failure.
+      const diagnosis = () => {
+        const folder = join(stateFile(), "..");
+        const read = (name: string) => {
+          try {
+            return readFileSync(join(folder, name), "utf8");
+          } catch {
+            return null;
+          }
+        };
+        return JSON.stringify({
+          ms: Date.now() - startedAt,
+          status: backgroundListenStatus(target),
+          supervisor: read("supervisor.json"),
+          state: read("state.json"),
+          stop: read("stop.json"),
+          restart: read("restart.json"),
+          relaunch: existsSync(relaunchLog)
+            ? readFileSync(relaunchLog, "utf8")
+            : null,
+        });
+      };
       process.kill(supervisorPid, "SIGKILL");
       await vi.waitFor(
         () => {
           const current = backgroundListenStatus(target);
-          expect(current).toMatchObject({ phase: "receiving", healthy: true });
+          expect(current, diagnosis()).toMatchObject({
+            phase: "receiving",
+            healthy: true,
+          });
           expect(current.supervisorPid).toBeGreaterThan(0);
           expect(current.supervisorPid).not.toBe(supervisorPid);
         },
         { timeout: 15_000 },
       );
+      const firstPhase = diagnosis();
       // The replacement is a normal supervisor: it restarts its own worker.
       const replaced = backgroundListenStatus(target);
       process.kill(replaced.pid as number, "SIGKILL");
       await vi.waitFor(
         () => {
           const current = backgroundListenStatus(target);
-          expect(current).toMatchObject({ phase: "receiving", healthy: true });
+          expect(current, `${firstPhase} then ${diagnosis()}`).toMatchObject({
+            phase: "receiving",
+            healthy: true,
+          });
           expect(current.pid).not.toBe(replaced.pid);
           expect(current.supervisorPid).toBe(replaced.supervisorPid);
         },

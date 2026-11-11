@@ -162,7 +162,7 @@ async function fixture() {
     signal = new AbortController().signal,
     extra: Pick<
       Parameters<typeof connectNativeSession>[0],
-      "expectedCwd" | "onVerifiedCwd"
+      "expectedCwd" | "onVerifiedCwd" | "timeoutMs"
     > = {},
   ) => {
     const native = await connectNativeSession({
@@ -337,7 +337,12 @@ describe.skipIf(process.platform === "win32")(
     it("reports an oversized native response without claiming a socket permission failure", async () => {
       const f = await fixture();
       f.state.oversizedRead = true;
-      await expect(f.connect()).rejects.toMatchObject({
+      // Serializing and sending 9 MiB can outlast the fixture's 100 ms request
+      // timeout on a loaded runner, which reports a timeout instead of the
+      // oversized frame. Allow the client's longest timeout here.
+      await expect(
+        f.connect(undefined, undefined, { timeoutMs: 3000 }),
+      ).rejects.toMatchObject({
         message: expect.stringContaining("oversized response"),
         submitted: false,
       });
