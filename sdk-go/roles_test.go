@@ -34,10 +34,12 @@ func TestBuiltinRoleKeysMatchSpec(t *testing.T) {
 }
 
 func TestIsBuiltinRoleKey(t *testing.T) {
-	if !IsBuiltinRoleKey("operator") {
-		t.Fatal("operator should be a built-in role key")
+	if !IsBuiltinRoleKey("member") {
+		t.Fatal("member should be a built-in role key")
 	}
-	for _, key := range []string{"custom_1", "restricted"} {
+	// operator is a template role, and restricted stands for a role that
+	// does not fully include member: neither is a built-in role.
+	for _, key := range []string{"custom_1", "restricted", "operator"} {
 		if IsBuiltinRoleKey(key) {
 			t.Fatalf("%s should not be a built-in role key", key)
 		}

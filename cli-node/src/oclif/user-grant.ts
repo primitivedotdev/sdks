@@ -15,6 +15,7 @@
  * never reach this module.
  */
 import { Errors } from "@oclif/core";
+import { BUILTIN_ROLE_KEYS } from "@primitivedotdev/api-core";
 import {
   acquireCliCredentialsLock,
   cliAccessTokenExpiresAt,
@@ -50,9 +51,7 @@ export const NO_CURRENT_ORG_MESSAGE =
  * includes, or `restricted` when it includes none or they hold no role at
  * all. The role's own name is not in these answers.
  */
-// Not api-core's BUILTIN_ROLE_KEYS: that list, generated from the published
-// spec, names operator, which the server stores as a template role.
-const BUILT_IN_ROLE_KEYS = new Set(["owner", "admin", "member"]);
+const BUILT_IN_ROLE_KEYS: ReadonlySet<string> = new Set(BUILTIN_ROLE_KEYS);
 
 /** Whether a role key names one of the built-in roles. */
 export function isBuiltInRoleKey(role: string): boolean {

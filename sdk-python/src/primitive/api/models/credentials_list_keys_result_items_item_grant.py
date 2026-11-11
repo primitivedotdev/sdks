@@ -10,6 +10,8 @@ from ..types import UNSET, Unset
 
 from typing import cast
 
+if TYPE_CHECKING:
+  from ..models.credentials_list_keys_result_items_item_grant_resources_type_0 import CredentialsListKeysResultItemsItemGrantResourcesType0
 
 
 
@@ -26,11 +28,19 @@ class CredentialsListKeysResultItemsItemGrant:
             template (None | str):
             permissions (list[str] | None):
             mail_scope (Any):
+            ref (str | Unset): The grant this read shows. Send it as expected_grant_ref on PATCH /v1/keys/{id} so the change
+                is refused (409 conflict, details.reason grant_changed) if the grant has changed since this read.
+            resources (CredentialsListKeysResultItemsItemGrantResourcesType0 | None | Unset): The Functions, domains,
+                endpoints or routes the key is limited to, by type; null when it has no such limits. A grant change on a key
+                with limits must drop them on purpose, with grant.resources {} (otherwise 409 conflict, details.reason
+                key_has_resource_limits).
      """
 
     template: None | str
     permissions: list[str] | None
     mail_scope: Any
+    ref: str | Unset = UNSET
+    resources: CredentialsListKeysResultItemsItemGrantResourcesType0 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -38,6 +48,7 @@ class CredentialsListKeysResultItemsItemGrant:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.credentials_list_keys_result_items_item_grant_resources_type_0 import CredentialsListKeysResultItemsItemGrantResourcesType0 # noqa: PLC0415
         template: None | str
         template = self.template
 
@@ -51,6 +62,16 @@ class CredentialsListKeysResultItemsItemGrant:
 
         mail_scope = self.mail_scope
 
+        ref = self.ref
+
+        resources: dict[str, Any] | None | Unset
+        if isinstance(self.resources, Unset):
+            resources = UNSET
+        elif isinstance(self.resources, CredentialsListKeysResultItemsItemGrantResourcesType0):
+            resources = self.resources.to_dict()
+        else:
+            resources = self.resources
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -59,6 +80,10 @@ class CredentialsListKeysResultItemsItemGrant:
             "permissions": permissions,
             "mail_scope": mail_scope,
         })
+        if ref is not UNSET:
+            field_dict["ref"] = ref
+        if resources is not UNSET:
+            field_dict["resources"] = resources
 
         return field_dict
 
@@ -66,6 +91,7 @@ class CredentialsListKeysResultItemsItemGrant:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.credentials_list_keys_result_items_item_grant_resources_type_0 import CredentialsListKeysResultItemsItemGrantResourcesType0 # noqa: PLC0415
         d = dict(src_dict)
         def _parse_template(data: object) -> None | str:
             if data is None:
@@ -93,10 +119,34 @@ class CredentialsListKeysResultItemsItemGrant:
 
         mail_scope = d.pop("mail_scope")
 
+        ref = d.pop("ref", UNSET)
+
+        def _parse_resources(data: object) -> CredentialsListKeysResultItemsItemGrantResourcesType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                resources_type_0 = CredentialsListKeysResultItemsItemGrantResourcesType0.from_dict(data)
+
+
+
+                return resources_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(CredentialsListKeysResultItemsItemGrantResourcesType0 | None | Unset, data)
+
+        resources = _parse_resources(d.pop("resources", UNSET))
+
+
         credentials_list_keys_result_items_item_grant = cls(
             template=template,
             permissions=permissions,
             mail_scope=mail_scope,
+            ref=ref,
+            resources=resources,
         )
 
 

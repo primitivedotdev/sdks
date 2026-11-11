@@ -87,6 +87,17 @@ These no longer exist, so code that uses them stops compiling or running:
   longer has it, and `OPERATION_PERMISSIONS` lists no permission for
   `getAccount`, `getSendPermissions` and `whoami`.
 
+#### Built-in role keys
+
+- `operator` is no longer a built-in role key. The API's `BuiltinRoleKey`
+  lists `owner`, `admin` and `member`; Operator is a template role with a key
+  of its own. The Node `BUILTIN_ROLE_KEYS` list and `BuiltinRoleKey` type no
+  longer have `operator`, and Python's `BuiltinRoleKey.OPERATOR` is gone (a
+  value the API adds later still decodes, so `BuiltinRoleKey("operator")`
+  does too: check membership against the enum's listed values). Go's
+  `RoleOperator` is removed: `BuiltinRoleKeys()` leaves it out and
+  `IsBuiltinRoleKey("operator")` is false.
+
 #### Not in the SDKs
 
 - `GET /health` (`getHealth`), an unauthenticated health check for uptime
@@ -126,6 +137,12 @@ no longer `UNSET` in Python, plain or `Nil*` fields rather than `Opt*` in Go):
   `latest_attempt`, `next_attempt_at`, `response_status` and
   `response_body`.
 - `listEmailRuleShareEmails` items: `shared_at`.
+- `DeliverySummary`, `getDelivery`'s result and each of its `attempts`:
+  `retry_scheduled`. In Python it comes before `next_attempt_at` in the
+  arguments of `DeliverySummary` and the `getDelivery` result.
+- `whoami`: `email`, `role_name`.
+- `testEndpoint`'s answer (`TestResult`): `reachable`, `delivery`.
+- `testEndpointRules`' answer: `delivery`.
 
 #### Nullable values
 
@@ -358,6 +375,27 @@ Go (package `api`):
 - A rule write's `expectations_check.passed` can be null: in Go it is a
   `NilBool` instead of a `bool` on `EmailRuleWrittenExpectationsCheck`, and
   in Python `bool | None` on the expectations check models. A null `passed` means none failed but some are undecided.
+
+#### Endpoint answers
+
+- `updateEndpoint` answers `data` as the endpoint plus its `warnings`
+  (`UpdatedEndpoint`), so the generated type of `data` is new: in Go
+  `UpdatedEndpoint` instead of `Endpoint` on `UpdateEndpointOK`, and in
+  Python `UpdatedEndpoint` on `UpdateEndpointResponse200`. Read the same
+  endpoint fields from it. In Go its nested enum, option and rules types are
+  `UpdatedEndpoint*` too (for example `OptUpdatedEndpointKind` and
+  `UpdatedEndpointRules`), so code that compares them with the `Endpoint*`
+  types needs updating; Python reuses the `Endpoint*` enums.
+- Giving a webhook the organization does not own to a different key, or a
+  key's webhook back to the organization, turns it off unless the same
+  `updateEndpoint` request sets `enabled`: it then reads `enabled` false with
+  `disabled_reason` `owner_changed`, and the answer's `warnings` say so.
+- `testEndpointRules`: `would_deliver` also covers the endpoint's own
+  delivery conditions (it is on, neither it nor the email's route is held, its
+  owner may receive the email, and it subscribes to the event), and `rule`
+  names the first check that stops the email: `disabled`, `held` or an
+  `acting_owner_*` code, then `event_types`, then the name of the rule that
+  does not match. `rule` is no longer always a rule's name.
 
 #### CLI sender default
 
@@ -625,10 +663,37 @@ date-time is kept as null and sorts last. A sync stops with an error after
     endpoint at the new URL is refused.
   - `updateEndpoint` declares `403` and `503` answers; in Go they are typed
     responses instead of errors.
+  - Endpoints carry `disabled_reason`: `owner_changed`,
+    `owner_credential_revoked`, or null while on and when turned off by hand.
+  - `listEndpoints` and `getEndpoint` carry `delivery` for a webhook: whether
+    it is being sent received mail, every reason it is not, and, for a caller
+    with access to every mailbox, `held_for_owner`, the rule-granted mail held
+    while its owner cannot act.
+  - `updateEndpoint` answers with `warnings` (`turned_off_owner_changed`,
+    `turned_on_new_url`).
+  - `testEndpoint` answers with `reachable` (whether the endpoint answered the
+    test with a 2xx) and `delivery` (whether real `email.received` events
+    would be sent to it, and every reason they would not).
+  - `testEndpointRules` answers with `delivery` and declares `503`; in Go it
+    is a typed response.
 - Credentials: `getCredentialPolicy`, `updateCredentialPolicy` and
   `getKeyBuilder`'s `policy` carry `cli_writes_require_approval`; `getKey`
   and `listKeys` items carry `status`; `revokeCredential` takes
   `Primitive-Step-Up`.
+  - `listKeys` takes `include_revoked`, a string enum (`"true"` or
+    `"false"`: `ListKeysIncludeRevoked.TRUE` in Python,
+    `api.ListKeysIncludeRevokedTrue` in Go). `getKey` answers a revoked key
+    too. A key's `status` can be `revoked`, with `revoked_at` and
+    `revoked_by`.
+  - A key read's `grant` carries `ref`, to send as `expected_grant_ref` on
+    `updateKey`, and `resources`, the Functions, domains, endpoints or routes
+    the key is limited to. `updateKey` answers `grant_unguarded: true` when a
+    grant change was sent without `expected_grant_ref`. A grant change on a
+    key with `resources` drops them only on purpose, with a custom grant and
+    `grant.resources: {}`; one that leaves them out is refused with `409` and
+    `details.reason` `key_has_resource_limits`.
+  - `revokeCredential` answers `already_revoked: true`, with `revoked` 0,
+    for an API key that was already revoked.
 - `getDelivery` carries `attempts`; it and `listDeliveries` carry
   `latest_attempt`, `next_attempt_at`, `response_status` and
   `response_body`.
@@ -650,6 +715,12 @@ date-time is kept as null and sorts last. A sync stops with an error after
     list members.
   - `listEmailRuleShareEmails` no longer answers `409` for a share whose
     rule is off.
+  - `listEmailRuleDecisions` and `listEmailRuleResults` carry `withheld_by`
+    (`EmailRuleWithheldBy`: the do-not-share rules you can see that kept a
+    match from being shared, and why) and `withheld_by_hidden` (how many more
+    kept it back that you cannot see, or that were deleted since).
+  - `testEmailRule` results carry `recipient`, the mailbox the email was
+    received in.
 - Routes: `createRoute` and `updateRoute` answer with `warnings`
   (`endpoint_owner_limited`, `route_owner_limited`, `owner_unchecked`) and
   refuse a route that could never deliver with `400` `validation_error`,
@@ -662,6 +733,18 @@ date-time is kept as null and sorts last. A sync stops with an error after
   each member's mail access comes from instead.
 - `listRoles` carries `unassigned`, what a member with no role of their own
   holds.
+- `whoami` carries `email` (your own sign-in email) and `role_name` (your
+  role as the members list labels it). Both are set only when you are signed
+  in as yourself, and null for API keys, Functions, connected agents, agent
+  signup logins and other apps.
+- `listDeliveries` and `getDelivery`, and each of `getDelivery`'s
+  `attempts`, carry `retry_scheduled`: true when the email has another
+  automatic delivery pass to come, false when no automatic retry will try it
+  again, and null while a delivery pass for the email is running now. It is
+  also null on every attempt of a delivery that is retried or settled on a
+  schedule of its own: a held one, a pull attempt, a rule-granted one, and a
+  sent email's or other event's delivery. Null is not false: in Go it is a
+  `NilBool` and in Python `bool | None`. `next_attempt_at` stays null.
 
 #### Node SDK
 
@@ -752,6 +835,10 @@ downgrading, or sign in again afterwards.
   (`rules_not_on_key`); a change that leaves the grant as it is sends no
   grant change, and nothing at all unless `--name`, `--expires-at` or
   `--no-expiry` is also given.
+- `keys get` on a revoked key prints when it was revoked, and by whom when
+  the read says. `keys update` refuses to change a revoked key's grant before
+  asking for any approval, and `keys revoke` on a key that is already revoked
+  says nothing changed.
 
 #### Rule request webhook events
 

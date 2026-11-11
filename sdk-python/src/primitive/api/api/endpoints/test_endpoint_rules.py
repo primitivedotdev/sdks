@@ -77,6 +77,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_404
 
+    if response.status_code == 503:
+        response_503 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_503
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -122,6 +129,12 @@ def sync_detailed(
     all. Delivery fails OPEN on an invalid blob (the message is
     delivered as if unfiltered), so `rules_valid: false` exposes a
     misconfiguration that is otherwise silent.
+
+
+    would_deliver also covers the endpoint's own delivery conditions for this email (delivery): it is
+    on, neither it nor the email's route is held, its owner may receive this email, and it subscribes to
+    the event. Which endpoint routing sends the email to is decided separately: POST /routes/simulate
+    answers that. A 503 means those conditions could not be read just now; retry.
 
     Args:
         id (UUID):
@@ -181,6 +194,12 @@ def sync(
     delivered as if unfiltered), so `rules_valid: false` exposes a
     misconfiguration that is otherwise silent.
 
+
+    would_deliver also covers the endpoint's own delivery conditions for this email (delivery): it is
+    on, neither it nor the email's route is held, its owner may receive this email, and it subscribes to
+    the event. Which endpoint routing sends the email to is decided separately: POST /routes/simulate
+    answers that. A 503 means those conditions could not be read just now; retry.
+
     Args:
         id (UUID):
         idempotency_key (str | Unset):
@@ -233,6 +252,12 @@ async def asyncio_detailed(
     all. Delivery fails OPEN on an invalid blob (the message is
     delivered as if unfiltered), so `rules_valid: false` exposes a
     misconfiguration that is otherwise silent.
+
+
+    would_deliver also covers the endpoint's own delivery conditions for this email (delivery): it is
+    on, neither it nor the email's route is held, its owner may receive this email, and it subscribes to
+    the event. Which endpoint routing sends the email to is decided separately: POST /routes/simulate
+    answers that. A 503 means those conditions could not be read just now; retry.
 
     Args:
         id (UUID):
@@ -291,6 +316,12 @@ async def asyncio(
     all. Delivery fails OPEN on an invalid blob (the message is
     delivered as if unfiltered), so `rules_valid: false` exposes a
     misconfiguration that is otherwise silent.
+
+
+    would_deliver also covers the endpoint's own delivery conditions for this email (delivery): it is
+    on, neither it nor the email's route is held, its owner may receive this email, and it subscribes to
+    the event. Which endpoint routing sends the email to is decided separately: POST /routes/simulate
+    answers that. A 503 means those conditions could not be read just now; retry.
 
     Args:
         id (UUID):

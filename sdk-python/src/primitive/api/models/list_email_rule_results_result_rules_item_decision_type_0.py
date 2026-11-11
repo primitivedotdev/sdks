@@ -13,6 +13,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.email_rule_tree import EmailRuleTree
+  from ..models.email_rule_withheld_by import EmailRuleWithheldBy
   from ..models.list_email_rule_results_result_rules_item_decision_type_0_parts_item import ListEmailRuleResultsResultRulesItemDecisionType0PartsItem
   from ..models.list_email_rule_results_result_rules_item_decision_type_0_question_answers_item import ListEmailRuleResultsResultRulesItemDecisionType0QuestionAnswersItem
 
@@ -41,6 +42,10 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
             detail_withheld (bool | Unset): Present, as true, on a result for an email whose content cannot be read
                 (withheld, failed to parse or discarded): matched still says what the rule decided, but how it got there was
                 read from that content, so parts and question_answers are empty. Absent otherwise.
+            withheld_by (list[EmailRuleWithheldBy] | Unset): Set when do-not-share rules kept this match from being shared,
+                so no key or webhook got it through the rule: those you can see, and why.
+            withheld_by_hidden (int | Unset): With withheld_by: how many more kept it back that you cannot see, or that were
+                deleted since. Those rules are not shown; an admin can see them.
      """
 
     rule_version: int
@@ -50,6 +55,8 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
     tree: EmailRuleTree | None
     created_at: datetime.datetime
     detail_withheld: bool | Unset = UNSET
+    withheld_by: list[EmailRuleWithheldBy] | Unset = UNSET
+    withheld_by_hidden: int | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -58,6 +65,7 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_rule_tree import EmailRuleTree # noqa: PLC0415
+        from ..models.email_rule_withheld_by import EmailRuleWithheldBy # noqa: PLC0415
         from ..models.list_email_rule_results_result_rules_item_decision_type_0_parts_item import ListEmailRuleResultsResultRulesItemDecisionType0PartsItem # noqa: PLC0415
         from ..models.list_email_rule_results_result_rules_item_decision_type_0_question_answers_item import ListEmailRuleResultsResultRulesItemDecisionType0QuestionAnswersItem # noqa: PLC0415
         rule_version = self.rule_version
@@ -88,6 +96,17 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
 
         detail_withheld = self.detail_withheld
 
+        withheld_by: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.withheld_by, Unset):
+            withheld_by = []
+            for withheld_by_item_data in self.withheld_by:
+                withheld_by_item = withheld_by_item_data.to_dict()
+                withheld_by.append(withheld_by_item)
+
+
+
+        withheld_by_hidden = self.withheld_by_hidden
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -101,6 +120,10 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
         })
         if detail_withheld is not UNSET:
             field_dict["detail_withheld"] = detail_withheld
+        if withheld_by is not UNSET:
+            field_dict["withheld_by"] = withheld_by
+        if withheld_by_hidden is not UNSET:
+            field_dict["withheld_by_hidden"] = withheld_by_hidden
 
         return field_dict
 
@@ -109,6 +132,7 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_rule_tree import EmailRuleTree # noqa: PLC0415
+        from ..models.email_rule_withheld_by import EmailRuleWithheldBy # noqa: PLC0415
         from ..models.list_email_rule_results_result_rules_item_decision_type_0_parts_item import ListEmailRuleResultsResultRulesItemDecisionType0PartsItem # noqa: PLC0415
         from ..models.list_email_rule_results_result_rules_item_decision_type_0_question_answers_item import ListEmailRuleResultsResultRulesItemDecisionType0QuestionAnswersItem # noqa: PLC0415
         d = dict(src_dict)
@@ -161,6 +185,20 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
 
         detail_withheld = d.pop("detail_withheld", UNSET)
 
+        _withheld_by = d.pop("withheld_by", UNSET)
+        withheld_by: list[EmailRuleWithheldBy] | Unset = UNSET
+        if _withheld_by is not UNSET:
+            withheld_by = []
+            for withheld_by_item_data in _withheld_by:
+                withheld_by_item = EmailRuleWithheldBy.from_dict(withheld_by_item_data)
+
+
+
+                withheld_by.append(withheld_by_item)
+
+
+        withheld_by_hidden = d.pop("withheld_by_hidden", UNSET)
+
         list_email_rule_results_result_rules_item_decision_type_0 = cls(
             rule_version=rule_version,
             matched=matched,
@@ -169,6 +207,8 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
             tree=tree,
             created_at=created_at,
             detail_withheld=detail_withheld,
+            withheld_by=withheld_by,
+            withheld_by_hidden=withheld_by_hidden,
         )
 
 

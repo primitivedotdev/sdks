@@ -54,8 +54,22 @@ class GetDeliveryResult:
                 of no attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A retry is
                 recorded as a new attempt with its own id and attempt_count (not always higher than the one before), so an
                 earlier attempt never changes: follow the latest one, or read attempts on any of them.
-            next_attempt_at (None | str): When the next automatic retry of this delivery is due. Not reported yet: always
-                null.
+            retry_scheduled (bool | None): Whether an automatic retry will try this delivery again. A retry is a delivery
+                pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the
+                current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its
+                owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. Null on every
+                attempt of a delivery retried or settled on a schedule of its own, which this does not report: a held one (its
+                release settles it, including the attempts it makes itself), a pull attempt, a rule-granted one, and a sent
+                email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still
+                owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the
+                event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the
+                message, reads false) and has not received the email by another delivery: null while a delivery pass for the
+                email is running (whether another follows is decided when it ends), true when the email has another automatic
+                pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did
+                not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no
+                automatic retry of the email's delivery will try it again, which does not mean nothing else ever will.
+            next_attempt_at (None | str): When the next automatic retry of this delivery is due. Not reported: always null.
+                Whether one is coming is retry_scheduled.
             attempts (list[GetDeliveryResultAttemptsItem]): Every attempt of this delivery in the order recorded, oldest
                 first, this one included: the same endpoint, and the same event (or, for an attempt recorded without one, the
                 same email). Each carries what the endpoint answered that attempt (response_status, response_body). Records of
@@ -81,6 +95,7 @@ class GetDeliveryResult:
     updated_at: str
     email: GetDeliveryResultEmailType0 | None
     latest_attempt: bool
+    retry_scheduled: bool | None
     next_attempt_at: None | str
     attempts: list[GetDeliveryResultAttemptsItem]
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -146,6 +161,9 @@ class GetDeliveryResult:
 
         latest_attempt = self.latest_attempt
 
+        retry_scheduled: bool | None
+        retry_scheduled = self.retry_scheduled
+
         next_attempt_at: None | str
         next_attempt_at = self.next_attempt_at
 
@@ -178,6 +196,7 @@ class GetDeliveryResult:
             "updated_at": updated_at,
             "email": email,
             "latest_attempt": latest_attempt,
+            "retry_scheduled": retry_scheduled,
             "next_attempt_at": next_attempt_at,
             "attempts": attempts,
         })
@@ -314,6 +333,14 @@ class GetDeliveryResult:
 
         latest_attempt = d.pop("latest_attempt")
 
+        def _parse_retry_scheduled(data: object) -> bool | None:
+            if data is None:
+                return data
+            return cast(bool | None, data)
+
+        retry_scheduled = _parse_retry_scheduled(d.pop("retry_scheduled"))
+
+
         def _parse_next_attempt_at(data: object) -> None | str:
             if data is None:
                 return data
@@ -351,6 +378,7 @@ class GetDeliveryResult:
             updated_at=updated_at,
             email=email,
             latest_attempt=latest_attempt,
+            retry_scheduled=retry_scheduled,
             next_attempt_at=next_attempt_at,
             attempts=attempts,
         )

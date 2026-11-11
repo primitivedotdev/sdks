@@ -37,6 +37,20 @@ class GetDeliveryResultAttemptsItem:
                 that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was
                 sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is
                 deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.
+            retry_scheduled (bool | None): Whether an automatic retry will try this delivery again. A retry is a delivery
+                pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the
+                current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its
+                owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. Null on every
+                attempt of a delivery retried or settled on a schedule of its own, which this does not report: a held one (its
+                release settles it, including the attempts it makes itself), a pull attempt, a rule-granted one, and a sent
+                email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still
+                owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the
+                event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the
+                message, reads false) and has not received the email by another delivery: null while a delivery pass for the
+                email is running (whether another follows is decided when it ends), true when the email has another automatic
+                pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did
+                not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no
+                automatic retry of the email's delivery will try it again, which does not mean nothing else ever will.
      """
 
     id: str
@@ -47,6 +61,7 @@ class GetDeliveryResultAttemptsItem:
     created_at: str
     response_status: int | None
     response_body: None | str
+    retry_scheduled: bool | None
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -74,6 +89,9 @@ class GetDeliveryResultAttemptsItem:
         response_body: None | str
         response_body = self.response_body
 
+        retry_scheduled: bool | None
+        retry_scheduled = self.retry_scheduled
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -86,6 +104,7 @@ class GetDeliveryResultAttemptsItem:
             "created_at": created_at,
             "response_status": response_status,
             "response_body": response_body,
+            "retry_scheduled": retry_scheduled,
         })
 
         return field_dict
@@ -135,6 +154,14 @@ class GetDeliveryResultAttemptsItem:
         response_body = _parse_response_body(d.pop("response_body"))
 
 
+        def _parse_retry_scheduled(data: object) -> bool | None:
+            if data is None:
+                return data
+            return cast(bool | None, data)
+
+        retry_scheduled = _parse_retry_scheduled(d.pop("retry_scheduled"))
+
+
         get_delivery_result_attempts_item = cls(
             id=id,
             attempt_count=attempt_count,
@@ -144,6 +171,7 @@ class GetDeliveryResultAttemptsItem:
             created_at=created_at,
             response_status=response_status,
             response_body=response_body,
+            retry_scheduled=retry_scheduled,
         )
 
 

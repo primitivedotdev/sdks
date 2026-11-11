@@ -5,19 +5,17 @@ package primitive
 // use other keys, so a role key read from the API is a plain string.
 type BuiltinRoleKey string
 
-// The built-in role keys. RoleOperator has every permission RoleAdmin has
-// except managing members, changing roles, sending invitations and billing.
-// By default the CLI may be used by RoleOwner, RoleAdmin and RoleOperator.
+// The built-in role keys. Every other role, including the operator
+// template, is a template or custom role with a key of its own.
 const (
-	RoleOwner    BuiltinRoleKey = "owner"
-	RoleAdmin    BuiltinRoleKey = "admin"
-	RoleOperator BuiltinRoleKey = "operator"
-	RoleMember   BuiltinRoleKey = "member"
+	RoleOwner  BuiltinRoleKey = "owner"
+	RoleAdmin  BuiltinRoleKey = "admin"
+	RoleMember BuiltinRoleKey = "member"
 )
 
 // BuiltinRoleKeys lists every built-in role key, in the spec's order.
 func BuiltinRoleKeys() []BuiltinRoleKey {
-	return []BuiltinRoleKey{RoleOwner, RoleAdmin, RoleOperator, RoleMember}
+	return []BuiltinRoleKey{RoleOwner, RoleAdmin, RoleMember}
 }
 
 // IsBuiltinRoleKey reports whether key names a built-in role.

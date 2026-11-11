@@ -92,20 +92,35 @@ def test_grant_forbidden_without_details() -> None:
     assert error.resource is None
 
 
-def test_builtin_role_keys_include_operator() -> None:
+def test_builtin_role_keys_are_owner_admin_and_member() -> None:
     from primitive.api.models import BuiltinRoleKey, ListRolesResultRolesItem
 
     assert [key.value for key in BuiltinRoleKey] == [
         "admin",
         "member",
-        "operator",
         "owner",
     ]
     role = ListRolesResultRolesItem.from_dict(
         {
+            "id": "r-admin",
+            "key": "admin",
+            "kind": "builtin",
+            "description": None,
+            "mail_scope": "org",
+            "catalog_version": None,
+            "predates_catalog": False,
+            "name": "Admin",
+            "permissions": ["mail:send"],
+            "version": 1,
+        }
+    )
+    assert BuiltinRoleKey(role.key) is BuiltinRoleKey.ADMIN
+    # Operator is a template role, not a built-in one.
+    operator = ListRolesResultRolesItem.from_dict(
+        {
             "id": "r-operator",
             "key": "operator",
-            "kind": "builtin",
+            "kind": "template",
             "description": None,
             "mail_scope": "org",
             "catalog_version": None,
@@ -115,7 +130,9 @@ def test_builtin_role_keys_include_operator() -> None:
             "version": 1,
         }
     )
-    assert BuiltinRoleKey(role.key) is BuiltinRoleKey.OPERATOR
+    assert operator.key == "operator"
+    assert "operator" not in {key.value for key in BuiltinRoleKey}
+    assert not hasattr(BuiltinRoleKey, "OPERATOR")
     unlisted = ListRolesResultRolesItem.from_dict(
         {
             "id": "r-other",

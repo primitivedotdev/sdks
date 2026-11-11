@@ -204,6 +204,9 @@ describe("delivery attempts", () => {
     const data = {
       id: DELIVERY,
       status: "delivered",
+      // Null (a delivery pass is running now, or this kind of delivery is
+      // retried on its own schedule) is printed as null, never as false.
+      retry_scheduled: null,
       attempts: [
         {
           id: "a1",
@@ -214,6 +217,7 @@ describe("delivery attempts", () => {
           created_at: "2026-11-10T10:05:00Z",
           response_status: 202,
           response_body: "accepted",
+          retry_scheduled: null,
         },
       ],
     };
@@ -224,6 +228,8 @@ describe("delivery attempts", () => {
     expect(plain.stderr).toBe(
       "Attempts (1):\n  #1 2026-11-10T10:05:00Z delivered, answered HTTP 202: accepted\n",
     );
+    expect(JSON.parse(plain.stdout)).toEqual(data);
+    expect(plain.stdout).not.toContain('"retry_scheduled": false');
     const json = await run(command, [DELIVERY, "--json"]);
     expect(json.stderr).toBe("");
     expect(JSON.parse(json.stdout)).toEqual(data);

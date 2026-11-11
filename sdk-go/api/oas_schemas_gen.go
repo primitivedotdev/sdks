@@ -17617,10 +17617,18 @@ type CredentialsGetKeyResult struct {
 	ExpiresAt       NilString                    `json:"expires_at"`
 	Suspended       bool                         `json:"suspended"`
 	// Whether the key works now: active; suspended (refused until the suspension is lifted); expired
-	// (refused since expires_at); or inactive, for an agent connection key whose connection cannot act
-	// (not claimed, revoked, its domain not verified, or its owner no longer a member). A revoked key is
-	// not listed. An endpoint's owner_key_status reports an expired key as suspended.
-	Status          OptCredentialsGetKeyResultStatus `json:"status"`
+	// (refused since expires_at); inactive, for an agent connection key whose connection cannot act (not
+	// claimed, revoked, its domain not verified, or its owner no longer a member); or revoked, which it
+	// stays for good and which no unrevoked key ever shows. A revoked key is listed only with
+	// include_revoked=true, and GET /v1/keys/{id} answers it. An endpoint's owner_key_status reports an
+	// expired key as suspended.
+	Status OptCredentialsGetKeyResultStatus `json:"status"`
+	// When the key was revoked (ISO 8601); null for a key that is not revoked.
+	RevokedAt OptNilString `json:"revoked_at"`
+	// The user id of the person who revoked the key from their own dashboard session, step-up or
+	// Primitive CLI login; null for a key that is not revoked, and for one revoked any other way (by an
+	// API key, another app or token, or an automatic process such as secret scanning).
+	RevokedBy       OptNilString `json:"revoked_by"`
 	AdditionalProps CredentialsGetKeyResultAdditional
 }
 
@@ -17682,6 +17690,16 @@ func (s *CredentialsGetKeyResult) GetSuspended() bool {
 // GetStatus returns the value of Status.
 func (s *CredentialsGetKeyResult) GetStatus() OptCredentialsGetKeyResultStatus {
 	return s.Status
+}
+
+// GetRevokedAt returns the value of RevokedAt.
+func (s *CredentialsGetKeyResult) GetRevokedAt() OptNilString {
+	return s.RevokedAt
+}
+
+// GetRevokedBy returns the value of RevokedBy.
+func (s *CredentialsGetKeyResult) GetRevokedBy() OptNilString {
+	return s.RevokedBy
 }
 
 // GetAdditionalProps returns the value of AdditionalProps.
@@ -17749,6 +17767,16 @@ func (s *CredentialsGetKeyResult) SetStatus(val OptCredentialsGetKeyResultStatus
 	s.Status = val
 }
 
+// SetRevokedAt sets the value of RevokedAt.
+func (s *CredentialsGetKeyResult) SetRevokedAt(val OptNilString) {
+	s.RevokedAt = val
+}
+
+// SetRevokedBy sets the value of RevokedBy.
+func (s *CredentialsGetKeyResult) SetRevokedBy(val OptNilString) {
+	s.RevokedBy = val
+}
+
 // SetAdditionalProps sets the value of AdditionalProps.
 func (s *CredentialsGetKeyResult) SetAdditionalProps(val CredentialsGetKeyResultAdditional) {
 	s.AdditionalProps = val
@@ -17766,10 +17794,22 @@ func (s *CredentialsGetKeyResultAdditional) init() CredentialsGetKeyResultAdditi
 }
 
 type CredentialsGetKeyResultGrant struct {
-	Template        NilString `json:"template"`
-	Permissions     []string  `json:"permissions"`
-	MailScope       jx.Raw    `json:"mail_scope"`
+	// The grant this read shows. Send it as expected_grant_ref on PATCH /v1/keys/{id} so the change is
+	// refused (409 conflict, details.reason grant_changed) if the grant has changed since this read.
+	Ref         OptString `json:"ref"`
+	Template    NilString `json:"template"`
+	Permissions []string  `json:"permissions"`
+	MailScope   jx.Raw    `json:"mail_scope"`
+	// The Functions, domains, endpoints or routes the key is limited to, by type; null when it has no
+	// such limits. A grant change on a key with limits must drop them on purpose, with grant.resources
+	// {} (otherwise 409 conflict, details.reason key_has_resource_limits).
+	Resources       OptNilCredentialsGetKeyResultGrantResources `json:"resources"`
 	AdditionalProps CredentialsGetKeyResultGrantAdditional
+}
+
+// GetRef returns the value of Ref.
+func (s *CredentialsGetKeyResultGrant) GetRef() OptString {
+	return s.Ref
 }
 
 // GetTemplate returns the value of Template.
@@ -17787,9 +17827,19 @@ func (s *CredentialsGetKeyResultGrant) GetMailScope() jx.Raw {
 	return s.MailScope
 }
 
+// GetResources returns the value of Resources.
+func (s *CredentialsGetKeyResultGrant) GetResources() OptNilCredentialsGetKeyResultGrantResources {
+	return s.Resources
+}
+
 // GetAdditionalProps returns the value of AdditionalProps.
 func (s *CredentialsGetKeyResultGrant) GetAdditionalProps() CredentialsGetKeyResultGrantAdditional {
 	return s.AdditionalProps
+}
+
+// SetRef sets the value of Ref.
+func (s *CredentialsGetKeyResultGrant) SetRef(val OptString) {
+	s.Ref = val
 }
 
 // SetTemplate sets the value of Template.
@@ -17807,6 +17857,11 @@ func (s *CredentialsGetKeyResultGrant) SetMailScope(val jx.Raw) {
 	s.MailScope = val
 }
 
+// SetResources sets the value of Resources.
+func (s *CredentialsGetKeyResultGrant) SetResources(val OptNilCredentialsGetKeyResultGrantResources) {
+	s.Resources = val
+}
+
 // SetAdditionalProps sets the value of AdditionalProps.
 func (s *CredentialsGetKeyResultGrant) SetAdditionalProps(val CredentialsGetKeyResultGrantAdditional) {
 	s.AdditionalProps = val
@@ -17818,6 +17873,20 @@ func (s *CredentialsGetKeyResultGrantAdditional) init() CredentialsGetKeyResultG
 	m := *s
 	if m == nil {
 		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// The Functions, domains, endpoints or routes the key is limited to, by type; null when it has no
+// such limits. A grant change on a key with limits must drop them on purpose, with grant.resources
+// {} (otherwise 409 conflict, details.reason key_has_resource_limits).
+type CredentialsGetKeyResultGrantResources map[string][]string
+
+func (s *CredentialsGetKeyResultGrantResources) init() CredentialsGetKeyResultGrantResources {
+	m := *s
+	if m == nil {
+		m = map[string][]string{}
 		*s = m
 	}
 	return m
@@ -17872,9 +17941,11 @@ func (s *CredentialsGetKeyResultKind) UnmarshalText(data []byte) error {
 }
 
 // Whether the key works now: active; suspended (refused until the suspension is lifted); expired
-// (refused since expires_at); or inactive, for an agent connection key whose connection cannot act
-// (not claimed, revoked, its domain not verified, or its owner no longer a member). A revoked key is
-// not listed. An endpoint's owner_key_status reports an expired key as suspended.
+// (refused since expires_at); inactive, for an agent connection key whose connection cannot act (not
+// claimed, revoked, its domain not verified, or its owner no longer a member); or revoked, which it
+// stays for good and which no unrevoked key ever shows. A revoked key is listed only with
+// include_revoked=true, and GET /v1/keys/{id} answers it. An endpoint's owner_key_status reports an
+// expired key as suspended.
 type CredentialsGetKeyResultStatus string
 
 const (
@@ -17882,6 +17953,7 @@ const (
 	CredentialsGetKeyResultStatusSuspended CredentialsGetKeyResultStatus = "suspended"
 	CredentialsGetKeyResultStatusExpired   CredentialsGetKeyResultStatus = "expired"
 	CredentialsGetKeyResultStatusInactive  CredentialsGetKeyResultStatus = "inactive"
+	CredentialsGetKeyResultStatusRevoked   CredentialsGetKeyResultStatus = "revoked"
 )
 
 // AllValues returns all CredentialsGetKeyResultStatus values.
@@ -17891,6 +17963,7 @@ func (CredentialsGetKeyResultStatus) AllValues() []CredentialsGetKeyResultStatus
 		CredentialsGetKeyResultStatusSuspended,
 		CredentialsGetKeyResultStatusExpired,
 		CredentialsGetKeyResultStatusInactive,
+		CredentialsGetKeyResultStatusRevoked,
 	}
 }
 
@@ -17904,6 +17977,8 @@ func (s CredentialsGetKeyResultStatus) MarshalText() ([]byte, error) {
 	case CredentialsGetKeyResultStatusExpired:
 		return []byte(s), nil
 	case CredentialsGetKeyResultStatusInactive:
+		return []byte(s), nil
+	case CredentialsGetKeyResultStatusRevoked:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -17924,6 +17999,9 @@ func (s *CredentialsGetKeyResultStatus) UnmarshalText(data []byte) error {
 		return nil
 	case CredentialsGetKeyResultStatusInactive:
 		*s = CredentialsGetKeyResultStatusInactive
+		return nil
+	case CredentialsGetKeyResultStatusRevoked:
+		*s = CredentialsGetKeyResultStatusRevoked
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -20006,10 +20084,18 @@ type CredentialsListKeysResultItemsItem struct {
 	ExpiresAt       NilString                               `json:"expires_at"`
 	Suspended       bool                                    `json:"suspended"`
 	// Whether the key works now: active; suspended (refused until the suspension is lifted); expired
-	// (refused since expires_at); or inactive, for an agent connection key whose connection cannot act
-	// (not claimed, revoked, its domain not verified, or its owner no longer a member). A revoked key is
-	// not listed. An endpoint's owner_key_status reports an expired key as suspended.
-	Status          OptCredentialsListKeysResultItemsItemStatus `json:"status"`
+	// (refused since expires_at); inactive, for an agent connection key whose connection cannot act (not
+	// claimed, revoked, its domain not verified, or its owner no longer a member); or revoked, which it
+	// stays for good and which no unrevoked key ever shows. A revoked key is listed only with
+	// include_revoked=true, and GET /v1/keys/{id} answers it. An endpoint's owner_key_status reports an
+	// expired key as suspended.
+	Status OptCredentialsListKeysResultItemsItemStatus `json:"status"`
+	// When the key was revoked (ISO 8601); null for a key that is not revoked.
+	RevokedAt OptNilString `json:"revoked_at"`
+	// The user id of the person who revoked the key from their own dashboard session, step-up or
+	// Primitive CLI login; null for a key that is not revoked, and for one revoked any other way (by an
+	// API key, another app or token, or an automatic process such as secret scanning).
+	RevokedBy       OptNilString `json:"revoked_by"`
 	AdditionalProps CredentialsListKeysResultItemsItemAdditional
 }
 
@@ -20071,6 +20157,16 @@ func (s *CredentialsListKeysResultItemsItem) GetSuspended() bool {
 // GetStatus returns the value of Status.
 func (s *CredentialsListKeysResultItemsItem) GetStatus() OptCredentialsListKeysResultItemsItemStatus {
 	return s.Status
+}
+
+// GetRevokedAt returns the value of RevokedAt.
+func (s *CredentialsListKeysResultItemsItem) GetRevokedAt() OptNilString {
+	return s.RevokedAt
+}
+
+// GetRevokedBy returns the value of RevokedBy.
+func (s *CredentialsListKeysResultItemsItem) GetRevokedBy() OptNilString {
+	return s.RevokedBy
 }
 
 // GetAdditionalProps returns the value of AdditionalProps.
@@ -20138,6 +20234,16 @@ func (s *CredentialsListKeysResultItemsItem) SetStatus(val OptCredentialsListKey
 	s.Status = val
 }
 
+// SetRevokedAt sets the value of RevokedAt.
+func (s *CredentialsListKeysResultItemsItem) SetRevokedAt(val OptNilString) {
+	s.RevokedAt = val
+}
+
+// SetRevokedBy sets the value of RevokedBy.
+func (s *CredentialsListKeysResultItemsItem) SetRevokedBy(val OptNilString) {
+	s.RevokedBy = val
+}
+
 // SetAdditionalProps sets the value of AdditionalProps.
 func (s *CredentialsListKeysResultItemsItem) SetAdditionalProps(val CredentialsListKeysResultItemsItemAdditional) {
 	s.AdditionalProps = val
@@ -20155,10 +20261,22 @@ func (s *CredentialsListKeysResultItemsItemAdditional) init() CredentialsListKey
 }
 
 type CredentialsListKeysResultItemsItemGrant struct {
-	Template        NilString `json:"template"`
-	Permissions     []string  `json:"permissions"`
-	MailScope       jx.Raw    `json:"mail_scope"`
+	// The grant this read shows. Send it as expected_grant_ref on PATCH /v1/keys/{id} so the change is
+	// refused (409 conflict, details.reason grant_changed) if the grant has changed since this read.
+	Ref         OptString `json:"ref"`
+	Template    NilString `json:"template"`
+	Permissions []string  `json:"permissions"`
+	MailScope   jx.Raw    `json:"mail_scope"`
+	// The Functions, domains, endpoints or routes the key is limited to, by type; null when it has no
+	// such limits. A grant change on a key with limits must drop them on purpose, with grant.resources
+	// {} (otherwise 409 conflict, details.reason key_has_resource_limits).
+	Resources       OptNilCredentialsListKeysResultItemsItemGrantResources `json:"resources"`
 	AdditionalProps CredentialsListKeysResultItemsItemGrantAdditional
+}
+
+// GetRef returns the value of Ref.
+func (s *CredentialsListKeysResultItemsItemGrant) GetRef() OptString {
+	return s.Ref
 }
 
 // GetTemplate returns the value of Template.
@@ -20176,9 +20294,19 @@ func (s *CredentialsListKeysResultItemsItemGrant) GetMailScope() jx.Raw {
 	return s.MailScope
 }
 
+// GetResources returns the value of Resources.
+func (s *CredentialsListKeysResultItemsItemGrant) GetResources() OptNilCredentialsListKeysResultItemsItemGrantResources {
+	return s.Resources
+}
+
 // GetAdditionalProps returns the value of AdditionalProps.
 func (s *CredentialsListKeysResultItemsItemGrant) GetAdditionalProps() CredentialsListKeysResultItemsItemGrantAdditional {
 	return s.AdditionalProps
+}
+
+// SetRef sets the value of Ref.
+func (s *CredentialsListKeysResultItemsItemGrant) SetRef(val OptString) {
+	s.Ref = val
 }
 
 // SetTemplate sets the value of Template.
@@ -20196,6 +20324,11 @@ func (s *CredentialsListKeysResultItemsItemGrant) SetMailScope(val jx.Raw) {
 	s.MailScope = val
 }
 
+// SetResources sets the value of Resources.
+func (s *CredentialsListKeysResultItemsItemGrant) SetResources(val OptNilCredentialsListKeysResultItemsItemGrantResources) {
+	s.Resources = val
+}
+
 // SetAdditionalProps sets the value of AdditionalProps.
 func (s *CredentialsListKeysResultItemsItemGrant) SetAdditionalProps(val CredentialsListKeysResultItemsItemGrantAdditional) {
 	s.AdditionalProps = val
@@ -20207,6 +20340,20 @@ func (s *CredentialsListKeysResultItemsItemGrantAdditional) init() CredentialsLi
 	m := *s
 	if m == nil {
 		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// The Functions, domains, endpoints or routes the key is limited to, by type; null when it has no
+// such limits. A grant change on a key with limits must drop them on purpose, with grant.resources
+// {} (otherwise 409 conflict, details.reason key_has_resource_limits).
+type CredentialsListKeysResultItemsItemGrantResources map[string][]string
+
+func (s *CredentialsListKeysResultItemsItemGrantResources) init() CredentialsListKeysResultItemsItemGrantResources {
+	m := *s
+	if m == nil {
+		m = map[string][]string{}
 		*s = m
 	}
 	return m
@@ -20261,9 +20408,11 @@ func (s *CredentialsListKeysResultItemsItemKind) UnmarshalText(data []byte) erro
 }
 
 // Whether the key works now: active; suspended (refused until the suspension is lifted); expired
-// (refused since expires_at); or inactive, for an agent connection key whose connection cannot act
-// (not claimed, revoked, its domain not verified, or its owner no longer a member). A revoked key is
-// not listed. An endpoint's owner_key_status reports an expired key as suspended.
+// (refused since expires_at); inactive, for an agent connection key whose connection cannot act (not
+// claimed, revoked, its domain not verified, or its owner no longer a member); or revoked, which it
+// stays for good and which no unrevoked key ever shows. A revoked key is listed only with
+// include_revoked=true, and GET /v1/keys/{id} answers it. An endpoint's owner_key_status reports an
+// expired key as suspended.
 type CredentialsListKeysResultItemsItemStatus string
 
 const (
@@ -20271,6 +20420,7 @@ const (
 	CredentialsListKeysResultItemsItemStatusSuspended CredentialsListKeysResultItemsItemStatus = "suspended"
 	CredentialsListKeysResultItemsItemStatusExpired   CredentialsListKeysResultItemsItemStatus = "expired"
 	CredentialsListKeysResultItemsItemStatusInactive  CredentialsListKeysResultItemsItemStatus = "inactive"
+	CredentialsListKeysResultItemsItemStatusRevoked   CredentialsListKeysResultItemsItemStatus = "revoked"
 )
 
 // AllValues returns all CredentialsListKeysResultItemsItemStatus values.
@@ -20280,6 +20430,7 @@ func (CredentialsListKeysResultItemsItemStatus) AllValues() []CredentialsListKey
 		CredentialsListKeysResultItemsItemStatusSuspended,
 		CredentialsListKeysResultItemsItemStatusExpired,
 		CredentialsListKeysResultItemsItemStatusInactive,
+		CredentialsListKeysResultItemsItemStatusRevoked,
 	}
 }
 
@@ -20293,6 +20444,8 @@ func (s CredentialsListKeysResultItemsItemStatus) MarshalText() ([]byte, error) 
 	case CredentialsListKeysResultItemsItemStatusExpired:
 		return []byte(s), nil
 	case CredentialsListKeysResultItemsItemStatusInactive:
+		return []byte(s), nil
+	case CredentialsListKeysResultItemsItemStatusRevoked:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -20313,6 +20466,9 @@ func (s *CredentialsListKeysResultItemsItemStatus) UnmarshalText(data []byte) er
 		return nil
 	case CredentialsListKeysResultItemsItemStatusInactive:
 		*s = CredentialsListKeysResultItemsItemStatusInactive
+		return nil
+	case CredentialsListKeysResultItemsItemStatusRevoked:
+		*s = CredentialsListKeysResultItemsItemStatusRevoked
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -20845,10 +21001,13 @@ func (s *CredentialsRevokeCredentialInputKind) UnmarshalText(data []byte) error 
 
 // Ref: #/components/schemas/Credentials_revokeCredential_Result
 type CredentialsRevokeCredentialResult struct {
-	Revoked         float64                                     `json:"revoked"`
-	Kind            CredentialsRevokeCredentialResultKind       `json:"kind"`
-	ID              string                                      `json:"id"`
-	Kept            []CredentialsRevokeCredentialResultKeptItem `json:"kept"`
+	Revoked float64                                     `json:"revoked"`
+	Kind    CredentialsRevokeCredentialResultKind       `json:"kind"`
+	ID      string                                      `json:"id"`
+	Kept    []CredentialsRevokeCredentialResultKeptItem `json:"kept"`
+	// True when the API key was already revoked, so nothing changed and revoked is 0. Absent otherwise.
+	// GET /v1/keys/{id} says when and by whom, to a caller who may read the key.
+	AlreadyRevoked  OptBool `json:"already_revoked"`
 	AdditionalProps CredentialsRevokeCredentialResultAdditional
 }
 
@@ -20870,6 +21029,11 @@ func (s *CredentialsRevokeCredentialResult) GetID() string {
 // GetKept returns the value of Kept.
 func (s *CredentialsRevokeCredentialResult) GetKept() []CredentialsRevokeCredentialResultKeptItem {
 	return s.Kept
+}
+
+// GetAlreadyRevoked returns the value of AlreadyRevoked.
+func (s *CredentialsRevokeCredentialResult) GetAlreadyRevoked() OptBool {
+	return s.AlreadyRevoked
 }
 
 // GetAdditionalProps returns the value of AdditionalProps.
@@ -20895,6 +21059,11 @@ func (s *CredentialsRevokeCredentialResult) SetID(val string) {
 // SetKept sets the value of Kept.
 func (s *CredentialsRevokeCredentialResult) SetKept(val []CredentialsRevokeCredentialResultKeptItem) {
 	s.Kept = val
+}
+
+// SetAlreadyRevoked sets the value of AlreadyRevoked.
+func (s *CredentialsRevokeCredentialResult) SetAlreadyRevoked(val OptBool) {
+	s.AlreadyRevoked = val
 }
 
 // SetAdditionalProps sets the value of AdditionalProps.
@@ -22146,6 +22315,11 @@ type CredentialsUpdateKeyResult struct {
 	Changed         []string                                        `json:"changed"`
 	Warnings        []CredentialsUpdateKeyResultWarningsItem        `json:"warnings"`
 	AddressWarnings []CredentialsUpdateKeyResultAddressWarningsItem `json:"address_warnings"`
+	// Present, as true, when the grant was changed without expected_grant_ref, so the change was not
+	// checked against changes made since the key was read. Send grant.ref from GET /v1/keys/{id} as
+	// expected_grant_ref to have such a change refused instead (409 conflict, details.reason
+	// grant_changed).
+	GrantUnguarded  OptBool `json:"grant_unguarded"`
 	AdditionalProps CredentialsUpdateKeyResultAdditional
 }
 
@@ -22167,6 +22341,11 @@ func (s *CredentialsUpdateKeyResult) GetWarnings() []CredentialsUpdateKeyResultW
 // GetAddressWarnings returns the value of AddressWarnings.
 func (s *CredentialsUpdateKeyResult) GetAddressWarnings() []CredentialsUpdateKeyResultAddressWarningsItem {
 	return s.AddressWarnings
+}
+
+// GetGrantUnguarded returns the value of GrantUnguarded.
+func (s *CredentialsUpdateKeyResult) GetGrantUnguarded() OptBool {
+	return s.GrantUnguarded
 }
 
 // GetAdditionalProps returns the value of AdditionalProps.
@@ -22192,6 +22371,11 @@ func (s *CredentialsUpdateKeyResult) SetWarnings(val []CredentialsUpdateKeyResul
 // SetAddressWarnings sets the value of AddressWarnings.
 func (s *CredentialsUpdateKeyResult) SetAddressWarnings(val []CredentialsUpdateKeyResultAddressWarningsItem) {
 	s.AddressWarnings = val
+}
+
+// SetGrantUnguarded sets the value of GrantUnguarded.
+func (s *CredentialsUpdateKeyResult) SetGrantUnguarded(val OptBool) {
+	s.GrantUnguarded = val
 }
 
 // SetAdditionalProps sets the value of AdditionalProps.
@@ -25514,7 +25698,25 @@ type DeliverySummary struct {
 	// one before), so an earlier attempt never changes: follow the latest one, or read attempts on any
 	// of them.
 	LatestAttempt bool `json:"latest_attempt"`
-	// When the next automatic retry of this delivery is due. Not reported yet: always null.
+	// Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email:
+	// it sends again to the endpoint the email's routing resolves then (its recorded route, or the
+	// current endpoint for its domain), unless the email already reached it, deciding it afresh (its
+	// rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to
+	// this endpoint. Null on every attempt of a delivery retried or settled on a schedule of its own,
+	// which this does not report: a held one (its release settles it, including the attempts it makes
+	// itself), a pull attempt, a rule-granted one, and a sent email's or other event's delivery. On the
+	// latest attempt that failed, is pending or was skipped in a way still owed, of an email that was
+	// not rejected and still has its content, to an endpoint that is still on, takes the event, has an
+	// owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the
+	// message, reads false) and has not received the email by another delivery: null while a delivery
+	// pass for the email is running (whether another follows is decided when it ends), true when the
+	// email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped,
+	// or the recovery of a first pass that did not finish), and false otherwise. False on every other
+	// attempt, including every attempt a later one followed: no automatic retry of the email's delivery
+	// will try it again, which does not mean nothing else ever will.
+	RetryScheduled NilBool `json:"retry_scheduled"`
+	// When the next automatic retry of this delivery is due. Not reported: always null. Whether one is
+	// coming is retry_scheduled.
 	NextAttemptAt NilDateTime `json:"next_attempt_at"`
 }
 
@@ -25606,6 +25808,11 @@ func (s *DeliverySummary) GetResponseBody() NilString {
 // GetLatestAttempt returns the value of LatestAttempt.
 func (s *DeliverySummary) GetLatestAttempt() bool {
 	return s.LatestAttempt
+}
+
+// GetRetryScheduled returns the value of RetryScheduled.
+func (s *DeliverySummary) GetRetryScheduled() NilBool {
+	return s.RetryScheduled
 }
 
 // GetNextAttemptAt returns the value of NextAttemptAt.
@@ -25701,6 +25908,11 @@ func (s *DeliverySummary) SetResponseBody(val NilString) {
 // SetLatestAttempt sets the value of LatestAttempt.
 func (s *DeliverySummary) SetLatestAttempt(val bool) {
 	s.LatestAttempt = val
+}
+
+// SetRetryScheduled sets the value of RetryScheduled.
+func (s *DeliverySummary) SetRetryScheduled(val NilBool) {
+	s.RetryScheduled = val
 }
 
 // SetNextAttemptAt sets the value of NextAttemptAt.
@@ -33573,6 +33785,95 @@ func (s *EmailRuleWithVersionState) UnmarshalText(data []byte) error {
 	}
 }
 
+// Ref: #/components/schemas/EmailRuleWithheldBy
+type EmailRuleWithheldBy struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+	// Undecided: it had not decided the email, which blocks too. outside_scope_stale: cleared as outside
+	// its scope, and its author now reads the email.
+	Reason EmailRuleWithheldByReason `json:"reason"`
+}
+
+// GetID returns the value of ID.
+func (s *EmailRuleWithheldBy) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *EmailRuleWithheldBy) GetName() string {
+	return s.Name
+}
+
+// GetReason returns the value of Reason.
+func (s *EmailRuleWithheldBy) GetReason() EmailRuleWithheldByReason {
+	return s.Reason
+}
+
+// SetID sets the value of ID.
+func (s *EmailRuleWithheldBy) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *EmailRuleWithheldBy) SetName(val string) {
+	s.Name = val
+}
+
+// SetReason sets the value of Reason.
+func (s *EmailRuleWithheldBy) SetReason(val EmailRuleWithheldByReason) {
+	s.Reason = val
+}
+
+// Undecided: it had not decided the email, which blocks too. outside_scope_stale: cleared as outside
+// its scope, and its author now reads the email.
+type EmailRuleWithheldByReason string
+
+const (
+	EmailRuleWithheldByReasonMatched           EmailRuleWithheldByReason = "matched"
+	EmailRuleWithheldByReasonUndecided         EmailRuleWithheldByReason = "undecided"
+	EmailRuleWithheldByReasonOutsideScopeStale EmailRuleWithheldByReason = "outside_scope_stale"
+)
+
+// AllValues returns all EmailRuleWithheldByReason values.
+func (EmailRuleWithheldByReason) AllValues() []EmailRuleWithheldByReason {
+	return []EmailRuleWithheldByReason{
+		EmailRuleWithheldByReasonMatched,
+		EmailRuleWithheldByReasonUndecided,
+		EmailRuleWithheldByReasonOutsideScopeStale,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailRuleWithheldByReason) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailRuleWithheldByReasonMatched:
+		return []byte(s), nil
+	case EmailRuleWithheldByReasonUndecided:
+		return []byte(s), nil
+	case EmailRuleWithheldByReasonOutsideScopeStale:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailRuleWithheldByReason) UnmarshalText(data []byte) error {
+	switch EmailRuleWithheldByReason(data) {
+	case EmailRuleWithheldByReasonMatched:
+		*s = EmailRuleWithheldByReasonMatched
+		return nil
+	case EmailRuleWithheldByReasonUndecided:
+		*s = EmailRuleWithheldByReasonUndecided
+		return nil
+	case EmailRuleWithheldByReasonOutsideScopeStale:
+		*s = EmailRuleWithheldByReasonOutsideScopeStale
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Ref: #/components/schemas/EmailRuleWritten
 type EmailRuleWritten struct {
 	ID    uuid.UUID             `json:"id"`
@@ -37281,8 +37582,21 @@ type Endpoint struct {
 	OwnerKeyID OptNilUUID `json:"owner_key_id"`
 	// Whether the owning key can act now. In endpoint responses it is set only for a caller who may read
 	// API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent
-	// nothing.
+	// nothing. Anyone who may read the endpoint learns that from delivery.reasons, which never names the
+	// key.
 	OwnerKeyStatus OptNilEndpointOwnerKeyStatus `json:"owner_key_status"`
+	// Why the platform turned this endpoint off, when it names a reason. owner_changed: it was given to
+	// a new owner while its URL stayed, and the URL was chosen under the previous owner; turning it on
+	// or giving it a new URL starts it again. owner_credential_revoked: the third-party app or agent
+	// delegate grant that owned it was revoked; an owner or admin who turns it back on takes it over.
+	// Null while it is on and when it was turned off by hand. An access suspension does not set it (a
+	// suspension is decided through its own record). Other values may be added.
+	DisabledReason OptNilString `json:"disabled_reason"`
+	// For a webhook (kind http) in GET /endpoints and GET /endpoints/{id}: whether it is being sent
+	// received mail, and why not. Shown to anyone who may read the endpoint; it names a state, never a
+	// key. Null when it could not be checked just now. Absent from other kinds of endpoint and from
+	// create and update answers.
+	Delivery OptNilEndpointDelivery `json:"delivery"`
 	// Which secret signs deliveries to this webhook: its own (read it from GET
 	// /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that
 	// is not a webhook.
@@ -37416,6 +37730,16 @@ func (s *Endpoint) GetOwnerKeyID() OptNilUUID {
 // GetOwnerKeyStatus returns the value of OwnerKeyStatus.
 func (s *Endpoint) GetOwnerKeyStatus() OptNilEndpointOwnerKeyStatus {
 	return s.OwnerKeyStatus
+}
+
+// GetDisabledReason returns the value of DisabledReason.
+func (s *Endpoint) GetDisabledReason() OptNilString {
+	return s.DisabledReason
+}
+
+// GetDelivery returns the value of Delivery.
+func (s *Endpoint) GetDelivery() OptNilEndpointDelivery {
+	return s.Delivery
 }
 
 // GetSignedWith returns the value of SignedWith.
@@ -37553,6 +37877,16 @@ func (s *Endpoint) SetOwnerKeyStatus(val OptNilEndpointOwnerKeyStatus) {
 	s.OwnerKeyStatus = val
 }
 
+// SetDisabledReason sets the value of DisabledReason.
+func (s *Endpoint) SetDisabledReason(val OptNilString) {
+	s.DisabledReason = val
+}
+
+// SetDelivery sets the value of Delivery.
+func (s *Endpoint) SetDelivery(val OptNilEndpointDelivery) {
+	s.Delivery = val
+}
+
 // SetSignedWith sets the value of SignedWith.
 func (s *Endpoint) SetSignedWith(val OptEndpointSignedWith) {
 	s.SignedWith = val
@@ -37561,6 +37895,195 @@ func (s *Endpoint) SetSignedWith(val OptEndpointSignedWith) {
 // SetSigningSecret sets the value of SigningSecret.
 func (s *Endpoint) SetSigningSecret(val OptString) {
 	s.SigningSecret = val
+}
+
+// For a webhook (kind http) in GET /endpoints and GET /endpoints/{id}: whether it is being sent
+// received mail, and why not. Shown to anyone who may read the endpoint; it names a state, never a
+// key. Null when it could not be checked just now. Absent from other kinds of endpoint and from
+// create and update answers.
+type EndpointDelivery struct {
+	// Whether the webhook is being sent received mail at all now: it is on, it is not held, and its
+	// owner can receive mail. Which messages reach it is still decided per message, by routing, rule
+	// grants and its own rules.
+	Delivering bool `json:"delivering"`
+	// Every reason it is not, in the order delivery checks them; empty when it is. Codes, of which more
+	// may be added: disabled: the endpoint is off (disabled_reason on the endpoint says why). held: the
+	// endpoint, or the route the email came through, is held pending an owner or admin decision after
+	// its creator's access was reduced. acting_owner_revoked, acting_owner_suspended (which covers an
+	// expired key) and acting_owner_left: its owner cannot act now. acting_owner_permission: its owner
+	// does not read mail. acting_owner_depth: its owner sees headers only. acting_owner_scope: its owner
+	// does not read this email's mailbox, or, with no email to judge, reads no received mail at all now.
+	// These three name what the owner's access holds, so a caller who may not read API key metadata sees
+	// acting_owner_access in their place.
+	Reasons []EndpointDeliveryReasonsItem `json:"reasons"`
+	// Rule-granted mail held for this webhook while its owner cannot act; null when none is. Only for a
+	// caller with access to every mailbox (held mail can be an earlier owner's), and absent when it
+	// could not be read just now.
+	HeldForOwner    OptNilEndpointDeliveryHeldForOwner `json:"held_for_owner"`
+	AdditionalProps EndpointDeliveryAdditional
+}
+
+// GetDelivering returns the value of Delivering.
+func (s *EndpointDelivery) GetDelivering() bool {
+	return s.Delivering
+}
+
+// GetReasons returns the value of Reasons.
+func (s *EndpointDelivery) GetReasons() []EndpointDeliveryReasonsItem {
+	return s.Reasons
+}
+
+// GetHeldForOwner returns the value of HeldForOwner.
+func (s *EndpointDelivery) GetHeldForOwner() OptNilEndpointDeliveryHeldForOwner {
+	return s.HeldForOwner
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *EndpointDelivery) GetAdditionalProps() EndpointDeliveryAdditional {
+	return s.AdditionalProps
+}
+
+// SetDelivering sets the value of Delivering.
+func (s *EndpointDelivery) SetDelivering(val bool) {
+	s.Delivering = val
+}
+
+// SetReasons sets the value of Reasons.
+func (s *EndpointDelivery) SetReasons(val []EndpointDeliveryReasonsItem) {
+	s.Reasons = val
+}
+
+// SetHeldForOwner sets the value of HeldForOwner.
+func (s *EndpointDelivery) SetHeldForOwner(val OptNilEndpointDeliveryHeldForOwner) {
+	s.HeldForOwner = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *EndpointDelivery) SetAdditionalProps(val EndpointDeliveryAdditional) {
+	s.AdditionalProps = val
+}
+
+type EndpointDeliveryAdditional map[string]jx.Raw
+
+func (s *EndpointDeliveryAdditional) init() EndpointDeliveryAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Rule-granted mail held for this webhook while its owner cannot act; null when none is. Only for a
+// caller with access to every mailbox (held mail can be an earlier owner's), and absent when it
+// could not be read just now.
+type EndpointDeliveryHeldForOwner struct {
+	// Rule-granted emails waiting for this webhook because its owner could not act at their last check.
+	Count int `json:"count"`
+	// When the oldest of them was queued.
+	OldestQueuedAt time.Time `json:"oldest_queued_at"`
+	// When the oldest is given up on if its owner still cannot act. Each is checked again periodically,
+	// so the count can trail a change of the owner's state.
+	ExpiresAt       time.Time `json:"expires_at"`
+	AdditionalProps EndpointDeliveryHeldForOwnerAdditional
+}
+
+// GetCount returns the value of Count.
+func (s *EndpointDeliveryHeldForOwner) GetCount() int {
+	return s.Count
+}
+
+// GetOldestQueuedAt returns the value of OldestQueuedAt.
+func (s *EndpointDeliveryHeldForOwner) GetOldestQueuedAt() time.Time {
+	return s.OldestQueuedAt
+}
+
+// GetExpiresAt returns the value of ExpiresAt.
+func (s *EndpointDeliveryHeldForOwner) GetExpiresAt() time.Time {
+	return s.ExpiresAt
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *EndpointDeliveryHeldForOwner) GetAdditionalProps() EndpointDeliveryHeldForOwnerAdditional {
+	return s.AdditionalProps
+}
+
+// SetCount sets the value of Count.
+func (s *EndpointDeliveryHeldForOwner) SetCount(val int) {
+	s.Count = val
+}
+
+// SetOldestQueuedAt sets the value of OldestQueuedAt.
+func (s *EndpointDeliveryHeldForOwner) SetOldestQueuedAt(val time.Time) {
+	s.OldestQueuedAt = val
+}
+
+// SetExpiresAt sets the value of ExpiresAt.
+func (s *EndpointDeliveryHeldForOwner) SetExpiresAt(val time.Time) {
+	s.ExpiresAt = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *EndpointDeliveryHeldForOwner) SetAdditionalProps(val EndpointDeliveryHeldForOwnerAdditional) {
+	s.AdditionalProps = val
+}
+
+type EndpointDeliveryHeldForOwnerAdditional map[string]jx.Raw
+
+func (s *EndpointDeliveryHeldForOwnerAdditional) init() EndpointDeliveryHeldForOwnerAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type EndpointDeliveryReasonsItem struct {
+	Code            string `json:"code"`
+	Message         string `json:"message"`
+	AdditionalProps EndpointDeliveryReasonsItemAdditional
+}
+
+// GetCode returns the value of Code.
+func (s *EndpointDeliveryReasonsItem) GetCode() string {
+	return s.Code
+}
+
+// GetMessage returns the value of Message.
+func (s *EndpointDeliveryReasonsItem) GetMessage() string {
+	return s.Message
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *EndpointDeliveryReasonsItem) GetAdditionalProps() EndpointDeliveryReasonsItemAdditional {
+	return s.AdditionalProps
+}
+
+// SetCode sets the value of Code.
+func (s *EndpointDeliveryReasonsItem) SetCode(val string) {
+	s.Code = val
+}
+
+// SetMessage sets the value of Message.
+func (s *EndpointDeliveryReasonsItem) SetMessage(val string) {
+	s.Message = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *EndpointDeliveryReasonsItem) SetAdditionalProps(val EndpointDeliveryReasonsItemAdditional) {
+	s.AdditionalProps = val
+}
+
+type EndpointDeliveryReasonsItemAdditional map[string]jx.Raw
+
+func (s *EndpointDeliveryReasonsItemAdditional) init() EndpointDeliveryReasonsItemAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
 }
 
 // Http: deliver to the webhook URL. function: invoke a Primitive Function.
@@ -37614,7 +38137,8 @@ func (s *EndpointKind) UnmarshalText(data []byte) error {
 
 // Whether the owning key can act now. In endpoint responses it is set only for a caller who may read
 // API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent
-// nothing.
+// nothing. Anyone who may read the endpoint learns that from delivery.reasons, which never names the
+// key.
 type EndpointOwnerKeyStatus string
 
 const (
@@ -38078,6 +38602,54 @@ func (EndpointSigningSecretResponseSuccess) AllValues() []EndpointSigningSecretR
 	return []EndpointSigningSecretResponseSuccess{
 		EndpointSigningSecretResponseSuccessTrue,
 	}
+}
+
+// Ref: #/components/schemas/EndpointUpdateWarning
+type EndpointUpdateWarning struct {
+	Code            string `json:"code"`
+	Message         string `json:"message"`
+	AdditionalProps EndpointUpdateWarningAdditional
+}
+
+// GetCode returns the value of Code.
+func (s *EndpointUpdateWarning) GetCode() string {
+	return s.Code
+}
+
+// GetMessage returns the value of Message.
+func (s *EndpointUpdateWarning) GetMessage() string {
+	return s.Message
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *EndpointUpdateWarning) GetAdditionalProps() EndpointUpdateWarningAdditional {
+	return s.AdditionalProps
+}
+
+// SetCode sets the value of Code.
+func (s *EndpointUpdateWarning) SetCode(val string) {
+	s.Code = val
+}
+
+// SetMessage sets the value of Message.
+func (s *EndpointUpdateWarning) SetMessage(val string) {
+	s.Message = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *EndpointUpdateWarning) SetAdditionalProps(val EndpointUpdateWarningAdditional) {
+	s.AdditionalProps = val
+}
+
+type EndpointUpdateWarningAdditional map[string]jx.Raw
+
+func (s *EndpointUpdateWarningAdditional) init() EndpointUpdateWarningAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
 }
 
 // Ref: #/components/schemas/ErrorResponse
@@ -45814,7 +46386,25 @@ type GetDeliveryResult struct {
 	// one before), so an earlier attempt never changes: follow the latest one, or read attempts on any
 	// of them.
 	LatestAttempt bool `json:"latest_attempt"`
-	// When the next automatic retry of this delivery is due. Not reported yet: always null.
+	// Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email:
+	// it sends again to the endpoint the email's routing resolves then (its recorded route, or the
+	// current endpoint for its domain), unless the email already reached it, deciding it afresh (its
+	// rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to
+	// this endpoint. Null on every attempt of a delivery retried or settled on a schedule of its own,
+	// which this does not report: a held one (its release settles it, including the attempts it makes
+	// itself), a pull attempt, a rule-granted one, and a sent email's or other event's delivery. On the
+	// latest attempt that failed, is pending or was skipped in a way still owed, of an email that was
+	// not rejected and still has its content, to an endpoint that is still on, takes the event, has an
+	// owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the
+	// message, reads false) and has not received the email by another delivery: null while a delivery
+	// pass for the email is running (whether another follows is decided when it ends), true when the
+	// email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped,
+	// or the recovery of a first pass that did not finish), and false otherwise. False on every other
+	// attempt, including every attempt a later one followed: no automatic retry of the email's delivery
+	// will try it again, which does not mean nothing else ever will.
+	RetryScheduled NilBool `json:"retry_scheduled"`
+	// When the next automatic retry of this delivery is due. Not reported: always null. Whether one is
+	// coming is retry_scheduled.
 	NextAttemptAt NilString `json:"next_attempt_at"`
 	// Every attempt of this delivery in the order recorded, oldest first, this one included: the same
 	// endpoint, and the same event (or, for an attempt recorded without one, the same email). Each
@@ -45912,6 +46502,11 @@ func (s *GetDeliveryResult) GetEmail() NilGetDeliveryResultEmail {
 // GetLatestAttempt returns the value of LatestAttempt.
 func (s *GetDeliveryResult) GetLatestAttempt() bool {
 	return s.LatestAttempt
+}
+
+// GetRetryScheduled returns the value of RetryScheduled.
+func (s *GetDeliveryResult) GetRetryScheduled() NilBool {
+	return s.RetryScheduled
 }
 
 // GetNextAttemptAt returns the value of NextAttemptAt.
@@ -46014,6 +46609,11 @@ func (s *GetDeliveryResult) SetLatestAttempt(val bool) {
 	s.LatestAttempt = val
 }
 
+// SetRetryScheduled sets the value of RetryScheduled.
+func (s *GetDeliveryResult) SetRetryScheduled(val NilBool) {
+	s.RetryScheduled = val
+}
+
 // SetNextAttemptAt sets the value of NextAttemptAt.
 func (s *GetDeliveryResult) SetNextAttemptAt(val NilString) {
 	s.NextAttemptAt = val
@@ -46042,6 +46642,23 @@ type GetDeliveryResultAttemptsItem struct {
 	// sent email is deleted. Withheld from a caller who cannot read message content, since an answer can
 	// echo what was sent.
 	ResponseBody NilString `json:"response_body"`
+	// Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email:
+	// it sends again to the endpoint the email's routing resolves then (its recorded route, or the
+	// current endpoint for its domain), unless the email already reached it, deciding it afresh (its
+	// rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to
+	// this endpoint. Null on every attempt of a delivery retried or settled on a schedule of its own,
+	// which this does not report: a held one (its release settles it, including the attempts it makes
+	// itself), a pull attempt, a rule-granted one, and a sent email's or other event's delivery. On the
+	// latest attempt that failed, is pending or was skipped in a way still owed, of an email that was
+	// not rejected and still has its content, to an endpoint that is still on, takes the event, has an
+	// owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the
+	// message, reads false) and has not received the email by another delivery: null while a delivery
+	// pass for the email is running (whether another follows is decided when it ends), true when the
+	// email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped,
+	// or the recovery of a first pass that did not finish), and false otherwise. False on every other
+	// attempt, including every attempt a later one followed: no automatic retry of the email's delivery
+	// will try it again, which does not mean nothing else ever will.
+	RetryScheduled NilBool `json:"retry_scheduled"`
 }
 
 // GetID returns the value of ID.
@@ -46084,6 +46701,11 @@ func (s *GetDeliveryResultAttemptsItem) GetResponseBody() NilString {
 	return s.ResponseBody
 }
 
+// GetRetryScheduled returns the value of RetryScheduled.
+func (s *GetDeliveryResultAttemptsItem) GetRetryScheduled() NilBool {
+	return s.RetryScheduled
+}
+
 // SetID sets the value of ID.
 func (s *GetDeliveryResultAttemptsItem) SetID(val string) {
 	s.ID = val
@@ -46122,6 +46744,11 @@ func (s *GetDeliveryResultAttemptsItem) SetResponseStatus(val NilInt) {
 // SetResponseBody sets the value of ResponseBody.
 func (s *GetDeliveryResultAttemptsItem) SetResponseBody(val NilString) {
 	s.ResponseBody = val
+}
+
+// SetRetryScheduled sets the value of RetryScheduled.
+func (s *GetDeliveryResultAttemptsItem) SetRetryScheduled(val NilBool) {
+	s.RetryScheduled = val
 }
 
 type GetDeliveryResultEmail struct {
@@ -58337,8 +58964,14 @@ type ListEmailRuleDecisionsResultItem struct {
 	// decided, but how it got there was read from that content, so parts and question_answers are empty
 	// and near_miss is false. Discarding an email's content normally removes its decisions. Absent
 	// otherwise.
-	DetailWithheld OptBool   `json:"detail_withheld"`
-	CreatedAt      time.Time `json:"created_at"`
+	DetailWithheld OptBool `json:"detail_withheld"`
+	// Set when do-not-share rules kept this match from being shared, so no key or webhook got it through
+	// the rule: those you can see, and why.
+	WithheldBy []EmailRuleWithheldBy `json:"withheld_by"`
+	// With withheld_by: how many more kept it back that you cannot see, or that were deleted since.
+	// Those rules are not shown; an admin can see them.
+	WithheldByHidden OptInt    `json:"withheld_by_hidden"`
+	CreatedAt        time.Time `json:"created_at"`
 	// The decided email's sender address, as GET /v1/emails/{id} shows it.
 	FromAddress OptNilString `json:"from_address"`
 	// The decided email's subject, as GET /v1/emails/{id} shows it.
@@ -58391,6 +59024,16 @@ func (s *ListEmailRuleDecisionsResultItem) GetQuestionAnswers() []jx.Raw {
 // GetDetailWithheld returns the value of DetailWithheld.
 func (s *ListEmailRuleDecisionsResultItem) GetDetailWithheld() OptBool {
 	return s.DetailWithheld
+}
+
+// GetWithheldBy returns the value of WithheldBy.
+func (s *ListEmailRuleDecisionsResultItem) GetWithheldBy() []EmailRuleWithheldBy {
+	return s.WithheldBy
+}
+
+// GetWithheldByHidden returns the value of WithheldByHidden.
+func (s *ListEmailRuleDecisionsResultItem) GetWithheldByHidden() OptInt {
+	return s.WithheldByHidden
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -58456,6 +59099,16 @@ func (s *ListEmailRuleDecisionsResultItem) SetQuestionAnswers(val []jx.Raw) {
 // SetDetailWithheld sets the value of DetailWithheld.
 func (s *ListEmailRuleDecisionsResultItem) SetDetailWithheld(val OptBool) {
 	s.DetailWithheld = val
+}
+
+// SetWithheldBy sets the value of WithheldBy.
+func (s *ListEmailRuleDecisionsResultItem) SetWithheldBy(val []EmailRuleWithheldBy) {
+	s.WithheldBy = val
+}
+
+// SetWithheldByHidden sets the value of WithheldByHidden.
+func (s *ListEmailRuleDecisionsResultItem) SetWithheldByHidden(val OptInt) {
+	s.WithheldByHidden = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
@@ -59095,8 +59748,14 @@ type ListEmailRuleResultsResultRulesItemDecision struct {
 	// Present, as true, on a result for an email whose content cannot be read (withheld, failed to parse
 	// or discarded): matched still says what the rule decided, but how it got there was read from that
 	// content, so parts and question_answers are empty. Absent otherwise.
-	DetailWithheld OptBool   `json:"detail_withheld"`
-	CreatedAt      time.Time `json:"created_at"`
+	DetailWithheld OptBool `json:"detail_withheld"`
+	// Set when do-not-share rules kept this match from being shared, so no key or webhook got it through
+	// the rule: those you can see, and why.
+	WithheldBy []EmailRuleWithheldBy `json:"withheld_by"`
+	// With withheld_by: how many more kept it back that you cannot see, or that were deleted since.
+	// Those rules are not shown; an admin can see them.
+	WithheldByHidden OptInt    `json:"withheld_by_hidden"`
+	CreatedAt        time.Time `json:"created_at"`
 }
 
 // GetRuleVersion returns the value of RuleVersion.
@@ -59127,6 +59786,16 @@ func (s *ListEmailRuleResultsResultRulesItemDecision) GetTree() NilEmailRuleTree
 // GetDetailWithheld returns the value of DetailWithheld.
 func (s *ListEmailRuleResultsResultRulesItemDecision) GetDetailWithheld() OptBool {
 	return s.DetailWithheld
+}
+
+// GetWithheldBy returns the value of WithheldBy.
+func (s *ListEmailRuleResultsResultRulesItemDecision) GetWithheldBy() []EmailRuleWithheldBy {
+	return s.WithheldBy
+}
+
+// GetWithheldByHidden returns the value of WithheldByHidden.
+func (s *ListEmailRuleResultsResultRulesItemDecision) GetWithheldByHidden() OptInt {
+	return s.WithheldByHidden
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -59162,6 +59831,16 @@ func (s *ListEmailRuleResultsResultRulesItemDecision) SetTree(val NilEmailRuleTr
 // SetDetailWithheld sets the value of DetailWithheld.
 func (s *ListEmailRuleResultsResultRulesItemDecision) SetDetailWithheld(val OptBool) {
 	s.DetailWithheld = val
+}
+
+// SetWithheldBy sets the value of WithheldBy.
+func (s *ListEmailRuleResultsResultRulesItemDecision) SetWithheldBy(val []EmailRuleWithheldBy) {
+	s.WithheldBy = val
+}
+
+// SetWithheldByHidden sets the value of WithheldByHidden.
+func (s *ListEmailRuleResultsResultRulesItemDecision) SetWithheldByHidden(val OptInt) {
+	s.WithheldByHidden = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
@@ -63611,6 +64290,47 @@ func (*ListKeysBadRequest) listKeysRes() {}
 type ListKeysForbidden ErrorResponse
 
 func (*ListKeysForbidden) listKeysRes() {}
+
+type ListKeysIncludeRevoked string
+
+const (
+	ListKeysIncludeRevokedTrue  ListKeysIncludeRevoked = "true"
+	ListKeysIncludeRevokedFalse ListKeysIncludeRevoked = "false"
+)
+
+// AllValues returns all ListKeysIncludeRevoked values.
+func (ListKeysIncludeRevoked) AllValues() []ListKeysIncludeRevoked {
+	return []ListKeysIncludeRevoked{
+		ListKeysIncludeRevokedTrue,
+		ListKeysIncludeRevokedFalse,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListKeysIncludeRevoked) MarshalText() ([]byte, error) {
+	switch s {
+	case ListKeysIncludeRevokedTrue:
+		return []byte(s), nil
+	case ListKeysIncludeRevokedFalse:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListKeysIncludeRevoked) UnmarshalText(data []byte) error {
+	switch ListKeysIncludeRevoked(data) {
+	case ListKeysIncludeRevokedTrue:
+		*s = ListKeysIncludeRevokedTrue
+		return nil
+	case ListKeysIncludeRevokedFalse:
+		*s = ListKeysIncludeRevokedFalse
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 type ListKeysNotFound ErrorResponse
 
@@ -72462,6 +73182,96 @@ func (o NilString) Get() (v string, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o NilString) Or(d string) string {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilTestEndpointRulesResultDelivery returns new NilTestEndpointRulesResultDelivery with value set to v.
+func NewNilTestEndpointRulesResultDelivery(v TestEndpointRulesResultDelivery) NilTestEndpointRulesResultDelivery {
+	return NilTestEndpointRulesResultDelivery{
+		Value: v,
+	}
+}
+
+// NilTestEndpointRulesResultDelivery is nullable TestEndpointRulesResultDelivery.
+type NilTestEndpointRulesResultDelivery struct {
+	Value TestEndpointRulesResultDelivery
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilTestEndpointRulesResultDelivery) SetTo(v TestEndpointRulesResultDelivery) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilTestEndpointRulesResultDelivery) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilTestEndpointRulesResultDelivery) SetToNull() {
+	o.Null = true
+	var v TestEndpointRulesResultDelivery
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilTestEndpointRulesResultDelivery) Get() (v TestEndpointRulesResultDelivery, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilTestEndpointRulesResultDelivery) Or(d TestEndpointRulesResultDelivery) TestEndpointRulesResultDelivery {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilTestResultDelivery returns new NilTestResultDelivery with value set to v.
+func NewNilTestResultDelivery(v TestResultDelivery) NilTestResultDelivery {
+	return NilTestResultDelivery{
+		Value: v,
+	}
+}
+
+// NilTestResultDelivery is nullable TestResultDelivery.
+type NilTestResultDelivery struct {
+	Value TestResultDelivery
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilTestResultDelivery) SetTo(v TestResultDelivery) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilTestResultDelivery) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilTestResultDelivery) SetToNull() {
+	o.Null = true
+	var v TestResultDelivery
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilTestResultDelivery) Get() (v TestResultDelivery, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilTestResultDelivery) Or(d TestResultDelivery) TestResultDelivery {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -81484,6 +82294,52 @@ func (o OptListInteractionsState) Or(d ListInteractionsState) ListInteractionsSt
 	return d
 }
 
+// NewOptListKeysIncludeRevoked returns new OptListKeysIncludeRevoked with value set to v.
+func NewOptListKeysIncludeRevoked(v ListKeysIncludeRevoked) OptListKeysIncludeRevoked {
+	return OptListKeysIncludeRevoked{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListKeysIncludeRevoked is optional ListKeysIncludeRevoked.
+type OptListKeysIncludeRevoked struct {
+	Value ListKeysIncludeRevoked
+	Set   bool
+}
+
+// IsSet returns true if OptListKeysIncludeRevoked was set.
+func (o OptListKeysIncludeRevoked) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListKeysIncludeRevoked) Reset() {
+	var v ListKeysIncludeRevoked
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListKeysIncludeRevoked) SetTo(v ListKeysIncludeRevoked) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListKeysIncludeRevoked) Get() (v ListKeysIncludeRevoked, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListKeysIncludeRevoked) Or(d ListKeysIncludeRevoked) ListKeysIncludeRevoked {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptListMailRoutingOKCacheControl returns new OptListMailRoutingOKCacheControl with value set to v.
 func NewOptListMailRoutingOKCacheControl(v ListMailRoutingOKCacheControl) OptListMailRoutingOKCacheControl {
 	return OptListMailRoutingOKCacheControl{
@@ -83136,6 +83992,69 @@ func (o OptNilConversationMessageSenderMember) Or(d ConversationMessageSenderMem
 	return d
 }
 
+// NewOptNilCredentialsGetKeyResultGrantResources returns new OptNilCredentialsGetKeyResultGrantResources with value set to v.
+func NewOptNilCredentialsGetKeyResultGrantResources(v CredentialsGetKeyResultGrantResources) OptNilCredentialsGetKeyResultGrantResources {
+	return OptNilCredentialsGetKeyResultGrantResources{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilCredentialsGetKeyResultGrantResources is optional nullable CredentialsGetKeyResultGrantResources.
+type OptNilCredentialsGetKeyResultGrantResources struct {
+	Value CredentialsGetKeyResultGrantResources
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilCredentialsGetKeyResultGrantResources was set.
+func (o OptNilCredentialsGetKeyResultGrantResources) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilCredentialsGetKeyResultGrantResources) Reset() {
+	var v CredentialsGetKeyResultGrantResources
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilCredentialsGetKeyResultGrantResources) SetTo(v CredentialsGetKeyResultGrantResources) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilCredentialsGetKeyResultGrantResources) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilCredentialsGetKeyResultGrantResources) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v CredentialsGetKeyResultGrantResources
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilCredentialsGetKeyResultGrantResources) Get() (v CredentialsGetKeyResultGrantResources, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilCredentialsGetKeyResultGrantResources) Or(d CredentialsGetKeyResultGrantResources) CredentialsGetKeyResultGrantResources {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilCredentialsGetKeySuggestionResultMailScope returns new OptNilCredentialsGetKeySuggestionResultMailScope with value set to v.
 func NewOptNilCredentialsGetKeySuggestionResultMailScope(v CredentialsGetKeySuggestionResultMailScope) OptNilCredentialsGetKeySuggestionResultMailScope {
 	return OptNilCredentialsGetKeySuggestionResultMailScope{
@@ -83193,6 +84112,69 @@ func (o OptNilCredentialsGetKeySuggestionResultMailScope) Get() (v CredentialsGe
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilCredentialsGetKeySuggestionResultMailScope) Or(d CredentialsGetKeySuggestionResultMailScope) CredentialsGetKeySuggestionResultMailScope {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilCredentialsListKeysResultItemsItemGrantResources returns new OptNilCredentialsListKeysResultItemsItemGrantResources with value set to v.
+func NewOptNilCredentialsListKeysResultItemsItemGrantResources(v CredentialsListKeysResultItemsItemGrantResources) OptNilCredentialsListKeysResultItemsItemGrantResources {
+	return OptNilCredentialsListKeysResultItemsItemGrantResources{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilCredentialsListKeysResultItemsItemGrantResources is optional nullable CredentialsListKeysResultItemsItemGrantResources.
+type OptNilCredentialsListKeysResultItemsItemGrantResources struct {
+	Value CredentialsListKeysResultItemsItemGrantResources
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilCredentialsListKeysResultItemsItemGrantResources was set.
+func (o OptNilCredentialsListKeysResultItemsItemGrantResources) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilCredentialsListKeysResultItemsItemGrantResources) Reset() {
+	var v CredentialsListKeysResultItemsItemGrantResources
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilCredentialsListKeysResultItemsItemGrantResources) SetTo(v CredentialsListKeysResultItemsItemGrantResources) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilCredentialsListKeysResultItemsItemGrantResources) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilCredentialsListKeysResultItemsItemGrantResources) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v CredentialsListKeysResultItemsItemGrantResources
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilCredentialsListKeysResultItemsItemGrantResources) Get() (v CredentialsListKeysResultItemsItemGrantResources, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilCredentialsListKeysResultItemsItemGrantResources) Or(d CredentialsListKeysResultItemsItemGrantResources) CredentialsListKeysResultItemsItemGrantResources {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -85020,6 +86002,132 @@ func (o OptNilEmailWebhookStatus) Get() (v EmailWebhookStatus, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilEmailWebhookStatus) Or(d EmailWebhookStatus) EmailWebhookStatus {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilEndpointDelivery returns new OptNilEndpointDelivery with value set to v.
+func NewOptNilEndpointDelivery(v EndpointDelivery) OptNilEndpointDelivery {
+	return OptNilEndpointDelivery{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEndpointDelivery is optional nullable EndpointDelivery.
+type OptNilEndpointDelivery struct {
+	Value EndpointDelivery
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEndpointDelivery was set.
+func (o OptNilEndpointDelivery) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEndpointDelivery) Reset() {
+	var v EndpointDelivery
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEndpointDelivery) SetTo(v EndpointDelivery) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEndpointDelivery) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEndpointDelivery) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EndpointDelivery
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEndpointDelivery) Get() (v EndpointDelivery, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEndpointDelivery) Or(d EndpointDelivery) EndpointDelivery {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilEndpointDeliveryHeldForOwner returns new OptNilEndpointDeliveryHeldForOwner with value set to v.
+func NewOptNilEndpointDeliveryHeldForOwner(v EndpointDeliveryHeldForOwner) OptNilEndpointDeliveryHeldForOwner {
+	return OptNilEndpointDeliveryHeldForOwner{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEndpointDeliveryHeldForOwner is optional nullable EndpointDeliveryHeldForOwner.
+type OptNilEndpointDeliveryHeldForOwner struct {
+	Value EndpointDeliveryHeldForOwner
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEndpointDeliveryHeldForOwner was set.
+func (o OptNilEndpointDeliveryHeldForOwner) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEndpointDeliveryHeldForOwner) Reset() {
+	var v EndpointDeliveryHeldForOwner
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEndpointDeliveryHeldForOwner) SetTo(v EndpointDeliveryHeldForOwner) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEndpointDeliveryHeldForOwner) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEndpointDeliveryHeldForOwner) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EndpointDeliveryHeldForOwner
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEndpointDeliveryHeldForOwner) Get() (v EndpointDeliveryHeldForOwner, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEndpointDeliveryHeldForOwner) Or(d EndpointDeliveryHeldForOwner) EndpointDeliveryHeldForOwner {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -88428,6 +89536,195 @@ func (o OptNilUpdateEmailRuleRequestExpectations) Get() (v UpdateEmailRuleReques
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilUpdateEmailRuleRequestExpectations) Or(d UpdateEmailRuleRequestExpectations) UpdateEmailRuleRequestExpectations {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilUpdatedEndpointDelivery returns new OptNilUpdatedEndpointDelivery with value set to v.
+func NewOptNilUpdatedEndpointDelivery(v UpdatedEndpointDelivery) OptNilUpdatedEndpointDelivery {
+	return OptNilUpdatedEndpointDelivery{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilUpdatedEndpointDelivery is optional nullable UpdatedEndpointDelivery.
+type OptNilUpdatedEndpointDelivery struct {
+	Value UpdatedEndpointDelivery
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilUpdatedEndpointDelivery was set.
+func (o OptNilUpdatedEndpointDelivery) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilUpdatedEndpointDelivery) Reset() {
+	var v UpdatedEndpointDelivery
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilUpdatedEndpointDelivery) SetTo(v UpdatedEndpointDelivery) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilUpdatedEndpointDelivery) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilUpdatedEndpointDelivery) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v UpdatedEndpointDelivery
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilUpdatedEndpointDelivery) Get() (v UpdatedEndpointDelivery, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilUpdatedEndpointDelivery) Or(d UpdatedEndpointDelivery) UpdatedEndpointDelivery {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilUpdatedEndpointDeliveryHeldForOwner returns new OptNilUpdatedEndpointDeliveryHeldForOwner with value set to v.
+func NewOptNilUpdatedEndpointDeliveryHeldForOwner(v UpdatedEndpointDeliveryHeldForOwner) OptNilUpdatedEndpointDeliveryHeldForOwner {
+	return OptNilUpdatedEndpointDeliveryHeldForOwner{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilUpdatedEndpointDeliveryHeldForOwner is optional nullable UpdatedEndpointDeliveryHeldForOwner.
+type OptNilUpdatedEndpointDeliveryHeldForOwner struct {
+	Value UpdatedEndpointDeliveryHeldForOwner
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilUpdatedEndpointDeliveryHeldForOwner was set.
+func (o OptNilUpdatedEndpointDeliveryHeldForOwner) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilUpdatedEndpointDeliveryHeldForOwner) Reset() {
+	var v UpdatedEndpointDeliveryHeldForOwner
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilUpdatedEndpointDeliveryHeldForOwner) SetTo(v UpdatedEndpointDeliveryHeldForOwner) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilUpdatedEndpointDeliveryHeldForOwner) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilUpdatedEndpointDeliveryHeldForOwner) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v UpdatedEndpointDeliveryHeldForOwner
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilUpdatedEndpointDeliveryHeldForOwner) Get() (v UpdatedEndpointDeliveryHeldForOwner, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilUpdatedEndpointDeliveryHeldForOwner) Or(d UpdatedEndpointDeliveryHeldForOwner) UpdatedEndpointDeliveryHeldForOwner {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilUpdatedEndpointOwnerKeyStatus returns new OptNilUpdatedEndpointOwnerKeyStatus with value set to v.
+func NewOptNilUpdatedEndpointOwnerKeyStatus(v UpdatedEndpointOwnerKeyStatus) OptNilUpdatedEndpointOwnerKeyStatus {
+	return OptNilUpdatedEndpointOwnerKeyStatus{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilUpdatedEndpointOwnerKeyStatus is optional nullable UpdatedEndpointOwnerKeyStatus.
+type OptNilUpdatedEndpointOwnerKeyStatus struct {
+	Value UpdatedEndpointOwnerKeyStatus
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilUpdatedEndpointOwnerKeyStatus was set.
+func (o OptNilUpdatedEndpointOwnerKeyStatus) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilUpdatedEndpointOwnerKeyStatus) Reset() {
+	var v UpdatedEndpointOwnerKeyStatus
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilUpdatedEndpointOwnerKeyStatus) SetTo(v UpdatedEndpointOwnerKeyStatus) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilUpdatedEndpointOwnerKeyStatus) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilUpdatedEndpointOwnerKeyStatus) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v UpdatedEndpointOwnerKeyStatus
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilUpdatedEndpointOwnerKeyStatus) Get() (v UpdatedEndpointOwnerKeyStatus, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilUpdatedEndpointOwnerKeyStatus) Or(d UpdatedEndpointOwnerKeyStatus) UpdatedEndpointOwnerKeyStatus {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -93415,6 +94712,144 @@ func (o OptUpdateWakeScheduleInputArgs) Get() (v UpdateWakeScheduleInputArgs, ok
 
 // Or returns value if set, or given parameter if does not.
 func (o OptUpdateWakeScheduleInputArgs) Or(d UpdateWakeScheduleInputArgs) UpdateWakeScheduleInputArgs {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptUpdatedEndpointKind returns new OptUpdatedEndpointKind with value set to v.
+func NewOptUpdatedEndpointKind(v UpdatedEndpointKind) OptUpdatedEndpointKind {
+	return OptUpdatedEndpointKind{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptUpdatedEndpointKind is optional UpdatedEndpointKind.
+type OptUpdatedEndpointKind struct {
+	Value UpdatedEndpointKind
+	Set   bool
+}
+
+// IsSet returns true if OptUpdatedEndpointKind was set.
+func (o OptUpdatedEndpointKind) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptUpdatedEndpointKind) Reset() {
+	var v UpdatedEndpointKind
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptUpdatedEndpointKind) SetTo(v UpdatedEndpointKind) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptUpdatedEndpointKind) Get() (v UpdatedEndpointKind, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptUpdatedEndpointKind) Or(d UpdatedEndpointKind) UpdatedEndpointKind {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptUpdatedEndpointReceiverCapabilities returns new OptUpdatedEndpointReceiverCapabilities with value set to v.
+func NewOptUpdatedEndpointReceiverCapabilities(v UpdatedEndpointReceiverCapabilities) OptUpdatedEndpointReceiverCapabilities {
+	return OptUpdatedEndpointReceiverCapabilities{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptUpdatedEndpointReceiverCapabilities is optional UpdatedEndpointReceiverCapabilities.
+type OptUpdatedEndpointReceiverCapabilities struct {
+	Value UpdatedEndpointReceiverCapabilities
+	Set   bool
+}
+
+// IsSet returns true if OptUpdatedEndpointReceiverCapabilities was set.
+func (o OptUpdatedEndpointReceiverCapabilities) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptUpdatedEndpointReceiverCapabilities) Reset() {
+	var v UpdatedEndpointReceiverCapabilities
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptUpdatedEndpointReceiverCapabilities) SetTo(v UpdatedEndpointReceiverCapabilities) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptUpdatedEndpointReceiverCapabilities) Get() (v UpdatedEndpointReceiverCapabilities, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptUpdatedEndpointReceiverCapabilities) Or(d UpdatedEndpointReceiverCapabilities) UpdatedEndpointReceiverCapabilities {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptUpdatedEndpointSignedWith returns new OptUpdatedEndpointSignedWith with value set to v.
+func NewOptUpdatedEndpointSignedWith(v UpdatedEndpointSignedWith) OptUpdatedEndpointSignedWith {
+	return OptUpdatedEndpointSignedWith{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptUpdatedEndpointSignedWith is optional UpdatedEndpointSignedWith.
+type OptUpdatedEndpointSignedWith struct {
+	Value UpdatedEndpointSignedWith
+	Set   bool
+}
+
+// IsSet returns true if OptUpdatedEndpointSignedWith was set.
+func (o OptUpdatedEndpointSignedWith) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptUpdatedEndpointSignedWith) Reset() {
+	var v UpdatedEndpointSignedWith
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptUpdatedEndpointSignedWith) SetTo(v UpdatedEndpointSignedWith) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptUpdatedEndpointSignedWith) Get() (v UpdatedEndpointSignedWith, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptUpdatedEndpointSignedWith) Or(d UpdatedEndpointSignedWith) UpdatedEndpointSignedWith {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -121825,7 +123260,10 @@ type TestEmailRuleResultResultsItem struct {
 	Outcome     TestEmailRuleResultResultsItemOutcome `json:"outcome"`
 	ReceivedAt  OptDateTime                           `json:"received_at"`
 	FromAddress OptNilString                          `json:"from_address"`
-	Subject     OptNilString                          `json:"subject"`
+	// The mailbox this copy of the email was received in, as GET /v1/emails/{id} shows it. Given with
+	// received_at, from_address and subject, so absent for not_found.
+	Recipient OptString    `json:"recipient"`
+	Subject   OptNilString `json:"subject"`
 	// How each top-level part of the rule decided. Present for matched, near_miss and no_match.
 	Parts []TestEmailRuleResultResultsItemPartsItem `json:"parts"`
 	// Facts the rule reads that this email's classification left out, so the rule did not match.
@@ -121870,6 +123308,11 @@ func (s *TestEmailRuleResultResultsItem) GetReceivedAt() OptDateTime {
 // GetFromAddress returns the value of FromAddress.
 func (s *TestEmailRuleResultResultsItem) GetFromAddress() OptNilString {
 	return s.FromAddress
+}
+
+// GetRecipient returns the value of Recipient.
+func (s *TestEmailRuleResultResultsItem) GetRecipient() OptString {
+	return s.Recipient
 }
 
 // GetSubject returns the value of Subject.
@@ -121930,6 +123373,11 @@ func (s *TestEmailRuleResultResultsItem) SetReceivedAt(val OptDateTime) {
 // SetFromAddress sets the value of FromAddress.
 func (s *TestEmailRuleResultResultsItem) SetFromAddress(val OptNilString) {
 	s.FromAddress = val
+}
+
+// SetRecipient sets the value of Recipient.
+func (s *TestEmailRuleResultResultsItem) SetRecipient(val OptString) {
+	s.Recipient = val
 }
 
 // SetSubject sets the value of Subject.
@@ -122881,13 +124329,18 @@ func (*TestEndpointRulesOK) testEndpointRulesRes() {}
 // shared matcher the live delivery paths use.
 // Ref: #/components/schemas/TestEndpointRulesResult
 type TestEndpointRulesResult struct {
-	// Whether the delivery path would deliver this email to the endpoint.
+	// Whether this email would be sent to this endpoint by the endpoint's own conditions: it is on,
+	// neither it nor the email's route is held, its owner may receive this email, it subscribes to the
+	// event, and its rules match. Which endpoint routing sends the email to is decided separately: POST
+	// /routes/simulate answers that. A rule grant can still deliver an email whose mailbox the owner
+	// does not read, and a Function endpoint is also judged at delivery on its Function's run state and
+	// key.
 	WouldDeliver bool `json:"would_deliver"`
-	// Name of the failing rule when delivery would be
-	// suppressed; null when the message matches and the
-	// endpoint is subscribed to the event type.
+	// The first check that stops this email, in the order delivery makes them: disabled, held or an
+	// acting_owner_* code (see delivery.reasons), then event_types when the endpoint does not subscribe,
+	// then the name of the rule that does not match. Null when it would deliver.
 	Rule NilString `json:"rule"`
-	// Human-readable explanation of the failing rule; null when the message matches.
+	// Why, in words. Null when it would deliver.
 	Reason NilString `json:"reason"`
 	// False when the endpoint's stored rules blob failed
 	// validation. Delivery fails OPEN on an invalid blob
@@ -122907,6 +124360,9 @@ type TestEndpointRulesResult struct {
 	// authenticated From identity versus the raw envelope
 	// sender).
 	Evaluated TestEndpointRulesResultEvaluated `json:"evaluated"`
+	// The endpoint's own conditions for this email, as delivery judges them, the owner judged on this
+	// email's mailbox and time. Null for a pull destination, which nothing pushes to.
+	Delivery NilTestEndpointRulesResultDelivery `json:"delivery"`
 }
 
 // GetWouldDeliver returns the value of WouldDeliver.
@@ -122944,6 +124400,11 @@ func (s *TestEndpointRulesResult) GetEvaluated() TestEndpointRulesResultEvaluate
 	return s.Evaluated
 }
 
+// GetDelivery returns the value of Delivery.
+func (s *TestEndpointRulesResult) GetDelivery() NilTestEndpointRulesResultDelivery {
+	return s.Delivery
+}
+
 // SetWouldDeliver sets the value of WouldDeliver.
 func (s *TestEndpointRulesResult) SetWouldDeliver(val bool) {
 	s.WouldDeliver = val
@@ -122977,6 +124438,149 @@ func (s *TestEndpointRulesResult) SetEventType(val string) {
 // SetEvaluated sets the value of Evaluated.
 func (s *TestEndpointRulesResult) SetEvaluated(val TestEndpointRulesResultEvaluated) {
 	s.Evaluated = val
+}
+
+// SetDelivery sets the value of Delivery.
+func (s *TestEndpointRulesResult) SetDelivery(val NilTestEndpointRulesResultDelivery) {
+	s.Delivery = val
+}
+
+// The endpoint's own conditions for this email, as delivery judges them, the owner judged on this
+// email's mailbox and time. Null for a pull destination, which nothing pushes to.
+type TestEndpointRulesResultDelivery struct {
+	// The event type checked.
+	EventType string `json:"event_type"`
+	// Whether this endpoint's own conditions let the event through: it is on, it is not held, its owner
+	// can receive it, and it subscribes to the event type. Which endpoint routing or a rule grant sends
+	// a message to is decided separately, per message: POST /routes/simulate answers that, and a rule
+	// grant can deliver an email outside its owner's mailboxes. A Function endpoint is also judged at
+	// delivery on its Function's run state and key.
+	WouldDeliver bool `json:"would_deliver"`
+	// Every reason it would not be sent the event, in the order delivery checks them; empty when it
+	// would. Codes, of which more may be added: disabled: the endpoint is off (disabled_reason on the
+	// endpoint says why). held: the endpoint, or the route the email came through, is held pending an
+	// owner or admin decision after its creator's access was reduced. acting_owner_revoked,
+	// acting_owner_suspended (which covers an expired key) and acting_owner_left: its owner cannot act
+	// now. acting_owner_permission: its owner does not read mail. acting_owner_depth: its owner sees
+	// headers only. acting_owner_scope: its owner does not read this email's mailbox, or, with no email
+	// to judge, reads no received mail at all now. These three name what the owner's access holds, so a
+	// caller who may not read API key metadata sees acting_owner_access in their place.
+	// event_type_not_subscribed: rules.event_types leaves the event out.
+	Reasons []TestEndpointRulesResultDeliveryReasonsItem `json:"reasons"`
+	// While repeated failures have paused this webhook (its circuit breaker is open): when webhook
+	// events other than mail (interaction, sent mail and credential events) are next attempted. Received
+	// mail is attempted regardless, so this does not change would_deliver. Null when nothing is paused,
+	// and for a Function endpoint.
+	EventsPausedUntil NilDateTime `json:"events_paused_until"`
+	AdditionalProps   TestEndpointRulesResultDeliveryAdditional
+}
+
+// GetEventType returns the value of EventType.
+func (s *TestEndpointRulesResultDelivery) GetEventType() string {
+	return s.EventType
+}
+
+// GetWouldDeliver returns the value of WouldDeliver.
+func (s *TestEndpointRulesResultDelivery) GetWouldDeliver() bool {
+	return s.WouldDeliver
+}
+
+// GetReasons returns the value of Reasons.
+func (s *TestEndpointRulesResultDelivery) GetReasons() []TestEndpointRulesResultDeliveryReasonsItem {
+	return s.Reasons
+}
+
+// GetEventsPausedUntil returns the value of EventsPausedUntil.
+func (s *TestEndpointRulesResultDelivery) GetEventsPausedUntil() NilDateTime {
+	return s.EventsPausedUntil
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *TestEndpointRulesResultDelivery) GetAdditionalProps() TestEndpointRulesResultDeliveryAdditional {
+	return s.AdditionalProps
+}
+
+// SetEventType sets the value of EventType.
+func (s *TestEndpointRulesResultDelivery) SetEventType(val string) {
+	s.EventType = val
+}
+
+// SetWouldDeliver sets the value of WouldDeliver.
+func (s *TestEndpointRulesResultDelivery) SetWouldDeliver(val bool) {
+	s.WouldDeliver = val
+}
+
+// SetReasons sets the value of Reasons.
+func (s *TestEndpointRulesResultDelivery) SetReasons(val []TestEndpointRulesResultDeliveryReasonsItem) {
+	s.Reasons = val
+}
+
+// SetEventsPausedUntil sets the value of EventsPausedUntil.
+func (s *TestEndpointRulesResultDelivery) SetEventsPausedUntil(val NilDateTime) {
+	s.EventsPausedUntil = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *TestEndpointRulesResultDelivery) SetAdditionalProps(val TestEndpointRulesResultDeliveryAdditional) {
+	s.AdditionalProps = val
+}
+
+type TestEndpointRulesResultDeliveryAdditional map[string]jx.Raw
+
+func (s *TestEndpointRulesResultDeliveryAdditional) init() TestEndpointRulesResultDeliveryAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type TestEndpointRulesResultDeliveryReasonsItem struct {
+	Code            string `json:"code"`
+	Message         string `json:"message"`
+	AdditionalProps TestEndpointRulesResultDeliveryReasonsItemAdditional
+}
+
+// GetCode returns the value of Code.
+func (s *TestEndpointRulesResultDeliveryReasonsItem) GetCode() string {
+	return s.Code
+}
+
+// GetMessage returns the value of Message.
+func (s *TestEndpointRulesResultDeliveryReasonsItem) GetMessage() string {
+	return s.Message
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *TestEndpointRulesResultDeliveryReasonsItem) GetAdditionalProps() TestEndpointRulesResultDeliveryReasonsItemAdditional {
+	return s.AdditionalProps
+}
+
+// SetCode sets the value of Code.
+func (s *TestEndpointRulesResultDeliveryReasonsItem) SetCode(val string) {
+	s.Code = val
+}
+
+// SetMessage sets the value of Message.
+func (s *TestEndpointRulesResultDeliveryReasonsItem) SetMessage(val string) {
+	s.Message = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *TestEndpointRulesResultDeliveryReasonsItem) SetAdditionalProps(val TestEndpointRulesResultDeliveryReasonsItemAdditional) {
+	s.AdditionalProps = val
+}
+
+type TestEndpointRulesResultDeliveryReasonsItemAdditional map[string]jx.Raw
+
+func (s *TestEndpointRulesResultDeliveryReasonsItemAdditional) init() TestEndpointRulesResultDeliveryReasonsItemAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
 }
 
 // The message metadata the matcher compared, so the caller
@@ -123067,6 +124671,10 @@ func (s *TestEndpointRulesResultEvaluated) SetSenderAuthenticated(val bool) {
 func (s *TestEndpointRulesResultEvaluated) SetSenderTrustBasis(val string) {
 	s.SenderTrustBasis = val
 }
+
+type TestEndpointRulesServiceUnavailable ErrorResponse
+
+func (*TestEndpointRulesServiceUnavailable) testEndpointRulesRes() {}
 
 type TestEndpointTooManyRequests ErrorResponseHeaders
 
@@ -123276,6 +124884,12 @@ type TestResult struct {
 	// the organization's secret, a caller who may read that secret; for one signed with its own, the
 	// person who owns it, calling as themselves.
 	Signature OptString `json:"signature"`
+	// Whether the endpoint answered the test with a 2xx status: the request reached it and its handler
+	// accepted it. It says nothing about whether real mail is sent to it: see delivery.
+	Reachable bool `json:"reachable"`
+	// Whether real email.received events would be sent to this endpoint, judged by the endpoint's own
+	// conditions as delivery judges them. Null when that could not be checked just now.
+	Delivery NilTestResultDelivery `json:"delivery"`
 }
 
 // GetStatus returns the value of Status.
@@ -123293,6 +124907,16 @@ func (s *TestResult) GetSignature() OptString {
 	return s.Signature
 }
 
+// GetReachable returns the value of Reachable.
+func (s *TestResult) GetReachable() bool {
+	return s.Reachable
+}
+
+// GetDelivery returns the value of Delivery.
+func (s *TestResult) GetDelivery() NilTestResultDelivery {
+	return s.Delivery
+}
+
 // SetStatus sets the value of Status.
 func (s *TestResult) SetStatus(val int) {
 	s.Status = val
@@ -123306,6 +124930,154 @@ func (s *TestResult) SetBody(val string) {
 // SetSignature sets the value of Signature.
 func (s *TestResult) SetSignature(val OptString) {
 	s.Signature = val
+}
+
+// SetReachable sets the value of Reachable.
+func (s *TestResult) SetReachable(val bool) {
+	s.Reachable = val
+}
+
+// SetDelivery sets the value of Delivery.
+func (s *TestResult) SetDelivery(val NilTestResultDelivery) {
+	s.Delivery = val
+}
+
+// Whether real email.received events would be sent to this endpoint, judged by the endpoint's own
+// conditions as delivery judges them. Null when that could not be checked just now.
+type TestResultDelivery struct {
+	// The event type checked.
+	EventType string `json:"event_type"`
+	// Whether this endpoint's own conditions let the event through: it is on, it is not held, its owner
+	// can receive it, and it subscribes to the event type. Which endpoint routing or a rule grant sends
+	// a message to is decided separately, per message: POST /routes/simulate answers that, and a rule
+	// grant can deliver an email outside its owner's mailboxes. A Function endpoint is also judged at
+	// delivery on its Function's run state and key.
+	WouldDeliver bool `json:"would_deliver"`
+	// Every reason it would not be sent the event, in the order delivery checks them; empty when it
+	// would. Codes, of which more may be added: disabled: the endpoint is off (disabled_reason on the
+	// endpoint says why). held: the endpoint, or the route the email came through, is held pending an
+	// owner or admin decision after its creator's access was reduced. acting_owner_revoked,
+	// acting_owner_suspended (which covers an expired key) and acting_owner_left: its owner cannot act
+	// now. acting_owner_permission: its owner does not read mail. acting_owner_depth: its owner sees
+	// headers only. acting_owner_scope: its owner does not read this email's mailbox, or, with no email
+	// to judge, reads no received mail at all now. These three name what the owner's access holds, so a
+	// caller who may not read API key metadata sees acting_owner_access in their place.
+	// event_type_not_subscribed: rules.event_types leaves the event out.
+	Reasons []TestResultDeliveryReasonsItem `json:"reasons"`
+	// While repeated failures have paused this webhook (its circuit breaker is open): when webhook
+	// events other than mail (interaction, sent mail and credential events) are next attempted. Received
+	// mail is attempted regardless, so this does not change would_deliver. Null when nothing is paused,
+	// and for a Function endpoint.
+	EventsPausedUntil NilDateTime `json:"events_paused_until"`
+	AdditionalProps   TestResultDeliveryAdditional
+}
+
+// GetEventType returns the value of EventType.
+func (s *TestResultDelivery) GetEventType() string {
+	return s.EventType
+}
+
+// GetWouldDeliver returns the value of WouldDeliver.
+func (s *TestResultDelivery) GetWouldDeliver() bool {
+	return s.WouldDeliver
+}
+
+// GetReasons returns the value of Reasons.
+func (s *TestResultDelivery) GetReasons() []TestResultDeliveryReasonsItem {
+	return s.Reasons
+}
+
+// GetEventsPausedUntil returns the value of EventsPausedUntil.
+func (s *TestResultDelivery) GetEventsPausedUntil() NilDateTime {
+	return s.EventsPausedUntil
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *TestResultDelivery) GetAdditionalProps() TestResultDeliveryAdditional {
+	return s.AdditionalProps
+}
+
+// SetEventType sets the value of EventType.
+func (s *TestResultDelivery) SetEventType(val string) {
+	s.EventType = val
+}
+
+// SetWouldDeliver sets the value of WouldDeliver.
+func (s *TestResultDelivery) SetWouldDeliver(val bool) {
+	s.WouldDeliver = val
+}
+
+// SetReasons sets the value of Reasons.
+func (s *TestResultDelivery) SetReasons(val []TestResultDeliveryReasonsItem) {
+	s.Reasons = val
+}
+
+// SetEventsPausedUntil sets the value of EventsPausedUntil.
+func (s *TestResultDelivery) SetEventsPausedUntil(val NilDateTime) {
+	s.EventsPausedUntil = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *TestResultDelivery) SetAdditionalProps(val TestResultDeliveryAdditional) {
+	s.AdditionalProps = val
+}
+
+type TestResultDeliveryAdditional map[string]jx.Raw
+
+func (s *TestResultDeliveryAdditional) init() TestResultDeliveryAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type TestResultDeliveryReasonsItem struct {
+	Code            string `json:"code"`
+	Message         string `json:"message"`
+	AdditionalProps TestResultDeliveryReasonsItemAdditional
+}
+
+// GetCode returns the value of Code.
+func (s *TestResultDeliveryReasonsItem) GetCode() string {
+	return s.Code
+}
+
+// GetMessage returns the value of Message.
+func (s *TestResultDeliveryReasonsItem) GetMessage() string {
+	return s.Message
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *TestResultDeliveryReasonsItem) GetAdditionalProps() TestResultDeliveryReasonsItemAdditional {
+	return s.AdditionalProps
+}
+
+// SetCode sets the value of Code.
+func (s *TestResultDeliveryReasonsItem) SetCode(val string) {
+	s.Code = val
+}
+
+// SetMessage sets the value of Message.
+func (s *TestResultDeliveryReasonsItem) SetMessage(val string) {
+	s.Message = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *TestResultDeliveryReasonsItem) SetAdditionalProps(val TestResultDeliveryReasonsItemAdditional) {
+	s.AdditionalProps = val
+}
+
+type TestResultDeliveryReasonsItemAdditional map[string]jx.Raw
+
+func (s *TestResultDeliveryReasonsItemAdditional) init() TestResultDeliveryReasonsItemAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
 }
 
 // A conversation thread: its metadata plus the inbound and
@@ -125797,7 +127569,18 @@ type UpdateEndpointInput struct {
 	// Give this webhook to an API key of the organization. Only a route target can be given to a key; a
 	// default endpoint stays the organization's, and takeover is refused with it. null gives a key-owned
 	// webhook back to the organization (a caller with access to every mailbox only); it stays a route
-	// target.
+	// target. Giving a webhook the organization does not own to a different key, or a key's webhook back
+	// to the organization, turns it off (enabled false, disabled_reason owner_changed) unless the same
+	// request sets enabled: its URL was chosen under its previous owner. A key that carries on for the
+	// key that owns it through rotation (its successor, at any depth up to 16 rotations) is not a
+	// different key: the webhook stays as it was, with the same signing secret. That does not hold for a
+	// webhook whose owning key was made from a key a transfer moved or rotated away, or from one that
+	// has since been deleted: no successor carries on for it, so giving the webhook to one is a change
+	// of owner. Turning it on, or a new URL, starts it again. A webhook that signs with its own secret
+	// keeps signing with one: the same one when it stays with the same key, or was the organization's
+	// (giving away one the organization owns needs webhook_secret:read, since the key and its holder can
+	// then read its secret), and a new one for any other owner's. The response's warnings say when an
+	// update turned the webhook off or on.
 	OwnerKeyID OptNilUUID `json:"owner_key_id"`
 	// A webhook's label, up to 200 characters, shown with it in lists; null removes it. Only for http
 	// webhooks: a pull destination keeps the name it was created with.
@@ -125980,8 +127763,8 @@ func (*UpdateEndpointNotFound) updateEndpointRes() {}
 
 // Merged schema.
 type UpdateEndpointOK struct {
-	Success bool     `json:"success"`
-	Data    Endpoint `json:"data"`
+	Success bool            `json:"success"`
+	Data    UpdatedEndpoint `json:"data"`
 }
 
 // GetSuccess returns the value of Success.
@@ -125990,7 +127773,7 @@ func (s *UpdateEndpointOK) GetSuccess() bool {
 }
 
 // GetData returns the value of Data.
-func (s *UpdateEndpointOK) GetData() Endpoint {
+func (s *UpdateEndpointOK) GetData() UpdatedEndpoint {
 	return s.Data
 }
 
@@ -126000,7 +127783,7 @@ func (s *UpdateEndpointOK) SetSuccess(val bool) {
 }
 
 // SetData sets the value of Data.
-func (s *UpdateEndpointOK) SetData(val Endpoint) {
+func (s *UpdateEndpointOK) SetData(val UpdatedEndpoint) {
 	s.Data = val
 }
 
@@ -128940,6 +130723,933 @@ func (s *UpdatedDomainDNSHealth) UnmarshalText(data []byte) error {
 	}
 }
 
+// Merged schema.
+// Ref: #/components/schemas/UpdatedEndpoint
+type UpdatedEndpoint struct {
+	// Server-enforced recipient for an address-scoped pull subscription; null for an account-wide
+	// destination created before pull creation required a connected-agent credential.
+	Recipient            OptNilString                           `json:"recipient"`
+	ReceiverCapabilities OptUpdatedEndpointReceiverCapabilities `json:"receiver_capabilities"`
+	ID                   uuid.UUID                              `json:"id"`
+	OrgID                uuid.UUID                              `json:"org_id"`
+	URL                  OptNilString                           `json:"url"`
+	Enabled              bool                                   `json:"enabled"`
+	// Restrict this endpoint to emails from a specific domain.
+	DomainID OptNilUUID `json:"domain_id"`
+	// Endpoint-specific filtering rules.
+	Rules     UpdatedEndpointRules `json:"rules"`
+	CreatedAt time.Time            `json:"created_at"`
+	UpdatedAt time.Time            `json:"updated_at"`
+	// Total webhook deliveries attempted.
+	DeliveryCount int `json:"delivery_count"`
+	// Successful deliveries.
+	SuccessCount int `json:"success_count"`
+	// Failed deliveries.
+	FailureCount int `json:"failure_count"`
+	// Current streak of consecutive failures.
+	ConsecutiveFails int            `json:"consecutive_fails"`
+	LastDeliveryAt   OptNilDateTime `json:"last_delivery_at"`
+	LastSuccessAt    OptNilDateTime `json:"last_success_at"`
+	LastFailureAt    OptNilDateTime `json:"last_failure_at"`
+	DeactivatedAt    OptNilDateTime `json:"deactivated_at"`
+	// Http: deliver to the webhook URL. function: invoke a Primitive Function.
+	Kind OptUpdatedEndpointKind `json:"kind"`
+	// The Function this endpoint invokes, when kind is function.
+	FunctionID OptNilUUID `json:"function_id"`
+	// When true, this endpoint is reachable only via an explicit recipient
+	// route, never as a domain's default destination, and is exempt from
+	// the one-endpoint-per-domain rule (so many can share a domain).
+	IsRouteTarget OptBool `json:"is_route_target"`
+	// A pull destination's stable name, or an http webhook's label (null when it has none).
+	Name OptNilString `json:"name"`
+	// Whether an API key owns this webhook instead of the organization.
+	OwnedByKey OptBool `json:"owned_by_key"`
+	// The API key that owns this webhook. In endpoint responses it is set only for a caller who may read
+	// API key metadata, and is null otherwise and when the organization owns the webhook. After a
+	// rotation, the key that carries on for the key first named while it can act.
+	OwnerKeyID OptNilUUID `json:"owner_key_id"`
+	// Whether the owning key can act now. In endpoint responses it is set only for a caller who may read
+	// API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent
+	// nothing. Anyone who may read the endpoint learns that from delivery.reasons, which never names the
+	// key.
+	OwnerKeyStatus OptNilUpdatedEndpointOwnerKeyStatus `json:"owner_key_status"`
+	// Why the platform turned this endpoint off, when it names a reason. owner_changed: it was given to
+	// a new owner while its URL stayed, and the URL was chosen under the previous owner; turning it on
+	// or giving it a new URL starts it again. owner_credential_revoked: the third-party app or agent
+	// delegate grant that owned it was revoked; an owner or admin who turns it back on takes it over.
+	// Null while it is on and when it was turned off by hand. An access suspension does not set it (a
+	// suspension is decided through its own record). Other values may be added.
+	DisabledReason OptNilString `json:"disabled_reason"`
+	// For a webhook (kind http) in GET /endpoints and GET /endpoints/{id}: whether it is being sent
+	// received mail, and why not. Shown to anyone who may read the endpoint; it names a state, never a
+	// key. Null when it could not be checked just now. Absent from other kinds of endpoint and from
+	// create and update answers.
+	Delivery OptNilUpdatedEndpointDelivery `json:"delivery"`
+	// Which secret signs deliveries to this webhook: its own (read it from GET
+	// /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that
+	// is not a webhook.
+	SignedWith OptUpdatedEndpointSignedWith `json:"signed_with"`
+	// Only in the response that creates a webhook made with a signing secret of its own (one made as a
+	// person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate
+	// for itself): that secret, shown this once. Read it again from GET /endpoints/{id}/signing-secret.
+	SigningSecret OptString `json:"signing_secret"`
+	// When this update turned the webhook off or on without the request setting enabled.
+	// turned_off_owner_changed: the webhook was given to a new owner, so it is now off (disabled_reason
+	// owner_changed) until it is turned on or given a new URL. turned_on_new_url: it was off because its
+	// owner changed, and the new URL turned it back on. Empty when the update did neither. Other codes
+	// may be added.
+	Warnings []EndpointUpdateWarning `json:"warnings"`
+}
+
+// GetRecipient returns the value of Recipient.
+func (s *UpdatedEndpoint) GetRecipient() OptNilString {
+	return s.Recipient
+}
+
+// GetReceiverCapabilities returns the value of ReceiverCapabilities.
+func (s *UpdatedEndpoint) GetReceiverCapabilities() OptUpdatedEndpointReceiverCapabilities {
+	return s.ReceiverCapabilities
+}
+
+// GetID returns the value of ID.
+func (s *UpdatedEndpoint) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetOrgID returns the value of OrgID.
+func (s *UpdatedEndpoint) GetOrgID() uuid.UUID {
+	return s.OrgID
+}
+
+// GetURL returns the value of URL.
+func (s *UpdatedEndpoint) GetURL() OptNilString {
+	return s.URL
+}
+
+// GetEnabled returns the value of Enabled.
+func (s *UpdatedEndpoint) GetEnabled() bool {
+	return s.Enabled
+}
+
+// GetDomainID returns the value of DomainID.
+func (s *UpdatedEndpoint) GetDomainID() OptNilUUID {
+	return s.DomainID
+}
+
+// GetRules returns the value of Rules.
+func (s *UpdatedEndpoint) GetRules() UpdatedEndpointRules {
+	return s.Rules
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *UpdatedEndpoint) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *UpdatedEndpoint) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// GetDeliveryCount returns the value of DeliveryCount.
+func (s *UpdatedEndpoint) GetDeliveryCount() int {
+	return s.DeliveryCount
+}
+
+// GetSuccessCount returns the value of SuccessCount.
+func (s *UpdatedEndpoint) GetSuccessCount() int {
+	return s.SuccessCount
+}
+
+// GetFailureCount returns the value of FailureCount.
+func (s *UpdatedEndpoint) GetFailureCount() int {
+	return s.FailureCount
+}
+
+// GetConsecutiveFails returns the value of ConsecutiveFails.
+func (s *UpdatedEndpoint) GetConsecutiveFails() int {
+	return s.ConsecutiveFails
+}
+
+// GetLastDeliveryAt returns the value of LastDeliveryAt.
+func (s *UpdatedEndpoint) GetLastDeliveryAt() OptNilDateTime {
+	return s.LastDeliveryAt
+}
+
+// GetLastSuccessAt returns the value of LastSuccessAt.
+func (s *UpdatedEndpoint) GetLastSuccessAt() OptNilDateTime {
+	return s.LastSuccessAt
+}
+
+// GetLastFailureAt returns the value of LastFailureAt.
+func (s *UpdatedEndpoint) GetLastFailureAt() OptNilDateTime {
+	return s.LastFailureAt
+}
+
+// GetDeactivatedAt returns the value of DeactivatedAt.
+func (s *UpdatedEndpoint) GetDeactivatedAt() OptNilDateTime {
+	return s.DeactivatedAt
+}
+
+// GetKind returns the value of Kind.
+func (s *UpdatedEndpoint) GetKind() OptUpdatedEndpointKind {
+	return s.Kind
+}
+
+// GetFunctionID returns the value of FunctionID.
+func (s *UpdatedEndpoint) GetFunctionID() OptNilUUID {
+	return s.FunctionID
+}
+
+// GetIsRouteTarget returns the value of IsRouteTarget.
+func (s *UpdatedEndpoint) GetIsRouteTarget() OptBool {
+	return s.IsRouteTarget
+}
+
+// GetName returns the value of Name.
+func (s *UpdatedEndpoint) GetName() OptNilString {
+	return s.Name
+}
+
+// GetOwnedByKey returns the value of OwnedByKey.
+func (s *UpdatedEndpoint) GetOwnedByKey() OptBool {
+	return s.OwnedByKey
+}
+
+// GetOwnerKeyID returns the value of OwnerKeyID.
+func (s *UpdatedEndpoint) GetOwnerKeyID() OptNilUUID {
+	return s.OwnerKeyID
+}
+
+// GetOwnerKeyStatus returns the value of OwnerKeyStatus.
+func (s *UpdatedEndpoint) GetOwnerKeyStatus() OptNilUpdatedEndpointOwnerKeyStatus {
+	return s.OwnerKeyStatus
+}
+
+// GetDisabledReason returns the value of DisabledReason.
+func (s *UpdatedEndpoint) GetDisabledReason() OptNilString {
+	return s.DisabledReason
+}
+
+// GetDelivery returns the value of Delivery.
+func (s *UpdatedEndpoint) GetDelivery() OptNilUpdatedEndpointDelivery {
+	return s.Delivery
+}
+
+// GetSignedWith returns the value of SignedWith.
+func (s *UpdatedEndpoint) GetSignedWith() OptUpdatedEndpointSignedWith {
+	return s.SignedWith
+}
+
+// GetSigningSecret returns the value of SigningSecret.
+func (s *UpdatedEndpoint) GetSigningSecret() OptString {
+	return s.SigningSecret
+}
+
+// GetWarnings returns the value of Warnings.
+func (s *UpdatedEndpoint) GetWarnings() []EndpointUpdateWarning {
+	return s.Warnings
+}
+
+// SetRecipient sets the value of Recipient.
+func (s *UpdatedEndpoint) SetRecipient(val OptNilString) {
+	s.Recipient = val
+}
+
+// SetReceiverCapabilities sets the value of ReceiverCapabilities.
+func (s *UpdatedEndpoint) SetReceiverCapabilities(val OptUpdatedEndpointReceiverCapabilities) {
+	s.ReceiverCapabilities = val
+}
+
+// SetID sets the value of ID.
+func (s *UpdatedEndpoint) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetOrgID sets the value of OrgID.
+func (s *UpdatedEndpoint) SetOrgID(val uuid.UUID) {
+	s.OrgID = val
+}
+
+// SetURL sets the value of URL.
+func (s *UpdatedEndpoint) SetURL(val OptNilString) {
+	s.URL = val
+}
+
+// SetEnabled sets the value of Enabled.
+func (s *UpdatedEndpoint) SetEnabled(val bool) {
+	s.Enabled = val
+}
+
+// SetDomainID sets the value of DomainID.
+func (s *UpdatedEndpoint) SetDomainID(val OptNilUUID) {
+	s.DomainID = val
+}
+
+// SetRules sets the value of Rules.
+func (s *UpdatedEndpoint) SetRules(val UpdatedEndpointRules) {
+	s.Rules = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *UpdatedEndpoint) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *UpdatedEndpoint) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// SetDeliveryCount sets the value of DeliveryCount.
+func (s *UpdatedEndpoint) SetDeliveryCount(val int) {
+	s.DeliveryCount = val
+}
+
+// SetSuccessCount sets the value of SuccessCount.
+func (s *UpdatedEndpoint) SetSuccessCount(val int) {
+	s.SuccessCount = val
+}
+
+// SetFailureCount sets the value of FailureCount.
+func (s *UpdatedEndpoint) SetFailureCount(val int) {
+	s.FailureCount = val
+}
+
+// SetConsecutiveFails sets the value of ConsecutiveFails.
+func (s *UpdatedEndpoint) SetConsecutiveFails(val int) {
+	s.ConsecutiveFails = val
+}
+
+// SetLastDeliveryAt sets the value of LastDeliveryAt.
+func (s *UpdatedEndpoint) SetLastDeliveryAt(val OptNilDateTime) {
+	s.LastDeliveryAt = val
+}
+
+// SetLastSuccessAt sets the value of LastSuccessAt.
+func (s *UpdatedEndpoint) SetLastSuccessAt(val OptNilDateTime) {
+	s.LastSuccessAt = val
+}
+
+// SetLastFailureAt sets the value of LastFailureAt.
+func (s *UpdatedEndpoint) SetLastFailureAt(val OptNilDateTime) {
+	s.LastFailureAt = val
+}
+
+// SetDeactivatedAt sets the value of DeactivatedAt.
+func (s *UpdatedEndpoint) SetDeactivatedAt(val OptNilDateTime) {
+	s.DeactivatedAt = val
+}
+
+// SetKind sets the value of Kind.
+func (s *UpdatedEndpoint) SetKind(val OptUpdatedEndpointKind) {
+	s.Kind = val
+}
+
+// SetFunctionID sets the value of FunctionID.
+func (s *UpdatedEndpoint) SetFunctionID(val OptNilUUID) {
+	s.FunctionID = val
+}
+
+// SetIsRouteTarget sets the value of IsRouteTarget.
+func (s *UpdatedEndpoint) SetIsRouteTarget(val OptBool) {
+	s.IsRouteTarget = val
+}
+
+// SetName sets the value of Name.
+func (s *UpdatedEndpoint) SetName(val OptNilString) {
+	s.Name = val
+}
+
+// SetOwnedByKey sets the value of OwnedByKey.
+func (s *UpdatedEndpoint) SetOwnedByKey(val OptBool) {
+	s.OwnedByKey = val
+}
+
+// SetOwnerKeyID sets the value of OwnerKeyID.
+func (s *UpdatedEndpoint) SetOwnerKeyID(val OptNilUUID) {
+	s.OwnerKeyID = val
+}
+
+// SetOwnerKeyStatus sets the value of OwnerKeyStatus.
+func (s *UpdatedEndpoint) SetOwnerKeyStatus(val OptNilUpdatedEndpointOwnerKeyStatus) {
+	s.OwnerKeyStatus = val
+}
+
+// SetDisabledReason sets the value of DisabledReason.
+func (s *UpdatedEndpoint) SetDisabledReason(val OptNilString) {
+	s.DisabledReason = val
+}
+
+// SetDelivery sets the value of Delivery.
+func (s *UpdatedEndpoint) SetDelivery(val OptNilUpdatedEndpointDelivery) {
+	s.Delivery = val
+}
+
+// SetSignedWith sets the value of SignedWith.
+func (s *UpdatedEndpoint) SetSignedWith(val OptUpdatedEndpointSignedWith) {
+	s.SignedWith = val
+}
+
+// SetSigningSecret sets the value of SigningSecret.
+func (s *UpdatedEndpoint) SetSigningSecret(val OptString) {
+	s.SigningSecret = val
+}
+
+// SetWarnings sets the value of Warnings.
+func (s *UpdatedEndpoint) SetWarnings(val []EndpointUpdateWarning) {
+	s.Warnings = val
+}
+
+// For a webhook (kind http) in GET /endpoints and GET /endpoints/{id}: whether it is being sent
+// received mail, and why not. Shown to anyone who may read the endpoint; it names a state, never a
+// key. Null when it could not be checked just now. Absent from other kinds of endpoint and from
+// create and update answers.
+type UpdatedEndpointDelivery struct {
+	// Whether the webhook is being sent received mail at all now: it is on, it is not held, and its
+	// owner can receive mail. Which messages reach it is still decided per message, by routing, rule
+	// grants and its own rules.
+	Delivering bool `json:"delivering"`
+	// Every reason it is not, in the order delivery checks them; empty when it is. Codes, of which more
+	// may be added: disabled: the endpoint is off (disabled_reason on the endpoint says why). held: the
+	// endpoint, or the route the email came through, is held pending an owner or admin decision after
+	// its creator's access was reduced. acting_owner_revoked, acting_owner_suspended (which covers an
+	// expired key) and acting_owner_left: its owner cannot act now. acting_owner_permission: its owner
+	// does not read mail. acting_owner_depth: its owner sees headers only. acting_owner_scope: its owner
+	// does not read this email's mailbox, or, with no email to judge, reads no received mail at all now.
+	// These three name what the owner's access holds, so a caller who may not read API key metadata sees
+	// acting_owner_access in their place.
+	Reasons []UpdatedEndpointDeliveryReasonsItem `json:"reasons"`
+	// Rule-granted mail held for this webhook while its owner cannot act; null when none is. Only for a
+	// caller with access to every mailbox (held mail can be an earlier owner's), and absent when it
+	// could not be read just now.
+	HeldForOwner    OptNilUpdatedEndpointDeliveryHeldForOwner `json:"held_for_owner"`
+	AdditionalProps UpdatedEndpointDeliveryAdditional
+}
+
+// GetDelivering returns the value of Delivering.
+func (s *UpdatedEndpointDelivery) GetDelivering() bool {
+	return s.Delivering
+}
+
+// GetReasons returns the value of Reasons.
+func (s *UpdatedEndpointDelivery) GetReasons() []UpdatedEndpointDeliveryReasonsItem {
+	return s.Reasons
+}
+
+// GetHeldForOwner returns the value of HeldForOwner.
+func (s *UpdatedEndpointDelivery) GetHeldForOwner() OptNilUpdatedEndpointDeliveryHeldForOwner {
+	return s.HeldForOwner
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *UpdatedEndpointDelivery) GetAdditionalProps() UpdatedEndpointDeliveryAdditional {
+	return s.AdditionalProps
+}
+
+// SetDelivering sets the value of Delivering.
+func (s *UpdatedEndpointDelivery) SetDelivering(val bool) {
+	s.Delivering = val
+}
+
+// SetReasons sets the value of Reasons.
+func (s *UpdatedEndpointDelivery) SetReasons(val []UpdatedEndpointDeliveryReasonsItem) {
+	s.Reasons = val
+}
+
+// SetHeldForOwner sets the value of HeldForOwner.
+func (s *UpdatedEndpointDelivery) SetHeldForOwner(val OptNilUpdatedEndpointDeliveryHeldForOwner) {
+	s.HeldForOwner = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *UpdatedEndpointDelivery) SetAdditionalProps(val UpdatedEndpointDeliveryAdditional) {
+	s.AdditionalProps = val
+}
+
+type UpdatedEndpointDeliveryAdditional map[string]jx.Raw
+
+func (s *UpdatedEndpointDeliveryAdditional) init() UpdatedEndpointDeliveryAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Rule-granted mail held for this webhook while its owner cannot act; null when none is. Only for a
+// caller with access to every mailbox (held mail can be an earlier owner's), and absent when it
+// could not be read just now.
+type UpdatedEndpointDeliveryHeldForOwner struct {
+	// Rule-granted emails waiting for this webhook because its owner could not act at their last check.
+	Count int `json:"count"`
+	// When the oldest of them was queued.
+	OldestQueuedAt time.Time `json:"oldest_queued_at"`
+	// When the oldest is given up on if its owner still cannot act. Each is checked again periodically,
+	// so the count can trail a change of the owner's state.
+	ExpiresAt       time.Time `json:"expires_at"`
+	AdditionalProps UpdatedEndpointDeliveryHeldForOwnerAdditional
+}
+
+// GetCount returns the value of Count.
+func (s *UpdatedEndpointDeliveryHeldForOwner) GetCount() int {
+	return s.Count
+}
+
+// GetOldestQueuedAt returns the value of OldestQueuedAt.
+func (s *UpdatedEndpointDeliveryHeldForOwner) GetOldestQueuedAt() time.Time {
+	return s.OldestQueuedAt
+}
+
+// GetExpiresAt returns the value of ExpiresAt.
+func (s *UpdatedEndpointDeliveryHeldForOwner) GetExpiresAt() time.Time {
+	return s.ExpiresAt
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *UpdatedEndpointDeliveryHeldForOwner) GetAdditionalProps() UpdatedEndpointDeliveryHeldForOwnerAdditional {
+	return s.AdditionalProps
+}
+
+// SetCount sets the value of Count.
+func (s *UpdatedEndpointDeliveryHeldForOwner) SetCount(val int) {
+	s.Count = val
+}
+
+// SetOldestQueuedAt sets the value of OldestQueuedAt.
+func (s *UpdatedEndpointDeliveryHeldForOwner) SetOldestQueuedAt(val time.Time) {
+	s.OldestQueuedAt = val
+}
+
+// SetExpiresAt sets the value of ExpiresAt.
+func (s *UpdatedEndpointDeliveryHeldForOwner) SetExpiresAt(val time.Time) {
+	s.ExpiresAt = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *UpdatedEndpointDeliveryHeldForOwner) SetAdditionalProps(val UpdatedEndpointDeliveryHeldForOwnerAdditional) {
+	s.AdditionalProps = val
+}
+
+type UpdatedEndpointDeliveryHeldForOwnerAdditional map[string]jx.Raw
+
+func (s *UpdatedEndpointDeliveryHeldForOwnerAdditional) init() UpdatedEndpointDeliveryHeldForOwnerAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type UpdatedEndpointDeliveryReasonsItem struct {
+	Code            string `json:"code"`
+	Message         string `json:"message"`
+	AdditionalProps UpdatedEndpointDeliveryReasonsItemAdditional
+}
+
+// GetCode returns the value of Code.
+func (s *UpdatedEndpointDeliveryReasonsItem) GetCode() string {
+	return s.Code
+}
+
+// GetMessage returns the value of Message.
+func (s *UpdatedEndpointDeliveryReasonsItem) GetMessage() string {
+	return s.Message
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *UpdatedEndpointDeliveryReasonsItem) GetAdditionalProps() UpdatedEndpointDeliveryReasonsItemAdditional {
+	return s.AdditionalProps
+}
+
+// SetCode sets the value of Code.
+func (s *UpdatedEndpointDeliveryReasonsItem) SetCode(val string) {
+	s.Code = val
+}
+
+// SetMessage sets the value of Message.
+func (s *UpdatedEndpointDeliveryReasonsItem) SetMessage(val string) {
+	s.Message = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *UpdatedEndpointDeliveryReasonsItem) SetAdditionalProps(val UpdatedEndpointDeliveryReasonsItemAdditional) {
+	s.AdditionalProps = val
+}
+
+type UpdatedEndpointDeliveryReasonsItemAdditional map[string]jx.Raw
+
+func (s *UpdatedEndpointDeliveryReasonsItemAdditional) init() UpdatedEndpointDeliveryReasonsItemAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Http: deliver to the webhook URL. function: invoke a Primitive Function.
+type UpdatedEndpointKind string
+
+const (
+	UpdatedEndpointKindHTTP     UpdatedEndpointKind = "http"
+	UpdatedEndpointKindFunction UpdatedEndpointKind = "function"
+	UpdatedEndpointKindPull     UpdatedEndpointKind = "pull"
+)
+
+// AllValues returns all UpdatedEndpointKind values.
+func (UpdatedEndpointKind) AllValues() []UpdatedEndpointKind {
+	return []UpdatedEndpointKind{
+		UpdatedEndpointKindHTTP,
+		UpdatedEndpointKindFunction,
+		UpdatedEndpointKindPull,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s UpdatedEndpointKind) MarshalText() ([]byte, error) {
+	switch s {
+	case UpdatedEndpointKindHTTP:
+		return []byte(s), nil
+	case UpdatedEndpointKindFunction:
+		return []byte(s), nil
+	case UpdatedEndpointKindPull:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *UpdatedEndpointKind) UnmarshalText(data []byte) error {
+	switch UpdatedEndpointKind(data) {
+	case UpdatedEndpointKindHTTP:
+		*s = UpdatedEndpointKindHTTP
+		return nil
+	case UpdatedEndpointKindFunction:
+		*s = UpdatedEndpointKindFunction
+		return nil
+	case UpdatedEndpointKindPull:
+		*s = UpdatedEndpointKindPull
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Whether the owning key can act now. In endpoint responses it is set only for a caller who may read
+// API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent
+// nothing. Anyone who may read the endpoint learns that from delivery.reasons, which never names the
+// key.
+type UpdatedEndpointOwnerKeyStatus string
+
+const (
+	UpdatedEndpointOwnerKeyStatusActive    UpdatedEndpointOwnerKeyStatus = "active"
+	UpdatedEndpointOwnerKeyStatusSuspended UpdatedEndpointOwnerKeyStatus = "suspended"
+	UpdatedEndpointOwnerKeyStatusRevoked   UpdatedEndpointOwnerKeyStatus = "revoked"
+)
+
+// AllValues returns all UpdatedEndpointOwnerKeyStatus values.
+func (UpdatedEndpointOwnerKeyStatus) AllValues() []UpdatedEndpointOwnerKeyStatus {
+	return []UpdatedEndpointOwnerKeyStatus{
+		UpdatedEndpointOwnerKeyStatusActive,
+		UpdatedEndpointOwnerKeyStatusSuspended,
+		UpdatedEndpointOwnerKeyStatusRevoked,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s UpdatedEndpointOwnerKeyStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case UpdatedEndpointOwnerKeyStatusActive:
+		return []byte(s), nil
+	case UpdatedEndpointOwnerKeyStatusSuspended:
+		return []byte(s), nil
+	case UpdatedEndpointOwnerKeyStatusRevoked:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *UpdatedEndpointOwnerKeyStatus) UnmarshalText(data []byte) error {
+	switch UpdatedEndpointOwnerKeyStatus(data) {
+	case UpdatedEndpointOwnerKeyStatusActive:
+		*s = UpdatedEndpointOwnerKeyStatusActive
+		return nil
+	case UpdatedEndpointOwnerKeyStatusSuspended:
+		*s = UpdatedEndpointOwnerKeyStatusSuspended
+		return nil
+	case UpdatedEndpointOwnerKeyStatusRevoked:
+		*s = UpdatedEndpointOwnerKeyStatusRevoked
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type UpdatedEndpointReceiverCapabilities struct {
+	CompletionModes []UpdatedEndpointReceiverCapabilitiesCompletionModesItem `json:"completion_modes"`
+	StreamProtocols []UpdatedEndpointReceiverCapabilitiesStreamProtocolsItem `json:"stream_protocols"`
+}
+
+// GetCompletionModes returns the value of CompletionModes.
+func (s *UpdatedEndpointReceiverCapabilities) GetCompletionModes() []UpdatedEndpointReceiverCapabilitiesCompletionModesItem {
+	return s.CompletionModes
+}
+
+// GetStreamProtocols returns the value of StreamProtocols.
+func (s *UpdatedEndpointReceiverCapabilities) GetStreamProtocols() []UpdatedEndpointReceiverCapabilitiesStreamProtocolsItem {
+	return s.StreamProtocols
+}
+
+// SetCompletionModes sets the value of CompletionModes.
+func (s *UpdatedEndpointReceiverCapabilities) SetCompletionModes(val []UpdatedEndpointReceiverCapabilitiesCompletionModesItem) {
+	s.CompletionModes = val
+}
+
+// SetStreamProtocols sets the value of StreamProtocols.
+func (s *UpdatedEndpointReceiverCapabilities) SetStreamProtocols(val []UpdatedEndpointReceiverCapabilitiesStreamProtocolsItem) {
+	s.StreamProtocols = val
+}
+
+type UpdatedEndpointReceiverCapabilitiesCompletionModesItem string
+
+const (
+	UpdatedEndpointReceiverCapabilitiesCompletionModesItemHTTP   UpdatedEndpointReceiverCapabilitiesCompletionModesItem = "http"
+	UpdatedEndpointReceiverCapabilitiesCompletionModesItemExec   UpdatedEndpointReceiverCapabilitiesCompletionModesItem = "exec"
+	UpdatedEndpointReceiverCapabilitiesCompletionModesItemStdout UpdatedEndpointReceiverCapabilitiesCompletionModesItem = "stdout"
+	UpdatedEndpointReceiverCapabilitiesCompletionModesItemSdk    UpdatedEndpointReceiverCapabilitiesCompletionModesItem = "sdk"
+)
+
+// AllValues returns all UpdatedEndpointReceiverCapabilitiesCompletionModesItem values.
+func (UpdatedEndpointReceiverCapabilitiesCompletionModesItem) AllValues() []UpdatedEndpointReceiverCapabilitiesCompletionModesItem {
+	return []UpdatedEndpointReceiverCapabilitiesCompletionModesItem{
+		UpdatedEndpointReceiverCapabilitiesCompletionModesItemHTTP,
+		UpdatedEndpointReceiverCapabilitiesCompletionModesItemExec,
+		UpdatedEndpointReceiverCapabilitiesCompletionModesItemStdout,
+		UpdatedEndpointReceiverCapabilitiesCompletionModesItemSdk,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s UpdatedEndpointReceiverCapabilitiesCompletionModesItem) MarshalText() ([]byte, error) {
+	switch s {
+	case UpdatedEndpointReceiverCapabilitiesCompletionModesItemHTTP:
+		return []byte(s), nil
+	case UpdatedEndpointReceiverCapabilitiesCompletionModesItemExec:
+		return []byte(s), nil
+	case UpdatedEndpointReceiverCapabilitiesCompletionModesItemStdout:
+		return []byte(s), nil
+	case UpdatedEndpointReceiverCapabilitiesCompletionModesItemSdk:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *UpdatedEndpointReceiverCapabilitiesCompletionModesItem) UnmarshalText(data []byte) error {
+	switch UpdatedEndpointReceiverCapabilitiesCompletionModesItem(data) {
+	case UpdatedEndpointReceiverCapabilitiesCompletionModesItemHTTP:
+		*s = UpdatedEndpointReceiverCapabilitiesCompletionModesItemHTTP
+		return nil
+	case UpdatedEndpointReceiverCapabilitiesCompletionModesItemExec:
+		*s = UpdatedEndpointReceiverCapabilitiesCompletionModesItemExec
+		return nil
+	case UpdatedEndpointReceiverCapabilitiesCompletionModesItemStdout:
+		*s = UpdatedEndpointReceiverCapabilitiesCompletionModesItemStdout
+		return nil
+	case UpdatedEndpointReceiverCapabilitiesCompletionModesItemSdk:
+		*s = UpdatedEndpointReceiverCapabilitiesCompletionModesItemSdk
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type UpdatedEndpointReceiverCapabilitiesStreamProtocolsItem string
+
+const (
+	UpdatedEndpointReceiverCapabilitiesStreamProtocolsItemPrimitiveEventsV1 UpdatedEndpointReceiverCapabilitiesStreamProtocolsItem = "primitive.events.v1"
+)
+
+// AllValues returns all UpdatedEndpointReceiverCapabilitiesStreamProtocolsItem values.
+func (UpdatedEndpointReceiverCapabilitiesStreamProtocolsItem) AllValues() []UpdatedEndpointReceiverCapabilitiesStreamProtocolsItem {
+	return []UpdatedEndpointReceiverCapabilitiesStreamProtocolsItem{
+		UpdatedEndpointReceiverCapabilitiesStreamProtocolsItemPrimitiveEventsV1,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s UpdatedEndpointReceiverCapabilitiesStreamProtocolsItem) MarshalText() ([]byte, error) {
+	switch s {
+	case UpdatedEndpointReceiverCapabilitiesStreamProtocolsItemPrimitiveEventsV1:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *UpdatedEndpointReceiverCapabilitiesStreamProtocolsItem) UnmarshalText(data []byte) error {
+	switch UpdatedEndpointReceiverCapabilitiesStreamProtocolsItem(data) {
+	case UpdatedEndpointReceiverCapabilitiesStreamProtocolsItemPrimitiveEventsV1:
+		*s = UpdatedEndpointReceiverCapabilitiesStreamProtocolsItemPrimitiveEventsV1
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Endpoint-specific filtering rules.
+type UpdatedEndpointRules struct {
+	// Event types this endpoint receives. Omitted: every event type except the opt-in sent_email.*
+	// events, which an endpoint receives only when it lists them.
+	EventTypes []string `json:"event_types"`
+	// Skip messages larger than this many bytes.
+	MaxSizeBytes OptInt `json:"max_size_bytes"`
+	// When true, skip messages that have attachments.
+	ExcludeAttachments OptBool `json:"exclude_attachments"`
+	// Skip messages whose attachments total more than this many megabytes.
+	AttachmentLimitMB OptFloat64 `json:"attachment_limit_mb"`
+	// Deliver only messages whose authenticated From identity matches an entry: an exact address, or
+	// @domain, which also matches its subdomains.
+	SenderWhitelist []string `json:"sender_whitelist"`
+	// Skip messages whose envelope sender or From address matches an entry: an exact address, or @domain,
+	//  which also matches its subdomains.
+	SenderBlacklist []string `json:"sender_blacklist"`
+	AdditionalProps UpdatedEndpointRulesAdditional
+}
+
+// GetEventTypes returns the value of EventTypes.
+func (s *UpdatedEndpointRules) GetEventTypes() []string {
+	return s.EventTypes
+}
+
+// GetMaxSizeBytes returns the value of MaxSizeBytes.
+func (s *UpdatedEndpointRules) GetMaxSizeBytes() OptInt {
+	return s.MaxSizeBytes
+}
+
+// GetExcludeAttachments returns the value of ExcludeAttachments.
+func (s *UpdatedEndpointRules) GetExcludeAttachments() OptBool {
+	return s.ExcludeAttachments
+}
+
+// GetAttachmentLimitMB returns the value of AttachmentLimitMB.
+func (s *UpdatedEndpointRules) GetAttachmentLimitMB() OptFloat64 {
+	return s.AttachmentLimitMB
+}
+
+// GetSenderWhitelist returns the value of SenderWhitelist.
+func (s *UpdatedEndpointRules) GetSenderWhitelist() []string {
+	return s.SenderWhitelist
+}
+
+// GetSenderBlacklist returns the value of SenderBlacklist.
+func (s *UpdatedEndpointRules) GetSenderBlacklist() []string {
+	return s.SenderBlacklist
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *UpdatedEndpointRules) GetAdditionalProps() UpdatedEndpointRulesAdditional {
+	return s.AdditionalProps
+}
+
+// SetEventTypes sets the value of EventTypes.
+func (s *UpdatedEndpointRules) SetEventTypes(val []string) {
+	s.EventTypes = val
+}
+
+// SetMaxSizeBytes sets the value of MaxSizeBytes.
+func (s *UpdatedEndpointRules) SetMaxSizeBytes(val OptInt) {
+	s.MaxSizeBytes = val
+}
+
+// SetExcludeAttachments sets the value of ExcludeAttachments.
+func (s *UpdatedEndpointRules) SetExcludeAttachments(val OptBool) {
+	s.ExcludeAttachments = val
+}
+
+// SetAttachmentLimitMB sets the value of AttachmentLimitMB.
+func (s *UpdatedEndpointRules) SetAttachmentLimitMB(val OptFloat64) {
+	s.AttachmentLimitMB = val
+}
+
+// SetSenderWhitelist sets the value of SenderWhitelist.
+func (s *UpdatedEndpointRules) SetSenderWhitelist(val []string) {
+	s.SenderWhitelist = val
+}
+
+// SetSenderBlacklist sets the value of SenderBlacklist.
+func (s *UpdatedEndpointRules) SetSenderBlacklist(val []string) {
+	s.SenderBlacklist = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *UpdatedEndpointRules) SetAdditionalProps(val UpdatedEndpointRulesAdditional) {
+	s.AdditionalProps = val
+}
+
+type UpdatedEndpointRulesAdditional map[string]jx.Raw
+
+func (s *UpdatedEndpointRulesAdditional) init() UpdatedEndpointRulesAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Which secret signs deliveries to this webhook: its own (read it from GET
+// /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that
+// is not a webhook.
+type UpdatedEndpointSignedWith string
+
+const (
+	UpdatedEndpointSignedWithOwnSecret          UpdatedEndpointSignedWith = "own_secret"
+	UpdatedEndpointSignedWithOrganizationSecret UpdatedEndpointSignedWith = "organization_secret"
+)
+
+// AllValues returns all UpdatedEndpointSignedWith values.
+func (UpdatedEndpointSignedWith) AllValues() []UpdatedEndpointSignedWith {
+	return []UpdatedEndpointSignedWith{
+		UpdatedEndpointSignedWithOwnSecret,
+		UpdatedEndpointSignedWithOrganizationSecret,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s UpdatedEndpointSignedWith) MarshalText() ([]byte, error) {
+	switch s {
+	case UpdatedEndpointSignedWithOwnSecret:
+		return []byte(s), nil
+	case UpdatedEndpointSignedWithOrganizationSecret:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *UpdatedEndpointSignedWith) UnmarshalText(data []byte) error {
+	switch UpdatedEndpointSignedWith(data) {
+	case UpdatedEndpointSignedWithOwnSecret:
+		*s = UpdatedEndpointSignedWithOwnSecret
+		return nil
+	case UpdatedEndpointSignedWithOrganizationSecret:
+		*s = UpdatedEndpointSignedWithOrganizationSecret
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Ref: #/components/schemas/VerifiedDomain
 type VerifiedDomain struct {
 	ID                uuid.UUID     `json:"id"`
@@ -129955,8 +132665,16 @@ type WhoamiOKData struct {
 	RequestID               string                       `json:"request_id"`
 	AuthMethod              NilString                    `json:"auth_method"`
 	KeyID                   NilString                    `json:"key_id"`
-	Grant                   OptNilWhoamiOKDataGrant      `json:"grant"`
-	Check                   OptWhoamiOKDataCheck         `json:"check"`
+	// Your own sign-in email, when you are signed in as yourself: in the dashboard, or with your own
+	// Primitive CLI or app login. Null for API keys, Functions, connected agents, agent signup logins
+	// and other apps acting for you.
+	Email NilString `json:"email"`
+	// Your role as the organization's members list labels it: a template or custom role as "<name>
+	// (template)" or "<name> (custom)", otherwise Owner, Admin, Member or Restricted. Null for the same
+	// credentials as email.
+	RoleName NilString               `json:"role_name"`
+	Grant    OptNilWhoamiOKDataGrant `json:"grant"`
+	Check    OptWhoamiOKDataCheck    `json:"check"`
 }
 
 // GetMemberAddress returns the value of MemberAddress.
@@ -129997,6 +132715,16 @@ func (s *WhoamiOKData) GetAuthMethod() NilString {
 // GetKeyID returns the value of KeyID.
 func (s *WhoamiOKData) GetKeyID() NilString {
 	return s.KeyID
+}
+
+// GetEmail returns the value of Email.
+func (s *WhoamiOKData) GetEmail() NilString {
+	return s.Email
+}
+
+// GetRoleName returns the value of RoleName.
+func (s *WhoamiOKData) GetRoleName() NilString {
+	return s.RoleName
 }
 
 // GetGrant returns the value of Grant.
@@ -130047,6 +132775,16 @@ func (s *WhoamiOKData) SetAuthMethod(val NilString) {
 // SetKeyID sets the value of KeyID.
 func (s *WhoamiOKData) SetKeyID(val NilString) {
 	s.KeyID = val
+}
+
+// SetEmail sets the value of Email.
+func (s *WhoamiOKData) SetEmail(val NilString) {
+	s.Email = val
+}
+
+// SetRoleName sets the value of RoleName.
+func (s *WhoamiOKData) SetRoleName(val NilString) {
+	s.RoleName = val
 }
 
 // SetGrant sets the value of Grant.

@@ -285,9 +285,8 @@ rotate keys.
 and `client.roles` reads roles, groups, mailbox access and the access mode.
 Routes a server has not enabled answer `404 feature_disabled`.
 `BUILTIN_ROLE_KEYS` and the `BuiltinRoleKey` type list the built-in role keys
-(`owner`, `admin`, `operator` and `member`). `operator` has every
-permission `admin` has except managing members, changing roles, sending
-invitations and billing.
+(`owner`, `admin` and `member`). Every other role, including the operator
+template, is a template or custom role with a key of its own.
 
 ## The normalized email object
 

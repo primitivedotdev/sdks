@@ -132,12 +132,17 @@ def sync_detailed(
     change needs the person's own access to cover the key's access now (an owner covers every key);
     otherwise 403 grant_forbidden, details.reason target_not_covered. A grant change is a new version of
     the key and is held to the same rules as creating one (a custom grant that does not say which mail
-    it reaches is refused with details.reason mail_scope_required), so it takes the same step-up. The
-    person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules)
-    unless the organization's credential policy sets cli_writes_require_approval; the Primitive app's
-    token is refused, even with one. Needs the organization's credential features to be enabled; while
-    they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact
-    Primitive to turn them on.
+    it reaches is refused with details.reason mail_scope_required), so it takes the same step-up. It
+    replaces the whole grant: send expected_grant_ref (grant.ref from GET /v1/keys/{id}) to have it
+    refused (409 conflict, details.reason grant_changed) if the grant changed since that read; a grant
+    change sent without it answers grant_unguarded: true. On a key limited to selected resources
+    (grant.resources), a grant change must drop the limits on purpose with a custom grant and
+    grant.resources {}; one that leaves them out is refused (409 conflict, details.reason
+    key_has_resource_limits) and nothing changes. The person's own Primitive CLI login needs no step-up
+    (it acts as the person, held to the same rules) unless the organization's credential policy sets
+    cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
     organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token
@@ -194,12 +199,17 @@ def sync(
     change needs the person's own access to cover the key's access now (an owner covers every key);
     otherwise 403 grant_forbidden, details.reason target_not_covered. A grant change is a new version of
     the key and is held to the same rules as creating one (a custom grant that does not say which mail
-    it reaches is refused with details.reason mail_scope_required), so it takes the same step-up. The
-    person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules)
-    unless the organization's credential policy sets cli_writes_require_approval; the Primitive app's
-    token is refused, even with one. Needs the organization's credential features to be enabled; while
-    they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact
-    Primitive to turn them on.
+    it reaches is refused with details.reason mail_scope_required), so it takes the same step-up. It
+    replaces the whole grant: send expected_grant_ref (grant.ref from GET /v1/keys/{id}) to have it
+    refused (409 conflict, details.reason grant_changed) if the grant changed since that read; a grant
+    change sent without it answers grant_unguarded: true. On a key limited to selected resources
+    (grant.resources), a grant change must drop the limits on purpose with a custom grant and
+    grant.resources {}; one that leaves them out is refused (409 conflict, details.reason
+    key_has_resource_limits) and nothing changes. The person's own Primitive CLI login needs no step-up
+    (it acts as the person, held to the same rules) unless the organization's credential policy sets
+    cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
     organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token
@@ -251,12 +261,17 @@ async def asyncio_detailed(
     change needs the person's own access to cover the key's access now (an owner covers every key);
     otherwise 403 grant_forbidden, details.reason target_not_covered. A grant change is a new version of
     the key and is held to the same rules as creating one (a custom grant that does not say which mail
-    it reaches is refused with details.reason mail_scope_required), so it takes the same step-up. The
-    person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules)
-    unless the organization's credential policy sets cli_writes_require_approval; the Primitive app's
-    token is refused, even with one. Needs the organization's credential features to be enabled; while
-    they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact
-    Primitive to turn them on.
+    it reaches is refused with details.reason mail_scope_required), so it takes the same step-up. It
+    replaces the whole grant: send expected_grant_ref (grant.ref from GET /v1/keys/{id}) to have it
+    refused (409 conflict, details.reason grant_changed) if the grant changed since that read; a grant
+    change sent without it answers grant_unguarded: true. On a key limited to selected resources
+    (grant.resources), a grant change must drop the limits on purpose with a custom grant and
+    grant.resources {}; one that leaves them out is refused (409 conflict, details.reason
+    key_has_resource_limits) and nothing changes. The person's own Primitive CLI login needs no step-up
+    (it acts as the person, held to the same rules) unless the organization's credential policy sets
+    cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
     organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token
@@ -313,12 +328,17 @@ async def asyncio(
     change needs the person's own access to cover the key's access now (an owner covers every key);
     otherwise 403 grant_forbidden, details.reason target_not_covered. A grant change is a new version of
     the key and is held to the same rules as creating one (a custom grant that does not say which mail
-    it reaches is refused with details.reason mail_scope_required), so it takes the same step-up. The
-    person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules)
-    unless the organization's credential policy sets cli_writes_require_approval; the Primitive app's
-    token is refused, even with one. Needs the organization's credential features to be enabled; while
-    they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact
-    Primitive to turn them on.
+    it reaches is refused with details.reason mail_scope_required), so it takes the same step-up. It
+    replaces the whole grant: send expected_grant_ref (grant.ref from GET /v1/keys/{id}) to have it
+    refused (409 conflict, details.reason grant_changed) if the grant changed since that read; a grant
+    change sent without it answers grant_unguarded: true. On a key limited to selected resources
+    (grant.resources), a grant change must drop the limits on purpose with a custom grant and
+    grant.resources {}; one that leaves them out is refused (409 conflict, details.reason
+    key_has_resource_limits) and nothing changes. The person's own Primitive CLI login needs no step-up
+    (it acts as the person, held to the same rules) unless the organization's credential policy sets
+    cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
     organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token

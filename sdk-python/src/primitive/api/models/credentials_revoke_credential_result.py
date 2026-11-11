@@ -30,12 +30,15 @@ class CredentialsRevokeCredentialResult:
             kind (CredentialsRevokeCredentialResultKind):
             id (str):
             kept (list[CredentialsRevokeCredentialResultKeptItem] | Unset):
+            already_revoked (bool | Unset): true when the API key was already revoked, so nothing changed and revoked is 0.
+                Absent otherwise. GET /v1/keys/{id} says when and by whom, to a caller who may read the key.
      """
 
     revoked: float
     kind: CredentialsRevokeCredentialResultKind
     id: str
     kept: list[CredentialsRevokeCredentialResultKeptItem] | Unset = UNSET
+    already_revoked: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -59,6 +62,8 @@ class CredentialsRevokeCredentialResult:
 
 
 
+        already_revoked = self.already_revoked
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -69,6 +74,8 @@ class CredentialsRevokeCredentialResult:
         })
         if kept is not UNSET:
             field_dict["kept"] = kept
+        if already_revoked is not UNSET:
+            field_dict["already_revoked"] = already_revoked
 
         return field_dict
 
@@ -99,11 +106,14 @@ class CredentialsRevokeCredentialResult:
                 kept.append(kept_item)
 
 
+        already_revoked = d.pop("already_revoked", UNSET)
+
         credentials_revoke_credential_result = cls(
             revoked=revoked,
             kind=kind,
             id=id,
             kept=kept,
+            already_revoked=already_revoked,
         )
 
 

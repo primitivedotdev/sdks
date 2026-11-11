@@ -109,6 +109,12 @@ def sync_detailed(
     Successful deliveries and verified-domain endpoints are exempt
     from the rate limit.
 
+
+    The test is sent whether or not real mail would be. reachable says whether the endpoint answered it
+    with a 2xx; delivery says, apart from that, whether real email.received events would be sent to the
+    endpoint by its own conditions (on, not held, an owner that can receive mail, subscribed to the
+    event), with every reason it would not be. A 200 from the test alone does not mean mail arrives.
+
     Args:
         id (UUID):
         idempotency_key (str | Unset):
@@ -149,6 +155,12 @@ def sync(
     Successful deliveries and verified-domain endpoints are exempt
     from the rate limit.
 
+
+    The test is sent whether or not real mail would be. reachable says whether the endpoint answered it
+    with a 2xx; delivery says, apart from that, whether real email.received events would be sent to the
+    endpoint by its own conditions (on, not held, an owner that can receive mail, subscribed to the
+    event), with every reason it would not be. A 200 from the test alone does not mean mail arrives.
+
     Args:
         id (UUID):
         idempotency_key (str | Unset):
@@ -183,6 +195,12 @@ async def asyncio_detailed(
     Rate limited to 4 per minute and 30 per hour (non-exempt).
     Successful deliveries and verified-domain endpoints are exempt
     from the rate limit.
+
+
+    The test is sent whether or not real mail would be. reachable says whether the endpoint answered it
+    with a 2xx; delivery says, apart from that, whether real email.received events would be sent to the
+    endpoint by its own conditions (on, not held, an owner that can receive mail, subscribed to the
+    event), with every reason it would not be. A 200 from the test alone does not mean mail arrives.
 
     Args:
         id (UUID):
@@ -223,6 +241,12 @@ async def asyncio(
     Rate limited to 4 per minute and 30 per hour (non-exempt).
     Successful deliveries and verified-domain endpoints are exempt
     from the rate limit.
+
+
+    The test is sent whether or not real mail would be. reachable says whether the endpoint answered it
+    with a 2xx; delivery says, apart from that, whether real email.received events would be sent to the
+    endpoint by its own conditions (on, not held, an owner that can receive mail, subscribed to the
+    event), with every reason it would not be. A 200 from the test alone does not mean mail arrives.
 
     Args:
         id (UUID):

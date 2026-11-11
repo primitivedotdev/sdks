@@ -112,9 +112,10 @@ describe("Permission and OPERATION_PERMISSIONS", () => {
 });
 
 describe("BUILTIN_ROLE_KEYS", () => {
-  it("come from the spec's BuiltinRoleKey and include operator", () => {
-    expect(BUILTIN_ROLE_KEYS).toEqual(["owner", "admin", "operator", "member"]);
-    expectTypeOf<"operator">().toMatchTypeOf<BuiltinRoleKey>();
+  it("come from the spec's BuiltinRoleKey, without the operator template", () => {
+    expect(BUILTIN_ROLE_KEYS).toEqual(["owner", "admin", "member"]);
+    expectTypeOf<"member">().toMatchTypeOf<BuiltinRoleKey>();
+    expectTypeOf<"operator">().not.toMatchTypeOf<BuiltinRoleKey>();
     expectTypeOf<
       (typeof BUILTIN_ROLE_KEYS)[number]
     >().toEqualTypeOf<BuiltinRoleKey>();
@@ -268,9 +269,17 @@ describe("keys, credentials, roles and whoami", () => {
       data: {
         roles: [
           {
+            id: "r-admin",
+            key: "admin",
+            kind: "builtin",
+            name: "Admin",
+            permissions: ["mail:send"],
+            version: 1,
+          },
+          {
             id: "r-operator",
             key: "operator",
-            kind: "builtin",
+            kind: "template",
             name: "Operator",
             permissions: ["mail:send"],
             version: 1,
@@ -291,11 +300,13 @@ describe("keys, credentials, roles and whoami", () => {
     const result = await roles.client.roles.list();
     expect(result.assignment.available).toBe(false);
     expect(result.roles.map((role) => role.key)).toEqual([
+      "admin",
       "operator",
       "restricted",
     ]);
     expect(BUILTIN_ROLE_KEYS).toContain(result.roles[0]?.key);
     expect(BUILTIN_ROLE_KEYS).not.toContain(result.roles[1]?.key);
+    expect(BUILTIN_ROLE_KEYS).not.toContain(result.roles[2]?.key);
     expect(new URL(roles.requests[0].url).pathname).toBe("/v1/roles");
   });
 

@@ -894,7 +894,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "whoami",
-    "description": "Current authenticated identity. member_address is null for machine credentials or an unavailable member address.",
+    "description": "Current authenticated identity. member_address is null for machine credentials or an unavailable member address. email (your own sign-in email) and role_name (your role as the members list labels it) are set only when you are signed in as yourself, in the dashboard or with your own Primitive CLI or app login, and are null for API keys, Functions, connected agents, agent signup logins and other apps acting for you.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "whoami",
@@ -984,6 +984,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "null"
           ]
         },
+        "email": {
+          "description": "Your own sign-in email, when you are signed in as yourself: in the dashboard, or with your own Primitive CLI or app login. Null for API keys, Functions, connected agents, agent signup logins and other apps acting for you.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "role_name": {
+          "description": "Your role as the organization's members list labels it: a template or custom role as \"<name> (template)\" or \"<name> (custom)\", otherwise Owner, Admin, Member or Restricted. Null for the same credentials as email.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "grant": {
           "type": [
             "object",
@@ -1043,7 +1057,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "role",
         "request_id",
         "auth_method",
-        "key_id"
+        "key_id",
+        "email",
+        "role_name"
       ]
     },
     "sdkName": "whoami",
@@ -11962,7 +11978,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-key",
-    "description": "One key's metadata, never its secret, with whether it works now (status). Its grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain, otherwise content. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.",
+    "description": "One key's metadata, never its secret, with whether it works now (status). A revoked key whose record is kept is answered too, with status revoked, revoked_at and revoked_by, under the same access rules as a key that works: one the caller may not read is 404, revoked or not. Its grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain, otherwise content. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getKey",
@@ -12009,6 +12025,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "grant": {
           "type": "object",
           "properties": {
+            "ref": {
+              "description": "The grant this read shows. Send it as expected_grant_ref on PATCH /v1/keys/{id} so the change is refused (409 conflict, details.reason grant_changed) if the grant has changed since this read.",
+              "type": "string"
+            },
             "template": {
               "type": [
                 "string",
@@ -12024,7 +12044,23 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "string"
               }
             },
-            "mail_scope": {}
+            "mail_scope": {},
+            "resources": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "description": "The Functions, domains, endpoints or routes the key is limited to, by type; null when it has no such limits. A grant change on a key with limits must drop them on purpose, with grant.resources {} (otherwise 409 conflict, details.reason key_has_resource_limits)."
+            }
           },
           "required": [
             "template",
@@ -12067,13 +12103,28 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "boolean"
         },
         "status": {
-          "description": "Whether the key works now: active; suspended (refused until the suspension is lifted); expired (refused since expires_at); or inactive, for an agent connection key whose connection cannot act (not claimed, revoked, its domain not verified, or its owner no longer a member). A revoked key is not listed. An endpoint's owner_key_status reports an expired key as suspended.",
+          "description": "Whether the key works now: active; suspended (refused until the suspension is lifted); expired (refused since expires_at); inactive, for an agent connection key whose connection cannot act (not claimed, revoked, its domain not verified, or its owner no longer a member); or revoked, which it stays for good and which no unrevoked key ever shows. A revoked key is listed only with include_revoked=true, and GET /v1/keys/{id} answers it. An endpoint's owner_key_status reports an expired key as suspended.",
           "type": "string",
           "enum": [
             "active",
             "suspended",
             "expired",
-            "inactive"
+            "inactive",
+            "revoked"
+          ]
+        },
+        "revoked_at": {
+          "description": "When the key was revoked (ISO 8601); null for a key that is not revoked.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "revoked_by": {
+          "description": "The user id of the person who revoked the key from their own dashboard session, step-up or Primitive CLI login; null for a key that is not revoked, and for one revoked any other way (by an API key, another app or token, or an automatic process such as secret scanning).",
+          "type": [
+            "string",
+            "null"
           ]
         }
       },
@@ -13249,7 +13300,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-keys",
-    "description": "Key metadata, never a secret: name, prefix, grant, creator, last use, expiry, suspension and whether each key works now (status). A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain, otherwise content. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.",
+    "description": "Key metadata, never a secret: name, prefix, grant, creator, last use, expiry, suspension and whether each key works now (status). Revoked keys are left out unless include_revoked is true, which lists them too with status revoked, revoked_at and revoked_by, under the same access rules as keys that work. A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain, otherwise content. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listKeys",
@@ -13260,6 +13311,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "description": "cursor (optional filter).",
         "enum": null,
         "name": "cursor",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "true to list revoked keys as well, newest first among the rest; false (the default) lists only keys that are not revoked. The cursor does not carry it: send it with every page.",
+        "enum": [
+          "true",
+          "false"
+        ],
+        "name": "include_revoked",
         "required": false,
         "type": "string"
       }
@@ -13301,6 +13362,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "grant": {
                 "type": "object",
                 "properties": {
+                  "ref": {
+                    "description": "The grant this read shows. Send it as expected_grant_ref on PATCH /v1/keys/{id} so the change is refused (409 conflict, details.reason grant_changed) if the grant has changed since this read.",
+                    "type": "string"
+                  },
                   "template": {
                     "type": [
                       "string",
@@ -13316,7 +13381,23 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                       "type": "string"
                     }
                   },
-                  "mail_scope": {}
+                  "mail_scope": {},
+                  "resources": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "description": "The Functions, domains, endpoints or routes the key is limited to, by type; null when it has no such limits. A grant change on a key with limits must drop them on purpose, with grant.resources {} (otherwise 409 conflict, details.reason key_has_resource_limits)."
+                  }
                 },
                 "required": [
                   "template",
@@ -13359,13 +13440,28 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "boolean"
               },
               "status": {
-                "description": "Whether the key works now: active; suspended (refused until the suspension is lifted); expired (refused since expires_at); or inactive, for an agent connection key whose connection cannot act (not claimed, revoked, its domain not verified, or its owner no longer a member). A revoked key is not listed. An endpoint's owner_key_status reports an expired key as suspended.",
+                "description": "Whether the key works now: active; suspended (refused until the suspension is lifted); expired (refused since expires_at); inactive, for an agent connection key whose connection cannot act (not claimed, revoked, its domain not verified, or its owner no longer a member); or revoked, which it stays for good and which no unrevoked key ever shows. A revoked key is listed only with include_revoked=true, and GET /v1/keys/{id} answers it. An endpoint's owner_key_status reports an expired key as suspended.",
                 "type": "string",
                 "enum": [
                   "active",
                   "suspended",
                   "expired",
-                  "inactive"
+                  "inactive",
+                  "revoked"
+                ]
+              },
+              "revoked_at": {
+                "description": "When the key was revoked (ISO 8601); null for a key that is not revoked.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "revoked_by": {
+                "description": "The user id of the person who revoked the key from their own dashboard session, step-up or Primitive CLI login; null for a key that is not revoked, and for one revoked any other way (by an API key, another app or token, or an automatic process such as secret scanning).",
+                "type": [
+                  "string",
+                  "null"
                 ]
               }
             },
@@ -13514,7 +13610,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "revoke-credential",
-    "description": "Revoke one credential by kind and id. A Function key is rotated, never revoked (409 rotate_instead). An API key is revoked only by a person whose own access covers the key's access (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered. What the credential set up keeps working and is listed in standing_objects for review. The person's own Primitive CLI login revokes an API key (kind org_key) as the person, with no step-up unless the organization's credential policy sets cli_writes_require_approval (then it takes a keys.create step-up); every other kind (a connected key named as org_key included, 403 grant_forbidden target_not_covered), and every other app even with a step-up, is refused outside the dashboard (403). Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:manage. API keys, agent connection keys and agents are refused.",
+    "description": "Revoke one credential by kind and id. A Function key is rotated, never revoked (409 rotate_instead). An API key is revoked only by a person whose own access covers the key's access (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered. What the credential set up keeps working and is listed in standing_objects for review. An API key (kind org_key or connected_key) that is already revoked, and whose record is kept, answers 200 with already_revoked true and revoked 0, to a caller who could have revoked it; anyone else gets the answer they would get for a key that does not exist. The person's own Primitive CLI login revokes an API key (kind org_key) as the person, with no step-up unless the organization's credential policy sets cli_writes_require_approval (then it takes a keys.create step-up); every other kind (a connected key named as org_key included, 403 grant_forbidden target_not_covered), and every other app even with a step-up, is refused outside the dashboard (403). Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:manage. API keys, agent connection keys and agents are refused.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "revokeCredential",
@@ -13647,6 +13743,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "id"
             ]
           }
+        },
+        "already_revoked": {
+          "description": "true when the API key was already revoked, so nothing changed and revoked is 0. Absent otherwise. GET /v1/keys/{id} says when and by whom, to a caller who may read the key.",
+          "type": "boolean"
         }
       },
       "required": [
@@ -13902,7 +14002,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "update-key",
-    "description": "Rename a key, change its expiry, its grant or its conditions, or suspend it. A later expires_at extends the key, which is how to keep a key working past its expiry (rotating keeps it, unless the rotation gives the new key an expires_at): it is held to the credential policy (400 when past its maximum lifetime, with the latest expiry it allows now in the message), and like any loosening needs the person to be allowed to create a key with the key's access. Expiry is final: an expired key's expiry cannot be changed (409 conflict, details.reason key_expired); make a new key instead. Any change needs the person's own access to cover the key's access now (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key and is held to the same rules as creating one (a custom grant that does not say which mail it reaches is refused with details.reason mail_scope_required), so it takes the same step-up. The person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless the organization's credential policy sets cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.",
+    "description": "Rename a key, change its expiry, its grant or its conditions, or suspend it. A later expires_at extends the key, which is how to keep a key working past its expiry (rotating keeps it, unless the rotation gives the new key an expires_at): it is held to the credential policy (400 when past its maximum lifetime, with the latest expiry it allows now in the message), and like any loosening needs the person to be allowed to create a key with the key's access. Expiry is final: an expired key's expiry cannot be changed (409 conflict, details.reason key_expired); make a new key instead. Any change needs the person's own access to cover the key's access now (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key and is held to the same rules as creating one (a custom grant that does not say which mail it reaches is refused with details.reason mail_scope_required), so it takes the same step-up. It replaces the whole grant: send expected_grant_ref (grant.ref from GET /v1/keys/{id}) to have it refused (409 conflict, details.reason grant_changed) if the grant changed since that read; a grant change sent without it answers grant_unguarded: true. On a key limited to selected resources (grant.resources), a grant change must drop the limits on purpose with a custom grant and grant.resources {}; one that leaves them out is refused (409 conflict, details.reason key_has_resource_limits) and nothing changes. The person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless the organization's credential policy sets cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.",
     "hasJsonBody": true,
     "method": "PATCH",
     "operationId": "updateKey",
@@ -14153,6 +14253,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ],
             "additionalProperties": {}
           }
+        },
+        "grant_unguarded": {
+          "description": "Present, as true, when the grant was changed without expected_grant_ref, so the change was not checked against changes made since the key was read. Send grant.ref from GET /v1/keys/{id} as expected_grant_ref to have such a change refused instead (409 conflict, details.reason grant_changed).",
+          "type": "boolean",
+          "const": true
         }
       },
       "required": [
@@ -19685,6 +19790,41 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "type": "boolean",
             "const": true
           },
+          "withheld_by": {
+            "description": "Set when do-not-share rules kept this match from being shared, so no key or webhook got it through the rule: those you can see, and why.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string",
+                  "enum": [
+                    "matched",
+                    "undecided",
+                    "outside_scope_stale"
+                  ],
+                  "description": "undecided: it had not decided the email, which blocks too. outside_scope_stale: cleared as outside its scope, and its author now reads the email."
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "reason"
+              ]
+            }
+          },
+          "withheld_by_hidden": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "With withheld_by: how many more kept it back that you cannot see, or that were deleted since. Those rules are not shown; an admin can see them."
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -20203,6 +20343,41 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                     "description": "Present, as true, on a result for an email whose content cannot be read (withheld, failed to parse or discarded): matched still says what the rule decided, but how it got there was read from that content, so parts and question_answers are empty. Absent otherwise.",
                     "type": "boolean",
                     "const": true
+                  },
+                  "withheld_by": {
+                    "description": "Set when do-not-share rules kept this match from being shared, so no key or webhook got it through the rule: those you can see, and why.",
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "matched",
+                            "undecided",
+                            "outside_scope_stale"
+                          ],
+                          "description": "undecided: it had not decided the email, which blocks too. outside_scope_stale: cleared as outside its scope, and its author now reads the email."
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "reason"
+                      ]
+                    }
+                  },
+                  "withheld_by_hidden": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "With withheld_by: how many more kept it back that you cannot see, or that were deleted since. Those rules are not shown; an admin can see them."
                   },
                   "created_at": {
                     "type": "string",
@@ -22098,6 +22273,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "string",
                   "null"
                 ]
+              },
+              "recipient": {
+                "description": "The mailbox this copy of the email was received in, as GET /v1/emails/{id} shows it. Given with received_at, from_address and subject, so absent for not_found.",
+                "type": "string"
               },
               "subject": {
                 "type": [
@@ -28378,7 +28557,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
         },
         "owner_key_status": {
-          "description": "Whether the owning key can act now. In endpoint responses it is set only for a caller who may read API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent nothing.",
+          "description": "Whether the owning key can act now. In endpoint responses it is set only for a caller who may read API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent nothing. Anyone who may read the endpoint learns that from delivery.reasons, which never names the key.",
           "type": [
             "string",
             "null"
@@ -28389,6 +28568,84 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "revoked",
             null
           ]
+        },
+        "disabled_reason": {
+          "description": "Why the platform turned this endpoint off, when it names a reason. owner_changed: it was given to a new owner while its URL stayed, and the URL was chosen under the previous owner; turning it on or giving it a new URL starts it again. owner_credential_revoked: the third-party app or agent delegate grant that owned it was revoked; an owner or admin who turns it back on takes it over. Null while it is on and when it was turned off by hand. An access suspension does not set it (a suspension is decided through its own record). Other values may be added.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "delivery": {
+          "description": "For a webhook (kind http) in GET /endpoints and GET /endpoints/{id}: whether it is being sent received mail, and why not. Shown to anyone who may read the endpoint; it names a state, never a key. Null when it could not be checked just now. Absent from other kinds of endpoint and from create and update answers.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "delivering": {
+              "type": "boolean",
+              "description": "Whether the webhook is being sent received mail at all now: it is on, it is not held, and its owner can receive mail. Which messages reach it is still decided per message, by routing, rule grants and its own rules."
+            },
+            "reasons": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "additionalProperties": {}
+              },
+              "description": "Every reason it is not, in the order delivery checks them; empty when it is. Codes, of which more may be added: disabled: the endpoint is off (disabled_reason on the endpoint says why). held: the endpoint, or the route the email came through, is held pending an owner or admin decision after its creator's access was reduced. acting_owner_revoked, acting_owner_suspended (which covers an expired key) and acting_owner_left: its owner cannot act now. acting_owner_permission: its owner does not read mail. acting_owner_depth: its owner sees headers only. acting_owner_scope: its owner does not read this email's mailbox, or, with no email to judge, reads no received mail at all now. These three name what the owner's access holds, so a caller who may not read API key metadata sees acting_owner_access in their place."
+            },
+            "held_for_owner": {
+              "description": "Rule-granted mail held for this webhook while its owner cannot act; null when none is. Only for a caller with access to every mailbox (held mail can be an earlier owner's), and absent when it could not be read just now.",
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "count": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Rule-granted emails waiting for this webhook because its owner could not act at their last check."
+                },
+                "oldest_queued_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                  "description": "When the oldest of them was queued."
+                },
+                "expires_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                  "description": "When the oldest is given up on if its owner still cannot act. Each is checked again periodically, so the count can trail a change of the owner's state."
+                }
+              },
+              "required": [
+                "count",
+                "oldest_queued_at",
+                "expires_at"
+              ],
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "delivering",
+            "reasons"
+          ],
+          "additionalProperties": {}
         },
         "signed_with": {
           "description": "Which secret signs deliveries to this webhook: its own (read it from GET /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that is not a webhook.",
@@ -28467,7 +28724,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-endpoint",
-    "description": "One endpoint, as GET /endpoints shows it, to a caller who would see it there. Any other id, a deleted endpoint's included, answers 404.",
+    "description": "One endpoint, as GET /endpoints shows it, to a caller who would see it there. Any other id, a deleted endpoint's included, answers 404. For a webhook, delivery says whether it is being sent received mail at all, why not, and how much rule-granted mail is held while its owner cannot act.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEndpoint",
@@ -28713,7 +28970,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
         },
         "owner_key_status": {
-          "description": "Whether the owning key can act now. In endpoint responses it is set only for a caller who may read API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent nothing.",
+          "description": "Whether the owning key can act now. In endpoint responses it is set only for a caller who may read API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent nothing. Anyone who may read the endpoint learns that from delivery.reasons, which never names the key.",
           "type": [
             "string",
             "null"
@@ -28724,6 +28981,84 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "revoked",
             null
           ]
+        },
+        "disabled_reason": {
+          "description": "Why the platform turned this endpoint off, when it names a reason. owner_changed: it was given to a new owner while its URL stayed, and the URL was chosen under the previous owner; turning it on or giving it a new URL starts it again. owner_credential_revoked: the third-party app or agent delegate grant that owned it was revoked; an owner or admin who turns it back on takes it over. Null while it is on and when it was turned off by hand. An access suspension does not set it (a suspension is decided through its own record). Other values may be added.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "delivery": {
+          "description": "For a webhook (kind http) in GET /endpoints and GET /endpoints/{id}: whether it is being sent received mail, and why not. Shown to anyone who may read the endpoint; it names a state, never a key. Null when it could not be checked just now. Absent from other kinds of endpoint and from create and update answers.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "delivering": {
+              "type": "boolean",
+              "description": "Whether the webhook is being sent received mail at all now: it is on, it is not held, and its owner can receive mail. Which messages reach it is still decided per message, by routing, rule grants and its own rules."
+            },
+            "reasons": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "additionalProperties": {}
+              },
+              "description": "Every reason it is not, in the order delivery checks them; empty when it is. Codes, of which more may be added: disabled: the endpoint is off (disabled_reason on the endpoint says why). held: the endpoint, or the route the email came through, is held pending an owner or admin decision after its creator's access was reduced. acting_owner_revoked, acting_owner_suspended (which covers an expired key) and acting_owner_left: its owner cannot act now. acting_owner_permission: its owner does not read mail. acting_owner_depth: its owner sees headers only. acting_owner_scope: its owner does not read this email's mailbox, or, with no email to judge, reads no received mail at all now. These three name what the owner's access holds, so a caller who may not read API key metadata sees acting_owner_access in their place."
+            },
+            "held_for_owner": {
+              "description": "Rule-granted mail held for this webhook while its owner cannot act; null when none is. Only for a caller with access to every mailbox (held mail can be an earlier owner's), and absent when it could not be read just now.",
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "count": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Rule-granted emails waiting for this webhook because its owner could not act at their last check."
+                },
+                "oldest_queued_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                  "description": "When the oldest of them was queued."
+                },
+                "expires_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                  "description": "When the oldest is given up on if its owner still cannot act. Each is checked again periodically, so the count can trail a change of the owner's state."
+                }
+              },
+              "required": [
+                "count",
+                "oldest_queued_at",
+                "expires_at"
+              ],
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "delivering",
+            "reasons"
+          ],
+          "additionalProperties": {}
         },
         "signed_with": {
           "description": "Which secret signs deliveries to this webhook: its own (read it from GET /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that is not a webhook.",
@@ -29041,7 +29376,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
           "owner_key_status": {
-            "description": "Whether the owning key can act now. In endpoint responses it is set only for a caller who may read API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent nothing.",
+            "description": "Whether the owning key can act now. In endpoint responses it is set only for a caller who may read API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent nothing. Anyone who may read the endpoint learns that from delivery.reasons, which never names the key.",
             "type": [
               "string",
               "null"
@@ -29052,6 +29387,84 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "revoked",
               null
             ]
+          },
+          "disabled_reason": {
+            "description": "Why the platform turned this endpoint off, when it names a reason. owner_changed: it was given to a new owner while its URL stayed, and the URL was chosen under the previous owner; turning it on or giving it a new URL starts it again. owner_credential_revoked: the third-party app or agent delegate grant that owned it was revoked; an owner or admin who turns it back on takes it over. Null while it is on and when it was turned off by hand. An access suspension does not set it (a suspension is decided through its own record). Other values may be added.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "delivery": {
+            "description": "For a webhook (kind http) in GET /endpoints and GET /endpoints/{id}: whether it is being sent received mail, and why not. Shown to anyone who may read the endpoint; it names a state, never a key. Null when it could not be checked just now. Absent from other kinds of endpoint and from create and update answers.",
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "delivering": {
+                "type": "boolean",
+                "description": "Whether the webhook is being sent received mail at all now: it is on, it is not held, and its owner can receive mail. Which messages reach it is still decided per message, by routing, rule grants and its own rules."
+              },
+              "reasons": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": {}
+                },
+                "description": "Every reason it is not, in the order delivery checks them; empty when it is. Codes, of which more may be added: disabled: the endpoint is off (disabled_reason on the endpoint says why). held: the endpoint, or the route the email came through, is held pending an owner or admin decision after its creator's access was reduced. acting_owner_revoked, acting_owner_suspended (which covers an expired key) and acting_owner_left: its owner cannot act now. acting_owner_permission: its owner does not read mail. acting_owner_depth: its owner sees headers only. acting_owner_scope: its owner does not read this email's mailbox, or, with no email to judge, reads no received mail at all now. These three name what the owner's access holds, so a caller who may not read API key metadata sees acting_owner_access in their place."
+              },
+              "held_for_owner": {
+                "description": "Rule-granted mail held for this webhook while its owner cannot act; null when none is. Only for a caller with access to every mailbox (held mail can be an earlier owner's), and absent when it could not be read just now.",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "count": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Rule-granted emails waiting for this webhook because its owner could not act at their last check."
+                  },
+                  "oldest_queued_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                    "description": "When the oldest of them was queued."
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                    "description": "When the oldest is given up on if its owner still cannot act. Each is checked again periodically, so the count can trail a change of the owner's state."
+                  }
+                },
+                "required": [
+                  "count",
+                  "oldest_queued_at",
+                  "expires_at"
+                ],
+                "additionalProperties": {}
+              }
+            },
+            "required": [
+              "delivering",
+              "reasons"
+            ],
+            "additionalProperties": {}
           },
           "signed_with": {
             "description": "Which secret signs deliveries to this webhook: its own (read it from GET /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that is not a webhook.",
@@ -29290,7 +29703,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "test-endpoint",
-    "description": "Sends a sample `email.received` event to the endpoint. The request\nincludes SSRF protection (private IP rejection and DNS pinning).\nRate limited to 4 per minute and 30 per hour (non-exempt).\nSuccessful deliveries and verified-domain endpoints are exempt\nfrom the rate limit.\n",
+    "description": "Sends a sample `email.received` event to the endpoint. The request\nincludes SSRF protection (private IP rejection and DNS pinning).\nRate limited to 4 per minute and 30 per hour (non-exempt).\nSuccessful deliveries and verified-domain endpoints are exempt\nfrom the rate limit.\n\n\nThe test is sent whether or not real mail would be. reachable says whether the endpoint answered it with a 2xx; delivery says, apart from that, whether real email.received events would be sent to the endpoint by its own conditions (on, not held, an owner that can receive mail, subscribed to the event), with every reason it would not be. A 200 from the test alone does not mean mail arrives.",
     "hasJsonBody": false,
     "method": "POST",
     "operationId": "testEndpoint",
@@ -29333,11 +29746,70 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "signature": {
           "type": "string",
           "description": "The signature header value sent, answered to a caller who may see it: for a webhook signed with the organization's secret, a caller who may read that secret; for one signed with its own, the person who owns it, calling as themselves."
+        },
+        "reachable": {
+          "type": "boolean",
+          "description": "Whether the endpoint answered the test with a 2xx status: the request reached it and its handler accepted it. It says nothing about whether real mail is sent to it: see delivery."
+        },
+        "delivery": {
+          "description": "Whether real email.received events would be sent to this endpoint, judged by the endpoint's own conditions as delivery judges them. Null when that could not be checked just now.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "event_type": {
+              "type": "string",
+              "description": "The event type checked."
+            },
+            "would_deliver": {
+              "type": "boolean",
+              "description": "Whether this endpoint's own conditions let the event through: it is on, it is not held, its owner can receive it, and it subscribes to the event type. Which endpoint routing or a rule grant sends a message to is decided separately, per message: POST /routes/simulate answers that, and a rule grant can deliver an email outside its owner's mailboxes. A Function endpoint is also judged at delivery on its Function's run state and key."
+            },
+            "reasons": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "additionalProperties": {}
+              },
+              "description": "Every reason it would not be sent the event, in the order delivery checks them; empty when it would. Codes, of which more may be added: disabled: the endpoint is off (disabled_reason on the endpoint says why). held: the endpoint, or the route the email came through, is held pending an owner or admin decision after its creator's access was reduced. acting_owner_revoked, acting_owner_suspended (which covers an expired key) and acting_owner_left: its owner cannot act now. acting_owner_permission: its owner does not read mail. acting_owner_depth: its owner sees headers only. acting_owner_scope: its owner does not read this email's mailbox, or, with no email to judge, reads no received mail at all now. These three name what the owner's access holds, so a caller who may not read API key metadata sees acting_owner_access in their place. event_type_not_subscribed: rules.event_types leaves the event out."
+            },
+            "events_paused_until": {
+              "description": "While repeated failures have paused this webhook (its circuit breaker is open): when webhook events other than mail (interaction, sent mail and credential events) are next attempted. Received mail is attempted regardless, so this does not change would_deliver. Null when nothing is paused, and for a Function endpoint.",
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            }
+          },
+          "required": [
+            "event_type",
+            "would_deliver",
+            "reasons",
+            "events_paused_until"
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
         "status",
-        "body"
+        "body",
+        "reachable",
+        "delivery"
       ]
     },
     "sdkName": "testEndpoint",
@@ -29349,7 +29821,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "test-endpoint-rules",
-    "description": "Evaluates the endpoint's filtering rules against an\nalready-received email WITHOUT delivering anything. The same\nshared matcher the live delivery paths use produces the\nverdict, so the response explains exactly why a webhook fired\nor was suppressed for that message.\n\nWhen delivery would be suppressed, `rule` names the failing\nrule and `reason` carries a human-readable explanation; both\nare null when the message matches. `evaluated` echoes the\nmessage metadata the matcher compared (size, attachments, and\nthe authenticated From identity versus the raw envelope\nsender), so a surprising verdict can be traced to its inputs.\n\nTwo independent gates are surfaced separately:\n`subscribed_to_event` reports the endpoint's event-type\nsubscription (checked before message matching), and\n`rules_valid` reports whether the stored rules blob parsed at\nall. Delivery fails OPEN on an invalid blob (the message is\ndelivered as if unfiltered), so `rules_valid: false` exposes a\nmisconfiguration that is otherwise silent.\n",
+    "description": "Evaluates the endpoint's filtering rules against an\nalready-received email WITHOUT delivering anything. The same\nshared matcher the live delivery paths use produces the\nverdict, so the response explains exactly why a webhook fired\nor was suppressed for that message.\n\nWhen delivery would be suppressed, `rule` names the failing\nrule and `reason` carries a human-readable explanation; both\nare null when the message matches. `evaluated` echoes the\nmessage metadata the matcher compared (size, attachments, and\nthe authenticated From identity versus the raw envelope\nsender), so a surprising verdict can be traced to its inputs.\n\nTwo independent gates are surfaced separately:\n`subscribed_to_event` reports the endpoint's event-type\nsubscription (checked before message matching), and\n`rules_valid` reports whether the stored rules blob parsed at\nall. Delivery fails OPEN on an invalid blob (the message is\ndelivered as if unfiltered), so `rules_valid: false` exposes a\nmisconfiguration that is otherwise silent.\n\n\nwould_deliver also covers the endpoint's own delivery conditions for this email (delivery): it is on, neither it nor the email's route is held, its owner may receive this email, and it subscribes to the event. Which endpoint routing sends the email to is decided separately: POST /routes/simulate answers that. A 503 means those conditions could not be read just now; retry.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "testEndpointRules",
@@ -29397,21 +29869,21 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "properties": {
         "would_deliver": {
           "type": "boolean",
-          "description": "Whether the delivery path would deliver this email to the endpoint."
+          "description": "Whether this email would be sent to this endpoint by the endpoint's own conditions: it is on, neither it nor the email's route is held, its owner may receive this email, it subscribes to the event, and its rules match. Which endpoint routing sends the email to is decided separately: POST /routes/simulate answers that. A rule grant can still deliver an email whose mailbox the owner does not read, and a Function endpoint is also judged at delivery on its Function's run state and key."
         },
         "rule": {
+          "description": "The first check that stops this email, in the order delivery makes them: disabled, held or an acting_owner_* code (see delivery.reasons), then event_types when the endpoint does not subscribe, then the name of the rule that does not match. Null when it would deliver.",
           "type": [
             "string",
             "null"
-          ],
-          "description": "Name of the failing rule when delivery would be\nsuppressed; null when the message matches and the\nendpoint is subscribed to the event type.\n"
+          ]
         },
         "reason": {
+          "description": "Why, in words. Null when it would deliver.",
           "type": [
             "string",
             "null"
-          ],
-          "description": "Human-readable explanation of the failing rule; null when the message matches."
+          ]
         },
         "rules_valid": {
           "type": "boolean",
@@ -29467,6 +29939,59 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "sender_authenticated",
             "sender_trust_basis"
           ]
+        },
+        "delivery": {
+          "description": "The endpoint's own conditions for this email, as delivery judges them, the owner judged on this email's mailbox and time. Null for a pull destination, which nothing pushes to.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "event_type": {
+              "type": "string",
+              "description": "The event type checked."
+            },
+            "would_deliver": {
+              "type": "boolean",
+              "description": "Whether this endpoint's own conditions let the event through: it is on, it is not held, its owner can receive it, and it subscribes to the event type. Which endpoint routing or a rule grant sends a message to is decided separately, per message: POST /routes/simulate answers that, and a rule grant can deliver an email outside its owner's mailboxes. A Function endpoint is also judged at delivery on its Function's run state and key."
+            },
+            "reasons": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "additionalProperties": {}
+              },
+              "description": "Every reason it would not be sent the event, in the order delivery checks them; empty when it would. Codes, of which more may be added: disabled: the endpoint is off (disabled_reason on the endpoint says why). held: the endpoint, or the route the email came through, is held pending an owner or admin decision after its creator's access was reduced. acting_owner_revoked, acting_owner_suspended (which covers an expired key) and acting_owner_left: its owner cannot act now. acting_owner_permission: its owner does not read mail. acting_owner_depth: its owner sees headers only. acting_owner_scope: its owner does not read this email's mailbox, or, with no email to judge, reads no received mail at all now. These three name what the owner's access holds, so a caller who may not read API key metadata sees acting_owner_access in their place. event_type_not_subscribed: rules.event_types leaves the event out."
+            },
+            "events_paused_until": {
+              "description": "While repeated failures have paused this webhook (its circuit breaker is open): when webhook events other than mail (interaction, sent mail and credential events) are next attempted. Received mail is attempted regardless, so this does not change would_deliver. Null when nothing is paused, and for a Function endpoint.",
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            }
+          },
+          "required": [
+            "event_type",
+            "would_deliver",
+            "reasons",
+            "events_paused_until"
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -29476,7 +30001,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "rules_valid",
         "subscribed_to_event",
         "event_type",
-        "evaluated"
+        "evaluated",
+        "delivery"
       ]
     },
     "sdkName": "testEndpointRules",
@@ -29488,7 +30014,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "update-endpoint",
-    "description": "Updates an active webhook endpoint. Changing the URL keeps the endpoint: its id, recipient routes, signing secret, delivery history and any deliveries still owed to it stay with it, and owed deliveries go to the new URL. Another active endpoint at the new URL is refused.\n\n\nPull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint deletion disconnects the destination; creating a new destination does not backfill historical events.",
+    "description": "Updates an active webhook endpoint. Changing the URL keeps the endpoint: its id, recipient routes, signing secret, delivery history and any deliveries still owed to it stay with it, and owed deliveries go to the new URL. Another active endpoint at the new URL is refused.\n\n\nPull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint deletion disconnects the destination; creating a new destination does not backfill historical events.\n\nGiving a webhook the organization does not own to a different key (owner_key_id), or a key's webhook back to the organization (owner_key_id null), turns it off unless the request also sets enabled: its URL was chosen under its previous owner. It then reads enabled false with disabled_reason owner_changed, and turning it on or giving it a new URL starts it again. A key that carries on for the owning key through rotation (its successor, at any depth up to 16 rotations) is not a different key: the webhook stays as it was, with the same signing secret. That does not hold when the owning key was made from a key a transfer moved or rotated away, or from one that has since been deleted: no successor carries on for it. The answer's warnings name each such change (turned_off_owner_changed, turned_on_new_url), so a client can say so.",
     "hasJsonBody": true,
     "method": "PATCH",
     "operationId": "updateEndpoint",
@@ -29605,7 +30131,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "description": "For a move to another domain_id whose slot already has an active endpoint: false (the default) answers 409 conflict with details.holder naming it; true retires that endpoint in the same request, after the checks deleting it would need."
         },
         "owner_key_id": {
-          "description": "Give this webhook to an API key of the organization. Only a route target can be given to a key; a default endpoint stays the organization's, and takeover is refused with it. null gives a key-owned webhook back to the organization (a caller with access to every mailbox only); it stays a route target.",
+          "description": "Give this webhook to an API key of the organization. Only a route target can be given to a key; a default endpoint stays the organization's, and takeover is refused with it. null gives a key-owned webhook back to the organization (a caller with access to every mailbox only); it stays a route target. Giving a webhook the organization does not own to a different key, or a key's webhook back to the organization, turns it off (enabled false, disabled_reason owner_changed) unless the same request sets enabled: its URL was chosen under its previous owner. A key that carries on for the key that owns it through rotation (its successor, at any depth up to 16 rotations) is not a different key: the webhook stays as it was, with the same signing secret. That does not hold for a webhook whose owning key was made from a key a transfer moved or rotated away, or from one that has since been deleted: no successor carries on for it, so giving the webhook to one is a change of owner. Turning it on, or a new URL, starts it again. A webhook that signs with its own secret keeps signing with one: the same one when it stays with the same key, or was the organization's (giving away one the organization owns needs webhook_secret:read, since the key and its holder can then read its secret), and a new one for any other owner's. The response's warnings say when an update turned the webhook off or on.",
           "type": [
             "string",
             "null"
@@ -29625,266 +30151,377 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "minProperties": 1
     },
     "responseSchema": {
-      "type": "object",
-      "properties": {
-        "recipient": {
-          "description": "Server-enforced recipient for an address-scoped pull subscription; null for an account-wide destination created before pull creation required a connected-agent credential.",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "receiver_capabilities": {
+      "allOf": [
+        {
           "type": "object",
           "properties": {
-            "completion_modes": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "http",
-                  "exec",
-                  "stdout",
-                  "sdk"
-                ]
+            "recipient": {
+              "description": "Server-enforced recipient for an address-scoped pull subscription; null for an account-wide destination created before pull creation required a connected-agent credential.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "receiver_capabilities": {
+              "type": "object",
+              "properties": {
+                "completion_modes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "http",
+                      "exec",
+                      "stdout",
+                      "sdk"
+                    ]
+                  }
+                },
+                "stream_protocols": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "primitive.events.v1"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "completion_modes",
+                "stream_protocols"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "org_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "url": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "domain_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "description": "Restrict this endpoint to emails from a specific domain"
+            },
+            "rules": {
+              "type": "object",
+              "description": "Endpoint-specific filtering rules",
+              "additionalProperties": true,
+              "properties": {
+                "event_types": {
+                  "minItems": 1,
+                  "maxItems": 50,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": "Event types this endpoint receives. Omitted: every event type except the opt-in sent_email.* events, which an endpoint receives only when it lists them."
+                },
+                "max_size_bytes": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Skip messages larger than this many bytes."
+                },
+                "exclude_attachments": {
+                  "type": "boolean",
+                  "description": "When true, skip messages that have attachments."
+                },
+                "attachment_limit_mb": {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "description": "Skip messages whose attachments total more than this many megabytes."
+                },
+                "sender_whitelist": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "email",
+                        "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
+                      }
+                    ]
+                  },
+                  "description": "Deliver only messages whose authenticated From identity matches an entry: an exact address, or @domain, which also matches its subdomains."
+                },
+                "sender_blacklist": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "email",
+                        "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
+                      }
+                    ]
+                  },
+                  "description": "Skip messages whose envelope sender or From address matches an entry: an exact address, or @domain, which also matches its subdomains."
+                }
               }
             },
-            "stream_protocols": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "primitive.events.v1"
-                ]
-              }
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "delivery_count": {
+              "type": "integer",
+              "description": "Total webhook deliveries attempted"
+            },
+            "success_count": {
+              "type": "integer",
+              "description": "Successful deliveries"
+            },
+            "failure_count": {
+              "type": "integer",
+              "description": "Failed deliveries"
+            },
+            "consecutive_fails": {
+              "type": "integer",
+              "description": "Current streak of consecutive failures"
+            },
+            "last_delivery_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "last_success_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "last_failure_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "deactivated_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "http",
+                "function",
+                "pull"
+              ],
+              "description": "http: deliver to the webhook URL. function: invoke a Primitive Function."
+            },
+            "function_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "description": "The Function this endpoint invokes, when kind is function."
+            },
+            "is_route_target": {
+              "type": "boolean",
+              "description": "When true, this endpoint is reachable only via an explicit recipient\nroute, never as a domain's default destination, and is exempt from\nthe one-endpoint-per-domain rule (so many can share a domain).\n"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "A pull destination's stable name, or an http webhook's label (null when it has none)."
+            },
+            "owned_by_key": {
+              "description": "Whether an API key owns this webhook instead of the organization.",
+              "type": "boolean"
+            },
+            "owner_key_id": {
+              "description": "The API key that owns this webhook. In endpoint responses it is set only for a caller who may read API key metadata, and is null otherwise and when the organization owns the webhook. After a rotation, the key that carries on for the key first named while it can act.",
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "owner_key_status": {
+              "description": "Whether the owning key can act now. In endpoint responses it is set only for a caller who may read API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent nothing. Anyone who may read the endpoint learns that from delivery.reasons, which never names the key.",
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "active",
+                "suspended",
+                "revoked",
+                null
+              ]
+            },
+            "disabled_reason": {
+              "description": "Why the platform turned this endpoint off, when it names a reason. owner_changed: it was given to a new owner while its URL stayed, and the URL was chosen under the previous owner; turning it on or giving it a new URL starts it again. owner_credential_revoked: the third-party app or agent delegate grant that owned it was revoked; an owner or admin who turns it back on takes it over. Null while it is on and when it was turned off by hand. An access suspension does not set it (a suspension is decided through its own record). Other values may be added.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "delivery": {
+              "description": "For a webhook (kind http) in GET /endpoints and GET /endpoints/{id}: whether it is being sent received mail, and why not. Shown to anyone who may read the endpoint; it names a state, never a key. Null when it could not be checked just now. Absent from other kinds of endpoint and from create and update answers.",
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "delivering": {
+                  "type": "boolean",
+                  "description": "Whether the webhook is being sent received mail at all now: it is on, it is not held, and its owner can receive mail. Which messages reach it is still decided per message, by routing, rule grants and its own rules."
+                },
+                "reasons": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string"
+                      },
+                      "message": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "message"
+                    ],
+                    "additionalProperties": {}
+                  },
+                  "description": "Every reason it is not, in the order delivery checks them; empty when it is. Codes, of which more may be added: disabled: the endpoint is off (disabled_reason on the endpoint says why). held: the endpoint, or the route the email came through, is held pending an owner or admin decision after its creator's access was reduced. acting_owner_revoked, acting_owner_suspended (which covers an expired key) and acting_owner_left: its owner cannot act now. acting_owner_permission: its owner does not read mail. acting_owner_depth: its owner sees headers only. acting_owner_scope: its owner does not read this email's mailbox, or, with no email to judge, reads no received mail at all now. These three name what the owner's access holds, so a caller who may not read API key metadata sees acting_owner_access in their place."
+                },
+                "held_for_owner": {
+                  "description": "Rule-granted mail held for this webhook while its owner cannot act; null when none is. Only for a caller with access to every mailbox (held mail can be an earlier owner's), and absent when it could not be read just now.",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "count": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Rule-granted emails waiting for this webhook because its owner could not act at their last check."
+                    },
+                    "oldest_queued_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "description": "When the oldest of them was queued."
+                    },
+                    "expires_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "description": "When the oldest is given up on if its owner still cannot act. Each is checked again periodically, so the count can trail a change of the owner's state."
+                    }
+                  },
+                  "required": [
+                    "count",
+                    "oldest_queued_at",
+                    "expires_at"
+                  ],
+                  "additionalProperties": {}
+                }
+              },
+              "required": [
+                "delivering",
+                "reasons"
+              ],
+              "additionalProperties": {}
+            },
+            "signed_with": {
+              "description": "Which secret signs deliveries to this webhook: its own (read it from GET /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that is not a webhook.",
+              "type": "string",
+              "enum": [
+                "own_secret",
+                "organization_secret"
+              ]
+            },
+            "signing_secret": {
+              "description": "Only in the response that creates a webhook made with a signing secret of its own (one made as a person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate for itself): that secret, shown this once. Read it again from GET /endpoints/{id}/signing-secret.",
+              "type": "string"
             }
           },
           "required": [
-            "completion_modes",
-            "stream_protocols"
+            "id",
+            "org_id",
+            "enabled",
+            "rules",
+            "created_at",
+            "updated_at",
+            "delivery_count",
+            "success_count",
+            "failure_count",
+            "consecutive_fails"
           ]
         },
-        "id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "org_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "url": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "enabled": {
-          "type": "boolean"
-        },
-        "domain_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "uuid",
-          "description": "Restrict this endpoint to emails from a specific domain"
-        },
-        "rules": {
+        {
           "type": "object",
-          "description": "Endpoint-specific filtering rules",
-          "additionalProperties": true,
+          "required": [
+            "warnings"
+          ],
           "properties": {
-            "event_types": {
-              "minItems": 1,
-              "maxItems": 50,
+            "warnings": {
+              "default": [],
+              "description": "When this update turned the webhook off or on without the request setting enabled. turned_off_owner_changed: the webhook was given to a new owner, so it is now off (disabled_reason owner_changed) until it is turned on or given a new URL. turned_on_new_url: it was off because its owner changed, and the new URL turned it back on. Empty when the update did neither. Other codes may be added.",
               "type": "array",
               "items": {
-                "type": "string",
-                "minLength": 1
-              },
-              "description": "Event types this endpoint receives. Omitted: every event type except the opt-in sent_email.* events, which an endpoint receives only when it lists them."
-            },
-            "max_size_bytes": {
-              "type": "integer",
-              "exclusiveMinimum": 0,
-              "maximum": 9007199254740991,
-              "description": "Skip messages larger than this many bytes."
-            },
-            "exclude_attachments": {
-              "type": "boolean",
-              "description": "When true, skip messages that have attachments."
-            },
-            "attachment_limit_mb": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "Skip messages whose attachments total more than this many megabytes."
-            },
-            "sender_whitelist": {
-              "type": "array",
-              "items": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "format": "email",
-                    "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string"
                   },
-                  {
-                    "type": "string",
-                    "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
+                  "message": {
+                    "type": "string"
                   }
-                ]
-              },
-              "description": "Deliver only messages whose authenticated From identity matches an entry: an exact address, or @domain, which also matches its subdomains."
-            },
-            "sender_blacklist": {
-              "type": "array",
-              "items": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "format": "email",
-                    "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                  },
-                  {
-                    "type": "string",
-                    "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
-                  }
-                ]
-              },
-              "description": "Skip messages whose envelope sender or From address matches an entry: an exact address, or @domain, which also matches its subdomains."
+                },
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "additionalProperties": {}
+              }
             }
           }
-        },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updated_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "delivery_count": {
-          "type": "integer",
-          "description": "Total webhook deliveries attempted"
-        },
-        "success_count": {
-          "type": "integer",
-          "description": "Successful deliveries"
-        },
-        "failure_count": {
-          "type": "integer",
-          "description": "Failed deliveries"
-        },
-        "consecutive_fails": {
-          "type": "integer",
-          "description": "Current streak of consecutive failures"
-        },
-        "last_delivery_at": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        },
-        "last_success_at": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        },
-        "last_failure_at": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        },
-        "deactivated_at": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        },
-        "kind": {
-          "type": "string",
-          "enum": [
-            "http",
-            "function",
-            "pull"
-          ],
-          "description": "http: deliver to the webhook URL. function: invoke a Primitive Function."
-        },
-        "function_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "uuid",
-          "description": "The Function this endpoint invokes, when kind is function."
-        },
-        "is_route_target": {
-          "type": "boolean",
-          "description": "When true, this endpoint is reachable only via an explicit recipient\nroute, never as a domain's default destination, and is exempt from\nthe one-endpoint-per-domain rule (so many can share a domain).\n"
-        },
-        "name": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "A pull destination's stable name, or an http webhook's label (null when it has none)."
-        },
-        "owned_by_key": {
-          "description": "Whether an API key owns this webhook instead of the organization.",
-          "type": "boolean"
-        },
-        "owner_key_id": {
-          "description": "The API key that owns this webhook. In endpoint responses it is set only for a caller who may read API key metadata, and is null otherwise and when the organization owns the webhook. After a rotation, the key that carries on for the key first named while it can act.",
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "uuid",
-          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-        },
-        "owner_key_status": {
-          "description": "Whether the owning key can act now. In endpoint responses it is set only for a caller who may read API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent nothing.",
-          "type": [
-            "string",
-            "null"
-          ],
-          "enum": [
-            "active",
-            "suspended",
-            "revoked",
-            null
-          ]
-        },
-        "signed_with": {
-          "description": "Which secret signs deliveries to this webhook: its own (read it from GET /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that is not a webhook.",
-          "type": "string",
-          "enum": [
-            "own_secret",
-            "organization_secret"
-          ]
-        },
-        "signing_secret": {
-          "description": "Only in the response that creates a webhook made with a signing secret of its own (one made as a person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate for itself): that secret, shown this once. Read it again from GET /endpoints/{id}/signing-secret.",
-          "type": "string"
         }
-      },
-      "required": [
-        "id",
-        "org_id",
-        "enabled",
-        "rules",
-        "created_at",
-        "updated_at",
-        "delivery_count",
-        "success_count",
-        "failure_count",
-        "consecutive_fails"
       ]
     },
     "sdkName": "updateEndpoint",
@@ -58571,8 +59208,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "boolean",
           "description": "Whether this is the latest attempt of its delivery: the one recorded last, where a record of no attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A retry is recorded as a new attempt with its own id and attempt_count (not always higher than the one before), so an earlier attempt never changes: follow the latest one, or read attempts on any of them."
         },
+        "retry_scheduled": {
+          "description": "Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. Null on every attempt of a delivery retried or settled on a schedule of its own, which this does not report: a held one (its release settles it, including the attempts it makes itself), a pull attempt, a rule-granted one, and a sent email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the message, reads false) and has not received the email by another delivery: null while a delivery pass for the email is running (whether another follows is decided when it ends), true when the email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no automatic retry of the email's delivery will try it again, which does not mean nothing else ever will.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "next_attempt_at": {
-          "description": "When the next automatic retry of this delivery is due. Not reported yet: always null.",
+          "description": "When the next automatic retry of this delivery is due. Not reported: always null. Whether one is coming is retry_scheduled.",
           "type": [
             "string",
             "null"
@@ -58630,6 +59274,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "string",
                   "null"
                 ]
+              },
+              "retry_scheduled": {
+                "description": "Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. Null on every attempt of a delivery retried or settled on a schedule of its own, which this does not report: a held one (its release settles it, including the attempts it makes itself), a pull attempt, a rule-granted one, and a sent email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the message, reads false) and has not received the email by another delivery: null while a delivery pass for the email is running (whether another follows is decided when it ends), true when the email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no automatic retry of the email's delivery will try it again, which does not mean nothing else ever will.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               }
             },
             "required": [
@@ -58640,7 +59291,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "duration_ms",
               "created_at",
               "response_status",
-              "response_body"
+              "response_body",
+              "retry_scheduled"
             ]
           },
           "description": "Every attempt of this delivery in the order recorded, oldest first, this one included: the same endpoint, and the same event (or, for an attempt recorded without one, the same email). Each carries what the endpoint answered that attempt (response_status, response_body). Records of no attempt (attempt_count 0) are listed where they were recorded, so the last entry is not always the latest attempt (latest_attempt says which is). The newest 100 when there are more."
@@ -58665,6 +59317,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "updated_at",
         "email",
         "latest_attempt",
+        "retry_scheduled",
         "next_attempt_at",
         "attempts"
       ]
@@ -58887,13 +59540,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "type": "boolean",
             "description": "Whether this is the latest attempt of its delivery: the one recorded last, where a record of no attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A retry is recorded as a new attempt with its own id and attempt_count (not always higher than the one before), so an earlier attempt never changes: follow the latest one, or read attempts on any of them."
           },
+          "retry_scheduled": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its owner's access, whether it is still on), so true promises a pass, not a delivery to this endpoint. Null on every attempt of a delivery retried or settled on a schedule of its own, which this does not report: a held one (its release settles it, including the attempts it makes itself), a pull attempt, a rule-granted one, and a sent email's or other event's delivery. On the latest attempt that failed, is pending or was skipped in a way still owed, of an email that was not rejected and still has its content, to an endpoint that is still on, takes the event, has an owner the pass would deliver to (a revoked or suspended key, or an owner that may not receive the message, reads false) and has not received the email by another delivery: null while a delivery pass for the email is running (whether another follows is decided when it ends), true when the email has another automatic pass to come (a scheduled retry, the reclaim of a pass that stopped, or the recovery of a first pass that did not finish), and false otherwise. False on every other attempt, including every attempt a later one followed: no automatic retry of the email's delivery will try it again, which does not mean nothing else ever will."
+          },
           "next_attempt_at": {
             "type": [
               "string",
               "null"
             ],
             "format": "date-time",
-            "description": "When the next automatic retry of this delivery is due. Not reported yet: always null."
+            "description": "When the next automatic retry of this delivery is due. Not reported: always null. Whether one is coming is retry_scheduled."
           }
         },
         "required": [
@@ -58912,6 +59572,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "response_status",
           "response_body",
           "latest_attempt",
+          "retry_scheduled",
           "next_attempt_at"
         ]
       }

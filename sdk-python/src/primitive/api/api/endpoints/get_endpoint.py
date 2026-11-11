@@ -102,7 +102,8 @@ def sync_detailed(
     """ Get an endpoint
 
      One endpoint, as GET /endpoints shows it, to a caller who would see it there. Any other id, a
-    deleted endpoint's included, answers 404.
+    deleted endpoint's included, answers 404. For a webhook, delivery says whether it is being sent
+    received mail at all, why not, and how much rule-granted mail is held while its owner cannot act.
 
     Args:
         id (UUID):
@@ -136,7 +137,8 @@ def sync(
     """ Get an endpoint
 
      One endpoint, as GET /endpoints shows it, to a caller who would see it there. Any other id, a
-    deleted endpoint's included, answers 404.
+    deleted endpoint's included, answers 404. For a webhook, delivery says whether it is being sent
+    received mail at all, why not, and how much rule-granted mail is held while its owner cannot act.
 
     Args:
         id (UUID):
@@ -165,7 +167,8 @@ async def asyncio_detailed(
     """ Get an endpoint
 
      One endpoint, as GET /endpoints shows it, to a caller who would see it there. Any other id, a
-    deleted endpoint's included, answers 404.
+    deleted endpoint's included, answers 404. For a webhook, delivery says whether it is being sent
+    received mail at all, why not, and how much rule-granted mail is held while its owner cannot act.
 
     Args:
         id (UUID):
@@ -199,7 +202,8 @@ async def asyncio(
     """ Get an endpoint
 
      One endpoint, as GET /endpoints shows it, to a caller who would see it there. Any other id, a
-    deleted endpoint's included, answers 404.
+    deleted endpoint's included, answers 404. For a webhook, delivery says whether it is being sent
+    received mail at all, why not, and how much rule-granted mail is held while its owner cannot act.
 
     Args:
         id (UUID):

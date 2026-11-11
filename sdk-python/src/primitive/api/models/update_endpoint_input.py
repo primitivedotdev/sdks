@@ -36,7 +36,16 @@ class UpdateEndpointInput:
             owner_key_id (None | Unset | UUID): Give this webhook to an API key of the organization. Only a route target can
                 be given to a key; a default endpoint stays the organization's, and takeover is refused with it. null gives a
                 key-owned webhook back to the organization (a caller with access to every mailbox only); it stays a route
-                target.
+                target. Giving a webhook the organization does not own to a different key, or a key's webhook back to the
+                organization, turns it off (enabled false, disabled_reason owner_changed) unless the same request sets enabled:
+                its URL was chosen under its previous owner. A key that carries on for the key that owns it through rotation
+                (its successor, at any depth up to 16 rotations) is not a different key: the webhook stays as it was, with the
+                same signing secret. That does not hold for a webhook whose owning key was made from a key a transfer moved or
+                rotated away, or from one that has since been deleted: no successor carries on for it, so giving the webhook to
+                one is a change of owner. Turning it on, or a new URL, starts it again. A webhook that signs with its own secret
+                keeps signing with one: the same one when it stays with the same key, or was the organization's (giving away one
+                the organization owns needs webhook_secret:read, since the key and its holder can then read its secret), and a
+                new one for any other owner's. The response's warnings say when an update turned the webhook off or on.
             name (None | str | Unset): A webhook's label, up to 200 characters, shown with it in lists; null removes it.
                 Only for http webhooks: a pull destination keeps the name it was created with.
      """

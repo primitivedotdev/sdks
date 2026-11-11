@@ -994,6 +994,5 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
 export const BUILTIN_ROLE_KEYS = [
   "owner",
   "admin",
-  "operator",
   "member"
 ] as const;

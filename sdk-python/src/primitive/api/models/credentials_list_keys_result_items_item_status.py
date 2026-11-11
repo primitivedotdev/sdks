@@ -4,6 +4,7 @@ class CredentialsListKeysResultItemsItemStatus(StrEnum):
     ACTIVE = "active"
     EXPIRED = "expired"
     INACTIVE = "inactive"
+    REVOKED = "revoked"
     SUSPENDED = "suspended"
 
     def __str__(self) -> str:

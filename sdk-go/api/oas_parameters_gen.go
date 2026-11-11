@@ -24325,6 +24325,9 @@ func decodeListInteractionsParams(args [0]string, argsEscaped bool, r *http.Requ
 type ListKeysParams struct {
 	// Cursor (optional filter).
 	Cursor OptString `json:",omitempty,omitzero"`
+	// True to list revoked keys as well, newest first among the rest; false (the default) lists only
+	// keys that are not revoked. The cursor does not carry it: send it with every page.
+	IncludeRevoked OptListKeysIncludeRevoked `json:",omitempty,omitzero"`
 }
 
 func unpackListKeysParams(packed middleware.Parameters) (params ListKeysParams) {
@@ -24335,6 +24338,15 @@ func unpackListKeysParams(packed middleware.Parameters) (params ListKeysParams) 
 		}
 		if v, ok := packed[key]; ok {
 			params.Cursor = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "include_revoked",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.IncludeRevoked = v.(OptListKeysIncludeRevoked)
 		}
 	}
 	return params
@@ -24406,6 +24418,62 @@ func decodeListKeysParams(args [0]string, argsEscaped bool, r *http.Request) (pa
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "cursor",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: include_revoked.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "include_revoked",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIncludeRevokedVal ListKeysIncludeRevoked
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotIncludeRevokedVal = ListKeysIncludeRevoked(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.IncludeRevoked.SetTo(paramsDotIncludeRevokedVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.IncludeRevoked.Get(); ok {
+					if err := func() error {
+						if err := validateParameter(value); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "include_revoked",
 			In:   "query",
 			Err:  err,
 		}
