@@ -6821,7 +6821,7 @@ export type CreateEmailRuleRequest = {
     /**
      * Ignored (the compile answer's breadth).
      */
-    breadth?: unknown;
+    breadth?: EmailRuleBreadth | null;
 };
 
 export type CreateEmailRuleResult = EmailRuleWritten;
@@ -6950,7 +6950,7 @@ export type UpdateEmailRuleRequest = {
     /**
      * Ignored (the compile answer's breadth).
      */
-    breadth?: unknown;
+    breadth?: EmailRuleBreadth | null;
     /**
      * own_mailboxes: mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names. Left out, the scope stays. A change saves a new version with the same conditions, and is refused while the rule is shared.
      */
@@ -7310,7 +7310,7 @@ export type CreateEmailRuleRequestRequest = {
     /**
      * Ignored (the compile answer's breadth).
      */
-    breadth?: unknown;
+    breadth?: EmailRuleBreadth | null;
 };
 
 export type CreateEmailRuleRequestResult = {
@@ -7599,7 +7599,7 @@ export type AcceptEmailRuleRequestRequest = {
     /**
      * Ignored (the compile answer's breadth).
      */
-    breadth?: unknown;
+    breadth?: EmailRuleBreadth | null;
 };
 
 export type AcceptEmailRuleRequestResult = {

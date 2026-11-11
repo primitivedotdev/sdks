@@ -77833,7 +77833,15 @@ export const openapiDocument: Record<string, unknown> = {
             "maxLength": 64
           },
           "breadth": {
-            "description": "Ignored (the compile answer's breadth)."
+            "description": "Ignored (the compile answer's breadth).",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmailRuleBreadth"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -78153,7 +78161,15 @@ export const openapiDocument: Record<string, unknown> = {
             "maxLength": 64
           },
           "breadth": {
-            "description": "Ignored (the compile answer's breadth)."
+            "description": "Ignored (the compile answer's breadth).",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmailRuleBreadth"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "evaluation_scope": {
             "type": "string",
@@ -78975,7 +78991,15 @@ export const openapiDocument: Record<string, unknown> = {
             "maxLength": 64
           },
           "breadth": {
-            "description": "Ignored (the compile answer's breadth)."
+            "description": "Ignored (the compile answer's breadth).",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmailRuleBreadth"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -79754,7 +79778,15 @@ export const openapiDocument: Record<string, unknown> = {
             "maxLength": 64
           },
           "breadth": {
-            "description": "Ignored (the compile answer's breadth)."
+            "description": "Ignored (the compile answer's breadth).",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmailRuleBreadth"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false

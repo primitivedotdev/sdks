@@ -667,7 +667,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
   - `compileEmailRule` answers `breadth` (`EmailRuleBreadth`: of your
     recent emails, how many were `checked` and how many the conditions
     `matched`), null when not counted in full. The create, update, request
-    and accept bodies take it back and ignore it.
+    and accept bodies take it back, as `EmailRuleBreadth` or null, and ignore
+    it.
   - `updateEmailRule` takes `if_revision`, refused with `409`
     `email_rule_conflict`, `details.reason` `revision_moved` and
     `details.current_revision` when the rule was updated since.

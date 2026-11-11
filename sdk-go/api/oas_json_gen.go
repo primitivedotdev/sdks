@@ -338,9 +338,9 @@ func (s *AcceptEmailRuleRequestRequest) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if len(s.Breadth) != 0 {
+		if s.Breadth.Set {
 			e.FieldStart("breadth")
-			e.Raw(s.Breadth)
+			s.Breadth.Encode(e)
 		}
 	}
 }
@@ -454,9 +454,8 @@ func (s *AcceptEmailRuleRequestRequest) Decode(d *jx.Decoder) error {
 			}
 		case "breadth":
 			if err := func() error {
-				v, err := d.RawAppend(nil)
-				s.Breadth = jx.Raw(v)
-				if err != nil {
+				s.Breadth.Reset()
+				if err := s.Breadth.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -28170,9 +28169,9 @@ func (s *CreateEmailRuleRequest) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if len(s.Breadth) != 0 {
+		if s.Breadth.Set {
 			e.FieldStart("breadth")
-			e.Raw(s.Breadth)
+			s.Breadth.Encode(e)
 		}
 	}
 }
@@ -28346,9 +28345,8 @@ func (s *CreateEmailRuleRequest) Decode(d *jx.Decoder) error {
 			}
 		case "breadth":
 			if err := func() error {
-				v, err := d.RawAppend(nil)
-				s.Breadth = jx.Raw(v)
-				if err != nil {
+				s.Breadth.Reset()
+				if err := s.Breadth.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -28935,9 +28933,9 @@ func (s *CreateEmailRuleRequestRequest) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if len(s.Breadth) != 0 {
+		if s.Breadth.Set {
 			e.FieldStart("breadth")
-			e.Raw(s.Breadth)
+			s.Breadth.Encode(e)
 		}
 	}
 }
@@ -29089,9 +29087,8 @@ func (s *CreateEmailRuleRequestRequest) Decode(d *jx.Decoder) error {
 			}
 		case "breadth":
 			if err := func() error {
-				v, err := d.RawAppend(nil)
-				s.Breadth = jx.Raw(v)
-				if err != nil {
+				s.Breadth.Reset()
+				if err := s.Breadth.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -250972,9 +250969,9 @@ func (s *UpdateEmailRuleRequest) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if len(s.Breadth) != 0 {
+		if s.Breadth.Set {
 			e.FieldStart("breadth")
-			e.Raw(s.Breadth)
+			s.Breadth.Encode(e)
 		}
 	}
 	{
@@ -251148,9 +251145,8 @@ func (s *UpdateEmailRuleRequest) Decode(d *jx.Decoder) error {
 			}
 		case "breadth":
 			if err := func() error {
-				v, err := d.RawAppend(nil)
-				s.Breadth = jx.Raw(v)
-				if err != nil {
+				s.Breadth.Reset()
+				if err := s.Breadth.Decode(d); err != nil {
 					return err
 				}
 				return nil

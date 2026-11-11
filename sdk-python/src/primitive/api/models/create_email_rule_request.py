@@ -15,6 +15,7 @@ from typing import cast
 
 if TYPE_CHECKING:
   from ..models.create_email_rule_request_expectations import CreateEmailRuleRequestExpectations
+  from ..models.email_rule_breadth import EmailRuleBreadth
   from ..models.email_rule_scope_selection import EmailRuleScopeSelection
   from ..models.email_rule_tree_input import EmailRuleTreeInput
 
@@ -54,7 +55,7 @@ class CreateEmailRuleRequest:
                 returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
             compiled_by (str | Unset): Who produced the tree (not verified): the compile response's compiled_by, or member
                 (the default) for a tree you wrote or edited.
-            breadth (Any | Unset): Ignored (the compile answer's breadth).
+            breadth (EmailRuleBreadth | None | Unset): Ignored (the compile answer's breadth).
      """
 
     name: str
@@ -69,7 +70,7 @@ class CreateEmailRuleRequest:
     assumptions: list[str] | Unset = UNSET
     warnings: list[str] | Unset = UNSET
     compiled_by: str | Unset = UNSET
-    breadth: Any | Unset = UNSET
+    breadth: EmailRuleBreadth | None | Unset = UNSET
 
 
 
@@ -77,6 +78,7 @@ class CreateEmailRuleRequest:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.create_email_rule_request_expectations import CreateEmailRuleRequestExpectations # noqa: PLC0415
+        from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
         from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         name = self.name
@@ -124,7 +126,13 @@ class CreateEmailRuleRequest:
 
         compiled_by = self.compiled_by
 
-        breadth = self.breadth
+        breadth: dict[str, Any] | None | Unset
+        if isinstance(self.breadth, Unset):
+            breadth = UNSET
+        elif isinstance(self.breadth, EmailRuleBreadth):
+            breadth = self.breadth.to_dict()
+        else:
+            breadth = self.breadth
 
 
         field_dict: dict[str, Any] = {}
@@ -162,6 +170,7 @@ class CreateEmailRuleRequest:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.create_email_rule_request_expectations import CreateEmailRuleRequestExpectations # noqa: PLC0415
+        from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
         from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         d = dict(src_dict)
@@ -234,7 +243,25 @@ class CreateEmailRuleRequest:
 
         compiled_by = d.pop("compiled_by", UNSET)
 
-        breadth = d.pop("breadth", UNSET)
+        def _parse_breadth(data: object) -> EmailRuleBreadth | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                breadth_type_1 = EmailRuleBreadth.from_dict(data)
+
+
+
+                return breadth_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailRuleBreadth | None | Unset, data)
+
+        breadth = _parse_breadth(d.pop("breadth", UNSET))
+
 
         create_email_rule_request = cls(
             name=name,
