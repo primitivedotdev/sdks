@@ -160,10 +160,10 @@ export interface EmailRuleRequestEvent {
     share_id?: string;
     /** On `accepted`: whether the member asked changed the rule first. */
     edited_on_accept?: boolean;
-    /** What the member asking wrote about why; null when they wrote nothing. Absent from servers that predate it. */
-    message?: string | null;
-    /** Why the member asked declined; null unless they gave a reason. Absent from servers that predate it. */
-    decline_reason?: string | null;
+    /** What the member asking wrote about why; null when they wrote nothing. */
+    message: string | null;
+    /** Why the member asked declined; null unless they gave a reason. */
+    decline_reason: string | null;
     [key: string]: unknown;
   };
   /** On `created` and `withdrawn`: the member who asked. */

@@ -12,6 +12,13 @@ import {
   unknownEventTypes,
   withEventTypes,
 } from "../../src/oclif/endpoint-event-types.js";
+import {
+  createEndpointRuleRequestHint,
+  RULE_REQUEST_WEBHOOK_CREATE_HINT,
+  RULE_REQUEST_WEBHOOK_DEFAULT_HINT,
+  RULE_REQUEST_WEBHOOK_UPDATE_HINT,
+  updateEndpointRuleRequestHint,
+} from "../../src/oclif/rule-request-webhooks.js";
 
 const auth = vi.hoisted(() => ({ create: vi.fn() }));
 vi.mock("../../src/oclif/api-client.js", () => ({
@@ -298,5 +305,127 @@ describe("endpoints create/update --event-types", () => {
     expect(stderr.mock.calls.map((call) => String(call[0])).join("")).toContain(
       "sent_email.faild is not an event type this CLI knows",
     );
+  });
+});
+
+describe("a refused webhook for rule request events", () => {
+  const RULE_REQUEST_EVENTS = [
+    "email_rule_request.created",
+    "email_rule_request.accepted",
+    "email_rule_request.declined",
+    "email_rule_request.withdrawn",
+  ];
+  const refused = (status: number, code: string, reason?: string): Reply => ({
+    status,
+    body: {
+      success: false,
+      error: {
+        code,
+        message: "Refused.",
+        ...(reason ? { details: { reason } } : {}),
+      },
+    },
+  });
+  const stderrOf = async (sdkName: string, argv: string[]) => {
+    const written: string[] = [];
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+      written.push(String(chunk));
+      return true;
+    });
+    await command(sdkName)
+      .run(argv, { root })
+      .catch(() => undefined);
+    return written.join("");
+  };
+
+  it("says to make it signed in as yourself when a key or another app made it", async () => {
+    const calls = fixture(
+      refused(403, "forbidden", "rule_request_events_need_own_webhook"),
+    );
+    const stderr = await stderrOf("createEndpoint", [
+      "--url",
+      "https://hooks.example.test/requests",
+      "--event-types",
+      "email_rule_request.*",
+    ]);
+    expect(calls[0]?.body).toEqual({
+      url: "https://hooks.example.test/requests",
+      rules: { event_types: RULE_REQUEST_EVENTS },
+    });
+    expect(stderr).toContain(RULE_REQUEST_WEBHOOK_CREATE_HINT);
+  });
+
+  it("says to leave out the default flags when it is asked to be a default", async () => {
+    fixture(refused(400, "validation_error"));
+    const stderr = await stderrOf("createEndpoint", [
+      "--url",
+      "https://hooks.example.test/requests",
+      "--event-types",
+      "email_rule_request.*",
+      "--no-is-route-target",
+    ]);
+    expect(stderr).toContain(RULE_REQUEST_WEBHOOK_DEFAULT_HINT);
+  });
+
+  it("says to create a new webhook when an existing one is given the events", async () => {
+    const calls = fixture(
+      {
+        body: {
+          success: true,
+          data: [endpointRow({ event_types: ["email.received"] })],
+        },
+      },
+      refused(403, "forbidden", "rule_request_events_need_own_webhook"),
+    );
+    const stderr = await stderrOf("updateEndpoint", [
+      "--id",
+      ENDPOINT_ID,
+      "--event-types",
+      "email_rule_request.*",
+    ]);
+    expect(calls.map((call) => call.method)).toEqual(["GET", "PATCH"]);
+    expect(stderr).toContain(RULE_REQUEST_WEBHOOK_UPDATE_HINT);
+  });
+
+  it("adds nothing to other refusals", () => {
+    expect(
+      createEndpointRuleRequestHint("validation_error", {
+        url: "https://hooks.example.test/x",
+        is_route_target: false,
+        rules: { event_types: ["email.received"] },
+      }),
+    ).toBeUndefined();
+    expect(
+      createEndpointRuleRequestHint("validation_error", {
+        url: "https://hooks.example.test/x",
+        rules: { event_types: RULE_REQUEST_EVENTS },
+      }),
+    ).toBeUndefined();
+    expect(
+      createEndpointRuleRequestHint(
+        "forbidden",
+        {},
+        {
+          code: "forbidden",
+          details: { reason: "endpoint_owner_changed" },
+        },
+      ),
+    ).toBeUndefined();
+    expect(
+      updateEndpointRuleRequestHint("forbidden", {}, undefined),
+    ).toBeUndefined();
+    // The reason is read from the error, or from an envelope around it.
+    expect(
+      createEndpointRuleRequestHint(
+        "forbidden",
+        {},
+        {
+          error: {
+            details: { reason: "rule_request_events_need_own_webhook" },
+          },
+        },
+      ),
+    ).toBe(RULE_REQUEST_WEBHOOK_CREATE_HINT);
   });
 });
