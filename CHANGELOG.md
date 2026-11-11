@@ -893,3 +893,26 @@ parsers.
 - The event listener stops with an explanation when an event's content is
   withheld from the credential, instead of passing on an event it cannot
   show.
+- A background listener start no longer stops a supervisor that is running
+  and holds the receiver. When the new worker exits just after it reports
+  ready, the start succeeds and the supervisor restarts the worker. Before,
+  the start stopped that supervisor and left the receiver stopped, which
+  could happen to a worker replacing its lost supervisor. When the startup
+  timeout passes while the supervisor still holds the receiver, `listen
+  --background` exits with an error that says the supervisor keeps the
+  receiver, restarting it if it exits, and leaves it running. A start is still stopped
+  when its supervisor exits, cannot be started or no longer holds the
+  receiver, or when its worker reports a failure.
+- A background listener whose session, profile or config directory differs
+  from what the command that started it selected reports
+  `connection-changed`, so its supervisor holds it as failed instead of
+  restarting it. Other options, which also change when the CLI is upgraded,
+  are not treated this way.
+- When a background start gives up, including one with no terminal to report
+  to, such as a worker replacing its lost supervisor, its time, reason and
+  failure code are saved. `listen --status` shows them as
+  `listener.lastStartFailure` and in `listener.detail` until the receiver is
+  receiving, `agent connect --status` does the same under `receiving`, and
+  `primitive doctor` adds a Receiver warning for a connected profile while
+  they are shown. A later start that succeeds, or the receiver starting to
+  receive, removes the record.
