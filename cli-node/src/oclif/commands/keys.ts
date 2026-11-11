@@ -236,7 +236,8 @@ export function formatKeyDetail(key: KeyView): string {
   ];
   // GET /keys/{id} also answers a revoked key, which never works again.
   if (key.status === "revoked") {
-    lines.push(`Revoked:      ${key.revoked_at ?? "yes"}`);
+    const by = key.revoked_by ? ` by user ${key.revoked_by}` : "";
+    lines.push(`Revoked:      ${key.revoked_at ?? "yes"}${by}`);
   }
   if (key.agent_address) lines.push(`Agent:        ${key.agent_address}`);
   if (key.grant.template) {
@@ -1037,6 +1038,13 @@ export class KeysUpdateCommand extends Command {
       if (!current.ok) {
         reportKeysError(this, current, auth, Boolean(flags.json));
         return;
+      }
+      // The key read also answers a revoked key, which cannot be changed:
+      // stop before asking for any approval.
+      if (current.data.status === "revoked") {
+        this.error(`Key ${args.id} is revoked, so it cannot be changed.`, {
+          exit: 1,
+        });
       }
       rulesBefore = keyRules(current.data.grant);
       const next = buildUpdatedGrant(current.data.grant, {

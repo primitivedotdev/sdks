@@ -234,7 +234,7 @@ describe("keys helpers", () => {
           revoked_by: "user-1",
         }),
       ),
-    ).toContain("Revoked:      2026-11-02T00:00:00.000Z");
+    ).toContain("Revoked:      2026-11-02T00:00:00.000Z by user user-1");
     expect(
       formatKeyDetail(keyRow(grant, { status: "revoked", revoked_at: null })),
     ).toContain("Revoked:      yes");
@@ -1270,6 +1270,25 @@ describe("keys commands", () => {
     const result = await run(KeysUpdateCommand, [KEY_ID, "--add", "mail:send"]);
     expect(String((result.error as Error | null)?.message)).toContain(
       "The server does not say whether this key is limited to selected Functions, domains, endpoints or routes",
+    );
+    expect(requests.filter((r) => r.method === "PATCH")).toHaveLength(0);
+  });
+
+  it("update refuses a grant change on a revoked key before sending anything", async () => {
+    const requests = useServer(() =>
+      Response.json({
+        success: true,
+        data: {
+          ...READER,
+          status: "revoked",
+          revoked_at: "2026-11-02T00:00:00.000Z",
+          revoked_by: null,
+        },
+      }),
+    );
+    const result = await run(KeysUpdateCommand, [KEY_ID, "--add", "mail:send"]);
+    expect(String((result.error as Error | null)?.message)).toContain(
+      `Key ${KEY_ID} is revoked, so it cannot be changed.`,
     );
     expect(requests.filter((r) => r.method === "PATCH")).toHaveLength(0);
   });
