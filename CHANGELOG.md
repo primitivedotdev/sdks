@@ -809,6 +809,10 @@ parsers.
   token and sends the request again, as `primitive keys` does; under
   `--json` or without a terminal it prints the link and how to rerun.
   `endpoints create` and `endpoints update` take them as well.
+- The help for `email-rules test-email-rule`, `create-email-rule` and
+  `update-email-rule` names both expectation reports: a test answers with
+  `expectations` (`passed`, `counts`, `results`), and a create or update
+  with `expectations_check` (`passed`, `decided`, `failed`, `undecided`).
 - `emails watch`, and `emails wait` when it waits for more than one email,
   now report an email that became readable after a later one was reported,
   as mail can when it is accepted more slowly, held while its sender is
