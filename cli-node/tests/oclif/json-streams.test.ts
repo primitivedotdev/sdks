@@ -615,7 +615,10 @@ describe("generated commands with --json", () => {
       data: [],
       meta: { cursor: "cursor-2" },
     });
-    expect(document.summary).toContain("No inbound emails received yet");
+    // The page has a next cursor, so the hint says the list goes on rather than that it is empty.
+    expect(document.summary).toContain(
+      "This page came back empty, but the list goes on: continue with --cursor cursor-2.",
+    );
   });
 
   describe("an empty email list says what the credential reads", () => {
@@ -780,6 +783,19 @@ describe("generated commands with --json", () => {
       expect(
         String((parseOne(result.merged) as Record<string, unknown>).summary),
       ).toContain("may not read every mailbox");
+    });
+
+    it("says an empty page with a next cursor is not the end, and reads no grant for it", async () => {
+      responder = answering(grantWithScope("org"), {
+        success: true,
+        data: [],
+        meta: { cursor: "c3" },
+      });
+      const result = await runMerged("emails:list", ["--cursor", "c2"]);
+      expect(result.stderr).toContain(
+        "(no results) This page came back empty, but the list goes on: continue with --cursor c3.",
+      );
+      expect(fetchCalls.map((c) => c.url.pathname)).toEqual(["/v1/emails"]);
     });
 
     it("says a page past the last is past the given --cursor", async () => {

@@ -2103,8 +2103,9 @@ export function createOperationCommand(
           // An empty email list says what was asked and what this
           // credential reads, not that the account has no mail.
           // A --since tail is polled, so its empty pages do not each read
-          // the grant too.
+          // the grant too, and nor does a page with more to read.
           const tail = query.since !== undefined;
+          const more = envelope?.meta?.cursor ?? null;
           const hint =
             operation.sdkName === "listEmails"
               ? emptyEmailListHint({
@@ -2116,9 +2117,11 @@ export function createOperationCommand(
                     : query.cursor !== undefined
                       ? { pastFlag: "--cursor" as const }
                       : {}),
-                  caller: tail
-                    ? null
-                    : await readCallerMailFor(auth, apiClient.client),
+                  nextCursor: more,
+                  caller:
+                    tail || more
+                      ? null
+                      : await readCallerMailFor(auth, apiClient.client),
                 })
               : EMPTY_RESULT_HINTS[operation.sdkName];
           if (hint && jsonOutput) summary.push(hint);

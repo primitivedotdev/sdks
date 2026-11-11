@@ -49,6 +49,24 @@ export async function readCallerMail(
   client: GrantClient,
   timeoutMs = GRANT_TIMEOUT_MS,
 ): Promise<CallerMail | undefined> {
+  // The signal stops the request itself; the race bounds everything around it
+  // too, such as a saved login's token exchange on a 401, which the signal
+  // does not reach. The hint is optional and never holds up the list.
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<undefined>((resolve) => {
+    timer = setTimeout(() => resolve(undefined), timeoutMs);
+  });
+  try {
+    return await Promise.race([readGrant(client, timeoutMs), late]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function readGrant(
+  client: GrantClient,
+  timeoutMs: number,
+): Promise<CallerMail | undefined> {
   try {
     const result = await getOwnGrant({
       client,
@@ -265,10 +283,16 @@ export function emptyEmailListHint(input: {
   filterFlags: readonly string[];
   /** The flag that read past the newest or last email, when one did. */
   pastFlag?: "--cursor" | "--since";
+  /** The page's own next cursor: an empty page that has one is not the end of the list. */
+  nextCursor?: string | null;
   caller: CallerMail | null | undefined;
   /** What to say for a credential that reads every mailbox and asked for everything. */
   orgHint?: string;
 }): string {
+  // Only a page with no next cursor ends a list: one can come back empty with more to read.
+  if (input.nextCursor) {
+    return `(no results) This page came back empty, but the list goes on: continue with --cursor ${input.nextCursor}.`;
+  }
   const reach: Reach =
     input.caller === null
       ? { kind: "org" }

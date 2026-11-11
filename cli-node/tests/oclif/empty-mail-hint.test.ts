@@ -207,6 +207,34 @@ describe("emptyEmailListHint", () => {
   });
 });
 
+describe("an empty page with a next cursor", () => {
+  it("says the list goes on, whatever the credential reads", () => {
+    for (const caller of [
+      key("org"),
+      key({ addresses: [], domains: [], rules: [RULE], depth: "content" }),
+      undefined,
+    ]) {
+      expect(
+        emptyEmailListHint({
+          filterFlags: [],
+          pastFlag: "--cursor",
+          nextCursor: "c3",
+          caller,
+        }),
+      ).toBe(
+        "(no results) This page came back empty, but the list goes on: continue with --cursor c3.",
+      );
+    }
+    expect(
+      emptyEmailListHint({
+        filterFlags: [],
+        nextCursor: null,
+        caller: key("org"),
+      }),
+    ).toBe(ORG_EMPTY_HINT);
+  });
+});
+
 describe("listFilters", () => {
   it("leaves out what pages, shapes or only modifies the list", () => {
     expect(
@@ -255,6 +283,17 @@ describe("readCallerMailFor", () => {
     expect(emptyEmailListHint({ filterFlags: [], caller: bare })).toBe(
       "(no results) No inbound emails to show. This connection key reads the address it was connected for, and any member mailbox its owner gave it (pass that mailbox with --recipient).",
     );
+  });
+
+  it("gives up in time even when the read itself ignores its signal, as a token exchange on a 401 does", async () => {
+    const deaf = new PrimitiveApiClient({
+      apiKey: "prim_test",
+      apiBaseUrl: "https://api.example.test/v1",
+      fetch: (() => new Promise<Response>(() => {})) as typeof fetch,
+    });
+    const started = Date.now();
+    expect(await readCallerMail(deaf.client, 50)).toBeUndefined();
+    expect(Date.now() - started).toBeLessThan(1_000);
   });
 
   it("gives up on a grant read that does not answer in time", async () => {
