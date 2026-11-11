@@ -756,6 +756,15 @@ parsers.
 
 #### CLI
 
+- An empty `emails list` or `emails latest` says what the credential reads
+  instead of "No inbound emails received yet on this account", which is true
+  only for a credential that reads every mailbox: a key limited to email
+  rules is told how its rules grant mail and who can check them, a narrowed
+  credential is told which mailboxes it reads, and a filtered list, a page
+  past the last and a caught-up `--since` tail say so, and an empty page that
+  still has a next cursor says to continue with it. The credential's reach
+  is read from `GET /whoami/grant` only when a hint is printed, and a
+  connected agent's key is answered from its own address.
 - `roles-and-members set-member-role` warns, before the change is sent and
   before any approval link, when the role reads all of the organization's
   mail while the organization uses whole-organization access (it holds
