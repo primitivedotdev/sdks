@@ -2005,7 +2005,8 @@ describe("upgrading the CLI in place under a background listener", () => {
 
   it("keeps the released listener modules exactly as released", () => {
     // A rewrite, even a reformat, would make the tests that start a
-    // released receiver run code that was never released.
+    // released receiver run code that was never released. Line endings are
+    // read as released, so a checkout that writes CRLF still matches.
     const digests = Object.fromEntries(
       [...RELEASED_LISTENER].map((name) => [
         name,
@@ -2013,7 +2014,8 @@ describe("upgrading the CLI in place under a background listener", () => {
           .update(
             readFileSync(
               resolve(`tests/fixtures/released-listener/${name}.ts`),
-            ),
+              "utf8",
+            ).replaceAll("\r\n", "\n"),
           )
           .digest("hex"),
       ]),
