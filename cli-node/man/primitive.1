@@ -232,7 +232,8 @@ signed in with
 can leave; API keys are refused. The only owner of an organization cannot leave
 it. If the server asks for a dashboard confirmation, open the page it names and
 paste the token at the prompt, or pass it with --step-up-token. Refusals from
-the server are printed as returned.
+the server are printed as returned. Without a terminal and without --yes, it
+exits 2 before anything is sent.
 .PP
 Run
 .B primitive whoami

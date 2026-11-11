@@ -14,18 +14,20 @@ import { extractErrorPayload, writeErrorWithHints } from "../api-command.js";
  */
 export default class AgentUpgradeCommand extends Command {
   static description =
-    "Upgrade an emailless agent account to a full developer account by confirming an email. Authenticated by the agent's own API key (PRIMITIVE_API_KEY). Upgrading raises the send cap and grants the developer plan's default features (such as Functions). It does not unlock sending to arbitrary recipients: the account's recipient rules still apply (see `primitive sending permissions`).";
+    "Upgrade an emailless agent account to a full developer account by confirming an email. Authenticated by the agent's own API key (PRIMITIVE_API_KEY). Upgrading raises the send cap and grants the developer plan's default features (such as Functions). It does not unlock sending to arbitrary recipients: the account's recipient rules still apply (see `primitive sending permissions`). It emails a code and asks for it, so it needs a terminal; without one, use `primitive agent claim` and `primitive agent claim-verify`.";
 
-  static summary = "Upgrade an agent account to developer (email confirmation)";
+  static summary =
+    "Upgrade an agent account to developer by email code (needs a terminal)";
 
   static examples = ["<%= config.bin %> agent upgrade --email you@example.com"];
 
   static flags = {
     email: Flags.string({
-      description: "Email to confirm. Prompted if omitted.",
+      description: "Email to confirm. Prompted if omitted or blank.",
     }),
     code: Flags.string({
-      description: "Verification code from the email. Prompted if omitted.",
+      description:
+        "Not accepted; for a code you already have, use `primitive agent claim-verify --verification-code <code>`. This command emails a new code, which replaces any code sent before.",
     }),
     "api-key": Flags.string({
       env: "PRIMITIVE_API_KEY",
@@ -39,15 +41,33 @@ export default class AgentUpgradeCommand extends Command {
 
   async run(): Promise<void> {
     const { flags } = await this.parse(AgentUpgradeCommand);
+    const email = flags.email?.trim() || undefined;
+    // This run emails a new code and then asks for it, and each start
+    // replaces the code sent before, so a code passed in up front can never
+    // be the one this run sends; submitting it would only void it.
+    if (flags.code !== undefined) {
+      this.error(
+        "Not upgrading: --code cannot be used here, because `primitive agent upgrade` emails a new code, which replaces the one you have. To use the code you have, run `primitive agent claim-verify --verification-code <code>`.",
+        { exit: 2 },
+      );
+    }
+    // Without a terminal to type the new code in, nothing here can finish:
+    // refuse before anything is sent.
+    if (!(process.stdin.isTTY && process.stderr.isTTY)) {
+      this.error(
+        `Not upgrading: \`primitive agent upgrade\` emails a code and asks for it, so it needs a terminal. Without one, run \`primitive agent claim --email ${email ?? "<address>"}\` to send the code, then \`primitive agent claim-verify --verification-code <code>\`.`,
+        { exit: 2 },
+      );
+    }
     const { apiClient } = await createAuthenticatedCliApiClient({
       apiKey: flags["api-key"],
       apiBaseUrl: flags["api-base-url"],
       configDir: this.config.configDir,
     });
 
-    const email = flags.email ?? (await promptRequired("Email to confirm: "));
+    const address = email ?? (await promptRequired("Email to confirm: "));
     const started = await startAgentClaim({
-      body: { email },
+      body: { email: address },
       client: apiClient.client,
       responseStyle: "fields",
     });
@@ -56,9 +76,9 @@ export default class AgentUpgradeCommand extends Command {
       this.exit(1);
       return;
     }
-    process.stderr.write(`Verification code sent to ${email}.\n`);
+    process.stderr.write(`Verification code sent to ${address}.\n`);
 
-    const code = flags.code ?? (await promptRequired("Verification code: "));
+    const code = await promptRequired("Verification code: ");
     const verified = await verifyAgentClaim({
       body: { verification_code: code },
       client: apiClient.client,

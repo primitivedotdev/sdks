@@ -1308,7 +1308,9 @@ export class SignupConfirmCommand extends Command {
       fromEnv: flags["code-from-env"],
     });
     if (resolvedCode.kind === "error") {
-      throw cliError(resolvedCode.message);
+      // No code source, more than one, or one that cannot be read: a usage
+      // error, refused before the credentials lock or any request.
+      throw usageError(resolvedCode.message);
     }
     let releaseCredentialsLock: () => void;
     try {
