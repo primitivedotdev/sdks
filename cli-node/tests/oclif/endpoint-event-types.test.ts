@@ -14,9 +14,11 @@ import {
 } from "../../src/oclif/endpoint-event-types.js";
 import {
   createEndpointRuleRequestHint,
+  RULE_REQUEST_WEBHOOK_CHANGE_HINT,
   RULE_REQUEST_WEBHOOK_CREATE_HINT,
   RULE_REQUEST_WEBHOOK_DEFAULT_HINT,
-  RULE_REQUEST_WEBHOOK_UPDATE_HINT,
+  RULE_REQUEST_WEBHOOK_KEY_HINT,
+  RULE_REQUEST_WEBHOOK_SUBSCRIBE_HINT,
   updateEndpointRuleRequestHint,
 } from "../../src/oclif/rule-request-webhooks.js";
 
@@ -385,7 +387,48 @@ describe("a refused webhook for rule request events", () => {
       "email_rule_request.*",
     ]);
     expect(calls.map((call) => call.method)).toEqual(["GET", "PATCH"]);
-    expect(stderr).toContain(RULE_REQUEST_WEBHOOK_UPDATE_HINT);
+    expect(stderr).toContain(RULE_REQUEST_WEBHOOK_SUBSCRIBE_HINT);
+  });
+
+  it("tells a change by someone else, or a hand-over to a key, apart from adding the events", () => {
+    const reason = {
+      code: "forbidden",
+      details: { reason: "rule_request_events_need_own_webhook" },
+    };
+    expect(
+      updateEndpointRuleRequestHint("forbidden", { enabled: false }, reason),
+    ).toBe(RULE_REQUEST_WEBHOOK_CHANGE_HINT);
+    expect(
+      updateEndpointRuleRequestHint(
+        "forbidden",
+        { owner_key_id: "00000000-0000-4000-8000-000000000001" },
+        reason,
+      ),
+    ).toBe(RULE_REQUEST_WEBHOOK_KEY_HINT);
+    expect(
+      updateEndpointRuleRequestHint(
+        "forbidden",
+        { rules: { event_types: ["email_rule_request.created"] } },
+        reason,
+      ),
+    ).toBe(RULE_REQUEST_WEBHOOK_SUBSCRIBE_HINT);
+  });
+
+  it("names every flag that asks for a default", () => {
+    for (const asked of [
+      { is_route_target: false },
+      { takeover: true },
+      { takeover: false },
+    ]) {
+      expect(
+        createEndpointRuleRequestHint("validation_error", {
+          url: "https://hooks.example.test/x",
+          rules: { event_types: RULE_REQUEST_EVENTS },
+          ...asked,
+        }),
+      ).toBe(RULE_REQUEST_WEBHOOK_DEFAULT_HINT);
+    }
+    expect(RULE_REQUEST_WEBHOOK_DEFAULT_HINT).toContain("--no-takeover");
   });
 
   it("adds nothing to other refusals", () => {
