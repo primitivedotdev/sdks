@@ -139,7 +139,7 @@ no longer `UNSET` in Python, plain or `Nil*` fields rather than `Opt*` in Go):
 - `listEmailRuleShareEmails` items: `shared_at`.
 - `DeliverySummary`, `getDelivery`'s result and each of its `attempts`:
   `retry_scheduled`. In Python it comes before `next_attempt_at` in the
-  models' arguments.
+  arguments of `DeliverySummary` and the `getDelivery` result.
 - `whoami`: `email`, `role_name`.
 - `testEndpoint`'s answer (`TestResult`): `reachable`, `delivery`.
 - `testEndpointRules`' answer: `delivery`.
@@ -689,9 +689,9 @@ date-time is kept as null and sorts last. A sync stops with an error after
     `updateKey`, and `resources`, the Functions, domains, endpoints or routes
     the key is limited to. `updateKey` answers `grant_unguarded: true` when a
     grant change was sent without `expected_grant_ref`. A grant change on a
-    key with `resources` must send `grant.resources: {}` to drop them on
-    purpose; otherwise it is refused with `409` and `details.reason`
-    `key_has_resource_limits`.
+    key with `resources` drops them only on purpose, with a custom grant and
+    `grant.resources: {}`; one that leaves them out is refused with `409` and
+    `details.reason` `key_has_resource_limits`.
   - `revokeCredential` answers `already_revoked: true`, with `revoked` 0,
     for an API key that was already revoked.
 - `getDelivery` carries `attempts`; it and `listDeliveries` carry
@@ -718,7 +718,7 @@ date-time is kept as null and sorts last. A sync stops with an error after
   - `listEmailRuleDecisions` and `listEmailRuleResults` carry `withheld_by`
     (`EmailRuleWithheldBy`: the do-not-share rules you can see that kept a
     match from being shared, and why) and `withheld_by_hidden` (how many more
-    did that you cannot see, or that were deleted since).
+    kept it back that you cannot see, or that were deleted since).
   - `testEmailRule` results carry `recipient`, the mailbox the email was
     received in.
 - Routes: `createRoute` and `updateRoute` answer with `warnings`
