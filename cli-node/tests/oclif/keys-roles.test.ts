@@ -920,7 +920,11 @@ describe("keys commands", () => {
       B.toUpperCase(),
       "--json",
     ]);
-    expect(JSON.parse(again.stdout)).toMatchObject({ id: KEY_ID, changed: [] });
+    expect(JSON.parse(again.stdout)).toMatchObject({
+      id: KEY_ID,
+      changed: [],
+      warnings: [],
+    });
     expect(requests.filter((r) => r.method === "PATCH")).toHaveLength(0);
   });
 

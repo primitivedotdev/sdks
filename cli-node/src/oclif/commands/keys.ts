@@ -1019,6 +1019,8 @@ export class KeysUpdateCommand extends Command {
               {
                 ...current.data,
                 changed: [],
+                // As the update answer carries it, so a script can always read it.
+                warnings: [],
                 ...(rulesNotOnKey.length > 0
                   ? { rules_not_on_key: rulesNotOnKey }
                   : {}),
