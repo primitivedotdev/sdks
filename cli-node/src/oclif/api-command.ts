@@ -865,6 +865,8 @@ export function forbiddenHint(payload: unknown): string | null {
 export function writeErrorWithHints(
   payload: unknown,
   response?: Response,
+  /** codeHint false leaves out the hint for the error code, where the operation's own hint says what applies. */
+  options: { codeHint?: boolean } = {},
 ): void {
   const formatted = formatErrorPayload(payload);
   process.stderr.write(`${formatted}\n`);
@@ -880,7 +882,7 @@ export function writeErrorWithHints(
     process.stderr.write(`${rateLimitHint(response)}\n`);
     return;
   }
-  if (!code) return;
+  if (!code || options.codeHint === false) return;
   if (code === "grant_forbidden") {
     process.stderr.write(`${grantForbiddenHint(payload)}\n`);
     return;
@@ -1516,7 +1518,8 @@ export const OPERATION_ERROR_HINTS: Record<
     path?: Record<string, unknown>,
   ) => string | undefined
 > = {
-  inviteOrganizationMember: (code, body) => inviteRefusalHint(code, body),
+  inviteOrganizationMember: (code, body, payload) =>
+    inviteRefusalHint(code, body, payload),
   updateEmailRule: (code, _body, payload, path) =>
     code === "email_rule_conflict"
       ? versionMovedHint(payload, path?.id)
@@ -1537,6 +1540,12 @@ export const OPERATION_ERROR_HINTS: Record<
     return undefined;
   },
 };
+
+// Operations whose error hint, when it applies, stands in for the generic
+// hint for the error code: inviting as Member is refused with grant_forbidden,
+// whose generic advice (widen the credential's grant) no CLI grant can follow.
+export const OPERATION_ERROR_HINTS_REPLACING_CODE_HINT: ReadonlySet<string> =
+  new Set(["inviteOrganizationMember"]);
 
 // Per-operation post-success hooks keyed by operation.sdkName. Fires
 // AFTER the API call returns a non-error response and BEFORE the
@@ -1922,7 +1931,8 @@ export function createOperationCommand(
         };
         // Giving someone a role that reads every mailbox says so first, so
         // the person approving the change sees it before the step-up link.
-        const preRequestNotes: string[] = [];
+        // Under --json the guard carries it in the document's warnings, on
+        // success and on failure (a step-up answer included).
         if (operation.sdkName === "setMemberRole") {
           const role =
             body && typeof body === "object"
@@ -1932,9 +1942,7 @@ export function createOperationCommand(
             typeof role === "string"
               ? roleReadsAllMailWarning(role, await readRoles(apiClient.client))
               : null;
-          if (warning && parsedFlags.json === true)
-            preRequestNotes.push(warning);
-          else if (warning) process.stderr.write(`${warning}\n`);
+          if (warning) process.stderr.write(`${warning}\n`);
         }
         const result = paged
           ? await callPaged()
@@ -1955,13 +1963,18 @@ export function createOperationCommand(
 
         if (result.error) {
           const errorPayload = extractErrorPayload(result.error);
-          writeErrorWithHints(errorPayload, result.response);
           const operationErrorHint = OPERATION_ERROR_HINTS[operation.sdkName]?.(
             extractErrorCode(errorPayload),
             body,
             errorPayload,
             collectValues(operation.pathParams, parsedFlags, operation.sdkName),
           );
+          writeErrorWithHints(errorPayload, result.response, {
+            codeHint: !(
+              operationErrorHint &&
+              OPERATION_ERROR_HINTS_REPLACING_CODE_HINT.has(operation.sdkName)
+            ),
+          });
           if (operationErrorHint) {
             process.stderr.write(`${operationErrorHint}\n`);
           }
@@ -2099,7 +2112,7 @@ export function createOperationCommand(
           process.stderr.write(`next cursor: ${cursor}\n`);
         }
         if (pagingNote && !jsonOutput) process.stderr.write(`${pagingNote}\n`);
-        const summary: string[] = withEnvelope ? [...preRequestNotes] : [];
+        const summary: string[] = [];
 
         // Empty-result hint. When a list-style operation returns
         // an empty array, emit an operation-specific note to
