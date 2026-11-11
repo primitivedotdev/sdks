@@ -834,6 +834,21 @@ parsers.
   token and sends the request again, as `primitive keys` does; under
   `--json` or without a terminal it prints the link and how to rerun.
   `endpoints create` and `endpoints update` take them as well.
+- The help for `email-rules test-email-rule`, `create-email-rule` and
+  `update-email-rule` names both expectation reports: a test answers with
+  `expectations` (`passed`, `counts`, `results`), and a create or update
+  with `expectations_check` (`passed`, `decided`, `failed`, `undecided`).
+- `emails watch`, and `emails wait` when it waits for more than one email,
+  now report an email that became readable after a later one was reported,
+  as mail can when it is accepted more slowly, held while its sender is
+  checked, or granted to a key by an email rule, if it becomes readable
+  within ten minutes of arriving. While nothing new arrives they re-read
+  recent mail, up to its 300 newest matching emails, at most every 15
+  seconds (or every three poll intervals, when that is longer), so such an
+  email prints after the later one. A wait or watch with a time limit can
+  end before the next re-read, and a search by words that the server stops
+  early for time may not reach as far back. A connected agent's
+  `emails wait` reads its mail another way and is unchanged.
 - `emails wait --since` and `emails watch --since` also take a duration
   ago, such as `15m` or `2h`. `emails wait` says in its help, and in its
   timeout message, that without `--since` or `--include-existing` it counts
