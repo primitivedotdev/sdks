@@ -73,9 +73,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
-    "permissions": [
-      "account:read"
-    ],
+    "permissions": null,
     "access": null,
     "requestSchema": null,
     "responseSchema": {
@@ -926,9 +924,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
-    "permissions": [
-      "account:read"
-    ],
+    "permissions": null,
     "access": null,
     "requestSchema": null,
     "responseSchema": {
@@ -1054,6 +1050,203 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "summary": "Get current caller identity",
     "tag": "Account",
     "tagCommand": "account"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-activity-objects",
+    "description": "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules and rule requests. Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listActivityObjects",
+    "path": "/activity/objects",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "description": "Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request. Defaults to every kind the caller can have created (a person's own kinds only for a person).",
+        "enum": null,
+        "name": "kind",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "all",
+        "description": "all (the default), live (still there, enabled or not) or ended (deleted, replaced or finished).",
+        "enum": [
+          "all",
+          "live",
+          "ended"
+        ],
+        "name": "state",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": 50,
+        "description": "Objects per page, from 1 to 200; defaults to 50.",
+        "enum": null,
+        "maximum": 200,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "next_cursor from the preceding page. Omit for the first page.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "headerParams": [],
+    "permissions": [
+      "activity:read_self"
+    ],
+    "access": null,
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "covers": {
+          "type": "string",
+          "description": "you: what a person created through any credential of theirs (their dashboard session, their own CLI or app login, apps and agent delegates acting for them, their API keys while theirs, their personal agents). this_credential: what the calling key, app or agent created itself."
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "description": "One of: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request."
+              },
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "description": "The name the object is known by: an endpoint's display name, a route's or filter's pattern, a Function's name, a send's From address, a wake schedule's command and the address it wakes, an API key's name, an agent's address, a rule's or rule request's name. Never a webhook URL and never mail content.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "state": {
+                "type": "string",
+                "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests)."
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "ended_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request was decided (accepted, declined or withdrawn); null otherwise."
+              },
+              "owned_now": {
+                "type": "string",
+                "enum": [
+                  "you",
+                  "someone_else"
+                ],
+                "description": "you: it is still yours: never transferred, or transferred back to you. someone_else: it was transferred and another person holds it now."
+              },
+              "created_through": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "description": "The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves)."
+                  },
+                  "id": {
+                    "description": "In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself.",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "name": {
+                    "description": "In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves.",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "id",
+                  "name"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "id",
+              "name",
+              "state",
+              "created_at",
+              "ended_at",
+              "owned_now",
+              "created_through"
+            ]
+          }
+        },
+        "withheld": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "permission_missing",
+                  "mail_scope",
+                  "not_for_this_credential"
+                ],
+                "description": "permission_missing: the caller lacks the permission the kind's own list needs (named in permission). mail_scope: listed only to a caller that reads every mailbox. not_for_this_credential: this kind of credential never lists them (a person's own kinds asked for by a key, an app or an agent)."
+              },
+              "permission": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "reason",
+              "permission"
+            ]
+          },
+          "description": "Kinds left out because the caller could not list them through their own routes. Nothing is said about how many there are."
+        },
+        "next_cursor": {
+          "description": "Pass as cursor to read the next page; null on the last page. A page can hold fewer items than limit, or none, while next_cursor is set.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "covers",
+        "items",
+        "withheld",
+        "next_cursor"
+      ]
+    },
+    "sdkName": "listActivityObjects",
+    "summary": "List what you created",
+    "tag": "Activity",
+    "tagCommand": "activity"
   },
   {
     "binaryResponse": false,
@@ -37975,7 +38168,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-mailbox-access",
-    "description": "Every access entry in the organization: who (a member, group, agent or address) may read, draft or send for each mailbox or domain. An entry that reads a mailbox reads the full email; raw MIME follows the person's mail.raw:read. `depth` is deprecated: it is accepted and ignored, and new entries record content. Needs members:read: a person, or an org-wide API key whose person holds it.",
+    "description": "Every access entry in the organization: who (a member, group, agent or address) may read, draft or send for each mailbox or domain. An entry that reads a mailbox reads the full email; raw MIME follows the person's mail.raw:read. `depth` is deprecated: it is accepted and ignored, and new entries record content. With no entries, `note` says where each member's mail access comes from instead. Needs members:read: a person, or an org-wide API key whose person holds it.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listMailboxAccess",
@@ -38102,6 +38295,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ],
             "additionalProperties": {}
           }
+        },
+        "note": {
+          "description": "Only with no entries: says where each member's mail access comes from instead.",
+          "type": "string"
         }
       },
       "required": [
@@ -41466,7 +41663,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-organization-people",
-    "description": "Requires a current human organization membership, or an org-wide API key: a super admin key, or a custom key with no addresses or domains whose grant holds members:read. A key lists members as the person it belongs to, at that person's live grant, and only while that person still holds members:read. Narrowed, Function and connected keys are refused. No local paths or existing conversation history are shared.",
+    "description": "Requires a current human organization membership, or an org-wide API key: a super admin key, or a custom key with no addresses or domains whose grant holds members:read. A key lists members as the person it belongs to, at that person's live grant, and only while that person still holds members:read. Narrowed, Function and connected keys are refused. A caller holding members:read also gets each person's mail_access. No local paths or existing conversation history are shared.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listOrganizationPeople",
@@ -41576,6 +41773,24 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                     "name"
                   ]
                 }
+              },
+              "mail_access": {
+                "description": "What their access lets them do with mail now. read false: they cannot read mail here; their role must give mail:read (in delegated mode they also need their own mailbox or an access entry). Only for a caller holding members:read; absent when it could not be read in time.",
+                "type": "object",
+                "properties": {
+                  "read": {
+                    "type": "boolean",
+                    "description": "Holds mail:read, over every mailbox or only some."
+                  },
+                  "send": {
+                    "type": "boolean",
+                    "description": "Holds mail:send, from every address or only some."
+                  }
+                },
+                "required": [
+                  "read",
+                  "send"
+                ]
               }
             },
             "required": [
@@ -44355,7 +44570,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-roles",
-    "description": "Every role in the organization (built-in, template copies and custom roles), with how many members and groups hold each, the templates not yet copied, and whether roles can be assigned now. Any person (a session or OAuth token); API keys are refused.",
+    "description": "Every role in the organization (built-in, template copies and custom roles), with how many members and groups hold each, the templates not yet copied, and whether roles can be assigned now. `unassigned` describes role restricted on a member with no role_id, which is not a role and is never in `roles`. Any person (a session or OAuth token); API keys are refused.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listRoles",
@@ -44497,6 +44712,35 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "limited_roles_available",
             "members_read_all_mail"
           ]
+        },
+        "unassigned": {
+          "description": "What role restricted means on a member with no role_id: no role of their own. Not a role, never assignable.",
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string",
+              "const": "restricted"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "permissions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "key",
+            "name",
+            "description",
+            "permissions"
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -49403,9 +49647,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
-    "permissions": [
-      "account:read"
-    ],
+    "permissions": null,
     "access": null,
     "requestSchema": null,
     "responseSchema": {
@@ -58246,6 +58488,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               },
               "created_at": {
                 "type": "string"
+              },
+              "response_status": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "The HTTP status the endpoint answered this attempt with: a webhook's own answer, or for a Function what its runtime answered, which is the platform's own error when the Function could not be run. Null when no answer came back (a network error, a timeout, an attempt refused or not sent) and on attempts recorded before this field."
+              },
+              "response_body": {
+                "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.",
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             },
             "required": [
@@ -58254,10 +58510,12 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "status",
               "last_error_code",
               "duration_ms",
-              "created_at"
+              "created_at",
+              "response_status",
+              "response_body"
             ]
           },
-          "description": "Every attempt of this delivery in the order recorded, oldest first, this one included: the same endpoint, and the same event (or, for an attempt recorded without one, the same email). Records of no attempt (attempt_count 0) are listed where they were recorded, so the last entry is not always the latest attempt (latest_attempt says which is). The newest 100 when there are more."
+          "description": "Every attempt of this delivery in the order recorded, oldest first, this one included: the same endpoint, and the same event (or, for an attempt recorded without one, the same email). Each carries what the endpoint answered that attempt (response_status, response_body). Records of no attempt (attempt_count 0) are listed where they were recorded, so the last entry is not always the latest attempt (latest_attempt says which is). The newest 100 when there are more."
         }
       },
       "required": [

@@ -14,6 +14,7 @@ from uuid import UUID
 
 if TYPE_CHECKING:
   from ..models.projects_list_organization_people_result_items_item_agents_item import ProjectsListOrganizationPeopleResultItemsItemAgentsItem
+  from ..models.projects_list_organization_people_result_items_item_mail_access import ProjectsListOrganizationPeopleResultItemsItemMailAccess
 
 
 
@@ -36,6 +37,10 @@ class ProjectsListOrganizationPeopleResultItemsItem:
                 /v1/members/{id}/role accepts. Null when they have none: a built-in role, or (with role restricted) access from
                 groups only.
             agents (list[ProjectsListOrganizationPeopleResultItemsItemAgentsItem]):
+            mail_access (ProjectsListOrganizationPeopleResultItemsItemMailAccess | Unset): What their access lets them do
+                with mail now. read false: they cannot read mail here; their role must give mail:read (in delegated mode they
+                also need their own mailbox or an access entry). Only for a caller holding members:read; absent when it could
+                not be read in time.
      """
 
     user_id: UUID
@@ -45,6 +50,7 @@ class ProjectsListOrganizationPeopleResultItemsItem:
     role_name: str
     role_id: None | UUID
     agents: list[ProjectsListOrganizationPeopleResultItemsItemAgentsItem]
+    mail_access: ProjectsListOrganizationPeopleResultItemsItemMailAccess | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -53,6 +59,7 @@ class ProjectsListOrganizationPeopleResultItemsItem:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.projects_list_organization_people_result_items_item_agents_item import ProjectsListOrganizationPeopleResultItemsItemAgentsItem # noqa: PLC0415
+        from ..models.projects_list_organization_people_result_items_item_mail_access import ProjectsListOrganizationPeopleResultItemsItemMailAccess # noqa: PLC0415
         user_id = str(self.user_id)
 
         name = self.name
@@ -77,6 +84,10 @@ class ProjectsListOrganizationPeopleResultItemsItem:
 
 
 
+        mail_access: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.mail_access, Unset):
+            mail_access = self.mail_access.to_dict()
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -89,6 +100,8 @@ class ProjectsListOrganizationPeopleResultItemsItem:
             "role_id": role_id,
             "agents": agents,
         })
+        if mail_access is not UNSET:
+            field_dict["mail_access"] = mail_access
 
         return field_dict
 
@@ -97,6 +110,7 @@ class ProjectsListOrganizationPeopleResultItemsItem:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.projects_list_organization_people_result_items_item_agents_item import ProjectsListOrganizationPeopleResultItemsItemAgentsItem # noqa: PLC0415
+        from ..models.projects_list_organization_people_result_items_item_mail_access import ProjectsListOrganizationPeopleResultItemsItemMailAccess # noqa: PLC0415
         d = dict(src_dict)
         user_id = UUID(d.pop("user_id"))
 
@@ -148,6 +162,16 @@ class ProjectsListOrganizationPeopleResultItemsItem:
             agents.append(agents_item)
 
 
+        _mail_access = d.pop("mail_access", UNSET)
+        mail_access: ProjectsListOrganizationPeopleResultItemsItemMailAccess | Unset
+        if isinstance(_mail_access,  Unset):
+            mail_access = UNSET
+        else:
+            mail_access = ProjectsListOrganizationPeopleResultItemsItemMailAccess.from_dict(_mail_access)
+
+
+
+
         projects_list_organization_people_result_items_item = cls(
             user_id=user_id,
             name=name,
@@ -156,6 +180,7 @@ class ProjectsListOrganizationPeopleResultItemsItem:
             role_name=role_name,
             role_id=role_id,
             agents=agents,
+            mail_access=mail_access,
         )
 
 

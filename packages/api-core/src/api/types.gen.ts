@@ -6000,6 +6000,66 @@ export type GetWebhookDeliveryStatsResult = {
     regressed: number;
 };
 
+export type ListActivityObjectsResult = {
+    /**
+     * you: what a person created through any credential of theirs (their dashboard session, their own CLI or app login, apps and agent delegates acting for them, their API keys while theirs, their personal agents). this_credential: what the calling key, app or agent created itself.
+     */
+    covers: string;
+    items: Array<{
+        /**
+         * One of: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request.
+         */
+        kind: string;
+        id: string;
+        /**
+         * The name the object is known by: an endpoint's display name, a route's or filter's pattern, a Function's name, a send's From address, a wake schedule's command and the address it wakes, an API key's name, an agent's address, a rule's or rule request's name. Never a webhook URL and never mail content.
+         */
+        name: string | null;
+        /**
+         * Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests).
+         */
+        state: string;
+        created_at: string;
+        /**
+         * When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request was decided (accepted, declined or withdrawn); null otherwise.
+         */
+        ended_at: string | null;
+        /**
+         * you: it is still yours: never transferred, or transferred back to you. someone_else: it was transferred and another person holds it now.
+         */
+        owned_now: 'you' | 'someone_else';
+        created_through: {
+            /**
+             * The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves).
+             */
+            kind: string;
+            /**
+             * In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself.
+             */
+            id: string | null;
+            /**
+             * In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves.
+             */
+            name: string | null;
+        };
+    }>;
+    /**
+     * Kinds left out because the caller could not list them through their own routes. Nothing is said about how many there are.
+     */
+    withheld: Array<{
+        kind: string;
+        /**
+         * permission_missing: the caller lacks the permission the kind's own list needs (named in permission). mail_scope: listed only to a caller that reads every mailbox. not_for_this_credential: this kind of credential never lists them (a person's own kinds asked for by a key, an app or an agent).
+         */
+        reason: 'permission_missing' | 'mail_scope' | 'not_for_this_credential';
+        permission: string | null;
+    }>;
+    /**
+     * Pass as cursor to read the next page; null on the last page. A page can hold fewer items than limit, or none, while next_cursor is set.
+     */
+    next_cursor: string | null;
+};
+
 export type GetEmailRuleVocabularyResult = {
     version: string;
     tree_version: 1;
@@ -8113,7 +8173,7 @@ export type GetDeliveryResult = {
      */
     next_attempt_at: string | null;
     /**
-     * Every attempt of this delivery in the order recorded, oldest first, this one included: the same endpoint, and the same event (or, for an attempt recorded without one, the same email). Records of no attempt (attempt_count 0) are listed where they were recorded, so the last entry is not always the latest attempt (latest_attempt says which is). The newest 100 when there are more.
+     * Every attempt of this delivery in the order recorded, oldest first, this one included: the same endpoint, and the same event (or, for an attempt recorded without one, the same email). Each carries what the endpoint answered that attempt (response_status, response_body). Records of no attempt (attempt_count 0) are listed where they were recorded, so the last entry is not always the latest attempt (latest_attempt says which is). The newest 100 when there are more.
      */
     attempts: Array<{
         id: string;
@@ -8122,6 +8182,14 @@ export type GetDeliveryResult = {
         last_error_code: string | null;
         duration_ms: number | null;
         created_at: string;
+        /**
+         * The HTTP status the endpoint answered this attempt with: a webhook's own answer, or for a Function what its runtime answered, which is the platform's own error when the Function could not be run. Null when no answer came back (a network error, a timeout, an attempt refused or not sent) and on attempts recorded before this field.
+         */
+        response_status: number | null;
+        /**
+         * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.
+         */
+        response_body: string | null;
     }>;
 };
 
@@ -8237,6 +8305,19 @@ export type ProjectsListOrganizationPeopleResult = {
             address: string;
             name: string;
         }>;
+        /**
+         * What their access lets them do with mail now. read false: they cannot read mail here; their role must give mail:read (in delegated mode they also need their own mailbox or an access entry). Only for a caller holding members:read; absent when it could not be read in time.
+         */
+        mail_access?: {
+            /**
+             * Holds mail:read, over every mailbox or only some.
+             */
+            read: boolean;
+            /**
+             * Holds mail:send, from every address or only some.
+             */
+            send: boolean;
+        };
     }>;
     cursor: string | null;
     can_invite: boolean;
@@ -8407,6 +8488,10 @@ export type ListMailboxAccessResult = {
         updated_at: string;
         [key: string]: unknown;
     }>;
+    /**
+     * Only with no entries: says where each member's mail access comes from instead.
+     */
+    note?: string;
     [key: string]: unknown;
 };
 
@@ -9103,6 +9188,16 @@ export type ListRolesResult = {
     invitations?: {
         limited_roles_available: boolean;
         members_read_all_mail: boolean;
+    };
+    /**
+     * What role restricted means on a member with no role_id: no role of their own. Not a role, never assignable.
+     */
+    unassigned?: {
+        key: 'restricted';
+        name: string;
+        description: string;
+        permissions: Array<string>;
+        [key: string]: unknown;
     };
     [key: string]: unknown;
 };
@@ -19564,6 +19659,62 @@ export type GetWebhookDeliveryStatsResponses = {
 
 export type GetWebhookDeliveryStatsResponse = GetWebhookDeliveryStatsResponses[keyof GetWebhookDeliveryStatsResponses];
 
+export type ListActivityObjectsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request. Defaults to every kind the caller can have created (a person's own kinds only for a person).
+         */
+        kind?: string;
+        /**
+         * all (the default), live (still there, enabled or not) or ended (deleted, replaced or finished).
+         */
+        state?: 'all' | 'live' | 'ended';
+        /**
+         * Objects per page, from 1 to 200; defaults to 50.
+         */
+        limit?: number;
+        /**
+         * next_cursor from the preceding page. Omit for the first page.
+         */
+        cursor?: string;
+    };
+    url: '/activity/objects';
+};
+
+export type ListActivityObjectsErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type ListActivityObjectsError = ListActivityObjectsErrors[keyof ListActivityObjectsErrors];
+
+export type ListActivityObjectsResponses = {
+    /**
+     * List what you created
+     */
+    200: SuccessEnvelope & {
+        data: ListActivityObjectsResult;
+    };
+};
+
+export type ListActivityObjectsResponse = ListActivityObjectsResponses[keyof ListActivityObjectsResponses];
+
 export type GetEmailRuleVocabularyData = {
     body?: never;
     path?: never;
@@ -25818,7 +25969,7 @@ export type GetAccessModeErrors = {
      */
     403: ErrorResponse;
     /**
-     * feature_disabled: the feature is not enabled for the organization; or not_found: the item the path names does not exist.
+     * feature_disabled: the access mode feature is not enabled for the organization. For a person, details.effective_mode names the mode that applies meanwhile: whole_org, or delegated if the organization switched to it earlier.
      */
     404: ErrorResponse;
     /**

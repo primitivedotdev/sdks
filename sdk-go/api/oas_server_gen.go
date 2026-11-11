@@ -1766,6 +1766,20 @@ type Handler interface {
 	//
 	// POST /organization/leave
 	LeaveOrganization(ctx context.Context, params LeaveOrganizationParams) (LeaveOrganizationRes, error)
+	// ListActivityObjects implements listActivityObjects operation.
+	//
+	// The objects the caller created, newest first, each with where it stands now, including ones since
+	// disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers,
+	//  pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled
+	// sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key
+	// lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees
+	// what they created through any credential of theirs, each item naming it, and also their API keys,
+	// personal agents, email rules and rule requests. Each kind is listed only if the caller could list
+	// it through that kind's own route; a kind it could not is named in withheld, with no count. Ids,
+	// names and states only: never a webhook URL or mail content. Needs activity:read_self.
+	//
+	// GET /activity/objects
+	ListActivityObjects(ctx context.Context, params ListActivityObjectsParams) (ListActivityObjectsRes, error)
 	// ListAddressNotes implements listAddressNotes operation.
 	//
 	// Organization-scoped address annotations, independent of agents, routes and endpoints. Any bare
@@ -2226,7 +2240,8 @@ type Handler interface {
 	// Every access entry in the organization: who (a member, group, agent or address) may read, draft or
 	// send for each mailbox or domain. An entry that reads a mailbox reads the full email; raw MIME
 	// follows the person's mail.raw:read. `depth` is deprecated: it is accepted and ignored, and new
-	// entries record content. Needs members:read: a person, or an org-wide API key whose person holds it.
+	// entries record content. With no entries, `note` says where each member's mail access comes from
+	// instead. Needs members:read: a person, or an org-wide API key whose person holds it.
 	//
 	// GET /mailbox-access
 	ListMailboxAccess(ctx context.Context) (ListMailboxAccessRes, error)
@@ -2280,8 +2295,8 @@ type Handler interface {
 	// Requires a current human organization membership, or an org-wide API key: a super admin key, or a
 	// custom key with no addresses or domains whose grant holds members:read. A key lists members as the
 	// person it belongs to, at that person's live grant, and only while that person still holds
-	// members:read. Narrowed, Function and connected keys are refused. No local paths or existing
-	// conversation history are shared.
+	// members:read. Narrowed, Function and connected keys are refused. A caller holding members:read
+	// also gets each person's mail_access. No local paths or existing conversation history are shared.
 	//
 	// GET /organization/members
 	ListOrganizationPeople(ctx context.Context, params ListOrganizationPeopleParams) (ListOrganizationPeopleRes, error)
@@ -2330,8 +2345,9 @@ type Handler interface {
 	// ListRoles implements listRoles operation.
 	//
 	// Every role in the organization (built-in, template copies and custom roles), with how many members
-	// and groups hold each, the templates not yet copied, and whether roles can be assigned now. Any
-	// person (a session or OAuth token); API keys are refused.
+	// and groups hold each, the templates not yet copied, and whether roles can be assigned now.
+	// `unassigned` describes role restricted on a member with no role_id, which is not a role and is
+	// never in `roles`. Any person (a session or OAuth token); API keys are refused.
 	//
 	// GET /roles
 	ListRoles(ctx context.Context) (ListRolesRes, error)

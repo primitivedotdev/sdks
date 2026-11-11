@@ -26,9 +26,11 @@ class ListMailboxAccessResult:
     """ 
         Attributes:
             entries (list[ListMailboxAccessResultEntriesItem]):
+            note (str | Unset): Only with no entries: says where each member's mail access comes from instead.
      """
 
     entries: list[ListMailboxAccessResultEntriesItem]
+    note: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -44,12 +46,16 @@ class ListMailboxAccessResult:
 
 
 
+        note = self.note
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
             "entries": entries,
         })
+        if note is not UNSET:
+            field_dict["note"] = note
 
         return field_dict
 
@@ -69,8 +75,11 @@ class ListMailboxAccessResult:
             entries.append(entries_item)
 
 
+        note = d.pop("note", UNSET)
+
         list_mailbox_access_result = cls(
             entries=entries,
+            note=note,
         )
 
 

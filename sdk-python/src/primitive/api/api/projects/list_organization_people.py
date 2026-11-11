@@ -136,8 +136,8 @@ def sync_detailed(
     """  Requires a current human organization membership, or an org-wide API key: a super admin key, or a
     custom key with no addresses or domains whose grant holds members:read. A key lists members as the
     person it belongs to, at that person's live grant, and only while that person still holds
-    members:read. Narrowed, Function and connected keys are refused. No local paths or existing
-    conversation history are shared.
+    members:read. Narrowed, Function and connected keys are refused. A caller holding members:read also
+    gets each person's mail_access. No local paths or existing conversation history are shared.
 
     Args:
         cursor (UUID | Unset):
@@ -177,8 +177,8 @@ def sync(
     """  Requires a current human organization membership, or an org-wide API key: a super admin key, or a
     custom key with no addresses or domains whose grant holds members:read. A key lists members as the
     person it belongs to, at that person's live grant, and only while that person still holds
-    members:read. Narrowed, Function and connected keys are refused. No local paths or existing
-    conversation history are shared.
+    members:read. Narrowed, Function and connected keys are refused. A caller holding members:read also
+    gets each person's mail_access. No local paths or existing conversation history are shared.
 
     Args:
         cursor (UUID | Unset):
@@ -213,8 +213,8 @@ async def asyncio_detailed(
     """  Requires a current human organization membership, or an org-wide API key: a super admin key, or a
     custom key with no addresses or domains whose grant holds members:read. A key lists members as the
     person it belongs to, at that person's live grant, and only while that person still holds
-    members:read. Narrowed, Function and connected keys are refused. No local paths or existing
-    conversation history are shared.
+    members:read. Narrowed, Function and connected keys are refused. A caller holding members:read also
+    gets each person's mail_access. No local paths or existing conversation history are shared.
 
     Args:
         cursor (UUID | Unset):
@@ -254,8 +254,8 @@ async def asyncio(
     """  Requires a current human organization membership, or an org-wide API key: a super admin key, or a
     custom key with no addresses or domains whose grant holds members:read. A key lists members as the
     person it belongs to, at that person's live grant, and only while that person still holds
-    members:read. Narrowed, Function and connected keys are refused. No local paths or existing
-    conversation history are shared.
+    members:read. Narrowed, Function and connected keys are refused. A caller holding members:read also
+    gets each person's mail_access. No local paths or existing conversation history are shared.
 
     Args:
         cursor (UUID | Unset):

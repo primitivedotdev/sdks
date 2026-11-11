@@ -1,0 +1,299 @@
+from http import HTTPStatus
+from typing import Any, cast
+from urllib.parse import quote
+
+import httpx
+
+from ...client import AuthenticatedClient, Client
+from ...types import Response, UNSET
+from ... import errors
+
+from ...models.error_response import ErrorResponse
+from ...models.list_activity_objects_response_200 import ListActivityObjectsResponse200
+from ...models.list_activity_objects_state import ListActivityObjectsState
+from ...types import UNSET, Unset
+from typing import cast
+
+
+
+def _get_kwargs(
+    *,
+    kind: str | Unset = UNSET,
+    state: ListActivityObjectsState | Unset = ListActivityObjectsState.ALL,
+    limit: int | Unset = 50,
+    cursor: str | Unset = UNSET,
+
+) -> dict[str, Any]:
+    
+
+    
+
+    params: dict[str, Any] = {}
+
+    params["kind"] = kind
+
+    json_state: str | Unset = UNSET
+    if not isinstance(state, Unset):
+        json_state = state.value
+
+    params["state"] = json_state
+
+    params["limit"] = limit
+
+    params["cursor"] = cursor
+
+
+    params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
+
+
+    _kwargs: dict[str, Any] = {
+        "method": "get",
+        "url": "/activity/objects",
+        "params": params,
+    }
+
+
+    return _kwargs
+
+
+
+def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> ErrorResponse | ListActivityObjectsResponse200 | None:
+    if response.status_code == 200:
+        response_200 = ListActivityObjectsResponse200.from_dict(response.json())
+
+
+
+        return response_200
+
+    if response.status_code == 400:
+        response_400 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_400
+
+    if response.status_code == 401:
+        response_401 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_401
+
+    if response.status_code == 403:
+        response_403 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_403
+
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_429
+
+    if client.raise_on_unexpected_status:
+        raise errors.UnexpectedStatus(response.status_code, response.content)
+    else:
+        return None
+
+
+def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[ErrorResponse | ListActivityObjectsResponse200]:
+    return Response(
+        status_code=HTTPStatus(response.status_code),
+        content=response.content,
+        headers=response.headers,
+        parsed=_parse_response(client=client, response=response),
+    )
+
+
+def sync_detailed(
+    *,
+    client: AuthenticatedClient | Client,
+    kind: str | Unset = UNSET,
+    state: ListActivityObjectsState | Unset = ListActivityObjectsState.ALL,
+    limit: int | Unset = 50,
+    cursor: str | Unset = UNSET,
+
+) -> Response[ErrorResponse | ListActivityObjectsResponse200]:
+    """ List what you created
+
+     The objects the caller created, newest first, each with where it stands now, including ones since
+    disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers,
+    pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends.
+    An API key, an app or an agent sees what it created itself; a webhook given to an API key lists
+    under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what
+    they created through any credential of theirs, each item naming it, and also their API keys,
+    personal agents, email rules and rule requests. Each kind is listed only if the caller could list it
+    through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names
+    and states only: never a webhook URL or mail content. Needs activity:read_self.
+
+    Args:
+        kind (str | Unset):
+        state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.
+        limit (int | Unset):  Default: 50.
+        cursor (str | Unset):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Response[ErrorResponse | ListActivityObjectsResponse200]
+     """
+
+
+    kwargs = _get_kwargs(
+        kind=kind,
+state=state,
+limit=limit,
+cursor=cursor,
+
+    )
+
+    response = client.get_httpx_client().request(
+        **kwargs,
+    )
+
+    return _build_response(client=client, response=response)
+
+def sync(
+    *,
+    client: AuthenticatedClient | Client,
+    kind: str | Unset = UNSET,
+    state: ListActivityObjectsState | Unset = ListActivityObjectsState.ALL,
+    limit: int | Unset = 50,
+    cursor: str | Unset = UNSET,
+
+) -> ErrorResponse | ListActivityObjectsResponse200 | None:
+    """ List what you created
+
+     The objects the caller created, newest first, each with where it stands now, including ones since
+    disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers,
+    pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends.
+    An API key, an app or an agent sees what it created itself; a webhook given to an API key lists
+    under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what
+    they created through any credential of theirs, each item naming it, and also their API keys,
+    personal agents, email rules and rule requests. Each kind is listed only if the caller could list it
+    through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names
+    and states only: never a webhook URL or mail content. Needs activity:read_self.
+
+    Args:
+        kind (str | Unset):
+        state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.
+        limit (int | Unset):  Default: 50.
+        cursor (str | Unset):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        ErrorResponse | ListActivityObjectsResponse200
+     """
+
+
+    return sync_detailed(
+        client=client,
+kind=kind,
+state=state,
+limit=limit,
+cursor=cursor,
+
+    ).parsed
+
+async def asyncio_detailed(
+    *,
+    client: AuthenticatedClient | Client,
+    kind: str | Unset = UNSET,
+    state: ListActivityObjectsState | Unset = ListActivityObjectsState.ALL,
+    limit: int | Unset = 50,
+    cursor: str | Unset = UNSET,
+
+) -> Response[ErrorResponse | ListActivityObjectsResponse200]:
+    """ List what you created
+
+     The objects the caller created, newest first, each with where it stands now, including ones since
+    disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers,
+    pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends.
+    An API key, an app or an agent sees what it created itself; a webhook given to an API key lists
+    under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what
+    they created through any credential of theirs, each item naming it, and also their API keys,
+    personal agents, email rules and rule requests. Each kind is listed only if the caller could list it
+    through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names
+    and states only: never a webhook URL or mail content. Needs activity:read_self.
+
+    Args:
+        kind (str | Unset):
+        state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.
+        limit (int | Unset):  Default: 50.
+        cursor (str | Unset):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Response[ErrorResponse | ListActivityObjectsResponse200]
+     """
+
+
+    kwargs = _get_kwargs(
+        kind=kind,
+state=state,
+limit=limit,
+cursor=cursor,
+
+    )
+
+    response = await client.get_async_httpx_client().request(
+        **kwargs
+    )
+
+    return _build_response(client=client, response=response)
+
+async def asyncio(
+    *,
+    client: AuthenticatedClient | Client,
+    kind: str | Unset = UNSET,
+    state: ListActivityObjectsState | Unset = ListActivityObjectsState.ALL,
+    limit: int | Unset = 50,
+    cursor: str | Unset = UNSET,
+
+) -> ErrorResponse | ListActivityObjectsResponse200 | None:
+    """ List what you created
+
+     The objects the caller created, newest first, each with where it stands now, including ones since
+    disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers,
+    pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends.
+    An API key, an app or an agent sees what it created itself; a webhook given to an API key lists
+    under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what
+    they created through any credential of theirs, each item naming it, and also their API keys,
+    personal agents, email rules and rule requests. Each kind is listed only if the caller could list it
+    through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names
+    and states only: never a webhook URL or mail content. Needs activity:read_self.
+
+    Args:
+        kind (str | Unset):
+        state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.
+        limit (int | Unset):  Default: 50.
+        cursor (str | Unset):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        ErrorResponse | ListActivityObjectsResponse200
+     """
+
+
+    return (await asyncio_detailed(
+        client=client,
+kind=kind,
+state=state,
+limit=limit,
+cursor=cursor,
+
+    )).parsed

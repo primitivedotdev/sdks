@@ -28764,6 +28764,215 @@ func (s *Server) handleLeaveOrganizationRequest(args [0]string, argsEscaped bool
 	}
 }
 
+// handleListActivityObjectsRequest handles listActivityObjects operation.
+//
+// The objects the caller created, newest first, each with where it stands now, including ones since
+// disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers,
+//
+//	pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled
+//
+// sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key
+// lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees
+// what they created through any credential of theirs, each item naming it, and also their API keys,
+// personal agents, email rules and rule requests. Each kind is listed only if the caller could list
+// it through that kind's own route; a kind it could not is named in withheld, with no count. Ids,
+// names and states only: never a webhook URL or mail content. Needs activity:read_self.
+//
+// GET /activity/objects
+func (s *Server) handleListActivityObjectsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listActivityObjects"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/activity/objects"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), ListActivityObjectsOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: ListActivityObjectsOperation,
+			ID:   "listActivityObjects",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, ListActivityObjectsOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeListActivityObjectsParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response ListActivityObjectsRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    ListActivityObjectsOperation,
+			OperationSummary: "List what you created",
+			OperationID:      "listActivityObjects",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "kind",
+					In:   "query",
+				}: params.Kind,
+				{
+					Name: "state",
+					In:   "query",
+				}: params.State,
+				{
+					Name: "limit",
+					In:   "query",
+				}: params.Limit,
+				{
+					Name: "cursor",
+					In:   "query",
+				}: params.Cursor,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = ListActivityObjectsParams
+			Response = ListActivityObjectsRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackListActivityObjectsParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.ListActivityObjects(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.ListActivityObjects(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeListActivityObjectsResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleListAddressNotesRequest handles listAddressNotes operation.
 //
 // Organization-scoped address annotations, independent of agents, routes and endpoints. Any bare
@@ -36935,7 +37144,8 @@ func (s *Server) handleListMailTopicGenerationsRequest(args [0]string, argsEscap
 // Every access entry in the organization: who (a member, group, agent or address) may read, draft or
 // send for each mailbox or domain. An entry that reads a mailbox reads the full email; raw MIME
 // follows the person's mail.raw:read. `depth` is deprecated: it is accepted and ignored, and new
-// entries record content. Needs members:read: a person, or an org-wide API key whose person holds it.
+// entries record content. With no entries, `note` says where each member's mail access comes from
+// instead. Needs members:read: a person, or an org-wide API key whose person holds it.
 //
 // GET /mailbox-access
 func (s *Server) handleListMailboxAccessRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -38065,8 +38275,8 @@ func (s *Server) handleListOrganizationInvitationsRequest(args [0]string, argsEs
 // Requires a current human organization membership, or an org-wide API key: a super admin key, or a
 // custom key with no addresses or domains whose grant holds members:read. A key lists members as the
 // person it belongs to, at that person's live grant, and only while that person still holds
-// members:read. Narrowed, Function and connected keys are refused. No local paths or existing
-// conversation history are shared.
+// members:read. Narrowed, Function and connected keys are refused. A caller holding members:read
+// also gets each person's mail_access. No local paths or existing conversation history are shared.
 //
 // GET /organization/members
 func (s *Server) handleListOrganizationPeopleRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -39193,8 +39403,9 @@ func (s *Server) handleListRepeatingSendsRequest(args [0]string, argsEscaped boo
 // handleListRolesRequest handles listRoles operation.
 //
 // Every role in the organization (built-in, template copies and custom roles), with how many members
-// and groups hold each, the templates not yet copied, and whether roles can be assigned now. Any
-// person (a session or OAuth token); API keys are refused.
+// and groups hold each, the templates not yet copied, and whether roles can be assigned now.
+// `unassigned` describes role restricted on a member with no role_id, which is not a role and is
+// never in `roles`. Any person (a session or OAuth token); API keys are refused.
 //
 // GET /roles
 func (s *Server) handleListRolesRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {

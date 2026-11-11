@@ -153,6 +153,7 @@ const (
 	InviteOrganizationMemberOperation             OperationName = "InviteOrganizationMember"
 	InviteProjectMemberOperation                  OperationName = "InviteProjectMember"
 	LeaveOrganizationOperation                    OperationName = "LeaveOrganization"
+	ListActivityObjectsOperation                  OperationName = "ListActivityObjects"
 	ListAddressNotesOperation                     OperationName = "ListAddressNotes"
 	ListAddressNotesBatchOperation                OperationName = "ListAddressNotesBatch"
 	ListAgentConnectionsOperation                 OperationName = "ListAgentConnections"

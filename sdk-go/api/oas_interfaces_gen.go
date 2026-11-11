@@ -585,6 +585,10 @@ type LeaveOrganizationRes interface {
 	leaveOrganizationRes()
 }
 
+type ListActivityObjectsRes interface {
+	listActivityObjectsRes()
+}
+
 type ListAddressNotesBatchRes interface {
 	listAddressNotesBatchRes()
 }
