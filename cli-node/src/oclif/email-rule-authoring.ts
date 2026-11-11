@@ -650,6 +650,9 @@ function expectationsCheckLine(
   const parts: string[] = [];
   if (failed.length > 0)
     parts.push(`${failed.length} failed (${failed.join(", ")})`);
+  // passed null: none failed, but a write judges without classifying mail
+  // or asking questions, so some are not decided yet. That is not a failure.
+  else if (undecided.length > 0) parts.push("none failed");
   if (undecided.length > 0)
     parts.push(`${undecided.length} undecided (${undecided.join(", ")})`);
   const rest =
@@ -725,6 +728,11 @@ export function writtenEmailRuleReport(
   const rule = data as Partial<EmailRuleWritten>;
   const ruleId = typeof rule.id === "string" ? rule.id : "<rule-id>";
   const lines = scopeWarningLines(rule.scope_warnings);
+  // A rule that blocks sharing reads like any other in the JSON; say so.
+  if ((rule as { kind?: unknown }).kind === "do_not_share")
+    lines.unshift(
+      `This rule blocks sharing (kind do_not_share): while it is active, no rule shares an email it matches.${typeof rule.state === "string" && rule.state !== "active" ? " It blocks nothing until it is active." : ""}`,
+    );
   const sentExpectations =
     isRecord(request.body) && isRecord(request.body.expectations);
   const checked = expectationsCheckLine(rule.expectations_check, ruleId);

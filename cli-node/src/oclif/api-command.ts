@@ -7,6 +7,7 @@ import type {
   PrimitiveParameterManifest,
 } from "@primitivedotdev/api-core";
 import { operations } from "@primitivedotdev/api-core";
+import { ANSWER_REPORT_EXTENSIONS } from "./answer-reports.js";
 import { createAuthenticatedCliApiClient } from "./api-client.js";
 import { cliCommandLines } from "./api-path-commands.js";
 import {
@@ -1489,6 +1490,7 @@ export const OPERATION_EXTRA_BODY_FLAGS: Record<
 // answer. See operation-extension.ts.
 export const OPERATION_EXTENSIONS: Record<string, OperationExtension> = {
   ...EMAIL_RULE_OPERATION_EXTENSIONS,
+  ...ANSWER_REPORT_EXTENSIONS,
 };
 
 export const MAIL_RELAY_NOT_ENABLED_MESSAGE =

@@ -1027,6 +1027,34 @@ describe("roles commands", () => {
     expect(formatMembers({ items: [], cursor: null, can_invite: false })).toBe(
       "No members.",
     );
+    // What each member's access lets them do with mail, where the caller sees it.
+    const withMail = (read: boolean, send: boolean) => ({
+      ...person,
+      agents: [],
+      mail_access: { read, send },
+    });
+    expect(
+      formatMembers({
+        items: [
+          withMail(true, true),
+          withMail(true, false),
+          withMail(false, true),
+          withMail(false, false),
+          // Malformed or absent: nothing is said about mail.
+          { ...person, agents: [], mail_access: { read: "yes", send: true } },
+          { ...person, agents: [], mail_access: null },
+        ],
+        cursor: null,
+        can_invite: false,
+      } as never).split("\n"),
+    ).toEqual([
+      "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111  mail: read and send",
+      "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111  mail: read only",
+      "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111  mail: send only",
+      "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111  mail: none",
+      "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111",
+      "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111",
+    ]);
     expect(COMMANDS["members:list"]).toBe(RolesMembersCommand);
     expect(COMMANDS["roles:members"]).toBe(RolesMembersCommand);
   });
