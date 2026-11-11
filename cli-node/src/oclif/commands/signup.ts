@@ -42,6 +42,7 @@ const INVALID_VERIFICATION_CODE = "invalid_verification_code";
 const EXPIRED_TOKEN = "expired_token";
 const INVALID_SIGNUP_TOKEN = "invalid_signup_token";
 const SLOW_DOWN = "slow_down";
+const MANAGED_DOMAIN = "managed_domain";
 const PENDING_SIGNUP_FILE = "signup.json";
 
 export type SignupFlags = {
@@ -69,6 +70,12 @@ type SignupStatusFlags = {
 export type SignupCommandCopy = {
   actionNoun: string;
   actionGerund: string;
+  /**
+   * The browser login to point at when the server refuses an emailed code
+   * for an address on a domain Primitive receives mail for. Unset for signup, where
+   * the server's own refusal is the right answer.
+   */
+  browserLoginCommand?: string;
   confirmCommand: (email: string) => string;
   resendCommand: (email: string) => string;
   startCommand: (email: string) => string;
@@ -104,6 +111,8 @@ type SignupStatus = {
 type SignupFlowDeps = {
   checkExistingLogin?: typeof checkExistingLogin;
   confirmTerms?: typeof confirmTerms;
+  /** Whether prompts can be answered. Defaults to a terminal on stdin and stderr. */
+  interactive?: boolean;
   promptRequired?: typeof promptRequired;
   resendAgentSignupVerification?: typeof resendAgentSignupVerification;
   startAgentSignup?: typeof startAgentSignup;
@@ -122,6 +131,93 @@ type ResendVerificationCodeResult = {
 
 function cliError(message: string): Errors.CLIError {
   return new Errors.CLIError(message, { exit: 1 });
+}
+
+function usageError(message: string): Errors.CLIError {
+  return new Errors.CLIError(message, { exit: 2 });
+}
+
+// A prompt needs someone to answer it: a terminal on stdin to type in and on
+// stderr to show the question. Without one, readline waits on input that
+// never comes and Node exits on the unsettled await.
+function canPrompt(interactive?: boolean): boolean {
+  return interactive ?? Boolean(process.stdin.isTTY && process.stderr.isTTY);
+}
+
+/** The email address given, or undefined when none (or only blanks) was. */
+function givenEmail(email: string | undefined): string | undefined {
+  return email?.trim() ? email : undefined;
+}
+
+/**
+ * Refuse an email-code start that would have to prompt when there is no one
+ * to answer. Commands call it before taking the credentials lock, so the
+ * refusal comes before anything is read, written or sent.
+ */
+export function refuseEmailCodeStartWithoutTerminal(params: {
+  copy?: SignupCommandCopy;
+  email?: string;
+  flags: { "accept-terms"?: boolean };
+  interactive?: boolean;
+}): void {
+  if (canPrompt(params.interactive)) return;
+  const copy = params.copy ?? DEFAULT_SIGNUP_COMMAND_COPY;
+  const email = givenEmail(params.email);
+  if (email === undefined) {
+    throw usageError(
+      `Not starting ${copy.actionNoun}: no terminal to ask for the email address in. Pass the address as an argument, for example \`primitive ${copy.startCommand("<email>")} --accept-terms\`.`,
+    );
+  }
+  if (!params.flags["accept-terms"]) {
+    throw usageError(
+      `Not starting ${copy.actionNoun}: no terminal to accept the terms in. To accept Primitive's Terms of Service (https://primitive.dev/terms) and Privacy Policy (https://primitive.dev/privacy), add --accept-terms to the same command, for example \`primitive ${copy.startCommand(email)} --accept-terms\`.`,
+    );
+  }
+}
+
+/** `signup interactive` asks for everything, so it needs a terminal. */
+export function refuseInteractiveSignupWithoutTerminal(
+  interactive?: boolean,
+): void {
+  if (canPrompt(interactive)) return;
+  throw usageError(
+    "Not starting signup: `primitive signup interactive` needs a terminal to ask for the email address and code in. Run `primitive signup <email> --accept-terms`, then `primitive signup confirm <email> <code>`.",
+  );
+}
+
+function emailDomain(email: string): string | null {
+  const at = email.lastIndexOf("@");
+  const domain =
+    at === -1
+      ? ""
+      : email
+          .slice(at + 1)
+          .trim()
+          .toLowerCase();
+  return domain === "" ? null : domain;
+}
+
+/**
+ * The server sends no emailed code to an address on a domain Primitive
+ * receives mail for. Its refusal is worded for signup; someone logging in
+ * needs to hear which way does sign them in.
+ */
+export function managedDomainLoginError(params: {
+  browserLoginCommand: string;
+  email: string;
+  interactive: boolean;
+}): Errors.CLIError {
+  const domain = emailDomain(params.email);
+  const subject = domain
+    ? `Primitive sends no emailed code to addresses on ${domain}, a domain it receives mail for.`
+    : "Primitive sends no emailed code to this address, which is on a domain it receives mail for.";
+  const run = params.interactive
+    ? `\`primitive ${params.browserLoginCommand}\``
+    : `\`primitive ${params.browserLoginCommand} --no-browser\` and open the link it prints`;
+  return new Errors.CLIError(
+    `${subject} Use browser login instead: run ${run}.`,
+    { code: MANAGED_DOMAIN, exit: 1 },
+  );
 }
 
 function unwrapData<T>(value: unknown): T | null {
@@ -490,7 +586,7 @@ async function confirmTerms(): Promise<void> {
     await promptRequired("Type 'yes' to continue: ")
   ).toLowerCase();
   if (answer !== "yes" && answer !== "y") {
-    throw cliError("You must accept the terms to create an account.");
+    throw cliError("You must accept the terms to continue.");
   }
 }
 
@@ -531,7 +627,7 @@ async function checkExistingCredentials(params: {
     credentialsLockHeld: true,
   });
   if (existingStatus.status === "removed_stale") {
-    process.stderr.write("Continuing with Primitive signup...\n");
+    process.stderr.write(`Continuing with Primitive ${copy.actionNoun}...\n`);
     return;
   }
   if (existingStatus.status === "blocked") {
@@ -607,8 +703,19 @@ async function startSignup(params: {
   });
 
   if (started.error) {
-    writeErrorWithHints(extractErrorPayload(started.error));
-    throw cliError("Could not start Primitive agent signup.");
+    const payload = extractErrorPayload(started.error);
+    if (
+      copy.browserLoginCommand &&
+      extractErrorCode(payload) === MANAGED_DOMAIN
+    ) {
+      throw managedDomainLoginError({
+        browserLoginCommand: copy.browserLoginCommand,
+        email: params.email,
+        interactive: canPrompt(params.deps.interactive),
+      });
+    }
+    writeErrorWithHints(payload);
+    throw cliError(`Could not start Primitive ${copy.actionNoun}.`);
   }
 
   const startResult = unwrapData<AgentSignupStartResult>(started.data);
@@ -629,6 +736,7 @@ async function resendVerificationCode(params: {
   apiBaseUrl: string;
   apiClient: PrimitiveApiClient;
   configDir: string;
+  copy?: SignupCommandCopy;
   deps: SignupFlowDeps;
   start: PendingAgentSignup;
 }): Promise<ResendVerificationCodeResult> {
@@ -675,7 +783,10 @@ async function resendVerificationCode(params: {
   }
 
   writeErrorWithHints(payload);
-  throw cliError("Could not resend Primitive agent signup verification email.");
+  const copy = params.copy ?? DEFAULT_SIGNUP_COMMAND_COPY;
+  throw cliError(
+    `Could not resend the Primitive ${copy.actionNoun} verification email.`,
+  );
 }
 
 export async function runSignupStartWithCredentialLock(params: {
@@ -687,8 +798,15 @@ export async function runSignupStartWithCredentialLock(params: {
 }): Promise<void> {
   const { configDir, flags } = params;
   const deps = params.deps ?? {};
+  // The commands refuse before taking the lock; this covers other callers.
+  refuseEmailCodeStartWithoutTerminal({
+    copy: params.copy,
+    email: params.email,
+    flags,
+    interactive: deps.interactive,
+  });
   const promptRequiredFn = deps.promptRequired ?? promptRequired;
-  const email = params.email ?? (await promptRequiredFn("Email: "));
+  const email = givenEmail(params.email) ?? (await promptRequiredFn("Email: "));
   await checkExistingCredentials({
     apiBaseUrl: flags["api-base-url"],
     configDir,
@@ -777,17 +895,28 @@ export async function runSignupConfirmWithCredentialLock(params: {
 
   const payload = extractErrorPayload(verified.error);
   const code = extractErrorCode(payload);
+  const copy = params.copy ?? DEFAULT_SIGNUP_COMMAND_COPY;
   if (code === INVALID_VERIFICATION_CODE) {
-    const copy = params.copy ?? DEFAULT_SIGNUP_COMMAND_COPY;
     throw cliError(
       `Invalid verification code. Try again, run ${copy.resendCommand(params.email)}, or run primitive signup status.`,
     );
+  }
+  if (copy.browserLoginCommand && code === MANAGED_DOMAIN) {
+    // The pending code stays: the server also gives this answer when it
+    // could not tell, and the code expires on its own.
+    throw managedDomainLoginError({
+      browserLoginCommand: copy.browserLoginCommand,
+      email: params.email,
+      interactive: canPrompt(deps.interactive),
+    });
   }
   if (code === EXPIRED_TOKEN || code === INVALID_SIGNUP_TOKEN) {
     deletePendingAgentSignup(configDir);
   }
   writeErrorWithHints(payload);
-  throw cliError("Primitive agent signup failed while verifying the account.");
+  throw cliError(
+    `Primitive ${copy.actionNoun} failed while verifying the account.`,
+  );
 }
 
 export async function runSignupResendWithCredentialLock(params: {
@@ -816,13 +945,14 @@ export async function runSignupResendWithCredentialLock(params: {
       );
   if (!pending) {
     throw cliError(
-      `No pending ${copy.actionNoun} found. Run \`primitive signup status\` to inspect pending state, or start one with \`${pendingSignupStartCommand()}\`.`,
+      `No pending ${copy.actionNoun} found. Run \`primitive signup status\` to inspect pending state, or start one with \`primitive ${copy.startCommand("<email>")} --accept-terms\`.`,
     );
   }
   const resend = await resendVerificationCode({
     apiBaseUrl: requestConfig.resolvedApiBaseUrl,
     apiClient,
     configDir: params.configDir,
+    copy,
     deps,
     start: pending,
   });
@@ -840,6 +970,7 @@ export async function runSignupInteractiveWithCredentialLock(params: {
 }): Promise<void> {
   const { configDir, flags } = params;
   const deps = params.deps ?? {};
+  refuseInteractiveSignupWithoutTerminal(deps.interactive);
   const promptRequiredFn = deps.promptRequired ?? promptRequired;
   await checkExistingCredentials({
     apiBaseUrl: flags["api-base-url"],
@@ -940,7 +1071,7 @@ function commonStartFlags() {
   return {
     "accept-terms": Flags.boolean({
       description:
-        "Confirm acceptance of Primitive's Terms of Service and Privacy Policy",
+        "Confirm acceptance of Primitive's Terms of Service and Privacy Policy. Required when there is no terminal to ask in.",
     }),
     "api-base-url": Flags.string({
       description:
@@ -982,6 +1113,7 @@ class SignupCommand extends Command {
 
   async run(): Promise<void> {
     const { args, flags } = await this.parse(SignupCommand);
+    refuseEmailCodeStartWithoutTerminal({ email: args.email, flags });
     let releaseCredentialsLock: () => void;
     try {
       releaseCredentialsLock = acquireCliCredentialsLock(this.config.configDir);
@@ -1301,6 +1433,7 @@ export class SignupInteractiveCommand extends Command {
 
   async run(): Promise<void> {
     const { flags } = await this.parse(SignupInteractiveCommand);
+    refuseInteractiveSignupWithoutTerminal();
     let releaseCredentialsLock: () => void;
     try {
       releaseCredentialsLock = acquireCliCredentialsLock(this.config.configDir);

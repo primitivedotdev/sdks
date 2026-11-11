@@ -105,10 +105,10 @@
         "description": "Send outbound emails. Prefer `primitive send` for fresh sends and `primitive reply --id <inbound-id>` for replies. Use `primitive domains list` or `primitive inbox status` to find usable sender domains for --from; `primitive sending permissions` lists recipient-scope destinations you may send to."
       },
       "signin": {
-        "description": "Sign in to an existing Primitive account"
+        "description": "Sign in with browser approval or an emailed code"
       },
       "login": {
-        "description": "Log in to an existing Primitive account"
+        "description": "Log in with browser approval or an emailed code"
       },
       "otp": {
         "description": "Authenticate with an emailed one-time code"
