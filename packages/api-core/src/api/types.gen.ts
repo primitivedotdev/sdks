@@ -8850,7 +8850,7 @@ export type CredentialsRotateKeyResult = {
     expires_at?: string | null;
     previous_key_id: string;
     /**
-     * When the old key stops working: the time of the rotation plus overlap_seconds (24 hours when it was omitted, now when it was 0), or the key's own expires_at when that comes first.
+     * When the old key stops working: the time of the rotation plus overlap_seconds (24 hours when it was omitted, now when it was 0), or the key's own expires_at, or the expires_at given to the new key, whichever comes first.
      */
     previous_key_expires_at: string;
     [key: string]: unknown;
@@ -8861,6 +8861,10 @@ export type CredentialsRotateKeyInput = {
      * How long the old key keeps working, in seconds, up to 604800 (7 days), and never past its own expires_at. 86400 (24 hours) when omitted. 0 stops the old key at once: use it when rotating because the secret leaked.
      */
     overlap_seconds?: number;
+    /**
+     * The new key's expiry. Omitted, it keeps the old key's expiry: rotating alone never extends a key. A time sets it, within the organization's credential policy (its maximum key lifetime counts from now); null makes it never expire, where the policy allows. Needs keys:manage, as changing a key does. The old key stops when the overlap ends, or at this expiry if that comes first.
+     */
+    expires_at?: string | null;
 };
 
 export type CredentialsUpdateKeyResult = {
@@ -8884,6 +8888,9 @@ export type CredentialsUpdateKeyResult = {
 
 export type CredentialsUpdateKeyInput = {
     name?: string;
+    /**
+     * A new expiry. A later time extends the key and an earlier one ends it sooner, within the organization's credential policy (its maximum key lifetime counts from now); null removes the expiry, where the policy allows. A rotated-out key's expiry can only be brought forward, and an expired key's cannot be changed.
+     */
     expires_at?: string | null;
     grant?: 'super_admin' | 'send_only' | 'read_only' | 'own_addresses' | 'own_addresses_read_only' | 'custom' | {
         preset: 'super_admin' | 'send_only' | 'read_only' | 'own_addresses' | 'own_addresses_read_only' | 'custom';

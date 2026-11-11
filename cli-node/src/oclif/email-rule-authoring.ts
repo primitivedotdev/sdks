@@ -823,8 +823,12 @@ export function versionMovedHint(
 
 // The flags and reports, by generated operation
 
+/** A write's --fail-on-expectations, the same on create and update. */
+const FAIL_ON_EXPECTATIONS_HELP =
+  "Exit 1 when an expectation in the answer's expectations_check failed, and 3 when none failed but one is undecided or the expectations this write sent were not checked (test the rule to decide). Without it the command exits 0 whatever the check says.";
+
 const EXPECTATION_FLAG_NOTE =
-  "Replaces any expect in --body-file or --raw-body. The exit code follows the answer's expectations; see --help-full.";
+  "Replaces any expect in --body-file or --raw-body. The answer reports them in expectations (passed, counts, results) and the exit code follows it; see --help-full.";
 
 export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
   string,
@@ -865,11 +869,10 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
     flags: {
       "expectations-file": Flags.string({
         description:
-          'A JSON file holding the emails the rule must match and must not, such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}. Sets expectations, over any in --body-file or --raw-body; the answer judges them in expectations_check.',
+          'A JSON file holding the emails the rule must match and must not, such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}. Sets expectations, over any in --body-file or --raw-body; the answer judges them in expectations_check (passed, decided, failed, undecided); the report test-email-rule answers with is named expectations instead.',
       }),
       [FAIL_ON_EXPECTATIONS_FLAG]: Flags.boolean({
-        description:
-          "Exit 1 when an expectation in the answer's expectations_check failed, and 3 when none failed but one is undecided or the expectations this write sent were not checked (test the rule to decide). Without it the command exits 0 whatever the check says.",
+        description: FAIL_ON_EXPECTATIONS_HELP,
       }),
     },
     bodyFields: expectationsBodyFields(false),
@@ -881,11 +884,10 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
     flags: {
       "expectations-file": Flags.string({
         description:
-          'A JSON file holding the emails the rule must match and must not, such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}, replacing its saved expectations; a file holding null removes them. Sets expectations, over any in --body-file or --raw-body; the answer judges them in expectations_check.',
+          'A JSON file holding the emails the rule must match and must not, such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}, replacing its saved expectations; a file holding null removes them. Sets expectations, over any in --body-file or --raw-body; the answer judges them in expectations_check (passed, decided, failed, undecided); the report test-email-rule answers with is named expectations instead.',
       }),
       [FAIL_ON_EXPECTATIONS_FLAG]: Flags.boolean({
-        description:
-          "Exit 1 when an expectation in the answer's expectations_check failed, and 3 when none failed but one is undecided or the expectations this write sent were not checked (test the rule to decide). Without it the command exits 0 whatever the check says.",
+        description: FAIL_ON_EXPECTATIONS_HELP,
       }),
     },
     bodyFields: expectationsBodyFields(true),

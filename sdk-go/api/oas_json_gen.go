@@ -48527,10 +48527,17 @@ func (s *CredentialsRotateKeyInput) encodeFields(e *jx.Encoder) {
 			s.OverlapSeconds.Encode(e)
 		}
 	}
+	{
+		if s.ExpiresAt.Set {
+			e.FieldStart("expires_at")
+			s.ExpiresAt.Encode(e, json.EncodeDateTime)
+		}
+	}
 }
 
-var jsonFieldsNameOfCredentialsRotateKeyInput = [1]string{
+var jsonFieldsNameOfCredentialsRotateKeyInput = [2]string{
 	0: "overlap_seconds",
+	1: "expires_at",
 }
 
 // Decode decodes CredentialsRotateKeyInput from json.
@@ -48550,6 +48557,16 @@ func (s *CredentialsRotateKeyInput) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"overlap_seconds\"")
+			}
+		case "expires_at":
+			if err := func() error {
+				s.ExpiresAt.Reset()
+				if err := s.ExpiresAt.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"expires_at\"")
 			}
 		default:
 			return errors.Errorf("unexpected field %q", k)

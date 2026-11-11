@@ -386,6 +386,10 @@ describe("email-rules test-email-rule: expectations from flags", () => {
     expect(rawBodyOnly).not.toMatch(/^ {3}expect\b/m);
     for (const text of [
       "a saved rule's saved expectations are judged instead",
+      // Both reports named, the test's and the write's.
+      "Either way, the answer reports the expectations it judged in expectations: passed, counts and per-email results.",
+      "create-email-rule and update-email-rule instead judge the rule's saved expectations on the version they save, in expectations_check",
+      "The exit code follows that report:",
       "1 when one is undecided and testing again will not decide it",
       "3 when the only undecided ones can be decided later",
       "Exit 1 also means the request failed",
@@ -399,6 +403,30 @@ describe("email-rules test-email-rule: expectations from flags", () => {
       const text = (COMMANDS[id] as unknown as { description: string })
         .description;
       expect(text, id).not.toMatch(/^ {2,3}expectations\b/m);
+    }
+  });
+
+  it("names the report each command answers with in its flag help: expectations on a test, expectations_check on a write", () => {
+    const flags = (id: string) =>
+      (
+        COMMANDS[id] as unknown as {
+          flags: Record<string, { description?: string }>;
+        }
+      ).flags;
+    for (const flag of ["expect-match", "expect-no-match"]) {
+      const text =
+        flags("email-rules:test-email-rule")[flag]?.description ?? "";
+      expect(text, flag).toContain(
+        "The answer reports them in expectations (passed, counts, results) and the exit code follows it",
+      );
+    }
+    for (const id of [
+      "email-rules:create-email-rule",
+      "email-rules:update-email-rule",
+    ]) {
+      expect(flags(id)["expectations-file"]?.description, id).toContain(
+        "the answer judges them in expectations_check (passed, decided, failed, undecided); the report test-email-rule answers with is named expectations instead.",
+      );
     }
   });
 

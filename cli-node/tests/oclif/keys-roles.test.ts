@@ -21,6 +21,7 @@ import {
 import {
   buildCreateGrant,
   buildUpdatedGrant,
+  expiryFromFlags,
   formatKeyDetail,
   formatKeyRows,
   HELD_REQUEST_NOTICE,
@@ -28,9 +29,11 @@ import {
   KeysGetCommand,
   KeysListCommand,
   KeysRevokeCommand,
+  KeysRotateCommand,
   KeysUpdateCommand,
   nextRules,
   STORE_SECRET_NOTICE,
+  standingSummary,
   stepUpUrlOf,
   withApproval,
 } from "../../src/oclif/commands/keys.js";
@@ -926,6 +929,29 @@ describe("keys commands", () => {
       warnings: [],
     });
     expect(requests.filter((r) => r.method === "PATCH")).toHaveLength(0);
+    // With a new expiry, the expiry is still sent, alone: the rule change adds nothing to it.
+    requests = useServer((request) =>
+      request.method === "GET"
+        ? Response.json({ success: true, data: withAddress })
+        : Response.json({
+            success: true,
+            data: { id: KEY_ID, changed: ["expires_at"], warnings: [] },
+          }),
+    );
+    const expiring = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--add-rule",
+      B,
+      "--expires-at",
+      "2027-02-08T00:00:00Z",
+    ]);
+    expect(expiring.exitCode).toBeUndefined();
+    const patches = requests.filter((r) => r.method === "PATCH");
+    expect(patches).toHaveLength(1);
+    expect(await (patches[0] as Request).json()).toEqual({
+      expires_at: "2027-02-08T00:00:00Z",
+    });
+    expect(expiring.stdout).toContain("Expires: 2027-02-08T00:00:00Z");
   });
 
   it("update --json says which rules a change took off and which were not on the key", async () => {
@@ -1207,6 +1233,193 @@ describe("keys commands", () => {
       "--json",
     ]);
     expect(json.stderr).not.toContain("which grant this key holds");
+  });
+
+  it("update --expires-at sets the expiry alone, without reading the key, and --no-expiry removes it", async () => {
+    const requests = useServer(() =>
+      Response.json({
+        success: true,
+        data: { id: KEY_ID, changed: ["expires_at"], warnings: [] },
+      }),
+    );
+    const extended = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--expires-at",
+      "2027-02-08T00:00:00Z",
+    ]);
+    expect(extended.exitCode).toBeUndefined();
+    expect(requests.map((r) => r.method)).toEqual(["PATCH"]);
+    expect(await (requests[0] as Request).json()).toEqual({
+      expires_at: "2027-02-08T00:00:00Z",
+    });
+    expect(extended.stdout).toContain(`Updated key ${KEY_ID}: expires_at.`);
+    expect(extended.stdout).toContain("Expires: 2027-02-08T00:00:00Z");
+    const removed = await run(KeysUpdateCommand, [KEY_ID, "--no-expiry"]);
+    expect(removed.exitCode).toBeUndefined();
+    expect(await (requests[1] as Request).json()).toEqual({ expires_at: null });
+    expect(removed.stdout).toContain("Expires: never");
+  });
+
+  it("update and rotate refuse an --expires-at without a time and zone, and send nothing", async () => {
+    const requests = useServer(() =>
+      Response.json({ success: true, data: {} }),
+    );
+    for (const command of [KeysUpdateCommand, KeysRotateCommand]) {
+      const refused = await run(command, [
+        KEY_ID,
+        "--expires-at",
+        "2027-02-08",
+      ]);
+      expect(String(refused.error)).toContain(
+        "ISO 8601 time with its time zone",
+      );
+    }
+    expect(requests).toHaveLength(0);
+    expect(
+      expiryFromFlags({ "expires-at": "2027-02-08T00:00:00+02:00" }),
+    ).toEqual({ ok: true, expiresAt: "2027-02-08T00:00:00+02:00" });
+    expect(expiryFromFlags({ "no-expiry": true })).toEqual({
+      ok: true,
+      expiresAt: null,
+    });
+    expect(expiryFromFlags({})).toEqual({ ok: true, expiresAt: undefined });
+    expect(expiryFromFlags({ "expires-at": "next week" }).ok).toBe(false);
+    expect(expiryFromFlags({ "expires-at": "2027-02-08t00:00:00z" }).ok).toBe(
+      false,
+    );
+    expect(expiryFromFlags({ "expires-at": "2027-02-08T24:00:00Z" }).ok).toBe(
+      false,
+    );
+  });
+
+  it("rotate keeps the expiry unless told, sends --expires-at for the new key, and says when the new key expires", async () => {
+    const requests = useServer(() =>
+      Response.json({
+        success: true,
+        data: {
+          id: "1f0e0d0c-0b0a-4908-8706-050403020100",
+          key: "prim_new_secret",
+          key_prefix: "prim_new",
+          expires_at: "2027-02-08T00:00:00.000Z",
+          previous_key_id: KEY_ID,
+          previous_key_expires_at: "2026-11-12T00:00:00.000Z",
+        },
+      }),
+    );
+    const kept = await run(KeysRotateCommand, [KEY_ID]);
+    expect(kept.exitCode).toBeUndefined();
+    expect(await (requests[0] as Request).json()).toEqual({});
+    const extended = await run(KeysRotateCommand, [
+      KEY_ID,
+      "--expires-at",
+      "2027-02-08T00:00:00Z",
+      "--overlap-seconds",
+      "3600",
+    ]);
+    expect(extended.exitCode).toBeUndefined();
+    expect(await (requests[1] as Request).json()).toEqual({
+      overlap_seconds: 3600,
+      expires_at: "2027-02-08T00:00:00Z",
+    });
+    expect(extended.stderr).toContain("and expires 2027-02-08T00:00:00.000Z.");
+  });
+
+  it("refuses --expires-at with --no-expiry on both commands, and rotate --no-expiry asks for a key that never expires", async () => {
+    const requests = useServer(() =>
+      Response.json({
+        success: true,
+        data: {
+          id: "1f0e0d0c-0b0a-4908-8706-050403020100",
+          key: "prim_new_secret",
+          key_prefix: "prim_new",
+          expires_at: null,
+          previous_key_id: KEY_ID,
+          previous_key_expires_at: "2026-11-12T00:00:00.000Z",
+        },
+      }),
+    );
+    for (const command of [KeysUpdateCommand, KeysRotateCommand]) {
+      const both = await run(command, [
+        KEY_ID,
+        "--expires-at",
+        "2027-02-08T00:00:00Z",
+        "--no-expiry",
+      ]);
+      expect(both.error).toBeTruthy();
+    }
+    expect(requests).toHaveLength(0);
+    const never = await run(KeysRotateCommand, [KEY_ID, "--no-expiry"]);
+    expect(never.exitCode).toBeUndefined();
+    expect(await (requests[0] as Request).json()).toEqual({ expires_at: null });
+    expect(never.stderr).toContain("and expires never.");
+  });
+
+  it("rotate says nothing about the new key's expiry when the answer does not give it", async () => {
+    useServer(() =>
+      Response.json({
+        success: true,
+        data: {
+          id: "1f0e0d0c-0b0a-4908-8706-050403020100",
+          key: "prim_new_secret",
+          key_prefix: "prim_new",
+          previous_key_id: KEY_ID,
+          previous_key_expires_at: "2026-11-12T00:00:00.000Z",
+        },
+      }),
+    );
+    const rotated = await run(KeysRotateCommand, [KEY_ID]);
+    expect(rotated.stderr).toContain(
+      "prefix prim_new. The old key works until",
+    );
+    expect(rotated.stderr).not.toContain("expires never");
+  });
+
+  it("revoke prints what keeps working and what stops", async () => {
+    useServer(() =>
+      Response.json({
+        success: true,
+        data: {
+          revoked: 1,
+          kind: "org_key",
+          id: KEY_ID,
+          standing_objects: [
+            { kind: "endpoint", id: "a", label: "x", org_owned: true },
+            { kind: "endpoint", id: "b", label: "y", org_owned: false },
+          ],
+        },
+      }),
+    );
+    const revoked = await run(KeysRevokeCommand, [KEY_ID, "--yes"]);
+    expect(revoked.stdout).toContain(
+      "1 item(s) it set up for the organization keep working. 1 item(s) the key owned itself, such as its own webhooks, which stop with it.",
+    );
+  });
+
+  it("revoke says what keeps working for the organization and what the key owned stops with it", () => {
+    expect(standingSummary([])).toBeNull();
+    expect(standingSummary(undefined)).toBeNull();
+    expect(
+      standingSummary([
+        { kind: "endpoint", id: "a", label: "x", org_owned: true },
+        { kind: "endpoint", id: "b", label: "y", org_owned: false },
+        { kind: "recipient_route", id: "c", label: "z", org_owned: false },
+      ]),
+    ).toBe(
+      "1 item(s) it set up for the organization keep working. 2 item(s) the key owned itself, such as its own webhooks, which stop with it. Review them with --json.",
+    );
+    expect(
+      standingSummary([
+        { kind: "endpoint", id: "b", label: "y", org_owned: false },
+      ]),
+    ).toBe(
+      "1 item(s) the key owned itself, such as its own webhooks, which stop with it. Review them with --json.",
+    );
+    expect(KeysRevokeCommand.description).not.toContain(
+      "what it set up keeps working",
+    );
+    expect(KeysRotateCommand.description).toContain(
+      "rotating alone does not extend a key",
+    );
   });
 
   it("revoke without --yes and without a terminal sends nothing; with --yes it revokes an API key", async () => {
