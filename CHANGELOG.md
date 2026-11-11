@@ -809,6 +809,14 @@ parsers.
   token and sends the request again, as `primitive keys` does; under
   `--json` or without a terminal it prints the link and how to rerun.
   `endpoints create` and `endpoints update` take them as well.
+- `emails watch`, and `emails wait` when it waits for more than one email,
+  now report an email that became readable after a later one was reported,
+  as mail can when it is accepted more slowly, held while its sender is
+  checked, or granted to a key by an email rule, if that happens within ten
+  minutes of the email arriving. While nothing new arrives they re-read the
+  last ten minutes, at most every 15 seconds, so such an email prints after
+  the later one. A connected agent's `emails wait` reads its mail another way
+  and is unchanged.
 - `emails wait --since` and `emails watch --since` also take a duration
   ago, such as `15m` or `2h`. `emails wait` says in its help, and in its
   timeout message, that without `--since` or `--include-existing` it counts
