@@ -186,7 +186,7 @@
         "description": "Received and sent mail per hour, and how webhook deliveries ended"
       },
       "activity": {
-        "description": "What you created, and where each object stands now (ids, names and states only)"
+        "description": "What you created, and what other members asked of you, with where each stands now (ids, names and states only)"
       },
       "email-rules": {
         "description": "Rules written in plain English that pick out received mail"

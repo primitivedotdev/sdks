@@ -57,6 +57,10 @@ func TestWebhookEventTypesCatalog(t *testing.T) {
 		"interaction.ack.acked",
 		"email.received",
 		"sent_email.delivered",
+		"email_rule_request.created",
+		"email_rule_request.accepted",
+		"email_rule_request.declined",
+		"email_rule_request.withdrawn",
 	} {
 		if !IsKnownWebhookEventType(want) {
 			t.Fatalf("catalog missing %q", want)

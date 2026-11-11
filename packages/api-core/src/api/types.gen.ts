@@ -6002,7 +6002,7 @@ export type GetWebhookDeliveryStatsResult = {
 
 export type ListActivityObjectsResult = {
     /**
-     * you: what a person created through any credential of theirs (their dashboard session, their own CLI or app login, apps and agent delegates acting for them, their API keys while theirs, their personal agents). this_credential: what the calling key, app or agent created itself.
+     * you: what a person created through any credential of theirs, or with relation=asked what others asked of them (their dashboard session, their own CLI or app login, apps and agent delegates acting for them, their API keys while theirs, their personal agents). this_credential: what the calling key, app or agent created itself.
      */
     covers: string;
     items: Array<{
@@ -6025,20 +6025,20 @@ export type ListActivityObjectsResult = {
          */
         ended_at: string | null;
         /**
-         * you: it is still yours: never transferred, or transferred back to you. someone_else: it was transferred and another person holds it now.
+         * you: it is still yours: never transferred, or transferred back to you. someone_else: it was transferred and another person holds it now, or, with relation=asked, another member made it.
          */
         owned_now: 'you' | 'someone_else';
         created_through: {
             /**
-             * The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves).
+             * The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves). With relation=asked, member: the member who asked.
              */
             kind: string;
             /**
-             * In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself.
+             * In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself. With relation=asked, the user id of the member who asked.
              */
             id: string | null;
             /**
-             * In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves.
+             * In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves. With relation=asked, the name of the member who asked.
              */
             name: string | null;
         };
@@ -7023,6 +7023,10 @@ export type CreateEmailRuleRequestRequest = {
      */
     name: string;
     /**
+     * A short note to the member asked about why you are asking, up to 500 characters; null or absent for none. They see it with the request; it cannot be changed later.
+     */
+    message?: string | null;
+    /**
      * The plain-English description the rule was compiled from.
      */
     english: string;
@@ -7075,6 +7079,14 @@ export type CreateEmailRuleRequestResult = {
      * The share accepting created, while it exists.
      */
     share_id: string | null;
+    /**
+     * What the member asking wrote about why; null when they wrote nothing.
+     */
+    message?: string | null;
+    /**
+     * Why the member asked declined it; null unless they gave a reason when declining.
+     */
+    decline_reason?: string | null;
     /**
      * Whether the member asked can accept it now under their role. Null unless you can list members and their roles (members:read), or when it could not be read.
      */
@@ -7146,11 +7158,26 @@ export type EmailRuleRequest = {
      * The share accepting created, while it exists.
      */
     share_id: string | null;
+    /**
+     * What the member asking wrote about why; null when they wrote nothing.
+     */
+    message?: string | null;
+    /**
+     * Why the member asked declined it; null unless they gave a reason when declining.
+     */
+    decline_reason?: string | null;
 };
 
 export type ListEmailRuleRequestsResult = Array<EmailRuleRequest>;
 
 export type GetEmailRuleRequestResult = EmailRuleRequest;
+
+export type DeclineEmailRuleRequestRequest = {
+    /**
+     * Why you are declining, up to 500 characters; null or absent for none. The member who asked sees it with the request.
+     */
+    reason?: string | null;
+};
 
 export type DeclineEmailRuleRequestResult = EmailRuleRequest;
 
@@ -19671,7 +19698,11 @@ export type ListActivityObjectsData = {
     path?: never;
     query?: {
         /**
-         * Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request. Defaults to every kind the caller can have created (a person's own kinds only for a person).
+         * created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you. asked is for a person's own view only, and kind may then name only email_rule_request.
+         */
+        relation?: 'created' | 'asked';
+        /**
+         * Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request. Defaults to every kind the caller can have created (a person's own kinds only for a person). With relation=asked, only email_rule_request, which is also the default.
          */
         kind?: string;
         /**
@@ -19713,7 +19744,7 @@ export type ListActivityObjectsError = ListActivityObjectsErrors[keyof ListActiv
 
 export type ListActivityObjectsResponses = {
     /**
-     * List what you created
+     * List what you created, or what you were asked
      */
     200: SuccessEnvelope & {
         data: ListActivityObjectsResult;
@@ -20499,7 +20530,7 @@ export type CreateEmailRuleRequestData = {
 
 export type CreateEmailRuleRequestErrors = {
     /**
-     * validation_error: give exactly one of target_user_id and target_email and a tree that is valid for the column contract; details.reason self_request when the member named is you.
+     * validation_error: give exactly one of target_user_id and target_email, a tree that is valid for the column contract, and a message, if any, of 1 to 500 characters; details.reason self_request when the member named is you.
      */
     400: ErrorResponse;
     /**
@@ -20687,7 +20718,7 @@ export type GetEmailRuleRequestResponses = {
 export type GetEmailRuleRequestResponse = GetEmailRuleRequestResponses[keyof GetEmailRuleRequestResponses];
 
 export type DeclineEmailRuleRequestData = {
-    body?: never;
+    body?: DeclineEmailRuleRequestRequest;
     headers?: {
         /**
          * Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.
@@ -20705,6 +20736,10 @@ export type DeclineEmailRuleRequestData = {
 };
 
 export type DeclineEmailRuleRequestErrors = {
+    /**
+     * validation_error: reason is empty or longer than 500 characters.
+     */
+    400: ErrorResponse;
     /**
      * Invalid or missing API key
      */

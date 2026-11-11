@@ -11,10 +11,11 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 
-// What you created, read from GET /activity/objects. A key, an app or an agent
-// sees what it created itself; a person signed in with `primitive login` sees
-// what they created through any credential of theirs. Ids, names and states
-// only: never a webhook URL or mail content.
+// What you created, or what other members asked of you (relation=asked), read
+// from GET /activity/objects. A key, an app or an agent sees what it created
+// itself; a person signed in with `primitive login` sees what they created
+// through any credential of theirs, and the rule requests made to them. Ids,
+// names and states only: never a webhook URL or mail content.
 
 const API_KEY_FLAG = Flags.string({
   description:
@@ -128,6 +129,38 @@ export function formatActivityRows(
   return [line(header), ...rows.map(line)].join("\n");
 }
 
+/**
+ * One line per request asked of you: its state, when it was asked, its name,
+ * and who asked. `complete` says the listing is the whole of it (every state,
+ * from the first page to the last, nothing withheld), the only time an empty one means
+ * nobody has asked.
+ */
+export function formatAskedRows(
+  items: readonly ActivityItem[],
+  complete = false,
+): string {
+  if (items.length === 0)
+    return complete ? "Nobody has asked you for anything." : "Nothing to show.";
+  const rows = items.map((item) => [
+    item.state,
+    minute(item.created_at),
+    item.name ?? item.id,
+    item.created_through.name ?? item.created_through.id ?? "",
+    item.id,
+  ]);
+  const header = ["STATE", "ASKED (UTC)", "NAME", "FROM", "ID"];
+  const widths = header.map((h, i) =>
+    Math.max(h.length, ...rows.map((row) => (row[i] ?? "").length)),
+  );
+  const line = (cells: readonly string[]) =>
+    cells
+      .map((cell, i) =>
+        i === cells.length - 1 ? cell : cell.padEnd(widths[i] ?? 0),
+      )
+      .join("  ");
+  return [line(header), ...rows.map(line)].join("\n");
+}
+
 /** What was left out, and why: no counts, only the kinds and what would show them. */
 export function formatWithheld(
   withheld: readonly WithheldKind[],
@@ -154,15 +187,104 @@ export function resumeCommand(
   bin: string,
   flags: { kind?: string; state: string; limit: number; all?: boolean },
   cursor: string,
+  subcommand: "created" | "asked" = "created",
 ): string {
   return [
-    `${bin} activity created`,
+    `${bin} activity ${subcommand}`,
     ...(flags.kind ? [`--kind ${shellWord(flags.kind)}`] : []),
     ...(flags.state !== "all" ? [`--state ${flags.state}`] : []),
     ...(flags.limit !== DEFAULT_LIMIT ? [`--limit ${flags.limit}`] : []),
     ...(flags.all ? ["--all"] : []),
     `--cursor ${shellWord(cursor)}`,
   ].join(" ");
+}
+
+type ListFlags = {
+  "api-key"?: string;
+  "api-base-url"?: string;
+  kind?: string;
+  state: string;
+  limit: number;
+  cursor?: string;
+  all?: boolean;
+  json?: boolean;
+};
+
+/** List one page, or every page with --all, of what the caller created or was asked. */
+async function runActivityList(
+  command: Command,
+  flags: ListFlags,
+  relation: "created" | "asked",
+): Promise<void> {
+  const auth = await createAuthenticatedCliApiClient({
+    apiKey: flags["api-key"],
+    apiBaseUrl: flags["api-base-url"],
+    configDir: command.config.configDir,
+  });
+  const items: ActivityItem[] = [];
+  let covers = "";
+  let withheld: WithheldKind[] = [];
+  let cursor = flags.cursor;
+  for (let page = 0; page < (flags.all ? ALL_PAGES_LIMIT : 1); page += 1) {
+    const result = await call(
+      listActivityObjects({
+        client: auth.apiClient.client,
+        query: {
+          ...(relation === "asked" ? { relation } : {}),
+          state: flags.state as "all" | "live" | "ended",
+          limit: flags.limit,
+          ...(flags.kind ? { kind: flags.kind } : {}),
+          ...(cursor ? { cursor } : {}),
+        },
+      }),
+    );
+    if (!result.ok) {
+      if (flags.json)
+        process.stderr.write(`${JSON.stringify(result.payload)}\n`);
+      else writeErrorWithHints(result.payload);
+      surfaceUnauthorizedHint({
+        auth: auth.auth,
+        baseUrlOverridden: auth.baseUrlOverridden,
+        configDir: command.config.configDir,
+        payload: result.payload,
+      });
+      process.exitCode = 1;
+      return;
+    }
+    covers = result.data.covers;
+    withheld = result.data.withheld;
+    items.push(...result.data.items);
+    cursor = result.data.next_cursor ?? undefined;
+    if (!cursor) break;
+  }
+  if (flags.json) {
+    command.log(
+      JSON.stringify(
+        { covers, items, withheld, next_cursor: cursor ?? null },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+  command.log(
+    relation === "asked"
+      ? formatAskedRows(
+          items,
+          // Every state, from the first page to the last, with nothing withheld.
+          flags.state === "all" &&
+            !flags.cursor &&
+            !cursor &&
+            withheld.length === 0,
+        )
+      : formatActivityRows(covers, items),
+  );
+  const notShown = formatWithheld(withheld);
+  if (notShown) command.log(`\n${notShown}`);
+  if (cursor)
+    command.log(
+      `\nMore: ${resumeCommand(command.config.bin, flags, cursor, relation)}`,
+    );
 }
 
 export class ActivityCreatedCommand extends Command {
@@ -211,60 +333,50 @@ export class ActivityCreatedCommand extends Command {
 
   async run(): Promise<void> {
     const { flags } = await this.parse(ActivityCreatedCommand);
-    const auth = await createAuthenticatedCliApiClient({
-      apiKey: flags["api-key"],
-      apiBaseUrl: flags["api-base-url"],
-      configDir: this.config.configDir,
-    });
-    const items: ActivityItem[] = [];
-    let covers = "";
-    let withheld: WithheldKind[] = [];
-    let cursor = flags.cursor;
-    for (let page = 0; page < (flags.all ? ALL_PAGES_LIMIT : 1); page += 1) {
-      const result = await call(
-        listActivityObjects({
-          client: auth.apiClient.client,
-          query: {
-            state: flags.state as "all" | "live" | "ended",
-            limit: flags.limit,
-            ...(flags.kind ? { kind: flags.kind } : {}),
-            ...(cursor ? { cursor } : {}),
-          },
-        }),
-      );
-      if (!result.ok) {
-        if (flags.json)
-          process.stderr.write(`${JSON.stringify(result.payload)}\n`);
-        else writeErrorWithHints(result.payload);
-        surfaceUnauthorizedHint({
-          auth: auth.auth,
-          baseUrlOverridden: auth.baseUrlOverridden,
-          configDir: this.config.configDir,
-          payload: result.payload,
-        });
-        process.exitCode = 1;
-        return;
-      }
-      covers = result.data.covers;
-      withheld = result.data.withheld;
-      items.push(...result.data.items);
-      cursor = result.data.next_cursor ?? undefined;
-      if (!cursor) break;
-    }
-    if (flags.json) {
-      this.log(
-        JSON.stringify(
-          { covers, items, withheld, next_cursor: cursor ?? null },
-          null,
-          2,
-        ),
-      );
-      return;
-    }
-    this.log(formatActivityRows(covers, items));
-    const notShown = formatWithheld(withheld);
-    if (notShown) this.log(`\n${notShown}`);
-    if (cursor)
-      this.log(`\nMore: ${resumeCommand(this.config.bin, flags, cursor)}`);
+    await runActivityList(this, flags, "created");
+  }
+}
+
+export class ActivityAskedCommand extends Command {
+  static description =
+    `List what other members asked of you, newest first, open or answered: rule requests made to you for an email rule over your own mail, each with where it stands and who asked.
+
+  Signed in with \`primitive login\`, you see the requests made to you under your current membership. A key, an app or an agent is asked nothing. Read one with \`primitive email-rules get-email-rule-request --id <id>\`, then accept or decline it.`;
+
+  static summary = "List what other members asked of you";
+
+  static examples = [
+    "<%= config.bin %> activity asked",
+    "<%= config.bin %> activity asked --state live",
+    "<%= config.bin %> activity asked --all --json",
+  ];
+
+  static flags = {
+    "api-key": API_KEY_FLAG,
+    "api-base-url": API_BASE_URL_FLAG,
+    state: Flags.string({
+      description:
+        "all (default), live (still waiting on you), or ended (answered or withdrawn).",
+      options: ["all", "live", "ended"],
+      default: "all",
+    }),
+    limit: Flags.integer({
+      description: "Requests per page, 1 to 200.",
+      min: 1,
+      max: 200,
+      default: DEFAULT_LIMIT,
+    }),
+    cursor: Flags.string({
+      description: "Resume from a next_cursor an earlier page printed.",
+    }),
+    all: Flags.boolean({
+      description: `Follow every page (at most ${ALL_PAGES_LIMIT}).`,
+    }),
+    json: Flags.boolean({ description: "Print the answer as JSON." }),
+  };
+
+  async run(): Promise<void> {
+    const { flags } = await this.parse(ActivityAskedCommand);
+    await runActivityList(this, flags, "asked");
   }
 }

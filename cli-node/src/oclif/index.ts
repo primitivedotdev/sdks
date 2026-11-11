@@ -3,7 +3,10 @@ import type { PrimitiveOperationManifest } from "@primitivedotdev/api-core";
 import { createOperationCommand } from "./api-command.js";
 import { setKnownCommands } from "./api-path-commands.js";
 import { cliOperationManifest } from "./cli-operations.js";
-import { ActivityCreatedCommand } from "./commands/activity.js";
+import {
+  ActivityAskedCommand,
+  ActivityCreatedCommand,
+} from "./commands/activity.js";
 import AgentCheckMailCommand from "./commands/agent-check-mail.js";
 import AgentConnectCommand from "./commands/agent-connect.js";
 import AgentContactsAddCommand from "./commands/agent-contacts-add.js";
@@ -800,8 +803,10 @@ export const COMMANDS: Record<string, typeof Command> = {
   // API keys. Writes go through these commands, which handle browser approval
   // when it is required, not generated ones; see KEY_WRITE_OPERATION_IDS in
   // cli-operations.ts.
-  // What you created, with where each object stands now. The generated
-  // `activity:list-activity-objects` stays available for raw API parity.
+  // What you created, and the rule requests other members made to you, with
+  // where each stands now. The generated `activity:list-activity-objects`
+  // stays available for raw API parity.
+  "activity:asked": ActivityAskedCommand,
   "activity:created": ActivityCreatedCommand,
   "keys:list": KeysListCommand,
   "keys:get": KeysGetCommand,

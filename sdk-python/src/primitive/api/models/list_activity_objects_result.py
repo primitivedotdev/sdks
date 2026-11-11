@@ -26,9 +26,10 @@ T = TypeVar("T", bound="ListActivityObjectsResult")
 class ListActivityObjectsResult:
     """ 
         Attributes:
-            covers (str): you: what a person created through any credential of theirs (their dashboard session, their own
-                CLI or app login, apps and agent delegates acting for them, their API keys while theirs, their personal agents).
-                this_credential: what the calling key, app or agent created itself.
+            covers (str): you: what a person created through any credential of theirs, or with relation=asked what others
+                asked of them (their dashboard session, their own CLI or app login, apps and agent delegates acting for them,
+                their API keys while theirs, their personal agents). this_credential: what the calling key, app or agent created
+                itself.
             items (list[ListActivityObjectsResultItemsItem]):
             withheld (list[ListActivityObjectsResultWithheldItem]): Kinds left out because the caller could not list them
                 through their own routes. Nothing is said about how many there are.

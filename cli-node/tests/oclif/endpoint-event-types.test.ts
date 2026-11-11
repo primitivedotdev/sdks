@@ -103,6 +103,19 @@ describe("parseEventTypesFlag", () => {
     ).toEqual(["email.received", ...SENT_EMAIL_EVENTS]);
   });
 
+  it("expands email_rule_request.* to the four rule request events, and nothing else named like it", () => {
+    expect(
+      parseEventTypesFlag(["email_rule_request.*,email.received"]),
+    ).toEqual([
+      "email_rule_request.created",
+      "email_rule_request.accepted",
+      "email_rule_request.declined",
+      "email_rule_request.withdrawn",
+      "email.received",
+    ]);
+    expect(parseEventTypesFlag(["constructor"])).toEqual(["constructor"]);
+  });
+
   it("rejects an empty list and more than 50 names", () => {
     expect(() => parseEventTypesFlag([" , "])).toThrow(EventTypesFlagError);
     const many = Array.from({ length: 51 }, (_, i) => `custom.${i}`);

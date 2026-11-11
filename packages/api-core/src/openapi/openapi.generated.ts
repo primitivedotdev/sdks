@@ -34337,8 +34337,8 @@ export const openapiDocument: Record<string, unknown> = {
     "/activity/objects": {
       "get": {
         "operationId": "listActivityObjects",
-        "summary": "List what you created",
-        "description": "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules and rule requests. Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self.",
+        "summary": "List what you created, or what you were asked",
+        "description": "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules and rule requests. Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked it lists instead what other members asked of the person, open or answered: the rule requests made to them, under their current membership, each naming the member who asked in created_through. A key, an app or an agent has none, and gets email_rule_request in withheld.",
         "tags": [
           "Activity"
         ],
@@ -34349,10 +34349,25 @@ export const openapiDocument: Record<string, unknown> = {
         ],
         "parameters": [
           {
+            "name": "relation",
+            "in": "query",
+            "required": false,
+            "description": "created (the default) or asked.",
+            "schema": {
+              "default": "created",
+              "description": "created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you. asked is for a person's own view only, and kind may then name only email_rule_request.",
+              "type": "string",
+              "enum": [
+                "created",
+                "asked"
+              ]
+            }
+          },
+          {
             "name": "kind",
             "in": "query",
             "required": false,
-            "description": "Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request. Defaults to every kind the caller can have created (a person's own kinds only for a person).",
+            "description": "Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request. Defaults to every kind the caller can have created (a person's own kinds only for a person). With relation=asked, only email_rule_request, which is also the default.",
             "schema": {
               "type": "string",
               "minLength": 1,
@@ -34399,7 +34414,7 @@ export const openapiDocument: Record<string, unknown> = {
         ],
         "responses": {
           "200": {
-            "description": "List what you created",
+            "description": "List what you created, or what you were asked",
             "content": {
               "application/json": {
                 "schema": {
@@ -37125,7 +37140,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "createEmailRuleRequest",
         "summary": "Ask a member for a rule",
-        "description": "Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated and nothing is shared until they accept, and they may change the rule first; they see the request and can preview what it matches in their own mail. You may have at most 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer also says whether they can accept it under their role (target_can_accept), and if not, why (target_warning); the request is sent either way. To find out before asking, use POST /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+        "description": "Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated and nothing is shared until they accept, and they may change the rule first; they see the request and can preview what it matches in their own mail. A message (up to 500 characters) tells them why you are asking; they see it with the request, and it cannot be changed later. You may have at most 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer also says whether they can accept it under their role (target_can_accept), and if not, why (target_warning); the request is sent either way. To find out before asking, use POST /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
         "tags": [
           "Email Rules"
         ],
@@ -37171,7 +37186,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "400": {
-            "description": "validation_error: give exactly one of target_user_id and target_email and a tree that is valid for the column contract; details.reason self_request when the member named is you.",
+            "description": "validation_error: give exactly one of target_user_id and target_email, a tree that is valid for the column contract, and a message, if any, of 1 to 500 characters; details.reason self_request when the member named is you.",
             "content": {
               "application/json": {
                 "schema": {
@@ -37713,7 +37728,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "getEmailRuleRequest",
         "summary": "Read a rule request",
-        "description": "A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a member. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+        "description": "A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a member. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. The member asked can try the rule as proposed before answering: on mail they have, with POST /v1/email-rules/test and the request's tree, and on mail that has not arrived. Mail already received shows only what has arrived. To see what the rule would do with an email that has not, such as one they would never want shared, the member asked can pass the request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email they make up. Nothing is stored, and it needs no access beyond testing a rule of their own. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
         "tags": [
           "Email Rules"
         ],
@@ -38039,7 +38054,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "declineEmailRuleRequest",
         "summary": "Decline a rule request",
-        "description": "Declines a pending request made to you. Nothing is written but the decision. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+        "description": "Declines a pending request made to you. Nothing is written but the decision and, if you give one, its reason (reason, up to 500 characters), which the member who asked sees with the request. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
         "tags": [
           "Email Rules"
         ],
@@ -38071,6 +38086,16 @@ export const openapiDocument: Record<string, unknown> = {
             }
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeclineEmailRuleRequestRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Decline a rule request",
@@ -38108,6 +38133,16 @@ export const openapiDocument: Record<string, unknown> = {
               },
               "ratelimit-policy": {
                 "$ref": "#/components/headers/ratelimit-policy"
+              }
+            }
+          },
+          "400": {
+            "description": "validation_error: reason is empty or longer than 500 characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           },
@@ -38399,7 +38434,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "acceptEmailRuleRequest",
         "summary": "Accept a rule request",
-        "description": "Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from now on with the member who asked. Send no body to accept it as asked, or change it first with english and tree together (and an explanation, or the server writes one). Because this gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused. Also needs mail:share_own (sharing your own mail through email rules, which only shows it and never sends): a role without it is refused, whether or not it can send. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+        "description": "Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from now on with the member who asked. Send no body to accept it as asked, or change it first with english and tree together (and an explanation, or the server writes one). Because this gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused. Test it before accepting: on your mail with POST /v1/email-rules/test and the request's tree, and on mail that has not arrived. Mail already received shows only what has arrived. To see what the rule would do with an email that has not, such as one they would never want shared, the member asked can pass the request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email they make up. Nothing is stored, and it needs no access beyond testing a rule of their own. Also needs mail:share_own (sharing your own mail through email rules, which only shows it and never sends): a role without it is refused, whether or not it can send. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
         "tags": [
           "Email Rules"
         ],
@@ -75631,7 +75666,7 @@ export const openapiDocument: Record<string, unknown> = {
         "properties": {
           "covers": {
             "type": "string",
-            "description": "you: what a person created through any credential of theirs (their dashboard session, their own CLI or app login, apps and agent delegates acting for them, their API keys while theirs, their personal agents). this_credential: what the calling key, app or agent created itself."
+            "description": "you: what a person created through any credential of theirs, or with relation=asked what others asked of them (their dashboard session, their own CLI or app login, apps and agent delegates acting for them, their API keys while theirs, their personal agents). this_credential: what the calling key, app or agent created itself."
           },
           "items": {
             "type": "array",
@@ -75674,24 +75709,24 @@ export const openapiDocument: Record<string, unknown> = {
                     "you",
                     "someone_else"
                   ],
-                  "description": "you: it is still yours: never transferred, or transferred back to you. someone_else: it was transferred and another person holds it now."
+                  "description": "you: it is still yours: never transferred, or transferred back to you. someone_else: it was transferred and another person holds it now, or, with relation=asked, another member made it."
                 },
                 "created_through": {
                   "type": "object",
                   "properties": {
                     "kind": {
                       "type": "string",
-                      "description": "The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves)."
+                      "description": "The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves). With relation=asked, member: the member who asked."
                     },
                     "id": {
-                      "description": "In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself.",
+                      "description": "In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself. With relation=asked, the user id of the member who asked.",
                       "type": [
                         "string",
                         "null"
                       ]
                     },
                     "name": {
-                      "description": "In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves.",
+                      "description": "In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves. With relation=asked, the name of the member who asked.",
                       "type": [
                         "string",
                         "null"
@@ -78339,6 +78374,15 @@ export const openapiDocument: Record<string, unknown> = {
             "maxLength": 200,
             "description": "A short name for the rule."
           },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "A short note to the member asked about why you are asking, up to 500 characters; null or absent for none. They see it with the request; it cannot be changed later."
+          },
           "english": {
             "type": "string",
             "minLength": 1,
@@ -78487,6 +78531,20 @@ export const openapiDocument: Record<string, unknown> = {
             ],
             "format": "uuid",
             "description": "The share accepting created, while it exists."
+          },
+          "message": {
+            "description": "What the member asking wrote about why; null when they wrote nothing.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "decline_reason": {
+            "description": "Why the member asked declined it; null unless they gave a reason when declining.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "target_can_accept": {
             "description": "Whether the member asked can accept it now under their role. Null unless you can list members and their roles (members:read), or when it could not be read.",
@@ -78697,6 +78755,20 @@ export const openapiDocument: Record<string, unknown> = {
             ],
             "format": "uuid",
             "description": "The share accepting created, while it exists."
+          },
+          "message": {
+            "description": "What the member asking wrote about why; null when they wrote nothing.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "decline_reason": {
+            "description": "Why the member asked declined it; null unless they gave a reason when declining.",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -78730,6 +78802,21 @@ export const openapiDocument: Record<string, unknown> = {
       },
       "GetEmailRuleRequestResult": {
         "$ref": "#/components/schemas/EmailRuleRequest"
+      },
+      "DeclineEmailRuleRequestRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Why you are declining, up to 500 characters; null or absent for none. The member who asked sees it with the request."
+          }
+        },
+        "additionalProperties": false
       },
       "DeclineEmailRuleRequestResult": {
         "$ref": "#/components/schemas/EmailRuleRequest"
