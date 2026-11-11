@@ -19,7 +19,7 @@ export const RULE_REQUEST_WEBHOOK_SUBSCRIBE_HINT =
   "Hint: rule request events go only to a webhook made for them. If this webhook does not list them yet, it cannot be given them: create a new one with `--event-types 'email_rule_request.*'`, signed in as yourself. If it does, only its maker, signed in as themself, can change it.";
 
 export const RULE_REQUEST_WEBHOOK_KEY_HINT =
-  "Hint: a webhook for rule request events stays its maker's own and cannot be given to an API key.";
+  "Hint: a webhook for rule request events is made by the person it is for, signed in as themself, and stays theirs: it cannot be given to an API key.";
 
 export const RULE_REQUEST_WEBHOOK_CHANGE_HINT =
   "Hint: only the person who made a webhook for rule request events, signed in as themself (not with an API key, another app or an agent), can change it. It can be deleted as any other webhook can.";
