@@ -9,7 +9,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
-import { emptyEmailListHint, readCallerMailScope } from "../empty-mail-hint.js";
+import { emptyEmailListHint, readCallerMail } from "../empty-mail-hint.js";
 import {
   AWAITING_FLAG_DESCRIPTION,
   AWAITING_VALUES,
@@ -236,11 +236,10 @@ class EmailsLatestCommand extends Command {
         // email rules sees only the mail they granted it.
         process.stderr.write(
           `${emptyEmailListHint({
-            filterFlags: awaiting ? [`--awaiting ${awaiting}`] : [],
-            paged: false,
-            mailScope: await readCallerMailScope(apiClient.client),
+            filterFlags: awaiting ? ["--awaiting"] : [],
+            caller: await readCallerMail(apiClient.client),
             orgHint:
-              "No inbound emails yet. Send an email to one of your verified domains to populate this list.",
+              "(no results) No inbound emails yet. Send an email to one of your verified domains to populate this list.",
           })}\n`,
         );
         return;

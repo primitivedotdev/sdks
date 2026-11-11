@@ -38,8 +38,7 @@ import {
 import {
   emptyEmailListHint,
   listFilters,
-  ORG_EMPTY_HINT,
-  readCallerMailScope,
+  readCallerMail,
 } from "./empty-mail-hint.js";
 import {
   bodyHasRules,
@@ -2103,14 +2102,21 @@ export function createOperationCommand(
         ) {
           // An empty email list says what was asked and what this
           // credential reads, not that the account has no mail.
+          // A --since tail is polled, so its empty pages do not each read
+          // the grant too.
+          const tail = query.since !== undefined;
           const hint =
             operation.sdkName === "listEmails"
               ? emptyEmailListHint({
                   filterFlags: listFilters(query).map(
                     (name) => `--${parameterFlagName(operation.sdkName, name)}`,
                   ),
-                  paged: query.cursor !== undefined,
-                  mailScope: await readCallerMailScope(apiClient.client),
+                  ...(tail
+                    ? { pastFlag: "--since" as const }
+                    : query.cursor !== undefined
+                      ? { pastFlag: "--cursor" as const }
+                      : {}),
+                  caller: tail ? null : await readCallerMail(apiClient.client),
                 })
               : EMPTY_RESULT_HINTS[operation.sdkName];
           if (hint && jsonOutput) summary.push(hint);
@@ -2255,10 +2261,6 @@ export const EMPTY_RESULT_HINTS: Record<string, string> = {
     "(no results) No webhook deliveries logged yet. If you have an endpoint configured but expected to see test fires here: test deliveries from `primitive endpoints test` are NOT logged in this list, they're synchronous and visible only in the test-endpoint command's response. Real deliveries are logged when an event fans out to your endpoints: an inbound `email.received`, or a `sent_email.*` event for an endpoint that lists it in rules.event_types (they arrive within a few minutes of the result). If you have no endpoints, run `primitive endpoints list` to check.",
   listEndpoints:
     "(no results) No webhook endpoints configured. Add one with `primitive endpoints create --url <your-url>`.",
-  // An empty listEmails picks its hint from the credential and the filters
-  // (emptyEmailListHint); this is what it says for one that reads every
-  // mailbox and asked for everything.
-  listEmails: ORG_EMPTY_HINT,
   listDomains:
     "(no results) No domains on this account. Add one with `primitive domains add --domain <yourdomain.example>`.",
   listFilters: "(no results) No filter rules configured.",

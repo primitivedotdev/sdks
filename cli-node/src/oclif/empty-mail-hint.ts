@@ -2,51 +2,75 @@
 // received yet on this account" is true only for a credential that reads every
 // mailbox and asked for everything. A key limited to email rules reads only
 // mail its rules granted it, and a filtered list is empty because nothing
-// matched, so each is told that instead (the credential's reach comes from
-// GET /whoami, read only when a list comes back empty).
+// matched, so each is told that instead. The credential's reach comes from
+// GET /whoami/grant, which any credential may ask about itself, read only when
+// a list comes back empty and a hint will be printed.
+import { getOwnGrant } from "@primitivedotdev/api-core";
 
-type ApiClient = {
-  get: (options: {
-    responseStyle: "fields";
-    security: Array<{ scheme: "bearer"; type: "http" }>;
-    url: string;
-  }) => Promise<{ data?: unknown; error?: unknown }>;
-};
+type GrantClient = NonNullable<Parameters<typeof getOwnGrant>[0]>["client"];
 
 /**
- * Query parameters that page or shape a list without narrowing which emails
- * it holds. Any other one the caller set is a filter.
+ * Query parameters that page, shape or modify a list without narrowing which
+ * emails it holds on their own. Any other one the caller set is a filter.
  */
 const NOT_FILTERS = new Set([
   "cursor",
+  "since",
   "limit",
   "include",
   "include_presence",
   "wait",
+  "group",
+  // These change how --search matches; --search is the filter.
+  "search_regex",
+  "search_case_sensitive",
+  "search_negate",
 ]);
 
-/** How many addresses and domains the hint names before "and N more". */
+/** How many addresses, domains or rules the hint names before "and N more". */
 const NAMED_MAX = 3;
+
+/** How long the hint waits for the grant before leaving it out. */
+const GRANT_TIMEOUT_MS = 2_000;
 
 export const ORG_EMPTY_HINT =
   "(no results) No inbound emails received yet on this account. Send one to a verified domain to populate this list. For a compact view, prefer `primitive emails latest`.";
 
-/** The credential's mail scope as GET /whoami describes it, or undefined when it could not be read. */
-export async function readCallerMailScope(client: ApiClient): Promise<unknown> {
+/** What the hint needs of the caller's grant: what it is, and which mail it reads. */
+export type CallerMail = { credentialKind: unknown; mailScope: unknown };
+
+/**
+ * The caller's grant from GET /whoami/grant, or undefined when it cannot be
+ * read in time: the hint then says only that the credential may be narrowed.
+ * Reading mail follows `mail:read`'s own scope where it reaches fewer
+ * mailboxes than the grant's.
+ */
+export async function readCallerMail(
+  client: GrantClient,
+): Promise<CallerMail | undefined> {
   try {
-    const result = await client.get({
+    const result = await getOwnGrant({
+      client,
       responseStyle: "fields",
-      security: [{ scheme: "bearer", type: "http" }],
-      url: "/whoami",
+      signal: AbortSignal.timeout(GRANT_TIMEOUT_MS),
     });
     if (result.error) return undefined;
-    const data = (result.data as { data?: unknown } | undefined)?.data;
-    const grant =
-      data && typeof data === "object"
-        ? (data as { grant?: unknown }).grant
-        : undefined;
+    const grant = (result.data as { data?: { grant?: unknown } } | undefined)
+      ?.data?.grant;
     if (!grant || typeof grant !== "object") return undefined;
-    return (grant as { mail_scope?: unknown }).mail_scope;
+    const g = grant as {
+      credential_kind?: unknown;
+      mail_scope?: unknown;
+      scoped_permissions?: unknown;
+    };
+    const scoped =
+      g.scoped_permissions && typeof g.scoped_permissions === "object"
+        ? (g.scoped_permissions as Record<string, unknown>)["mail:read"]
+        : undefined;
+    return {
+      credentialKind: g.credential_kind,
+      mailScope: scoped ?? g.mail_scope,
+    };
   } catch {
     return undefined;
   }
@@ -54,17 +78,21 @@ export async function readCallerMailScope(client: ApiClient): Promise<unknown> {
 
 /** The query parameters the caller set that narrow which emails are listed. */
 export function listFilters(query: Record<string, unknown>): string[] {
-  return Object.keys(query).filter(
-    (name) => !NOT_FILTERS.has(name) && query[name] !== undefined,
-  );
+  return Object.keys(query).filter((name) => {
+    const value = query[name];
+    if (NOT_FILTERS.has(name) || value === undefined) return false;
+    // Turning an exclusion off narrows nothing.
+    return !(name.startsWith("exclude_") && value === false);
+  });
 }
 
 type Reach =
   | { kind: "org" }
   | { kind: "unknown" }
+  | { kind: "unreadable" }
   | { kind: "none" }
-  | { kind: "rules_only"; rules: number }
-  | { kind: "mailboxes"; names: string[]; rules: number };
+  | { kind: "rules_only"; rules: string[] }
+  | { kind: "mailboxes"; names: string[]; rules: string[] };
 
 function strings(value: unknown): string[] | null {
   return Array.isArray(value) && value.every((v) => typeof v === "string")
@@ -72,10 +100,10 @@ function strings(value: unknown): string[] | null {
     : null;
 }
 
-/** What a mail scope from GET /whoami reaches, as far as the hint needs. */
+/** What a mail scope from GET /whoami/grant reaches, as far as the hint needs. */
 export function mailReach(scope: unknown): Reach {
   if (scope === "org") return { kind: "org" };
-  if (scope === "unreadable") return { kind: "none" };
+  if (scope === "unreadable") return { kind: "unreadable" };
   if (!scope || typeof scope !== "object" || Array.isArray(scope))
     return { kind: "unknown" };
   const record = scope as Record<string, unknown>;
@@ -84,14 +112,23 @@ export function mailReach(scope: unknown): Reach {
   const rules = strings(record.rules ?? []);
   if (!addresses || !domains || !rules) return { kind: "unknown" };
   if (addresses.length === 0 && domains.length === 0) {
-    return rules.length > 0
-      ? { kind: "rules_only", rules: rules.length }
-      : { kind: "none" };
+    return rules.length > 0 ? { kind: "rules_only", rules } : { kind: "none" };
   }
+  // A domain entry that leaves out personal mailboxes says so.
+  const exceptPersonal =
+    typeof record.excluded_personal_mailboxes === "number" &&
+    record.excluded_personal_mailboxes > 0;
   return {
     kind: "mailboxes",
-    names: [...addresses, ...domains.map((d) => `any address at ${d}`)],
-    rules: rules.length,
+    names: [
+      ...addresses,
+      ...domains.map((d) =>
+        exceptPersonal
+          ? `addresses at ${d} other than personal mailboxes`
+          : `any address at ${d}`,
+      ),
+    ],
+    rules,
   };
 }
 
@@ -106,47 +143,72 @@ function named(names: string[]): string {
 
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
 
-const RULES_GRANT =
-  "A rule grants an email only when the email matches while the rule is active, and never mail that arrived before; check each rule's state with `primitive email-rules get-email-rule --id <rule-id>`.";
+const GRANT_POINTER =
+  "`primitive whoami --json --grant` shows which mail it reaches.";
 
-/** What the credential reads, as a sentence for the hint, or null when it reads every mailbox. */
-function reachSentence(reach: Reach): string | null {
+/** How a rule grants mail, and who can look at the rules: a key cannot read rules itself. */
+function rulesSentence(rules: string[]): string {
+  const one = rules.length === 1;
+  return `A rule grants an email that matches it on arrival while the rule is active, and the key reads that mail only while the rule stays active. The ${one ? "rule's" : "rules'"} author, signed in as themselves, can check ${one ? "its" : "each one's"} state with \`primitive email-rules get-email-rule --id <rule-id>\` (${named(rules)}).`;
+}
+
+/** What the credential reads, as sentences for the hint, or null when it reads every mailbox. */
+function reachSentence(reach: Reach, credential: string): string | null {
   switch (reach.kind) {
     case "org":
       return null;
     case "unknown":
-      return "This credential may not read every mailbox; `primitive whoami` shows which mail it reaches.";
+      return `This credential may not read every mailbox; ${GRANT_POINTER}`;
+    case "unreadable":
+      return `The server could not read this credential's stored mail scope, so it reaches no mail. ${GRANT_POINTER}`;
     case "none":
-      return "This credential reads no mail: its grant names no mailbox, domain or email rule. `primitive whoami` shows its grant.";
+      return `${credential} reads no mail: its grant names no mailbox, domain or email rule. ${GRANT_POINTER}`;
     case "rules_only":
-      return `This key reads only mail its ${plural(reach.rules, "email rule")} granted it. ${RULES_GRANT}`;
+      return `${credential} reads only mail its ${plural(reach.rules.length, "email rule")} granted. ${rulesSentence(reach.rules)}`;
     case "mailboxes":
-      return `This credential reads only ${named(reach.names)}${reach.rules > 0 ? `, and mail its ${plural(reach.rules, "email rule")} granted it` : ""}; mail to the organization's other mailboxes is not listed.`;
+      return `${credential} reads only ${named(reach.names)}${reach.rules.length > 0 ? `, and mail its ${plural(reach.rules.length, "email rule")} granted` : ""}; mail to the organization's other mailboxes is not listed.`;
   }
 }
 
 /**
  * The hint for an empty inbound email list: what was asked (the filter flags
- * given, or a page past the last), and what this credential reads.
+ * given, or a page or tail past the last email), and what this credential
+ * reads. `caller` is undefined when the grant could not be read, and null
+ * when it was not asked for (a tail poll, which should not double its
+ * requests).
  */
 export function emptyEmailListHint(input: {
   filterFlags: readonly string[];
-  paged: boolean;
-  mailScope: unknown;
+  /** The flag that read past the newest or last email, when one did. */
+  pastFlag?: "--cursor" | "--since";
+  caller: CallerMail | null | undefined;
   /** What to say for a credential that reads every mailbox and asked for everything. */
   orgHint?: string;
 }): string {
-  const reach = mailReach(input.mailScope);
-  const scope = reachSentence(reach);
+  const reach: Reach =
+    input.caller === null
+      ? { kind: "org" }
+      : mailReach(input.caller?.mailScope);
+  const kind = input.caller?.credentialKind;
+  const credential =
+    kind === "org_key" || kind === "function_key"
+      ? "This key"
+      : "This credential";
+  const scope = reachSentence(reach, credential);
+  const withScope = (lead: string) => `${lead}${scope ? ` ${scope}` : ""}`;
   if (input.filterFlags.length > 0) {
-    return `(no results) No inbound emails match the filters given (${input.filterFlags.join(", ")}).${scope ? ` ${scope}` : ""}`;
+    return withScope(
+      `(no results) No inbound emails match the filters given (${input.filterFlags.join(", ")}).`,
+    );
   }
-  if (input.paged) {
-    return `(no results) No more inbound emails after this cursor.${scope ? ` ${scope}` : ""}`;
+  if (input.pastFlag) {
+    return withScope(
+      `(no results) No inbound emails after the given ${input.pastFlag}.`,
+    );
   }
   if (!scope) return input.orgHint ?? ORG_EMPTY_HINT;
   if (reach.kind === "rules_only") {
-    return `(no results) No email has been granted to this key yet. ${scope}`;
+    return `(no results) No mail ${credential === "This key" ? "this key's" : "this credential's"} rules granted is readable now. ${scope}`;
   }
   if (reach.kind === "mailboxes") {
     return `(no results) No inbound emails yet in the mail this credential reads. ${scope}`;

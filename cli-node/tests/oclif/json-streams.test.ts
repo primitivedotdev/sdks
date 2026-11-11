@@ -68,22 +68,37 @@ type Responder = (
   request?: { body: string | undefined; method: string },
 ) => Response;
 
-/** A GET /whoami answer for an API key whose grant reaches `mailScope`. */
-function whoamiWithScope(mailScope: unknown) {
+/**
+ * A GET /whoami/grant answer whose grant reaches `mailScope`. GET /whoami
+ * itself is refused, as it is for a key without account:read, so a test that
+ * reads the grant from the wrong endpoint fails.
+ */
+function grantWithScope(mailScope: unknown, credentialKind = "org_key") {
   return {
     success: true,
     data: {
       org_id: "00000000-0000-4000-8000-0000000000aa",
-      auth_method: "api_key",
-      key_id: "00000000-0000-4000-8000-0000000000bb",
       grant: {
-        credential_kind: "org_key",
+        credential_kind: credentialKind,
         permissions: ["mail:read"],
         mail_scope: mailScope,
         catalog_version: "1",
       },
     },
   };
+}
+
+/** Answers GET /whoami/grant with `grant`, refuses GET /whoami, and answers anything else with `body`. */
+function answering(grant: unknown, body: unknown): Responder {
+  return (url) =>
+    url.pathname.endsWith("/whoami/grant")
+      ? jsonResponse(200, grant)
+      : url.pathname.endsWith("/whoami")
+        ? jsonResponse(403, {
+            success: false,
+            error: { code: "forbidden", message: "Insufficient permissions" },
+          })
+        : jsonResponse(200, body);
 }
 
 function jsonResponse(status: number, body: unknown): Response {
@@ -581,20 +596,17 @@ describe("generated commands with --json", () => {
   );
 
   it("drops the cursor line under --json and keeps it in --envelope", async () => {
-    responder = (url) =>
-      url.pathname.endsWith("/whoami")
-        ? jsonResponse(200, whoamiWithScope("org"))
-        : jsonResponse(200, {
-            success: true,
-            data: [],
-            meta: { cursor: "cursor-2" },
-          });
+    responder = answering(grantWithScope("org"), {
+      success: true,
+      data: [],
+      meta: { cursor: "cursor-2" },
+    });
     const bare = await runMerged("emails:list", ["--json"]);
     expect(bare.exitCode).toBe(0);
     expect(bare.stderr).toBe("");
     expect(parseOne(bare.merged)).toEqual([]);
     // A bare payload has nowhere to carry a hint, so nothing more is read for one.
-    expect(fetchCalls.map((c) => c.url.pathname)).not.toContain("/v1/whoami");
+    expect(fetchCalls.map((c) => c.url.pathname)).toEqual(["/v1/emails"]);
     const result = await runMerged("emails:list", ["--json", "--envelope"]);
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
@@ -607,44 +619,82 @@ describe("generated commands with --json", () => {
     expect(document.summary).toContain("No inbound emails received yet");
   });
 
-  describe("an empty email list says what the credential reads (CLI-3)", () => {
-    const emptyList = (scope: unknown) => (url: URL) =>
-      url.pathname.endsWith("/whoami")
-        ? jsonResponse(200, whoamiWithScope(scope))
-        : jsonResponse(200, {
-            success: true,
-            data: [],
-            meta: { cursor: null },
-          });
-
-    it("tells a key limited to email rules that none has granted it mail yet, not that the account has none", async () => {
-      responder = emptyList({
-        addresses: [],
-        domains: [],
-        rules: ["1b1b1b1b-0000-4000-8000-000000000001"],
-        depth: "content",
+  describe("an empty email list says what the credential reads", () => {
+    const RULE = "1b1b1b1b-0000-4000-8000-000000000001";
+    const rulesOnly = {
+      addresses: [],
+      domains: [],
+      rules: [RULE],
+      depth: "content",
+    };
+    const emptyList = (scope: unknown, kind = "org_key") =>
+      answering(grantWithScope(scope, kind), {
+        success: true,
+        data: [],
+        meta: { cursor: null },
       });
+
+    it("tells a key limited to email rules how its rules grant mail, not that the account has none", async () => {
+      responder = emptyList(rulesOnly);
       const result = await runMerged("emails:list", []);
       expect(result.exitCode).toBe(0);
       expect(result.stderr).not.toContain("received yet on this account");
       expect(result.stderr).toContain(
-        "(no results) No email has been granted to this key yet. This key reads only mail its 1 email rule granted it.",
+        "(no results) No mail this key's rules granted is readable now. This key reads only mail its 1 email rule granted. A rule grants an email that matches it on arrival while the rule is active, and the key reads that mail only while the rule stays active.",
       );
+      // A key cannot read rules, so the hint names the rule and who can check it.
       expect(result.stderr).toContain(
-        "primitive email-rules get-email-rule --id <rule-id>",
+        `The rule's author, signed in as themselves, can check its state with \`primitive email-rules get-email-rule --id <rule-id>\` (${RULE}).`,
       );
+      // Read from the endpoint any credential may ask about itself.
+      expect(fetchCalls.map((c) => c.url.pathname)).toEqual([
+        "/v1/emails",
+        "/v1/whoami/grant",
+      ]);
     });
 
     it("names the mailboxes a narrowed credential reads", async () => {
-      responder = emptyList({
-        addresses: ["poile@yuuja.test"],
-        domains: ["ops.yuuja.test"],
-        rules: [],
-        depth: "content",
-      });
+      responder = emptyList(
+        {
+          addresses: ["a@example.test"],
+          domains: ["ops.example.test"],
+          depth: "content",
+        },
+        "oauth",
+      );
       const result = await runMerged("emails:list", []);
       expect(result.stderr).toContain(
-        "(no results) No inbound emails yet in the mail this credential reads. This credential reads only poile@yuuja.test and any address at ops.yuuja.test; mail to the organization's other mailboxes is not listed.",
+        "(no results) No inbound emails yet in the mail this credential reads. This credential reads only a@example.test and any address at ops.example.test; mail to the organization's other mailboxes is not listed.",
+      );
+    });
+
+    it("reads mail:read's own scope where it reaches fewer mailboxes than the grant", async () => {
+      responder = answering(
+        {
+          success: true,
+          data: {
+            org_id: "00000000-0000-4000-8000-0000000000aa",
+            grant: {
+              credential_kind: "oauth",
+              permissions: ["mail:read", "mail:send"],
+              mail_scope: "org",
+              scoped_permissions: {
+                "mail:read": {
+                  addresses: ["a@example.test"],
+                  domains: [],
+                  depth: "raw",
+                },
+              },
+              catalog_version: "1",
+            },
+          },
+        },
+        { success: true, data: [], meta: { cursor: null } },
+      );
+      const result = await runMerged("emails:list", []);
+      expect(result.stderr).not.toContain("received yet on this account");
+      expect(result.stderr).toContain(
+        "This credential reads only a@example.test;",
       );
     });
 
@@ -657,6 +707,15 @@ describe("generated commands with --json", () => {
       expect(result.stderr).not.toContain("received yet");
     });
 
+    it("says a --since tail is caught up, without reading the grant on every poll", async () => {
+      responder = emptyList(rulesOnly);
+      const result = await runMerged("emails:list", ["--since", "c1"]);
+      expect(result.stderr).toContain(
+        "(no results) No inbound emails after the given --since.",
+      );
+      expect(fetchCalls.map((c) => c.url.pathname)).toEqual(["/v1/emails"]);
+    });
+
     it("keeps the whole-org hint for a credential that reads every mailbox", async () => {
       responder = emptyList("org");
       const result = await runMerged("emails:list", []);
@@ -665,10 +724,10 @@ describe("generated commands with --json", () => {
       );
     });
 
-    it("does not claim the account is empty when the credential cannot be read", async () => {
-      responder = (url) =>
-        url.pathname.endsWith("/whoami")
-          ? serverError(url, undefined)
+    it("does not claim the account is empty when the grant cannot be read", async () => {
+      responder = (url, init) =>
+        url.pathname.endsWith("/whoami/grant")
+          ? serverError(url, init)
           : jsonResponse(200, {
               success: true,
               data: [],
@@ -678,41 +737,31 @@ describe("generated commands with --json", () => {
       expect(result.exitCode).toBe(0);
       expect(result.stderr).not.toContain("received yet on this account");
       expect(result.stderr).toContain(
-        "`primitive whoami` shows which mail it reaches",
+        "`primitive whoami --json --grant` shows which mail it reaches",
       );
     });
 
     it("carries the credential's hint in --envelope", async () => {
-      responder = emptyList({
-        addresses: [],
-        domains: [],
-        rules: ["1b1b1b1b-0000-4000-8000-000000000001"],
-        depth: "content",
-      });
+      responder = emptyList(rulesOnly);
       const result = await runMerged("emails:list", ["--json", "--envelope"]);
       expect(result.stderr).toBe("");
       const document = parseOne(result.merged) as Record<string, unknown>;
       expect(String(document.summary)).toContain(
-        "No email has been granted to this key yet.",
+        "No mail this key's rules granted is readable now.",
       );
     });
 
     it("says the same in emails latest", async () => {
-      responder = emptyList({
-        addresses: [],
-        domains: [],
-        rules: ["1b1b1b1b-0000-4000-8000-000000000001"],
-        depth: "content",
-      });
+      responder = emptyList(rulesOnly);
       const result = await runMerged("emails:latest", []);
       expect(result.exitCode).toBe(0);
       expect(result.stderr).toContain(
-        "No email has been granted to this key yet.",
+        "No mail this key's rules granted is readable now.",
       );
       responder = emptyList("org");
       const whole = await runMerged("emails:latest", []);
       expect(whole.stderr).toContain(
-        "No inbound emails yet. Send an email to one of your verified domains to populate this list.",
+        "(no results) No inbound emails yet. Send an email to one of your verified domains to populate this list.",
       );
     });
   });
