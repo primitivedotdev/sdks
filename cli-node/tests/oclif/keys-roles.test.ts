@@ -377,6 +377,36 @@ describe("keys helpers", () => {
     ).toBe(false);
   });
 
+  it("restates a grant only when the read shows its resource limits, and none", () => {
+    const base = {
+      template: null,
+      permissions: ["mail:read"],
+      mail_scope: "org",
+    };
+    const change = { add: ["mail:send"], remove: [] };
+    // No resources field: the server does not say, so nothing is restated, ref or not.
+    expect(buildUpdatedGrant({ ...base, ref: "g1" }, change)).toMatchObject({
+      ok: false,
+      message: expect.stringContaining(
+        "The server does not say whether this key is limited",
+      ),
+    });
+    // None, as null or an empty map: restated.
+    expect(buildUpdatedGrant({ ...base, resources: null }, change).ok).toBe(
+      true,
+    );
+    expect(buildUpdatedGrant({ ...base, resources: {} }, change).ok).toBe(true);
+    // A type listed with no ids allows none of that type: a limit, which the change could not keep.
+    expect(
+      buildUpdatedGrant({ ...base, resources: { function: [] } }, change),
+    ).toMatchObject({
+      ok: false,
+      message: expect.stringContaining(
+        "create a key with what you need and revoke this one",
+      ),
+    });
+  });
+
   it("asks for approval, waits for the token, and sends the request again with it", async () => {
     const tokens: Array<string | undefined> = [];
     const opened: string[] = [];
@@ -658,7 +688,7 @@ describe("keys commands", () => {
   });
 
   it("update adds permissions to a read-only key, guarded by the grant it read, and says what happens to held requests", async () => {
-    const reader = { ...READER, grant: { ...READER.grant, ref: "grant-1" } };
+    const reader = READER;
     const upgraded = {
       ...READER,
       grant: {
@@ -864,10 +894,18 @@ describe("keys commands", () => {
       "--no-browser",
     ]);
     expect(result.stderr).toContain(
-      "The server did not say which grant this key holds, so this change is not checked against changes made since it was read.",
+      "Note: the server did not say which grant this key holds, so this change is not checked against changes made since it was read.",
     );
     const patch = requests.find((r) => r.method === "PATCH") as Request;
-    expect(await patch.json()).not.toHaveProperty("expected_grant_ref");
+    expect(await patch.json()).not.toHaveProperty("expected_grant_ref"); // Under --json the note stays out of stderr.
+    const json = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--add",
+      "mail:send",
+      "--no-browser",
+      "--json",
+    ]);
+    expect(json.stderr).not.toContain("which grant this key holds");
   });
 
   it("revoke without --yes and without a terminal sends nothing; with --yes it revokes an API key", async () => {

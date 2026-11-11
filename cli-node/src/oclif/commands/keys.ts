@@ -383,7 +383,7 @@ export function buildUpdatedGrant(
     return {
       ok: false,
       message:
-        "This key is limited to selected resources, which the CLI cannot restate. Change it in the dashboard.",
+        "This key is limited to selected Functions, domains, endpoints or routes, which a change to its grant cannot keep. To change what it can do, create a key with what you need and revoke this one.",
     };
   }
   const held = stringList(current.permissions);
@@ -885,7 +885,7 @@ export class KeysUpdateCommand extends Command {
       if (typeof ref === "string") body.expected_grant_ref = ref;
       else if (!flags.json) {
         process.stderr.write(
-          "The server did not say which grant this key holds, so this change is not checked against changes made since it was read.\n",
+          "Note: the server did not say which grant this key holds, so this change is not checked against changes made since it was read.\n",
         );
       }
     }
