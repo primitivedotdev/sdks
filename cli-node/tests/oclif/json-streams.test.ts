@@ -68,6 +68,38 @@ type Responder = (
   request?: { body: string | undefined; method: string },
 ) => Response;
 
+/**
+ * A GET /whoami/grant answer whose grant reaches `mailScope`. GET /whoami is
+ * refused here, so a test that reads the grant from the wrong endpoint fails.
+ */
+function grantWithScope(mailScope: unknown, credentialKind = "org_key") {
+  return {
+    success: true,
+    data: {
+      org_id: "00000000-0000-4000-8000-0000000000aa",
+      grant: {
+        credential_kind: credentialKind,
+        permissions: ["mail:read"],
+        mail_scope: mailScope,
+        catalog_version: "1",
+      },
+    },
+  };
+}
+
+/** Answers GET /whoami/grant with `grant`, refuses GET /whoami, and answers anything else with `body`. */
+function answering(grant: unknown, body: unknown): Responder {
+  return (url) =>
+    url.pathname.endsWith("/whoami/grant")
+      ? jsonResponse(200, grant)
+      : url.pathname.endsWith("/whoami")
+        ? jsonResponse(403, {
+            success: false,
+            error: { code: "forbidden", message: "Insufficient permissions" },
+          })
+        : jsonResponse(200, body);
+}
+
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     headers: { "content-type": "application/json" },
@@ -563,16 +595,17 @@ describe("generated commands with --json", () => {
   );
 
   it("drops the cursor line under --json and keeps it in --envelope", async () => {
-    responder = () =>
-      jsonResponse(200, {
-        success: true,
-        data: [],
-        meta: { cursor: "cursor-2" },
-      });
+    responder = answering(grantWithScope("org"), {
+      success: true,
+      data: [],
+      meta: { cursor: "cursor-2" },
+    });
     const bare = await runMerged("emails:list", ["--json"]);
     expect(bare.exitCode).toBe(0);
     expect(bare.stderr).toBe("");
     expect(parseOne(bare.merged)).toEqual([]);
+    // A bare payload has nowhere to carry a hint, so nothing more is read for one.
+    expect(fetchCalls.map((c) => c.url.pathname)).toEqual(["/v1/emails"]);
     const result = await runMerged("emails:list", ["--json", "--envelope"]);
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
@@ -582,7 +615,461 @@ describe("generated commands with --json", () => {
       data: [],
       meta: { cursor: "cursor-2" },
     });
-    expect(document.summary).toContain("No inbound emails received yet");
+    // The page has a next cursor, so the hint says the list goes on rather than that it is empty, and no grant is read.
+    expect(document.summary).toContain(
+      "This page came back empty, but the list goes on: continue with --cursor cursor-2.",
+    );
+    expect(fetchCalls.map((c) => c.url.pathname)).toEqual([
+      "/v1/emails",
+      "/v1/emails",
+    ]);
+  });
+
+  it("keeps a caught-up --since tail's wording even when its page carries a cursor", async () => {
+    responder = answering(grantWithScope("org"), {
+      success: true,
+      data: [],
+      meta: { cursor: "c9" },
+    });
+    const result = await runMerged("emails:list", ["--since", "c1"]);
+    expect(result.stderr).toContain(
+      "(no results) No inbound emails after the given --since.",
+    );
+    expect(result.stderr).not.toContain("continue with --cursor");
+  });
+
+  describe("an empty email list says what the credential reads", () => {
+    const RULE = "1b1b1b1b-0000-4000-8000-000000000001";
+    const rulesOnly = {
+      addresses: [],
+      domains: [],
+      rules: [RULE],
+      depth: "content",
+    };
+    const emptyList = (scope: unknown, kind = "org_key") =>
+      answering(grantWithScope(scope, kind), {
+        success: true,
+        data: [],
+        meta: { cursor: null },
+      });
+
+    it("tells a key limited to email rules how its rules grant mail, not that the account has none", async () => {
+      responder = emptyList(rulesOnly);
+      const result = await runMerged("emails:list", []);
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).not.toContain("received yet on this account");
+      expect(result.stderr).toContain(
+        "(no results) No mail this key's rules granted is readable now. This key reads only mail its 1 email rule granted. A rule grants an email it matches when the email is evaluated, shortly after it arrives, while the rule is active, and the key reads that mail only while the rule stays active.",
+      );
+      // A key cannot read rules, so the hint names the rule and who can check it.
+      expect(result.stderr).toContain(
+        `Each id (${RULE}) is an email rule or a rule shared with the key's holder: a rule's author, signed in as themselves, can check it with \`primitive email-rules get-email-rule --id <id>\``,
+      );
+      // Read from the endpoint any credential may ask about itself.
+      expect(fetchCalls.map((c) => c.url.pathname)).toEqual([
+        "/v1/emails",
+        "/v1/whoami/grant",
+      ]);
+      // With the credential's own token: the read uses plain fetch, not the client's, but keeps its auth.
+      expect(
+        new Headers(fetchCalls[1]?.init?.headers).get("authorization"),
+      ).toBe("Bearer prim_test_json_streams");
+    });
+
+    it("names the mailboxes a narrowed credential reads", async () => {
+      responder = emptyList(
+        {
+          addresses: ["a@example.test"],
+          domains: ["ops.example.test"],
+          depth: "content",
+        },
+        "oauth",
+      );
+      const result = await runMerged("emails:list", []);
+      expect(result.stderr).toContain(
+        "(no results) No inbound emails yet in the mail this login reads. This login reads a@example.test and any address at ops.example.test, and mail from email rules colleagues shared with you (`primitive email-rules list-email-rule-shares` lists them); other mail is not listed.",
+      );
+    });
+
+    it("reads mail:read's own scope where it reaches fewer mailboxes than the grant", async () => {
+      responder = answering(
+        {
+          success: true,
+          data: {
+            org_id: "00000000-0000-4000-8000-0000000000aa",
+            grant: {
+              credential_kind: "oauth",
+              // A permission held over fewer mailboxes is listed only under scoped_permissions.
+              permissions: ["mail:send"],
+              mail_scope: "org",
+              scoped_permissions: {
+                "mail:read": {
+                  addresses: ["a@example.test"],
+                  domains: [],
+                  depth: "raw",
+                },
+              },
+              catalog_version: "1",
+            },
+          },
+        },
+        { success: true, data: [], meta: { cursor: null } },
+      );
+      const result = await runMerged("emails:list", []);
+      expect(result.stderr).not.toContain("received yet on this account");
+      expect(result.stderr).toContain(
+        "This login reads a@example.test, and mail from email rules colleagues shared with you",
+      );
+    });
+
+    it("never asks GET /whoami/grant with a connected agent's key, which may not ask it", async () => {
+      process.env.PRIMITIVE_API_KEY = "pconn_test_json_streams";
+      responder = (url) =>
+        url.pathname.endsWith("/whoami/grant")
+          ? jsonResponse(403, {
+              success: false,
+              error: {
+                code: "agent_connection_scope_forbidden",
+                message: "Not for a connection key",
+              },
+            })
+          : jsonResponse(200, {
+              success: true,
+              data: [],
+              meta: { cursor: null },
+            });
+      const result = await runMerged("emails:list", []);
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toContain(
+        "This connection key reads the address it was connected for, and any member mailbox its owner gave it",
+      );
+      expect(fetchCalls.map((c) => c.url.pathname)).toEqual(["/v1/emails"]);
+    });
+
+    it("says no email matched the filters, rather than that none was received", async () => {
+      responder = emptyList("org");
+      const result = await runMerged("emails:list", ["--search", "invoice"]);
+      expect(result.stderr).toContain(
+        "(no results) No inbound emails match the filters given (--search).",
+      );
+      expect(result.stderr).not.toContain("received yet");
+    });
+
+    it("says a --since tail is caught up, without reading the grant on every poll", async () => {
+      responder = emptyList(rulesOnly);
+      const result = await runMerged("emails:list", ["--since", "c1"]);
+      expect(result.stderr).toContain(
+        "(no results) No inbound emails after the given --since.",
+      );
+      expect(fetchCalls.map((c) => c.url.pathname)).toEqual(["/v1/emails"]);
+    });
+
+    it("keeps the whole-org hint for a credential that reads every mailbox", async () => {
+      responder = emptyList("org");
+      const result = await runMerged("emails:list", []);
+      expect(result.stderr).toContain(
+        "(no results) No inbound emails received yet on this account.",
+      );
+    });
+
+    it("does not claim the account is empty when the grant cannot be read", async () => {
+      responder = (url, init) =>
+        url.pathname.endsWith("/whoami/grant")
+          ? serverError(url, init)
+          : jsonResponse(200, {
+              success: true,
+              data: [],
+              meta: { cursor: null },
+            });
+      const result = await runMerged("emails:list", []);
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).not.toContain("received yet on this account");
+      expect(result.stderr).toContain(
+        "`primitive whoami --json --grant` shows which mail it reaches",
+      );
+    });
+
+    it("keeps --json --envelope to one document with exit 0 when the grant cannot be read", async () => {
+      responder = (url, init) =>
+        url.pathname.endsWith("/whoami/grant")
+          ? serverError(url, init)
+          : jsonResponse(200, {
+              success: true,
+              data: [],
+              meta: { cursor: null },
+            });
+      const result = await runMerged("emails:list", ["--json", "--envelope"]);
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toBe("");
+      expect(
+        String((parseOne(result.merged) as Record<string, unknown>).summary),
+      ).toContain("may not read every mailbox");
+    });
+
+    it("says an empty page with a next cursor is not the end, and reads no grant for it", async () => {
+      responder = answering(grantWithScope("org"), {
+        success: true,
+        data: [],
+        meta: { cursor: "c3" },
+      });
+      const result = await runMerged("emails:list", ["--cursor", "c2"]);
+      expect(result.stderr).toContain(
+        "(no results) This page came back empty, but the list goes on: continue with --cursor c3.",
+      );
+      expect(fetchCalls.map((c) => c.url.pathname)).toEqual(["/v1/emails"]);
+    });
+
+    it("says a page past the last is past the given --cursor", async () => {
+      responder = emptyList("org");
+      const result = await runMerged("emails:list", ["--cursor", "c2"]);
+      expect(result.stderr).toContain(
+        "(no results) No more inbound emails past the given --cursor.",
+      );
+    });
+
+    it("carries the credential's hint in --envelope", async () => {
+      responder = emptyList(rulesOnly);
+      const result = await runMerged("emails:list", ["--json", "--envelope"]);
+      expect(result.stderr).toBe("");
+      const document = parseOne(result.merged) as Record<string, unknown>;
+      expect(String(document.summary)).toContain(
+        "No mail this key's rules granted is readable now.",
+      );
+    });
+
+    it("says the same in emails latest", async () => {
+      responder = emptyList(rulesOnly);
+      const result = await runMerged("emails:latest", []);
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toContain(
+        "No mail this key's rules granted is readable now.",
+      );
+      responder = emptyList("org");
+      const whole = await runMerged("emails:latest", []);
+      expect(whole.stderr).toContain(
+        "(no results) No inbound emails yet. Send an email to one of your verified domains to populate this list.",
+      );
+    });
+  });
+
+  describe("giving someone a role that reads every mailbox says so", () => {
+    const ROLES = {
+      roles: [
+        {
+          id: "r-member",
+          key: "member",
+          kind: "builtin",
+          name: "Member",
+          permissions: ["mail:read", "mail:send"],
+          mail_scope: "org",
+        },
+        {
+          id: "r-own",
+          key: "own_mail_read_only",
+          kind: "template",
+          name: "Read only (own mail)",
+          permissions: ["mail:read"],
+          mail_scope: { self: true, depth: "raw" },
+        },
+      ],
+      templates: [],
+      invitations: {
+        limited_roles_available: true,
+        members_read_all_mail: true,
+      },
+    };
+    const MEMBER_ID = "00000000-0000-4000-8000-0000000000cc";
+    const MEMBER_WARNING =
+      'Warning: the role "Member" reads all of this organization\'s mail while this organization uses whole-organization access';
+    const invite = () =>
+      runMerged("organizations:invite-organization-member", [
+        "--request-id",
+        "00000000-0000-4000-8000-0000000000dd",
+        "--email",
+        "a@example.test",
+      ]);
+
+    it("explains why an invitation for Member is refused where every member reads all mail, instead of the generic advice", async () => {
+      responder = () =>
+        jsonResponse(403, {
+          success: false,
+          error: {
+            code: "grant_forbidden",
+            message:
+              "Inviting someone with this role needs you to be signed in to the dashboard, with permission to assign roles.",
+          },
+        });
+      const result = await invite();
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain(
+        "In this organization every Member reads all of its mail",
+      );
+      expect(result.stderr).toContain("--role none");
+      // The generic grant_forbidden advice (widen the grant) cannot help here.
+      expect(result.stderr).not.toContain("widen it");
+    });
+
+    it("leaves a refusal for a grant that lacks a permission to its own hint", async () => {
+      responder = () =>
+        jsonResponse(403, {
+          success: false,
+          error: {
+            code: "grant_forbidden",
+            message:
+              "This credential's grant does not include invitations:manage.",
+            details: {
+              permission: "invitations:manage",
+              reason: "permission_missing",
+              credential_kind: "oauth",
+            },
+          },
+        });
+      const result = await invite();
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).not.toContain("every Member reads all of its mail");
+      // The generic advice stays, since widening the grant is what helps here.
+      expect(result.stderr).toContain("widen it");
+    });
+
+    it("warns before the request when the role reads every mailbox", async () => {
+      responder = (url) =>
+        url.pathname.endsWith("/roles")
+          ? jsonResponse(200, { success: true, data: ROLES })
+          : jsonResponse(200, {
+              success: true,
+              data: { id: MEMBER_ID, role: "member" },
+            });
+      const result = await runMerged("roles-and-members:set-member-role", [
+        "--id",
+        MEMBER_ID,
+        "--role",
+        "member",
+      ]);
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toContain(MEMBER_WARNING);
+      // Read before the change is sent, so it shows ahead of any approval link.
+      expect(fetchCalls.map((c) => `${c.method} ${c.url.pathname}`)).toEqual([
+        "GET /v1/roles",
+        `PUT /v1/members/${MEMBER_ID}/role`,
+      ]);
+    });
+
+    it("carries the warning in --json, on success and when the change waits for approval", async () => {
+      responder = (url) =>
+        url.pathname.endsWith("/roles")
+          ? jsonResponse(200, { success: true, data: ROLES })
+          : jsonResponse(200, {
+              success: true,
+              data: { id: MEMBER_ID, role: "member" },
+            });
+      const json = await runMerged("roles-and-members:set-member-role", [
+        "--id",
+        MEMBER_ID,
+        "--role",
+        "member",
+        "--json",
+      ]);
+      expect(json.exitCode).toBe(0);
+      expect(JSON.stringify(parseOne(json.merged))).toContain(
+        JSON.stringify(MEMBER_WARNING).slice(1, -1),
+      );
+      responder = (url) =>
+        url.pathname.endsWith("/roles")
+          ? jsonResponse(200, { success: true, data: ROLES })
+          : jsonResponse(403, {
+              success: false,
+              error: {
+                code: "step_up_required",
+                message: "Confirm this change.",
+                details: {
+                  step_up_url: "https://app.example.test/step-up/abc",
+                  purpose: "roles.write",
+                },
+              },
+            });
+      const waiting = await runMerged("roles-and-members:set-member-role", [
+        "--id",
+        MEMBER_ID,
+        "--role",
+        "member",
+        "--json",
+      ]);
+      expect(waiting.exitCode).not.toBe(0);
+      expect(JSON.stringify(parseOne(waiting.merged))).toContain(
+        JSON.stringify(MEMBER_WARNING).slice(1, -1),
+      );
+    });
+
+    it("says nothing for a narrower role, and still reads the roles before the change", async () => {
+      responder = (url) =>
+        url.pathname.endsWith("/roles")
+          ? jsonResponse(200, { success: true, data: ROLES })
+          : jsonResponse(200, {
+              success: true,
+              data: { id: MEMBER_ID, role: "own_mail_read_only" },
+            });
+      const narrower = await runMerged("roles-and-members:set-member-role", [
+        "--id",
+        MEMBER_ID,
+        "--role",
+        "own_mail_read_only",
+      ]);
+      expect(narrower.exitCode).toBe(0);
+      expect(narrower.stderr).not.toContain("Warning");
+      expect(fetchCalls.map((c) => `${c.method} ${c.url.pathname}`)).toEqual([
+        "GET /v1/roles",
+        `PUT /v1/members/${MEMBER_ID}/role`,
+      ]);
+    });
+
+    it("prints the warning before the approval link", async () => {
+      responder = (url) =>
+        url.pathname.endsWith("/roles")
+          ? jsonResponse(200, { success: true, data: ROLES })
+          : jsonResponse(403, {
+              success: false,
+              error: {
+                code: "step_up_required",
+                message: "Confirm this change.",
+                details: {
+                  step_up_url: "https://app.example.test/step-up/abc",
+                  purpose: "roles.write",
+                },
+              },
+            });
+      const waiting = await runMerged("roles-and-members:set-member-role", [
+        "--id",
+        MEMBER_ID,
+        "--role",
+        "member",
+        "--no-browser",
+      ]);
+      const warned = waiting.stderr.indexOf(MEMBER_WARNING);
+      const link = waiting.stderr.indexOf(
+        "https://app.example.test/step-up/abc",
+      );
+      expect(warned).toBeGreaterThanOrEqual(0);
+      expect(link).toBeGreaterThan(warned);
+    });
+
+    it("still changes the role when the roles cannot be read, without a warning", async () => {
+      responder = (url, init) =>
+        url.pathname.endsWith("/roles")
+          ? serverError(url, init)
+          : jsonResponse(200, {
+              success: true,
+              data: { id: MEMBER_ID, role: "member" },
+            });
+      const result = await runMerged("roles-and-members:set-member-role", [
+        "--id",
+        MEMBER_ID,
+        "--role",
+        "member",
+      ]);
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).not.toContain("Warning");
+      expect(fetchCalls.map((c) => c.method)).toContain("PUT");
+    });
   });
 
   it("takes the email id of list-email-rule-results as --email-id, and --id still works", async () => {

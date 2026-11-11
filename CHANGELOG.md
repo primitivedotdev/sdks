@@ -531,6 +531,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
 
 #### New parameters and fields on existing operations
 
+- `rotateKey` takes `expires_at`: the new key's expiry, a time or null for
+  none, instead of the old key's.
 - `Primitive-Step-Up` is a declared header parameter on the 36 operations that
   accept a step-up confirmation token, so a client can send the confirmation
   token through the generated call: `headers: { "Primitive-Step-Up": token }`
@@ -762,6 +764,23 @@ parsers.
 
 #### CLI
 
+- An empty `emails list` or `emails latest` says what the credential reads
+  instead of "No inbound emails received yet on this account", which is true
+  only for a credential that reads every mailbox: a key limited to email
+  rules is told how its rules grant mail and who can check them, a narrowed
+  credential is told which mailboxes it reads, and a filtered list, a page
+  past the last and a caught-up `--since` tail say so, and an empty page that
+  still has a next cursor says to continue with it. The credential's reach
+  is read from `GET /whoami/grant` only when a hint is printed, and a
+  connected agent's key is answered from its own address.
+- `roles-and-members set-member-role` warns, before the change is sent and
+  before any approval link, when the role reads all of the organization's
+  mail while the organization uses whole-organization access (it holds
+  `mail:read` over the whole organization). `organizations
+  invite-organization-member` refused for Member, or for a role above it,
+  says why: only an invitation sent from the dashboard can offer that role
+  (and there every Member reads all of its mail), so from the CLI invite
+  with `--role none` and give a role once they have joined.
 - `primitive activity created` lists what you created, newest first, with
   where each object stands now. Signed in with `primitive login`, it covers
   what you created through any credential of yours, names the credential on
@@ -796,6 +815,21 @@ parsers.
   token and sends the request again, as `primitive keys` does; under
   `--json` or without a terminal it prints the link and how to rerun.
   `endpoints create` and `endpoints update` take them as well.
+- The help for `email-rules test-email-rule`, `create-email-rule` and
+  `update-email-rule` names both expectation reports: a test answers with
+  `expectations` (`passed`, `counts`, `results`), and a create or update
+  with `expectations_check` (`passed`, `decided`, `failed`, `undecided`).
+- `emails watch`, and `emails wait` when it waits for more than one email,
+  now report an email that became readable after a later one was reported,
+  as mail can when it is accepted more slowly, held while its sender is
+  checked, or granted to a key by an email rule, if it becomes readable
+  within ten minutes of arriving. While nothing new arrives they re-read
+  recent mail, up to its 300 newest matching emails, at most every 15
+  seconds (or every three poll intervals, when that is longer), so such an
+  email prints after the later one. A wait or watch with a time limit can
+  end before the next re-read, and a search by words that the server stops
+  early for time may not reach as far back. A connected agent's
+  `emails wait` reads its mail another way and is unchanged.
 - `emails wait --since` and `emails watch --since` also take a duration
   ago, such as `15m` or `2h`. `emails wait` says in its help, and in its
   timeout message, that without `--since` or `--include-existing` it counts
@@ -835,6 +869,16 @@ parsers.
 - `keys update --json` prints the key at the top level, in the shape
   `keys get` and `keys create` print, with `changed`, `warnings` and
   `address_warnings` alongside, instead of nesting it under `key`.
+- `keys update --expires-at <time>` gives a key a new expiry, which is how
+  to keep a key working past its expiry: a later time extends it, within
+  the organization's credential policy. `--no-expiry` removes it where the
+  policy allows. `keys rotate` takes the same two flags for the new key.
+  Without them the new key keeps the old key's expiry, and the command now
+  prints when the new key expires. The time is ISO 8601 with its time zone.
+- `keys revoke` counts separately what the key set up for the
+  organization, which keeps working, and what the key owned itself, such as
+  its own webhooks, which stop with it. Its help no longer says that
+  everything the key set up keeps working.
 - Generated commands the API answers only in a dashboard session, such as
   `credentials list-credentials` and `credentials list-credential-events`,
   say so: their summary, which short help prints, ends with `(dashboard

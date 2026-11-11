@@ -49155,14 +49155,18 @@ func (s *Server) handleRotateEndpointSigningSecretRequest(args [1]string, argsEs
 // secret once. The old key keeps working for overlap_seconds, then stops: 24 hours when
 // overlap_seconds is omitted, at most 7 days, never past its own expires_at, and at once with 0
 // (which is how to rotate a key whose secret leaked). previous_key_expires_at says when the old key
-// stops. The person rotating must cover the key's access (403 grant_forbidden, details.reason
-// target_not_covered), and a key an owner holds is rotated by an owner only (403 forbidden, details.
-// reason owner_key_rotation), since rotating hands over the new secret. The person's own Primitive
-// CLI login needs no step-up (it acts as the person, held to the same rules) unless the
-// organization's credential policy sets cli_writes_require_approval; the Primitive app's token is
-// refused, even with one. Needs the organization's credential features to be enabled; while they are
-// not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive
-// to turn them on.
+// stops. Rotating does not extend a key: the successor keeps the old expiry unless expires_at gives
+// it a new one. That needs keys:manage (403 forbidden otherwise), is held to the credential policy
+// (400 when past its maximum lifetime, with the latest expiry it allows now in the message), and
+// someone limited to their own keys can only keep or bring it forward (403 grant_forbidden, details.
+// reason own_key_tighten_only); the old key then never outlives the new one. The person rotating
+// must cover the key's access (403 grant_forbidden, details.reason target_not_covered), and a key an
+// owner holds is rotated by an owner only (403 forbidden, details.reason owner_key_rotation), since
+// rotating hands over the new secret. The person's own Primitive CLI login needs no step-up (it acts
+// as the person, held to the same rules) unless the organization's credential policy sets
+// cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the
+// organization's credential features to be enabled; while they are not, this answers 404
+// feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 // Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
 // organization's credential policy sets cli_writes_require_approval), or the person's own OAuth
 // token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one
@@ -59454,16 +59458,23 @@ func (s *Server) handleUpdateGroupRequest(args [1]string, argsEscaped bool, w ht
 
 // handleUpdateKeyRequest handles updateKey operation.
 //
-// Rename a key, change its expiry, its grant or its conditions, or suspend it. Any change needs the
-// person's own access to cover the key's access now (an owner covers every key); otherwise 403
-// grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key and
-// is held to the same rules as creating one (a custom grant that does not say which mail it reaches
-// is refused with details.reason mail_scope_required), so it takes the same step-up. The person's
-// own Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless
-// the organization's credential policy sets cli_writes_require_approval; the Primitive app's token
-// is refused, even with one. Needs the organization's credential features to be enabled; while they
-// are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact
-// Primitive to turn them on.
+// Rename a key, change its expiry, its grant or its conditions, or suspend it. A later expires_at
+// extends the key, which is how to keep a key working past its expiry (rotating keeps it, unless the
+// rotation gives the new key an expires_at): it is held to the credential policy (400 when past its
+// maximum lifetime, with the latest expiry it allows now in the message), and like any loosening
+// needs the person to be allowed to create a key with the key's access. Expiry is final: an expired
+// key's expiry cannot be changed (409 conflict, details.reason key_expired); make a new key instead.
+// Any change needs the person's own access to cover the key's access now (an owner covers every key);
+//
+//	otherwise 403 grant_forbidden, details.reason target_not_covered. A grant change is a new version
+//
+// of the key and is held to the same rules as creating one (a custom grant that does not say which
+// mail it reaches is refused with details.reason mail_scope_required), so it takes the same step-up.
+// The person's own Primitive CLI login needs no step-up (it acts as the person, held to the same
+// rules) unless the organization's credential policy sets cli_writes_require_approval; the Primitive
+// app's token is refused, even with one. Needs the organization's credential features to be enabled;
+// while they are not, this answers 404 feature_disabled, with details.feature naming the feature.
+// Contact Primitive to turn them on.
 // Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
 // organization's credential policy sets cli_writes_require_approval), or the person's own OAuth
 // token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one

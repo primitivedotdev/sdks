@@ -29,7 +29,10 @@ class CredentialsUpdateKeyInput:
     """ 
         Attributes:
             name (str | Unset):
-            expires_at (datetime.datetime | None | Unset):
+            expires_at (datetime.datetime | None | Unset): A new expiry. A later time extends the key and an earlier one
+                ends it sooner, within the organization's credential policy (its maximum key lifetime counts from now); null
+                removes the expiry, where the policy allows. A rotated-out key's expiry can only be brought forward, and an
+                expired key's cannot be changed.
             grant (CredentialsUpdateKeyInputGrantType0 | CredentialsUpdateKeyInputGrantType1 | Unset):
             expected_grant_ref (str | Unset):
             conditions (CredentialsUpdateKeyInputConditionsType0 | None | Unset):

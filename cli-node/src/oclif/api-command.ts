@@ -36,6 +36,11 @@ import {
   versionMovedHint,
 } from "./email-rule-authoring.js";
 import {
+  emptyEmailListHint,
+  listFilters,
+  readCallerMailFor,
+} from "./empty-mail-hint.js";
+import {
   bodyHasRules,
   currentEndpointRules,
   EVENT_TYPES_FLAG_DESCRIPTION,
@@ -57,6 +62,11 @@ import {
   fromVerifiedExpectation,
 } from "./from-verified-filter.js";
 import { writeIdempotentReplayBannerIfReplay } from "./idempotent-replay-banner.js";
+import {
+  inviteRefusalHint,
+  readRoles,
+  roleReadsAllMailWarning,
+} from "./member-role-mail.js";
 import type {
   OperationExtension,
   OperationReport,
@@ -860,6 +870,8 @@ export function forbiddenHint(payload: unknown): string | null {
 export function writeErrorWithHints(
   payload: unknown,
   response?: Response,
+  /** codeHint false leaves out the hint for the error code, where the operation's own hint says what applies. */
+  options: { codeHint?: boolean } = {},
 ): void {
   const formatted = formatErrorPayload(payload);
   process.stderr.write(`${formatted}\n`);
@@ -875,7 +887,7 @@ export function writeErrorWithHints(
     process.stderr.write(`${rateLimitHint(response)}\n`);
     return;
   }
-  if (!code) return;
+  if (!code || options.codeHint === false) return;
   if (code === "grant_forbidden") {
     process.stderr.write(`${grantForbiddenHint(payload)}\n`);
     return;
@@ -1444,7 +1456,7 @@ export const OPERATION_HINTS: Record<string, string> = {
   startAgentSignup:
     "Tip: pass --terms-accepted. Capture the signup_token from the response and feed it to `primitive agent verify-agent-signup --signup-token <token> --verification-code <6-digit-code>` (the verify flag accepts --code as an alias). The high-level `primitive signup <email>` command walks an interactive user through both steps with friendlier prompts.",
   testEmailRule:
-    "Tip: --expect-match and --expect-no-match (or --expect-file) set expect, the emails the rule must match and must not. When no expect is sent, by these flags or in the body, a saved rule's saved expectations are judged instead. The exit code follows whichever expectations the answer judged: 1 when one failed; 1 when one is undecided and testing again will not decide it (its email cannot be found or read, cannot be classified, or cannot be tested: skipped); 3 when the only undecided ones can be decided later (not classified yet, or a question unanswered), so test again later. Exit 1 also means the request failed. With --json, error.code tells these apart: expectations_failed, expectations_unresolvable, expectations_undecided (exit 3), or the API's own code. Without --json a readable report follows the JSON on stderr: warnings, how each condition held, the expectations, and the values each email that did not match was compared on.",
+    "Tip: --expect-match and --expect-no-match (or --expect-file) set expect, the emails the rule must match and must not. When no expect is sent, by these flags or in the body, a saved rule's saved expectations are judged instead. Either way, the answer reports the expectations it judged in expectations: passed, counts and per-email results. (create-email-rule and update-email-rule instead judge the rule's saved expectations on the version they save, in expectations_check: passed, decided, failed and undecided.) The exit code follows that report: 1 when one failed; 1 when one is undecided and testing again will not decide it (its email cannot be found or read, cannot be classified, or cannot be tested: skipped); 3 when the only undecided ones can be decided later (not classified yet, or a question unanswered), so test again later. Exit 1 also means the request failed. With --json, error.code tells these apart: expectations_failed, expectations_unresolvable, expectations_undecided (exit 3), or the API's own code. Without --json a readable report follows the JSON on stderr: warnings, how each condition held, the expectations, and the values each email that did not match was compared on.",
   verifyAgentSignup:
     "Tip: pass --verification-code <code> (or --code; both work). The response carries OAuth tokens but not your assigned inbox domain; run `primitive domains list` (or `primitive whoami`) after success to see the managed *.primitive.email address that routes to this account.",
 };
@@ -1511,6 +1523,8 @@ export const OPERATION_ERROR_HINTS: Record<
     path?: Record<string, unknown>,
   ) => string | undefined
 > = {
+  inviteOrganizationMember: (code, body, payload) =>
+    inviteRefusalHint(code, body, payload),
   updateEmailRule: (code, _body, payload, path) =>
     code === "email_rule_conflict"
       ? versionMovedHint(payload, path?.id)
@@ -1531,6 +1545,13 @@ export const OPERATION_ERROR_HINTS: Record<
     return undefined;
   },
 };
+
+// Operations whose error hint, when it applies, stands in for the generic
+// hint for the error code: inviting with Member (where members read all
+// mail) or a role above it is refused with grant_forbidden, whose generic
+// advice (widen the credential's grant) no CLI request can follow.
+export const OPERATION_ERROR_HINTS_REPLACING_CODE_HINT: ReadonlySet<string> =
+  new Set(["inviteOrganizationMember"]);
 
 // Per-operation post-success hooks keyed by operation.sdkName. Fires
 // AFTER the API call returns a non-error response and BEFORE the
@@ -1914,6 +1935,21 @@ export function createOperationCommand(
             });
           }
         };
+        // Giving someone a role that reads every mailbox says so first, so
+        // the person approving the change sees it before the step-up link.
+        // Under --json the guard carries it in the document's warnings, on
+        // success and on failure (a step-up answer included).
+        if (operation.sdkName === "setMemberRole") {
+          const role =
+            body && typeof body === "object"
+              ? (body as { role?: unknown }).role
+              : undefined;
+          const warning =
+            typeof role === "string"
+              ? roleReadsAllMailWarning(role, await readRoles(apiClient.client))
+              : null;
+          if (warning) process.stderr.write(`${warning}\n`);
+        }
         const result = paged
           ? await callPaged()
           : takesStepUp(operation)
@@ -1933,13 +1969,18 @@ export function createOperationCommand(
 
         if (result.error) {
           const errorPayload = extractErrorPayload(result.error);
-          writeErrorWithHints(errorPayload, result.response);
           const operationErrorHint = OPERATION_ERROR_HINTS[operation.sdkName]?.(
             extractErrorCode(errorPayload),
             body,
             errorPayload,
             collectValues(operation.pathParams, parsedFlags, operation.sdkName),
           );
+          writeErrorWithHints(errorPayload, result.response, {
+            codeHint: !(
+              operationErrorHint &&
+              OPERATION_ERROR_HINTS_REPLACING_CODE_HINT.has(operation.sdkName)
+            ),
+          });
           if (operationErrorHint) {
             process.stderr.write(`${operationErrorHint}\n`);
           }
@@ -2087,13 +2128,41 @@ export function createOperationCommand(
         // AGX walkthrough flagged this: `list-deliveries` returning
         // `[]` left the agent unsure whether they had an empty
         // delivery log or no endpoints configured at all.
-        if (Array.isArray(envelope?.data) && envelope.data.length === 0) {
-          const hint = EMPTY_RESULT_HINTS[operation.sdkName];
-          // Under --json the hint rides in the envelope's summary when
-          // one is printed; a bare data payload has nowhere to carry it.
-          if (hint && jsonOutput) {
-            if (withEnvelope) summary.push(hint);
-          } else if (hint) process.stderr.write(`${hint}\n`);
+        // Under --json the hint rides in the envelope's summary when one is
+        // printed; a bare data payload has nowhere to carry it, so nothing
+        // more is read for it.
+        if (
+          Array.isArray(envelope?.data) &&
+          envelope.data.length === 0 &&
+          (!jsonOutput || withEnvelope)
+        ) {
+          // An empty email list says what was asked and what this
+          // credential reads, not that the account has no mail.
+          // A --since tail is polled, so its empty pages do not each read
+          // the grant too, and nor does a page with more to read.
+          const tail = query.since !== undefined;
+          const more = envelope?.meta?.cursor ?? null;
+          const hint =
+            operation.sdkName === "listEmails"
+              ? emptyEmailListHint({
+                  filterFlags: listFilters(query).map(
+                    (name) => `--${parameterFlagName(operation.sdkName, name)}`,
+                  ),
+                  ...(tail
+                    ? { pastFlag: "--since" as const }
+                    : query.cursor !== undefined
+                      ? { pastFlag: "--cursor" as const }
+                      : {}),
+                  // A tail is caught up whatever cursor it carries: --since and --cursor do not mix.
+                  nextCursor: tail ? null : more,
+                  caller:
+                    tail || more
+                      ? null
+                      : await readCallerMailFor(auth, apiClient.client),
+                })
+              : EMPTY_RESULT_HINTS[operation.sdkName];
+          if (hint && jsonOutput) summary.push(hint);
+          else if (hint) process.stderr.write(`${hint}\n`);
         }
 
         // A connected address's sent list also carries delivered sends
@@ -2234,8 +2303,6 @@ export const EMPTY_RESULT_HINTS: Record<string, string> = {
     "(no results) No webhook deliveries logged yet. If you have an endpoint configured but expected to see test fires here: test deliveries from `primitive endpoints test` are NOT logged in this list, they're synchronous and visible only in the test-endpoint command's response. Real deliveries are logged when an event fans out to your endpoints: an inbound `email.received`, or a `sent_email.*` event for an endpoint that lists it in rules.event_types (they arrive within a few minutes of the result). If you have no endpoints, run `primitive endpoints list` to check.",
   listEndpoints:
     "(no results) No webhook endpoints configured. Add one with `primitive endpoints create --url <your-url>`.",
-  listEmails:
-    "(no results) No inbound emails received yet on this account. Send one to a verified domain to populate this list. For a compact view, prefer `primitive emails latest`.",
   listDomains:
     "(no results) No domains on this account. Add one with `primitive domains add --domain <yourdomain.example>`.",
   listFilters: "(no results) No filter rules configured.",
