@@ -882,6 +882,12 @@ describe("keys commands", () => {
     });
     expect(expiryFromFlags({})).toEqual({ ok: true, expiresAt: undefined });
     expect(expiryFromFlags({ "expires-at": "next week" }).ok).toBe(false);
+    expect(expiryFromFlags({ "expires-at": "2027-02-08t00:00:00z" }).ok).toBe(
+      false,
+    );
+    expect(expiryFromFlags({ "expires-at": "2027-02-08T24:00:00Z" }).ok).toBe(
+      false,
+    );
   });
 
   it("rotate keeps the expiry unless told, sends --expires-at for the new key, and says when the new key expires", async () => {
@@ -916,6 +922,77 @@ describe("keys commands", () => {
     expect(extended.stderr).toContain("and expires 2027-02-08T00:00:00.000Z.");
   });
 
+  it("refuses --expires-at with --no-expiry on both commands, and rotate --no-expiry asks for a key that never expires", async () => {
+    const requests = useServer(() =>
+      Response.json({
+        success: true,
+        data: {
+          id: "1f0e0d0c-0b0a-4908-8706-050403020100",
+          key: "prim_new_secret",
+          key_prefix: "prim_new",
+          expires_at: null,
+          previous_key_id: KEY_ID,
+          previous_key_expires_at: "2026-11-12T00:00:00.000Z",
+        },
+      }),
+    );
+    for (const command of [KeysUpdateCommand, KeysRotateCommand]) {
+      const both = await run(command, [
+        KEY_ID,
+        "--expires-at",
+        "2027-02-08T00:00:00Z",
+        "--no-expiry",
+      ]);
+      expect(both.error).toBeTruthy();
+    }
+    expect(requests).toHaveLength(0);
+    const never = await run(KeysRotateCommand, [KEY_ID, "--no-expiry"]);
+    expect(never.exitCode).toBeUndefined();
+    expect(await (requests[0] as Request).json()).toEqual({ expires_at: null });
+    expect(never.stderr).toContain("and expires never.");
+  });
+
+  it("rotate says nothing about the new key's expiry when the answer does not give it", async () => {
+    useServer(() =>
+      Response.json({
+        success: true,
+        data: {
+          id: "1f0e0d0c-0b0a-4908-8706-050403020100",
+          key: "prim_new_secret",
+          key_prefix: "prim_new",
+          previous_key_id: KEY_ID,
+          previous_key_expires_at: "2026-11-12T00:00:00.000Z",
+        },
+      }),
+    );
+    const rotated = await run(KeysRotateCommand, [KEY_ID]);
+    expect(rotated.stderr).toContain(
+      "prefix prim_new. The old key works until",
+    );
+    expect(rotated.stderr).not.toContain("expires never");
+  });
+
+  it("revoke prints what keeps working and what stops", async () => {
+    useServer(() =>
+      Response.json({
+        success: true,
+        data: {
+          revoked: 1,
+          kind: "org_key",
+          id: KEY_ID,
+          standing_objects: [
+            { kind: "endpoint", id: "a", label: "x", org_owned: true },
+            { kind: "endpoint", id: "b", label: "y", org_owned: false },
+          ],
+        },
+      }),
+    );
+    const revoked = await run(KeysRevokeCommand, [KEY_ID, "--yes"]);
+    expect(revoked.stdout).toContain(
+      "1 item(s) it set up for the organization keep working. 1 item(s) the key owned itself, such as its own webhooks, which stop with it.",
+    );
+  });
+
   it("revoke says what keeps working for the organization and what the key owned stops with it", () => {
     expect(standingSummary([])).toBeNull();
     expect(standingSummary(undefined)).toBeNull();
@@ -926,13 +1003,15 @@ describe("keys commands", () => {
         { kind: "recipient_route", id: "c", label: "z", org_owned: false },
       ]),
     ).toBe(
-      "1 item(s) it set up for the organization keep working. 2 item(s) the key owned stop with it. Review them with --json.",
+      "1 item(s) it set up for the organization keep working. 2 item(s) the key owned itself, such as its own webhooks, which stop with it. Review them with --json.",
     );
     expect(
       standingSummary([
         { kind: "endpoint", id: "b", label: "y", org_owned: false },
       ]),
-    ).toBe("1 item(s) the key owned stop with it. Review them with --json.");
+    ).toBe(
+      "1 item(s) the key owned itself, such as its own webhooks, which stop with it. Review them with --json.",
+    );
     expect(KeysRevokeCommand.description).not.toContain(
       "what it set up keeps working",
     );

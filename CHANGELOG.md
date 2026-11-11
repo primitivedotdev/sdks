@@ -854,9 +854,10 @@ parsers.
   policy allows. `keys rotate` takes the same two flags for the new key.
   Without them the new key keeps the old key's expiry, and the command now
   prints when the new key expires. The time is ISO 8601 with its time zone.
-- `keys revoke` says which of what the key set up keeps working for the
-  organization and which the key owned and stops with it, and its help no
-  longer says that everything it set up keeps working.
+- `keys revoke` counts separately what the key set up for the
+  organization, which keeps working, and what the key owned itself, such as
+  its own webhooks, which stop with it. Its help no longer says that
+  everything the key set up keeps working.
 - Generated commands the API answers only in a dashboard session, such as
   `credentials list-credentials` and `credentials list-credential-events`,
   say so: their summary, which short help prints, ends with `(dashboard

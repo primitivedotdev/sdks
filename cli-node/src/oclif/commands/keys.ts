@@ -96,8 +96,9 @@ type SdkResult = {
 };
 
 /**
- * A new expiry from --expires-at or --no-expiry: a time with its time zone
- * (the API takes no other), null for none, or undefined when neither was given.
+ * A new expiry from --expires-at or --no-expiry: a time with its time zone,
+ * null for none, or undefined when neither was given. The API checks the date
+ * itself; this refuses what is plainly not such a time before sending it.
  */
 export function expiryFromFlags(flags: {
   "expires-at"?: string;
@@ -109,7 +110,7 @@ export function expiryFromFlags(flags: {
   const at = flags["expires-at"]?.trim();
   if (at === undefined) return { ok: true, expiresAt: undefined };
   if (
-    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/i.test(
+    !/^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d(:[0-5]\d(\.\d+)?)?(Z|[+-]([01]\d|2[0-3]):[0-5]\d)$/.test(
       at,
     ) ||
     Number.isNaN(Date.parse(at))
@@ -831,7 +832,7 @@ export class KeysRotateCommand extends Command {
       Boolean(flags.json),
       rotated,
       rotated.key,
-      `Rotated key ${rotated.previous_key_id}. The new key is ${rotated.id}, prefix ${rotated.key_prefix}, and expires ${rotated.expires_at ?? "never"}. The old key works until ${rotated.previous_key_expires_at}.`,
+      `Rotated key ${rotated.previous_key_id}. The new key is ${rotated.id}, prefix ${rotated.key_prefix}${rotated.expires_at === undefined ? "" : `, and expires ${rotated.expires_at ?? "never"}`}. The old key works until ${rotated.previous_key_expires_at}.`,
     );
   }
 }
@@ -1014,14 +1015,18 @@ export function standingSummary(standing: unknown): string | null {
     ...(kept > 0
       ? [`${kept} item(s) it set up for the organization keep working.`]
       : []),
-    ...(stopped > 0 ? [`${stopped} item(s) the key owned stop with it.`] : []),
+    ...(stopped > 0
+      ? [
+          `${stopped} item(s) the key owned itself, such as its own webhooks, which stop with it.`,
+        ]
+      : []),
   ];
   return `${parts.join(" ")} Review them with --json.`;
 }
 
 export class KeysRevokeCommand extends Command {
   static description =
-    `Revoke an API key. It stops working at once. What it set up for the organization keeps working; webhooks and anything else the key itself owns stop with it. Both are listed for review.
+    `Revoke an API key. It stops working at once. What it set up for the organization keeps working; webhooks the key itself owns stop with it. What it set up is listed for review.
 
   Asks for confirmation first; pass --yes to skip the prompt in scripts. Revoking runs directly. If your organization requires approval, the command prints the approval link, opens it where it can and waits for the one-time token; in a script, approve and run it again with --step-up-token.`;
 
