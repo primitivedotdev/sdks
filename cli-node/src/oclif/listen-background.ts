@@ -1503,11 +1503,24 @@ async function prepareRelaunch(
  * A start refused because a healthy receiver runs with another options
  * fingerprint. Earlier releases put their version in it, so a receiver one
  * of them started differs even when the command is the same. From here the
- * two causes look alike, and stopping it is the remedy for both.
+ * two causes look alike, and stopping it is the remedy for both. The stop
+ * must reach the same connection, so the flags that chose it are named, never
+ * their values.
  */
-function keptWithOtherOptions(threadId: string): ListenStateError {
+function keptWithOtherOptions(
+  threadId: string,
+  argv: readonly string[],
+): ListenStateError {
+  const given = (flag: string) =>
+    argv.some((arg) => arg === flag || arg.startsWith(`${flag}=`));
+  const stop = [
+    `primitive listen --notify-session ${threadId}`,
+    ...(given("--api-key") ? ["--api-key <the same key>"] : []),
+    ...(given("--api-base-url") ? ["--api-base-url <the same URL>"] : []),
+    "--stop",
+  ].join(" ");
   return new ListenStateError(
-    `A background listener for this session is still running, started by an older version of the CLI or with different receiving options, so it was kept. To restart it with this command, run \`primitive listen --notify-session ${threadId} --stop\`, then run this command again.`,
+    `A background listener for this session is still running, started by an older version of the CLI or with different receiving options, so it was kept. To restart it with this command, run \`${stop}\` with the same profile and environment, then run this command again.`,
   );
 }
 
@@ -1575,7 +1588,7 @@ export async function startBackgroundListen(
         );
       }
       if (prior?.configuration !== configuration)
-        throw keptWithOtherOptions(options.threadId);
+        throw keptWithOtherOptions(options.threadId, options.argv);
       // Only a receiver that is receiving makes an earlier failed start
       // history; one still starting has not recovered from it yet.
       if (!startFailureCurrent(current)) clearStartFailure(paths);
@@ -1603,7 +1616,7 @@ export async function startBackgroundListen(
       // rather than reuse it, even when an upgrade changed its options.
       if (!priorSupervisor) {
         if (prior.configuration !== configuration)
-          throw keptWithOtherOptions(options.threadId);
+          throw keptWithOtherOptions(options.threadId, options.argv);
         if (!startFailureCurrent(current)) clearStartFailure(paths);
         return { started: false, status: current };
       }

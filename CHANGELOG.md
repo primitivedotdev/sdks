@@ -923,10 +923,12 @@ parsers.
   a receiver started by this version or later. A start that changes
   contacts, contact requests, senders, events or the session socket while a
   receiver runs is still refused.
-- A refused `listen --background` start now says why: the running listener
-  was started by an older version of the CLI or with different receiving
-  options. It names the `listen --notify-session <session> --stop` command to
-  run before running the same command again.
+- A `listen --background` start refused because a listener already runs with
+  other options now says why: that listener was started by an older version
+  of the CLI or with different receiving options. It names the
+  `listen --notify-session <session> --stop` command to run first, with
+  `--api-key` or `--api-base-url` when the start gave them (never their
+  values), and then the same command again.
 - A listener started by an earlier release is handed to a supervisor of the
   new version when its worker next restarts. If that attempt does not
   complete, a later restart tries again after at least a minute. Until the

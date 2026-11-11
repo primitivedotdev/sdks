@@ -2003,6 +2003,31 @@ describe("upgrading the CLI in place under a background listener", () => {
     await stopBackgroundListen(target).catch(() => {});
   });
 
+  it("keeps the released listener modules exactly as released", () => {
+    // A rewrite, even a reformat, would make the tests that start a
+    // released receiver run code that was never released.
+    const digests = Object.fromEntries(
+      [...RELEASED_LISTENER].map((name) => [
+        name,
+        createHash("sha256")
+          .update(
+            readFileSync(
+              resolve(`tests/fixtures/released-listener/${name}.ts`),
+            ),
+          )
+          .digest("hex"),
+      ]),
+    );
+    expect(digests).toEqual({
+      "listen-background":
+        "3dbc72deceeaf0880916fd04c85b9542c49e4b757e869715082ba74a6d942cae",
+      "listen-state":
+        "74159fd4652c99a8bc30736d0a4dbcb3c1296707c4b821285072f09304507770",
+      "shared-mail-files":
+        "b79b68b87b982b0fb8995789eb1878ce264397f4486ddce2f39aa6adb781e795",
+    });
+  });
+
   it("fingerprints the receiving options alone, with the same value in every release", () => {
     // Pinned: a changed value makes every running supervisor's next worker
     // hand its receiver over once instead of restarting under it.
@@ -2055,6 +2080,28 @@ describe("upgrading the CLI in place under a background listener", () => {
           }),
         }),
       ).rejects.toThrow(KEPT_WITH_OTHER_OPTIONS);
+    // The stop it names reaches the same connection: the flags that chose
+    // it, never their values.
+    const refusal = await startBackgroundListen({
+      ...target,
+      argv: [
+        "unused",
+        "listen",
+        "--api-key",
+        "listen-test-secret",
+        "--api-base-url=https://api.example.test",
+        "--background",
+      ],
+      configuration: backgroundListenConfiguration({
+        ...receiving,
+        contactRequests: true,
+      }),
+    }).catch((error: Error) => error.message);
+    expect(refusal).toContain(
+      `run \`primitive listen --notify-session ${target.threadId} --api-key <the same key> --api-base-url <the same URL> --stop\` with the same profile and environment`,
+    );
+    expect(refusal).not.toContain("listen-test-secret");
+    expect(refusal).not.toContain("api.example.test");
     expect(saved().configuration).toBe(configuration);
   });
 
@@ -2160,8 +2207,9 @@ describe("upgrading the CLI in place under a background listener", () => {
       );
       // The old supervisor stopped and exited, so it neither restarts the
       // refusing worker nor competes with its replacement.
-      await vi.waitFor(() =>
-        expect(() => process.kill(supervisorPid as number, 0)).toThrow(),
+      await vi.waitFor(
+        () => expect(() => process.kill(supervisorPid as number, 0)).toThrow(),
+        { timeout: 5000 },
       );
       const configuration = backgroundListenConfiguration(receiving);
       // The worker that refused never received; the new version receives
@@ -2213,7 +2261,7 @@ describe("upgrading the CLI in place under a background listener", () => {
       await expect(
         startBackgroundListen({ ...target, argv: [child], configuration }),
       ).rejects.toThrow(
-        `A background listener for this session is still running, started by an older version of the CLI or with different receiving options, so it was kept. To restart it with this command, run \`primitive listen --notify-session ${target.threadId} --stop\`, then run this command again.`,
+        `A background listener for this session is still running, started by an older version of the CLI or with different receiving options, so it was kept. To restart it with this command, run \`primitive listen --notify-session ${target.threadId} --stop\` with the same profile and environment, then run this command again.`,
       );
       const kept = backgroundListenStatus(target);
       expect(kept).toMatchObject({
@@ -2226,8 +2274,13 @@ describe("upgrading the CLI in place under a background listener", () => {
       // What the message says to do: the new CLI stops the released
       // supervisor, and the same command then starts one of its own.
       expect((await stopBackgroundListen(target)).phase).toBe("stopped");
-      await vi.waitFor(() =>
-        expect(() => process.kill(status.supervisorPid as number, 0)).toThrow(),
+      // Its start process has exited, so init reaps it.
+      await vi.waitFor(
+        () =>
+          expect(() =>
+            process.kill(status.supervisorPid as number, 0),
+          ).toThrow(),
+        { timeout: 5000 },
       );
       const restarted = await startBackgroundListen({
         ...target,
@@ -2360,8 +2413,9 @@ describe("upgrading the CLI in place under a background listener", () => {
       expect(
         readMailJson(join(stateFile(), "..", "supervisor.json")),
       ).toMatchObject({ phase: "failed", failureCode: "some-future-code" });
-      await vi.waitFor(() =>
-        expect(() => process.kill(supervisorPid as number, 0)).toThrow(),
+      await vi.waitFor(
+        () => expect(() => process.kill(supervisorPid as number, 0)).toThrow(),
+        { timeout: 5000 },
       );
     },
     15_000,
