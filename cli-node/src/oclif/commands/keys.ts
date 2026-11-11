@@ -1243,17 +1243,17 @@ export class KeysUpdateCommand extends Command {
  */
 export function standingSummary(standing: unknown): string | null {
   if (!Array.isArray(standing) || standing.length === 0) return null;
-  const stopped = standing.filter(
+  const keyOwned = standing.filter(
     (item) => (item as { org_owned?: unknown }).org_owned === false,
   ).length;
-  const kept = standing.length - stopped;
+  const kept = standing.length - keyOwned;
   const parts = [
     ...(kept > 0
       ? [`${kept} item(s) the organization owns keep working.`]
       : []),
-    ...(stopped > 0
+    ...(keyOwned > 0
       ? [
-          `${stopped} item(s) the key owned itself, such as its own webhooks, which keep working only while someone can still act for them, such as a key of the same rotation that still works.`,
+          `${keyOwned} item(s) the key owned itself or carried on for the keys it was rotated from, such as its own webhooks, which keep working only while someone can still act for them, such as a key of the same rotation that still works.`,
         ]
       : []),
   ];
@@ -1337,9 +1337,7 @@ export class KeysRevokeCommand extends Command {
         ? `Key ${args.id} was already revoked; nothing changed.`
         : `Revoked key ${args.id}.`,
     );
-    const summary = standingSummary(
-      (result.data as { standing_objects?: unknown }).standing_objects,
-    );
+    const summary = standingSummary(result.data.standing_objects);
     if (summary) this.log(summary);
   }
 }

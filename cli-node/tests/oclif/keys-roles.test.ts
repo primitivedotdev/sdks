@@ -1594,7 +1594,7 @@ describe("keys commands", () => {
     expect(rotated.stderr).not.toContain("expires never");
   });
 
-  it("revoke prints what keeps working and what stops", async () => {
+  it("revoke prints what the organization owns and what the key owned", async () => {
     useServer(() =>
       Response.json({
         success: true,
@@ -1611,7 +1611,7 @@ describe("keys commands", () => {
     );
     const revoked = await run(KeysRevokeCommand, [KEY_ID, "--yes"]);
     expect(revoked.stdout).toContain(
-      "1 item(s) the organization owns keep working. 1 item(s) the key owned itself, such as its own webhooks, which keep working only while someone can still act for them, such as a key of the same rotation that still works.",
+      "1 item(s) the organization owns keep working. 1 item(s) the key owned itself or carried on for the keys it was rotated from, such as its own webhooks, which keep working only while someone can still act for them, such as a key of the same rotation that still works.",
     );
   });
 
@@ -1625,14 +1625,14 @@ describe("keys commands", () => {
         { kind: "recipient_route", id: "c", label: "z", org_owned: false },
       ]),
     ).toBe(
-      "1 item(s) the organization owns keep working. 2 item(s) the key owned itself, such as its own webhooks, which keep working only while someone can still act for them, such as a key of the same rotation that still works. Review them with --json.",
+      "1 item(s) the organization owns keep working. 2 item(s) the key owned itself or carried on for the keys it was rotated from, such as its own webhooks, which keep working only while someone can still act for them, such as a key of the same rotation that still works. Review them with --json.",
     );
     expect(
       standingSummary([
         { kind: "endpoint", id: "b", label: "y", org_owned: false },
       ]),
     ).toBe(
-      "1 item(s) the key owned itself, such as its own webhooks, which keep working only while someone can still act for them, such as a key of the same rotation that still works. Review them with --json.",
+      "1 item(s) the key owned itself or carried on for the keys it was rotated from, such as its own webhooks, which keep working only while someone can still act for them, such as a key of the same rotation that still works. Review them with --json.",
     );
     expect(KeysRevokeCommand.description).not.toContain(
       "what it set up keeps working",

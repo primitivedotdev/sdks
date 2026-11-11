@@ -400,12 +400,12 @@ Go (package `api`):
   does not match. `rule` is no longer always a rule's name.
 - A URL can have one endpoint per domain, route targets included, and
   endpoints with no `domain_id` count as one domain. A disabled endpoint still
-  holds its URL; a deleted one does not. `createEndpoint` at a URL another
-  endpoint has on the same domain is refused with `400` instead of turning a
-  deactivated endpoint back on, and a deleted endpoint's URL makes a new
-  endpoint with a new id. `updateEndpoint` onto such a URL is refused with
-  `400`, and a move onto a domain where another endpoint has the URL with
-  `409`.
+  holds its URL; a deleted one does not. `createEndpoint` at a deleted
+  endpoint's URL makes a new endpoint with a new id and leaves the deleted one
+  as it was, instead of bringing the deleted endpoint back with its old id. A
+  URL another endpoint has on the same domain, a disabled one included, is
+  refused with `400`. `updateEndpoint` onto such a URL is refused with `400`,
+  and a move onto a domain where another endpoint has the URL with `409`.
 
 #### Email list meta
 
@@ -689,8 +689,9 @@ date-time is kept as null and sorts last. A sync stops with an error after
   - `createEndpoint` and `updateEndpoint` take `Primitive-Step-Up`, and
     `updateEndpoint` takes `name`. `name` only needs at least one character.
   - Changing an endpoint's URL keeps the endpoint: its id, recipient routes,
-    signing secret, delivery history and owed deliveries. Another active
-    endpoint at the new URL is refused.
+    signing secret, delivery history and owed deliveries. A URL another
+    endpoint has on the same domain is refused; see Endpoint answers under
+    breaking changes.
   - `updateEndpoint` declares `403` and `503` answers; in Go they are typed
     responses instead of errors.
   - Endpoints carry `disabled_reason`: `owner_changed`,
@@ -724,9 +725,9 @@ date-time is kept as null and sorts last. A sync stops with an error after
     `details.reason` `key_has_resource_limits`.
   - `revokeCredential` answers `already_revoked: true`, with `revoked` 0,
     for an API key that was already revoked.
-  - Key reads carry `rotated_from` and `rotated_to`: the key this one was
-    rotated from, and the newest key rotated from it, among those the caller
-    may read.
+  - `listKeys` items and `getKey` carry `rotated_from` and `rotated_to`: the
+    key this one was rotated from, and the newest key rotated from it, among
+    those the caller may read.
   - `revokeCredential` declares `standing_objects` (`kind`, `id`, `label`,
     `org_owned`): what the credential set up or owns and, for an API key,
     what it carries on for the keys it was rotated from. What the
@@ -1054,9 +1055,10 @@ parsers.
   Without them the new key keeps the old key's expiry, and the command now
   prints when the new key expires. The time is ISO 8601 with its time zone.
 - `keys revoke` counts separately what the organization owns, which keeps
-  working, and what the key owned itself, such as its own webhooks, which
-  keeps working only while someone can still act for it, such as a key of
-  the same rotation that still works. Its help no longer says that
+  working, and what the key owned itself or carried on for the keys it was
+  rotated from, such as its own webhooks, which keeps working only while
+  someone can still act for it, such as a key of the same rotation that still
+  works. Its help no longer says that
   everything the key set up keeps working.
 - Generated commands the API answers only in a dashboard session, such as
   `credentials list-credentials` and `credentials list-credential-events`,
