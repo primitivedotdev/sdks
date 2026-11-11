@@ -259,7 +259,7 @@ primitive keys rotate <id>
 primitive keys revoke <id>
 ```
 
-`keys list` shows each key's id, prefix, name, permissions, the mail it reaches, expiry and last use, and `keys get` shows one key in full. Neither shows a secret. You see your own keys, and every key if your role may read them all.
+`keys list` shows each key's id, prefix, name, permissions, the mail it reaches, expiry and last use, and `keys get` shows one key in full. Neither shows a secret. Revoked keys are left out of `keys list` unless you pass `--include-revoked`, which marks each `[revoked]` with when it was revoked. You see your own keys, and every key if your role may read them all.
 
 `keys create` needs you to say what the key can do: a `--preset`, or `--permission` with the mail it reaches (`--address`, `--domain`, `--rule`, each repeatable, or `--all-mailboxes`). There is no default, and a super admin key needs `--preset super_admin`. A key never holds more than you do, and your organization's credential policy applies. `keys update` adds or removes permissions (`--add`, `--remove`), adds or removes email rules (`--add-rule`, `--remove-rule`), or replaces them all (`--rule`); the key keeps its id and secret. A request already held open with that key, such as a long poll or a wait, ends once when its permissions change. `keys update --expires-at <time>` extends a key before it expires, within your organization's credential policy, and `--no-expiry` removes its expiry where the policy allows. Rotating keeps the expiry: `keys rotate` gives the new key the old key's expiry unless you pass `--expires-at` or `--no-expiry`. An expired key cannot be extended.
 

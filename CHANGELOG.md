@@ -900,6 +900,11 @@ downgrading, or sign in again afterwards.
   permissions a key can hold as this CLI version lists them. An update
   refused over a permission the key already holds says to take it off with
   `--remove`. `keys create --help-full` lists the permissions by area.
+- `keys list --include-revoked` lists revoked keys too, each marked
+  `[revoked]` with when it was revoked (with `--json`, `status`,
+  `revoked_at` and `revoked_by`), so a revocation can be confirmed without
+  keeping the key ids beforehand. Without it, an empty list says revoked
+  keys are left out.
 - `keys get` on a revoked key prints when it was revoked, and by whom when
   the read says. `keys update` refuses to change a revoked key's grant before
   asking for any approval, and `keys revoke` on a key that is already revoked
