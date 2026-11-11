@@ -164,6 +164,8 @@ export function sinceFromFlags(
 }
 
 export function buildEmailSearchQuery(params: {
+  /** false: the server leaves the total match count, which a poll never shows, uncomputed. */
+  count?: boolean;
   cursor?: string | null;
   filters: EmailPollFilters;
   /** Oldest first unless said, as a poll reads. */
@@ -203,6 +205,7 @@ export function buildEmailSearchQuery(params: {
   if (params.filters.to) query.to = params.filters.to;
   if (params.since) query.date_from = params.since;
   if (params.cursor) query.cursor = params.cursor;
+  if (params.count === false) query.count = "false";
 
   return query;
 }
@@ -253,6 +256,8 @@ export function collectNewAcceptedEmails(
 export const LATE_MAIL_WINDOW_MS = 10 * 60_000;
 export const LATE_MAIL_REREAD_MS = 15_000;
 export const LATE_MAIL_MAX_PAGES = 3;
+/** A re-read also waits at least this many poll intervals, so a longer interval chosen to send fewer requests keeps doing so. */
+export const LATE_MAIL_REREAD_POLLS = 3;
 
 /**
  * Mail received in the last LATE_MAIL_WINDOW_MS (never before `since`),
@@ -295,6 +300,7 @@ export async function fetchRecentEmails(params: {
     try {
       page = await fetchPage({
         apiClient: params.apiClient,
+        count: false,
         cursor,
         filters: params.filters,
         order: "received_at_desc",
@@ -313,24 +319,33 @@ export async function fetchRecentEmails(params: {
 }
 
 /**
- * Whether an idle poll is due to re-read recent mail (fetchRecentEmails), and
- * marks it done when it is. First due one interval after it is made: until
- * then the poll has just read the same window itself.
+ * When an idle poll is due to re-read recent mail (fetchRecentEmails): one
+ * interval after this is made, as until then the poll has just read the same
+ * window itself, and then one interval after the last re-read finished
+ * (`done`), so a slow re-read is not followed straight away by another. The
+ * interval is LATE_MAIL_REREAD_MS, or LATE_MAIL_REREAD_POLLS poll intervals
+ * when that is longer.
  */
 export function lateMailReread(
-  intervalMs = LATE_MAIL_REREAD_MS,
+  pollIntervalMs: number,
   start = Date.now(),
-): (now?: number) => boolean {
+): { due: (now?: number) => boolean; done: (now?: number) => void } {
+  const intervalMs = Math.max(
+    LATE_MAIL_REREAD_MS,
+    LATE_MAIL_REREAD_POLLS * pollIntervalMs,
+  );
   let last = start;
-  return (now = Date.now()) => {
-    if (now - last < intervalMs) return false;
-    last = now;
-    return true;
+  return {
+    due: (now = Date.now()) => now - last >= intervalMs,
+    done: (now = Date.now()) => {
+      last = now;
+    },
   };
 }
 
 export async function fetchEmailSearchPage(params: {
   apiClient: PrimitiveApiClient;
+  count?: boolean;
   cursor?: string | null;
   filters: EmailPollFilters;
   order?: "received_at_asc" | "received_at_desc";
@@ -340,6 +355,7 @@ export async function fetchEmailSearchPage(params: {
   const result = await searchEmails({
     client: params.apiClient.client,
     query: buildEmailSearchQuery({
+      count: params.count,
       cursor: params.cursor,
       filters: params.filters,
       order: params.order,

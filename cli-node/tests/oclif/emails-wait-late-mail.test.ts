@@ -34,6 +34,7 @@ import {
   fetchRecentEmails,
   LATE_MAIL_MAX_PAGES,
   LATE_MAIL_REREAD_MS,
+  LATE_MAIL_REREAD_POLLS,
   LATE_MAIL_WINDOW_MS,
   lateMailReread,
   MAX_EMAIL_POLL_PAGE_SIZE,
@@ -203,47 +204,28 @@ describe("an email that becomes readable after a later one", () => {
       row("later", { received_at: LATER }),
     ]);
 
-  // Re-reads come one interval after the wait starts and no closer together, newest first and full size.
+  // A re-read is the newest-first requests made at one moment (it may read several pages).
+  // Re-reads come one interval after the start and no closer together, at the largest page size.
   const expectThrottledRereads = (
     requests: ReturnType<typeof searchServer>["requests"],
+    intervalSeconds: number,
   ) => {
-    const rereads = requests.filter((r) => r.sort === "received_at_desc");
+    const newestFirst = requests.filter((r) => r.sort === "received_at_desc");
+    for (const r of newestFirst) expect(r.limit).toBe(MAX_EMAIL_POLL_PAGE_SIZE);
+    const rereads = [...new Set(newestFirst.map((r) => r.at))];
+    const spacing = Math.max(
+      LATE_MAIL_REREAD_MS,
+      LATE_MAIL_REREAD_POLLS * intervalSeconds * 1000,
+    );
     expect(rereads.length).toBeGreaterThan(1);
-    expect(rereads[0]?.at).toBeGreaterThanOrEqual(START + LATE_MAIL_REREAD_MS);
+    expect(rereads[0]).toBeGreaterThanOrEqual(START + spacing);
     for (let i = 1; i < rereads.length; i += 1)
-      expect(
-        (rereads[i]?.at ?? 0) - (rereads[i - 1]?.at ?? 0),
-      ).toBeGreaterThanOrEqual(LATE_MAIL_REREAD_MS);
-    for (const r of rereads) expect(r.limit).toBe(MAX_EMAIL_POLL_PAGE_SIZE);
+      expect((rereads[i] ?? 0) - (rereads[i - 1] ?? 0)).toBeGreaterThanOrEqual(
+        spacing,
+      );
   };
 
-  it("is reported by emails wait, once, after the later one", async () => {
-    const server = lateServer();
-    mocks.searchEmails.mockImplementation(server.handler);
-    // Asks for three, so the wait runs on past both and would print a repeat.
-    const result = await runWait([
-      "--json",
-      "--include-existing",
-      "--number",
-      "3",
-      "--timeout",
-      "60",
-      "--interval",
-      "2",
-    ]);
-    const docs = result.stdout.map(
-      (l) => JSON.parse(l) as { id?: string; error?: { message?: string } },
-    );
-    // The emails, then the timeout under --json.
-    expect(docs.slice(0, -1).map((d) => d.id)).toEqual(["later", "earlier"]);
-    expect(JSON.stringify(docs.at(-1))).toContain("received 2");
-    expect(result.exitCode).toBe(1);
-    expectThrottledRereads(server.requests);
-  });
-
-  it("is reported by emails watch, once, after the later one", async () => {
-    const server = lateServer();
-    mocks.searchEmails.mockImplementation(server.handler);
+  async function runWatch(argv: string[]) {
     const out: string[] = [];
     const spies = [
       vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
@@ -252,21 +234,65 @@ describe("an email that becomes readable after a later one", () => {
       vi.spyOn(process.stderr, "write").mockImplementation(() => true),
     ];
     try {
-      await (COMMANDS["emails:watch"] as unknown as Runnable).run(
-        ["--jsonl", "--include-existing", "--seconds", "60", "--interval", "2"],
-        { root: CLI_ROOT },
-      );
+      await (COMMANDS["emails:watch"] as unknown as Runnable).run(argv, {
+        root: CLI_ROOT,
+      });
     } finally {
       for (const spy of spies) spy.mockRestore();
     }
-    expect(out.map((l) => (JSON.parse(l) as { id?: string }).id)).toEqual([
-      "later",
-      "earlier",
-    ]);
-    expectThrottledRereads(server.requests);
-  });
+    return out;
+  }
 
-  it("is not re-read for while the wait has passed no mail, as each poll reads it all", async () => {
+  // At the default poll interval the re-read waits its own 15 seconds; at a long one, three polls.
+  it.each([2, 30])(
+    "is reported by emails wait, once, after the later one (--interval %i)",
+    async (interval) => {
+      const server = lateServer();
+      mocks.searchEmails.mockImplementation(server.handler);
+      // Asks for three, so the wait runs on past both and would print a repeat.
+      const result = await runWait([
+        "--json",
+        "--include-existing",
+        "--number",
+        "3",
+        "--timeout",
+        String(interval * 20),
+        "--interval",
+        String(interval),
+      ]);
+      const docs = result.stdout.map(
+        (l) => JSON.parse(l) as { id?: string; error?: { message?: string } },
+      );
+      // The emails, then the timeout under --json.
+      expect(docs.slice(0, -1).map((d) => d.id)).toEqual(["later", "earlier"]);
+      expect(JSON.stringify(docs.at(-1))).toContain("received 2");
+      expect(result.exitCode).toBe(1);
+      expectThrottledRereads(server.requests, interval);
+    },
+  );
+
+  it.each([2, 30])(
+    "is reported by emails watch, once, after the later one (--interval %i)",
+    async (interval) => {
+      const server = lateServer();
+      mocks.searchEmails.mockImplementation(server.handler);
+      const out = await runWatch([
+        "--jsonl",
+        "--include-existing",
+        "--seconds",
+        String(interval * 20),
+        "--interval",
+        String(interval),
+      ]);
+      expect(out.map((l) => (JSON.parse(l) as { id?: string }).id)).toEqual([
+        "later",
+        "earlier",
+      ]);
+      expectThrottledRereads(server.requests, interval);
+    },
+  );
+
+  it("is not re-read while nothing has been reported, as each poll reads from the start", async () => {
     const server = searchServer(() => []);
     mocks.searchEmails.mockImplementation(server.handler);
     const result = await runWait([
@@ -280,7 +306,15 @@ describe("an email that becomes readable after a later one", () => {
       "2",
     ]);
     expect(result.exitCode).toBe(1);
-    expect(server.requests.length).toBeGreaterThan(10);
+    await runWatch([
+      "--jsonl",
+      "--include-existing",
+      "--seconds",
+      "60",
+      "--interval",
+      "2",
+    ]);
+    expect(server.requests.length).toBeGreaterThan(20);
     expect(
       server.requests.filter((r) => r.sort === "received_at_desc"),
     ).toEqual([]);
@@ -307,6 +341,7 @@ describe("fetchRecentEmails", () => {
     mocks.searchEmails.mockResolvedValue(page([]));
     await recent();
     expect(query(0)).toMatchObject({
+      count: "false",
       date_from: new Date(START - LATE_MAIL_WINDOW_MS).toISOString(),
       limit: MAX_EMAIL_POLL_PAGE_SIZE,
       sort: "received_at_desc",
@@ -371,11 +406,19 @@ describe("fetchRecentEmails", () => {
 });
 
 describe("lateMailReread", () => {
-  it("is first due one interval after it is made, then no more often", () => {
-    const due = lateMailReread(15_000, 0);
-    expect(due(1_000)).toBe(false);
-    expect(due(15_000)).toBe(true);
-    expect(due(20_000)).toBe(false);
-    expect(due(30_000)).toBe(true);
+  it("is first due one interval after it is made, then one interval after the last re-read finished", () => {
+    const reread = lateMailReread(2_000, 0);
+    expect(reread.due(1_000)).toBe(false);
+    expect(reread.due(LATE_MAIL_REREAD_MS)).toBe(true);
+    // A re-read that took 20 seconds: the next is due 15 seconds after it ended.
+    reread.done(LATE_MAIL_REREAD_MS + 20_000);
+    expect(reread.due(LATE_MAIL_REREAD_MS + 30_000)).toBe(false);
+    expect(reread.due(2 * LATE_MAIL_REREAD_MS + 20_000)).toBe(true);
+  });
+
+  it("waits three poll intervals when that is longer", () => {
+    const reread = lateMailReread(30_000, 0);
+    expect(reread.due(60_000)).toBe(false);
+    expect(reread.due(LATE_MAIL_REREAD_POLLS * 30_000)).toBe(true);
   });
 });

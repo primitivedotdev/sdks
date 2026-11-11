@@ -159,7 +159,7 @@ class EmailsWatchCommand extends Command {
     let failures = 0;
     let printed = 0;
     let headerPrinted = false;
-    const rereadDue = lateMailReread();
+    const reread = lateMailReread(flags.interval * 1000);
 
     while (deadline === null || Date.now() < deadline) {
       let page: Awaited<ReturnType<typeof fetchEmailSearchPage>>;
@@ -209,17 +209,18 @@ class EmailsWatchCommand extends Command {
       const cursorAdvanced = Boolean(nextCursor && nextCursor !== cursor);
       if (nextCursor) cursor = nextCursor;
       // Idle: mail that became readable after the cursor passed its place.
-      // Until the cursor has passed some mail, each poll reads it all itself.
-      const recent =
-        cursor !== null && !cursorAdvanced && rereadDue()
-          ? await fetchRecentEmails({
-              apiClient,
-              filters,
-              since,
-              deadline,
-              fetchPage: fetchEmailSearchPage,
-            })
-          : [];
+      // Until the cursor has passed some mail, each poll reads from the start.
+      let recent: Awaited<ReturnType<typeof fetchRecentEmails>> = [];
+      if (cursor !== null && !cursorAdvanced && reread.due()) {
+        recent = await fetchRecentEmails({
+          apiClient,
+          filters,
+          since,
+          deadline,
+          fetchPage: fetchEmailSearchPage,
+        });
+        reread.done();
+      }
 
       for (const email of collectNewAcceptedEmails(
         [...page.rows, ...recent],
