@@ -31,6 +31,8 @@ const API_BASE_URL_FLAG = Flags.string({
 /** The most pages `--all` follows before it stops and prints where to resume. */
 export const ALL_PAGES_LIMIT = 50;
 
+const DEFAULT_LIMIT = 50;
+
 type Page = ListActivityObjectsResult;
 export type ActivityItem = Page["items"][number];
 export type WithheldKind = Page["withheld"][number];
@@ -141,6 +143,28 @@ export function formatWithheld(
   return `Not shown: ${parts.join(", ")}.`;
 }
 
+const SHELL_SAFE = /^[A-Za-z0-9_,.:=/-]+$/;
+
+function shellWord(value: string): string {
+  return SHELL_SAFE.test(value) ? value : `'${value.replaceAll("'", `'\\''`)}'`;
+}
+
+/** The command that continues this listing from `cursor`, with the same filters. */
+export function resumeCommand(
+  bin: string,
+  flags: { kind?: string; state: string; limit: number; all?: boolean },
+  cursor: string,
+): string {
+  return [
+    `${bin} activity created`,
+    ...(flags.kind ? [`--kind ${shellWord(flags.kind)}`] : []),
+    ...(flags.state !== "all" ? [`--state ${flags.state}`] : []),
+    ...(flags.limit !== DEFAULT_LIMIT ? [`--limit ${flags.limit}`] : []),
+    ...(flags.all ? ["--all"] : []),
+    `--cursor ${shellWord(cursor)}`,
+  ].join(" ");
+}
+
 export class ActivityCreatedCommand extends Command {
   static description =
     `List what you created, newest first, with where each object stands now: Functions, endpoints, pull subscriptions, routes, filters, wake schedules, repeating and scheduled sends, including ones since disabled, deleted or revoked.
@@ -174,7 +198,7 @@ export class ActivityCreatedCommand extends Command {
       description: "Objects per page, 1 to 200.",
       min: 1,
       max: 200,
-      default: 50,
+      default: DEFAULT_LIMIT,
     }),
     cursor: Flags.string({
       description: "Resume from a next_cursor an earlier page printed.",
@@ -241,8 +265,6 @@ export class ActivityCreatedCommand extends Command {
     const notShown = formatWithheld(withheld);
     if (notShown) this.log(`\n${notShown}`);
     if (cursor)
-      this.log(
-        `\nMore: ${this.config.bin} activity created --cursor ${cursor}`,
-      );
+      this.log(`\nMore: ${resumeCommand(this.config.bin, flags, cursor)}`);
   }
 }
