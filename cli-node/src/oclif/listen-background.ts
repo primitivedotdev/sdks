@@ -1145,8 +1145,9 @@ export async function runBackgroundListenSupervisor(
   process.on("uncaughtException", crashed);
   process.on("unhandledRejection", crashed);
   // Whether the current worker's last report was receiving. While it is,
-  // any start failure saved for this receiver is history: a start that
-  // saved one after the worker's own receiving report is cleared here.
+  // and its record shows it healthy and receiving, any start failure saved
+  // for this receiver is history: one saved after the worker's own
+  // receiving report is cleared here.
   let workerReceiving = false;
   const heartbeat = setInterval(() => {
     try {
@@ -1155,7 +1156,21 @@ export async function runBackgroundListenSupervisor(
         child?.kill("SIGTERM");
       }
       tryPublish();
-      if (workerReceiving) clearStartFailure(paths);
+      // Only a worker of this generation that is healthy and receiving now,
+      // not one that reported receiving once and has since gone quiet.
+      if (workerReceiving) {
+        try {
+          const worker = readState(paths.state);
+          if (
+            worker?.token === token &&
+            worker.phase === "receiving" &&
+            status(worker).healthy
+          )
+            clearStartFailure(paths);
+        } catch {
+          /* The saved failure stands until the worker can be read. */
+        }
+      }
     } catch {
       cancel();
     }
