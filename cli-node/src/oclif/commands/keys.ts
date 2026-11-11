@@ -25,6 +25,11 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import {
+  keyPermissionsHelp,
+  ungrantablePermission,
+  ungrantablePermissionHint,
+} from "../key-permissions.js";
+import {
   type ApprovalIo,
   approveThenRerunHint,
   BROWSER_FLAG_DESCRIPTION,
@@ -625,16 +630,26 @@ async function authenticate(
 }
 
 /** Print a refusal and set a failing exit code. */
-function reportKeysError(
+async function reportKeysError(
   command: Command,
   outcome: { payload: unknown; stepUpUrl?: string },
   auth: CliAuth,
   json: boolean,
-): void {
+  /** The permissions an update asked to add, beside those the key holds. */
+  askedPermissions?: readonly string[],
+): Promise<void> {
   if (json) {
     process.stderr.write(`${JSON.stringify(outcome.payload)}\n`);
   } else {
     writeErrorWithHints(outcome.payload);
+  }
+  // "<name> cannot be granted to a key": say whether it is a permission at
+  // all, and what a key can hold.
+  const ungrantable = ungrantablePermission(outcome.payload);
+  if (ungrantable) {
+    process.stderr.write(
+      `${await ungrantablePermissionHint(auth.apiClient.client, ungrantable, askedPermissions)}\n`,
+    );
   }
   if (outcome.stepUpUrl) {
     process.stderr.write(approveThenRerunHint(outcome.stepUpUrl));
@@ -690,7 +705,7 @@ export class KeysListCommand extends Command {
         }),
       );
       if (!result.ok) {
-        reportKeysError(this, result, auth, Boolean(flags.json));
+        await reportKeysError(this, result, auth, Boolean(flags.json));
         return;
       }
       items.push(...(result.data.items as KeyView[]));
@@ -733,7 +748,7 @@ export class KeysGetCommand extends Command {
       getKey({ client: auth.apiClient.client, path: { id: args.id } }),
     );
     if (!result.ok) {
-      reportKeysError(this, result, auth, Boolean(flags.json));
+      await reportKeysError(this, result, auth, Boolean(flags.json));
       return;
     }
     this.log(
@@ -771,7 +786,9 @@ export class KeysCreateCommand extends Command {
 
   The secret is printed once, on its own line on stdout (in the JSON with --json). Store it right away: it is not shown again and the CLI does not save it.
 
-  A key limited to email rules (--rule, repeatable) reaches only the mail those rules match. Give it mail:read with --permission, or use --preset own_addresses_read_only.`;
+  A key limited to email rules (--rule, repeatable) reaches only the mail those rules match. Give it mail:read with --permission, or use --preset own_addresses_read_only.
+
+  ${keyPermissionsHelp()}`;
 
   static summary = "Create an API key";
 
@@ -792,7 +809,7 @@ export class KeysCreateCommand extends Command {
     }),
     permission: Flags.string({
       description:
-        "A permission the key holds (repeatable, or comma-separated), for a custom key.",
+        "A permission the key holds (repeatable, or comma-separated), for a custom key. See --help-full for the permissions a key can hold.",
       multiple: true,
     }),
     address: Flags.string({
@@ -864,7 +881,7 @@ export class KeysCreateCommand extends Command {
       approvalIo(flags),
     );
     if (!result.ok) {
-      reportKeysError(this, result, auth, Boolean(flags.json));
+      await reportKeysError(this, result, auth, Boolean(flags.json));
       return;
     }
     const key = result.data;
@@ -953,7 +970,7 @@ export class KeysRotateCommand extends Command {
       approvalIo(flags),
     );
     if (!result.ok) {
-      reportKeysError(this, result, auth, Boolean(flags.json));
+      await reportKeysError(this, result, auth, Boolean(flags.json));
       return;
     }
     const rotated = result.data;
@@ -971,7 +988,7 @@ export class KeysUpdateCommand extends Command {
   static description =
     `Change an API key's permissions, email rules, name or expiry. It keeps its id and secret.
 
-  --add and --remove take permissions (repeatable, or comma-separated). --add-rule and --remove-rule add email rules to the key or take them off, and keep its other rules. --rule replaces every rule the key has with the ones given, so pass all the rules it should keep; it cannot be combined with --add-rule or --remove-rule. --expires-at gives it a new expiry: a later one extends it, within your organization's credential policy, and is how to keep a key working past its expiry (rotating keeps the expiry). --no-expiry removes it where the policy allows. An expired key cannot be extended. Everything else about the key stays as it is, and the output lists any rules a change took off.
+  --add and --remove take permissions (repeatable, or comma-separated); \`primitive keys create --help-full\` lists the permissions a key can hold. --add-rule and --remove-rule add email rules to the key or take them off, and keep its other rules. --rule replaces every rule the key has with the ones given, so pass all the rules it should keep; it cannot be combined with --add-rule or --remove-rule. --expires-at gives it a new expiry: a later one extends it, within your organization's credential policy, and is how to keep a key working past its expiry (rotating keeps the expiry). --no-expiry removes it where the policy allows. An expired key cannot be extended. Everything else about the key stays as it is, and the output lists any rules a change took off.
 
   The change runs directly; if your organization requires approval, the command prints the approval link and takes --step-up-token, as for a new key. A key never holds more than you do.
 
@@ -1005,7 +1022,7 @@ export class KeysUpdateCommand extends Command {
     }),
     rule: Flags.string({
       description:
-        "An email rule id the key reaches (repeatable, or comma-separated). Replaces every rule the key has: pass all the rules it should keep, or use --add-rule and --remove-rule.",
+        "Replaces the key's rules with these email rule ids. Pass every rule it should keep (repeatable, or comma-separated), or use --add-rule and --remove-rule, which keep its other rules.",
       multiple: true,
       exclusive: ["add-rule", "remove-rule"],
     }),
@@ -1089,7 +1106,7 @@ export class KeysUpdateCommand extends Command {
         getKey({ client: auth.apiClient.client, path: { id: args.id } }),
       );
       if (!current.ok) {
-        reportKeysError(this, current, auth, Boolean(flags.json));
+        await reportKeysError(this, current, auth, Boolean(flags.json));
         return;
       }
       // The key read also answers a revoked key, which cannot be changed:
@@ -1179,7 +1196,7 @@ export class KeysUpdateCommand extends Command {
       approvalIo(flags),
     );
     if (!result.ok) {
-      reportKeysError(this, result, auth, Boolean(flags.json));
+      await reportKeysError(this, result, auth, Boolean(flags.json), add);
       return;
     }
     const grantChanged = result.data.changed.includes("grant");
@@ -1324,7 +1341,7 @@ export class KeysRevokeCommand extends Command {
       approvalIo(flags),
     );
     if (!result.ok) {
-      reportKeysError(this, result, auth, Boolean(flags.json));
+      await reportKeysError(this, result, auth, Boolean(flags.json));
       return;
     }
     if (flags.json) {

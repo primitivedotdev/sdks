@@ -51,6 +51,7 @@ import {
   withoutOrgSelection,
 } from "../../src/oclif/global-org-flag.js";
 import { COMMANDS, lookupOperation } from "../../src/oclif/index.js";
+import { keyPermissionsHelp } from "../../src/oclif/key-permissions.js";
 
 const CLI_ROOT = resolve(import.meta.dirname, "../..");
 const KEY_ID = "0f0e0d0c-0b0a-4908-8706-050403020100";
@@ -841,6 +842,235 @@ describe("keys commands", () => {
     expect(result.stderr).toContain(HELD_REQUEST_NOTICE);
   });
 
+  describe("a permission the API says cannot be granted to a key", () => {
+    const refusedAs = (name: string) =>
+      Response.json(
+        {
+          success: false,
+          error: {
+            code: "validation_error",
+            message: `${name} cannot be granted to a key`,
+            details: {},
+          },
+        },
+        { status: 400 },
+      );
+    /** The API's answer to GET /whoami?check=<name>. */
+    const checkAnswer = (known: boolean | "fails") => (url: URL) =>
+      known === "fails"
+        ? Response.json(
+            {
+              success: false,
+              error: { code: "internal_error", message: "x" },
+            },
+            { status: 500 },
+          )
+        : known
+          ? Response.json({
+              success: true,
+              data: {
+                org_id: "org-1",
+                check: {
+                  permission: url.searchParams.get("check"),
+                  allow: true,
+                },
+              },
+            })
+          : Response.json(
+              {
+                success: false,
+                error: {
+                  code: "validation_error",
+                  message: `unknown permission: ${url.searchParams.get("check")}`,
+                },
+              },
+              { status: 400 },
+            );
+    const serve = (name: string, known: boolean | "fails") =>
+      useServer((request) => {
+        const url = new URL(request.url);
+        return url.pathname.endsWith("/whoami")
+          ? checkAnswer(known)(url)
+          : refusedAs(name);
+      });
+    const holdable =
+      "As this CLI version lists them, a key can hold mail:read, changes:read, mail.search:semantic, mail:send,";
+
+    it.each([
+      ["mail:everything", false, "Hint: mail:everything is not a permission."],
+      [
+        "members:manage",
+        true,
+        "Hint: members:manage is a permission, but an API key cannot hold it.",
+      ],
+      [
+        "mail:everything",
+        "fails",
+        "Hint: mail:everything is not a permission an API key can hold.",
+      ],
+    ] as const)(
+      "create says whether %s is a permission at all, then what a key can hold",
+      async (name, known, lead) => {
+        const requests = serve(name, known);
+        const result = await run(KeysCreateCommand, [
+          "--permission",
+          name,
+          "--all-mailboxes",
+          "--step-up-token",
+          "pstep_x",
+        ]);
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(`${name} cannot be granted to a key`);
+        const hint = result.stderr
+          .split("\n")
+          .find((line) => line.startsWith("Hint: "));
+        expect(hint).toMatch(new RegExp(`^${lead.replaceAll(".", "\\.")} `));
+        expect(hint).toContain(holdable);
+        expect(hint).toContain(
+          "and, only when it reaches every mailbox, members:read. `primitive keys create --help-full` lists them by area.",
+        );
+        const check = requests.find((r) =>
+          new URL(r.url).pathname.endsWith("/whoami"),
+        ) as Request;
+        expect(new URL(check.url).searchParams.get("check")).toBe(name);
+      },
+    );
+
+    it("puts the hint in warnings with --json and keeps the API's error", async () => {
+      serve("mail:everything", false);
+      const result = await run(COMMANDS["keys:create"] as never, [
+        "--permission",
+        "mail:everything",
+        "--all-mailboxes",
+        "--step-up-token",
+        "pstep_x",
+        "--json",
+      ]);
+      const document = JSON.parse(result.stdout);
+      expect(document.error).toEqual({
+        code: "validation_error",
+        message: "mail:everything cannot be granted to a key",
+        details: {},
+      });
+      expect(document.warnings).toEqual([
+        expect.stringMatching(/^Hint: mail:everything is not a permission\. /),
+      ]);
+    });
+
+    it("update --add gets the same hint", async () => {
+      useServer((request) => {
+        const url = new URL(request.url);
+        if (url.pathname.endsWith("/whoami")) return checkAnswer(false)(url);
+        return request.method === "GET"
+          ? Response.json({ success: true, data: READER })
+          : refusedAs("mail:everything");
+      });
+      const result = await run(KeysUpdateCommand, [
+        KEY_ID,
+        "--add",
+        "mail:everything",
+        "--step-up-token",
+        "pstep_x",
+      ]);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain(
+        "Hint: mail:everything is not a permission. As this CLI version lists them, a key can hold",
+      );
+    });
+
+    it("update says when the refused permission is one the key already holds", async () => {
+      useServer((request) => {
+        const url = new URL(request.url);
+        if (url.pathname.endsWith("/whoami")) return checkAnswer(true)(url);
+        return request.method === "GET"
+          ? Response.json({ success: true, data: READER })
+          : refusedAs("mail:read");
+      });
+      const result = await run(KeysUpdateCommand, [
+        KEY_ID,
+        "--add",
+        "mail:send",
+        "--step-up-token",
+        "pstep_x",
+      ]);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain(
+        "Hint: mail:read is a permission, but an API key cannot hold it. The key already holds it, so this change cannot keep it: take it off with --remove mail:read.",
+      );
+    });
+
+    it("says the CLI's list is out of date when it still names the refused permission", async () => {
+      serve("mail:send", true);
+      const result = await run(KeysCreateCommand, [
+        "--permission",
+        "mail:send",
+        "--all-mailboxes",
+        "--step-up-token",
+        "pstep_x",
+      ]);
+      expect(result.stderr).toContain(
+        "Hint: mail:send is a permission, but an API key cannot hold it. This CLI's list of the permissions a key can hold still names it, so the list is older than the API's: update the CLI.",
+      );
+      expect(result.stderr).not.toContain("As this CLI version lists them");
+    });
+
+    it("says only what it knows when the check gives no answer", async () => {
+      for (const whoami of [
+        // A server that ignores ?check.
+        () => Response.json({ success: true, data: { org_id: "org-1" } }),
+        () => {
+          throw new TypeError("network down");
+        },
+      ]) {
+        useServer((request) =>
+          new URL(request.url).pathname.endsWith("/whoami")
+            ? whoami()
+            : refusedAs("mail:everything"),
+        );
+        const result = await run(KeysCreateCommand, [
+          "--permission",
+          "mail:everything",
+          "--all-mailboxes",
+          "--step-up-token",
+          "pstep_x",
+        ]);
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain(
+          "Hint: mail:everything is not a permission an API key can hold. As this CLI version lists them,",
+        );
+      }
+    });
+
+    it("lists the permissions in keys create --help-full", () => {
+      expect(KeysCreateCommand.description).toContain(keyPermissionsHelp());
+    });
+
+    it("asks nothing more for any other refusal", async () => {
+      const requests = useServer(() =>
+        Response.json(
+          {
+            success: false,
+            error: {
+              code: "validation_error",
+              message: "Say which mail the key reaches.",
+            },
+          },
+          { status: 400 },
+        ),
+      );
+      const result = await run(KeysCreateCommand, [
+        "--permission",
+        "mail:read",
+        "--all-mailboxes",
+        "--step-up-token",
+        "pstep_x",
+      ]);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).not.toContain("A key can hold");
+      expect(requests).toHaveLength(1);
+    });
+  });
+
   it("update --add-rule keeps the key's rules and adds one, and --remove-rule names what it took off", async () => {
     const B = "9c1d2e3f-4a5b-4c6d-8e7f-0a1b2c3d4e5f";
     const C = "5e5e5e5e-0000-4000-8000-000000000003";
@@ -1247,8 +1477,9 @@ describe("keys commands", () => {
   });
 
   it("says in help that --rule replaces every rule, and offers --add-rule and --remove-rule", () => {
-    expect(KeysUpdateCommand.flags.rule.description).toContain(
-      "Replaces every rule the key has",
+    // Compact help keeps only a flag's first sentence, so it starts there.
+    expect(KeysUpdateCommand.flags.rule.description).toMatch(
+      /^Replaces the key's rules with these email rule ids\. /,
     );
     expect(KeysUpdateCommand.flags["add-rule"].description).toContain(
       "Its other rules stay.",
