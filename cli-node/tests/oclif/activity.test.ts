@@ -134,6 +134,9 @@ describe("resumeCommand", () => {
         "x'y",
       ),
     ).toBe(`primitive activity created --kind 'a b' --cursor 'x'\\''y'`);
+    expect(
+      resumeCommand("primitive", { kind: "=ls", state: "all", limit: 50 }, "c"),
+    ).toBe("primitive activity created --kind '=ls' --cursor c");
   });
 });
 
@@ -239,13 +242,30 @@ describe("activity created command", () => {
   });
 
   it(`stops --all after ${ALL_PAGES_LIMIT} pages and says where to resume`, async () => {
-    const urls = useApi((n) => page([item({ id: `id-${n}` })], `c${n}`));
+    const urls = useApi((n) => {
+      if (n > ALL_PAGES_LIMIT) throw new Error("past the cap");
+      return page([item({ id: `id-${n}` })], `c${n}`);
+    });
     const lines = captureLog();
     await ActivityCreatedCommand.run(["--all", "--json"], { root });
     expect(urls).toHaveLength(ALL_PAGES_LIMIT);
     const answer = JSON.parse(lines.join("\n"));
     expect(answer.items).toHaveLength(ALL_PAGES_LIMIT);
     expect(answer.next_cursor).toBe(`c${ALL_PAGES_LIMIT}`);
+  });
+
+  it(`prints the resume command, --all kept, after ${ALL_PAGES_LIMIT} pages`, async () => {
+    useApi((n) => {
+      if (n > ALL_PAGES_LIMIT) throw new Error("past the cap");
+      return page([item({ id: `id-${n}` })], `c${n}`);
+    });
+    const lines = captureLog();
+    await ActivityCreatedCommand.run(["--all", "--state", "ended"], { root });
+    expect(lines.at(-1)).toMatch(
+      new RegExp(
+        `More: \\S+ activity created --state ended --all --cursor c${ALL_PAGES_LIMIT}$`,
+      ),
+    );
   });
 
   it("exits 1 and prints the API's error when the request fails", async () => {

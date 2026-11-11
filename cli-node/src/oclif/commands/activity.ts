@@ -143,7 +143,7 @@ export function formatWithheld(
   return `Not shown: ${parts.join(", ")}.`;
 }
 
-const SHELL_SAFE = /^[A-Za-z0-9_,.:=/-]+$/;
+const SHELL_SAFE = /^[A-Za-z0-9_][A-Za-z0-9_,.:=/-]*$/;
 
 function shellWord(value: string): string {
   return SHELL_SAFE.test(value) ? value : `'${value.replaceAll("'", `'\\''`)}'`;
