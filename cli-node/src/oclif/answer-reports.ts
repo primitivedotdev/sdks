@@ -90,7 +90,7 @@ export function deliveryAttemptLines(data: unknown): string[] {
         : "";
     const line = `${number}${parts.join(" ")}${answered}${body ? `: ${body}` : ""}`;
     // An entry with neither time nor status says nothing worth a line.
-    if (parts.length > 0) lines.push(`  ${line}`);
+    if (text(attempt.created_at) || status) lines.push(`  ${line}`);
   }
   return lines.length > 0 ? [`Attempts (${lines.length}):`, ...lines] : [];
 }

@@ -1211,6 +1211,16 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
       "This rule blocks sharing (kind do_not_share): while it is active, no rule shares an email it matches. It blocks nothing until it is active.",
       `Expectations on version 4: none failed, 1 undecided (${D}). To decide the rest, run \`primitive email-rules test-email-rule --rule-id ${RULE}\`.`,
     ]);
+    // An active do_not_share rule says only that it blocks sharing.
+    answer({ ...written, kind: "do_not_share", state: "active" });
+    const active = await run("email-rules:update-email-rule", [
+      RULE,
+      "--name",
+      "n",
+    ]);
+    expect(stderrLines(active)).toEqual([
+      "This rule blocks sharing (kind do_not_share): while it is active, no rule shares an email it matches.",
+    ]);
     // A grant rule adds no line for its kind.
     answer({ ...written, kind: "grant" });
     const grant = await run("email-rules:update-email-rule", [

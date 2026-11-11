@@ -731,7 +731,7 @@ export function writtenEmailRuleReport(
   // A rule that blocks sharing reads like any other in the JSON; say so.
   if ((rule as { kind?: unknown }).kind === "do_not_share")
     lines.unshift(
-      `This rule blocks sharing (kind do_not_share): while it is active, no rule shares an email it matches.${rule.state === "active" ? "" : " It blocks nothing until it is active."}`,
+      `This rule blocks sharing (kind do_not_share): while it is active, no rule shares an email it matches.${typeof rule.state === "string" && rule.state !== "active" ? " It blocks nothing until it is active." : ""}`,
     );
   const sentExpectations =
     isRecord(request.body) && isRecord(request.body.expectations);
