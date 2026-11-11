@@ -18,6 +18,7 @@ import {
 import {
   pauseForTransientFailure,
   transientFailure,
+  waitOutRetryAfter,
 } from "../transient-retry.js";
 import { formatHeader, formatRow, pickIdWidth } from "./emails-latest.js";
 import {
@@ -27,6 +28,8 @@ import {
   DEFAULT_EMAIL_POLL_PAGE_SIZE,
   fetchEmailSearchPage,
   filtersFromFlags,
+  type LateMailReread,
+  lateMailReread,
   MAX_EMAIL_POLL_PAGE_SIZE,
   SINCE_VALUE_HELP,
   sinceFromFlags,
@@ -157,8 +160,11 @@ class EmailsWatchCommand extends Command {
     let failures = 0;
     let printed = 0;
     let headerPrinted = false;
+    // Re-reads behind the cursor, once it has passed some mail.
+    let reread: LateMailReread | null = null;
 
     while (deadline === null || Date.now() < deadline) {
+      const polledAt = Date.now();
       let page: Awaited<ReturnType<typeof fetchEmailSearchPage>>;
       try {
         page = await fetchEmailSearchPage({
@@ -205,8 +211,27 @@ class EmailsWatchCommand extends Command {
       const nextCursor = cursorFromAcceptedRows(page.rows);
       const cursorAdvanced = Boolean(nextCursor && nextCursor !== cursor);
       if (nextCursor) cursor = nextCursor;
+      if (cursor !== null)
+        reread ??= lateMailReread({
+          pollIntervalMs: flags.interval * 1000,
+          deadline,
+          start: polledAt,
+        });
+      // Idle: mail that became readable after the cursor passed its place.
+      const recent =
+        !cursorAdvanced && reread?.due()
+          ? await reread.read({
+              apiClient,
+              filters,
+              since,
+              fetchPage: fetchEmailSearchPage,
+            })
+          : { rows: [] };
 
-      for (const email of collectNewAcceptedEmails(page.rows, seenIds)) {
+      for (const email of collectNewAcceptedEmails(
+        [...page.rows, ...recent.rows],
+        seenIds,
+      )) {
         if (flags.jsonl) {
           this.log(JSON.stringify(email));
         } else {
@@ -221,6 +246,7 @@ class EmailsWatchCommand extends Command {
       }
 
       if (cursorAdvanced) continue;
+      if (!(await waitOutRetryAfter(recent.failed, { deadline }))) break;
       if (deadline !== null && Date.now() >= deadline) break;
       await sleep(flags.interval * 1000);
     }

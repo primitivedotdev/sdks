@@ -151,6 +151,20 @@ export async function pauseForTransientFailure(
 }
 
 /**
+ * After a failed read the caller does not retry, wait as long as the server
+ * asked (Retry-After), if it did, before the caller's next request. False when
+ * the deadline came first.
+ */
+export async function waitOutRetryAfter(
+  result: unknown,
+  options: TransientRetryOptions,
+): Promise<boolean> {
+  const failure = transientFailure(result);
+  if (failure?.retryAfterMs === undefined) return true;
+  return pauseForTransientFailure(failure, 0, options);
+}
+
+/**
  * Run an idempotent read, retrying transient failures until the deadline.
  * Resolves the first result that is not transient, or null when the
  * deadline passes first (or the read itself resolved null).
