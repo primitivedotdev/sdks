@@ -45715,9 +45715,10 @@ type GetDeliveryResult struct {
 	// When the next automatic retry of this delivery is due. Not reported yet: always null.
 	NextAttemptAt NilString `json:"next_attempt_at"`
 	// Every attempt of this delivery in the order recorded, oldest first, this one included: the same
-	// endpoint, and the same event (or, for an attempt recorded without one, the same email). Records of
-	// no attempt (attempt_count 0) are listed where they were recorded, so the last entry is not always
-	// the latest attempt (latest_attempt says which is). The newest 100 when there are more.
+	// endpoint, and the same event (or, for an attempt recorded without one, the same email). Each
+	// carries what the endpoint answered that attempt (response_status, response_body). Records of no
+	// attempt (attempt_count 0) are listed where they were recorded, so the last entry is not always the
+	// latest attempt (latest_attempt says which is). The newest 100 when there are more.
 	Attempts []GetDeliveryResultAttemptsItem `json:"attempts"`
 }
 
@@ -45928,6 +45929,17 @@ type GetDeliveryResultAttemptsItem struct {
 	LastErrorCode NilString `json:"last_error_code"`
 	DurationMs    NilInt    `json:"duration_ms"`
 	CreatedAt     string    `json:"created_at"`
+	// The HTTP status the endpoint answered this attempt with: a webhook's own answer, or for a Function
+	// what its runtime answered, which is the platform's own error when the Function could not be run.
+	// Null when no answer came back (a network error, a timeout, an attempt refused or not sent) and on
+	// attempts recorded before this field.
+	ResponseStatus NilInt `json:"response_status"`
+	// The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200
+	// and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was
+	// sent. Null when no answer came back, and cleared when the message's content is discarded or the
+	// sent email is deleted. Withheld from a caller who cannot read message content, since an answer can
+	// echo what was sent.
+	ResponseBody NilString `json:"response_body"`
 }
 
 // GetID returns the value of ID.
@@ -45960,6 +45972,16 @@ func (s *GetDeliveryResultAttemptsItem) GetCreatedAt() string {
 	return s.CreatedAt
 }
 
+// GetResponseStatus returns the value of ResponseStatus.
+func (s *GetDeliveryResultAttemptsItem) GetResponseStatus() NilInt {
+	return s.ResponseStatus
+}
+
+// GetResponseBody returns the value of ResponseBody.
+func (s *GetDeliveryResultAttemptsItem) GetResponseBody() NilString {
+	return s.ResponseBody
+}
+
 // SetID sets the value of ID.
 func (s *GetDeliveryResultAttemptsItem) SetID(val string) {
 	s.ID = val
@@ -45988,6 +46010,16 @@ func (s *GetDeliveryResultAttemptsItem) SetDurationMs(val NilInt) {
 // SetCreatedAt sets the value of CreatedAt.
 func (s *GetDeliveryResultAttemptsItem) SetCreatedAt(val string) {
 	s.CreatedAt = val
+}
+
+// SetResponseStatus sets the value of ResponseStatus.
+func (s *GetDeliveryResultAttemptsItem) SetResponseStatus(val NilInt) {
+	s.ResponseStatus = val
+}
+
+// SetResponseBody sets the value of ResponseBody.
+func (s *GetDeliveryResultAttemptsItem) SetResponseBody(val NilString) {
+	s.ResponseBody = val
 }
 
 type GetDeliveryResultEmail struct {
@@ -63963,13 +63995,20 @@ func (*ListMailboxAccessOK) listMailboxAccessRes() {}
 
 // Ref: #/components/schemas/ListMailboxAccessResult
 type ListMailboxAccessResult struct {
-	Entries         []ListMailboxAccessResultEntriesItem `json:"entries"`
+	Entries []ListMailboxAccessResultEntriesItem `json:"entries"`
+	// Only with no entries: says where each member's mail access comes from instead.
+	Note            OptString `json:"note"`
 	AdditionalProps ListMailboxAccessResultAdditional
 }
 
 // GetEntries returns the value of Entries.
 func (s *ListMailboxAccessResult) GetEntries() []ListMailboxAccessResultEntriesItem {
 	return s.Entries
+}
+
+// GetNote returns the value of Note.
+func (s *ListMailboxAccessResult) GetNote() OptString {
+	return s.Note
 }
 
 // GetAdditionalProps returns the value of AdditionalProps.
@@ -63980,6 +64019,11 @@ func (s *ListMailboxAccessResult) GetAdditionalProps() ListMailboxAccessResultAd
 // SetEntries sets the value of Entries.
 func (s *ListMailboxAccessResult) SetEntries(val []ListMailboxAccessResultEntriesItem) {
 	s.Entries = val
+}
+
+// SetNote sets the value of Note.
+func (s *ListMailboxAccessResult) SetNote(val OptString) {
+	s.Note = val
 }
 
 // SetAdditionalProps sets the value of AdditionalProps.
@@ -65168,10 +65212,13 @@ func (*ListRolesOK) listRolesRes() {}
 
 // Ref: #/components/schemas/ListRolesResult
 type ListRolesResult struct {
-	Roles           []ListRolesResultRolesItem     `json:"roles"`
-	Templates       []ListRolesResultTemplatesItem `json:"templates"`
-	Assignment      ListRolesResultAssignment      `json:"assignment"`
-	Invitations     OptListRolesResultInvitations  `json:"invitations"`
+	Roles       []ListRolesResultRolesItem     `json:"roles"`
+	Templates   []ListRolesResultTemplatesItem `json:"templates"`
+	Assignment  ListRolesResultAssignment      `json:"assignment"`
+	Invitations OptListRolesResultInvitations  `json:"invitations"`
+	// What role restricted means on a member with no role_id: no role of their own. Not a role, never
+	// assignable.
+	Unassigned      OptListRolesResultUnassigned `json:"unassigned"`
 	AdditionalProps ListRolesResultAdditional
 }
 
@@ -65193,6 +65240,11 @@ func (s *ListRolesResult) GetAssignment() ListRolesResultAssignment {
 // GetInvitations returns the value of Invitations.
 func (s *ListRolesResult) GetInvitations() OptListRolesResultInvitations {
 	return s.Invitations
+}
+
+// GetUnassigned returns the value of Unassigned.
+func (s *ListRolesResult) GetUnassigned() OptListRolesResultUnassigned {
+	return s.Unassigned
 }
 
 // GetAdditionalProps returns the value of AdditionalProps.
@@ -65218,6 +65270,11 @@ func (s *ListRolesResult) SetAssignment(val ListRolesResultAssignment) {
 // SetInvitations sets the value of Invitations.
 func (s *ListRolesResult) SetInvitations(val OptListRolesResultInvitations) {
 	s.Invitations = val
+}
+
+// SetUnassigned sets the value of Unassigned.
+func (s *ListRolesResult) SetUnassigned(val OptListRolesResultUnassigned) {
+	s.Unassigned = val
 }
 
 // SetAdditionalProps sets the value of AdditionalProps.
@@ -65558,6 +65615,111 @@ func (s *ListRolesResultTemplatesItemAdditional) init() ListRolesResultTemplates
 		*s = m
 	}
 	return m
+}
+
+// What role restricted means on a member with no role_id: no role of their own. Not a role, never
+// assignable.
+type ListRolesResultUnassigned struct {
+	Key             ListRolesResultUnassignedKey `json:"key"`
+	Name            string                       `json:"name"`
+	Description     string                       `json:"description"`
+	Permissions     []string                     `json:"permissions"`
+	AdditionalProps ListRolesResultUnassignedAdditional
+}
+
+// GetKey returns the value of Key.
+func (s *ListRolesResultUnassigned) GetKey() ListRolesResultUnassignedKey {
+	return s.Key
+}
+
+// GetName returns the value of Name.
+func (s *ListRolesResultUnassigned) GetName() string {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *ListRolesResultUnassigned) GetDescription() string {
+	return s.Description
+}
+
+// GetPermissions returns the value of Permissions.
+func (s *ListRolesResultUnassigned) GetPermissions() []string {
+	return s.Permissions
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *ListRolesResultUnassigned) GetAdditionalProps() ListRolesResultUnassignedAdditional {
+	return s.AdditionalProps
+}
+
+// SetKey sets the value of Key.
+func (s *ListRolesResultUnassigned) SetKey(val ListRolesResultUnassignedKey) {
+	s.Key = val
+}
+
+// SetName sets the value of Name.
+func (s *ListRolesResultUnassigned) SetName(val string) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *ListRolesResultUnassigned) SetDescription(val string) {
+	s.Description = val
+}
+
+// SetPermissions sets the value of Permissions.
+func (s *ListRolesResultUnassigned) SetPermissions(val []string) {
+	s.Permissions = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *ListRolesResultUnassigned) SetAdditionalProps(val ListRolesResultUnassignedAdditional) {
+	s.AdditionalProps = val
+}
+
+type ListRolesResultUnassignedAdditional map[string]jx.Raw
+
+func (s *ListRolesResultUnassignedAdditional) init() ListRolesResultUnassignedAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type ListRolesResultUnassignedKey string
+
+const (
+	ListRolesResultUnassignedKeyRestricted ListRolesResultUnassignedKey = "restricted"
+)
+
+// AllValues returns all ListRolesResultUnassignedKey values.
+func (ListRolesResultUnassignedKey) AllValues() []ListRolesResultUnassignedKey {
+	return []ListRolesResultUnassignedKey{
+		ListRolesResultUnassignedKeyRestricted,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListRolesResultUnassignedKey) MarshalText() ([]byte, error) {
+	switch s {
+	case ListRolesResultUnassignedKeyRestricted:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListRolesResultUnassignedKey) UnmarshalText(data []byte) error {
+	switch ListRolesResultUnassignedKey(data) {
+	case ListRolesResultUnassignedKeyRestricted:
+		*s = ListRolesResultUnassignedKeyRestricted
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 type ListRolesTooManyRequests ErrorResponseHeaders
@@ -81402,6 +81564,52 @@ func (o OptListRolesResultInvitations) Or(d ListRolesResultInvitations) ListRole
 	return d
 }
 
+// NewOptListRolesResultUnassigned returns new OptListRolesResultUnassigned with value set to v.
+func NewOptListRolesResultUnassigned(v ListRolesResultUnassigned) OptListRolesResultUnassigned {
+	return OptListRolesResultUnassigned{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListRolesResultUnassigned is optional ListRolesResultUnassigned.
+type OptListRolesResultUnassigned struct {
+	Value ListRolesResultUnassigned
+	Set   bool
+}
+
+// IsSet returns true if OptListRolesResultUnassigned was set.
+func (o OptListRolesResultUnassigned) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListRolesResultUnassigned) Reset() {
+	var v ListRolesResultUnassigned
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListRolesResultUnassigned) SetTo(v ListRolesResultUnassigned) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListRolesResultUnassigned) Get() (v ListRolesResultUnassigned, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListRolesResultUnassigned) Or(d ListRolesResultUnassigned) ListRolesResultUnassigned {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptListSuspensionsIncludeDecided returns new OptListSuspensionsIncludeDecided with value set to v.
 func NewOptListSuspensionsIncludeDecided(v ListSuspensionsIncludeDecided) OptListSuspensionsIncludeDecided {
 	return OptListSuspensionsIncludeDecided{
@@ -88595,6 +88803,52 @@ func (o OptProjectsListOrganizationInvitationsResultItemsItemRole) Get() (v Proj
 
 // Or returns value if set, or given parameter if does not.
 func (o OptProjectsListOrganizationInvitationsResultItemsItemRole) Or(d ProjectsListOrganizationInvitationsResultItemsItemRole) ProjectsListOrganizationInvitationsResultItemsItemRole {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptProjectsListOrganizationPeopleResultItemsItemMailAccess returns new OptProjectsListOrganizationPeopleResultItemsItemMailAccess with value set to v.
+func NewOptProjectsListOrganizationPeopleResultItemsItemMailAccess(v ProjectsListOrganizationPeopleResultItemsItemMailAccess) OptProjectsListOrganizationPeopleResultItemsItemMailAccess {
+	return OptProjectsListOrganizationPeopleResultItemsItemMailAccess{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptProjectsListOrganizationPeopleResultItemsItemMailAccess is optional ProjectsListOrganizationPeopleResultItemsItemMailAccess.
+type OptProjectsListOrganizationPeopleResultItemsItemMailAccess struct {
+	Value ProjectsListOrganizationPeopleResultItemsItemMailAccess
+	Set   bool
+}
+
+// IsSet returns true if OptProjectsListOrganizationPeopleResultItemsItemMailAccess was set.
+func (o OptProjectsListOrganizationPeopleResultItemsItemMailAccess) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptProjectsListOrganizationPeopleResultItemsItemMailAccess) Reset() {
+	var v ProjectsListOrganizationPeopleResultItemsItemMailAccess
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptProjectsListOrganizationPeopleResultItemsItemMailAccess) SetTo(v ProjectsListOrganizationPeopleResultItemsItemMailAccess) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptProjectsListOrganizationPeopleResultItemsItemMailAccess) Get() (v ProjectsListOrganizationPeopleResultItemsItemMailAccess, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptProjectsListOrganizationPeopleResultItemsItemMailAccess) Or(d ProjectsListOrganizationPeopleResultItemsItemMailAccess) ProjectsListOrganizationPeopleResultItemsItemMailAccess {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -97542,6 +97796,10 @@ type ProjectsListOrganizationPeopleResultItemsItem struct {
 	// restricted) access from groups only.
 	RoleID NilUUID                                                   `json:"role_id"`
 	Agents []ProjectsListOrganizationPeopleResultItemsItemAgentsItem `json:"agents"`
+	// What their access lets them do with mail now. read false: they cannot read mail here; their role
+	// must give mail:read (in delegated mode they also need their own mailbox or an access entry). Only
+	// for a caller holding members:read; absent when it could not be read in time.
+	MailAccess OptProjectsListOrganizationPeopleResultItemsItemMailAccess `json:"mail_access"`
 }
 
 // GetUserID returns the value of UserID.
@@ -97579,6 +97837,11 @@ func (s *ProjectsListOrganizationPeopleResultItemsItem) GetAgents() []ProjectsLi
 	return s.Agents
 }
 
+// GetMailAccess returns the value of MailAccess.
+func (s *ProjectsListOrganizationPeopleResultItemsItem) GetMailAccess() OptProjectsListOrganizationPeopleResultItemsItemMailAccess {
+	return s.MailAccess
+}
+
 // SetUserID sets the value of UserID.
 func (s *ProjectsListOrganizationPeopleResultItemsItem) SetUserID(val uuid.UUID) {
 	s.UserID = val
@@ -97612,6 +97875,11 @@ func (s *ProjectsListOrganizationPeopleResultItemsItem) SetRoleID(val NilUUID) {
 // SetAgents sets the value of Agents.
 func (s *ProjectsListOrganizationPeopleResultItemsItem) SetAgents(val []ProjectsListOrganizationPeopleResultItemsItemAgentsItem) {
 	s.Agents = val
+}
+
+// SetMailAccess sets the value of MailAccess.
+func (s *ProjectsListOrganizationPeopleResultItemsItem) SetMailAccess(val OptProjectsListOrganizationPeopleResultItemsItemMailAccess) {
+	s.MailAccess = val
 }
 
 type ProjectsListOrganizationPeopleResultItemsItemAgentsItem struct {
@@ -97648,6 +97916,36 @@ func (s *ProjectsListOrganizationPeopleResultItemsItemAgentsItem) SetAddress(val
 // SetName sets the value of Name.
 func (s *ProjectsListOrganizationPeopleResultItemsItemAgentsItem) SetName(val string) {
 	s.Name = val
+}
+
+// What their access lets them do with mail now. read false: they cannot read mail here; their role
+// must give mail:read (in delegated mode they also need their own mailbox or an access entry). Only
+// for a caller holding members:read; absent when it could not be read in time.
+type ProjectsListOrganizationPeopleResultItemsItemMailAccess struct {
+	// Holds mail:read, over every mailbox or only some.
+	Read bool `json:"read"`
+	// Holds mail:send, from every address or only some.
+	Send bool `json:"send"`
+}
+
+// GetRead returns the value of Read.
+func (s *ProjectsListOrganizationPeopleResultItemsItemMailAccess) GetRead() bool {
+	return s.Read
+}
+
+// GetSend returns the value of Send.
+func (s *ProjectsListOrganizationPeopleResultItemsItemMailAccess) GetSend() bool {
+	return s.Send
+}
+
+// SetRead sets the value of Read.
+func (s *ProjectsListOrganizationPeopleResultItemsItemMailAccess) SetRead(val bool) {
+	s.Read = val
+}
+
+// SetSend sets the value of Send.
+func (s *ProjectsListOrganizationPeopleResultItemsItemMailAccess) SetSend(val bool) {
+	s.Send = val
 }
 
 type ProjectsListOrganizationPeopleResultItemsItemRole string

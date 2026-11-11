@@ -73,9 +73,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
-    "permissions": [
-      "account:read"
-    ],
+    "permissions": null,
     "access": null,
     "requestSchema": null,
     "responseSchema": {
@@ -926,9 +924,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "headerParams": [],
-    "permissions": [
-      "account:read"
-    ],
+    "permissions": null,
     "access": null,
     "requestSchema": null,
     "responseSchema": {
@@ -38172,7 +38168,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-mailbox-access",
-    "description": "Every access entry in the organization: who (a member, group, agent or address) may read, draft or send for each mailbox or domain. An entry that reads a mailbox reads the full email; raw MIME follows the person's mail.raw:read. `depth` is deprecated: it is accepted and ignored, and new entries record content. Needs members:read: a person, or an org-wide API key whose person holds it.",
+    "description": "Every access entry in the organization: who (a member, group, agent or address) may read, draft or send for each mailbox or domain. An entry that reads a mailbox reads the full email; raw MIME follows the person's mail.raw:read. `depth` is deprecated: it is accepted and ignored, and new entries record content. With no entries, `note` says where each member's mail access comes from instead. Needs members:read: a person, or an org-wide API key whose person holds it.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listMailboxAccess",
@@ -38299,6 +38295,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ],
             "additionalProperties": {}
           }
+        },
+        "note": {
+          "description": "Only with no entries: says where each member's mail access comes from instead.",
+          "type": "string"
         }
       },
       "required": [
@@ -41663,7 +41663,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-organization-people",
-    "description": "Requires a current human organization membership, or an org-wide API key: a super admin key, or a custom key with no addresses or domains whose grant holds members:read. A key lists members as the person it belongs to, at that person's live grant, and only while that person still holds members:read. Narrowed, Function and connected keys are refused. No local paths or existing conversation history are shared.",
+    "description": "Requires a current human organization membership, or an org-wide API key: a super admin key, or a custom key with no addresses or domains whose grant holds members:read. A key lists members as the person it belongs to, at that person's live grant, and only while that person still holds members:read. Narrowed, Function and connected keys are refused. A caller holding members:read also gets each person's mail_access. No local paths or existing conversation history are shared.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listOrganizationPeople",
@@ -41773,6 +41773,24 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                     "name"
                   ]
                 }
+              },
+              "mail_access": {
+                "description": "What their access lets them do with mail now. read false: they cannot read mail here; their role must give mail:read (in delegated mode they also need their own mailbox or an access entry). Only for a caller holding members:read; absent when it could not be read in time.",
+                "type": "object",
+                "properties": {
+                  "read": {
+                    "type": "boolean",
+                    "description": "Holds mail:read, over every mailbox or only some."
+                  },
+                  "send": {
+                    "type": "boolean",
+                    "description": "Holds mail:send, from every address or only some."
+                  }
+                },
+                "required": [
+                  "read",
+                  "send"
+                ]
               }
             },
             "required": [
@@ -44552,7 +44570,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-roles",
-    "description": "Every role in the organization (built-in, template copies and custom roles), with how many members and groups hold each, the templates not yet copied, and whether roles can be assigned now. Any person (a session or OAuth token); API keys are refused.",
+    "description": "Every role in the organization (built-in, template copies and custom roles), with how many members and groups hold each, the templates not yet copied, and whether roles can be assigned now. `unassigned` describes role restricted on a member with no role_id, which is not a role and is never in `roles`. Any person (a session or OAuth token); API keys are refused.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listRoles",
@@ -44694,6 +44712,35 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "limited_roles_available",
             "members_read_all_mail"
           ]
+        },
+        "unassigned": {
+          "description": "What role restricted means on a member with no role_id: no role of their own. Not a role, never assignable.",
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string",
+              "const": "restricted"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "permissions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "key",
+            "name",
+            "description",
+            "permissions"
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -49600,9 +49647,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "headerParams": [],
-    "permissions": [
-      "account:read"
-    ],
+    "permissions": null,
     "access": null,
     "requestSchema": null,
     "responseSchema": {
@@ -58443,6 +58488,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               },
               "created_at": {
                 "type": "string"
+              },
+              "response_status": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "The HTTP status the endpoint answered this attempt with: a webhook's own answer, or for a Function what its runtime answered, which is the platform's own error when the Function could not be run. Null when no answer came back (a network error, a timeout, an attempt refused or not sent) and on attempts recorded before this field."
+              },
+              "response_body": {
+                "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.",
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             },
             "required": [
@@ -58451,10 +58510,12 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "status",
               "last_error_code",
               "duration_ms",
-              "created_at"
+              "created_at",
+              "response_status",
+              "response_body"
             ]
           },
-          "description": "Every attempt of this delivery in the order recorded, oldest first, this one included: the same endpoint, and the same event (or, for an attempt recorded without one, the same email). Records of no attempt (attempt_count 0) are listed where they were recorded, so the last entry is not always the latest attempt (latest_attempt says which is). The newest 100 when there are more."
+          "description": "Every attempt of this delivery in the order recorded, oldest first, this one included: the same endpoint, and the same event (or, for an attempt recorded without one, the same email). Each carries what the endpoint answered that attempt (response_status, response_body). Records of no attempt (attempt_count 0) are listed where they were recorded, so the last entry is not always the latest attempt (latest_attempt says which is). The newest 100 when there are more."
         }
       },
       "required": [

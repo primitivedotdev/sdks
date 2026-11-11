@@ -101,7 +101,8 @@ def sync_detailed(
      Every access entry in the organization: who (a member, group, agent or address) may read, draft or
     send for each mailbox or domain. An entry that reads a mailbox reads the full email; raw MIME
     follows the person's mail.raw:read. `depth` is deprecated: it is accepted and ignored, and new
-    entries record content. Needs members:read: a person, or an org-wide API key whose person holds it.
+    entries record content. With no entries, `note` says where each member's mail access comes from
+    instead. Needs members:read: a person, or an org-wide API key whose person holds it.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -132,7 +133,8 @@ def sync(
      Every access entry in the organization: who (a member, group, agent or address) may read, draft or
     send for each mailbox or domain. An entry that reads a mailbox reads the full email; raw MIME
     follows the person's mail.raw:read. `depth` is deprecated: it is accepted and ignored, and new
-    entries record content. Needs members:read: a person, or an org-wide API key whose person holds it.
+    entries record content. With no entries, `note` says where each member's mail access comes from
+    instead. Needs members:read: a person, or an org-wide API key whose person holds it.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -158,7 +160,8 @@ async def asyncio_detailed(
      Every access entry in the organization: who (a member, group, agent or address) may read, draft or
     send for each mailbox or domain. An entry that reads a mailbox reads the full email; raw MIME
     follows the person's mail.raw:read. `depth` is deprecated: it is accepted and ignored, and new
-    entries record content. Needs members:read: a person, or an org-wide API key whose person holds it.
+    entries record content. With no entries, `note` says where each member's mail access comes from
+    instead. Needs members:read: a person, or an org-wide API key whose person holds it.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -189,7 +192,8 @@ async def asyncio(
      Every access entry in the organization: who (a member, group, agent or address) may read, draft or
     send for each mailbox or domain. An entry that reads a mailbox reads the full email; raw MIME
     follows the person's mail.raw:read. `depth` is deprecated: it is accepted and ignored, and new
-    entries record content. Needs members:read: a person, or an org-wide API key whose person holds it.
+    entries record content. With no entries, `note` says where each member's mail access comes from
+    instead. Needs members:read: a person, or an org-wide API key whose person holds it.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

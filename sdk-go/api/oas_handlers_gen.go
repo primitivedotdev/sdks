@@ -37144,7 +37144,8 @@ func (s *Server) handleListMailTopicGenerationsRequest(args [0]string, argsEscap
 // Every access entry in the organization: who (a member, group, agent or address) may read, draft or
 // send for each mailbox or domain. An entry that reads a mailbox reads the full email; raw MIME
 // follows the person's mail.raw:read. `depth` is deprecated: it is accepted and ignored, and new
-// entries record content. Needs members:read: a person, or an org-wide API key whose person holds it.
+// entries record content. With no entries, `note` says where each member's mail access comes from
+// instead. Needs members:read: a person, or an org-wide API key whose person holds it.
 //
 // GET /mailbox-access
 func (s *Server) handleListMailboxAccessRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -38274,8 +38275,8 @@ func (s *Server) handleListOrganizationInvitationsRequest(args [0]string, argsEs
 // Requires a current human organization membership, or an org-wide API key: a super admin key, or a
 // custom key with no addresses or domains whose grant holds members:read. A key lists members as the
 // person it belongs to, at that person's live grant, and only while that person still holds
-// members:read. Narrowed, Function and connected keys are refused. No local paths or existing
-// conversation history are shared.
+// members:read. Narrowed, Function and connected keys are refused. A caller holding members:read
+// also gets each person's mail_access. No local paths or existing conversation history are shared.
 //
 // GET /organization/members
 func (s *Server) handleListOrganizationPeopleRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -39402,8 +39403,9 @@ func (s *Server) handleListRepeatingSendsRequest(args [0]string, argsEscaped boo
 // handleListRolesRequest handles listRoles operation.
 //
 // Every role in the organization (built-in, template copies and custom roles), with how many members
-// and groups hold each, the templates not yet copied, and whether roles can be assigned now. Any
-// person (a session or OAuth token); API keys are refused.
+// and groups hold each, the templates not yet copied, and whether roles can be assigned now.
+// `unassigned` describes role restricted on a member with no role_id, which is not a role and is
+// never in `roles`. Any person (a session or OAuth token); API keys are refused.
 //
 // GET /roles
 func (s *Server) handleListRolesRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {

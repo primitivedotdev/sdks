@@ -12,7 +12,6 @@ export const PERMISSIONS = [
   "access_mode:manage",
   "account:claim",
   "account:manage",
-  "account:read",
   "activity:read_self",
   "agent_connections:manage",
   "agent_connections:read_self",
@@ -333,9 +332,6 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   "getAccessMode": [
     "members:read"
   ],
-  "getAccount": [
-    "account:read"
-  ],
   "getAddressNote": [
     "notes:read"
   ],
@@ -473,9 +469,6 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   ],
   "getSearchSettings": [
     "org:read"
-  ],
-  "getSendPermissions": [
-    "account:read"
   ],
   "getSentEmail": [
     "mail:read"
@@ -988,9 +981,6 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   ],
   "verifyDomain": [
     "domains:manage"
-  ],
-  "whoami": [
-    "account:read"
   ],
   "withdrawEmailRuleRequest": [
     "mail:read"

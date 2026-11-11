@@ -89,6 +89,12 @@ These no longer exist, so code that uses them stops compiling or running:
 - `Account` no longer declares its subscription status field, and the
   generated `Account` types drop it.
 
+#### Account permission
+
+- `account:read` is no longer a permission: the Node `PERMISSIONS` list no
+  longer has it, and `OPERATION_PERMISSIONS` lists no permission for
+  `getAccount`, `getSendPermissions` and `whoami`.
+
 #### Not in the SDKs
 
 - `GET /health` (`getHealth`), an unauthenticated health check for uptime
@@ -411,10 +417,13 @@ date-time is kept as null and sorts last. A sync stops with an error after
 
 #### New operations
 
-165 operations, by area:
+166 operations, by area:
 
 - Account: `getOwnGrant`, `getSendFrom` (the addresses a credential may
   send from, and the one a send that names no From should use).
+- Activity: `listActivityObjects` (what the caller created, newest first,
+  with where each object stands now: for a person, through any credential of
+  theirs; for a key, an app or an agent, what it created itself).
 - Address notes: `listAddressNotes`, `listAddressNotesBatch`,
   `getAddressNote`, `putAddressNote`, `deleteAddressNote`,
   `listPublicAddressNotes`, `getPublicAddressNote`.
@@ -616,6 +625,14 @@ date-time is kept as null and sorts last. A sync stops with an error after
   (`endpoint_owner_limited`, `route_owner_limited`, `owner_unchecked`) and
   refuse a route that could never deliver with `400` `validation_error`,
   `details.reason` `endpoint_owner_access` or `route_owner_access`.
+- `getDelivery`: each of its `attempts` carries `response_status` and
+  `response_body`, the endpoint's answer to that attempt.
+- `listOrganizationPeople`: each person carries `mail_access` (`read`,
+  `send`), what their access lets them do with mail now.
+- `listMailboxAccess` carries `note` when there are no entries, saying where
+  each member's mail access comes from instead.
+- `listRoles` carries `unassigned`, what a member with no role of their own
+  holds.
 
 #### Node SDK
 
@@ -720,6 +737,14 @@ parsers.
 
 #### CLI
 
+- `primitive activity created` lists what you created, newest first, with
+  where each object stands now. Signed in with `primitive login`, it covers
+  what you created through any credential of yours, names the credential on
+  each row, and includes your API keys, agents, email rules and rule
+  requests; with an API key or an agent's key, it lists what that key
+  created. Kinds your access does not let you list are named at the end, with
+  the permission that would show them. It takes `--kind`, `--state`,
+  `--limit`, `--cursor`, `--all` and `--json`.
 - `primitive billing` opens the dashboard's billing page, or prints its link.
 - More commands take `--json`, which prints exactly one JSON document on
   stdout, failures included: `routes` (all of them), `org secrets`, `wake

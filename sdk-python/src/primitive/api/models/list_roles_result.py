@@ -15,6 +15,7 @@ if TYPE_CHECKING:
   from ..models.list_roles_result_invitations import ListRolesResultInvitations
   from ..models.list_roles_result_roles_item import ListRolesResultRolesItem
   from ..models.list_roles_result_templates_item import ListRolesResultTemplatesItem
+  from ..models.list_roles_result_unassigned import ListRolesResultUnassigned
 
 
 
@@ -32,12 +33,15 @@ class ListRolesResult:
             templates (list[ListRolesResultTemplatesItem]):
             assignment (ListRolesResultAssignment):
             invitations (ListRolesResultInvitations | Unset):
+            unassigned (ListRolesResultUnassigned | Unset): What role restricted means on a member with no role_id: no role
+                of their own. Not a role, never assignable.
      """
 
     roles: list[ListRolesResultRolesItem]
     templates: list[ListRolesResultTemplatesItem]
     assignment: ListRolesResultAssignment
     invitations: ListRolesResultInvitations | Unset = UNSET
+    unassigned: ListRolesResultUnassigned | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -49,6 +53,7 @@ class ListRolesResult:
         from ..models.list_roles_result_invitations import ListRolesResultInvitations # noqa: PLC0415
         from ..models.list_roles_result_roles_item import ListRolesResultRolesItem # noqa: PLC0415
         from ..models.list_roles_result_templates_item import ListRolesResultTemplatesItem # noqa: PLC0415
+        from ..models.list_roles_result_unassigned import ListRolesResultUnassigned # noqa: PLC0415
         roles = []
         for roles_item_data in self.roles:
             roles_item = roles_item_data.to_dict()
@@ -69,6 +74,10 @@ class ListRolesResult:
         if not isinstance(self.invitations, Unset):
             invitations = self.invitations.to_dict()
 
+        unassigned: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.unassigned, Unset):
+            unassigned = self.unassigned.to_dict()
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -79,6 +88,8 @@ class ListRolesResult:
         })
         if invitations is not UNSET:
             field_dict["invitations"] = invitations
+        if unassigned is not UNSET:
+            field_dict["unassigned"] = unassigned
 
         return field_dict
 
@@ -90,6 +101,7 @@ class ListRolesResult:
         from ..models.list_roles_result_invitations import ListRolesResultInvitations # noqa: PLC0415
         from ..models.list_roles_result_roles_item import ListRolesResultRolesItem # noqa: PLC0415
         from ..models.list_roles_result_templates_item import ListRolesResultTemplatesItem # noqa: PLC0415
+        from ..models.list_roles_result_unassigned import ListRolesResultUnassigned # noqa: PLC0415
         d = dict(src_dict)
         roles = []
         _roles = d.pop("roles")
@@ -126,11 +138,22 @@ class ListRolesResult:
 
 
 
+        _unassigned = d.pop("unassigned", UNSET)
+        unassigned: ListRolesResultUnassigned | Unset
+        if isinstance(_unassigned,  Unset):
+            unassigned = UNSET
+        else:
+            unassigned = ListRolesResultUnassigned.from_dict(_unassigned)
+
+
+
+
         list_roles_result = cls(
             roles=roles,
             templates=templates,
             assignment=assignment,
             invitations=invitations,
+            unassigned=unassigned,
         )
 
 

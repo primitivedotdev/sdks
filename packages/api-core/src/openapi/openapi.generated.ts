@@ -190,6 +190,11 @@ export const openapiDocument: Record<string, unknown> = {
       "x-openapi-spec": "https://api.primitive.dev/v1/openapi/tags/stats"
     },
     {
+      "name": "Activity",
+      "description": "What the calling credential itself did: the objects it created, by id, name and state.",
+      "x-openapi-spec": "https://api.primitive.dev/v1/openapi/tags/activity"
+    },
+    {
       "name": "Email Rules",
       "description": "Rules a member writes in plain English to pick out received mail. The organization needs the email rules feature, and the caller must be a member (their own session, or an OAuth or CLI token that is not narrowed) with mail:read.",
       "x-openapi-spec": "https://api.primitive.dev/v1/openapi/tags/email-rules"
@@ -198,11 +203,6 @@ export const openapiDocument: Record<string, unknown> = {
       "name": "Changes",
       "description": "One replayable long-poll of what changed (ids and kinds) across mail, sent mail, read state, the agent directory and access, so a client can keep its snapshots current without polling every list.",
       "x-openapi-spec": "https://api.primitive.dev/v1/openapi/tags/changes"
-    },
-    {
-      "name": "Activity",
-      "description": "What the calling credential itself did: the objects it created, by id, name and state.",
-      "x-openapi-spec": "https://api.primitive.dev/v1/openapi/tags/activity"
     }
   ],
   "paths": {
@@ -2250,10 +2250,7 @@ export const openapiDocument: Record<string, unknown> = {
             "BearerAuth": []
           }
         ],
-        "description": "Retrieve the authenticated organization's account: organization identity, current plan, usage, and onboarding state. Fields the credential has no permission to read are null: plan, limits, entitlements, settings and the managed inbox need org:read, the subscription dates billing:read, the signup email the access that shows members' emails, and the webhook secret rotation date webhook_secret:read.",
-        "x-primitive-permission": [
-          "account:read"
-        ]
+        "description": "Retrieve the authenticated organization's account: organization identity, current plan, usage, and onboarding state. Fields the credential has no permission to read are null: plan, limits, entitlements, settings and the managed inbox need org:read, the subscription dates billing:read, the signup email the access that shows members' emails, and the webhook secret rotation date webhook_secret:read."
       },
       "patch": {
         "operationId": "updateAccount",
@@ -12178,9 +12175,6 @@ export const openapiDocument: Record<string, unknown> = {
           {
             "BearerAuth": []
           }
-        ],
-        "x-primitive-permission": [
-          "account:read"
         ]
       }
     },
@@ -26042,10 +26036,7 @@ export const openapiDocument: Record<string, unknown> = {
               }
             }
           }
-        },
-        "x-primitive-permission": [
-          "account:read"
-        ]
+        }
       }
     },
     "/account/member-address": {
@@ -48334,7 +48325,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           }
         ],
-        "description": "Requires a current human organization membership, or an org-wide API key: a super admin key, or a custom key with no addresses or domains whose grant holds members:read. A key lists members as the person it belongs to, at that person's live grant, and only while that person still holds members:read. Narrowed, Function and connected keys are refused. No local paths or existing conversation history are shared.",
+        "description": "Requires a current human organization membership, or an org-wide API key: a super admin key, or a custom key with no addresses or domains whose grant holds members:read. A key lists members as the person it belongs to, at that person's live grant, and only while that person still holds members:read. Narrowed, Function and connected keys are refused. A caller holding members:read also gets each person's mail_access. No local paths or existing conversation history are shared.",
         "responses": {
           "200": {
             "description": "Success",
@@ -50339,7 +50330,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "listMailboxAccess",
         "summary": "List mailbox access",
-        "description": "Every access entry in the organization: who (a member, group, agent or address) may read, draft or send for each mailbox or domain. An entry that reads a mailbox reads the full email; raw MIME follows the person's mail.raw:read. `depth` is deprecated: it is accepted and ignored, and new entries record content. Needs members:read: a person, or an org-wide API key whose person holds it.",
+        "description": "Every access entry in the organization: who (a member, group, agent or address) may read, draft or send for each mailbox or domain. An entry that reads a mailbox reads the full email; raw MIME follows the person's mail.raw:read. `depth` is deprecated: it is accepted and ignored, and new entries record content. With no entries, `note` says where each member's mail access comes from instead. Needs members:read: a person, or an org-wide API key whose person holds it.",
         "tags": [
           "Mailbox access"
         ],
@@ -56341,7 +56332,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "listRoles",
         "summary": "List roles",
-        "description": "Every role in the organization (built-in, template copies and custom roles), with how many members and groups hold each, the templates not yet copied, and whether roles can be assigned now. Any person (a session or OAuth token); API keys are refused.",
+        "description": "Every role in the organization (built-in, template copies and custom roles), with how many members and groups hold each, the templates not yet copied, and whether roles can be assigned now. `unassigned` describes role restricted on a member with no role_id, which is not a role and is never in `roles`. Any person (a session or OAuth token); API keys are refused.",
         "tags": [
           "Roles and members"
         ],
@@ -57867,7 +57858,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "404": {
-            "description": "feature_disabled: the feature is not enabled for the organization; or not_found: the item the path names does not exist.",
+            "description": "feature_disabled: the access mode feature is not enabled for the organization. For a person, details.effective_mode names the mode that applies meanwhile: whole_org, or delegated if the organization switched to it earlier.",
             "content": {
               "application/json": {
                 "schema": {
@@ -75635,6 +75626,144 @@ export const openapiDocument: Record<string, unknown> = {
           "regressed"
         ]
       },
+      "ListActivityObjectsResult": {
+        "type": "object",
+        "properties": {
+          "covers": {
+            "type": "string",
+            "description": "you: what a person created through any credential of theirs (their dashboard session, their own CLI or app login, apps and agent delegates acting for them, their API keys while theirs, their personal agents). this_credential: what the calling key, app or agent created itself."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "description": "One of: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request."
+                },
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "description": "The name the object is known by: an endpoint's display name, a route's or filter's pattern, a Function's name, a send's From address, a wake schedule's command and the address it wakes, an API key's name, an agent's address, a rule's or rule request's name. Never a webhook URL and never mail content.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "state": {
+                  "type": "string",
+                  "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests)."
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "ended_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "description": "When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request was decided (accepted, declined or withdrawn); null otherwise."
+                },
+                "owned_now": {
+                  "type": "string",
+                  "enum": [
+                    "you",
+                    "someone_else"
+                  ],
+                  "description": "you: it is still yours: never transferred, or transferred back to you. someone_else: it was transferred and another person holds it now."
+                },
+                "created_through": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "description": "The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves)."
+                    },
+                    "id": {
+                      "description": "In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "description": "In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "id",
+                    "name"
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "id",
+                "name",
+                "state",
+                "created_at",
+                "ended_at",
+                "owned_now",
+                "created_through"
+              ]
+            }
+          },
+          "withheld": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string",
+                  "enum": [
+                    "permission_missing",
+                    "mail_scope",
+                    "not_for_this_credential"
+                  ],
+                  "description": "permission_missing: the caller lacks the permission the kind's own list needs (named in permission). mail_scope: listed only to a caller that reads every mailbox. not_for_this_credential: this kind of credential never lists them (a person's own kinds asked for by a key, an app or an agent)."
+                },
+                "permission": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "reason",
+                "permission"
+              ]
+            },
+            "description": "Kinds left out because the caller could not list them through their own routes. Nothing is said about how many there are."
+          },
+          "next_cursor": {
+            "description": "Pass as cursor to read the next page; null on the last page. A page can hold fewer items than limit, or none, while next_cursor is set.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "covers",
+          "items",
+          "withheld",
+          "next_cursor"
+        ]
+      },
       "GetEmailRuleVocabularyResult": {
         "type": "object",
         "properties": {
@@ -82402,6 +82531,20 @@ export const openapiDocument: Record<string, unknown> = {
                 },
                 "created_at": {
                   "type": "string"
+                },
+                "response_status": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "description": "The HTTP status the endpoint answered this attempt with: a webhook's own answer, or for a Function what its runtime answered, which is the platform's own error when the Function could not be run. Null when no answer came back (a network error, a timeout, an attempt refused or not sent) and on attempts recorded before this field."
+                },
+                "response_body": {
+                  "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               },
               "required": [
@@ -82410,10 +82553,12 @@ export const openapiDocument: Record<string, unknown> = {
                 "status",
                 "last_error_code",
                 "duration_ms",
-                "created_at"
+                "created_at",
+                "response_status",
+                "response_body"
               ]
             },
-            "description": "Every attempt of this delivery in the order recorded, oldest first, this one included: the same endpoint, and the same event (or, for an attempt recorded without one, the same email). Records of no attempt (attempt_count 0) are listed where they were recorded, so the last entry is not always the latest attempt (latest_attempt says which is). The newest 100 when there are more."
+            "description": "Every attempt of this delivery in the order recorded, oldest first, this one included: the same endpoint, and the same event (or, for an attempt recorded without one, the same email). Each carries what the endpoint answered that attempt (response_status, response_body). Records of no attempt (attempt_count 0) are listed where they were recorded, so the last entry is not always the latest attempt (latest_attempt says which is). The newest 100 when there are more."
           }
         },
         "required": [
@@ -83068,6 +83213,24 @@ export const openapiDocument: Record<string, unknown> = {
                       "name"
                     ]
                   }
+                },
+                "mail_access": {
+                  "description": "What their access lets them do with mail now. read false: they cannot read mail here; their role must give mail:read (in delegated mode they also need their own mailbox or an access entry). Only for a caller holding members:read; absent when it could not be read in time.",
+                  "type": "object",
+                  "properties": {
+                    "read": {
+                      "type": "boolean",
+                      "description": "Holds mail:read, over every mailbox or only some."
+                    },
+                    "send": {
+                      "type": "boolean",
+                      "description": "Holds mail:send, from every address or only some."
+                    }
+                  },
+                  "required": [
+                    "read",
+                    "send"
+                  ]
                 }
               },
               "required": [
@@ -84125,6 +84288,10 @@ export const openapiDocument: Record<string, unknown> = {
               ],
               "additionalProperties": {}
             }
+          },
+          "note": {
+            "description": "Only with no entries: says where each member's mail access comes from instead.",
+            "type": "string"
           }
         },
         "required": [
@@ -87246,6 +87413,35 @@ export const openapiDocument: Record<string, unknown> = {
               "limited_roles_available",
               "members_read_all_mail"
             ]
+          },
+          "unassigned": {
+            "description": "What role restricted means on a member with no role_id: no role of their own. Not a role, never assignable.",
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string",
+                "const": "restricted"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "permissions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "key",
+              "name",
+              "description",
+              "permissions"
+            ],
+            "additionalProperties": {}
           }
         },
         "required": [
@@ -90628,144 +90824,6 @@ export const openapiDocument: Record<string, unknown> = {
           "admin",
           "operator",
           "member"
-        ]
-      },
-      "ListActivityObjectsResult": {
-        "type": "object",
-        "properties": {
-          "covers": {
-            "type": "string",
-            "description": "you: what a person created through any credential of theirs (their dashboard session, their own CLI or app login, apps and agent delegates acting for them, their API keys while theirs, their personal agents). this_credential: what the calling key, app or agent created itself."
-          },
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "kind": {
-                  "type": "string",
-                  "description": "One of: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request."
-                },
-                "id": {
-                  "type": "string"
-                },
-                "name": {
-                  "description": "The name the object is known by: an endpoint's display name, a route's or filter's pattern, a Function's name, a send's From address, a wake schedule's command and the address it wakes, an API key's name, an agent's address, a rule's or rule request's name. Never a webhook URL and never mail content.",
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "state": {
-                  "type": "string",
-                  "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests)."
-                },
-                "created_at": {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                "ended_at": {
-                  "type": [
-                    "string",
-                    "null"
-                  ],
-                  "format": "date-time",
-                  "description": "When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request was decided (accepted, declined or withdrawn); null otherwise."
-                },
-                "owned_now": {
-                  "type": "string",
-                  "enum": [
-                    "you",
-                    "someone_else"
-                  ],
-                  "description": "you: it is still yours: never transferred, or transferred back to you. someone_else: it was transferred and another person holds it now."
-                },
-                "created_through": {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "description": "The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves)."
-                    },
-                    "id": {
-                      "description": "In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself.",
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "name": {
-                      "description": "In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves.",
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "id",
-                    "name"
-                  ]
-                }
-              },
-              "required": [
-                "kind",
-                "id",
-                "name",
-                "state",
-                "created_at",
-                "ended_at",
-                "owned_now",
-                "created_through"
-              ]
-            }
-          },
-          "withheld": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "kind": {
-                  "type": "string"
-                },
-                "reason": {
-                  "type": "string",
-                  "enum": [
-                    "permission_missing",
-                    "mail_scope",
-                    "not_for_this_credential"
-                  ],
-                  "description": "permission_missing: the caller lacks the permission the kind's own list needs (named in permission). mail_scope: listed only to a caller that reads every mailbox. not_for_this_credential: this kind of credential never lists them (a person's own kinds asked for by a key, an app or an agent)."
-                },
-                "permission": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                }
-              },
-              "required": [
-                "kind",
-                "reason",
-                "permission"
-              ]
-            },
-            "description": "Kinds left out because the caller could not list them through their own routes. Nothing is said about how many there are."
-          },
-          "next_cursor": {
-            "description": "Pass as cursor to read the next page; null on the last page. A page can hold fewer items than limit, or none, while next_cursor is set.",
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "covers",
-          "items",
-          "withheld",
-          "next_cursor"
         ]
       }
     },

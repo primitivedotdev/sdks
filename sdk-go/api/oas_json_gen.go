@@ -95404,15 +95404,25 @@ func (s *GetDeliveryResultAttemptsItem) encodeFields(e *jx.Encoder) {
 		e.FieldStart("created_at")
 		e.Str(s.CreatedAt)
 	}
+	{
+		e.FieldStart("response_status")
+		s.ResponseStatus.Encode(e)
+	}
+	{
+		e.FieldStart("response_body")
+		s.ResponseBody.Encode(e)
+	}
 }
 
-var jsonFieldsNameOfGetDeliveryResultAttemptsItem = [6]string{
+var jsonFieldsNameOfGetDeliveryResultAttemptsItem = [8]string{
 	0: "id",
 	1: "attempt_count",
 	2: "status",
 	3: "last_error_code",
 	4: "duration_ms",
 	5: "created_at",
+	6: "response_status",
+	7: "response_body",
 }
 
 // Decode decodes GetDeliveryResultAttemptsItem from json.
@@ -95492,6 +95502,26 @@ func (s *GetDeliveryResultAttemptsItem) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"created_at\"")
 			}
+		case "response_status":
+			requiredBitSet[0] |= 1 << 6
+			if err := func() error {
+				if err := s.ResponseStatus.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"response_status\"")
+			}
+		case "response_body":
+			requiredBitSet[0] |= 1 << 7
+			if err := func() error {
+				if err := s.ResponseBody.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"response_body\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -95502,7 +95532,7 @@ func (s *GetDeliveryResultAttemptsItem) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00111111,
+		0b11111111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -140264,6 +140294,12 @@ func (s *ListMailboxAccessResult) encodeFields(e *jx.Encoder) {
 		}
 		e.ArrEnd()
 	}
+	{
+		if s.Note.Set {
+			e.FieldStart("note")
+			s.Note.Encode(e)
+		}
+	}
 	for k, elem := range s.AdditionalProps {
 		e.FieldStart(k)
 
@@ -140273,8 +140309,9 @@ func (s *ListMailboxAccessResult) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfListMailboxAccessResult = [1]string{
+var jsonFieldsNameOfListMailboxAccessResult = [2]string{
 	0: "entries",
+	1: "note",
 }
 
 // Decode decodes ListMailboxAccessResult from json.
@@ -140304,6 +140341,16 @@ func (s *ListMailboxAccessResult) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"entries\"")
+			}
+		case "note":
+			if err := func() error {
+				s.Note.Reset()
+				if err := s.Note.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"note\"")
 			}
 		default:
 			var elem jx.Raw
@@ -144458,6 +144505,12 @@ func (s *ListRolesResult) encodeFields(e *jx.Encoder) {
 			s.Invitations.Encode(e)
 		}
 	}
+	{
+		if s.Unassigned.Set {
+			e.FieldStart("unassigned")
+			s.Unassigned.Encode(e)
+		}
+	}
 	for k, elem := range s.AdditionalProps {
 		e.FieldStart(k)
 
@@ -144467,11 +144520,12 @@ func (s *ListRolesResult) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfListRolesResult = [4]string{
+var jsonFieldsNameOfListRolesResult = [5]string{
 	0: "roles",
 	1: "templates",
 	2: "assignment",
 	3: "invitations",
+	4: "unassigned",
 }
 
 // Decode decodes ListRolesResult from json.
@@ -144539,6 +144593,16 @@ func (s *ListRolesResult) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"invitations\"")
+			}
+		case "unassigned":
+			if err := func() error {
+				s.Unassigned.Reset()
+				if err := s.Unassigned.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"unassigned\"")
 			}
 		default:
 			var elem jx.Raw
@@ -145575,6 +145639,278 @@ func (s ListRolesResultTemplatesItemAdditional) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ListRolesResultTemplatesItemAdditional) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ListRolesResultUnassigned) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ListRolesResultUnassigned) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("key")
+		s.Key.Encode(e)
+	}
+	{
+		e.FieldStart("name")
+		e.Str(s.Name)
+	}
+	{
+		e.FieldStart("description")
+		e.Str(s.Description)
+	}
+	{
+		e.FieldStart("permissions")
+		e.ArrStart()
+		for _, elem := range s.Permissions {
+			e.Str(elem)
+		}
+		e.ArrEnd()
+	}
+	for k, elem := range s.AdditionalProps {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
+}
+
+var jsonFieldsNameOfListRolesResultUnassigned = [4]string{
+	0: "key",
+	1: "name",
+	2: "description",
+	3: "permissions",
+}
+
+// Decode decodes ListRolesResultUnassigned from json.
+func (s *ListRolesResultUnassigned) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ListRolesResultUnassigned to nil")
+	}
+	var requiredBitSet [1]uint8
+	s.AdditionalProps = map[string]jx.Raw{}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "key":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Key.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"key\"")
+			}
+		case "name":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Name = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"name\"")
+			}
+		case "description":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.Description = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"description\"")
+			}
+		case "permissions":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				s.Permissions = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.Permissions = append(s.Permissions, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"permissions\"")
+			}
+		default:
+			var elem jx.Raw
+			if err := func() error {
+				v, err := d.RawAppend(nil)
+				elem = jx.Raw(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrapf(err, "decode field %q", k)
+			}
+			s.AdditionalProps[string(k)] = elem
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ListRolesResultUnassigned")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00001111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfListRolesResultUnassigned) {
+					name = jsonFieldsNameOfListRolesResultUnassigned[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ListRolesResultUnassigned) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ListRolesResultUnassigned) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s ListRolesResultUnassignedAdditional) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields implements json.Marshaler.
+func (s ListRolesResultUnassignedAdditional) encodeFields(e *jx.Encoder) {
+	for k, elem := range s {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
+}
+
+// Decode decodes ListRolesResultUnassignedAdditional from json.
+func (s *ListRolesResultUnassignedAdditional) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ListRolesResultUnassignedAdditional to nil")
+	}
+	m := s.init()
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		var elem jx.Raw
+		if err := func() error {
+			v, err := d.RawAppend(nil)
+			elem = jx.Raw(v)
+			if err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
+			return errors.Wrapf(err, "decode field %q", k)
+		}
+		m[string(k)] = elem
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ListRolesResultUnassignedAdditional")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ListRolesResultUnassignedAdditional) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ListRolesResultUnassignedAdditional) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ListRolesResultUnassignedKey as json.
+func (s ListRolesResultUnassignedKey) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ListRolesResultUnassignedKey from json.
+func (s *ListRolesResultUnassignedKey) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ListRolesResultUnassignedKey to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ListRolesResultUnassignedKey(v) {
+	case ListRolesResultUnassignedKeyRestricted:
+		*s = ListRolesResultUnassignedKeyRestricted
+	default:
+		*s = ListRolesResultUnassignedKey(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ListRolesResultUnassignedKey) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ListRolesResultUnassignedKey) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -162422,6 +162758,39 @@ func (s *OptListRolesResultInvitations) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes ListRolesResultUnassigned as json.
+func (o OptListRolesResultUnassigned) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes ListRolesResultUnassigned from json.
+func (o *OptListRolesResultUnassigned) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptListRolesResultUnassigned to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptListRolesResultUnassigned) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptListRolesResultUnassigned) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes ListThreadReadStatesOKMeta as json.
 func (o OptListThreadReadStatesOKMeta) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -168032,6 +168401,39 @@ func (s OptProjectsListOrganizationInvitationsResultItemsItemRole) MarshalJSON()
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptProjectsListOrganizationInvitationsResultItemsItemRole) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ProjectsListOrganizationPeopleResultItemsItemMailAccess as json.
+func (o OptProjectsListOrganizationPeopleResultItemsItemMailAccess) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes ProjectsListOrganizationPeopleResultItemsItemMailAccess from json.
+func (o *OptProjectsListOrganizationPeopleResultItemsItemMailAccess) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptProjectsListOrganizationPeopleResultItemsItemMailAccess to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptProjectsListOrganizationPeopleResultItemsItemMailAccess) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptProjectsListOrganizationPeopleResultItemsItemMailAccess) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -181200,9 +181602,15 @@ func (s *ProjectsListOrganizationPeopleResultItemsItem) encodeFields(e *jx.Encod
 		}
 		e.ArrEnd()
 	}
+	{
+		if s.MailAccess.Set {
+			e.FieldStart("mail_access")
+			s.MailAccess.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfProjectsListOrganizationPeopleResultItemsItem = [7]string{
+var jsonFieldsNameOfProjectsListOrganizationPeopleResultItemsItem = [8]string{
 	0: "user_id",
 	1: "name",
 	2: "work_email",
@@ -181210,6 +181618,7 @@ var jsonFieldsNameOfProjectsListOrganizationPeopleResultItemsItem = [7]string{
 	4: "role_name",
 	5: "role_id",
 	6: "agents",
+	7: "mail_access",
 }
 
 // Decode decodes ProjectsListOrganizationPeopleResultItemsItem from json.
@@ -181304,6 +181713,16 @@ func (s *ProjectsListOrganizationPeopleResultItemsItem) Decode(d *jx.Decoder) er
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"agents\"")
+			}
+		case "mail_access":
+			if err := func() error {
+				s.MailAccess.Reset()
+				if err := s.MailAccess.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"mail_access\"")
 			}
 		default:
 			return d.Skip()
@@ -181487,6 +181906,119 @@ func (s *ProjectsListOrganizationPeopleResultItemsItemAgentsItem) MarshalJSON() 
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ProjectsListOrganizationPeopleResultItemsItemAgentsItem) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ProjectsListOrganizationPeopleResultItemsItemMailAccess) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ProjectsListOrganizationPeopleResultItemsItemMailAccess) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("read")
+		e.Bool(s.Read)
+	}
+	{
+		e.FieldStart("send")
+		e.Bool(s.Send)
+	}
+}
+
+var jsonFieldsNameOfProjectsListOrganizationPeopleResultItemsItemMailAccess = [2]string{
+	0: "read",
+	1: "send",
+}
+
+// Decode decodes ProjectsListOrganizationPeopleResultItemsItemMailAccess from json.
+func (s *ProjectsListOrganizationPeopleResultItemsItemMailAccess) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ProjectsListOrganizationPeopleResultItemsItemMailAccess to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "read":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Read = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"read\"")
+			}
+		case "send":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Bool()
+				s.Send = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"send\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ProjectsListOrganizationPeopleResultItemsItemMailAccess")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfProjectsListOrganizationPeopleResultItemsItemMailAccess) {
+					name = jsonFieldsNameOfProjectsListOrganizationPeopleResultItemsItemMailAccess[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ProjectsListOrganizationPeopleResultItemsItemMailAccess) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ProjectsListOrganizationPeopleResultItemsItemMailAccess) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

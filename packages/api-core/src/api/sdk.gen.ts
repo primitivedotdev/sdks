@@ -3796,7 +3796,7 @@ export const revokeOrganizationInvitation = <ThrowOnError extends boolean = fals
 });
 
 /**
- * Requires a current human organization membership, or an org-wide API key: a super admin key, or a custom key with no addresses or domains whose grant holds members:read. A key lists members as the person it belongs to, at that person's live grant, and only while that person still holds members:read. Narrowed, Function and connected keys are refused. No local paths or existing conversation history are shared.
+ * Requires a current human organization membership, or an org-wide API key: a super admin key, or a custom key with no addresses or domains whose grant holds members:read. A key lists members as the person it belongs to, at that person's live grant, and only while that person still holds members:read. Narrowed, Function and connected keys are refused. A caller holding members:read also gets each person's mail_access. No local paths or existing conversation history are shared.
  */
 export const listOrganizationPeople = <ThrowOnError extends boolean = false>(options?: Options<ListOrganizationPeopleData, ThrowOnError>): RequestResult<ListOrganizationPeopleResponses, ListOrganizationPeopleErrors, ThrowOnError> => (options?.client ?? client).get<ListOrganizationPeopleResponses, ListOrganizationPeopleErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -3891,7 +3891,7 @@ export const revokeProjectInvitation = <ThrowOnError extends boolean = false>(op
 /**
  * List mailbox access
  *
- * Every access entry in the organization: who (a member, group, agent or address) may read, draft or send for each mailbox or domain. An entry that reads a mailbox reads the full email; raw MIME follows the person's mail.raw:read. `depth` is deprecated: it is accepted and ignored, and new entries record content. Needs members:read: a person, or an org-wide API key whose person holds it.
+ * Every access entry in the organization: who (a member, group, agent or address) may read, draft or send for each mailbox or domain. An entry that reads a mailbox reads the full email; raw MIME follows the person's mail.raw:read. `depth` is deprecated: it is accepted and ignored, and new entries record content. With no entries, `note` says where each member's mail access comes from instead. Needs members:read: a person, or an org-wide API key whose person holds it.
  */
 export const listMailboxAccess = <ThrowOnError extends boolean = false>(options?: Options<ListMailboxAccessData, ThrowOnError>): RequestResult<ListMailboxAccessResponses, ListMailboxAccessErrors, ThrowOnError> => (options?.client ?? client).get<ListMailboxAccessResponses, ListMailboxAccessErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -4308,7 +4308,7 @@ export const updateSearchSettings = <ThrowOnError extends boolean = false>(optio
 /**
  * List roles
  *
- * Every role in the organization (built-in, template copies and custom roles), with how many members and groups hold each, the templates not yet copied, and whether roles can be assigned now. Any person (a session or OAuth token); API keys are refused.
+ * Every role in the organization (built-in, template copies and custom roles), with how many members and groups hold each, the templates not yet copied, and whether roles can be assigned now. `unassigned` describes role restricted on a member with no role_id, which is not a role and is never in `roles`. Any person (a session or OAuth token); API keys are refused.
  */
 export const listRoles = <ThrowOnError extends boolean = false>(options?: Options<ListRolesData, ThrowOnError>): RequestResult<ListRolesResponses, ListRolesErrors, ThrowOnError> => (options?.client ?? client).get<ListRolesResponses, ListRolesErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],

@@ -58,8 +58,9 @@ class GetDeliveryResult:
                 null.
             attempts (list[GetDeliveryResultAttemptsItem]): Every attempt of this delivery in the order recorded, oldest
                 first, this one included: the same endpoint, and the same event (or, for an attempt recorded without one, the
-                same email). Records of no attempt (attempt_count 0) are listed where they were recorded, so the last entry is
-                not always the latest attempt (latest_attempt says which is). The newest 100 when there are more.
+                same email). Each carries what the endpoint answered that attempt (response_status, response_body). Records of
+                no attempt (attempt_count 0) are listed where they were recorded, so the last entry is not always the latest
+                attempt (latest_attempt says which is). The newest 100 when there are more.
      """
 
     id: str
