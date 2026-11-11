@@ -865,11 +865,19 @@ downgrading, or sign in again afterwards.
   `EmailRuleRequestEventTypes` in Go). The Node SDK also has the body's shape
   (`EmailRuleRequestEvent`) and a type guard (`isEmailRuleRequestEvent`). Each goes to the person who did not act, only
   to a webhook that person made for them, and only when the webhook lists
-  them. The body carries the asker's `message` and a decline's
-  `decline_reason`, and `type` but not `event`, so parse it with the
-  `X-Webhook-Event` header.
-- `--event-types email_rule_request.*` expands to the four events, as
-  `sent_email.*` does.
+  them. The body always carries the asker's `message` and a decline's
+  `decline_reason` (null when there is none), and `type` but not `event`, so
+  parse it with the `X-Webhook-Event` header.
+- A webhook for these events is an http webhook made for them when it is
+  created, by a person signed in as themself; one made with an API key,
+  another app or an agent is refused, and an existing webhook cannot be given
+  them. It is its maker's own whatever their access: only they can change it,
+  and it cannot be given to an API key. It is always a route target, so it
+  receives mail only through routes; asking for it to be a default
+  (`is_route_target: false`, or a takeover) is refused.
+- `--event-types 'email_rule_request.*'` expands to the four events, as
+  `sent_email.*` does. When creating or changing such a webhook is refused,
+  `endpoints create-endpoint` and `update-endpoint` say what to do instead.
 
 #### Values the API adds later
 

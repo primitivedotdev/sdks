@@ -80,6 +80,10 @@ import {
   ReplyStateUnsupportedError,
   replyStateSurfaceForOperation,
 } from "./reply-state.js";
+import {
+  createEndpointRuleRequestHint,
+  updateEndpointRuleRequestHint,
+} from "./rule-request-webhooks.js";
 import { sentListOtherSendersNote } from "./sent-list-labels.js";
 import {
   approveThenRerunHint,
@@ -1534,6 +1538,10 @@ export const OPERATION_ERROR_HINTS: Record<
 > = {
   inviteOrganizationMember: (code, body, payload) =>
     inviteRefusalHint(code, body, payload),
+  createEndpoint: (code, body, payload) =>
+    createEndpointRuleRequestHint(code, body, payload),
+  updateEndpoint: (code, body, payload) =>
+    updateEndpointRuleRequestHint(code, body, payload),
   updateEmailRule: (code, _body, payload, path) =>
     code === "email_rule_conflict"
       ? versionMovedHint(payload, path?.id)

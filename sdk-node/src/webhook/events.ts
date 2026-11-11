@@ -135,12 +135,12 @@ export function isEmailReceivedEvent(
 // -----------------------------------------------------------------------------
 
 /**
- * The body of an `email_rule_request.*` webhook. It names the request, says
- * where it stands, and carries the asker's message and a decline's reason when
- * there are any. It does not carry the rule or anything read from mail: read
- * the request with `getEmailRuleRequest` for the rest. Pass the
- * `X-Webhook-Event` header to the parser, since the body has `type` and no
- * `event`.
+ * The body of an `email_rule_request.*` webhook. It names the request,
+ * says where it stands, and always carries the asker's message and a
+ * decline's reason, null when there is none. It does not carry the rule or
+ * anything read from mail: read the request with `getEmailRuleRequest` for
+ * the rest. Pass the `X-Webhook-Event` header to the parser, since the body
+ * has `type` and no `event`.
  */
 export interface EmailRuleRequestEvent {
   /** The event name, overlaid from the `X-Webhook-Event` header by the parser. */
@@ -160,10 +160,10 @@ export interface EmailRuleRequestEvent {
     share_id?: string;
     /** On `accepted`: whether the member asked changed the rule first. */
     edited_on_accept?: boolean;
-    /** What the member asking wrote about why; null when they wrote nothing. Absent from servers that predate it. */
-    message?: string | null;
-    /** Why the member asked declined; null unless they gave a reason. Absent from servers that predate it. */
-    decline_reason?: string | null;
+    /** What the member asking wrote about why; null when they wrote nothing. */
+    message: string | null;
+    /** Why the member asked declined; null unless they gave a reason. */
+    decline_reason: string | null;
     [key: string]: unknown;
   };
   /** On `created` and `withdrawn`: the member who asked. */
