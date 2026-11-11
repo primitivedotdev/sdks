@@ -218,6 +218,11 @@ run directly. If your organization requires approval, the command prints the
 approval link and waits for the one-time token the page shows, or takes it with
 .BR --step-up-token .
 A new secret is printed once and never saved.
+.B primitive keys update ID --expires-at TIME
+extends a key before it expires; rotating keeps its expiry unless
+.B rotate
+is given
+.BR --expires-at .
 .B primitive keys revoke ID
 revokes a key.
 .B primitive whoami --check PERMISSION

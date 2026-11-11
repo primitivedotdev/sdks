@@ -531,6 +531,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
 
 #### New parameters and fields on existing operations
 
+- `rotateKey` takes `expires_at`: the new key's expiry, a time or null for
+  none, instead of the old key's.
 - `Primitive-Step-Up` is a declared header parameter on the 36 operations that
   accept a step-up confirmation token, so a client can send the confirmation
   token through the generated call: `headers: { "Primitive-Step-Up": token }`
@@ -846,6 +848,16 @@ parsers.
 - `keys update --json` prints the key at the top level, in the shape
   `keys get` and `keys create` print, with `changed`, `warnings` and
   `address_warnings` alongside, instead of nesting it under `key`.
+- `keys update --expires-at <time>` gives a key a new expiry, which is how
+  to keep a key working past its expiry: a later time extends it, within
+  the organization's credential policy. `--no-expiry` removes it where the
+  policy allows. `keys rotate` takes the same two flags for the new key.
+  Without them the new key keeps the old key's expiry, and the command now
+  prints when the new key expires. The time is ISO 8601 with its time zone.
+- `keys revoke` counts separately what the key set up for the
+  organization, which keeps working, and what the key owned itself, such as
+  its own webhooks, which stop with it. Its help no longer says that
+  everything the key set up keeps working.
 - Generated commands the API answers only in a dashboard session, such as
   `credentials list-credentials` and `credentials list-credential-events`,
   say so: their summary, which short help prints, ends with `(dashboard

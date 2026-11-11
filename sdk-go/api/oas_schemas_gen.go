@@ -20976,6 +20976,11 @@ type CredentialsRotateKeyInput struct {
 	// expires_at. 86400 (24 hours) when omitted. 0 stops the old key at once: use it when rotating
 	// because the secret leaked.
 	OverlapSeconds OptInt `json:"overlap_seconds"`
+	// The new key's expiry. Omitted, it keeps the old key's expiry: rotating alone never extends a key.
+	// A time sets it, within the organization's credential policy (its maximum key lifetime counts from
+	// now); null makes it never expire, where the policy allows. Needs keys:manage, as changing a key
+	// does. The old key stops when the overlap ends, or at this expiry if that comes first.
+	ExpiresAt OptNilDateTime `json:"expires_at"`
 }
 
 // GetOverlapSeconds returns the value of OverlapSeconds.
@@ -20983,9 +20988,19 @@ func (s *CredentialsRotateKeyInput) GetOverlapSeconds() OptInt {
 	return s.OverlapSeconds
 }
 
+// GetExpiresAt returns the value of ExpiresAt.
+func (s *CredentialsRotateKeyInput) GetExpiresAt() OptNilDateTime {
+	return s.ExpiresAt
+}
+
 // SetOverlapSeconds sets the value of OverlapSeconds.
 func (s *CredentialsRotateKeyInput) SetOverlapSeconds(val OptInt) {
 	s.OverlapSeconds = val
+}
+
+// SetExpiresAt sets the value of ExpiresAt.
+func (s *CredentialsRotateKeyInput) SetExpiresAt(val OptNilDateTime) {
+	s.ExpiresAt = val
 }
 
 // Ref: #/components/schemas/Credentials_rotateKey_Result
@@ -20996,7 +21011,8 @@ type CredentialsRotateKeyResult struct {
 	ExpiresAt     OptNilDateTime `json:"expires_at"`
 	PreviousKeyID string         `json:"previous_key_id"`
 	// When the old key stops working: the time of the rotation plus overlap_seconds (24 hours when it
-	// was omitted, now when it was 0), or the key's own expires_at when that comes first.
+	// was omitted, now when it was 0), or the key's own expires_at, or the expires_at given to the new
+	// key, whichever comes first.
 	PreviousKeyExpiresAt time.Time `json:"previous_key_expires_at"`
 	AdditionalProps      CredentialsRotateKeyResultAdditional
 }
@@ -21526,7 +21542,11 @@ func (s *CredentialsUpdateCredentialPolicyResultSuperAdminKeyCreators) Unmarshal
 
 // Ref: #/components/schemas/Credentials_updateKey_Input
 type CredentialsUpdateKeyInput struct {
-	Name             OptString                                 `json:"name"`
+	Name OptString `json:"name"`
+	// A new expiry. A later time extends the key and an earlier one ends it sooner, within the
+	// organization's credential policy (its maximum key lifetime counts from now); null removes the
+	// expiry, where the policy allows. A rotated-out key's expiry can only be brought forward, and an
+	// expired key's cannot be changed.
 	ExpiresAt        OptNilDateTime                            `json:"expires_at"`
 	Grant            OptCredentialsUpdateKeyInputGrant         `json:"grant"`
 	ExpectedGrantRef OptString                                 `json:"expected_grant_ref"`

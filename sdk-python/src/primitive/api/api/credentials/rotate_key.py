@@ -132,14 +132,18 @@ def sync_detailed(
     secret once. The old key keeps working for overlap_seconds, then stops: 24 hours when
     overlap_seconds is omitted, at most 7 days, never past its own expires_at, and at once with 0 (which
     is how to rotate a key whose secret leaked). previous_key_expires_at says when the old key stops.
-    The person rotating must cover the key's access (403 grant_forbidden, details.reason
-    target_not_covered), and a key an owner holds is rotated by an owner only (403 forbidden,
-    details.reason owner_key_rotation), since rotating hands over the new secret. The person's own
-    Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless the
-    organization's credential policy sets cli_writes_require_approval; the Primitive app's token is
-    refused, even with one. Needs the organization's credential features to be enabled; while they are
-    not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive
-    to turn them on.
+    Rotating does not extend a key: the successor keeps the old expiry unless expires_at gives it a new
+    one. That needs keys:manage (403 forbidden otherwise), is held to the credential policy (400 when
+    past its maximum lifetime, with the latest expiry it allows now in the message), and someone limited
+    to their own keys can only keep or bring it forward (403 grant_forbidden, details.reason
+    own_key_tighten_only); the old key then never outlives the new one. The person rotating must cover
+    the key's access (403 grant_forbidden, details.reason target_not_covered), and a key an owner holds
+    is rotated by an owner only (403 forbidden, details.reason owner_key_rotation), since rotating hands
+    over the new secret. The person's own Primitive CLI login needs no step-up (it acts as the person,
+    held to the same rules) unless the organization's credential policy sets
+    cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
     organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token
@@ -194,14 +198,18 @@ def sync(
     secret once. The old key keeps working for overlap_seconds, then stops: 24 hours when
     overlap_seconds is omitted, at most 7 days, never past its own expires_at, and at once with 0 (which
     is how to rotate a key whose secret leaked). previous_key_expires_at says when the old key stops.
-    The person rotating must cover the key's access (403 grant_forbidden, details.reason
-    target_not_covered), and a key an owner holds is rotated by an owner only (403 forbidden,
-    details.reason owner_key_rotation), since rotating hands over the new secret. The person's own
-    Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless the
-    organization's credential policy sets cli_writes_require_approval; the Primitive app's token is
-    refused, even with one. Needs the organization's credential features to be enabled; while they are
-    not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive
-    to turn them on.
+    Rotating does not extend a key: the successor keeps the old expiry unless expires_at gives it a new
+    one. That needs keys:manage (403 forbidden otherwise), is held to the credential policy (400 when
+    past its maximum lifetime, with the latest expiry it allows now in the message), and someone limited
+    to their own keys can only keep or bring it forward (403 grant_forbidden, details.reason
+    own_key_tighten_only); the old key then never outlives the new one. The person rotating must cover
+    the key's access (403 grant_forbidden, details.reason target_not_covered), and a key an owner holds
+    is rotated by an owner only (403 forbidden, details.reason owner_key_rotation), since rotating hands
+    over the new secret. The person's own Primitive CLI login needs no step-up (it acts as the person,
+    held to the same rules) unless the organization's credential policy sets
+    cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
     organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token
@@ -251,14 +259,18 @@ async def asyncio_detailed(
     secret once. The old key keeps working for overlap_seconds, then stops: 24 hours when
     overlap_seconds is omitted, at most 7 days, never past its own expires_at, and at once with 0 (which
     is how to rotate a key whose secret leaked). previous_key_expires_at says when the old key stops.
-    The person rotating must cover the key's access (403 grant_forbidden, details.reason
-    target_not_covered), and a key an owner holds is rotated by an owner only (403 forbidden,
-    details.reason owner_key_rotation), since rotating hands over the new secret. The person's own
-    Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless the
-    organization's credential policy sets cli_writes_require_approval; the Primitive app's token is
-    refused, even with one. Needs the organization's credential features to be enabled; while they are
-    not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive
-    to turn them on.
+    Rotating does not extend a key: the successor keeps the old expiry unless expires_at gives it a new
+    one. That needs keys:manage (403 forbidden otherwise), is held to the credential policy (400 when
+    past its maximum lifetime, with the latest expiry it allows now in the message), and someone limited
+    to their own keys can only keep or bring it forward (403 grant_forbidden, details.reason
+    own_key_tighten_only); the old key then never outlives the new one. The person rotating must cover
+    the key's access (403 grant_forbidden, details.reason target_not_covered), and a key an owner holds
+    is rotated by an owner only (403 forbidden, details.reason owner_key_rotation), since rotating hands
+    over the new secret. The person's own Primitive CLI login needs no step-up (it acts as the person,
+    held to the same rules) unless the organization's credential policy sets
+    cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
     organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token
@@ -313,14 +325,18 @@ async def asyncio(
     secret once. The old key keeps working for overlap_seconds, then stops: 24 hours when
     overlap_seconds is omitted, at most 7 days, never past its own expires_at, and at once with 0 (which
     is how to rotate a key whose secret leaked). previous_key_expires_at says when the old key stops.
-    The person rotating must cover the key's access (403 grant_forbidden, details.reason
-    target_not_covered), and a key an owner holds is rotated by an owner only (403 forbidden,
-    details.reason owner_key_rotation), since rotating hands over the new secret. The person's own
-    Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless the
-    organization's credential policy sets cli_writes_require_approval; the Primitive app's token is
-    refused, even with one. Needs the organization's credential features to be enabled; while they are
-    not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive
-    to turn them on.
+    Rotating does not extend a key: the successor keeps the old expiry unless expires_at gives it a new
+    one. That needs keys:manage (403 forbidden otherwise), is held to the credential policy (400 when
+    past its maximum lifetime, with the latest expiry it allows now in the message), and someone limited
+    to their own keys can only keep or bring it forward (403 grant_forbidden, details.reason
+    own_key_tighten_only); the old key then never outlives the new one. The person rotating must cover
+    the key's access (403 grant_forbidden, details.reason target_not_covered), and a key an owner holds
+    is rotated by an owner only (403 forbidden, details.reason owner_key_rotation), since rotating hands
+    over the new secret. The person's own Primitive CLI login needs no step-up (it acts as the person,
+    held to the same rules) unless the organization's credential policy sets
+    cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
     organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token
