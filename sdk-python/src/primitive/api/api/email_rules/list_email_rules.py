@@ -116,7 +116,8 @@ def sync_detailed(
 
      The rules the caller can see, newest first: their own, or every member's rules for a caller who
     reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
-    for a selected rule). With matched_email_id, only the rules that matched that email. Needs
+    for a selected rule) and current_version, but not the version's text: read that under current from
+    GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs
     mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
     token), and the email rules feature.
 
@@ -159,7 +160,8 @@ def sync(
 
      The rules the caller can see, newest first: their own, or every member's rules for a caller who
     reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
-    for a selected rule). With matched_email_id, only the rules that matched that email. Needs
+    for a selected rule) and current_version, but not the version's text: read that under current from
+    GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs
     mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
     token), and the email rules feature.
 
@@ -197,7 +199,8 @@ async def asyncio_detailed(
 
      The rules the caller can see, newest first: their own, or every member's rules for a caller who
     reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
-    for a selected rule). With matched_email_id, only the rules that matched that email. Needs
+    for a selected rule) and current_version, but not the version's text: read that under current from
+    GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs
     mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
     token), and the email rules feature.
 
@@ -240,7 +243,8 @@ async def asyncio(
 
      The rules the caller can see, newest first: their own, or every member's rules for a caller who
     reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
-    for a selected rule). With matched_email_id, only the rules that matched that email. Needs
+    for a selected rule) and current_version, but not the version's text: read that under current from
+    GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs
     mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
     token), and the email rules feature.
 

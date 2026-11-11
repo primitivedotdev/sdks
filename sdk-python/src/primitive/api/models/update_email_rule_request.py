@@ -13,6 +13,7 @@ from ..models.update_email_rule_request_state import UpdateEmailRuleRequestState
 from typing import cast
 
 if TYPE_CHECKING:
+  from ..models.email_rule_breadth import EmailRuleBreadth
   from ..models.email_rule_scope_selection import EmailRuleScopeSelection
   from ..models.email_rule_tree_input import EmailRuleTreeInput
   from ..models.update_email_rule_request_expectations_type_0 import UpdateEmailRuleRequestExpectationsType0
@@ -45,17 +46,29 @@ class UpdateEmailRuleRequest:
                 returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
             compiled_by (str | Unset): Who produced the tree (not verified): the compile response's compiled_by, or member
                 (the default) for a tree you wrote or edited.
+            breadth (EmailRuleBreadth | None | Unset): Ignored (the compile answer's breadth).
             evaluation_scope (UpdateEmailRuleRequestEvaluationScope | Unset): own_mailboxes: mail to your own addresses and
                 agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
                 later included. selected: what scope_selection names. Left out, the scope stays. A change saves a new version
                 with the same conditions, and is refused while the rule is shared.
             scope_selection (EmailRuleScopeSelection | Unset): For a selected rule: inboxes, and domains (each address at
                 them the author reads); each one you can read.
-            if_version (int | Unset): The current_version you read. If the rule's now differs, nothing changes: 409
-                email_rule_conflict, details.reason version_moved and details.current_version. Send it with a new version so a
-                concurrent edit is never replaced unseen. It guards versions only: a change to expectations alone saves none.
+            if_version (int | Unset): The current_version you read: if it has moved, nothing is saved (409
+                email_rule_conflict, version_moved). It guards versions only; if_revision guards every update.
             expectations (None | Unset | UpdateEmailRuleRequestExpectationsType0): Replaces its saved expectations (author
                 only); null removes them.
+            if_revision (int | Unset): The revision you read: if the rule was updated since, nothing is saved (409
+                email_rule_conflict, revision_moved).
+            if_expectations_pass (bool | Unset): true: judge the rule as this write leaves it (new tree, restored version,
+                new scope, or the version it activates) against the expectations it leaves, as POST /email-rules/test would,
+                before saving; it can take as long as a test. Failed: 409 expectations_failed; undecided: 409
+                expectations_undecided (both with details.expectations_check); none to judge: 400 no_expectations. Refused
+                writes save nothing; a pass saves unless the rule moved meanwhile (409 email_rule_conflict). Only writes that
+                save a version or activate the rule are judged.
+            restore_version (int | Unset): Save version n again as the next version (author only): its english, tree,
+                explanation, assumptions, warnings and compiled_by. A version carries no scope: the rule keeps its own unless
+                evaluation_scope is sent. 404 version_not_found; 400 already_current or version_not_renderable. Not with a
+                version's own fields.
      """
 
     name: str | Unset = UNSET
@@ -66,16 +79,21 @@ class UpdateEmailRuleRequest:
     assumptions: list[str] | Unset = UNSET
     warnings: list[str] | Unset = UNSET
     compiled_by: str | Unset = UNSET
+    breadth: EmailRuleBreadth | None | Unset = UNSET
     evaluation_scope: UpdateEmailRuleRequestEvaluationScope | Unset = UNSET
     scope_selection: EmailRuleScopeSelection | Unset = UNSET
     if_version: int | Unset = UNSET
     expectations: None | Unset | UpdateEmailRuleRequestExpectationsType0 = UNSET
+    if_revision: int | Unset = UNSET
+    if_expectations_pass: bool | Unset = UNSET
+    restore_version: int | Unset = UNSET
 
 
 
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
         from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         from ..models.update_email_rule_request_expectations_type_0 import UpdateEmailRuleRequestExpectationsType0 # noqa: PLC0415
@@ -108,6 +126,14 @@ class UpdateEmailRuleRequest:
 
         compiled_by = self.compiled_by
 
+        breadth: dict[str, Any] | None | Unset
+        if isinstance(self.breadth, Unset):
+            breadth = UNSET
+        elif isinstance(self.breadth, EmailRuleBreadth):
+            breadth = self.breadth.to_dict()
+        else:
+            breadth = self.breadth
+
         evaluation_scope: str | Unset = UNSET
         if not isinstance(self.evaluation_scope, Unset):
             evaluation_scope = self.evaluation_scope.value
@@ -126,6 +152,12 @@ class UpdateEmailRuleRequest:
             expectations = self.expectations.to_dict()
         else:
             expectations = self.expectations
+
+        if_revision = self.if_revision
+
+        if_expectations_pass = self.if_expectations_pass
+
+        restore_version = self.restore_version
 
 
         field_dict: dict[str, Any] = {}
@@ -148,6 +180,8 @@ class UpdateEmailRuleRequest:
             field_dict["warnings"] = warnings
         if compiled_by is not UNSET:
             field_dict["compiled_by"] = compiled_by
+        if breadth is not UNSET:
+            field_dict["breadth"] = breadth
         if evaluation_scope is not UNSET:
             field_dict["evaluation_scope"] = evaluation_scope
         if scope_selection is not UNSET:
@@ -156,6 +190,12 @@ class UpdateEmailRuleRequest:
             field_dict["if_version"] = if_version
         if expectations is not UNSET:
             field_dict["expectations"] = expectations
+        if if_revision is not UNSET:
+            field_dict["if_revision"] = if_revision
+        if if_expectations_pass is not UNSET:
+            field_dict["if_expectations_pass"] = if_expectations_pass
+        if restore_version is not UNSET:
+            field_dict["restore_version"] = restore_version
 
         return field_dict
 
@@ -163,6 +203,7 @@ class UpdateEmailRuleRequest:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
         from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         from ..models.update_email_rule_request_expectations_type_0 import UpdateEmailRuleRequestExpectationsType0 # noqa: PLC0415
@@ -200,6 +241,26 @@ class UpdateEmailRuleRequest:
 
 
         compiled_by = d.pop("compiled_by", UNSET)
+
+        def _parse_breadth(data: object) -> EmailRuleBreadth | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                breadth_type_1 = EmailRuleBreadth.from_dict(data)
+
+
+
+                return breadth_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailRuleBreadth | None | Unset, data)
+
+        breadth = _parse_breadth(d.pop("breadth", UNSET))
+
 
         _evaluation_scope = d.pop("evaluation_scope", UNSET)
         evaluation_scope: UpdateEmailRuleRequestEvaluationScope | Unset
@@ -243,6 +304,12 @@ class UpdateEmailRuleRequest:
         expectations = _parse_expectations(d.pop("expectations", UNSET))
 
 
+        if_revision = d.pop("if_revision", UNSET)
+
+        if_expectations_pass = d.pop("if_expectations_pass", UNSET)
+
+        restore_version = d.pop("restore_version", UNSET)
+
         update_email_rule_request = cls(
             name=name,
             state=state,
@@ -252,10 +319,14 @@ class UpdateEmailRuleRequest:
             assumptions=assumptions,
             warnings=warnings,
             compiled_by=compiled_by,
+            breadth=breadth,
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,
             if_version=if_version,
             expectations=expectations,
+            if_revision=if_revision,
+            if_expectations_pass=if_expectations_pass,
+            restore_version=restore_version,
         )
 
         return update_email_rule_request
