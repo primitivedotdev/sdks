@@ -370,6 +370,21 @@ describe("activity asked command", () => {
     expect(out).toMatch(/More: \S+ activity asked --cursor next-page$/m);
   });
 
+  it("does not say nobody asked when an empty page has more after it", async () => {
+    useApi([page([], "next-page")]);
+    const lines: string[] = [];
+    vi.spyOn(ActivityAskedCommand.prototype, "log").mockImplementation(
+      (message?: string) => {
+        lines.push(message ?? "");
+      },
+    );
+    await ActivityAskedCommand.run([], { root });
+    const out = lines.join("\n");
+    expect(out).toContain("Nothing to show.");
+    expect(out).not.toContain("Nobody has asked");
+    expect(out).toMatch(/More: \S+ activity asked --cursor next-page$/m);
+  });
+
   it("says nothing to show, not that nobody asked, for a filtered listing", async () => {
     useApi([page([], null)]);
     const lines: string[] = [];

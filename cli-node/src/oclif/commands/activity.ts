@@ -132,7 +132,7 @@ export function formatActivityRows(
 /**
  * One line per request asked of you: its state, when it was asked, its name,
  * and who asked. `complete` says the listing is the whole of it (every state,
- * from the first page, nothing withheld), the only time an empty one means
+ * from the first page to the last, nothing withheld), the only time an empty one means
  * nobody has asked.
  */
 export function formatAskedRows(
@@ -271,7 +271,11 @@ async function runActivityList(
     relation === "asked"
       ? formatAskedRows(
           items,
-          flags.state === "all" && !flags.cursor && withheld.length === 0,
+          // Every state, from the first page to the last, with nothing withheld.
+          flags.state === "all" &&
+            !flags.cursor &&
+            !cursor &&
+            withheld.length === 0,
         )
       : formatActivityRows(covers, items),
   );
