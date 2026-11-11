@@ -68,12 +68,14 @@ class UpdatedEndpoint:
             owned_by_key (bool | Unset): Whether an API key owns this webhook instead of the organization.
             owner_key_id (None | Unset | UUID): The API key that owns this webhook. In endpoint responses it is set only for
                 a caller who may read API key metadata, and is null otherwise and when the organization owns the webhook. After
-                a rotation, the key that carries on for the key first named while it can act.
+                a rotation, the key that carries on for the key first named while it can act. When none can, the key delivery
+                stops on: the key first named while it is suspended and not expired, otherwise the newest key of its rotation
+                that is not revoked, otherwise the newest one (only the key first named when nothing may carry on for it).
             owner_key_status (EndpointOwnerKeyStatusType1 | EndpointOwnerKeyStatusType2Type1 |
                 EndpointOwnerKeyStatusType3Type1 | None | Unset): Whether the owning key can act now. In endpoint responses it
-                is set only for a caller who may read API key metadata. Suspended also covers an expired key. A suspended or
-                revoked owner is sent nothing. Anyone who may read the endpoint learns that from delivery.reasons, which never
-                names the key.
+                is set only for a caller who may read API key metadata. It is the state delivery acts on. Suspended also covers
+                an expired key. A suspended or revoked owner is sent nothing. Anyone who may read the endpoint learns that from
+                delivery.reasons, which never names the key.
             disabled_reason (None | str | Unset): Why the platform turned this endpoint off, when it names a reason.
                 owner_changed: it was given to a new owner while its URL stayed, and the URL was chosen under the previous
                 owner; turning it on or giving it a new URL starts it again. owner_credential_revoked: the third-party app or

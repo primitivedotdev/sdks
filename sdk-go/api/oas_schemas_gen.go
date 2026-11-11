@@ -12997,9 +12997,12 @@ type CreateEmailRuleRequestResult struct {
 	Tree        EmailRuleTree                      `json:"tree"`
 	Explanation string                             `json:"explanation"`
 	Assumptions []string                           `json:"assumptions"`
-	Warnings    []string                           `json:"warnings"`
-	CompiledBy  string                             `json:"compiled_by"`
-	Vocabulary  string                             `json:"vocabulary"`
+	// As the member who asked sent them, normally from their compile. The compiler's note that the rule
+	// matches nearly everything, in its own wording, counted that member's recent mail: anyone else
+	// reads it naming them.
+	Warnings   []string `json:"warnings"`
+	CompiledBy string   `json:"compiled_by"`
+	Vocabulary string   `json:"vocabulary"`
 	// Session: the proposer's own session; oauth: an OAuth or CLI token acting for them.
 	ProposedVia     CreateEmailRuleRequestResultProposedVia `json:"proposed_via"`
 	CreatedAt       time.Time                               `json:"created_at"`
@@ -17628,7 +17631,15 @@ type CredentialsGetKeyResult struct {
 	// The user id of the person who revoked the key from their own dashboard session, step-up or
 	// Primitive CLI login; null for a key that is not revoked, and for one revoked any other way (by an
 	// API key, another app or token, or an automatic process such as secret scanning).
-	RevokedBy       OptNilString `json:"revoked_by"`
+	RevokedBy OptNilString `json:"revoked_by"`
+	// The id of the key this key was rotated from (POST /v1/keys/{id}/rotate made this key in its place);
+	//  null for a key not made by rotation, when the caller may not read that key, or when its record is
+	// gone. A revoked one is still named: GET /v1/keys/{id} answers it.
+	RotatedFrom OptNilString `json:"rotated_from"`
+	// The id of the newest key rotated from this key that the caller may read; null until it is rotated,
+	// or when the caller may read no key rotated from it. A revoked one is still named: GET
+	// /v1/keys/{id} answers it.
+	RotatedTo       OptNilString `json:"rotated_to"`
 	AdditionalProps CredentialsGetKeyResultAdditional
 }
 
@@ -17700,6 +17711,16 @@ func (s *CredentialsGetKeyResult) GetRevokedAt() OptNilString {
 // GetRevokedBy returns the value of RevokedBy.
 func (s *CredentialsGetKeyResult) GetRevokedBy() OptNilString {
 	return s.RevokedBy
+}
+
+// GetRotatedFrom returns the value of RotatedFrom.
+func (s *CredentialsGetKeyResult) GetRotatedFrom() OptNilString {
+	return s.RotatedFrom
+}
+
+// GetRotatedTo returns the value of RotatedTo.
+func (s *CredentialsGetKeyResult) GetRotatedTo() OptNilString {
+	return s.RotatedTo
 }
 
 // GetAdditionalProps returns the value of AdditionalProps.
@@ -17775,6 +17796,16 @@ func (s *CredentialsGetKeyResult) SetRevokedAt(val OptNilString) {
 // SetRevokedBy sets the value of RevokedBy.
 func (s *CredentialsGetKeyResult) SetRevokedBy(val OptNilString) {
 	s.RevokedBy = val
+}
+
+// SetRotatedFrom sets the value of RotatedFrom.
+func (s *CredentialsGetKeyResult) SetRotatedFrom(val OptNilString) {
+	s.RotatedFrom = val
+}
+
+// SetRotatedTo sets the value of RotatedTo.
+func (s *CredentialsGetKeyResult) SetRotatedTo(val OptNilString) {
+	s.RotatedTo = val
 }
 
 // SetAdditionalProps sets the value of AdditionalProps.
@@ -20095,7 +20126,15 @@ type CredentialsListKeysResultItemsItem struct {
 	// The user id of the person who revoked the key from their own dashboard session, step-up or
 	// Primitive CLI login; null for a key that is not revoked, and for one revoked any other way (by an
 	// API key, another app or token, or an automatic process such as secret scanning).
-	RevokedBy       OptNilString `json:"revoked_by"`
+	RevokedBy OptNilString `json:"revoked_by"`
+	// The id of the key this key was rotated from (POST /v1/keys/{id}/rotate made this key in its place);
+	//  null for a key not made by rotation, when the caller may not read that key, or when its record is
+	// gone. A revoked one is still named: GET /v1/keys/{id} answers it.
+	RotatedFrom OptNilString `json:"rotated_from"`
+	// The id of the newest key rotated from this key that the caller may read; null until it is rotated,
+	// or when the caller may read no key rotated from it. A revoked one is still named: GET
+	// /v1/keys/{id} answers it.
+	RotatedTo       OptNilString `json:"rotated_to"`
 	AdditionalProps CredentialsListKeysResultItemsItemAdditional
 }
 
@@ -20167,6 +20206,16 @@ func (s *CredentialsListKeysResultItemsItem) GetRevokedAt() OptNilString {
 // GetRevokedBy returns the value of RevokedBy.
 func (s *CredentialsListKeysResultItemsItem) GetRevokedBy() OptNilString {
 	return s.RevokedBy
+}
+
+// GetRotatedFrom returns the value of RotatedFrom.
+func (s *CredentialsListKeysResultItemsItem) GetRotatedFrom() OptNilString {
+	return s.RotatedFrom
+}
+
+// GetRotatedTo returns the value of RotatedTo.
+func (s *CredentialsListKeysResultItemsItem) GetRotatedTo() OptNilString {
+	return s.RotatedTo
 }
 
 // GetAdditionalProps returns the value of AdditionalProps.
@@ -20242,6 +20291,16 @@ func (s *CredentialsListKeysResultItemsItem) SetRevokedAt(val OptNilString) {
 // SetRevokedBy sets the value of RevokedBy.
 func (s *CredentialsListKeysResultItemsItem) SetRevokedBy(val OptNilString) {
 	s.RevokedBy = val
+}
+
+// SetRotatedFrom sets the value of RotatedFrom.
+func (s *CredentialsListKeysResultItemsItem) SetRotatedFrom(val OptNilString) {
+	s.RotatedFrom = val
+}
+
+// SetRotatedTo sets the value of RotatedTo.
+func (s *CredentialsListKeysResultItemsItem) SetRotatedTo(val OptNilString) {
+	s.RotatedTo = val
 }
 
 // SetAdditionalProps sets the value of AdditionalProps.
@@ -21007,7 +21066,13 @@ type CredentialsRevokeCredentialResult struct {
 	Kept    []CredentialsRevokeCredentialResultKeptItem `json:"kept"`
 	// True when the API key was already revoked, so nothing changed and revoked is 0. Absent otherwise.
 	// GET /v1/keys/{id} says when and by whom, to a caller who may read the key.
-	AlreadyRevoked  OptBool `json:"already_revoked"`
+	AlreadyRevoked OptBool `json:"already_revoked"`
+	// Items you chose to keep that could not be taken over after the revocation. Each stopped with it,
+	// unless someone else had taken it over in the meantime.
+	KeepFailed []CredentialsRevokeCredentialResultKeepFailedItem `json:"keep_failed"`
+	// What the credential set up or owns, listed for review, and for an API key also what it carries on
+	// for the keys it was rotated from. Revoking deletes none of it.
+	StandingObjects []CredentialsRevokeCredentialResultStandingObjectsItem `json:"standing_objects"`
 	AdditionalProps CredentialsRevokeCredentialResultAdditional
 }
 
@@ -21034,6 +21099,16 @@ func (s *CredentialsRevokeCredentialResult) GetKept() []CredentialsRevokeCredent
 // GetAlreadyRevoked returns the value of AlreadyRevoked.
 func (s *CredentialsRevokeCredentialResult) GetAlreadyRevoked() OptBool {
 	return s.AlreadyRevoked
+}
+
+// GetKeepFailed returns the value of KeepFailed.
+func (s *CredentialsRevokeCredentialResult) GetKeepFailed() []CredentialsRevokeCredentialResultKeepFailedItem {
+	return s.KeepFailed
+}
+
+// GetStandingObjects returns the value of StandingObjects.
+func (s *CredentialsRevokeCredentialResult) GetStandingObjects() []CredentialsRevokeCredentialResultStandingObjectsItem {
+	return s.StandingObjects
 }
 
 // GetAdditionalProps returns the value of AdditionalProps.
@@ -21066,6 +21141,16 @@ func (s *CredentialsRevokeCredentialResult) SetAlreadyRevoked(val OptBool) {
 	s.AlreadyRevoked = val
 }
 
+// SetKeepFailed sets the value of KeepFailed.
+func (s *CredentialsRevokeCredentialResult) SetKeepFailed(val []CredentialsRevokeCredentialResultKeepFailedItem) {
+	s.KeepFailed = val
+}
+
+// SetStandingObjects sets the value of StandingObjects.
+func (s *CredentialsRevokeCredentialResult) SetStandingObjects(val []CredentialsRevokeCredentialResultStandingObjectsItem) {
+	s.StandingObjects = val
+}
+
 // SetAdditionalProps sets the value of AdditionalProps.
 func (s *CredentialsRevokeCredentialResult) SetAdditionalProps(val CredentialsRevokeCredentialResultAdditional) {
 	s.AdditionalProps = val
@@ -21080,6 +21165,31 @@ func (s *CredentialsRevokeCredentialResultAdditional) init() CredentialsRevokeCr
 		*s = m
 	}
 	return m
+}
+
+type CredentialsRevokeCredentialResultKeepFailedItem struct {
+	Kind string `json:"kind"`
+	ID   string `json:"id"`
+}
+
+// GetKind returns the value of Kind.
+func (s *CredentialsRevokeCredentialResultKeepFailedItem) GetKind() string {
+	return s.Kind
+}
+
+// GetID returns the value of ID.
+func (s *CredentialsRevokeCredentialResultKeepFailedItem) GetID() string {
+	return s.ID
+}
+
+// SetKind sets the value of Kind.
+func (s *CredentialsRevokeCredentialResultKeepFailedItem) SetKind(val string) {
+	s.Kind = val
+}
+
+// SetID sets the value of ID.
+func (s *CredentialsRevokeCredentialResultKeepFailedItem) SetID(val string) {
+	s.ID = val
 }
 
 type CredentialsRevokeCredentialResultKeptItem struct {
@@ -21174,6 +21284,86 @@ func (s *CredentialsRevokeCredentialResultKind) UnmarshalText(data []byte) error
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+type CredentialsRevokeCredentialResultStandingObjectsItem struct {
+	// Endpoint, function_trigger, pull_subscription, recipient_route, filter_rule or wake_schedule.
+	Kind string `json:"kind"`
+	ID   string `json:"id"`
+	// A webhook's URL, a pull subscription's name (or pull when it has none), a route's or filter's
+	// pattern, or a wake schedule's command and the address it wakes (command to address). A Function
+	// trigger's label is function: look it up by id.
+	Label string `json:"label"`
+	// True: the organization owns it, and it keeps working. false: the credential owns it itself, as
+	// with everything a third-party app or agent delegate made, a webhook made with a narrowed API key,
+	// or a wake schedule made with a key that does not cover super_admin. It keeps working only while
+	// someone can still act for it, such as a key of the same rotation that still works, or whoever it
+	// was given to or kept it. Revoking a third-party app or agent delegate turns these off, except that
+	// a block filter it made keeps blocking, within the reach the app had, unless the person revoking
+	// chose to stop it.
+	OrgOwned        bool `json:"org_owned"`
+	AdditionalProps CredentialsRevokeCredentialResultStandingObjectsItemAdditional
+}
+
+// GetKind returns the value of Kind.
+func (s *CredentialsRevokeCredentialResultStandingObjectsItem) GetKind() string {
+	return s.Kind
+}
+
+// GetID returns the value of ID.
+func (s *CredentialsRevokeCredentialResultStandingObjectsItem) GetID() string {
+	return s.ID
+}
+
+// GetLabel returns the value of Label.
+func (s *CredentialsRevokeCredentialResultStandingObjectsItem) GetLabel() string {
+	return s.Label
+}
+
+// GetOrgOwned returns the value of OrgOwned.
+func (s *CredentialsRevokeCredentialResultStandingObjectsItem) GetOrgOwned() bool {
+	return s.OrgOwned
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *CredentialsRevokeCredentialResultStandingObjectsItem) GetAdditionalProps() CredentialsRevokeCredentialResultStandingObjectsItemAdditional {
+	return s.AdditionalProps
+}
+
+// SetKind sets the value of Kind.
+func (s *CredentialsRevokeCredentialResultStandingObjectsItem) SetKind(val string) {
+	s.Kind = val
+}
+
+// SetID sets the value of ID.
+func (s *CredentialsRevokeCredentialResultStandingObjectsItem) SetID(val string) {
+	s.ID = val
+}
+
+// SetLabel sets the value of Label.
+func (s *CredentialsRevokeCredentialResultStandingObjectsItem) SetLabel(val string) {
+	s.Label = val
+}
+
+// SetOrgOwned sets the value of OrgOwned.
+func (s *CredentialsRevokeCredentialResultStandingObjectsItem) SetOrgOwned(val bool) {
+	s.OrgOwned = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *CredentialsRevokeCredentialResultStandingObjectsItem) SetAdditionalProps(val CredentialsRevokeCredentialResultStandingObjectsItemAdditional) {
+	s.AdditionalProps = val
+}
+
+type CredentialsRevokeCredentialResultStandingObjectsItemAdditional map[string]jx.Raw
+
+func (s *CredentialsRevokeCredentialResultStandingObjectsItemAdditional) init() CredentialsRevokeCredentialResultStandingObjectsItemAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
 }
 
 // Ref: #/components/schemas/Credentials_rotateKey_Input
@@ -31145,6 +31335,76 @@ func NewStringArrayEmailDetailUnderstandingFactsItemValue(v []string) EmailDetai
 	return s
 }
 
+// Merged schema.
+// Ref: #/components/schemas/EmailListMeta
+type EmailListMeta struct {
+	// Total number of matching records.
+	Total int `json:"total"`
+	// Page size used for this request.
+	Limit int `json:"limit"`
+	// Cursor for the next page, or null if no more results.
+	Cursor NilString `json:"cursor"`
+	// Present, as true, when your credential is limited to some mailboxes, recipient names one that is
+	// neither one of its addresses nor on one of its domains (or the credential reads no received mail
+	// at all), and it reads through no email rule: the page is then empty however much mail that mailbox
+	// holds. Absent otherwise, and for an address on one of your domains, which may still list nothing.
+	RecipientOutsideAccess OptBool `json:"recipient_outside_access"`
+	// Present, as true, when your credential is limited to some mailboxes, recipient names one that is
+	// neither one of its addresses nor on one of its domains, and the credential reads some mail through
+	// email rules: the page holds only the mail those rules give it there. Absent otherwise.
+	RecipientRulesOnly OptBool `json:"recipient_rules_only"`
+}
+
+// GetTotal returns the value of Total.
+func (s *EmailListMeta) GetTotal() int {
+	return s.Total
+}
+
+// GetLimit returns the value of Limit.
+func (s *EmailListMeta) GetLimit() int {
+	return s.Limit
+}
+
+// GetCursor returns the value of Cursor.
+func (s *EmailListMeta) GetCursor() NilString {
+	return s.Cursor
+}
+
+// GetRecipientOutsideAccess returns the value of RecipientOutsideAccess.
+func (s *EmailListMeta) GetRecipientOutsideAccess() OptBool {
+	return s.RecipientOutsideAccess
+}
+
+// GetRecipientRulesOnly returns the value of RecipientRulesOnly.
+func (s *EmailListMeta) GetRecipientRulesOnly() OptBool {
+	return s.RecipientRulesOnly
+}
+
+// SetTotal sets the value of Total.
+func (s *EmailListMeta) SetTotal(val int) {
+	s.Total = val
+}
+
+// SetLimit sets the value of Limit.
+func (s *EmailListMeta) SetLimit(val int) {
+	s.Limit = val
+}
+
+// SetCursor sets the value of Cursor.
+func (s *EmailListMeta) SetCursor(val NilString) {
+	s.Cursor = val
+}
+
+// SetRecipientOutsideAccess sets the value of RecipientOutsideAccess.
+func (s *EmailListMeta) SetRecipientOutsideAccess(val OptBool) {
+	s.RecipientOutsideAccess = val
+}
+
+// SetRecipientRulesOnly sets the value of RecipientRulesOnly.
+func (s *EmailListMeta) SetRecipientRulesOnly(val OptBool) {
+	s.RecipientRulesOnly = val
+}
+
 // What an inbound email says, as plain text, with the fields that identify it.
 // Ref: #/components/schemas/EmailReadable
 type EmailReadable struct {
@@ -32130,9 +32390,12 @@ type EmailRuleRequest struct {
 	Tree        EmailRuleTree          `json:"tree"`
 	Explanation string                 `json:"explanation"`
 	Assumptions []string               `json:"assumptions"`
-	Warnings    []string               `json:"warnings"`
-	CompiledBy  string                 `json:"compiled_by"`
-	Vocabulary  string                 `json:"vocabulary"`
+	// As the member who asked sent them, normally from their compile. The compiler's note that the rule
+	// matches nearly everything, in its own wording, counted that member's recent mail: anyone else
+	// reads it naming them.
+	Warnings   []string `json:"warnings"`
+	CompiledBy string   `json:"compiled_by"`
+	Vocabulary string   `json:"vocabulary"`
 	// Session: the proposer's own session; oauth: an OAuth or CLI token acting for them.
 	ProposedVia     EmailRuleRequestProposedVia `json:"proposed_via"`
 	CreatedAt       time.Time                   `json:"created_at"`
@@ -37665,12 +37928,15 @@ type Endpoint struct {
 	OwnedByKey OptBool `json:"owned_by_key"`
 	// The API key that owns this webhook. In endpoint responses it is set only for a caller who may read
 	// API key metadata, and is null otherwise and when the organization owns the webhook. After a
-	// rotation, the key that carries on for the key first named while it can act.
+	// rotation, the key that carries on for the key first named while it can act. When none can, the key
+	// delivery stops on: the key first named while it is suspended and not expired, otherwise the newest
+	// key of its rotation that is not revoked, otherwise the newest one (only the key first named when
+	// nothing may carry on for it).
 	OwnerKeyID OptNilUUID `json:"owner_key_id"`
 	// Whether the owning key can act now. In endpoint responses it is set only for a caller who may read
-	// API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent
-	// nothing. Anyone who may read the endpoint learns that from delivery.reasons, which never names the
-	// key.
+	// API key metadata. It is the state delivery acts on. Suspended also covers an expired key. A
+	// suspended or revoked owner is sent nothing. Anyone who may read the endpoint learns that from
+	// delivery.reasons, which never names the key.
 	OwnerKeyStatus OptNilEndpointOwnerKeyStatus `json:"owner_key_status"`
 	// Why the platform turned this endpoint off, when it names a reason. owner_changed: it was given to
 	// a new owner while its URL stayed, and the URL was chosen under the previous owner; turning it on
@@ -38223,9 +38489,9 @@ func (s *EndpointKind) UnmarshalText(data []byte) error {
 }
 
 // Whether the owning key can act now. In endpoint responses it is set only for a caller who may read
-// API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent
-// nothing. Anyone who may read the endpoint learns that from delivery.reasons, which never names the
-// key.
+// API key metadata. It is the state delivery acts on. Suspended also covers an expired key. A
+// suspended or revoked owner is sent nothing. Anyone who may read the endpoint learns that from
+// delivery.reasons, which never names the key.
 type EndpointOwnerKeyStatus string
 
 const (
@@ -59419,6 +59685,8 @@ func (*ListEmailRuleResultsOK) listEmailRuleResultsRes() {}
 
 // Ref: #/components/schemas/ListEmailRuleResultsResult
 type ListEmailRuleResultsResult struct {
+	// The email these results are about, so a saved answer says which one it was.
+	Email OptListEmailRuleResultsResultEmail `json:"email"`
 	// Every rule the caller can see: those that matched this email, then those that did not, then those
 	// that have not run on it; newest rule first within each.
 	Rules []ListEmailRuleResultsResultRulesItem `json:"rules"`
@@ -59428,6 +59696,11 @@ type ListEmailRuleResultsResult struct {
 	// none (not classified, or never will be), or while the email's content is withheld, discarded or
 	// failed to parse.
 	Classification OptNilListEmailRuleResultsResultClassification `json:"classification"`
+}
+
+// GetEmail returns the value of Email.
+func (s *ListEmailRuleResultsResult) GetEmail() OptListEmailRuleResultsResultEmail {
+	return s.Email
 }
 
 // GetRules returns the value of Rules.
@@ -59443,6 +59716,11 @@ func (s *ListEmailRuleResultsResult) GetHidden() int {
 // GetClassification returns the value of Classification.
 func (s *ListEmailRuleResultsResult) GetClassification() OptNilListEmailRuleResultsResultClassification {
 	return s.Classification
+}
+
+// SetEmail sets the value of Email.
+func (s *ListEmailRuleResultsResult) SetEmail(val OptListEmailRuleResultsResultEmail) {
+	s.Email = val
 }
 
 // SetRules sets the value of Rules.
@@ -59730,6 +60008,67 @@ func (s *ListEmailRuleResultsResultClassificationFactsItemValueConfidences) init
 	return m
 }
 
+// The email these results are about, so a saved answer says which one it was.
+type ListEmailRuleResultsResultEmail struct {
+	ID uuid.UUID `json:"id"`
+	// The sender address, as GET /v1/emails/{id} shows it.
+	FromAddress NilString `json:"from_address"`
+	// The mailbox this copy of the email was received in, as GET /v1/emails/{id} shows it.
+	Recipient  string    `json:"recipient"`
+	Subject    NilString `json:"subject"`
+	ReceivedAt time.Time `json:"received_at"`
+}
+
+// GetID returns the value of ID.
+func (s *ListEmailRuleResultsResultEmail) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetFromAddress returns the value of FromAddress.
+func (s *ListEmailRuleResultsResultEmail) GetFromAddress() NilString {
+	return s.FromAddress
+}
+
+// GetRecipient returns the value of Recipient.
+func (s *ListEmailRuleResultsResultEmail) GetRecipient() string {
+	return s.Recipient
+}
+
+// GetSubject returns the value of Subject.
+func (s *ListEmailRuleResultsResultEmail) GetSubject() NilString {
+	return s.Subject
+}
+
+// GetReceivedAt returns the value of ReceivedAt.
+func (s *ListEmailRuleResultsResultEmail) GetReceivedAt() time.Time {
+	return s.ReceivedAt
+}
+
+// SetID sets the value of ID.
+func (s *ListEmailRuleResultsResultEmail) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetFromAddress sets the value of FromAddress.
+func (s *ListEmailRuleResultsResultEmail) SetFromAddress(val NilString) {
+	s.FromAddress = val
+}
+
+// SetRecipient sets the value of Recipient.
+func (s *ListEmailRuleResultsResultEmail) SetRecipient(val string) {
+	s.Recipient = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *ListEmailRuleResultsResultEmail) SetSubject(val NilString) {
+	s.Subject = val
+}
+
+// SetReceivedAt sets the value of ReceivedAt.
+func (s *ListEmailRuleResultsResultEmail) SetReceivedAt(val time.Time) {
+	s.ReceivedAt = val
+}
+
 type ListEmailRuleResultsResultRulesItem struct {
 	ID    uuid.UUID                                `json:"id"`
 	Name  string                                   `json:"name"`
@@ -59824,6 +60163,11 @@ type ListEmailRuleResultsResultRulesItemDecision struct {
 	// The version of the rule that decided.
 	RuleVersion int  `json:"rule_version"`
 	Matched     bool `json:"matched"`
+	// Not matched, but nearly: its questions did not all say yes, or it needs several parts and exactly
+	// one failed while at least one part that held is not an exclusion (a top-level not, or is_false).
+	// False when detail_withheld is true. Decisions recorded under the earlier definition counted an
+	// exclusion too.
+	NearMiss OptBool `json:"near_miss"`
 	// How each top-level part of the rule decided. Empty when a fact the rule reads was missing, so it
 	// was not evaluated, or when detail_withheld is true.
 	Parts []ListEmailRuleResultsResultRulesItemDecisionPartsItem `json:"parts"`
@@ -59834,7 +60178,7 @@ type ListEmailRuleResultsResultRulesItemDecision struct {
 	Tree NilEmailRuleTree `json:"tree"`
 	// Present, as true, on a result for an email whose content cannot be read (withheld, failed to parse
 	// or discarded): matched still says what the rule decided, but how it got there was read from that
-	// content, so parts and question_answers are empty. Absent otherwise.
+	// content, so parts and question_answers are empty and near_miss is false. Absent otherwise.
 	DetailWithheld OptBool `json:"detail_withheld"`
 	// Set when do-not-share rules kept this match from being shared, so no key or webhook got it through
 	// the rule: those you can see, and why.
@@ -59853,6 +60197,11 @@ func (s *ListEmailRuleResultsResultRulesItemDecision) GetRuleVersion() int {
 // GetMatched returns the value of Matched.
 func (s *ListEmailRuleResultsResultRulesItemDecision) GetMatched() bool {
 	return s.Matched
+}
+
+// GetNearMiss returns the value of NearMiss.
+func (s *ListEmailRuleResultsResultRulesItemDecision) GetNearMiss() OptBool {
+	return s.NearMiss
 }
 
 // GetParts returns the value of Parts.
@@ -59898,6 +60247,11 @@ func (s *ListEmailRuleResultsResultRulesItemDecision) SetRuleVersion(val int) {
 // SetMatched sets the value of Matched.
 func (s *ListEmailRuleResultsResultRulesItemDecision) SetMatched(val bool) {
 	s.Matched = val
+}
+
+// SetNearMiss sets the value of NearMiss.
+func (s *ListEmailRuleResultsResultRulesItemDecision) SetNearMiss(val OptBool) {
+	s.NearMiss = val
 }
 
 // SetParts sets the value of Parts.
@@ -62320,8 +62674,8 @@ func (s *ListEmailsKind) UnmarshalText(data []byte) error {
 // Merged schema.
 type ListEmailsOK struct {
 	Success bool           `json:"success"`
-	Meta    PaginationMeta `json:"meta"`
 	Data    []EmailSummary `json:"data"`
+	Meta    EmailListMeta  `json:"meta"`
 }
 
 // GetSuccess returns the value of Success.
@@ -62329,14 +62683,14 @@ func (s *ListEmailsOK) GetSuccess() bool {
 	return s.Success
 }
 
-// GetMeta returns the value of Meta.
-func (s *ListEmailsOK) GetMeta() PaginationMeta {
-	return s.Meta
-}
-
 // GetData returns the value of Data.
 func (s *ListEmailsOK) GetData() []EmailSummary {
 	return s.Data
+}
+
+// GetMeta returns the value of Meta.
+func (s *ListEmailsOK) GetMeta() EmailListMeta {
+	return s.Meta
 }
 
 // SetSuccess sets the value of Success.
@@ -62344,14 +62698,14 @@ func (s *ListEmailsOK) SetSuccess(val bool) {
 	s.Success = val
 }
 
-// SetMeta sets the value of Meta.
-func (s *ListEmailsOK) SetMeta(val PaginationMeta) {
-	s.Meta = val
-}
-
 // SetData sets the value of Data.
 func (s *ListEmailsOK) SetData(val []EmailSummary) {
 	s.Data = val
+}
+
+// SetMeta sets the value of Meta.
+func (s *ListEmailsOK) SetMeta(val EmailListMeta) {
+	s.Meta = val
 }
 
 func (*ListEmailsOK) listEmailsRes() {}
@@ -81547,6 +81901,52 @@ func (o OptListEmailRuleResultsResultClassificationFactsItemValueConfidences) Ge
 
 // Or returns value if set, or given parameter if does not.
 func (o OptListEmailRuleResultsResultClassificationFactsItemValueConfidences) Or(d ListEmailRuleResultsResultClassificationFactsItemValueConfidences) ListEmailRuleResultsResultClassificationFactsItemValueConfidences {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptListEmailRuleResultsResultEmail returns new OptListEmailRuleResultsResultEmail with value set to v.
+func NewOptListEmailRuleResultsResultEmail(v ListEmailRuleResultsResultEmail) OptListEmailRuleResultsResultEmail {
+	return OptListEmailRuleResultsResultEmail{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListEmailRuleResultsResultEmail is optional ListEmailRuleResultsResultEmail.
+type OptListEmailRuleResultsResultEmail struct {
+	Value ListEmailRuleResultsResultEmail
+	Set   bool
+}
+
+// IsSet returns true if OptListEmailRuleResultsResultEmail was set.
+func (o OptListEmailRuleResultsResultEmail) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListEmailRuleResultsResultEmail) Reset() {
+	var v ListEmailRuleResultsResultEmail
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListEmailRuleResultsResultEmail) SetTo(v ListEmailRuleResultsResultEmail) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListEmailRuleResultsResultEmail) Get() (v ListEmailRuleResultsResultEmail, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListEmailRuleResultsResultEmail) Or(d ListEmailRuleResultsResultEmail) ListEmailRuleResultsResultEmail {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -130853,12 +131253,15 @@ type UpdatedEndpoint struct {
 	OwnedByKey OptBool `json:"owned_by_key"`
 	// The API key that owns this webhook. In endpoint responses it is set only for a caller who may read
 	// API key metadata, and is null otherwise and when the organization owns the webhook. After a
-	// rotation, the key that carries on for the key first named while it can act.
+	// rotation, the key that carries on for the key first named while it can act. When none can, the key
+	// delivery stops on: the key first named while it is suspended and not expired, otherwise the newest
+	// key of its rotation that is not revoked, otherwise the newest one (only the key first named when
+	// nothing may carry on for it).
 	OwnerKeyID OptNilUUID `json:"owner_key_id"`
 	// Whether the owning key can act now. In endpoint responses it is set only for a caller who may read
-	// API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent
-	// nothing. Anyone who may read the endpoint learns that from delivery.reasons, which never names the
-	// key.
+	// API key metadata. It is the state delivery acts on. Suspended also covers an expired key. A
+	// suspended or revoked owner is sent nothing. Anyone who may read the endpoint learns that from
+	// delivery.reasons, which never names the key.
 	OwnerKeyStatus OptNilUpdatedEndpointOwnerKeyStatus `json:"owner_key_status"`
 	// Why the platform turned this endpoint off, when it names a reason. owner_changed: it was given to
 	// a new owner while its URL stayed, and the URL was chosen under the previous owner; turning it on
@@ -131427,9 +131830,9 @@ func (s *UpdatedEndpointKind) UnmarshalText(data []byte) error {
 }
 
 // Whether the owning key can act now. In endpoint responses it is set only for a caller who may read
-// API key metadata. Suspended also covers an expired key. A suspended or revoked owner is sent
-// nothing. Anyone who may read the endpoint learns that from delivery.reasons, which never names the
-// key.
+// API key metadata. It is the state delivery acts on. Suspended also covers an expired key. A
+// suspended or revoked owner is sent nothing. Anyone who may read the endpoint learns that from
+// delivery.reasons, which never names the key.
 type UpdatedEndpointOwnerKeyStatus string
 
 const (

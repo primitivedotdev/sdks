@@ -20891,7 +20891,12 @@ type ListEmailsParams struct {
 	// sender authentication.
 	Automated OptListEmailsAutomated `json:",omitempty,omitzero"`
 	// Exact case-insensitive delivered recipient mailbox, applied before pagination. Combines with
-	// existing filters and cursors; does not search message text.
+	// existing filters and cursors; does not search message text. It filters only the mail the caller
+	// can read, and is never refused for that (200): a mailbox outside the caller's mail access lists
+	// nothing, and one the caller reads only in part (for example through an email rule) lists only that
+	// part. For a caller limited to some mailboxes, meta.recipient_outside_access or meta.
+	// recipient_rules_only says so when the mailbox is neither one of its addresses nor on one of its
+	// domains.
 	Recipient OptString `json:",omitempty,omitzero"`
 	// With `true`, leave out emails whose `fyi` is true. Combines with every other filter and with both
 	// `cursor` and `since`.

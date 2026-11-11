@@ -96,15 +96,14 @@ def sync_detailed(
 
      A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a
     member. A request is visible to the member who made it, the member it was made to, and the
-    organization's owners and admins. The member asked can try the rule as proposed before answering: on
-    mail they have, with POST /v1/email-rules/test and the request's tree, and on mail that has not
-    arrived. Mail already received shows only what has arrived. To see what the rule would do with an
-    email that has not, such as one they would never want shared, the member asked can pass the
-    request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI,
-    primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email they make up.
-    Nothing is stored, and it needs no access beyond testing a rule of their own. Needs mail:read, a
-    member's own credential with their full access (not an API key, agent key or narrowed token), and
-    the email rules feature.
+    organization's owners and admins. If you are the member asked, you can try the rule as proposed
+    before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have
+    received. A test on mail already received shows only what has arrived. To see what the rule would do
+    with an email that has not, such as one you would never want shared, pass the request's tree to POST
+    /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules
+    test-email-rule-on-sample --body-file sample.json) with an email you make up. Nothing is stored, and
+    it needs no access beyond testing a rule of your own. Needs mail:read, a member's own credential
+    with their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -139,15 +138,14 @@ def sync(
 
      A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a
     member. A request is visible to the member who made it, the member it was made to, and the
-    organization's owners and admins. The member asked can try the rule as proposed before answering: on
-    mail they have, with POST /v1/email-rules/test and the request's tree, and on mail that has not
-    arrived. Mail already received shows only what has arrived. To see what the rule would do with an
-    email that has not, such as one they would never want shared, the member asked can pass the
-    request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI,
-    primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email they make up.
-    Nothing is stored, and it needs no access beyond testing a rule of their own. Needs mail:read, a
-    member's own credential with their full access (not an API key, agent key or narrowed token), and
-    the email rules feature.
+    organization's owners and admins. If you are the member asked, you can try the rule as proposed
+    before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have
+    received. A test on mail already received shows only what has arrived. To see what the rule would do
+    with an email that has not, such as one you would never want shared, pass the request's tree to POST
+    /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules
+    test-email-rule-on-sample --body-file sample.json) with an email you make up. Nothing is stored, and
+    it needs no access beyond testing a rule of your own. Needs mail:read, a member's own credential
+    with their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -177,15 +175,14 @@ async def asyncio_detailed(
 
      A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a
     member. A request is visible to the member who made it, the member it was made to, and the
-    organization's owners and admins. The member asked can try the rule as proposed before answering: on
-    mail they have, with POST /v1/email-rules/test and the request's tree, and on mail that has not
-    arrived. Mail already received shows only what has arrived. To see what the rule would do with an
-    email that has not, such as one they would never want shared, the member asked can pass the
-    request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI,
-    primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email they make up.
-    Nothing is stored, and it needs no access beyond testing a rule of their own. Needs mail:read, a
-    member's own credential with their full access (not an API key, agent key or narrowed token), and
-    the email rules feature.
+    organization's owners and admins. If you are the member asked, you can try the rule as proposed
+    before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have
+    received. A test on mail already received shows only what has arrived. To see what the rule would do
+    with an email that has not, such as one you would never want shared, pass the request's tree to POST
+    /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules
+    test-email-rule-on-sample --body-file sample.json) with an email you make up. Nothing is stored, and
+    it needs no access beyond testing a rule of your own. Needs mail:read, a member's own credential
+    with their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -220,15 +217,14 @@ async def asyncio(
 
      A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a
     member. A request is visible to the member who made it, the member it was made to, and the
-    organization's owners and admins. The member asked can try the rule as proposed before answering: on
-    mail they have, with POST /v1/email-rules/test and the request's tree, and on mail that has not
-    arrived. Mail already received shows only what has arrived. To see what the rule would do with an
-    email that has not, such as one they would never want shared, the member asked can pass the
-    request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI,
-    primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email they make up.
-    Nothing is stored, and it needs no access beyond testing a rule of their own. Needs mail:read, a
-    member's own credential with their full access (not an API key, agent key or narrowed token), and
-    the email rules feature.
+    organization's owners and admins. If you are the member asked, you can try the rule as proposed
+    before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have
+    received. A test on mail already received shows only what has arrived. To see what the rule would do
+    with an email that has not, such as one you would never want shared, pass the request's tree to POST
+    /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules
+    test-email-rule-on-sample --body-file sample.json) with an email you make up. Nothing is stored, and
+    it needs no access beyond testing a rule of your own. Needs mail:read, a member's own credential
+    with their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):

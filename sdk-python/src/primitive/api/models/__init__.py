@@ -309,8 +309,10 @@ from .credentials_revoke_credential_input_choices_item_decision import Credentia
 from .credentials_revoke_credential_input_choices_item_kind import CredentialsRevokeCredentialInputChoicesItemKind
 from .credentials_revoke_credential_input_kind import CredentialsRevokeCredentialInputKind
 from .credentials_revoke_credential_result import CredentialsRevokeCredentialResult
+from .credentials_revoke_credential_result_keep_failed_item import CredentialsRevokeCredentialResultKeepFailedItem
 from .credentials_revoke_credential_result_kept_item import CredentialsRevokeCredentialResultKeptItem
 from .credentials_revoke_credential_result_kind import CredentialsRevokeCredentialResultKind
+from .credentials_revoke_credential_result_standing_objects_item import CredentialsRevokeCredentialResultStandingObjectsItem
 from .credentials_rotate_key_input import CredentialsRotateKeyInput
 from .credentials_rotate_key_result import CredentialsRotateKeyResult
 from .credentials_update_credential_policy_input import CredentialsUpdateCredentialPolicyInput
@@ -446,6 +448,7 @@ from .email_detail_shared_through_type_0_sharer import EmailDetailSharedThroughT
 from .email_detail_understanding_type_0 import EmailDetailUnderstandingType0
 from .email_detail_understanding_type_0_facts import EmailDetailUnderstandingType0Facts
 from .email_detail_understanding_type_0_facts_additional_property import EmailDetailUnderstandingType0FactsAdditionalProperty
+from .email_list_meta import EmailListMeta
 from .email_readable import EmailReadable
 from .email_readable_attachment import EmailReadableAttachment
 from .email_readable_body_source import EmailReadableBodySource
@@ -863,6 +866,7 @@ from .list_email_rule_results_result_classification_type_0 import ListEmailRuleR
 from .list_email_rule_results_result_classification_type_0_facts import ListEmailRuleResultsResultClassificationType0Facts
 from .list_email_rule_results_result_classification_type_0_facts_additional_property import ListEmailRuleResultsResultClassificationType0FactsAdditionalProperty
 from .list_email_rule_results_result_classification_type_0_facts_additional_property_value_confidences import ListEmailRuleResultsResultClassificationType0FactsAdditionalPropertyValueConfidences
+from .list_email_rule_results_result_email import ListEmailRuleResultsResultEmail
 from .list_email_rule_results_result_rules_item import ListEmailRuleResultsResultRulesItem
 from .list_email_rule_results_result_rules_item_decision_type_0 import ListEmailRuleResultsResultRulesItemDecisionType0
 from .list_email_rule_results_result_rules_item_decision_type_0_parts_item import ListEmailRuleResultsResultRulesItemDecisionType0PartsItem
@@ -2043,8 +2047,10 @@ __all__ = (
     "CredentialsRevokeCredentialInputChoicesItemKind",
     "CredentialsRevokeCredentialInputKind",
     "CredentialsRevokeCredentialResult",
+    "CredentialsRevokeCredentialResultKeepFailedItem",
     "CredentialsRevokeCredentialResultKeptItem",
     "CredentialsRevokeCredentialResultKind",
+    "CredentialsRevokeCredentialResultStandingObjectsItem",
     "CredentialsRotateKeyInput",
     "CredentialsRotateKeyResult",
     "CredentialsUpdateCredentialPolicyInput",
@@ -2180,6 +2186,7 @@ __all__ = (
     "EmailDetailUnderstandingType0",
     "EmailDetailUnderstandingType0Facts",
     "EmailDetailUnderstandingType0FactsAdditionalProperty",
+    "EmailListMeta",
     "EmailReadable",
     "EmailReadableAttachment",
     "EmailReadableBodySource",
@@ -2597,6 +2604,7 @@ __all__ = (
     "ListEmailRuleResultsResultClassificationType0Facts",
     "ListEmailRuleResultsResultClassificationType0FactsAdditionalProperty",
     "ListEmailRuleResultsResultClassificationType0FactsAdditionalPropertyValueConfidences",
+    "ListEmailRuleResultsResultEmail",
     "ListEmailRuleResultsResultRulesItem",
     "ListEmailRuleResultsResultRulesItemDecisionType0",
     "ListEmailRuleResultsResultRulesItemDecisionType0PartsItem",

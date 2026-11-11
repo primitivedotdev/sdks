@@ -14,16 +14,15 @@ type Handler interface {
 	// from now on with the member who asked. Send no body to accept it as asked, or change it first with
 	// english and tree together (and an explanation, or the server writes one). Because this gives your
 	// mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and
-	// agent tokens are refused. Test it before accepting: on your mail with POST /v1/email-rules/test
-	// and the request's tree, and on mail that has not arrived. Mail already received shows only what
-	// has arrived. To see what the rule would do with an email that has not, such as one they would
-	// never want shared, the member asked can pass the request's tree to POST
-	// /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules
-	// test-email-rule-on-sample --body-file sample.json) with an email they make up. Nothing is stored,
-	// and it needs no access beyond testing a rule of their own. Also needs mail:share_own (sharing your
-	// own mail through email rules, which only shows it and never sends): a role without it is refused,
-	// whether or not it can send. Needs mail:read, a member's own credential with their full access (not
-	// an API key, agent key or narrowed token), and the email rules feature.
+	// agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to POST
+	// /v1/email-rules/test. A test on mail already received shows only what has arrived. To see what the
+	// rule would do with an email that has not, such as one you would never want shared, pass the
+	// request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI,
+	// primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up.
+	//  Nothing is stored, and it needs no access beyond testing a rule of your own. Accepting also needs
+	// mail:share_own (sharing your own mail through email rules, which only shows it and never sends): a
+	// role without it is refused, whether or not it can send. Needs mail:read, a member's own credential
+	// with their full access (not an API key, agent key or narrowed token), and the email rules feature.
 	//
 	// POST /email-rule-requests/{id}/accept
 	AcceptEmailRuleRequest(ctx context.Context, req OptAcceptEmailRuleRequestRequest, params AcceptEmailRuleRequestParams) (AcceptEmailRuleRequestRes, error)
@@ -381,9 +380,12 @@ type Handler interface {
 	CreateEmailRuleRequest(ctx context.Context, req *CreateEmailRuleRequestRequest, params CreateEmailRuleRequestParams) (CreateEmailRuleRequestRes, error)
 	// CreateEndpoint implements createEndpoint operation.
 	//
-	// Creates a new webhook endpoint. If a deactivated endpoint
-	// with the same URL and domain exists, it is reactivated
-	// instead. Subject to plan limits on the number of active
+	// Creates a new webhook endpoint. A URL can have one endpoint per domain, route targets included
+	// (unlike the one default destination per domain), and endpoints with no domain_id count as one
+	// domain. A disabled endpoint still holds its URL; a deleted one does not. A create at a URL another
+	// endpoint has on the same domain is refused (400). A deleted endpoint's URL can be used again: the
+	// create makes a new endpoint, with a new id, and the deleted one stays as it was. Subject to plan
+	// limits on the number of active
 	// endpoints.
 	// **Signing.** A webhook is signed with the organization's webhook secret (`GET
 	// /account/webhook-secret`) unless it has its own. A webhook made as a person's own, or by an API
@@ -1267,15 +1269,15 @@ type Handler interface {
 	//
 	// A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a
 	// member. A request is visible to the member who made it, the member it was made to, and the
-	// organization's owners and admins. The member asked can try the rule as proposed before answering:
-	// on mail they have, with POST /v1/email-rules/test and the request's tree, and on mail that has not
-	// arrived. Mail already received shows only what has arrived. To see what the rule would do with an
-	// email that has not, such as one they would never want shared, the member asked can pass the
-	// request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI,
-	// primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email they make
-	// up. Nothing is stored, and it needs no access beyond testing a rule of their own. Needs mail:read,
-	// a member's own credential with their full access (not an API key, agent key or narrowed token),
-	// and the email rules feature.
+	// organization's owners and admins. If you are the member asked, you can try the rule as proposed
+	// before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have
+	// received. A test on mail already received shows only what has arrived. To see what the rule would
+	// do with an email that has not, such as one you would never want shared, pass the request's tree to
+	// POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive
+	// email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up. Nothing
+	// is stored, and it needs no access beyond testing a rule of your own. Needs mail:read, a member's
+	// own credential with their full access (not an API key, agent key or narrowed token), and the email
+	// rules feature.
 	//
 	// GET /email-rule-requests/{id}
 	GetEmailRuleRequest(ctx context.Context, params GetEmailRuleRequestParams) (GetEmailRuleRequestRes, error)
@@ -2921,11 +2923,15 @@ type Handler interface {
 	// Revoke one credential by kind and id. A Function key is rotated, never revoked (409
 	// rotate_instead). An API key is revoked only by a person whose own access covers the key's access
 	// (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered.
-	// What the credential set up keeps working and is listed in standing_objects for review. An API key
-	// (kind org_key or connected_key) that is already revoked, and whose record is kept, answers 200
-	// with already_revoked true and revoked 0, to a caller who could have revoked it; anyone else gets
-	// the answer they would get for a key that does not exist. The person's own Primitive CLI login
-	// revokes an API key (kind org_key) as the person, with no step-up unless the organization's
+	// What the credential set up or owns is listed in standing_objects for review, and for an API key
+	// also what it carries on for the keys it was rotated from. An organization-owned object (org_owned
+	// true) keeps working; any other keeps working only while someone can still act for it, such as a
+	// key of the same rotation that still works, or whoever it was given to, except that a block filter
+	// an app made keeps blocking, within the reach the app had, unless the person revoking chose to stop
+	// it. An API key (kind org_key or connected_key) that is already revoked, and whose record is kept,
+	// answers 200 with already_revoked true and revoked 0, to a caller who could have revoked it; anyone
+	// else gets the answer they would get for a key that does not exist. The person's own Primitive CLI
+	// login revokes an API key (kind org_key) as the person, with no step-up unless the organization's
 	// credential policy sets cli_writes_require_approval (then it takes a keys.create step-up); every
 	// other kind (a connected key named as org_key included, 403 grant_forbidden target_not_covered),
 	// and every other app even with a step-up, is refused outside the dashboard (403). Needs the
@@ -3530,7 +3536,11 @@ type Handler interface {
 	//
 	// Updates an active webhook endpoint. Changing the URL keeps the endpoint: its id, recipient routes,
 	// signing secret, delivery history and any deliveries still owed to it stay with it, and owed
-	// deliveries go to the new URL. Another active endpoint at the new URL is refused.
+	// deliveries go to the new URL. A URL can have one endpoint per domain, route targets included
+	// (unlike the one default destination per domain), and endpoints with no domain_id count as one
+	// domain. A disabled endpoint still holds its URL; a deleted one does not. A change onto a URL
+	// another endpoint has on the same domain is refused (400), and a move onto a domain where another
+	// endpoint has this URL is refused (409).
 	// Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing
 	// endpoint deletion disconnects the destination; creating a new destination does not backfill
 	// historical events.
@@ -3593,13 +3603,13 @@ type Handler interface {
 	// extends the key, which is how to keep a key working past its expiry (rotating keeps it, unless the
 	// rotation gives the new key an expires_at): it is held to the credential policy (400 when past its
 	// maximum lifetime, with the latest expiry it allows now in the message), and like any loosening
-	// needs the person to be allowed to create a key with the key's access. Expiry is final: an expired
-	// key's expiry cannot be changed (409 conflict, details.reason key_expired); make a new key instead.
-	// Any change needs the person's own access to cover the key's access now (an owner covers every key);
-	//  otherwise 403 grant_forbidden, details.reason target_not_covered. A grant change is a new version
-	// of the key and is held to the same rules as creating one (a custom grant that does not say which
-	// mail it reaches is refused with details.reason mail_scope_required), so it takes the same step-up.
-	// It replaces the whole grant: send expected_grant_ref (grant.ref from GET /v1/keys/{id}) to have it
+	// needs the person to be allowed to create a key with the key's access. An expired key's expiry
+	// cannot be changed (409 conflict, details.reason key_expired); make a new key instead. Any change
+	// needs the person's own access to cover the key's access now (an owner covers every key); otherwise
+	// 403 grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key
+	// and is held to the same rules as creating one (a custom grant that does not say which mail it
+	// reaches is refused with details.reason mail_scope_required), so it takes the same step-up. It
+	// replaces the whole grant: send expected_grant_ref (grant.ref from GET /v1/keys/{id}) to have it
 	// refused (409 conflict, details.reason grant_changed) if the grant changed since that read; a grant
 	// change sent without it answers grant_unguarded: true. On a key limited to selected resources
 	// (grant.resources), a grant change must drop the limits on purpose with a custom grant and grant.
