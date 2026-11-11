@@ -210,6 +210,15 @@ class OrgLeaveCommand extends Command {
 
   async run(): Promise<void> {
     const { flags } = await this.parse(OrgLeaveCommand);
+    const interactive = Boolean(process.stdin.isTTY && process.stderr.isTTY);
+    // Without --yes the leave needs a confirmation, and without a terminal
+    // nobody can give one: refuse before anything is read or sent.
+    if (!flags.yes && !interactive) {
+      this.error(
+        "Not leaving: no terminal to confirm in. Pass --yes to leave without confirmation.",
+        { exit: 2 },
+      );
+    }
 
     await runWithTiming(flags.time, async () => {
       const { auth, baseUrlOverridden, requestConfig } =
@@ -230,7 +239,7 @@ class OrgLeaveCommand extends Command {
         orgLabel,
         yes: flags.yes,
         stepUpToken: flags["step-up-token"],
-        interactive: Boolean(process.stdin.isTTY && process.stderr.isTTY),
+        interactive,
         prompt: promptLine,
         write: (text) => process.stderr.write(text),
       });
@@ -247,7 +256,7 @@ class OrgLeaveCommand extends Command {
           process.stderr.write(
             "Not leaving: no terminal to confirm in. Pass --yes to leave without confirmation.\n",
           );
-          process.exitCode = 1;
+          process.exitCode = 2;
           return;
         case "error":
           writeErrorWithHints(outcome.payload);

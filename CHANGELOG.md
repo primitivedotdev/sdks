@@ -381,12 +381,20 @@ Go (package `api`):
   message, `chat` stops with outcome `uncertain` (exit 4) instead of sending
   it again, and names that chat's From and idempotency key.
 
-#### CLI email-code commands without a terminal
+#### CLI prompts and usage errors
 
 - Unless stdin and stderr are both terminals, `primitive login <email>`,
   `signin <email>`, `login otp`, `signin otp`, `otp` and `signup` need
   `--accept-terms`. An answer piped on stdin (`echo yes | ...`) no longer
   accepts the terms, and continuing a pending code also needs the flag.
+- Without a terminal, `primitive agent upgrade` always exits 2 (use `agent
+  claim` and `agent claim-verify`), and `org leave` without `--yes` exits 2
+  instead of 1.
+- `primitive agent upgrade --code` exits 2 with or without a terminal: the
+  command emails a new code, which replaces the one passed in. Use `agent
+  claim-verify --verification-code <code>` for a code you already have.
+- `primitive signup confirm` with no code source, more than one, or one that
+  cannot be read exits 2 instead of 1, with or without a terminal.
 
 #### CLI whoami and role text
 
@@ -1011,3 +1019,13 @@ parsers.
   mailboxes (and, in `orgs`, no role at all).
   `roles groups` labels a group's role as `role id`, and `roles list` help
   names Operator as a template, not a built-in role.
+- `primitive agent upgrade` needs a terminal: without one it exits 2 before
+  sending anything and names `agent claim` and `agent claim-verify`
+  instead. Before, it could email a code and then wait on a prompt nobody
+  could answer. `--code` is refused, since the command's own email replaces
+  that code, and at a terminal a blank `--email` is now asked for instead of
+  being sent.
+- `primitive org leave` without a terminal and without `--yes` exits 2 (it
+  exited 1), before reading the login or sending anything.
+- `primitive signup confirm` with no code source, more than one, or one that
+  cannot be read is a usage error and exits 2 (it exited 1).
