@@ -5,28 +5,29 @@
 // to an existing webhook; a change to such a webhook by anyone but its maker
 // acting as themself; giving it to a key; and asking for it to be a default.
 
-import { EMAIL_RULE_REQUEST_EVENT_TYPES } from "@primitivedotdev/sdk/webhook";
-
 /** The refusal reason the API gives for a rule request webhook made or changed by anyone else. */
 export const RULE_REQUEST_WEBHOOK_REFUSAL_REASON =
   "rule_request_events_need_own_webhook";
 
 export const RULE_REQUEST_WEBHOOK_CREATE_HINT =
-  "Hint: a webhook for rule request events is made by the person it is for, signed in as themself: after `primitive login`, run this without --api-key or PRIMITIVE_API_KEY and outside a connected agent's profile, or create it in the dashboard. An API key, another app or an agent cannot make one. It is a route target whatever your access, so it never takes a domain's or the organization's default slot.";
+  "Hint: a webhook for rule request events is made by the person it is for, signed in as themself: after `primitive login`, run this without --api-key, PRIMITIVE_API_KEY or PRIMITIVE_AGENT_PROFILE set, or create it in the dashboard. An API key, another app or an agent cannot make one. If you are already signed in as yourself, try again. It is a route target whatever your access, so it never takes a domain's or the organization's default slot.";
+
+export const RULE_REQUEST_WEBHOOK_HTTP_HINT =
+  "Hint: rule request events go only to an http webhook (kind http).";
 
 export const RULE_REQUEST_WEBHOOK_SUBSCRIBE_HINT =
-  "Hint: rule request events go only to a webhook made for them. An existing webhook cannot be given them: create a new one with `--event-types 'email_rule_request.*'`, signed in as yourself.";
+  "Hint: rule request events go only to a webhook made for them. If this webhook does not list them yet, it cannot be given them: create a new one with `--event-types 'email_rule_request.*'`, signed in as yourself. If it does, only its maker, signed in as themself, can change it.";
 
 export const RULE_REQUEST_WEBHOOK_KEY_HINT =
   "Hint: a webhook for rule request events stays its maker's own and cannot be given to an API key.";
 
 export const RULE_REQUEST_WEBHOOK_CHANGE_HINT =
-  "Hint: only the person who made a webhook for rule request events, signed in as themself (not with an API key), can change it. Anyone who can manage endpoints can delete it.";
+  "Hint: only the person who made a webhook for rule request events, signed in as themself (not with an API key, another app or an agent), can change it. It can be deleted as any other webhook can.";
 
 export const RULE_REQUEST_WEBHOOK_DEFAULT_HINT =
   "Hint: a webhook for rule request events is always a route target. Leave out --no-is-route-target, --takeover and --no-takeover (is_route_target: false and takeover in a raw body).";
 
-const RULE_REQUEST_EVENTS = new Set<string>(EMAIL_RULE_REQUEST_EVENT_TYPES);
+const RULE_REQUEST_EVENT_PREFIX = "email_rule_request.";
 
 function record(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -34,12 +35,18 @@ function record(value: unknown): Record<string, unknown> | undefined {
     : undefined;
 }
 
-/** Whether a create or update body lists any rule request event. */
+/**
+ * Whether a create or update body lists any rule request event. Matched by
+ * prefix, as the API matches it, so a raw body's literal
+ * `email_rule_request.*` counts too.
+ */
 export function listsRuleRequestEvents(body: unknown): boolean {
   const types = record(record(body)?.rules)?.event_types;
   return (
     Array.isArray(types) &&
-    types.some((t) => typeof t === "string" && RULE_REQUEST_EVENTS.has(t))
+    types.some(
+      (t) => typeof t === "string" && t.startsWith(RULE_REQUEST_EVENT_PREFIX),
+    )
   );
 }
 
@@ -50,15 +57,24 @@ function refusalReason(payload: unknown): unknown {
   );
 }
 
-/** The hint after a refused createEndpoint, or undefined when none applies. */
+/**
+ * The hint after a refused createEndpoint, or undefined when none applies.
+ * The one refusal reason covers a webhook given to a key, one that is not an
+ * http webhook, and one made by anyone but a person signed in as themself (or
+ * whose membership could not be confirmed), told apart by what was sent.
+ */
 export function createEndpointRuleRequestHint(
   code: string | undefined,
   body: unknown,
   payload?: unknown,
 ): string | undefined {
-  if (refusalReason(payload) === RULE_REQUEST_WEBHOOK_REFUSAL_REASON)
-    return RULE_REQUEST_WEBHOOK_CREATE_HINT;
   const asked = record(body);
+  if (refusalReason(payload) === RULE_REQUEST_WEBHOOK_REFUSAL_REASON) {
+    if (asked && "owner_key_id" in asked) return RULE_REQUEST_WEBHOOK_KEY_HINT;
+    if (asked?.kind !== undefined && asked.kind !== "http")
+      return RULE_REQUEST_WEBHOOK_HTTP_HINT;
+    return RULE_REQUEST_WEBHOOK_CREATE_HINT;
+  }
   if (
     code === "validation_error" &&
     listsRuleRequestEvents(body) &&
@@ -82,8 +98,7 @@ export function updateEndpointRuleRequestHint(
   if (refusalReason(payload) !== RULE_REQUEST_WEBHOOK_REFUSAL_REASON)
     return undefined;
   const asked = record(body);
-  if (asked && "owner_key_id" in asked && asked.owner_key_id !== null)
-    return RULE_REQUEST_WEBHOOK_KEY_HINT;
+  if (asked && "owner_key_id" in asked) return RULE_REQUEST_WEBHOOK_KEY_HINT;
   return listsRuleRequestEvents(body)
     ? RULE_REQUEST_WEBHOOK_SUBSCRIBE_HINT
     : RULE_REQUEST_WEBHOOK_CHANGE_HINT;

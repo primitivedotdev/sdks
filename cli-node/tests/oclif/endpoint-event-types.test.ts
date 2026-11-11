@@ -17,6 +17,7 @@ import {
   RULE_REQUEST_WEBHOOK_CHANGE_HINT,
   RULE_REQUEST_WEBHOOK_CREATE_HINT,
   RULE_REQUEST_WEBHOOK_DEFAULT_HINT,
+  RULE_REQUEST_WEBHOOK_HTTP_HINT,
   RULE_REQUEST_WEBHOOK_KEY_HINT,
   RULE_REQUEST_WEBHOOK_SUBSCRIBE_HINT,
   updateEndpointRuleRequestHint,
@@ -412,6 +413,58 @@ describe("a refused webhook for rule request events", () => {
         reason,
       ),
     ).toBe(RULE_REQUEST_WEBHOOK_SUBSCRIBE_HINT);
+    // Handing it back to the organization (owner_key_id null) is a hand-over too.
+    expect(
+      updateEndpointRuleRequestHint(
+        "forbidden",
+        { owner_key_id: null },
+        reason,
+      ),
+    ).toBe(RULE_REQUEST_WEBHOOK_KEY_HINT);
+    // A raw body's literal wildcard counts, as the API counts it.
+    expect(
+      updateEndpointRuleRequestHint(
+        "forbidden",
+        { rules: { event_types: ["email_rule_request.*"] } },
+        reason,
+      ),
+    ).toBe(RULE_REQUEST_WEBHOOK_SUBSCRIBE_HINT);
+  });
+
+  it("tells the create refusals apart by what was sent", () => {
+    const reason = {
+      code: "forbidden",
+      details: { reason: "rule_request_events_need_own_webhook" },
+    };
+    const rules = { event_types: ["email_rule_request.created"] };
+    expect(
+      createEndpointRuleRequestHint(
+        "forbidden",
+        { url: "https://x.test", rules },
+        reason,
+      ),
+    ).toBe(RULE_REQUEST_WEBHOOK_CREATE_HINT);
+    expect(
+      createEndpointRuleRequestHint(
+        "forbidden",
+        { url: "https://x.test", rules, owner_key_id: null },
+        reason,
+      ),
+    ).toBe(RULE_REQUEST_WEBHOOK_KEY_HINT);
+    expect(
+      createEndpointRuleRequestHint(
+        "forbidden",
+        { kind: "function", rules },
+        reason,
+      ),
+    ).toBe(RULE_REQUEST_WEBHOOK_HTTP_HINT);
+    expect(
+      createEndpointRuleRequestHint(
+        "forbidden",
+        { kind: "http", url: "https://x.test", rules },
+        reason,
+      ),
+    ).toBe(RULE_REQUEST_WEBHOOK_CREATE_HINT);
   });
 
   it("names every flag that asks for a default", () => {

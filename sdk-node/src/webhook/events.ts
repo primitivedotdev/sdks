@@ -135,12 +135,12 @@ export function isEmailReceivedEvent(
 // -----------------------------------------------------------------------------
 
 /**
- * The body of an `email_rule_request.*` webhook. It names the request, says
- * where it stands, and always carries the asker's message and a decline's
- * reason, null when there is none. It does not carry the rule or anything read from mail: read
- * the request with `getEmailRuleRequest` for the rest. Pass the
- * `X-Webhook-Event` header to the parser, since the body has `type` and no
- * `event`.
+ * The body of an `email_rule_request.*` webhook. It names the request,
+ * says where it stands, and always carries the asker's message and a
+ * decline's reason, null when there is none. It does not carry the rule or
+ * anything read from mail: read the request with `getEmailRuleRequest` for
+ * the rest. Pass the `X-Webhook-Event` header to the parser, since the body
+ * has `type` and no `event`.
  */
 export interface EmailRuleRequestEvent {
   /** The event name, overlaid from the `X-Webhook-Event` header by the parser. */
