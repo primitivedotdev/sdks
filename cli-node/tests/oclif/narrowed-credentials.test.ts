@@ -415,7 +415,7 @@ describe("resolveDefaultFrom: the person's sendability check", () => {
           error: {
             code: "grant_forbidden",
             message: "Not allowed",
-            details: { reason: "permission", permission: "account:read" },
+            details: { reason: "permission", permission: "domains:read" },
           },
         },
         { status: 403 },
