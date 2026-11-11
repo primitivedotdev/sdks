@@ -26,6 +26,9 @@ export const BACKGROUND_LISTEN_TARGET_ENV =
 const SUPERVISOR_ENV = "PRIMITIVE_LISTEN_SUPERVISOR";
 const SUPERVISOR_ARGV_ENV = "PRIMITIVE_LISTEN_SUPERVISOR_ARGV";
 const SUPERVISOR_WORKER_ENV = "PRIMITIVE_LISTEN_SUPERVISOR_WORKER";
+// Set on a start that a worker relaunched for its own generation, after its
+// supervisor was lost or runs another CLI build. Only that start reads it.
+export const BACKGROUND_LISTEN_RELAUNCH_ENV = "PRIMITIVE_LISTEN_RELAUNCH_FOR";
 const STALE_AFTER_MS = 15_000;
 const RESTART_WINDOW_MS = 10 * 60_000;
 const HEALTHY_RESET_MS = 10 * 60_000;
@@ -87,6 +90,19 @@ export type BackgroundListenStartFailure = {
   reason: StartFailureReason | "unrecognized";
   failureCode: BackgroundListenFailureCode | null;
 };
+
+/**
+ * A failure code as a worker reported it. One from a newer CLI keeps its name
+ * in supervisor.json, so that CLI reads its own code back; readers that do
+ * not know it see "unrecognized". Anything that is not a plain code name is
+ * "unrecognized" outright.
+ */
+function reportedFailureCode(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  return typeof value === "string" && /^[a-z][a-z0-9-]{0,63}$/.test(value)
+    ? value
+    : "unrecognized";
+}
 
 function knownFailureCode(value: unknown): BackgroundListenFailureCode | null {
   return failureCodes.includes(value as BackgroundListenFailureCode)
@@ -258,6 +274,11 @@ export type BackgroundListenTarget = {
   scope: string;
   threadId: string;
 };
+// A supervisor keeps running across an in-place upgrade and restarts workers
+// of the newer CLI, so what passes between them is shared by releases: the
+// token and target environment, the IPC state message, stop.json, and the
+// worker's state.json, which the supervisor reads after its worker exits.
+// Older readers of state.json and supervisor.json expect an exact key set.
 type State = {
   version: 1;
   token: string;
@@ -314,6 +335,38 @@ export function backgroundListenToken(
   return value === undefined ? null : mailId(value);
 }
 
+export type BackgroundListenOptions = {
+  contacts: boolean;
+  contactRequests: boolean;
+  senders: readonly string[];
+  socketPath?: string;
+  events?: readonly string[];
+};
+
+/**
+ * The fingerprint of the options a receiver runs with. A supervisor restarts
+ * its worker with the same command, also after the CLI was upgraded in place,
+ * so the value must not depend on the CLI version or anything else that
+ * changes between releases. Earlier releases included their version; a worker
+ * restarted by a supervisor of one of them hands its receiver over (see
+ * verifyBackgroundListenTarget).
+ */
+export function backgroundListenConfiguration(
+  options: BackgroundListenOptions,
+): string {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        contacts: options.contacts,
+        contactRequests: options.contactRequests,
+        senders: [...options.senders].sort(),
+        socketPath: options.socketPath,
+        events: options.events?.map((event) => event.trim()).sort(),
+      }),
+    )
+    .digest("hex");
+}
+
 function configurationFingerprint(value?: string): string | null {
   if (value === undefined) return null;
   if (!/^[a-f0-9]{64}$/i.test(value))
@@ -330,10 +383,11 @@ export function verifyBackgroundListenTarget(
 ): void {
   const token = backgroundListenToken(env);
   if (token === null) return;
-  // Whether every restart would refuse the same way. The options fingerprint
-  // includes the CLI version, so it also changes on an upgrade, and a failing
-  // disk can recover; neither is a changed connection.
+  // Whether every restart would refuse the same way. A failing disk can
+  // recover, and changed options are handled below; neither is a changed
+  // connection.
   let changedConnection = true;
+  let changedOptions = false;
   try {
     const value: unknown = JSON.parse(env[BACKGROUND_LISTEN_TARGET_ENV] ?? "");
     const expected = mailObject(value, [
@@ -368,16 +422,43 @@ export function verifyBackgroundListenTarget(
     if (resolved.some((path) => path !== configDir))
       throw new Error("Changed listener target");
     changedConnection = false;
-    if (configuration !== configurationFingerprint(target.configuration))
-      throw new Error("Changed listener options");
+    const own = configurationFingerprint(target.configuration);
+    changedOptions = configuration !== own;
+    if (changedOptions) throw new Error("Changed listener options");
   } catch {
     // Tell the supervisor to hold this receiver rather than restart a child
     // that would refuse the same way every time.
     if (changedConnection && env === process.env)
       announce(token, "failed", "connection-changed");
+    // A supervisor restarts its worker with the same command and
+    // environment, so options that differ from what its parent selected come
+    // from another CLI build: a release whose fingerprint included its
+    // version, or one that reads the same command differently. This worker
+    // still never receives with them. Every restart would refuse the same
+    // way, so hand the receiver to a supervisor started by this build, which
+    // selects the options from the same command again.
+    if (
+      changedOptions &&
+      env === process.env &&
+      env[SUPERVISOR_WORKER_ENV] === token
+    )
+      handOverReceiver(target, token);
     throw new ListenStateError(
       "Background listener target changed or its parent expectation is invalid. No listener was started.",
     );
+  }
+}
+
+/**
+ * Relaunch this worker's command with --background to replace the supervisor
+ * generation `token`. The claim allows one handover per restart interval: the
+ * supervisor may restart this worker again before the relaunch stops it.
+ */
+function handOverReceiver(target: BackgroundListenTarget, token: string) {
+  try {
+    if (claimBackgroundListenRestart(target)) relaunchSupervisor(token);
+  } catch {
+    /* The refusal stands; a later restart tries again. */
   }
 }
 
@@ -425,6 +506,9 @@ function files(target: BackgroundListenTarget, create = false) {
     // rewrite on every heartbeat and older CLIs read with an exact key set,
     // and from restart.json, whose read failure would refuse every restart.
     startFailure: join(directory, "start-failure.json"),
+    // The generation an owner asked to stop. stop.json alone cannot tell an
+    // owner's stop from a relaunch's, and its key set is fixed.
+    ownerStop: join(directory, "owner-stop.json"),
   };
 }
 
@@ -471,6 +555,22 @@ function recordStartFailure(
     });
   } catch {
     /* The start's own error still reaches any caller that is listening. */
+  }
+}
+
+/** Whether an owner asked generation `token` to stop; unreadable means no. */
+function ownerStopped(paths: ReturnType<typeof files>, token: string): boolean {
+  try {
+    const value = readMailJson(paths.ownerStop, 512);
+    return (
+      !!value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      typeof (value as { token?: unknown }).token === "string" &&
+      String((value as { token: string }).token).toLowerCase() === token
+    );
+  } catch {
+    return false;
   }
 }
 
@@ -776,6 +876,8 @@ export async function stopBackgroundListen(
     throw new ListenStateError(
       "Background listener ownership cannot be verified; no stop was requested.",
     );
+  // A relaunch already under way for this generation must not start it again.
+  writeMailJson(paths.ownerStop, { version: 1, token });
   writeMailJson(paths.stop, { token });
   const deadline = Date.now() + 5000;
   for (;;) {
@@ -912,7 +1014,8 @@ export async function runBackgroundListen(
       return;
     }
     relaunched = true;
-    (options.relaunchSupervisor ?? relaunchSupervisor)();
+    if (options.relaunchSupervisor) options.relaunchSupervisor();
+    else relaunchSupervisor(token);
   };
   const tick = () => {
     try {
@@ -1027,8 +1130,11 @@ export async function runBackgroundListen(
 }
 
 /** Relaunch this worker's own command detached, with --background restored. */
-function relaunchSupervisor(): void {
-  const env: NodeJS.ProcessEnv = { ...process.env };
+function relaunchSupervisor(token: string): void {
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    [BACKGROUND_LISTEN_RELAUNCH_ENV]: token,
+  };
   delete env[BACKGROUND_LISTEN_TOKEN_ENV];
   delete env[BACKGROUND_LISTEN_TARGET_ENV];
   delete env[SUPERVISOR_WORKER_ENV];
@@ -1076,7 +1182,10 @@ export async function runBackgroundListenSupervisor(
       "Supervisor process ownership cannot be verified.",
     );
   }
-  const record: SupervisorState = {
+  // failureCode may name a code from a newer CLI; see reportedFailureCode.
+  const record: Omit<SupervisorState, "failureCode"> & {
+    failureCode: string | null;
+  } = {
     version: 1,
     token,
     pid: process.pid,
@@ -1194,7 +1303,7 @@ export async function runBackgroundListenSupervisor(
       let readyAt: number | null = null;
       // The worker reports its failure over IPC too, so a reason survives a
       // disk too full for the worker to record it.
-      let reported: BackgroundListenFailureCode | null = null;
+      let reported: string | null = null;
       child.on("message", (message: unknown) => {
         if (!message || typeof message !== "object") return;
         const row = message as Record<string, unknown>;
@@ -1213,7 +1322,7 @@ export async function runBackgroundListenSupervisor(
           }
         }
         if (row.phase === "failed")
-          reported = knownFailureCode(row.failureCode) ?? "receiving-failed";
+          reported = reportedFailureCode(row.failureCode) ?? "receiving-failed";
         try {
           if (process.connected) process.send?.(message, () => {});
         } catch {
@@ -1242,13 +1351,16 @@ export async function runBackgroundListenSupervisor(
         worker?.token === token && worker.phase === "failed"
           ? worker.failureCode
           : null;
-      const failureCode: BackgroundListenFailureCode =
+      const failureCode: string =
         reported ??
         recorded ??
         (exit.code === 0 && exit.signal === null
           ? "receiving-failed"
           : "crashed");
-      if (HOLDING_FAILURE_CODES.includes(failureCode)) {
+      // A code this version does not know may be a hold, so it is never
+      // treated as safe to restart.
+      const known = knownFailureCode(failureCode);
+      if (known === null || HOLDING_FAILURE_CODES.includes(known)) {
         record.phase = "failed";
         record.failureCode = failureCode;
         tryPublish();
@@ -1325,6 +1437,99 @@ async function stopOrphanedWorker(
   }
 }
 
+/**
+ * Prepare a start that a worker relaunched for its own generation `token`:
+ * its supervisor was lost, or runs another CLI build. Nothing starts once the
+ * owner stopped that generation, or while its supervisor is stopped or holds
+ * a failure. A supervisor of that generation that is alive while its
+ * receiver is not healthy is stopped first, and this waits until its process
+ * has exited, so its cleanup cannot touch the replacement. Anything else is
+ * left to the ordinary start that follows.
+ */
+async function prepareRelaunch(
+  paths: ReturnType<typeof files>,
+  target: BackgroundListenTarget,
+  token: string,
+  timeout: number,
+  signal?: AbortSignal,
+): Promise<void> {
+  const supervisor = readSupervisor(paths.supervisor);
+  if (
+    ownerStopped(paths, token) ||
+    (supervisor?.token === token &&
+      (supervisor.phase === "stopped" ||
+        (supervisor.phase === "failed" &&
+          supervisor.failureCode !== "crashed")))
+  )
+    throw relaunchCancelled();
+  if (
+    supervisor?.token !== token ||
+    (supervisor.phase !== "starting" && supervisor.phase !== "running") ||
+    owner(supervisor) === "gone" ||
+    backgroundListenStatus(target).healthy
+  )
+    return;
+  writeMailJson(paths.stop, { token });
+  const deadline = Date.now() + timeout;
+  let exited = false;
+  try {
+    // The process, not its record: it removes supervisor.json on a stop
+    // when no worker ever recorded state, before releasing its lock.
+    while (Date.now() < deadline) {
+      if (owner(supervisor) === "gone") {
+        exited = true;
+        return;
+      }
+      await delay(50, undefined, { signal });
+    }
+  } finally {
+    if (!exited)
+      try {
+        // Leave the receiver with the supervisor that still runs, unless its
+        // owner asked it to stop meanwhile.
+        if (stopToken(paths.stop) === token && !ownerStopped(paths, token))
+          removeMailFile(paths.stop);
+      } catch {
+        /* It may stop after all; the next start finds it stopped. */
+      }
+  }
+  recordStartFailure(paths, "existing-kept", null);
+  throw new ListenStateError(
+    "The supervisor this relaunch was to replace did not stop, so it was left running. Stop it, then start again.",
+  );
+}
+
+/**
+ * A start refused because a healthy receiver runs with another options
+ * fingerprint. Earlier releases put their version in it, so a receiver one
+ * of them started differs even when the command is the same. From here the
+ * two causes look alike, and stopping it is the remedy for both. The stop
+ * must reach the same connection, so the flags that chose it are named, never
+ * their values.
+ */
+function keptWithOtherOptions(
+  threadId: string,
+  argv: readonly string[],
+): ListenStateError {
+  const given = (flag: string) =>
+    argv.some((arg) => arg === flag || arg.startsWith(`${flag}=`));
+  const stop = [
+    `primitive listen --notify-session ${threadId}`,
+    ...(given("--api-key") ? ["--api-key <the same key>"] : []),
+    ...(given("--api-base-url") ? ["--api-base-url <the same URL>"] : []),
+    "--stop",
+  ].join(" ");
+  return new ListenStateError(
+    `A background listener for this session is still running, started by an older version of the CLI or with different receiving options, so it was kept. To restart it with this command, run \`${stop}\` with the same profile and environment, then run this command again.`,
+  );
+}
+
+function relaunchCancelled(): ListenStateError {
+  return new ListenStateError(
+    "The receiver this relaunch was for was stopped or holds a failure, so nothing was started.",
+  );
+}
+
 /** Spawn the same CLI entrypoint. Overrides travel only in the child's environment. */
 export async function startBackgroundListen(
   options: BackgroundListenTarget & {
@@ -1355,6 +1560,17 @@ export async function startBackgroundListen(
     }
   }
   try {
+    const relaunchValue = process.env[BACKGROUND_LISTEN_RELAUNCH_ENV];
+    const relaunchFor =
+      relaunchValue === undefined ? null : mailId(relaunchValue);
+    if (relaunchFor !== null)
+      await prepareRelaunch(
+        paths,
+        options,
+        relaunchFor,
+        timeout,
+        options.signal,
+      );
     const prior = readState(paths.state);
     const priorSupervisor = readSupervisor(paths.supervisor);
     if (
@@ -1372,9 +1588,7 @@ export async function startBackgroundListen(
         );
       }
       if (prior?.configuration !== configuration)
-        throw new ListenStateError(
-          "Stop the existing listener before changing receiving options.",
-        );
+        throw keptWithOtherOptions(options.threadId, options.argv);
       // Only a receiver that is receiving makes an earlier failed start
       // history; one still starting has not recovered from it yet.
       if (!startFailureCurrent(current)) clearStartFailure(paths);
@@ -1402,9 +1616,7 @@ export async function startBackgroundListen(
       // rather than reuse it, even when an upgrade changed its options.
       if (!priorSupervisor) {
         if (prior.configuration !== configuration)
-          throw new ListenStateError(
-            "Stop the existing listener before changing receiving options.",
-          );
+          throw keptWithOtherOptions(options.threadId, options.argv);
         if (!startFailureCurrent(current)) clearStartFailure(paths);
         return { started: false, status: current };
       }
@@ -1415,6 +1627,9 @@ export async function startBackgroundListen(
         );
       }
     }
+    // The owner may have stopped the generation while this start waited.
+    if (relaunchFor !== null && ownerStopped(paths, relaunchFor))
+      throw relaunchCancelled();
     const token = randomUUID();
     const env: NodeJS.ProcessEnv = {
       ...process.env,
@@ -1427,6 +1642,7 @@ export async function startBackgroundListen(
         configuration,
       }),
     };
+    delete env[BACKGROUND_LISTEN_RELAUNCH_ENV];
     const argv: string[] = [];
     for (let index = 0; index < options.argv.length; index++) {
       const arg = options.argv[index];

@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { Writable } from "node:stream";
 import { Command, Errors, Flags } from "@oclif/core";
@@ -20,6 +20,7 @@ import {
   loadConnectedAgentProfile,
 } from "../connected-agent-profile.js";
 import {
+  backgroundListenConfiguration,
   backgroundListenStatus,
   backgroundListenToken,
   runBackgroundListen,
@@ -479,22 +480,16 @@ export default class ListenCommand extends Command {
       target && !flags.status && !flags.stop
         ? (flags["session-socket"] ?? defaultSessionSocket())
         : undefined;
+    // Receiving options only, never the CLI version: a supervisor restarts
+    // its worker with this same command after an in-place upgrade.
     const configuration = target
-      ? createHash("sha256")
-          .update(
-            JSON.stringify({
-              version: this.config.version,
-              contacts: Boolean(flags.contacts),
-              contactRequests: Boolean(flags["contact-requests"]),
-              senders: [...(senders ?? [])].sort(),
-              socketPath,
-              events: flags.events
-                ?.split(",")
-                .map((event) => event.trim())
-                .sort(),
-            }),
-          )
-          .digest("hex")
+      ? backgroundListenConfiguration({
+          contacts: Boolean(flags.contacts),
+          contactRequests: Boolean(flags["contact-requests"]),
+          senders: senders ?? [],
+          socketPath,
+          events: flags.events?.split(","),
+        })
       : undefined;
     if (target) verifyBackgroundListenTarget({ ...target, configuration });
     if (flags.stop && target) {
