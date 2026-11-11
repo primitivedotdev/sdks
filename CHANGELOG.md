@@ -36,7 +36,7 @@ What `3.0.0-preview.5` (`3.0.0rc5`) changes from `3.0.0-preview.4`:
   listed under breaking changes.
 - `email-rules create-email-rule` and `update-email-rule` take
   `--fail-on-expectations`: exit 1 when an expectation failed and 3 when one
-  is undecided or was not checked, as `test-email-rule` does.
+  is undecided or was not checked, so the rule should be tested.
 - Without `--json`, the CLI reads out more of an answer on stderr: route
   `warnings` on route writes; each delivery attempt with what the endpoint
   answered (`webhook-deliveries get-delivery`); "none failed" when a rule
