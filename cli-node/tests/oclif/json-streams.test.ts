@@ -852,6 +852,226 @@ describe("generated commands with --json", () => {
     });
   });
 
+  describe("giving someone a role that reads every mailbox says so", () => {
+    const ROLES = {
+      roles: [
+        {
+          id: "r-member",
+          key: "member",
+          kind: "builtin",
+          name: "Member",
+          permissions: ["mail:read", "mail:send"],
+          mail_scope: "org",
+        },
+        {
+          id: "r-own",
+          key: "own_mail_read_only",
+          kind: "template",
+          name: "Read only (own mail)",
+          permissions: ["mail:read"],
+          mail_scope: { self: true, depth: "raw" },
+        },
+      ],
+      templates: [],
+      invitations: {
+        limited_roles_available: true,
+        members_read_all_mail: true,
+      },
+    };
+    const MEMBER_ID = "00000000-0000-4000-8000-0000000000cc";
+    const MEMBER_WARNING =
+      'Warning: the role "Member" reads all of this organization\'s mail while this organization uses whole-organization access';
+    const invite = () =>
+      runMerged("organizations:invite-organization-member", [
+        "--request-id",
+        "00000000-0000-4000-8000-0000000000dd",
+        "--email",
+        "a@example.test",
+      ]);
+
+    it("explains why an invitation for Member is refused where every member reads all mail, instead of the generic advice", async () => {
+      responder = () =>
+        jsonResponse(403, {
+          success: false,
+          error: {
+            code: "grant_forbidden",
+            message:
+              "Inviting someone with this role needs you to be signed in to the dashboard, with permission to assign roles.",
+          },
+        });
+      const result = await invite();
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain(
+        "In this organization every Member reads all of its mail",
+      );
+      expect(result.stderr).toContain("--role none");
+      // The generic grant_forbidden advice (widen the grant) cannot help here.
+      expect(result.stderr).not.toContain("widen it");
+    });
+
+    it("leaves a refusal for a grant that lacks a permission to its own hint", async () => {
+      responder = () =>
+        jsonResponse(403, {
+          success: false,
+          error: {
+            code: "grant_forbidden",
+            message:
+              "This credential's grant does not include invitations:manage.",
+            details: {
+              permission: "invitations:manage",
+              reason: "permission_missing",
+              credential_kind: "oauth",
+            },
+          },
+        });
+      const result = await invite();
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).not.toContain("every Member reads all of its mail");
+      // The generic advice stays, since widening the grant is what helps here.
+      expect(result.stderr).toContain("widen it");
+    });
+
+    it("warns before the request when the role reads every mailbox", async () => {
+      responder = (url) =>
+        url.pathname.endsWith("/roles")
+          ? jsonResponse(200, { success: true, data: ROLES })
+          : jsonResponse(200, {
+              success: true,
+              data: { id: MEMBER_ID, role: "member" },
+            });
+      const result = await runMerged("roles-and-members:set-member-role", [
+        "--id",
+        MEMBER_ID,
+        "--role",
+        "member",
+      ]);
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toContain(MEMBER_WARNING);
+      // Read before the change is sent, so it shows ahead of any approval link.
+      expect(fetchCalls.map((c) => `${c.method} ${c.url.pathname}`)).toEqual([
+        "GET /v1/roles",
+        `PUT /v1/members/${MEMBER_ID}/role`,
+      ]);
+    });
+
+    it("carries the warning in --json, on success and when the change waits for approval", async () => {
+      responder = (url) =>
+        url.pathname.endsWith("/roles")
+          ? jsonResponse(200, { success: true, data: ROLES })
+          : jsonResponse(200, {
+              success: true,
+              data: { id: MEMBER_ID, role: "member" },
+            });
+      const json = await runMerged("roles-and-members:set-member-role", [
+        "--id",
+        MEMBER_ID,
+        "--role",
+        "member",
+        "--json",
+      ]);
+      expect(json.exitCode).toBe(0);
+      expect(JSON.stringify(parseOne(json.merged))).toContain(
+        JSON.stringify(MEMBER_WARNING).slice(1, -1),
+      );
+      responder = (url) =>
+        url.pathname.endsWith("/roles")
+          ? jsonResponse(200, { success: true, data: ROLES })
+          : jsonResponse(403, {
+              success: false,
+              error: {
+                code: "step_up_required",
+                message: "Confirm this change.",
+                details: {
+                  step_up_url: "https://app.example.test/step-up/abc",
+                  purpose: "roles.write",
+                },
+              },
+            });
+      const waiting = await runMerged("roles-and-members:set-member-role", [
+        "--id",
+        MEMBER_ID,
+        "--role",
+        "member",
+        "--json",
+      ]);
+      expect(waiting.exitCode).not.toBe(0);
+      expect(JSON.stringify(parseOne(waiting.merged))).toContain(
+        JSON.stringify(MEMBER_WARNING).slice(1, -1),
+      );
+    });
+
+    it("says nothing for a narrower role, and still reads the roles before the change", async () => {
+      responder = (url) =>
+        url.pathname.endsWith("/roles")
+          ? jsonResponse(200, { success: true, data: ROLES })
+          : jsonResponse(200, {
+              success: true,
+              data: { id: MEMBER_ID, role: "own_mail_read_only" },
+            });
+      const narrower = await runMerged("roles-and-members:set-member-role", [
+        "--id",
+        MEMBER_ID,
+        "--role",
+        "own_mail_read_only",
+      ]);
+      expect(narrower.exitCode).toBe(0);
+      expect(narrower.stderr).not.toContain("Warning");
+      expect(fetchCalls.map((c) => `${c.method} ${c.url.pathname}`)).toEqual([
+        "GET /v1/roles",
+        `PUT /v1/members/${MEMBER_ID}/role`,
+      ]);
+    });
+
+    it("prints the warning before the approval link", async () => {
+      responder = (url) =>
+        url.pathname.endsWith("/roles")
+          ? jsonResponse(200, { success: true, data: ROLES })
+          : jsonResponse(403, {
+              success: false,
+              error: {
+                code: "step_up_required",
+                message: "Confirm this change.",
+                details: {
+                  step_up_url: "https://app.example.test/step-up/abc",
+                  purpose: "roles.write",
+                },
+              },
+            });
+      const waiting = await runMerged("roles-and-members:set-member-role", [
+        "--id",
+        MEMBER_ID,
+        "--role",
+        "member",
+        "--no-browser",
+      ]);
+      const warned = waiting.stderr.indexOf(MEMBER_WARNING);
+      const link = waiting.stderr.indexOf(
+        "https://app.example.test/step-up/abc",
+      );
+      expect(warned).toBeGreaterThanOrEqual(0);
+      expect(link).toBeGreaterThan(warned);
+    });
+
+    it("still changes the role when the roles cannot be read, without a warning", async () => {
+      responder = (url, init) =>
+        url.pathname.endsWith("/roles")
+          ? serverError(url, init)
+          : jsonResponse(200, {
+              success: true,
+              data: { id: MEMBER_ID, role: "member" },
+            });
+      const result = await runMerged("roles-and-members:set-member-role", [
+        "--id",
+        MEMBER_ID,
+        "--role",
+        "member",
+      ]);
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).not.toContain("Warning");
+      expect(fetchCalls.map((c) => c.method)).toContain("PUT");
+    });
+  });
+
   it("takes the email id of list-email-rule-results as --email-id, and --id still works", async () => {
     responder = () => jsonResponse(200, { success: true, data: { rules: [] } });
     const email = "00000000-0000-4000-8000-0000000000e1";

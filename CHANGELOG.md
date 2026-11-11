@@ -765,6 +765,14 @@ parsers.
   still has a next cursor says to continue with it. The credential's reach
   is read from `GET /whoami/grant` only when a hint is printed, and a
   connected agent's key is answered from its own address.
+- `roles-and-members set-member-role` warns, before the change is sent and
+  before any approval link, when the role reads all of the organization's
+  mail while the organization uses whole-organization access (it holds
+  `mail:read` over the whole organization). `organizations
+  invite-organization-member` refused for Member, or for a role above it,
+  says why: only an invitation sent from the dashboard can offer that role
+  (and there every Member reads all of its mail), so from the CLI invite
+  with `--role none` and give a role once they have joined.
 - `primitive activity created` lists what you created, newest first, with
   where each object stands now. Signed in with `primitive login`, it covers
   what you created through any credential of yours, names the credential on
