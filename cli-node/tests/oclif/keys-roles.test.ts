@@ -159,7 +159,8 @@ function keyRow(
     created_at: "2026-11-01T00:00:00.000Z",
     created_by_user_id: null,
     expires_at: null,
-    grant,
+    // As GET /v1/keys/{id} answers: the grant's ref, and its resource limits (none).
+    grant: { ref: grant.template ?? "grant-1", resources: null, ...grant },
     id: KEY_ID,
     key_prefix: "prim_ab12cd34...",
     kind: "org_key" as const,
@@ -305,6 +306,7 @@ describe("keys helpers", () => {
     });
     const ruled = {
       template: null,
+      resources: null,
       permissions: ["mail:read", "mail:send"],
       mail_scope: {
         addresses: ["a@example.com"],
@@ -827,7 +829,45 @@ describe("keys commands", () => {
         permissions: ["mail:read"],
         mail_scope: "org",
       },
+      // Guarded by the grant it read.
+      expected_grant_ref: "grant-1",
     });
+  });
+
+  it("update does not restate a grant whose resource limits the server does not show, and sends nothing", async () => {
+    // A server that predates showing them: the read has neither ref nor resources.
+    const { ref: _ref, resources: _resources, ...older } = READER.grant;
+    const requests = useServer(() =>
+      Response.json({ success: true, data: { ...READER, grant: older } }),
+    );
+    const result = await run(KeysUpdateCommand, [KEY_ID, "--add", "mail:send"]);
+    expect(String((result.error as Error | null)?.message)).toContain(
+      "The server does not say whether this key is limited to selected Functions, domains, endpoints or routes",
+    );
+    expect(requests.filter((r) => r.method === "PATCH")).toHaveLength(0);
+  });
+
+  it("update says when the read carries no grant ref, and then sends no guard", async () => {
+    const { ref: _ref, ...unreffed } = READER.grant;
+    const requests = useServer((request) =>
+      request.method === "GET"
+        ? Response.json({ success: true, data: { ...READER, grant: unreffed } })
+        : Response.json({
+            success: true,
+            data: { id: KEY_ID, changed: ["grant"], warnings: [] },
+          }),
+    );
+    const result = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--add",
+      "mail:send",
+      "--no-browser",
+    ]);
+    expect(result.stderr).toContain(
+      "The server did not say which grant this key holds, so this change is not checked against changes made since it was read.",
+    );
+    const patch = requests.find((r) => r.method === "PATCH") as Request;
+    expect(await patch.json()).not.toHaveProperty("expected_grant_ref");
   });
 
   it("revoke without --yes and without a terminal sends nothing; with --yes it revokes an API key", async () => {
