@@ -27,6 +27,7 @@ import {
   BACKGROUND_LISTEN_TOKEN_ENV,
   type BackgroundListenFailureCode,
   type BackgroundListenTarget,
+  backgroundListenConfiguration,
   backgroundListenRestartable,
   backgroundListenStatus,
   backgroundListenToken,
@@ -165,7 +166,14 @@ function relaunchRows(path: string): Array<Record<string, unknown>> {
     .map((line) => JSON.parse(line));
 }
 
-function childFiles() {
+/**
+ * Write the synthetic CLI's files, as an install at the same path does. Its
+ * package.json carries the version a newly started process sees, and whether
+ * that release still hashed its version into the options fingerprint.
+ */
+function installCli(
+  installed: { version?: string; legacyFingerprint?: boolean } = {},
+) {
   for (const name of [
     "listen-background",
     "listen-state",
@@ -190,14 +198,24 @@ function childFiles() {
   }
   writeFileSync(
     join(directory, "package.json"),
-    JSON.stringify({ type: "module" }),
+    JSON.stringify({ type: "module", ...installed }),
   );
-  symlinkSync(resolve("node_modules"), join(directory, "node_modules"));
   const child = join(directory, "synthetic-child.mjs");
   writeFileSync(
     child,
     `
-    import { backgroundListenToken, runBackgroundListen } from './listen-background.js';
+    import { backgroundListenConfiguration, backgroundListenToken, runBackgroundListen } from './listen-background.js';
+    import { createHash } from 'node:crypto';
+    import { readFileSync as readInstalled } from 'node:fs';
+    // Like the CLI, a process reads its version once, when it starts, and
+    // derives the options fingerprint from its own command.
+    const installed = JSON.parse(readInstalled(new URL('./package.json', import.meta.url), 'utf8'));
+    const receiving = process.env.TEST_RECEIVING_OPTIONS ? JSON.parse(process.env.TEST_RECEIVING_OPTIONS) : null;
+    const configuration = !receiving
+      ? process.env.TEST_CONFIGURATION
+      : installed.legacyFingerprint
+        ? createHash('sha256').update(JSON.stringify({ version: installed.version, ...receiving })).digest('hex')
+        : backgroundListenConfiguration(receiving);
     if (process.env.PRIMITIVE_LISTEN_SUPERVISOR === '1') {
       const { runBackgroundListenSupervisor } = await import('./listen-background.js');
       await runBackgroundListenSupervisor({
@@ -229,7 +247,7 @@ function childFiles() {
         log({ killed: pid });
       } : undefined;
       try {
-        await startBackgroundListen({ ...relaunchTarget, argv: [process.argv[1]], startupTimeoutMs: 5000,
+        await startBackgroundListen({ ...relaunchTarget, argv: [process.argv[1]], configuration, startupTimeoutMs: 5000,
           env: process.env.TEST_RELAUNCH_MODE ? { TEST_LISTEN_MODE: process.env.TEST_RELAUNCH_MODE } : undefined,
           beforeStartupCheck });
         log({ started: true });
@@ -271,14 +289,22 @@ function childFiles() {
       writeFileSync(process.env.TEST_EXIT_ONCE, 'exited');
       process.exit(1);
     }
+    // A worker of a newer CLI that fails with a code this version does not know.
+    if (process.env.TEST_FUTURE_FAILURE && existsSync(process.env.TEST_FUTURE_FAILURE)) {
+      process.send({ type: 'primitive-listen-state', token: backgroundListenToken(), phase: 'failed', failureCode: 'some-future-code' }, () => process.exit(1));
+      await new Promise(() => {});
+    }
     let attempts = 0;
     await runBackgroundListen({ ...target, token: backgroundListenToken(), detached: true,
-      configuration: process.env.TEST_CONFIGURATION,
+      configuration,
       heartbeatMs: 30, retryDelayMs: 250,
       retryable: error => (policyModule && error instanceof policyModule.ContactPolicyReadRetryError) || error?.message === 'synthetic-preflight',
       failureCode: () => process.env.TEST_FAILURE_CODE,
       run: async (signal, ready) => {
         if (process.env.TEST_RUN_MARKER) writeFileSync(process.env.TEST_RUN_MARKER, 'ran');
+        // Which version received, under which parent selection.
+        if (process.env.TEST_VERSION_LOG) appendFileSync(process.env.TEST_VERSION_LOG, JSON.stringify({ pid: process.pid,
+          version: installed.version, expected: JSON.parse(process.env.PRIMITIVE_LISTEN_BACKGROUND_TARGET).configuration }) + '\\n');
         if (process.argv.some(arg => arg.startsWith('--background') || arg.startsWith('--api-key')))
           throw new Error('private argument reached child');
         if (process.env.TEST_EXPECT_KEY && process.env.PRIMITIVE_API_KEY !== process.env.TEST_EXPECT_KEY)
@@ -303,6 +329,13 @@ function childFiles() {
   `,
   );
   return child;
+}
+
+function childFiles(
+  installed: { version?: string; legacyFingerprint?: boolean } = {},
+) {
+  symlinkSync(resolve("node_modules"), join(directory, "node_modules"));
+  return installCli(installed);
 }
 
 describe("listener lifecycle state", () => {
@@ -1729,8 +1762,6 @@ describe("detached synthetic listener processes", () => {
   it.each([
     ["exits once and is then still starting", "once"],
     ["keeps exiting before it reports anything", "always"],
-    // As after a CLI upgrade, whose version is part of the options.
-    ["runs with options other than its parent selected", "options"],
   ] as const)(
     "never stops a supervisor that holds its start at the deadline when its worker %s",
     async (_name, mode) => {
@@ -1738,7 +1769,6 @@ describe("detached synthetic listener processes", () => {
       const options = {
         ...target,
         argv: [child],
-        ...(mode === "options" ? { configuration: "a".repeat(64) } : {}),
         env: {
           TEST_LISTEN_TARGET: JSON.stringify(target),
           TEST_RESTART_DELAY_MS: "50",
@@ -1747,9 +1777,7 @@ describe("detached synthetic listener processes", () => {
                 TEST_LISTEN_MODE: "blocked",
                 TEST_EXIT_ONCE: join(directory, "exited-once"),
               }
-            : mode === "always"
-              ? { TEST_EXIT_ALWAYS: "1" }
-              : { TEST_CONFIGURATION: "b".repeat(64) }),
+            : { TEST_EXIT_ALWAYS: "1" }),
         },
         startupTimeoutMs: 3000,
       };
@@ -1877,4 +1905,359 @@ describe("detached synthetic listener processes", () => {
         process.kill(Number(readFileSync(pidFile, "utf8")), "SIGKILL");
     }
   }, 15_000);
+});
+
+describe("upgrading the CLI in place under a background listener", () => {
+  const socketPath =
+    "/home/agent/.codex/app-server-control/app-server-control.sock";
+  const receiving = {
+    contacts: true,
+    contactRequests: false,
+    senders: [] as string[],
+    socketPath,
+  };
+  const upgradeEnv = () => ({
+    TEST_LISTEN_TARGET: JSON.stringify(target),
+    TEST_RECEIVING_OPTIONS: JSON.stringify(receiving),
+    TEST_VERSION_LOG: join(directory, "versions.jsonl"),
+    TEST_RELAUNCH_LOG: join(directory, "relaunch.jsonl"),
+    TEST_RESTART_DELAY_MS: "50",
+  });
+  afterEach(async () => {
+    // A detached relaunch must not outlive a failed test and start a
+    // supervisor after the directory is gone: let it finish, then stop it.
+    if (!existsSync(join(stateFile(), "..", "restart.json"))) return;
+    await vi
+      .waitFor(
+        () =>
+          expect(
+            relaunchRows(join(directory, "relaunch.jsonl")).length,
+          ).toBeGreaterThan(0),
+        { timeout: 8000 },
+      )
+      .catch(() => {});
+    await stopBackgroundListen(target).catch(() => {});
+  });
+
+  it("fingerprints the receiving options alone, with the same value in every release", () => {
+    // Pinned: a changed value makes every running supervisor's next worker
+    // hand its receiver over once instead of restarting under it.
+    expect(backgroundListenConfiguration(receiving)).toBe(
+      "d223e3b5064fd3b950f30f80b62c1c4c29d8bb777c3af5de17d498320a0b6177",
+    );
+    const listed = {
+      contacts: false,
+      contactRequests: false,
+      senders: ["owner@example.com", "a@example.com"],
+      socketPath,
+      events: [" email.received"],
+    };
+    expect(backgroundListenConfiguration(listed)).toBe(
+      "206065042058d0a7a73e6f9de8fba165c77ec0774e2af88f42ea38bd4c7bcc76",
+    );
+    expect(
+      backgroundListenConfiguration({
+        ...listed,
+        senders: ["a@example.com", "owner@example.com"],
+        events: ["email.received "],
+      }),
+    ).toBe(backgroundListenConfiguration(listed));
+  });
+
+  it("still refuses a start that changes receiving options, and reuses one that does not", async () => {
+    const configuration = backgroundListenConfiguration(receiving);
+    running(undefined, undefined, { detached: true, configuration });
+    await vi.waitFor(() => expect(saved().phase).toBe("receiving"));
+    expect(
+      await startBackgroundListen({
+        ...target,
+        argv: ["unused"],
+        configuration,
+      }),
+    ).toMatchObject({ started: false, status: { healthy: true } });
+    for (const change of [
+      { contacts: false, senders: ["owner@example.com"] },
+      { contactRequests: true },
+      { socketPath: "/home/agent/other/app-server-control.sock" },
+      { events: ["email.received"] },
+    ])
+      await expect(
+        startBackgroundListen({
+          ...target,
+          argv: ["unused"],
+          configuration: backgroundListenConfiguration({
+            ...receiving,
+            ...change,
+          }),
+        }),
+      ).rejects.toThrow(
+        "Stop the existing listener before changing receiving options.",
+      );
+    expect(saved().configuration).toBe(configuration);
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "keeps the same supervisor and receives with the new version after its worker restarts",
+    async () => {
+      const child = childFiles({ version: "3.0.0-preview.6" });
+      const env = upgradeEnv();
+      const configuration = backgroundListenConfiguration(receiving);
+      const result = await startBackgroundListen({
+        ...target,
+        argv: [child],
+        configuration,
+        env,
+        startupTimeoutMs: 5000,
+      });
+      expect(result.status).toMatchObject({
+        phase: "receiving",
+        healthy: true,
+      });
+      const { pid, supervisorPid } = result.status;
+      // The restarted worker sees the new version, as after an install at the
+      // same path, and derives its fingerprint the way listen does. That
+      // listen leaves the version out is pinned in listen-command.test.ts.
+      installCli({ version: "3.0.0-preview.7" });
+      process.kill(pid as number, "SIGKILL");
+      await vi.waitFor(
+        () => {
+          const current = backgroundListenStatus(target);
+          expect(current).toMatchObject({
+            phase: "receiving",
+            healthy: true,
+            failureCode: null,
+            supervisorPid,
+          });
+          expect(current.pid).not.toBe(pid);
+        },
+        { timeout: 8000 },
+      );
+      expect(relaunchRows(env.TEST_VERSION_LOG)).toEqual([
+        expect.objectContaining({
+          version: "3.0.0-preview.6",
+          expected: configuration,
+        }),
+        expect.objectContaining({
+          version: "3.0.0-preview.7",
+          expected: configuration,
+        }),
+      ]);
+      // Nothing was handed over, and the same command still reuses it.
+      expect(relaunchRows(env.TEST_RELAUNCH_LOG)).toEqual([]);
+      expect(
+        await startBackgroundListen({
+          ...target,
+          argv: [child],
+          configuration,
+        }),
+      ).toMatchObject({
+        started: false,
+        status: { healthy: true, supervisorPid },
+      });
+      // Other options than the supervised receiver runs with are refused.
+      await expect(
+        startBackgroundListen({
+          ...target,
+          argv: [child],
+          configuration: backgroundListenConfiguration({
+            ...receiving,
+            contacts: false,
+            senders: ["owner@example.com"],
+          }),
+        }),
+      ).rejects.toThrow(
+        "Stop the existing listener before changing receiving options.",
+      );
+      expect((await stopBackgroundListen(target)).phase).toBe("stopped");
+    },
+    15_000,
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "hands a receiver started by a release that fingerprinted its version to a supervisor of the new version",
+    async () => {
+      const child = childFiles({
+        version: "3.0.0-preview.5",
+        legacyFingerprint: true,
+      });
+      const env = upgradeEnv();
+      const legacy = createHash("sha256")
+        .update(JSON.stringify({ version: "3.0.0-preview.5", ...receiving }))
+        .digest("hex");
+      const result = await startBackgroundListen({
+        ...target,
+        argv: [child],
+        configuration: legacy,
+        env,
+        startupTimeoutMs: 5000,
+      });
+      expect(result.status).toMatchObject({
+        phase: "receiving",
+        healthy: true,
+      });
+      const { pid, supervisorPid } = result.status;
+      installCli({ version: "3.0.0-preview.6" });
+      process.kill(pid as number, "SIGKILL");
+      await vi.waitFor(
+        () => {
+          const current = backgroundListenStatus(target);
+          expect(current).toMatchObject({
+            phase: "receiving",
+            healthy: true,
+            failureCode: null,
+          });
+          expect(current.supervisorPid).not.toBe(supervisorPid);
+        },
+        { timeout: 12_000 },
+      );
+      // The old supervisor stopped and exited, so it neither restarts the
+      // refusing worker nor competes with its replacement.
+      await vi.waitFor(() =>
+        expect(() => process.kill(supervisorPid as number, 0)).toThrow(),
+      );
+      const configuration = backgroundListenConfiguration(receiving);
+      // The worker that refused never received; the new version receives
+      // only with the options its own supervisor's start selected.
+      expect(relaunchRows(env.TEST_VERSION_LOG)).toEqual([
+        expect.objectContaining({
+          version: "3.0.0-preview.5",
+          expected: legacy,
+        }),
+        expect.objectContaining({
+          version: "3.0.0-preview.6",
+          expected: configuration,
+        }),
+      ]);
+      // The relaunch logs once its start returns, after the receiver is up.
+      await vi.waitFor(() =>
+        expect(relaunchRows(env.TEST_RELAUNCH_LOG)).toEqual([
+          expect.objectContaining({ started: true }),
+        ]),
+      );
+      const current = backgroundListenStatus(target);
+      expect(current).not.toHaveProperty("lastStartFailure");
+      expect(
+        await startBackgroundListen({
+          ...target,
+          argv: [child],
+          configuration,
+        }),
+      ).toMatchObject({
+        started: false,
+        status: { healthy: true, supervisorPid: current.supervisorPid },
+      });
+      expect((await stopBackgroundListen(target)).phase).toBe("stopped");
+    },
+    20_000,
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "never receives with options its parent did not select, and a relaunch starts nothing once the owner stopped that receiver",
+    async () => {
+      const child = childFiles();
+      const env = {
+        ...upgradeEnv(),
+        TEST_RECEIVING_OPTIONS: "",
+        TEST_CONFIGURATION: "b".repeat(64),
+      };
+      // The start under the parent's selection is never ready; the
+      // replacement waits for it to give up the start lock.
+      await expect(
+        startBackgroundListen({
+          ...target,
+          argv: [child],
+          configuration: "a".repeat(64),
+          env,
+          startupTimeoutMs: 2000,
+        }),
+      ).rejects.toThrow("not ready before the startup timeout");
+      await vi.waitFor(
+        () =>
+          expect(backgroundListenStatus(target)).toMatchObject({
+            phase: "receiving",
+            healthy: true,
+          }),
+        { timeout: 10_000 },
+      );
+      expect(
+        relaunchRows(env.TEST_VERSION_LOG).map((row) => row.expected),
+      ).toEqual(["b".repeat(64)]);
+      // The relaunch logs once its start returns, after the receiver is up.
+      await vi.waitFor(() =>
+        expect(relaunchRows(env.TEST_RELAUNCH_LOG)).toEqual([
+          expect.objectContaining({ started: true }),
+        ]),
+      );
+      // A relaunch for this generation, still under way when its owner
+      // asked it to stop, starts nothing and stops nothing.
+      const { supervisorPid } = backgroundListenStatus(target);
+      const { token } = readMailJson(
+        join(stateFile(), "..", "supervisor.json"),
+      ) as { token: string };
+      writeMailJson(join(stateFile(), "..", "owner-stop.json"), {
+        version: 1,
+        token,
+      });
+      vi.stubEnv("PRIMITIVE_LISTEN_RELAUNCH_FOR", token);
+      await expect(
+        startBackgroundListen({ ...target, argv: [child], env }),
+      ).rejects.toThrow("so nothing was started");
+      expect(backgroundListenStatus(target)).toMatchObject({
+        healthy: true,
+        supervisorPid,
+      });
+      // And so does one that arrives after the stop.
+      expect((await stopBackgroundListen(target)).phase).toBe("stopped");
+      await expect(
+        startBackgroundListen({ ...target, argv: [child], env }),
+      ).rejects.toThrow("so nothing was started");
+      expect(backgroundListenStatus(target)).toMatchObject({
+        reason: "stopped",
+        supervisorPid,
+      });
+    },
+    20_000,
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "holds a receiver whose newer worker reports a failure code this version does not know",
+    async () => {
+      const child = childFiles();
+      const future = join(directory, "future-failure");
+      const result = await startBackgroundListen({
+        ...target,
+        argv: [child],
+        env: {
+          TEST_LISTEN_TARGET: JSON.stringify(target),
+          TEST_FUTURE_FAILURE: future,
+          TEST_RESTART_DELAY_MS: "50",
+        },
+        startupTimeoutMs: 5000,
+      });
+      const { pid, supervisorPid } = result.status;
+      writeFileSync(future, "");
+      process.kill(pid as number, "SIGKILL");
+      await vi.waitFor(
+        () =>
+          expect(backgroundListenStatus(target)).toMatchObject({
+            phase: "failed",
+            reason: "failed",
+            healthy: false,
+            failureCode: "unrecognized",
+          }),
+        { timeout: 5000 },
+      );
+      expect(backgroundListenRestartable(backgroundListenStatus(target))).toBe(
+        false,
+      );
+      // The code keeps its name for the newer CLI that knows it.
+      expect(
+        readMailJson(join(stateFile(), "..", "supervisor.json")),
+      ).toMatchObject({ phase: "failed", failureCode: "some-future-code" });
+      await vi.waitFor(() =>
+        expect(() => process.kill(supervisorPid as number, 0)).toThrow(),
+      );
+    },
+    15_000,
+  );
 });

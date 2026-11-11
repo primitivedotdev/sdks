@@ -8,6 +8,7 @@ import {
   loadConnectedAgentProfile,
 } from "./connected-agent-profile.js";
 import {
+  BACKGROUND_LISTEN_RELAUNCH_ENV,
   BACKGROUND_LISTEN_TOKEN_ENV,
   backgroundListenRestartable,
   backgroundListenStatus,
@@ -112,6 +113,9 @@ export function healSelectedReceiver(
     PRIMITIVE_CONFIG_DIR: configDir,
     [RECEIVER_HEAL_ENV]: "0",
   };
+  // A restart from an ordinary command is not a relaunch for a generation,
+  // even when this command is itself a relaunch.
+  delete childEnv[BACKGROUND_LISTEN_RELAUNCH_ENV];
   (options.spawnListener ?? spawnDetached)(listenArgv, childEnv);
   return { action: "restarting", profile: profileName, session };
 }

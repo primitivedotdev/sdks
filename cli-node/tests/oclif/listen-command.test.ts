@@ -1,6 +1,14 @@
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  mkdtempSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { Config } from "@oclif/core";
 import { describe, expect, it, vi } from "vitest";
 import ListenCommand, {
   CLAUDE_NOTIFY_SESSION_GUIDANCE,
@@ -11,7 +19,12 @@ import {
   agentProfileDirectory,
   saveConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
-import { startBackgroundListen } from "../../src/oclif/listen-background.js";
+import {
+  BACKGROUND_LISTEN_TARGET_ENV,
+  BACKGROUND_LISTEN_TOKEN_ENV,
+  backgroundListenConfiguration,
+  startBackgroundListen,
+} from "../../src/oclif/listen-background.js";
 import { AGENT_CONNECTION_REQUIRED_MESSAGE } from "../../src/oclif/listen-credential.js";
 import { notificationScope } from "../../src/oclif/notify-session.js";
 import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
@@ -121,6 +134,60 @@ describe("native listener command transport", () => {
       rmSync(directory, { recursive: true, force: true });
     }
   }, 15_000);
+  it("checks a supervised worker's options without the CLI version, so an upgrade in place still matches", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "primitive-listen-upgrade-"));
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      vi.stubEnv("PRIMITIVE_CONFIG_DIR", directory);
+      vi.stubEnv("PRIMITIVE_AGENT_PROFILE", "upgraded");
+      const apiKey = ["pconn", "g".repeat(48)].join("_");
+      saveConnectedAgentProfile(directory, "upgraded", {
+        version: 1,
+        auth_method: "agent_connection",
+        api_key: apiKey,
+        api_base_url: "https://api.primitive.dev/v1",
+        org_id: session,
+        agent_address: "agent@example.com",
+        owner_address: "owner@example.com",
+        invitation_hash: "a".repeat(64),
+        created_at: new Date().toISOString(),
+      });
+      // The parent's selection for this command: no contacts, senders,
+      // events or socket path (status selects none).
+      const select = (options: { contacts: boolean }) => {
+        vi.stubEnv(BACKGROUND_LISTEN_TOKEN_ENV, randomUUID());
+        vi.stubEnv(
+          BACKGROUND_LISTEN_TARGET_ENV,
+          JSON.stringify({
+            scope: notificationScope("https://api.primitive.dev/v1", apiKey),
+            threadId: session,
+            configDir: realpathSync(directory),
+            configuration: backgroundListenConfiguration({
+              ...options,
+              contactRequests: false,
+              senders: [],
+            }),
+          }),
+        );
+      };
+      const argv = ["--status", "--notify-session", session];
+      for (const version of ["3.0.0-preview.6", "3.0.0-preview.7"]) {
+        const config = await Config.load(root);
+        config.version = version;
+        select({ contacts: false });
+        await ListenCommand.run(argv, config);
+        // Other options than the parent selected are still refused.
+        select({ contacts: true });
+        await expect(ListenCommand.run(argv, config)).rejects.toThrow(
+          "target changed or its parent expectation is invalid",
+        );
+      }
+    } finally {
+      log.mockRestore();
+      vi.unstubAllEnvs();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
   it("status for a hook-receiving Claude session names the hook receiver and its status command", async () => {
     const directory = mkdtempSync(join(tmpdir(), "primitive-listen-hook-"));
     const output: string[] = [];

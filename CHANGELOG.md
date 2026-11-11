@@ -906,8 +906,7 @@ parsers.
 - A background listener whose session, profile or config directory differs
   from what the command that started it selected reports
   `connection-changed`, so its supervisor holds it as failed instead of
-  restarting it. Other options, which also change when the CLI is upgraded,
-  are not treated this way.
+  restarting it. Other options are not treated this way.
 - When a background start gives up, including one with no terminal to report
   to, such as a worker replacing its lost supervisor, its time, reason and
   failure code are saved. `listen --status` shows them as
@@ -916,3 +915,27 @@ parsers.
   `primitive doctor` adds a Receiver warning for a connected profile while
   they are shown. A later start that succeeds, or the receiver starting to
   receive, removes the record.
+- A background listener keeps receiving when the CLI is upgraded in place
+  while it runs. Its supervisor restarts the worker on the new version.
+  Before, the CLI version was part of the options the worker checks, so
+  every restarted worker refused to start and the supervisor kept restarting
+  it. Running the same `listen --background` command after an upgrade reuses
+  a receiver started by this version or later. A start that changes
+  contacts, contact requests, senders, events or the session socket while a
+  receiver runs is still refused.
+- A listener started by an earlier release is handed to a supervisor of the
+  new version when its worker next restarts. If that attempt does not
+  complete, a later restart tries again after at least a minute. Until the
+  handover, the same `listen --background` command is refused as a change of
+  receiving options, and `agent connect` reports the receiver as not ready.
+  During it, `listen --status` shows `reconnecting` with `crashed` for a
+  moment, then `stopped` for about a second, then the new supervisor starting
+  and receiving. A handover, like a worker replacing its lost supervisor,
+  starts nothing once the owner has stopped the listener with
+  `listen --stop`, or while it is held as failed. After a downgrade to a
+  release from before this change, stop the listener and start it again.
+- A background listener's supervisor holds the receiver when a worker from a
+  newer CLI reports a failure code this version does not know, instead of
+  restarting it. Status from this version shows `unrecognized`; the newer CLI
+  reads its own code back, so it can restart the receiver when that code
+  allows.
