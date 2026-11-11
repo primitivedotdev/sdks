@@ -40,6 +40,24 @@ describe("matchedRules", () => {
     expect(matchedRulesFromApi).toBe(matchedRules);
   });
 
+  it.each([
+    ["undefined", undefined],
+    ["null", null],
+    ["a string", "email"],
+    ["a number", 7],
+    ["a boolean", true],
+    ["a function", () => ({})],
+    ["an array", []],
+    ["an event whose email is null", { email: null }],
+    ["an event whose email is undefined", { email: undefined }],
+    ["an event whose email is a string", { email: "not an object" }],
+    ["an event whose analysis is null", { email: { analysis: null } }],
+    ["a received email whose analysis is null", { analysis: null }],
+  ])("returns nothing, without throwing, for %s", (_name, value) => {
+    expect(matchedRules(value as never)).toEqual([]);
+    expect(matchedRules(value as never, "rule_1")).toEqual([]);
+  });
+
   it("keeps only entries with a string rule id", () => {
     const rule: UnderstandingRule = { id: "rule_1", name: "Applicants" };
     const event = withUnvalidatedRules([
