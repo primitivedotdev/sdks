@@ -738,6 +738,12 @@ downgrading, or sign in again afterwards.
 - The new secret is printed once, alone on stdout or in the JSON, and the CLI
   never saves it. `keys revoke` asks for confirmation unless `--yes` is
   passed.
+- `keys update` changes a key's permissions or rules only when the key read
+  shows its resource limits and it has none; a key with limits is not
+  changed. It sends the read's `grant.ref` as `expected_grant_ref`, so the
+  change is refused if the grant changed after the read. If the server's key
+  read does not show resource limits, a grant change is refused and nothing
+  is sent.
 
 #### Rule request webhook events
 

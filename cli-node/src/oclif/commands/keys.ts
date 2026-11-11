@@ -393,6 +393,16 @@ export function buildUpdatedGrant(
       message: `This key's permissions come from its template (${current.template}) and are not changed here.`,
     };
   }
+  // A change restates the whole grant, so a key's per-resource limits must be
+  // seen to be kept. A server that does not say whether the key has any is
+  // not restated to: the change could drop them.
+  if (!("resources" in current)) {
+    return {
+      ok: false,
+      message:
+        "The server does not say whether this key is limited to selected Functions, domains, endpoints or routes, so the CLI does not restate its grant: that could drop such limits. Change it in the dashboard.",
+    };
+  }
   const resources = (current as { resources?: unknown }).resources;
   if (
     resources !== undefined &&
@@ -402,7 +412,7 @@ export function buildUpdatedGrant(
     return {
       ok: false,
       message:
-        "This key is limited to selected resources, which the CLI cannot restate. Change it in the dashboard.",
+        "This key is limited to selected Functions, domains, endpoints or routes, which a change to its grant cannot keep. To change what it can do, create a key with what you need and revoke this one.",
     };
   }
   const held = stringList(current.permissions);
@@ -940,6 +950,11 @@ export class KeysUpdateCommand extends Command {
       // approved later never overwrites one made meanwhile.
       const ref = (current.data.grant as { ref?: unknown }).ref;
       if (typeof ref === "string") body.expected_grant_ref = ref;
+      else if (!flags.json) {
+        process.stderr.write(
+          "Note: the server did not say which grant this key holds, so this change is not checked against changes made since it was read.\n",
+        );
+      }
     }
     const result = await withApproval(
       (token) =>
