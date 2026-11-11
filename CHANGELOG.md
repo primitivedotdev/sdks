@@ -891,6 +891,15 @@ downgrading, or sign in again afterwards.
   (`rules_not_on_key`); a change that leaves the grant as it is sends no
   grant change, and nothing at all unless `--name`, `--expires-at` or
   `--no-expiry` is also given.
+  The help of `--rule` starts with "Replaces the key's rules", so the
+  compact `--help` shows it.
+- When the API refuses a permission with `<name> cannot be granted to a
+  key`, `keys create` and `keys update` add a hint (in `warnings` with
+  `--json`) that says whether the name is not a permission at all or is one
+  an API key cannot hold, asked of `GET /whoami?check`, then lists the
+  permissions a key can hold as this CLI version lists them. An update
+  refused over a permission the key already holds says to take it off with
+  `--remove`. `keys create --help-full` lists the permissions by area.
 - `keys get` on a revoked key prints when it was revoked, and by whom when
   the read says. `keys update` refuses to change a revoked key's grant before
   asking for any approval, and `keys revoke` on a key that is already revoked
