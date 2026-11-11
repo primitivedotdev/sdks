@@ -24,11 +24,15 @@ type ListedRole = {
 /**
  * Why an invitation for Member was refused, for the refusal the server gives
  * when every Member reads all of the organization's mail: offering Member is
- * then giving that, which only a person signed in to the dashboard who can
- * assign roles may do.
+ * then giving that, which only an invitation sent from the dashboard by
+ * someone who can assign roles may do.
  */
 export const MEMBER_INVITE_READS_ALL_MAIL =
-  "In this organization every Member reads all of its mail, so inviting someone as Member gives them every mailbox, and that takes a person signed in to the dashboard who can assign roles. From the CLI you can invite them with --role none, where the organization can give limited roles, and once they have joined give them a role with `primitive roles-and-members set-member-role`. Or invite them from the dashboard's Roles settings, which says what each role reads.";
+  "In this organization every Member reads all of its mail, so inviting someone as Member gives them every mailbox. Only an invitation sent from the dashboard itself, by someone who can assign roles, can offer that; a CLI request cannot, even with a step-up token. From the CLI you can invite them with --role none, where the organization can give limited roles, and once they have joined give them a role with `primitive roles-and-members set-member-role`, which needs roles:assign and an approval in the browser. Or invite them from the dashboard's Roles settings, which says what each role reads.";
+
+/** The same refusal for any role above Member, which is assigning a role: the same advice, without the mail clause. */
+export const ROLE_INVITE_NEEDS_DASHBOARD =
+  "Inviting someone with a role other than Member or none is assigning that role, and only an invitation sent from the dashboard itself, by someone who can assign roles, can do it; a CLI request cannot, even with a step-up token. From the CLI you can invite them with --role none, where the organization can give limited roles, and once they have joined give them the role with `primitive roles-and-members set-member-role`, which needs roles:assign and an approval in the browser. Or invite them from the dashboard's Roles settings.";
 
 /**
  * The hint for a refused invite-organization-member, or undefined when it is
@@ -51,9 +55,10 @@ export function inviteRefusalHint(
     body && typeof body === "object"
       ? (body as { role?: unknown }).role
       : undefined;
-  // Member is the role an invitation without one is for.
-  if (role !== undefined && role !== "member") return undefined;
-  return MEMBER_INVITE_READS_ALL_MAIL;
+  // Member is the role an invitation without one is for. No access is never refused this way.
+  if (role === undefined || role === "member")
+    return MEMBER_INVITE_READS_ALL_MAIL;
+  return role === "none" ? undefined : ROLE_INVITE_NEEDS_DASHBOARD;
 }
 
 /**
@@ -89,34 +94,62 @@ export function roleReadsAllMailWarning(
     data.invitations && typeof data.invitations === "object"
       ? (data.invitations as { members_read_all_mail?: unknown })
       : null;
-  if (invitations && invitations.members_read_all_mail !== true) return null;
-  const wanted = role.toLowerCase();
-  const matches = (value: unknown) =>
-    typeof value === "string" && value.toLowerCase() === wanted;
+  // Only an answer that says members do not read all mail (delegated access) rules it out, as in the dashboard.
+  if (invitations?.members_read_all_mail === false) return null;
+  // Keys match exactly, as the server matches them; ids in any case.
+  const byKey = (value: unknown) => value === role;
+  const byId = (value: unknown) =>
+    typeof value === "string" && value.toLowerCase() === role.toLowerCase();
   const roles = Array.isArray(data.roles) ? (data.roles as ListedRole[]) : [];
   const templates = Array.isArray(data.templates)
     ? (data.templates as ListedRole[])
     : [];
   const found =
-    roles.find((r) => matches(r.key) || matches(r.id)) ??
-    templates.find((t) => matches(t.key));
+    roles.find((r) => byKey(r.key) || byId(r.id)) ??
+    templates.find((t) => byKey(t.key));
   const readsMail =
     Array.isArray(found?.permissions) &&
     found.permissions.includes("mail:read");
   if (found?.mail_scope !== "org" || !readsMail) return null;
-  const name = (typeof found.name === "string" ? found.name : role)
-    .replace(UNPRINTABLE, "")
-    .slice(0, 80);
-  return `Warning: ${name} reads all of this organization's mail while this organization uses whole-organization access, so the person given it reads every mailbox. For only their own mail, use a narrower role: \`primitive roles list --json\` shows each role's mail_scope.`;
+  const cleaned = Array.from(
+    (typeof found.name === "string" ? found.name : "")
+      .replace(UNPRINTABLE, " ")
+      .replace(/\s+/g, " ")
+      .trim(),
+  )
+    .slice(0, 80)
+    .join("")
+    .trim();
+  const name = cleaned || role;
+  return `Warning: the role "${name}" reads all of this organization's mail while this organization uses whole-organization access, so the person given it reads every mailbox. For only their own mail, use a narrower role: \`primitive roles list --json\` shows each role's mail_scope.`;
 }
 
 /** How long the warning waits for GET /roles before leaving it out. */
 export const ROLES_TIMEOUT_MS = 3_000;
 
-/** GET /roles, or null when it cannot be read in time: the warning is then left out rather than guessed. */
+/**
+ * GET /roles, or null when it cannot be read in time: the warning is then
+ * left out rather than guessed. The signal stops the request; the race bounds
+ * everything around it too, such as a saved login's token exchange on a 401.
+ */
 export async function readRoles(
   client: ApiClient,
   timeoutMs = ROLES_TIMEOUT_MS,
+): Promise<unknown> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), timeoutMs);
+  });
+  try {
+    return await Promise.race([fetchRoles(client, timeoutMs), late]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchRoles(
+  client: ApiClient,
+  timeoutMs: number,
 ): Promise<unknown> {
   try {
     const result = await client.get({

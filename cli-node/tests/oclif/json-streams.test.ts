@@ -613,7 +613,7 @@ describe("generated commands with --json", () => {
     };
     const MEMBER_ID = "00000000-0000-4000-8000-0000000000cc";
     const MEMBER_WARNING =
-      "Warning: Member reads all of this organization's mail while this organization uses whole-organization access";
+      'Warning: the role "Member" reads all of this organization\'s mail while this organization uses whole-organization access';
     const invite = () =>
       runMerged("organizations:invite-organization-member", [
         "--request-id",
@@ -660,6 +660,8 @@ describe("generated commands with --json", () => {
       const result = await invite();
       expect(result.exitCode).toBe(1);
       expect(result.stderr).not.toContain("every Member reads all of its mail");
+      // The generic advice stays, since widening the grant is what helps here.
+      expect(result.stderr).toContain("widen it");
     });
 
     it("warns before the request when the role reads every mailbox", async () => {
@@ -701,7 +703,9 @@ describe("generated commands with --json", () => {
         "--json",
       ]);
       expect(json.exitCode).toBe(0);
-      expect(JSON.stringify(parseOne(json.merged))).toContain(MEMBER_WARNING);
+      expect(JSON.stringify(parseOne(json.merged))).toContain(
+        JSON.stringify(MEMBER_WARNING).slice(1, -1),
+      );
       responder = (url) =>
         url.pathname.endsWith("/roles")
           ? jsonResponse(200, { success: true, data: ROLES })
@@ -725,11 +729,11 @@ describe("generated commands with --json", () => {
       ]);
       expect(waiting.exitCode).not.toBe(0);
       expect(JSON.stringify(parseOne(waiting.merged))).toContain(
-        MEMBER_WARNING,
+        JSON.stringify(MEMBER_WARNING).slice(1, -1),
       );
     });
 
-    it("says nothing for a narrower role", async () => {
+    it("says nothing for a narrower role, and still reads the roles before the change", async () => {
       responder = (url) =>
         url.pathname.endsWith("/roles")
           ? jsonResponse(200, { success: true, data: ROLES })
@@ -743,7 +747,42 @@ describe("generated commands with --json", () => {
         "--role",
         "own_mail_read_only",
       ]);
+      expect(narrower.exitCode).toBe(0);
       expect(narrower.stderr).not.toContain("Warning");
+      expect(fetchCalls.map((c) => `${c.method} ${c.url.pathname}`)).toEqual([
+        "GET /v1/roles",
+        `PUT /v1/members/${MEMBER_ID}/role`,
+      ]);
+    });
+
+    it("prints the warning before the approval link", async () => {
+      responder = (url) =>
+        url.pathname.endsWith("/roles")
+          ? jsonResponse(200, { success: true, data: ROLES })
+          : jsonResponse(403, {
+              success: false,
+              error: {
+                code: "step_up_required",
+                message: "Confirm this change.",
+                details: {
+                  step_up_url: "https://app.example.test/step-up/abc",
+                  purpose: "roles.write",
+                },
+              },
+            });
+      const waiting = await runMerged("roles-and-members:set-member-role", [
+        "--id",
+        MEMBER_ID,
+        "--role",
+        "member",
+        "--no-browser",
+      ]);
+      const warned = waiting.stderr.indexOf(MEMBER_WARNING);
+      const link = waiting.stderr.indexOf(
+        "https://app.example.test/step-up/abc",
+      );
+      expect(warned).toBeGreaterThanOrEqual(0);
+      expect(link).toBeGreaterThan(warned);
     });
 
     it("still changes the role when the roles cannot be read, without a warning", async () => {

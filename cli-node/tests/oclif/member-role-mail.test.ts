@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   inviteRefusalHint,
   MEMBER_INVITE_READS_ALL_MAIL,
+  ROLE_INVITE_NEEDS_DASHBOARD,
   readRoles,
   roleReadsAllMailWarning,
 } from "../../src/oclif/member-role-mail.js";
@@ -78,13 +79,26 @@ describe("inviteRefusalHint", () => {
     expect(MEMBER_INVITE_READS_ALL_MAIL).toContain(
       "In this organization every Member reads all of its mail",
     );
+    expect(MEMBER_INVITE_READS_ALL_MAIL).toContain(
+      "a CLI request cannot, even with a step-up token",
+    );
     expect(MEMBER_INVITE_READS_ALL_MAIL).toContain("--role none");
   });
 
-  it("says nothing for another role, another refusal, or one that names a missing permission", () => {
-    expect(
-      inviteRefusalHint("grant_forbidden", { role: "admin" }),
-    ).toBeUndefined();
+  it("explains the same refusal for a role above Member, without the mail clause", () => {
+    for (const role of [
+      "admin",
+      "own_mail_read_only",
+      "8f8f8f8f-0000-4000-8000-000000000001",
+    ]) {
+      expect(inviteRefusalHint("grant_forbidden", { role })).toBe(
+        ROLE_INVITE_NEEDS_DASHBOARD,
+      );
+    }
+    expect(ROLE_INVITE_NEEDS_DASHBOARD).not.toContain("reads all");
+  });
+
+  it("says nothing for no access, another refusal, or one that names a missing permission", () => {
     expect(
       inviteRefusalHint("grant_forbidden", { role: "none" }),
     ).toBeUndefined();
@@ -104,23 +118,50 @@ describe("inviteRefusalHint", () => {
 });
 
 describe("roleReadsAllMailWarning", () => {
-  it("warns for a role that reads every mailbox, by key or id in any case, while members read all mail", () => {
+  it("warns for a role that reads every mailbox, by its key or by its id in any case, while members read all mail", () => {
     expect(roleReadsAllMailWarning("member", ROLES)).toBe(
-      "Warning: Member reads all of this organization's mail while this organization uses whole-organization access, so the person given it reads every mailbox. For only their own mail, use a narrower role: `primitive roles list --json` shows each role's mail_scope.",
+      "Warning: the role \"Member\" reads all of this organization's mail while this organization uses whole-organization access, so the person given it reads every mailbox. For only their own mail, use a narrower role: `primitive roles list --json` shows each role's mail_scope.",
     );
     expect(
       roleReadsAllMailWarning("8F8F8F8F-0000-4000-8000-000000000001", ROLES),
-    ).toContain("Warning: Sup[2KportLine reads all");
+    ).toContain('Warning: the role "Sup [2Kport Line" reads all');
+    // Keys match exactly, as the server matches them.
+    expect(roleReadsAllMailWarning("Member", ROLES)).toBeNull();
+  });
+
+  it("strips what could fake a line from a role's name, and falls back to its key when nothing is left", () => {
+    const named = (name: string) => ({
+      ...ROLES,
+      roles: [
+        { id: "r-x", key: "x", name, permissions: READS, mail_scope: "org" },
+      ],
+    });
+    for (const unsafe of ["\u009b31mRed", "Right\u202eLeft", "One\u2028Two"]) {
+      const warning = roleReadsAllMailWarning("x", named(unsafe)) ?? "";
+      expect(warning).not.toMatch(/[\u009b\u202e\u2028]/u);
+    }
+    expect(roleReadsAllMailWarning("x", named("\u001b\u0007"))).toContain(
+      'the role "x" reads all',
+    );
   });
 
   it("warns for a template the organization has not copied yet, and when the answer does not say how mail is given", () => {
     expect(roleReadsAllMailWarning("read_only", ROLES)).toContain(
-      "Warning: Read only reads all of this organization's mail",
+      'Warning: the role "Read only" reads all of this organization\'s mail',
     );
     const { invitations: _, ...unsaid } = ROLES;
     expect(roleReadsAllMailWarning("member", unsaid)).toContain(
-      "Warning: Member reads all",
+      'the role "Member" reads all',
     );
+    expect(
+      roleReadsAllMailWarning("member", {
+        ...ROLES,
+        invitations: {
+          limited_roles_available: true,
+          members_read_all_mail: null,
+        },
+      }),
+    ).toContain('the role "Member" reads all');
   });
 
   it("says nothing for a role without mail:read, a narrower one, an unknown one, under delegated access, or when the roles cannot be read", () => {

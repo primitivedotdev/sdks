@@ -1542,8 +1542,9 @@ export const OPERATION_ERROR_HINTS: Record<
 };
 
 // Operations whose error hint, when it applies, stands in for the generic
-// hint for the error code: inviting as Member is refused with grant_forbidden,
-// whose generic advice (widen the credential's grant) no CLI grant can follow.
+// hint for the error code: inviting with Member (where members read all
+// mail) or a role above it is refused with grant_forbidden, whose generic
+// advice (widen the credential's grant) no CLI request can follow.
 export const OPERATION_ERROR_HINTS_REPLACING_CODE_HINT: ReadonlySet<string> =
   new Set(["inviteOrganizationMember"]);
 
