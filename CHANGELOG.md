@@ -16,46 +16,38 @@ the same OpenAPI spec. See `RELEASE.md`.
 OpenAPI document the API serves, and every client is regenerated from it. Most
 of the changes below follow from that document.
 
-Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.4` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.4`), and `3.0.0rc4` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.3` (`3.0.0rc3`), which made API key writes from your own CLI login run directly, `3.0.0-preview.2` (`3.0.0rc2`), which added managing API keys from the CLI, and `3.0.0-preview.1` (`3.0.0rc1`).
+Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.5` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.5`), and `3.0.0rc5` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring and the endpoint and signing-secret commands, `3.0.0-preview.3` (`3.0.0rc3`), which made API key writes from your own CLI login run directly, `3.0.0-preview.2` (`3.0.0rc2`), which added managing API keys from the CLI, and `3.0.0-preview.1` (`3.0.0rc1`).
 
-What `3.0.0-preview.4` (`3.0.0rc4`) changes from `3.0.0-preview.3`:
+What `3.0.0-preview.5` (`3.0.0rc5`) changes from `3.0.0-preview.4`:
 
-- The spec follows the API's next release: new operations for the email
-  rule vocabulary, deleting a withdrawn rule request, checking a request's
-  target, reading one endpoint, and reading and rotating a webhook's own
-  signing secret; and new fields on email rules, endpoints, credentials and
-  deliveries. A webhook made as a person's own, or by a key limited to some
-  mailboxes, an app or an agent delegate, signs with its own secret.
-  Accepting a rule request needs `mail:share_own`, which the Node
-  `PERMISSIONS` list gains.
-- Python and Go: the Email Rules types are renamed after the API's named
-  components. The renames are listed under breaking changes.
-- CLI email rule authoring: `test-email-rule` takes `--expect-match`,
-  `--expect-no-match` and `--expect-file`, exits 1 when an expectation
-  failed or cannot be decided and 3 when the undecided ones can be decided
-  by testing again, and prints a report on stderr;
-  `create-email-rule` and `update-email-rule` take `--expectations-file`;
-  scope warnings print on create, update and get-scope; a stale
-  `--if-version` names the rule's current version; and `primitive emails
-  facts <id>` prints what the classifier read from an email.
-- New CLI commands and short names: `endpoints get`, `email-rules
-  vocabulary`, `endpoints signing-secret`, `endpoints rotate-signing-secret`
-  and `roles members` (also `members list`).
-- A generated command with one path parameter takes it as its first
-  argument (`primitive emails get <id>`), and a stray or mistyped word is
-  reported for the command it follows.
-- A list's `--limit` above the API's cap, up to 1000, is fetched in pages.
-- `emails wait --since` takes a duration such as `15m`, and the wait says
-  that it counts only mail received after it starts unless told otherwise.
-- Generated commands whose operation can ask for browser approval, such as
-  `endpoints create` and `endpoints update`, take `--step-up-token` and
-  `--no-browser` and approve and retry as the `keys` commands do, and so
-  does `keys revoke`.
-- On Windows, the CLI opens approval and sign-in links through the system's
-  link handler, so a link with `&` in it opens whole.
-- SDKs: missing-field errors name the full path; a `matchedRules` helper
-  returns the rules that granted a delivery; Python checks webhook date-time
-  and uri formats as Node does; Go takes every email event type.
+- `primitive send` and `chat` without `--from` take their default From from
+  the API's answer (`getSendFrom`, `GET /whoami/send-from`). A person's own
+  login sends as their member address, never `agent@` a domain, and a
+  connected agent sends as its agent address. When the API names no default,
+  nothing is sent: the command gives the API's reason and the addresses it
+  lists, and asks for `--from`.
+- New command `primitive activity created`: what you created, newest first,
+  with where each object stands now. Signed in as yourself, it covers what you
+  created through any credential of yours; with a key, what that key created.
+- The spec follows the API's current release: new operations
+  `listActivityObjects` and `getSendFrom`; each of a delivery's `attempts`
+  carries `response_status` and `response_body`; people carry `mail_access`;
+  and `account:read` is gone. The Node `PERMISSIONS` list loses it, which is
+  listed under breaking changes.
+- `email-rules create-email-rule` and `update-email-rule` take
+  `--fail-on-expectations`: exit 1 when an expectation failed and 3 when one
+  is undecided or was not checked, so the rule should be tested.
+- Without `--json`, the CLI reads out more of an answer on stderr: route
+  `warnings` on route writes; each delivery attempt with what the endpoint
+  answered (`webhook-deliveries get-delivery`); "none failed" when a rule
+  write's expectations are only undecided, and that a `do_not_share` rule
+  blocks nothing until it is active; and each member's mail access in
+  `members list`.
+- When a server message names an API route, the CLI also names the command
+  that calls it.
+- Generated commands the API answers only in a dashboard session say so in
+  their summary and help.
+- `keys update --json` prints the key at the top level, as `keys get` does.
 
 ### Breaking changes
 
@@ -65,7 +57,7 @@ What `3.0.0-preview.4` (`3.0.0rc4`) changes from `3.0.0-preview.3`:
   CLI moves from 1.75.0.
 - The Go module path is `github.com/primitivedotdev/sdks/sdk-go/v3`. Update
   imports from `.../sdk-go/v2` and `.../sdk-go/v2/api`.
-- `primitive functions init` scaffolds projects on `^3.0.0-preview.4` of both
+- `primitive functions init` scaffolds projects on `^3.0.0-preview.5` of both
   `@primitivedotdev/sdk` and `primitive`.
 
 #### Removed code
