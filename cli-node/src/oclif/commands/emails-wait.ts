@@ -32,7 +32,6 @@ import {
   DEFAULT_EMAIL_POLL_INTERVAL_SECONDS,
   DEFAULT_EMAIL_POLL_PAGE_SIZE,
   fetchEmailSearchPage,
-  fetchRecentEmails,
   filtersFromFlags,
   lateMailReread,
   MAX_EMAIL_POLL_PAGE_SIZE,
@@ -337,14 +336,13 @@ class EmailsWaitCommand extends Command {
       // Idle: mail that became readable after the cursor passed its place.
       // Until the cursor has passed some mail, each poll reads from the start.
       if (cursor !== null && reread.due()) {
-        const recent = await fetchRecentEmails({
+        const recent = await reread.read({
           apiClient,
           filters,
           since,
           deadline,
           fetchPage: fetchEmailSearchPage,
         });
-        reread.done();
         for (const email of collectNewAcceptedEmails(recent, seenIds)) {
           printEmail(email);
           if (matched >= flags.number) return;

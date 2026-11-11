@@ -249,8 +249,8 @@ export function collectNewAcceptedEmails(
 }
 
 /**
- * How far back an idle poll re-reads, for mail that became readable after the
- * cursor passed its place; how often it does; and the most pages, of
+ * How long after arriving an email may become readable and still be reported
+ * by an idle poll's re-read; how often a re-read comes; and the most pages, of
  * MAX_EMAIL_POLL_PAGE_SIZE each, one re-read reads.
  */
 export const LATE_MAIL_WINDOW_MS = 10 * 60_000;
@@ -260,33 +260,35 @@ export const LATE_MAIL_MAX_PAGES = 3;
 export const LATE_MAIL_REREAD_POLLS = 3;
 
 /**
- * Mail received in the last LATE_MAIL_WINDOW_MS (never before `since`),
- * oldest first. Pages come in order of when an email was received, but an
- * email can become readable to this credential after one received later: it
- * was accepted more slowly, held while its sender was checked, or granted to
- * a key by an email rule once classified. By then the cursor is past its
- * place, so an idle poll re-reads the recent window and keeps only rows it
- * has not seen. The window is read newest first, where late mail mostly is,
- * so a busy window that holds more than the pages read loses its oldest part
- * rather than its newest. Best effort: a page that fails ends the re-read with
- * what it has, and the poll goes on; so does reaching `deadline`.
+ * Mail received from `from` (LATE_MAIL_WINDOW_MS ago when not given, and
+ * never before `since`), oldest first. Pages come in order of when an email
+ * was received, but an email can become readable to this credential after one
+ * received later: it was accepted more slowly, held while its sender was
+ * checked, or granted to a key by an email rule once classified. By then the
+ * cursor is past its place, so an idle poll re-reads recent mail and keeps
+ * only rows it has not seen. It reads newest first, where late mail mostly
+ * is, so a busy stretch that holds more than the pages read loses its oldest
+ * part rather than its newest. Best effort: a page that fails ends the
+ * re-read with what it has, and the poll goes on; so does reaching
+ * `deadline`. `cutShort` says it ended either way.
  */
 export async function fetchRecentEmails(params: {
   apiClient: PrimitiveApiClient;
   filters: EmailPollFilters;
   since?: string;
+  /** The earliest received time to read, as a Date.now() time. */
+  from?: number;
   /** When the caller stops waiting, as a Date.now() time; no further page is read after it. */
   deadline?: number | null;
   now?: number;
   /** The page reader the caller polls with, so the re-read reads as the poll does. */
   fetchPage?: typeof fetchEmailSearchPage;
-}): Promise<EmailSearchResult[]> {
+}): Promise<{ rows: EmailSearchResult[]; cutShort: boolean }> {
   const fetchPage = params.fetchPage ?? fetchEmailSearchPage;
   const now = params.now ?? Date.now();
   const sinceMs = params.since ? Date.parse(params.since) : Number.NaN;
-  const from = Number.isNaN(sinceMs)
-    ? now - LATE_MAIL_WINDOW_MS
-    : Math.max(now - LATE_MAIL_WINDOW_MS, sinceMs);
+  const wanted = params.from ?? now - LATE_MAIL_WINDOW_MS;
+  const from = Number.isNaN(sinceMs) ? wanted : Math.max(wanted, sinceMs);
   const newestFirst: EmailSearchResult[] = [];
   let cursor: string | null = null;
   for (let pages = 0; pages < LATE_MAIL_MAX_PAGES; pages += 1) {
@@ -295,7 +297,7 @@ export async function fetchRecentEmails(params: {
       params.deadline !== null &&
       Date.now() >= params.deadline
     )
-      break;
+      return { rows: newestFirst.reverse(), cutShort: true };
     let page: EmailSearchPageResult;
     try {
       page = await fetchPage({
@@ -308,37 +310,55 @@ export async function fetchRecentEmails(params: {
         since: new Date(from).toISOString(),
       });
     } catch {
-      break;
+      return { rows: newestFirst.reverse(), cutShort: true };
     }
-    if (!page.ok) break;
+    if (!page.ok) return { rows: newestFirst.reverse(), cutShort: true };
     newestFirst.push(...page.rows);
     if (!page.more || !page.cursor) break;
     cursor = page.cursor;
   }
-  return newestFirst.reverse();
+  return { rows: newestFirst.reverse(), cutShort: false };
 }
 
 /**
- * When an idle poll is due to re-read recent mail (fetchRecentEmails): one
+ * An idle poll's re-reads of recent mail (fetchRecentEmails). One is due an
  * interval after this is made, as until then the poll has just read the same
- * window itself, and then one interval after the last re-read finished
- * (`done`), so a slow re-read is not followed straight away by another. The
- * interval is LATE_MAIL_REREAD_MS, or LATE_MAIL_REREAD_POLLS poll intervals
- * when that is longer.
+ * mail itself, and then an interval after the last one finished, so a slow
+ * re-read is not followed straight away by another. The interval is
+ * LATE_MAIL_REREAD_MS, or LATE_MAIL_REREAD_POLLS poll intervals when that is
+ * longer. Each re-read reads from LATE_MAIL_WINDOW_MS before the last one
+ * that was not cut short began (before `start`, at first), so an email that
+ * becomes readable within LATE_MAIL_WINDOW_MS of arriving is read however far
+ * apart the re-reads come, unless it is older than the most a re-read reads.
  */
 export function lateMailReread(
   pollIntervalMs: number,
   start = Date.now(),
-): { due: (now?: number) => boolean; done: (now?: number) => void } {
+): {
+  due: (now?: number) => boolean;
+  read: (
+    params: Omit<Parameters<typeof fetchRecentEmails>[0], "from" | "now">,
+  ) => Promise<EmailSearchResult[]>;
+} {
   const intervalMs = Math.max(
     LATE_MAIL_REREAD_MS,
     LATE_MAIL_REREAD_POLLS * pollIntervalMs,
   );
-  let last = start;
+  // When the last re-read not cut short began, and when the last re-read ended.
+  let covered = start;
+  let ended = start;
   return {
-    due: (now = Date.now()) => now - last >= intervalMs,
-    done: (now = Date.now()) => {
-      last = now;
+    due: (now = Date.now()) => now - ended >= intervalMs,
+    read: async (params) => {
+      const begun = Date.now();
+      const { rows, cutShort } = await fetchRecentEmails({
+        ...params,
+        from: covered - LATE_MAIL_WINDOW_MS,
+        now: begun,
+      });
+      if (!cutShort) covered = begun;
+      ended = Date.now();
+      return rows;
     },
   };
 }
