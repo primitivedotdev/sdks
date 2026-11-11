@@ -877,11 +877,16 @@ func (UnimplementedHandler) DeleteEmail(ctx context.Context, params DeleteEmailP
 
 // DeleteEmailRule implements deleteEmailRule operation.
 //
-// Deletes a rule with its versions, its decisions and the access it granted. The author, or a caller
-// who reads the whole organization's mail, may delete it; while it is shared with another member,
-// only the author or someone who manages members from the dashboard. Needs mail:read, a member's own
-// credential with their full access (not an API key, agent key or narrowed token), and the email
-// rules feature.
+// Deletes a rule with its versions, its decisions and the access it granted. A rule that was ever
+// shared with another member keeps the record of its share: the share ends with end_reason
+// rule_deleted, and the member who shared can still list what it handed over, while the rule is no
+// longer shown and reads nothing. The answer lists the shares the delete ended (ended_shares) and
+// the keys, not revoked, that still list the rule, which now read nothing through it: those you may
+// read as key metadata by id, name and prefix (keys), and how many others (other_keys). keys and
+// other_keys are left out when the keys could not be read. The author, or a caller who reads the
+// whole organization's mail, may delete it; while it is shared with another member, only the author
+// or someone who manages members from the dashboard. Needs mail:read, a member's own credential with
+// their full access (not an API key, agent key or narrowed token), and the email rules feature.
 //
 // DELETE /email-rules/{id}
 func (UnimplementedHandler) DeleteEmailRule(ctx context.Context, params DeleteEmailRuleParams) (r DeleteEmailRuleRes, _ error) {
@@ -1796,9 +1801,12 @@ func (UnimplementedHandler) GetInteraction(ctx context.Context, params GetIntera
 // record is kept is answered too, with status revoked, revoked_at and revoked_by, under the same
 // access rules as a key that works: one the caller may not read is 404, revoked or not. Its grant's
 // mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a
-// domain, otherwise content. The person needs access to the whole organization's mail. Needs the
-// organization's credential features to be enabled; while they are not, this answers 404
-// feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
+// domain, otherwise content. A rule the key lists that reads nothing any more (a deleted rule, or a
+// share that ended) is listed under grant.mail_scope.ended_rules, each with its id and reason
+// (rule_deleted or share_ended), and not under rules. The person needs access to the whole
+// organization's mail. Needs the organization's credential features to be enabled; while they are
+// not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive
+// to turn them on.
 // Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
 // person's role must hold keys:read. API keys, agent connection keys and agents are refused.
 //
@@ -2466,9 +2474,11 @@ func (UnimplementedHandler) ListCredentialEvents(ctx context.Context, params Lis
 //
 //	A key's grant.mail_scope.depth is raw only when it holds mail.raw:read and its scope lists an
 //
-// address or a domain, otherwise content. Filter with kind. Needs the organization's credential
-// features to be enabled; while they are not, this answers 404 feature_disabled, with details.
-// feature naming the feature. Contact Primitive to turn them on.
+// address or a domain, otherwise content. A rule the key lists that reads nothing any more (a
+// deleted rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its
+// id and reason (rule_deleted or share_ended), and not under rules. Filter with kind. Needs the
+// organization's credential features to be enabled; while they are not, this answers 404
+// feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 // Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
 // connection keys and agents are refused.
 //
@@ -2818,10 +2828,12 @@ func (UnimplementedHandler) ListInteractions(ctx context.Context, params ListInt
 // whether each key works now (status). Revoked keys are left out unless include_revoked is true,
 // which lists them too with status revoked, revoked_at and revoked_by, under the same access rules
 // as keys that work. A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its
-// scope lists an address or a domain, otherwise content. The person needs access to the whole
-// organization's mail. Needs the organization's credential features to be enabled; while they are
-// not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive
-// to turn them on.
+// scope lists an address or a domain, otherwise content. A rule the key lists that reads nothing any
+// more (a deleted rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each
+// with its id and reason (rule_deleted or share_ended), and not under rules. The person needs access
+// to the whole organization's mail. Needs the organization's credential features to be enabled;
+// while they are not, this answers 404 feature_disabled, with details.feature naming the feature.
+// Contact Primitive to turn them on.
 // Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
 // person's role must hold keys:read. API keys, agent connection keys and agents are refused.
 //

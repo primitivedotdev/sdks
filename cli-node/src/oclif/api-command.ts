@@ -84,6 +84,7 @@ import { sentListOtherSendersNote } from "./sent-list-labels.js";
 import {
   approveThenRerunHint,
   BROWSER_FLAG_DESCRIPTION,
+  promptLine,
   STEP_UP_HEADER,
   STEP_UP_TOKEN_FLAG_DESCRIPTION,
   terminalApprovalIo,
@@ -1260,6 +1261,11 @@ function buildFlags(operation: PrimitiveOperationManifest): {
   // A flag an extension adds would change meaning if the spec gained a
   // parameter of the same name; refuse to build rather than guess.
   const extension = OPERATION_EXTENSIONS[operation.sdkName];
+  // A confirmation is skipped only by --yes, so the command must have it.
+  if (extension?.confirm && !("yes" in extension.flags))
+    throw new Error(
+      `${operation.sdkName}: a CLI extension that asks for confirmation must add --yes`,
+    );
   for (const [name, flag] of Object.entries(extension?.flags ?? {})) {
     if (flags[name] !== undefined)
       throw new Error(
@@ -1411,8 +1417,9 @@ export function domainVerificationFailedHint(payload: unknown): string {
   ].join("\n");
 }
 
-// Discoverability hints for generated commands that have a
-// hand-rolled ergonomic shortcut. Keyed by the manifest's
+// Discoverability hints for generated commands: a hand-rolled ergonomic
+// shortcut, or a behaviour of the command an agent should know before it
+// runs it (deleteEmailRule asks for confirmation). Keyed by the manifest's
 // `sdkName` (camelCase, matches the generated SDK function). The
 // hint is appended to the operation's --help description so an
 // agent reading `<command> --help` finds the shortcut without
@@ -1425,6 +1432,8 @@ export function domainVerificationFailedHint(payload: unknown): string {
 // generated operation; the COMMANDS map in `index.ts` is the
 // authoritative list of shortcuts.
 export const OPERATION_HINTS: Record<string, string> = {
+  deleteEmailRule:
+    "Asks for confirmation first in a terminal. Pass --yes (-y) to delete without a prompt; without a terminal, or with --json, it is required.",
   addDomain:
     "Tip: after this returns a domain id, run `primitive domains zone-file --id <domain-id> --output <domain>.zone` when the user wants an importable DNS zone file.",
   verifyDomain:
@@ -1498,8 +1507,8 @@ export const OPERATION_EXTRA_BODY_FLAGS: Record<
 };
 
 // CLI additions to generated commands keyed by operation.sdkName: flags that
-// set request body fields, and a stderr report and exit code read from the
-// answer. See operation-extension.ts.
+// set request body fields, a confirmation asked before the request, and a
+// stderr report and exit code read from the answer. See operation-extension.ts.
 export const OPERATION_EXTENSIONS: Record<string, OperationExtension> = {
   ...EMAIL_RULE_OPERATION_EXTENSIONS,
   ...ANSWER_REPORT_EXTENSIONS,
@@ -1681,6 +1690,23 @@ export function createOperationCommand(
           );
         }
         parsedFlags[positionalFlag] = value;
+      }
+      // A request that cannot be undone is confirmed first, before any
+      // credential is read: in a terminal by asking, otherwise only by --yes.
+      const confirm = extension?.confirm;
+      if (confirm && parsedFlags.yes !== true) {
+        if (
+          parsedFlags.json === true ||
+          !(process.stdin.isTTY && process.stderr.isTTY)
+        ) {
+          throw new Errors.CLIError(confirm.noTerminal, { exit: 2 });
+        }
+        const answer = await promptLine(confirm.question(parsedFlags));
+        if (!/^y(es)?$/i.test(answer.trim())) {
+          process.stderr.write(`${confirm.cancelled}\n`);
+          process.exitCode = 1;
+          return;
+        }
       }
       const headers = collectHeaderFlags(parsedFlags, headerFlagToName);
       if (

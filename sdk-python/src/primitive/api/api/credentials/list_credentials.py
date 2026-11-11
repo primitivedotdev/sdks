@@ -117,9 +117,11 @@ def sync_detailed(
      Every credential that can act in the organization: API keys, Function keys, agent connection keys,
     connected apps (OAuth), agent delegates and, where enabled, CLI logins. Secrets are never returned.
     A key's grant.mail_scope.depth is raw only when it holds mail.raw:read and its scope lists an
-    address or a domain, otherwise content. Filter with kind. Needs the organization's credential
-    features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature
-    naming the feature. Contact Primitive to turn them on.
+    address or a domain, otherwise content. A rule the key lists that reads nothing any more (a deleted
+    rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its id and
+    reason (rule_deleted or share_ended), and not under rules. Filter with kind. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.
@@ -158,9 +160,11 @@ def sync(
      Every credential that can act in the organization: API keys, Function keys, agent connection keys,
     connected apps (OAuth), agent delegates and, where enabled, CLI logins. Secrets are never returned.
     A key's grant.mail_scope.depth is raw only when it holds mail.raw:read and its scope lists an
-    address or a domain, otherwise content. Filter with kind. Needs the organization's credential
-    features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature
-    naming the feature. Contact Primitive to turn them on.
+    address or a domain, otherwise content. A rule the key lists that reads nothing any more (a deleted
+    rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its id and
+    reason (rule_deleted or share_ended), and not under rules. Filter with kind. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.
@@ -194,9 +198,11 @@ async def asyncio_detailed(
      Every credential that can act in the organization: API keys, Function keys, agent connection keys,
     connected apps (OAuth), agent delegates and, where enabled, CLI logins. Secrets are never returned.
     A key's grant.mail_scope.depth is raw only when it holds mail.raw:read and its scope lists an
-    address or a domain, otherwise content. Filter with kind. Needs the organization's credential
-    features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature
-    naming the feature. Contact Primitive to turn them on.
+    address or a domain, otherwise content. A rule the key lists that reads nothing any more (a deleted
+    rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its id and
+    reason (rule_deleted or share_ended), and not under rules. Filter with kind. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.
@@ -235,9 +241,11 @@ async def asyncio(
      Every credential that can act in the organization: API keys, Function keys, agent connection keys,
     connected apps (OAuth), agent delegates and, where enabled, CLI logins. Secrets are never returned.
     A key's grant.mail_scope.depth is raw only when it holds mail.raw:read and its scope lists an
-    address or a domain, otherwise content. Filter with kind. Needs the organization's credential
-    features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature
-    naming the feature. Contact Primitive to turn them on.
+    address or a domain, otherwise content. A rule the key lists that reads nothing any more (a deleted
+    rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its id and
+    reason (rule_deleted or share_ended), and not under rules. Filter with kind. Needs the
+    organization's credential features to be enabled; while they are not, this answers 404
+    feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session. The person's role must hold credentials:read. API keys, agent
     connection keys and agents are refused.

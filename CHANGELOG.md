@@ -433,6 +433,10 @@ Go (package `api`):
   claim-verify --verification-code <code>` for a code you already have.
 - `primitive signup confirm` with no code source, more than one, or one that
   cannot be read exits 2 instead of 1, with or without a terminal.
+- `email-rules delete-email-rule` asks for confirmation in a terminal, as
+  `keys revoke` does. Without a terminal, or with `--json`, it needs `--yes`
+  (`-y`): otherwise it exits 2 and sends nothing. An answer other than `y` or
+  `yes` exits 1 and the rule is kept.
 
 #### CLI whoami and role text
 
@@ -573,6 +577,14 @@ date-time is kept as null and sorts last. A sync stops with an error after
   none, instead of the old key's.
 - `listActivityObjects` takes `relation`: `created` (the default) or `asked`,
   what other members asked of you.
+- `deleteEmailRule` answers `ended_shares`, `keys` and `other_keys` beside
+  `deleted` (`DeleteEmailRuleResult`): the shares the delete ended, the keys
+  that are not revoked and still list the rule that you may read, by id, name
+  and prefix, and how many more there are. Those keys now read nothing through
+  the rule. An email rule share's `end_reason` can be `rule_deleted`. Key
+  reads (`listKeys`, `getKey`, `listCredentials`) show a rule a key lists that
+  reads nothing any more under `grant.mail_scope.ended_rules`, with its `id`
+  and a `reason`, `rule_deleted` or `share_ended`.
 - `createEmailRuleRequest` takes `message`, up to 500 characters, telling the
   member asked why you are asking. `declineEmailRuleRequest` takes an optional
   body with `reason`, up to 500 characters (`DeclineEmailRuleRequestRequest`).
@@ -839,6 +851,12 @@ downgrading, or sign in again afterwards.
   the read says. `keys update` refuses to change a revoked key's grant before
   asking for any approval, and `keys revoke` on a key that is already revoked
   says nothing changed.
+- A rule a key lists that reads nothing any more (a deleted rule, or a share
+  that ended) is shown under `grant.mail_scope.ended_rules`. `keys update
+  --remove-rule` takes such a rule off, and any other change to the key's
+  grant leaves it off too and lists it under the rules taken off. `keys get`
+  and `keys list` show them with their reason, and `--add-rule` or `--rule`
+  refuse to put one back.
 
 #### Rule request webhook events
 
@@ -909,6 +927,10 @@ parsers.
   created. Kinds your access does not let you list are named at the end, with
   the permission that would show them. It takes `--kind`, `--state`,
   `--limit`, `--cursor`, `--all` and `--json`.
+- Without `--json`, `email-rules delete-email-rule` reads out on stderr what
+  the delete left: the shares it ended, and the keys that still list the rule
+  and now read nothing through it, with the `keys update --remove-rule`
+  command that takes the rule off.
 - `primitive billing` opens the dashboard's billing page, or prints its link.
 - More commands take `--json`, which prints exactly one JSON document on
   stdout, failures included: `routes` (all of them), `org secrets`, `wake

@@ -26,6 +26,7 @@ vi.mock("@primitivedotdev/api-core", async (original) => ({
 import AgentUpgradeCommand from "../../src/oclif/commands/agent-upgrade.js";
 import OrgLeaveCommand from "../../src/oclif/commands/org-leave.js";
 import { SignupConfirmCommand } from "../../src/oclif/commands/signup.js";
+import { COMMANDS } from "../../src/oclif/index.js";
 
 const root = resolve(import.meta.dirname, "../..");
 
@@ -252,6 +253,66 @@ describe("commands that would prompt, run without a terminal", () => {
       if (terminal) setTerminals(true, true);
 
       await OrgLeaveCommand.run(argv, { root }).catch(() => undefined);
+
+      expect(mocks.auth).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("email-rules delete-email-rule", () => {
+    const RULE = "00000000-0000-4000-8000-0000000000aa";
+    const DeleteEmailRule = COMMANDS[
+      "email-rules:delete-email-rule"
+    ] as unknown as {
+      run: (argv: string[], opts: { root: string }) => Promise<unknown>;
+    };
+
+    it("without --yes and no terminal exits 2 before reading the login", async () => {
+      const error = await runFails(DeleteEmailRule, [RULE]);
+
+      expect(error.oclif.exit).toBe(2);
+      expect(error.message).toBe(
+        "Not deleting: no terminal to confirm in. Pass --yes to delete the rule without a prompt.",
+      );
+      expectNothingTouched();
+    });
+
+    it.each([
+      ["only stdin", true, undefined],
+      ["only stderr", undefined, true],
+    ])(
+      "without --yes and a terminal on %s still refuses",
+      async (_case, stdin, stderr) => {
+        setTerminals(stdin, stderr);
+
+        const error = await runFails(DeleteEmailRule, [RULE]);
+
+        expect(error.oclif.exit).toBe(2);
+        expectNothingTouched();
+      },
+    );
+
+    it("with --json and no --yes refuses at a terminal too, before reading the login", async () => {
+      setTerminals(true, true);
+
+      const error = await runFails(DeleteEmailRule, [RULE, "--json"]);
+
+      expect(error.oclif.exit).toBe(2);
+      expect(mocks.question).not.toHaveBeenCalled();
+      expectNothingTouched();
+    });
+
+    it.each([
+      ["--yes and no terminal", ["--yes"], false],
+      ["no --yes at a terminal, answered yes", [], true],
+    ])("with %s goes on to read the login", async (_case, argv, terminal) => {
+      if (terminal) {
+        setTerminals(true, true);
+        mocks.question.mockResolvedValueOnce("y");
+      }
+
+      await DeleteEmailRule.run([RULE, ...argv], { root }).catch(
+        () => undefined,
+      );
 
       expect(mocks.auth).toHaveBeenCalledOnce();
     });

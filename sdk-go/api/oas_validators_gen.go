@@ -21500,6 +21500,8 @@ func (s EmailRuleShareEndReason) Validate() error {
 		return nil
 	case "rule_changed":
 		return nil
+	case "rule_deleted":
+		return nil
 	default:
 		// Added to the API after this client was generated.
 		return nil
@@ -76923,6 +76925,8 @@ func (s EmailRuleShareEndReason) validateKnown() error {
 	case "stopped_by_admin":
 		return nil
 	case "rule_changed":
+		return nil
+	case "rule_deleted":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)

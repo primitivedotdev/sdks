@@ -184,6 +184,23 @@ function stringList(value: unknown): string[] | null {
     : null;
 }
 
+/**
+ * The rules a key's mail scope lists that read nothing any more, each with
+ * why: a deleted rule (rule_deleted) or a share that ended (share_ended).
+ */
+function endedRules(
+  scope: Record<string, unknown>,
+): { id: string; reason: string }[] {
+  if (!Array.isArray(scope.ended_rules)) return [];
+  return scope.ended_rules.flatMap((entry) => {
+    if (!entry || typeof entry !== "object") return [];
+    const { id, reason } = entry as { id?: unknown; reason?: unknown };
+    return typeof id === "string"
+      ? [{ id, reason: typeof reason === "string" ? reason : "ended" }]
+      : [];
+  });
+}
+
 /** Which mail a key reaches, in words. */
 export function describeMailScope(grant: KeyGrantView): string {
   if (grant.template === "super_admin") return "every mailbox";
@@ -201,7 +218,11 @@ export function describeMailScope(grant: KeyGrantView): string {
   if (addresses.length > 0) parts.push(`addresses ${addresses.join(", ")}`);
   if (domains.length > 0) parts.push(`domains ${domains.join(", ")}`);
   if (rules.length > 0) parts.push(`rules ${rules.join(", ")}`);
-  return parts.length > 0 ? parts.join("; ") : "no mailbox";
+  const ended = endedRules(record);
+  const reaches = parts.length > 0 ? parts.join("; ") : "no mailbox";
+  return ended.length > 0
+    ? `${reaches}; ended rules ${ended.map((r) => `${r.id} (${r.reason})`).join(", ")}`
+    : reaches;
 }
 
 /** What a key may do, in words. */
@@ -359,12 +380,17 @@ export function buildCreateGrant(
   };
 }
 
-/** The mail scope fields a change can send back unchanged. */
+/**
+ * The mail scope fields a change can restate. `ended_rules` (rules the key
+ * lists that read nothing any more: a deleted rule, or a share that ended) is
+ * read only: a change never sends it back, so the key is saved without them.
+ */
 const RESTATABLE_SCOPE_FIELDS = new Set([
   "addresses",
   "domains",
   "rules",
   "depth",
+  "ended_rules",
 ]);
 
 export type GrantChange = {
@@ -422,11 +448,17 @@ function sameSet(a: readonly string[], b: readonly string[]): boolean {
   return left.size === right.size && [...left].every((v) => right.has(v));
 }
 
-/** The rules a key's grant lists, or none. */
-function keyRules(grant: KeyGrantView): string[] {
+/**
+ * The rules a key's grant lists, or none: the ones it reads through, and the
+ * ones that read nothing any more (`ended_rules`), which a change to the key
+ * takes off.
+ */
+export function keyRules(grant: KeyGrantView): string[] {
   const scope = grant.mail_scope;
   if (!scope || typeof scope !== "object" || Array.isArray(scope)) return [];
-  return stringList((scope as Record<string, unknown>).rules ?? []) ?? [];
+  const record = scope as Record<string, unknown>;
+  const live = stringList(record.rules ?? []) ?? [];
+  return [...live, ...endedRules(record).map((rule) => rule.id)];
 }
 
 /**
@@ -521,6 +553,19 @@ export function buildUpdatedGrant(
   const addresses = stringList(record.addresses ?? []);
   const domains = stringList(record.domains ?? []);
   const heldRules = stringList(record.rules ?? []);
+  // A rule that reads nothing any more is never put back on a key.
+  const ended = endedRules(record);
+  const readdedEnded = ended.find((rule) =>
+    [...(change.addRules ?? []), ...(change.rules ?? [])].some(
+      (asked) => asked.toLowerCase() === rule.id.toLowerCase(),
+    ),
+  );
+  if (readdedEnded) {
+    return {
+      ok: false,
+      message: `${readdedEnded.id} reads nothing any more (${readdedEnded.reason}), so it cannot be added back to the key.`,
+    };
+  }
   const rules = heldRules ? nextRules(heldRules, change) : null;
   if (
     !addresses ||
@@ -535,6 +580,14 @@ export function buildUpdatedGrant(
     };
   }
   if (addresses.length === 0 && domains.length === 0 && rules.length === 0) {
+    // A key whose only rules ended reaches no mail already.
+    if ((heldRules?.length ?? 0) === 0 && ended.length > 0) {
+      return {
+        ok: false,
+        message:
+          "This key reads no mail any more: its only rules were deleted or their shares ended. Revoke it with `primitive keys revoke <key-id>`.",
+      };
+    }
     return {
       ok: false,
       message:
@@ -1053,7 +1106,7 @@ export class KeysUpdateCommand extends Command {
         ...ruleChange,
       });
       if (!next.ok) {
-        this.error(next.message, { exit: 2 });
+        this.error(next.message.replace("<key-id>", args.id), { exit: 2 });
       }
       rulesNotOnKey = removeRules.filter(
         (r) => !rulesBefore.some((k) => k.toLowerCase() === r.toLowerCase()),

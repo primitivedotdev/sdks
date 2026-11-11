@@ -3,6 +3,7 @@ from enum import StrEnum
 class GetEmailRuleShareResultEndReasonType2Type1(StrEnum):
     REMOVED_BY_BENEFICIARY = "removed_by_beneficiary"
     RULE_CHANGED = "rule_changed"
+    RULE_DELETED = "rule_deleted"
     STOPPED_BY_ADMIN = "stopped_by_admin"
     STOPPED_BY_GRANTER = "stopped_by_granter"
 

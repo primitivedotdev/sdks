@@ -24767,6 +24767,14 @@ func (*DeleteEmailRuleRequestUnauthorized) deleteEmailRuleRequestRes() {}
 // Ref: #/components/schemas/DeleteEmailRuleResult
 type DeleteEmailRuleResult struct {
 	Deleted bool `json:"deleted"`
+	// The shares of this rule that the delete ended (end_reason rule_deleted). Each keeps its record.
+	EndedShares []uuid.UUID `json:"ended_shares"`
+	// The API keys, not revoked, that still list the rule and that you may read (GET /v1/keys). They now
+	// read nothing through it; edit or revoke them. Left out, with other_keys, when the keys could not
+	// be read.
+	Keys []DeleteEmailRuleResultKeysItem `json:"keys"`
+	// How many more keys, not revoked, list the rule that you may not read. They are not named.
+	OtherKeys OptInt `json:"other_keys"`
 }
 
 // GetDeleted returns the value of Deleted.
@@ -24774,9 +24782,75 @@ func (s *DeleteEmailRuleResult) GetDeleted() bool {
 	return s.Deleted
 }
 
+// GetEndedShares returns the value of EndedShares.
+func (s *DeleteEmailRuleResult) GetEndedShares() []uuid.UUID {
+	return s.EndedShares
+}
+
+// GetKeys returns the value of Keys.
+func (s *DeleteEmailRuleResult) GetKeys() []DeleteEmailRuleResultKeysItem {
+	return s.Keys
+}
+
+// GetOtherKeys returns the value of OtherKeys.
+func (s *DeleteEmailRuleResult) GetOtherKeys() OptInt {
+	return s.OtherKeys
+}
+
 // SetDeleted sets the value of Deleted.
 func (s *DeleteEmailRuleResult) SetDeleted(val bool) {
 	s.Deleted = val
+}
+
+// SetEndedShares sets the value of EndedShares.
+func (s *DeleteEmailRuleResult) SetEndedShares(val []uuid.UUID) {
+	s.EndedShares = val
+}
+
+// SetKeys sets the value of Keys.
+func (s *DeleteEmailRuleResult) SetKeys(val []DeleteEmailRuleResultKeysItem) {
+	s.Keys = val
+}
+
+// SetOtherKeys sets the value of OtherKeys.
+func (s *DeleteEmailRuleResult) SetOtherKeys(val OptInt) {
+	s.OtherKeys = val
+}
+
+type DeleteEmailRuleResultKeysItem struct {
+	ID        uuid.UUID `json:"id"`
+	Name      NilString `json:"name"`
+	KeyPrefix string    `json:"key_prefix"`
+}
+
+// GetID returns the value of ID.
+func (s *DeleteEmailRuleResultKeysItem) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *DeleteEmailRuleResultKeysItem) GetName() NilString {
+	return s.Name
+}
+
+// GetKeyPrefix returns the value of KeyPrefix.
+func (s *DeleteEmailRuleResultKeysItem) GetKeyPrefix() string {
+	return s.KeyPrefix
+}
+
+// SetID sets the value of ID.
+func (s *DeleteEmailRuleResultKeysItem) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *DeleteEmailRuleResultKeysItem) SetName(val NilString) {
+	s.Name = val
+}
+
+// SetKeyPrefix sets the value of KeyPrefix.
+func (s *DeleteEmailRuleResultKeysItem) SetKeyPrefix(val string) {
+	s.KeyPrefix = val
 }
 
 type DeleteEmailRuleTooManyRequests ErrorResponseHeaders
@@ -32698,10 +32772,13 @@ func (s *EmailRuleScopeWarningReason) UnmarshalText(data []byte) error {
 
 // Ref: #/components/schemas/EmailRuleShare
 type EmailRuleShare struct {
-	ID        uuid.UUID                  `json:"id"`
-	RequestID uuid.UUID                  `json:"request_id"`
-	CreatedAt time.Time                  `json:"created_at"`
-	EndedAt   NilDateTime                `json:"ended_at"`
+	ID        uuid.UUID   `json:"id"`
+	RequestID uuid.UUID   `json:"request_id"`
+	CreatedAt time.Time   `json:"created_at"`
+	EndedAt   NilDateTime `json:"ended_at"`
+	// Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin,
+	// rule_changed (a new version of the rule was saved) or rule_deleted (the rule was deleted; the
+	// share keeps its record, and the rule is no longer shown). Null while it has not.
 	EndReason NilEmailRuleShareEndReason `json:"end_reason"`
 	// The version of the rule that was accepted. A new version of the rule ends the share.
 	AcceptedRuleVersion int `json:"accepted_rule_version"`
@@ -32929,6 +33006,9 @@ func (s *EmailRuleShareBeneficiary) SetActive(val bool) {
 	s.Active = val
 }
 
+// Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin,
+// rule_changed (a new version of the rule was saved) or rule_deleted (the rule was deleted; the
+// share keeps its record, and the rule is no longer shown). Null while it has not.
 type EmailRuleShareEndReason string
 
 const (
@@ -32936,6 +33016,7 @@ const (
 	EmailRuleShareEndReasonRemovedByBeneficiary EmailRuleShareEndReason = "removed_by_beneficiary"
 	EmailRuleShareEndReasonStoppedByAdmin       EmailRuleShareEndReason = "stopped_by_admin"
 	EmailRuleShareEndReasonRuleChanged          EmailRuleShareEndReason = "rule_changed"
+	EmailRuleShareEndReasonRuleDeleted          EmailRuleShareEndReason = "rule_deleted"
 )
 
 // AllValues returns all EmailRuleShareEndReason values.
@@ -32945,6 +33026,7 @@ func (EmailRuleShareEndReason) AllValues() []EmailRuleShareEndReason {
 		EmailRuleShareEndReasonRemovedByBeneficiary,
 		EmailRuleShareEndReasonStoppedByAdmin,
 		EmailRuleShareEndReasonRuleChanged,
+		EmailRuleShareEndReasonRuleDeleted,
 	}
 }
 
@@ -32958,6 +33040,8 @@ func (s EmailRuleShareEndReason) MarshalText() ([]byte, error) {
 	case EmailRuleShareEndReasonStoppedByAdmin:
 		return []byte(s), nil
 	case EmailRuleShareEndReasonRuleChanged:
+		return []byte(s), nil
+	case EmailRuleShareEndReasonRuleDeleted:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -32978,6 +33062,9 @@ func (s *EmailRuleShareEndReason) UnmarshalText(data []byte) error {
 		return nil
 	case EmailRuleShareEndReasonRuleChanged:
 		*s = EmailRuleShareEndReasonRuleChanged
+		return nil
+	case EmailRuleShareEndReasonRuleDeleted:
+		*s = EmailRuleShareEndReasonRuleDeleted
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)

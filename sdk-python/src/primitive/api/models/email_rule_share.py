@@ -37,7 +37,9 @@ class EmailRuleShare:
             created_at (datetime.datetime):
             ended_at (datetime.datetime | None):
             end_reason (EmailRuleShareEndReasonType1 | EmailRuleShareEndReasonType2Type1 | EmailRuleShareEndReasonType3Type1
-                | None):
+                | None): Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin, rule_changed
+                (a new version of the rule was saved) or rule_deleted (the rule was deleted; the share keeps its record, and the
+                rule is no longer shown). Null while it has not.
             accepted_rule_version (int): The version of the rule that was accepted. A new version of the rule ends the
                 share.
             edited_on_accept (bool): Whether the member who accepted changed the rule's English, tree or explanation before
