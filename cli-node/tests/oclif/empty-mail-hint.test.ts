@@ -286,13 +286,20 @@ describe("readCallerMailFor", () => {
   });
 
   it("gives up in time even when the read itself ignores its signal, as a token exchange on a 401 does", async () => {
-    const deaf = new PrimitiveApiClient({
+    // The read goes through plain fetch, so that is what stalls here.
+    const deaf = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal("fetch", deaf);
+    const client = new PrimitiveApiClient({
       apiKey: "prim_test",
       apiBaseUrl: "https://api.example.test/v1",
-      fetch: (() => new Promise<Response>(() => {})) as typeof fetch,
     });
     const started = Date.now();
-    expect(await readCallerMail(deaf.client, 50)).toBeUndefined();
+    try {
+      expect(await readCallerMail(client.client, 50)).toBeUndefined();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(deaf).toHaveBeenCalledTimes(1);
     expect(Date.now() - started).toBeLessThan(1_000);
   });
 
@@ -323,18 +330,27 @@ describe("readCallerMailFor", () => {
   });
 
   it("gives up on a grant read that does not answer in time", async () => {
-    const hanging = new PrimitiveApiClient({
+    // A stalled request that does stop when its signal aborts.
+    const hanging = vi.fn(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () =>
+            reject(init.signal?.reason),
+          );
+        }),
+    );
+    vi.stubGlobal("fetch", hanging);
+    const client = new PrimitiveApiClient({
       apiKey: "prim_test",
       apiBaseUrl: "https://api.example.test/v1",
-      fetch: ((input: Request) =>
-        new Promise<Response>((_resolve, reject) => {
-          input.signal.addEventListener("abort", () =>
-            reject(input.signal.reason),
-          );
-        })) as typeof fetch,
     });
     const started = Date.now();
-    expect(await readCallerMail(hanging.client, 50)).toBeUndefined();
+    try {
+      expect(await readCallerMail(client.client, 50)).toBeUndefined();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(hanging).toHaveBeenCalledTimes(1);
     expect(Date.now() - started).toBeLessThan(1_000);
   });
 });
