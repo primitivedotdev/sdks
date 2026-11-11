@@ -351,7 +351,9 @@ function unauthorizedRefusal(
  * Anything else, including an organization-wide key, an agent_delegate and
  * a person with no member address they may send from, gets no default: the
  * command refuses, lists what the credential may send from, and asks for
- * --from. The From is never an address guessed from the organization's
+ * --from. A credential whose grant has no mail:send is refused by that
+ * permission instead (MissingSendPermissionError), with no --from hint. The
+ * From is never an address guessed from the organization's
  * domains, such as agent@ at the first verified one. A failed answer from an
  * API that has it refuses rather than fall back.
  */
@@ -465,6 +467,86 @@ const SEND_FROM_SOURCES: Record<string, DefaultFromSource> = {
   granted_address: "granted_address",
 };
 
+/** What a credential without mail:send is, as /whoami/grant describes it. */
+type MissingSendPermission = {
+  credentialKind: string | null;
+  keyId: string | null;
+  replies: boolean;
+};
+
+/**
+ * The refusal of a send by a credential whose grant has no mail:send, in the
+ * shape the send route itself refuses it with (code grant_forbidden, details
+ * naming the permission), so a script can branch on it. It names what the
+ * credential lacks first, then what would fix it, never --from.
+ */
+export class MissingSendPermissionError extends Errors.CLIError {
+  readonly details = {
+    permission: "mail:send",
+    reason: "permission_missing",
+  } as const;
+
+  constructor(missing: MissingSendPermission) {
+    super(missingSendPermissionMessage(missing), {
+      code: "grant_forbidden",
+      exit: 1,
+    });
+  }
+}
+
+function missingSendPermissionMessage(missing: MissingSendPermission): string {
+  const isKey = KEY_CREDENTIAL_KINDS.has(missing.credentialKind ?? "");
+  const parts = [
+    `${isKey ? "This key" : "This credential"} has no mail:send, so it cannot send new mail from any address; --from does not change that.`,
+  ];
+  if (missing.replies) parts.push("It can still reply to mail it received.");
+  parts.push(
+    missing.credentialKind === "org_key" && missing.keyId
+      ? `To send, add the permission to the key (a member who manages keys runs \`primitive keys update ${missing.keyId} --add mail:send\`), or use a credential that holds mail:send.`
+      : PERSON_CREDENTIAL_KINDS.has(missing.credentialKind ?? "")
+        ? "To send, ask an organization admin for a role that includes mail:send."
+        : "To send, use a credential that holds mail:send.",
+  );
+  return parts.join(" ");
+}
+
+/**
+ * The credential's own grant when it has no mail:send, outright or over a
+ * reach of its own (as the API decides whether a caller may send), or null
+ * when it has it or the grant cannot be read: then nothing is claimed.
+ */
+async function missingSendPermission(
+  apiClient: PrimitiveApiClient,
+): Promise<MissingSendPermission | null> {
+  let own: Awaited<ReturnType<typeof getOwnGrant>>;
+  try {
+    own = await getOwnGrant({
+      client: apiClient.client,
+      responseStyle: "fields",
+    });
+  } catch {
+    return null;
+  }
+  if (!own || own.error) return null;
+  const data = own.data?.data as
+    | { key_id?: unknown; grant?: OwnGrant | null }
+    | undefined;
+  const grant = data?.grant;
+  if (!grant || !Array.isArray(grant.permissions)) return null;
+  const holds = (permission: string) =>
+    (grant.permissions as unknown[]).includes(permission) ||
+    (grant.scoped_permissions !== null &&
+      typeof grant.scoped_permissions === "object" &&
+      Object.hasOwn(grant.scoped_permissions, permission));
+  if (holds("mail:send")) return null;
+  return {
+    credentialKind:
+      typeof grant.credential_kind === "string" ? grant.credential_kind : null,
+    keyId: typeof data?.key_id === "string" ? data.key_id : null,
+    replies: holds("mail:reply"),
+  };
+}
+
 function errorDetail(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -569,6 +651,12 @@ async function sendFromAnswer(
   // still has its own reply rules, as before.
   if (purpose === "reply" && addresses.length === 0 && domains.length === 0)
     return undefined;
+  // Nothing listed for a send: when the grant has no mail:send, say that
+  // rather than ask for a --from that cannot help.
+  if (addresses.length === 0 && domains.length === 0) {
+    const missing = await missingSendPermission(apiClient);
+    if (missing) throw new MissingSendPermissionError(missing);
+  }
   const reason =
     typeof data.reason === "string" && data.reason.trim()
       ? data.reason.trim().replace(/\.?$/, ".")

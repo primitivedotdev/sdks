@@ -183,11 +183,18 @@ function isExitSignal(error: unknown): boolean {
   return (error as { code?: unknown } | null)?.code === "EEXIT";
 }
 
-function thrownErrorBody(error: unknown): Record<string, unknown> {
+/**
+ * The `error` a `--json` document carries for a thrown error: its message,
+ * and its `code` and `details` when it has them (a refusal the CLI makes in
+ * an API error's shape, such as a send without mail:send).
+ */
+export function thrownErrorBody(error: unknown): Record<string, unknown> {
   if (error instanceof Error) {
     const body: Record<string, unknown> = { message: error.message };
     const code = (error as { code?: unknown }).code;
     if (typeof code === "string" && code !== "EEXIT") body.code = code;
+    const details = (error as { details?: unknown }).details;
+    if (isPlainObject(details)) body.details = details;
     return body;
   }
   return { message: String(error) };
