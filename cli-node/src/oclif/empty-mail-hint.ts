@@ -92,12 +92,12 @@ export async function readCallerMailFor(
   const address = auth.connectedAgent?.agentAddress;
   if (address) {
     return {
-      credentialKind: "agent_connection",
+      credentialKind: "connected_key",
       mailScope: { addresses: [address], domains: [] },
     };
   }
   if (auth.apiKey?.startsWith("pconn_")) {
-    return { credentialKind: "agent_connection", mailScope: undefined };
+    return { credentialKind: "connected_key", mailScope: undefined };
   }
   return readCallerMail(client);
 }
@@ -141,7 +141,9 @@ export function mailReach(scope: unknown): Reach {
   const domains = strings(record.domains ?? []);
   const rules = strings(record.rules ?? []);
   if (!addresses || !domains || !rules) return { kind: "unknown" };
-  if (record.direction === "outbound") return { kind: "outbound_only" };
+  // Mail a rule granted is read whatever the direction, so only a scope with no rules reads no received mail.
+  if (record.direction === "outbound" && rules.length === 0)
+    return { kind: "outbound_only" };
   if (addresses.length === 0 && domains.length === 0) {
     return rules.length > 0 ? { kind: "rules_only", rules } : { kind: "none" };
   }
@@ -186,25 +188,69 @@ function rulesSentence(rules: string[]): string {
   return `A rule grants an email it matches when the email is evaluated, shortly after it arrives, while the rule is active, and the key reads that mail only while the rule stays active. Each id (${named(rules)}) is an email rule or a rule shared with the key's holder: a rule's author, signed in as themselves, can check it with \`primitive email-rules get-email-rule --id <id>\`, and a share's holder with \`primitive email-rules get-email-rule-share --id <id>\`.`;
 }
 
+/** Who holds the credential, which decides what else it reads beside its grant. */
+type Holder = "key" | "connection" | "person" | "unknown";
+
+function holderOf(kind: unknown): Holder {
+  if (kind === "org_key" || kind === "function_key") return "key";
+  if (kind === "connected_key") return "connection";
+  return typeof kind === "string" ? "person" : "unknown";
+}
+
+const NOUN: Record<Holder, string> = {
+  key: "This key",
+  connection: "This connection key",
+  person: "This login",
+  unknown: "This credential",
+};
+
+/** A person also reads mail through rules colleagues shared with them, which sit beside the grant, not in it. */
+const SHARED =
+  "mail from email rules colleagues shared with you (`primitive email-rules list-email-rule-shares` lists them)";
+
+/** A connection key also reads member mailboxes its owner gave it, asked for by name. */
+const GIVEN =
+  "any member mailbox its owner gave it (pass that mailbox with --recipient)";
+
 /** What the credential reads, as sentences for the hint, or null when it reads every mailbox. */
-function reachSentence(reach: Reach, credential: string): string | null {
+function reachSentence(reach: Reach, holder: Holder): string | null {
+  const noun = NOUN[holder];
   switch (reach.kind) {
     case "org":
       return null;
     case "unknown":
-      return credential === "This connection key"
-        ? "This connection key reads only the mail of the address it was connected for."
-        : `This credential may not read every mailbox; ${GRANT_POINTER}`;
+      return holder === "connection"
+        ? `${noun} reads the address it was connected for, and ${GIVEN}.`
+        : `${noun} may not read every mailbox; ${GRANT_POINTER}`;
     case "outbound_only":
-      return `${credential} reads no received mail: its grant covers sent mail only. ${GRANT_POINTER}`;
+      return holder === "person"
+        ? `${noun} reads no received mail through its grant, which covers sent mail only, but does read ${SHARED}. ${GRANT_POINTER}`
+        : `${noun} reads no received mail: its grant covers sent mail only. ${GRANT_POINTER}`;
     case "unreadable":
-      return `The server could not read this credential's stored mail scope, so it reaches no mail. ${GRANT_POINTER}`;
+      return `The server could not read this credential's stored mail scope, so it reaches no mail through it. ${GRANT_POINTER}`;
     case "none":
-      return `${credential} reads no mail: its grant names no mailbox or domain, and no email rule that still exists. ${GRANT_POINTER}`;
+      return holder === "person"
+        ? `${noun} reads no mailbox through its grant, only ${SHARED}. ${GRANT_POINTER}`
+        : `${noun} reads no mail: its grant names no mailbox or domain, and no email rule or live share. ${GRANT_POINTER}`;
     case "rules_only":
-      return `${credential} reads only mail its ${plural(reach.rules.length, "email rule")} granted. ${rulesSentence(reach.rules)}`;
-    case "mailboxes":
-      return `${credential} reads only ${named(reach.names)}${reach.rules.length > 0 ? `, and mail its ${plural(reach.rules.length, "email rule")} granted` : ""}; mail to the organization's other mailboxes is not listed.`;
+      return `${noun} reads only mail its ${plural(reach.rules.length, "email rule")} granted. ${rulesSentence(reach.rules)}`;
+    case "mailboxes": {
+      const parts = [
+        named(reach.names),
+        ...(reach.rules.length > 0
+          ? [`mail its ${plural(reach.rules.length, "email rule")} granted`]
+          : []),
+        ...(holder === "connection" ? [GIVEN] : []),
+        ...(holder === "person" ? [SHARED] : []),
+      ];
+      const all =
+        parts.length === 1
+          ? parts[0]
+          : `${parts.slice(0, -1).join(", ")}, and ${parts[parts.length - 1]}`;
+      return holder === "connection"
+        ? `${noun} reads only ${all}.`
+        : `${noun} reads ${holder === "person" ? "" : "only "}${all}; other mail is not listed.`;
+    }
   }
 }
 
@@ -227,18 +273,17 @@ export function emptyEmailListHint(input: {
     input.caller === null
       ? { kind: "org" }
       : mailReach(input.caller?.mailScope);
-  const kind = input.caller?.credentialKind;
-  const credential =
-    kind === "org_key" || kind === "function_key"
-      ? "This key"
-      : kind === "agent_connection"
-        ? "This connection key"
-        : "This credential";
-  const scope = reachSentence(reach, credential);
+  const holder = holderOf(input.caller?.credentialKind);
+  const scope = reachSentence(reach, holder);
   const withScope = (lead: string) => `${lead}${scope ? ` ${scope}` : ""}`;
-  if (input.filterFlags.length > 0) {
+  // A connection key leaves presence mail out by default, so asking it to narrows nothing.
+  const filters =
+    holder === "connection"
+      ? input.filterFlags.filter((f) => !f.startsWith("--include-presence"))
+      : input.filterFlags;
+  if (filters.length > 0) {
     return withScope(
-      `(no results) No inbound emails match the filters given (${input.filterFlags.join(", ")}).`,
+      `(no results) No inbound emails match the filters given (${filters.join(", ")}).`,
     );
   }
   if (input.pastFlag) {
@@ -250,11 +295,12 @@ export function emptyEmailListHint(input: {
     );
   }
   if (!scope) return input.orgHint ?? ORG_EMPTY_HINT;
+  const noun = NOUN[holder].replace(/^This/, "this");
   if (reach.kind === "rules_only") {
-    return `(no results) No mail ${credential === "This key" ? "this key's" : "this credential's"} rules granted is readable now. ${scope}`;
+    return `(no results) No mail ${noun}'s rules granted is readable now. ${scope}`;
   }
   if (reach.kind === "mailboxes") {
-    return `(no results) No inbound emails yet in the mail this credential reads. ${scope}`;
+    return `(no results) No inbound emails yet in the mail ${noun} reads. ${scope}`;
   }
   return `(no results) No inbound emails to show. ${scope}`;
 }

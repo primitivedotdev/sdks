@@ -663,7 +663,7 @@ describe("generated commands with --json", () => {
       );
       const result = await runMerged("emails:list", []);
       expect(result.stderr).toContain(
-        "(no results) No inbound emails yet in the mail this credential reads. This credential reads only a@example.test and any address at ops.example.test; mail to the organization's other mailboxes is not listed.",
+        "(no results) No inbound emails yet in the mail this login reads. This login reads a@example.test and any address at ops.example.test, and mail from email rules colleagues shared with you (`primitive email-rules list-email-rule-shares` lists them); other mail is not listed.",
       );
     });
 
@@ -694,7 +694,7 @@ describe("generated commands with --json", () => {
       const result = await runMerged("emails:list", []);
       expect(result.stderr).not.toContain("received yet on this account");
       expect(result.stderr).toContain(
-        "This credential reads only a@example.test;",
+        "This login reads a@example.test, and mail from email rules colleagues shared with you",
       );
     });
 
@@ -717,7 +717,7 @@ describe("generated commands with --json", () => {
       const result = await runMerged("emails:list", []);
       expect(result.exitCode).toBe(0);
       expect(result.stderr).toContain(
-        "This connection key reads only the mail of the address it was connected for.",
+        "This connection key reads the address it was connected for, and any member mailbox its owner gave it",
       );
       expect(fetchCalls.map((c) => c.url.pathname)).toEqual(["/v1/emails"]);
     });
@@ -762,6 +762,31 @@ describe("generated commands with --json", () => {
       expect(result.stderr).not.toContain("received yet on this account");
       expect(result.stderr).toContain(
         "`primitive whoami --json --grant` shows which mail it reaches",
+      );
+    });
+
+    it("keeps --json --envelope to one document with exit 0 when the grant cannot be read", async () => {
+      responder = (url, init) =>
+        url.pathname.endsWith("/whoami/grant")
+          ? serverError(url, init)
+          : jsonResponse(200, {
+              success: true,
+              data: [],
+              meta: { cursor: null },
+            });
+      const result = await runMerged("emails:list", ["--json", "--envelope"]);
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toBe("");
+      expect(
+        String((parseOne(result.merged) as Record<string, unknown>).summary),
+      ).toContain("may not read every mailbox");
+    });
+
+    it("says a page past the last is past the given --cursor", async () => {
+      responder = emptyList("org");
+      const result = await runMerged("emails:list", ["--cursor", "c2"]);
+      expect(result.stderr).toContain(
+        "(no results) No more inbound emails past the given --cursor.",
       );
     });
 

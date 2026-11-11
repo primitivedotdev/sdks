@@ -107,27 +107,63 @@ describe("emptyEmailListHint", () => {
         }),
       ),
     ).toBe(
-      "(no results) No inbound emails yet in the mail this credential reads. This key reads only a@x.test, b@x.test, c@x.test and 1 more, and mail its 1 email rule granted; mail to the organization's other mailboxes is not listed.",
+      "(no results) No inbound emails yet in the mail this key reads. This key reads only a@x.test, b@x.test, c@x.test and 1 more, and mail its 1 email rule granted; other mail is not listed.",
     );
   });
 
-  it("says a person's login is a credential, not a key", () => {
-    expect(
+  it("never tells a person's login it reads nothing: rules colleagues shared with them sit beside its grant", () => {
+    const person = (mailScope: unknown) =>
       emptyEmailListHint({
         filterFlags: [],
-        caller: {
-          credentialKind: "oauth",
-          mailScope: { addresses: [], domains: [], depth: "raw" },
-        },
+        caller: { credentialKind: "oauth", mailScope },
+      });
+    const empty = person({ addresses: [], domains: [], depth: "raw" });
+    expect(empty).not.toContain("reads no mail:");
+    expect(empty).toContain(
+      "This login reads no mailbox through its grant, only mail from email rules colleagues shared with you (`primitive email-rules list-email-rule-shares` lists them).",
+    );
+    expect(
+      person({ addresses: ["me@x.test"], domains: [], depth: "raw" }),
+    ).toContain(
+      "This login reads me@x.test, and mail from email rules colleagues shared with you",
+    );
+  });
+
+  it("tells a connection key about the member mailboxes its owner gave it, and drops a presence filter it has by default", () => {
+    const connection = {
+      credentialKind: "connected_key",
+      mailScope: { addresses: ["agent@x.test"], domains: [] },
+    };
+    expect(emptyEmailListHint({ filterFlags: [], caller: connection })).toBe(
+      "(no results) No inbound emails yet in the mail this connection key reads. This connection key reads only agent@x.test, and any member mailbox its owner gave it (pass that mailbox with --recipient).",
+    );
+    expect(
+      emptyEmailListHint({
+        filterFlags: ["--include-presence"],
+        caller: connection,
       }),
-    ).toContain("This credential reads no mail");
+    ).not.toContain("match the filters");
+  });
+
+  it("reads a rule-granted email whatever the scope's direction", () => {
+    expect(
+      hint(
+        key({
+          addresses: [],
+          domains: [],
+          rules: [RULE],
+          direction: "outbound",
+          depth: "content",
+        }),
+      ),
+    ).toContain("This key reads only mail its 1 email rule granted.");
   });
 
   it("tells apart a scope that names nothing, one the server could not read, and a grant that could not be read", () => {
     expect(
       hint(key({ addresses: [], domains: [], depth: "content" })),
     ).toContain(
-      "This key reads no mail: its grant names no mailbox or domain, and no email rule that still exists.",
+      "This key reads no mail: its grant names no mailbox or domain, and no email rule or live share.",
     );
     expect(
       hint(
@@ -142,7 +178,7 @@ describe("emptyEmailListHint", () => {
       "This key reads no received mail: its grant covers sent mail only.",
     );
     expect(hint(key("unreadable"))).toContain(
-      "The server could not read this credential's stored mail scope, so it reaches no mail.",
+      "The server could not read this credential's stored mail scope, so it reaches no mail through it.",
     );
     expect(hint(undefined)).toBe(
       "(no results) No inbound emails to show. This credential may not read every mailbox; `primitive whoami --json --grant` shows which mail it reaches.",
@@ -208,16 +244,16 @@ describe("readCallerMailFor", () => {
         client,
       ),
     ).toEqual({
-      credentialKind: "agent_connection",
+      credentialKind: "connected_key",
       mailScope: { addresses: ["agent@x.test"], domains: [] },
     });
     const bare = await readCallerMailFor({ apiKey: "pconn_x" }, client);
     expect(bare).toEqual({
-      credentialKind: "agent_connection",
+      credentialKind: "connected_key",
       mailScope: undefined,
     });
     expect(emptyEmailListHint({ filterFlags: [], caller: bare })).toBe(
-      "(no results) No inbound emails to show. This connection key reads only the mail of the address it was connected for.",
+      "(no results) No inbound emails to show. This connection key reads the address it was connected for, and any member mailbox its owner gave it (pass that mailbox with --recipient).",
     );
   });
 
