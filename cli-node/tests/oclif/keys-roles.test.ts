@@ -890,18 +890,90 @@ describe("keys commands", () => {
     ]);
     expect(replaced.stdout).toContain(`Rules taken off: ${RULE_ID}, ${B}`);
 
-    // Taking off a rule the key does not have says so.
-    requests = serve([B], [B]);
-    const absent = await run(KeysUpdateCommand, [
-      KEY_ID,
-      "--remove-rule",
-      `${C},${B}`,
-      "--step-up-token",
-      "pstep_d",
-    ]);
+    // Taking off a rule the key does not have changes nothing: it says so and sends no change.
+    const withAddress = keyRow({
+      template: null,
+      permissions: ["mail:read"],
+      mail_scope: {
+        addresses: ["a@example.com"],
+        domains: [],
+        rules: [B],
+        depth: "content",
+      },
+    });
+    requests = useServer(() =>
+      Response.json({ success: true, data: withAddress }),
+    );
+    const absent = await run(KeysUpdateCommand, [KEY_ID, "--remove-rule", C]);
+    expect(absent.exitCode).toBeUndefined();
     expect(absent.stderr).toContain(
       `Not on this key, so nothing to take off: ${C}.`,
     );
+    expect(absent.stdout).toContain(
+      `Key ${KEY_ID} already matched; nothing changed.`,
+    );
+    expect(requests.filter((r) => r.method === "PATCH")).toHaveLength(0);
+    // Adding one it already has, in another case, is the same.
+    const again = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--add-rule",
+      B.toUpperCase(),
+      "--json",
+    ]);
+    expect(JSON.parse(again.stdout)).toMatchObject({ id: KEY_ID, changed: [] });
+    expect(requests.filter((r) => r.method === "PATCH")).toHaveLength(0);
+  });
+
+  it("update --json says which rules a change took off and which were not on the key", async () => {
+    const B = "9c1d2e3f-4a5b-4c6d-8e7f-0a1b2c3d4e5f";
+    const C = "5e5e5e5e-0000-4000-8000-000000000003";
+    const before = keyRow({
+      template: null,
+      permissions: ["mail:read"],
+      mail_scope: {
+        addresses: ["a@example.com"],
+        domains: [],
+        rules: [RULE_ID, B],
+        depth: "content",
+      },
+    });
+    const after = keyRow({
+      template: null,
+      permissions: ["mail:read"],
+      mail_scope: {
+        addresses: ["a@example.com"],
+        domains: [],
+        rules: [B],
+        depth: "content",
+      },
+    });
+    let reads = 0;
+    useServer((request) => {
+      if (request.method !== "GET")
+        return Response.json({
+          success: true,
+          data: { id: KEY_ID, changed: ["grant"], warnings: [] },
+        });
+      reads += 1;
+      return Response.json({
+        success: true,
+        data: reads === 1 ? before : after,
+      });
+    });
+    const result = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--remove-rule",
+      `${RULE_ID},${C}`,
+      "--step-up-token",
+      "pstep_e",
+      "--json",
+    ]);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      rules_removed: [RULE_ID],
+      rules_not_on_key: [C],
+      changed: ["grant"],
+    });
+    expect(result.stderr).not.toContain("Not on this key");
   });
 
   it("update refuses --rule with --add-rule or --remove-rule, and a rule both added and removed, sending nothing", async () => {
@@ -915,8 +987,21 @@ describe("keys commands", () => {
       "--add-rule",
       RULE_ID,
     ]);
-    expect(mixed.error).toBeTruthy();
-    expect(String((mixed.error as Error).message)).toMatch(/--rule|--add-rule/);
+    // oclif refuses the pair as a usage error, either way round.
+    expect((mixed.error as { oclif?: { exit?: number } }).oclif?.exit).toBe(2);
+    expect(String((mixed.error as Error).message)).toContain(
+      "cannot also be provided when using --rule",
+    );
+    const removing = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--remove-rule",
+      RULE_ID,
+      "--rule",
+      RULE_ID,
+    ]);
+    expect((removing.error as { oclif?: { exit?: number } }).oclif?.exit).toBe(
+      2,
+    );
     const twice = await run(KeysUpdateCommand, [
       KEY_ID,
       "--add-rule",
@@ -927,6 +1012,7 @@ describe("keys commands", () => {
     expect(String((twice.error as Error).message)).toContain(
       "Both added and removed",
     );
+    expect((twice.error as { oclif?: { exit?: number } }).oclif?.exit).toBe(2);
     expect(requests).toHaveLength(0);
   });
 

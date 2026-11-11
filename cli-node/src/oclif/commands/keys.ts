@@ -369,10 +369,23 @@ export function nextRules(
     (change.removeRules ?? []).map((r) => r.toLowerCase()),
   );
   const kept = current.filter((r) => !removing.has(r.toLowerCase()));
-  const adding = (change.addRules ?? []).filter(
-    (r) => !kept.some((k) => k.toLowerCase() === r.toLowerCase()),
-  );
+  // Once each, as the server stores them, lowercase: the same rule in two cases is one rule.
+  const have = new Set(kept.map((r) => r.toLowerCase()));
+  const adding: string[] = [];
+  for (const rule of change.addRules ?? []) {
+    const id = rule.toLowerCase();
+    if (have.has(id)) continue;
+    have.add(id);
+    adding.push(id);
+  }
   return [...kept, ...adding];
+}
+
+/** Whether two lists hold the same values, in any order. */
+function sameSet(a: readonly string[], b: readonly string[]): boolean {
+  const left = new Set(a);
+  const right = new Set(b);
+  return left.size === right.size && [...left].every((v) => right.has(v));
 }
 
 /** The rules a key's grant lists, or none. */
@@ -937,8 +950,12 @@ export class KeysUpdateCommand extends Command {
         { exit: 2 },
       );
     }
-    // The rules the key listed before the change, to say which a change took off.
+    // The rules the key listed before the change, the ones the change takes
+    // off (from what is sent, not a later read), and any asked to be taken
+    // off that it did not have.
     let rulesBefore: string[] = [];
+    let rulesRemoved: string[] = [];
+    let rulesNotOnKey: string[] = [];
     const auth = await authenticate(this, flags);
     const body: CredentialsUpdateKeyInput = {
       ...(flags.name !== undefined ? { name: flags.name } : {}),
@@ -952,14 +969,6 @@ export class KeysUpdateCommand extends Command {
         return;
       }
       rulesBefore = keyRules(current.data.grant);
-      const missing = removeRules.filter(
-        (r) => !rulesBefore.some((k) => k.toLowerCase() === r.toLowerCase()),
-      );
-      if (missing.length > 0 && !flags.json) {
-        process.stderr.write(
-          `Not on this key, so nothing to take off: ${missing.join(", ")}.\n`,
-        );
-      }
       const next = buildUpdatedGrant(current.data.grant, {
         add,
         remove,
@@ -968,15 +977,60 @@ export class KeysUpdateCommand extends Command {
       if (!next.ok) {
         this.error(next.message, { exit: 2 });
       }
-      body.grant = next.grant;
-      // Refused if the key's grant changed after it was read, so a change
-      // approved later never overwrites one made meanwhile.
-      const ref = (current.data.grant as { ref?: unknown }).ref;
-      if (typeof ref === "string") body.expected_grant_ref = ref;
-      else if (!flags.json) {
+      rulesNotOnKey = removeRules.filter(
+        (r) => !rulesBefore.some((k) => k.toLowerCase() === r.toLowerCase()),
+      );
+      if (rulesNotOnKey.length > 0 && !flags.json) {
         process.stderr.write(
-          "Note: the server did not say which grant this key holds, so this change is not checked against changes made since it was read.\n",
+          `Not on this key, so nothing to take off: ${rulesNotOnKey.join(", ")}.\n`,
         );
+      }
+      const sentRules =
+        stringList((next.grant as { rules?: unknown }).rules ?? []) ?? [];
+      rulesRemoved = rulesBefore.filter(
+        (r) => !sentRules.some((k) => k.toLowerCase() === r.toLowerCase()),
+      );
+      // A change that leaves the grant as it is sends no grant: a grant
+      // change is a new version of the key, written, audited and announced.
+      const unchanged =
+        sameSet(
+          next.permissions,
+          stringList(current.data.grant.permissions) ?? [],
+        ) &&
+        sameSet(
+          sentRules.map((r) => r.toLowerCase()),
+          rulesBefore.map((r) => r.toLowerCase()),
+        );
+      if (!unchanged) {
+        body.grant = next.grant;
+        // Refused if the key's grant changed after it was read, so a change
+        // approved later never overwrites one made meanwhile.
+        const ref = (current.data.grant as { ref?: unknown }).ref;
+        if (typeof ref === "string") body.expected_grant_ref = ref;
+        else if (!flags.json) {
+          process.stderr.write(
+            "Note: the server did not say which grant this key holds, so this change is not checked against changes made since it was read.\n",
+          );
+        }
+      } else if (flags.name === undefined) {
+        if (flags.json) {
+          this.log(
+            JSON.stringify(
+              {
+                ...current.data,
+                changed: [],
+                ...(rulesNotOnKey.length > 0
+                  ? { rules_not_on_key: rulesNotOnKey }
+                  : {}),
+              },
+              null,
+              2,
+            ),
+          );
+          return;
+        }
+        this.log(`Key ${args.id} already matched; nothing changed.`);
+        return;
       }
     }
     const result = await withApproval(
@@ -1011,6 +1065,12 @@ export class KeysUpdateCommand extends Command {
             ...(after?.ok ? after.data : {}),
             ...result.data,
             ...(grantChanged ? { notice: HELD_REQUEST_NOTICE } : {}),
+            ...(grantChanged && rulesRemoved.length > 0
+              ? { rules_removed: rulesRemoved }
+              : {}),
+            ...(rulesNotOnKey.length > 0
+              ? { rules_not_on_key: rulesNotOnKey }
+              : {}),
             // The change was made; only reading the key back failed.
             ...(after && !after.ok ? { key_error: after.payload } : {}),
           },
@@ -1030,13 +1090,10 @@ export class KeysUpdateCommand extends Command {
     if (after?.ok) {
       this.log(`Permissions: ${describePermissions(after.data.grant)}`);
       this.log(`Mail: ${describeMailScope(after.data.grant)}`);
-      // A rule taken off stops the key reading what it granted, so it is named.
-      const rulesAfter = keyRules(after.data.grant);
-      const dropped = rulesBefore.filter(
-        (r) => !rulesAfter.some((k) => k.toLowerCase() === r.toLowerCase()),
-      );
-      if (dropped.length > 0)
-        this.log(`Rules taken off: ${dropped.join(", ")}`);
+    }
+    // A rule taken off stops the key reading what it granted, so it is named.
+    if (grantChanged && rulesRemoved.length > 0) {
+      this.log(`Rules taken off: ${rulesRemoved.join(", ")}`);
     }
     if (grantChanged) process.stderr.write(`${HELD_REQUEST_NOTICE}\n`);
   }
