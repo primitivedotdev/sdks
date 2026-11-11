@@ -338,8 +338,9 @@ describe.skipIf(process.platform === "win32")(
       const f = await fixture();
       f.state.oversizedRead = true;
       // Serializing and sending 9 MiB can outlast the fixture's 100 ms request
-      // timeout on a loaded runner, which reports a timeout instead of the
-      // oversized frame. Allow the client's longest timeout here.
+      // timeout on a loaded runner; the client then rejects with its generic
+      // socket error instead of the oversized frame. Allow the client's
+      // longest timeout here.
       await expect(
         f.connect(undefined, undefined, { timeoutMs: 3000 }),
       ).rejects.toMatchObject({
