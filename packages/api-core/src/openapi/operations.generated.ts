@@ -16464,7 +16464,31 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "maxLength": 64
         },
         "breadth": {
-          "description": "Ignored (the compile answer's breadth)."
+          "description": "Ignored (the compile answer's breadth).",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "checked": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                },
+                "matched": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Of those, how many they hold for (for a do-not-share rule, one they cannot decide counts)."
+                }
+              },
+              "required": [
+                "checked",
+                "matched"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -17618,7 +17642,31 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "maxLength": 64
         },
         "breadth": {
-          "description": "Ignored (the compile answer's breadth)."
+          "description": "Ignored (the compile answer's breadth).",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "checked": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                },
+                "matched": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Of those, how many they hold for (for a do-not-share rule, one they cannot decide counts)."
+                }
+              },
+              "required": [
+                "checked",
+                "matched"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -18128,7 +18176,31 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "maxLength": 64
         },
         "breadth": {
-          "description": "Ignored (the compile answer's breadth)."
+          "description": "Ignored (the compile answer's breadth).",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "checked": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                },
+                "matched": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Of those, how many they hold for (for a do-not-share rule, one they cannot decide counts)."
+                }
+              },
+              "required": [
+                "checked",
+                "matched"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -23592,7 +23664,31 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "maxLength": 64
         },
         "breadth": {
-          "description": "Ignored (the compile answer's breadth)."
+          "description": "Ignored (the compile answer's breadth).",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "checked": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                },
+                "matched": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Of those, how many they hold for (for a do-not-share rule, one they cannot decide counts)."
+                }
+              },
+              "required": [
+                "checked",
+                "matched"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "evaluation_scope": {
           "type": "string",

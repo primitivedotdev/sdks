@@ -13,6 +13,7 @@ from ..models.update_email_rule_request_state import UpdateEmailRuleRequestState
 from typing import cast
 
 if TYPE_CHECKING:
+  from ..models.email_rule_breadth import EmailRuleBreadth
   from ..models.email_rule_scope_selection import EmailRuleScopeSelection
   from ..models.email_rule_tree_input import EmailRuleTreeInput
   from ..models.update_email_rule_request_expectations_type_0 import UpdateEmailRuleRequestExpectationsType0
@@ -45,7 +46,7 @@ class UpdateEmailRuleRequest:
                 returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
             compiled_by (str | Unset): Who produced the tree (not verified): the compile response's compiled_by, or member
                 (the default) for a tree you wrote or edited.
-            breadth (Any | Unset): Ignored (the compile answer's breadth).
+            breadth (EmailRuleBreadth | None | Unset): Ignored (the compile answer's breadth).
             evaluation_scope (UpdateEmailRuleRequestEvaluationScope | Unset): own_mailboxes: mail to your own addresses and
                 agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
                 later included. selected: what scope_selection names. Left out, the scope stays. A change saves a new version
@@ -78,7 +79,7 @@ class UpdateEmailRuleRequest:
     assumptions: list[str] | Unset = UNSET
     warnings: list[str] | Unset = UNSET
     compiled_by: str | Unset = UNSET
-    breadth: Any | Unset = UNSET
+    breadth: EmailRuleBreadth | None | Unset = UNSET
     evaluation_scope: UpdateEmailRuleRequestEvaluationScope | Unset = UNSET
     scope_selection: EmailRuleScopeSelection | Unset = UNSET
     if_version: int | Unset = UNSET
@@ -92,6 +93,7 @@ class UpdateEmailRuleRequest:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
         from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         from ..models.update_email_rule_request_expectations_type_0 import UpdateEmailRuleRequestExpectationsType0 # noqa: PLC0415
@@ -124,7 +126,13 @@ class UpdateEmailRuleRequest:
 
         compiled_by = self.compiled_by
 
-        breadth = self.breadth
+        breadth: dict[str, Any] | None | Unset
+        if isinstance(self.breadth, Unset):
+            breadth = UNSET
+        elif isinstance(self.breadth, EmailRuleBreadth):
+            breadth = self.breadth.to_dict()
+        else:
+            breadth = self.breadth
 
         evaluation_scope: str | Unset = UNSET
         if not isinstance(self.evaluation_scope, Unset):
@@ -195,6 +203,7 @@ class UpdateEmailRuleRequest:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
         from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         from ..models.update_email_rule_request_expectations_type_0 import UpdateEmailRuleRequestExpectationsType0 # noqa: PLC0415
@@ -233,7 +242,25 @@ class UpdateEmailRuleRequest:
 
         compiled_by = d.pop("compiled_by", UNSET)
 
-        breadth = d.pop("breadth", UNSET)
+        def _parse_breadth(data: object) -> EmailRuleBreadth | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                breadth_type_1 = EmailRuleBreadth.from_dict(data)
+
+
+
+                return breadth_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailRuleBreadth | None | Unset, data)
+
+        breadth = _parse_breadth(d.pop("breadth", UNSET))
+
 
         _evaluation_scope = d.pop("evaluation_scope", UNSET)
         evaluation_scope: UpdateEmailRuleRequestEvaluationScope | Unset

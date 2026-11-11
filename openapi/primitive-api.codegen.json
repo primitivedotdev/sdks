@@ -75834,7 +75834,13 @@
             "maxLength": 64
           },
           "breadth": {
-            "description": "Ignored (the compile answer's breadth)."
+            "description": "Ignored (the compile answer's breadth).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EmailRuleBreadth"
+              }
+            ],
+            "nullable": true
           }
         },
         "required": [
@@ -76146,7 +76152,13 @@
             "maxLength": 64
           },
           "breadth": {
-            "description": "Ignored (the compile answer's breadth)."
+            "description": "Ignored (the compile answer's breadth).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EmailRuleBreadth"
+              }
+            ],
+            "nullable": true
           },
           "evaluation_scope": {
             "type": "string",
@@ -76924,7 +76936,13 @@
             "maxLength": 64
           },
           "breadth": {
-            "description": "Ignored (the compile answer's breadth)."
+            "description": "Ignored (the compile answer's breadth).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EmailRuleBreadth"
+              }
+            ],
+            "nullable": true
           }
         },
         "required": [
@@ -77637,7 +77655,13 @@
             "maxLength": 64
           },
           "breadth": {
-            "description": "Ignored (the compile answer's breadth)."
+            "description": "Ignored (the compile answer's breadth).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EmailRuleBreadth"
+              }
+            ],
+            "nullable": true
           }
         },
         "additionalProperties": false

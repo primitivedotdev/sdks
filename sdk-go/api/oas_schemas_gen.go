@@ -77,7 +77,7 @@ type AcceptEmailRuleRequestRequest struct {
 	// for a tree you wrote or edited.
 	CompiledBy OptString `json:"compiled_by"`
 	// Ignored (the compile answer's breadth).
-	Breadth jx.Raw `json:"breadth"`
+	Breadth OptNilEmailRuleBreadth `json:"breadth"`
 }
 
 // GetName returns the value of Name.
@@ -116,7 +116,7 @@ func (s *AcceptEmailRuleRequestRequest) GetCompiledBy() OptString {
 }
 
 // GetBreadth returns the value of Breadth.
-func (s *AcceptEmailRuleRequestRequest) GetBreadth() jx.Raw {
+func (s *AcceptEmailRuleRequestRequest) GetBreadth() OptNilEmailRuleBreadth {
 	return s.Breadth
 }
 
@@ -156,7 +156,7 @@ func (s *AcceptEmailRuleRequestRequest) SetCompiledBy(val OptString) {
 }
 
 // SetBreadth sets the value of Breadth.
-func (s *AcceptEmailRuleRequestRequest) SetBreadth(val jx.Raw) {
+func (s *AcceptEmailRuleRequestRequest) SetBreadth(val OptNilEmailRuleBreadth) {
 	s.Breadth = val
 }
 
@@ -12599,7 +12599,7 @@ type CreateEmailRuleRequest struct {
 	// for a tree you wrote or edited.
 	CompiledBy OptString `json:"compiled_by"`
 	// Ignored (the compile answer's breadth).
-	Breadth jx.Raw `json:"breadth"`
+	Breadth OptNilEmailRuleBreadth `json:"breadth"`
 }
 
 // GetName returns the value of Name.
@@ -12663,7 +12663,7 @@ func (s *CreateEmailRuleRequest) GetCompiledBy() OptString {
 }
 
 // GetBreadth returns the value of Breadth.
-func (s *CreateEmailRuleRequest) GetBreadth() jx.Raw {
+func (s *CreateEmailRuleRequest) GetBreadth() OptNilEmailRuleBreadth {
 	return s.Breadth
 }
 
@@ -12728,7 +12728,7 @@ func (s *CreateEmailRuleRequest) SetCompiledBy(val OptString) {
 }
 
 // SetBreadth sets the value of Breadth.
-func (s *CreateEmailRuleRequest) SetBreadth(val jx.Raw) {
+func (s *CreateEmailRuleRequest) SetBreadth(val OptNilEmailRuleBreadth) {
 	s.Breadth = val
 }
 
@@ -12928,7 +12928,7 @@ type CreateEmailRuleRequestRequest struct {
 	// for a tree you wrote or edited.
 	CompiledBy OptString `json:"compiled_by"`
 	// Ignored (the compile answer's breadth).
-	Breadth jx.Raw `json:"breadth"`
+	Breadth OptNilEmailRuleBreadth `json:"breadth"`
 }
 
 // GetTargetUserID returns the value of TargetUserID.
@@ -12982,7 +12982,7 @@ func (s *CreateEmailRuleRequestRequest) GetCompiledBy() OptString {
 }
 
 // GetBreadth returns the value of Breadth.
-func (s *CreateEmailRuleRequestRequest) GetBreadth() jx.Raw {
+func (s *CreateEmailRuleRequestRequest) GetBreadth() OptNilEmailRuleBreadth {
 	return s.Breadth
 }
 
@@ -13037,7 +13037,7 @@ func (s *CreateEmailRuleRequestRequest) SetCompiledBy(val OptString) {
 }
 
 // SetBreadth sets the value of Breadth.
-func (s *CreateEmailRuleRequestRequest) SetBreadth(val jx.Raw) {
+func (s *CreateEmailRuleRequestRequest) SetBreadth(val OptNilEmailRuleBreadth) {
 	s.Breadth = val
 }
 
@@ -128333,7 +128333,7 @@ type UpdateEmailRuleRequest struct {
 	// for a tree you wrote or edited.
 	CompiledBy OptString `json:"compiled_by"`
 	// Ignored (the compile answer's breadth).
-	Breadth jx.Raw `json:"breadth"`
+	Breadth OptNilEmailRuleBreadth `json:"breadth"`
 	// Own_mailboxes: mail to your own addresses and agents (for a rule that shares, those mail:share_own
 	// lets you share). author: all you can read, inboxes added later included. selected: what
 	// scope_selection names. Left out, the scope stays. A change saves a new version with the same
@@ -128403,7 +128403,7 @@ func (s *UpdateEmailRuleRequest) GetCompiledBy() OptString {
 }
 
 // GetBreadth returns the value of Breadth.
-func (s *UpdateEmailRuleRequest) GetBreadth() jx.Raw {
+func (s *UpdateEmailRuleRequest) GetBreadth() OptNilEmailRuleBreadth {
 	return s.Breadth
 }
 
@@ -128483,7 +128483,7 @@ func (s *UpdateEmailRuleRequest) SetCompiledBy(val OptString) {
 }
 
 // SetBreadth sets the value of Breadth.
-func (s *UpdateEmailRuleRequest) SetBreadth(val jx.Raw) {
+func (s *UpdateEmailRuleRequest) SetBreadth(val OptNilEmailRuleBreadth) {
 	s.Breadth = val
 }
 

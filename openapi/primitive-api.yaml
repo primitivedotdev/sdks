@@ -52936,6 +52936,9 @@ components:
           maxLength: 64
         breadth:
           description: Ignored (the compile answer's breadth).
+          anyOf:
+            - $ref: "#/components/schemas/EmailRuleBreadth"
+            - type: "null"
       required:
         - name
         - english
@@ -53168,6 +53171,9 @@ components:
           maxLength: 64
         breadth:
           description: Ignored (the compile answer's breadth).
+          anyOf:
+            - $ref: "#/components/schemas/EmailRuleBreadth"
+            - type: "null"
         evaluation_scope:
           type: string
           enum:
@@ -53763,6 +53769,9 @@ components:
           maxLength: 64
         breadth:
           description: Ignored (the compile answer's breadth).
+          anyOf:
+            - $ref: "#/components/schemas/EmailRuleBreadth"
+            - type: "null"
       required:
         - name
         - english
@@ -54337,6 +54346,9 @@ components:
           maxLength: 64
         breadth:
           description: Ignored (the compile answer's breadth).
+          anyOf:
+            - $ref: "#/components/schemas/EmailRuleBreadth"
+            - type: "null"
       additionalProperties: false
     AcceptEmailRuleRequestResult:
       type: object
