@@ -26,6 +26,7 @@ import {
   BACKGROUND_LISTEN_TARGET_ENV,
   BACKGROUND_LISTEN_TOKEN_ENV,
   type BackgroundListenFailureCode,
+  type BackgroundListenStatus,
   type BackgroundListenTarget,
   backgroundListenConfiguration,
   backgroundListenRestartable,
@@ -111,6 +112,9 @@ afterEach(async () => {
   rmSync(directory, { recursive: true, force: true });
 });
 
+const KEPT_WITH_OTHER_OPTIONS =
+  "started by an older version of the CLI or with different receiving options, so it was kept.";
+
 function deadPid(): number {
   return spawnSync(process.execPath, ["-e", ""]).pid as number;
 }
@@ -167,13 +171,32 @@ function relaunchRows(path: string): Array<Record<string, unknown>> {
 }
 
 /**
+ * The listener modules of the last releases before the options fingerprint
+ * left out the CLI version, copied unchanged from the cli-node/v1.75.0 and
+ * cli-node/v3.0.0-preview.5 tags (identical in both). Supervisors running this
+ * code are what an upgrade onto the current version meets.
+ */
+const RELEASED_LISTENER = new Set([
+  "listen-background",
+  "listen-state",
+  "shared-mail-files",
+]);
+
+/**
  * Write the synthetic CLI's files, as an install at the same path does. Its
  * package.json carries the version a newly started process sees, and whether
  * that release still hashed its version into the options fingerprint.
+ * `released` installs the released listener modules instead of the current
+ * ones.
  */
 function installCli(
-  installed: { version?: string; legacyFingerprint?: boolean } = {},
+  installed: {
+    version?: string;
+    legacyFingerprint?: boolean;
+    released?: boolean;
+  } = {},
 ) {
+  const { released, ...packageJson } = installed;
   for (const name of [
     "listen-background",
     "listen-state",
@@ -186,7 +209,12 @@ function installCli(
     writeFileSync(
       join(directory, `${name}.js`),
       ts.transpileModule(
-        readFileSync(resolve(`src/oclif/${name}.ts`), "utf8"),
+        readFileSync(
+          released && RELEASED_LISTENER.has(name)
+            ? resolve(`tests/fixtures/released-listener/${name}.ts`)
+            : resolve(`src/oclif/${name}.ts`),
+          "utf8",
+        ),
         {
           compilerOptions: {
             target: ts.ScriptTarget.ES2022,
@@ -198,13 +226,15 @@ function installCli(
   }
   writeFileSync(
     join(directory, "package.json"),
-    JSON.stringify({ type: "module", ...installed }),
+    JSON.stringify({ type: "module", ...packageJson }),
   );
   const child = join(directory, "synthetic-child.mjs");
   writeFileSync(
     child,
     `
-    import { backgroundListenConfiguration, backgroundListenToken, runBackgroundListen } from './listen-background.js';
+    // A namespace import: the released modules export no backgroundListenConfiguration.
+    import * as listen from './listen-background.js';
+    const { backgroundListenToken, runBackgroundListen } = listen;
     import { createHash } from 'node:crypto';
     import { readFileSync as readInstalled } from 'node:fs';
     // Like the CLI, a process reads its version once, when it starts, and
@@ -215,7 +245,7 @@ function installCli(
       ? process.env.TEST_CONFIGURATION
       : installed.legacyFingerprint
         ? createHash('sha256').update(JSON.stringify({ version: installed.version, ...receiving })).digest('hex')
-        : backgroundListenConfiguration(receiving);
+        : listen.backgroundListenConfiguration(receiving);
     if (process.env.PRIMITIVE_LISTEN_SUPERVISOR === '1') {
       const { runBackgroundListenSupervisor } = await import('./listen-background.js');
       await runBackgroundListenSupervisor({
@@ -331,9 +361,7 @@ function installCli(
   return child;
 }
 
-function childFiles(
-  installed: { version?: string; legacyFingerprint?: boolean } = {},
-) {
+function childFiles(installed: Parameters<typeof installCli>[0] = {}) {
   symlinkSync(resolve("node_modules"), join(directory, "node_modules"));
   return installCli(installed);
 }
@@ -470,10 +498,10 @@ describe("listener lifecycle state", () => {
         argv: ["unused"],
         configuration: "f".repeat(64),
       }),
-    ).rejects.toThrow("before changing receiving options");
+    ).rejects.toThrow(KEPT_WITH_OTHER_OPTIONS);
     await expect(
       startBackgroundListen({ ...target, argv: ["unused"] }),
-    ).rejects.toThrow("before changing receiving options");
+    ).rejects.toThrow(KEPT_WITH_OTHER_OPTIONS);
     expect(saved().configuration).toBe(configuration);
     expect(readFileSync(stateFile(), "utf8")).not.toContain(
       "synthetic delivery options",
@@ -1923,6 +1951,42 @@ describe("upgrading the CLI in place under a background listener", () => {
     TEST_RELAUNCH_LOG: join(directory, "relaunch.jsonl"),
     TEST_RESTART_DELAY_MS: "50",
   });
+  /** The CLI before the fingerprint left out its version. */
+  const releasedCli = {
+    version: "3.0.0-preview.5",
+    legacyFingerprint: true,
+    released: true,
+  };
+  const legacy = createHash("sha256")
+    .update(JSON.stringify({ version: "3.0.0-preview.5", ...receiving }))
+    .digest("hex");
+  /**
+   * `listen --background` of the released CLI: its start, in a process of its
+   * own, spawns a supervisor of that release, which spawns its worker.
+   */
+  async function releasedStart(
+    child: string,
+    env: NodeJS.ProcessEnv,
+  ): Promise<{ started: boolean; status: BackgroundListenStatus }> {
+    // The installed modules are the released ones, not the current ones.
+    expect(
+      readFileSync(join(directory, "listen-background.js"), "utf8"),
+    ).not.toContain("backgroundListenConfiguration");
+    const start = join(directory, "released-start.mjs");
+    writeFileSync(
+      start,
+      `
+      import { startBackgroundListen } from './listen-background.js';
+      const result = await startBackgroundListen({ ...JSON.parse(process.env.TEST_LISTEN_TARGET),
+        argv: [${JSON.stringify(child)}], configuration: ${JSON.stringify(legacy)}, startupTimeoutMs: 5000 });
+      process.stdout.write(JSON.stringify(result), () => process.exit(0));
+    `,
+    );
+    const { stdout } = await promisify(execFile)(process.execPath, [start], {
+      env: { ...process.env, ...env },
+    });
+    return JSON.parse(stdout);
+  }
   afterEach(async () => {
     // A detached relaunch must not outlive a failed test and start a
     // supervisor after the directory is gone: let it finish, then stop it.
@@ -1990,9 +2054,7 @@ describe("upgrading the CLI in place under a background listener", () => {
             ...change,
           }),
         }),
-      ).rejects.toThrow(
-        "Stop the existing listener before changing receiving options.",
-      );
+      ).rejects.toThrow(KEPT_WITH_OTHER_OPTIONS);
     expect(saved().configuration).toBe(configuration);
   });
 
@@ -2065,32 +2127,18 @@ describe("upgrading the CLI in place under a background listener", () => {
             senders: ["owner@example.com"],
           }),
         }),
-      ).rejects.toThrow(
-        "Stop the existing listener before changing receiving options.",
-      );
+      ).rejects.toThrow(KEPT_WITH_OTHER_OPTIONS);
       expect((await stopBackgroundListen(target)).phase).toBe("stopped");
     },
     15_000,
   );
 
   it.skipIf(process.platform === "win32")(
-    "hands a receiver started by a release that fingerprinted its version to a supervisor of the new version",
+    "hands a receiver started by a release that fingerprinted its version from that release's supervisor to one of the new version",
     async () => {
-      const child = childFiles({
-        version: "3.0.0-preview.5",
-        legacyFingerprint: true,
-      });
+      const child = childFiles(releasedCli);
       const env = upgradeEnv();
-      const legacy = createHash("sha256")
-        .update(JSON.stringify({ version: "3.0.0-preview.5", ...receiving }))
-        .digest("hex");
-      const result = await startBackgroundListen({
-        ...target,
-        argv: [child],
-        configuration: legacy,
-        env,
-        startupTimeoutMs: 5000,
-      });
+      const result = await releasedStart(child, env);
       expect(result.status).toMatchObject({
         phase: "receiving",
         healthy: true,
@@ -2146,6 +2194,64 @@ describe("upgrading the CLI in place under a background listener", () => {
         started: false,
         status: { healthy: true, supervisorPid: current.supervisorPid },
       });
+      expect((await stopBackgroundListen(target)).phase).toBe("stopped");
+    },
+    20_000,
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "explains a start refused while a receiver of an earlier release is still healthy, and its remedy restarts it on the new version",
+    async () => {
+      const child = childFiles(releasedCli);
+      const env = upgradeEnv();
+      const { status } = await releasedStart(child, env);
+      expect(status).toMatchObject({ phase: "receiving", healthy: true });
+      // The same command on the new version, before that receiver's worker
+      // next restarts and hands it over.
+      installCli({ version: "3.0.0-preview.6" });
+      const configuration = backgroundListenConfiguration(receiving);
+      await expect(
+        startBackgroundListen({ ...target, argv: [child], configuration }),
+      ).rejects.toThrow(
+        `A background listener for this session is still running, started by an older version of the CLI or with different receiving options, so it was kept. To restart it with this command, run \`primitive listen --notify-session ${target.threadId} --stop\`, then run this command again.`,
+      );
+      const kept = backgroundListenStatus(target);
+      expect(kept).toMatchObject({
+        phase: "receiving",
+        healthy: true,
+        pid: status.pid,
+        supervisorPid: status.supervisorPid,
+      });
+      expect(kept).not.toHaveProperty("lastStartFailure");
+      // What the message says to do: the new CLI stops the released
+      // supervisor, and the same command then starts one of its own.
+      expect((await stopBackgroundListen(target)).phase).toBe("stopped");
+      await vi.waitFor(() =>
+        expect(() => process.kill(status.supervisorPid as number, 0)).toThrow(),
+      );
+      const restarted = await startBackgroundListen({
+        ...target,
+        argv: [child],
+        configuration,
+        env,
+        startupTimeoutMs: 5000,
+      });
+      expect(restarted).toMatchObject({
+        started: true,
+        status: { phase: "receiving", healthy: true, failureCode: null },
+      });
+      expect(restarted.status.supervisorPid).not.toBe(status.supervisorPid);
+      expect(relaunchRows(env.TEST_VERSION_LOG)).toEqual([
+        expect.objectContaining({
+          version: "3.0.0-preview.5",
+          expected: legacy,
+        }),
+        expect.objectContaining({
+          version: "3.0.0-preview.6",
+          expected: configuration,
+        }),
+      ]);
+      expect(relaunchRows(env.TEST_RELAUNCH_LOG)).toEqual([]);
       expect((await stopBackgroundListen(target)).phase).toBe("stopped");
     },
     20_000,

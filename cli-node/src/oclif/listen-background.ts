@@ -1499,6 +1499,18 @@ async function prepareRelaunch(
   );
 }
 
+/**
+ * A start refused because a healthy receiver runs with another options
+ * fingerprint. Earlier releases put their version in it, so a receiver one
+ * of them started differs even when the command is the same. From here the
+ * two causes look alike, and stopping it is the remedy for both.
+ */
+function keptWithOtherOptions(threadId: string): ListenStateError {
+  return new ListenStateError(
+    `A background listener for this session is still running, started by an older version of the CLI or with different receiving options, so it was kept. To restart it with this command, run \`primitive listen --notify-session ${threadId} --stop\`, then run this command again.`,
+  );
+}
+
 function relaunchCancelled(): ListenStateError {
   return new ListenStateError(
     "The receiver this relaunch was for was stopped or holds a failure, so nothing was started.",
@@ -1563,9 +1575,7 @@ export async function startBackgroundListen(
         );
       }
       if (prior?.configuration !== configuration)
-        throw new ListenStateError(
-          "Stop the existing listener before changing receiving options.",
-        );
+        throw keptWithOtherOptions(options.threadId);
       // Only a receiver that is receiving makes an earlier failed start
       // history; one still starting has not recovered from it yet.
       if (!startFailureCurrent(current)) clearStartFailure(paths);
@@ -1593,9 +1603,7 @@ export async function startBackgroundListen(
       // rather than reuse it, even when an upgrade changed its options.
       if (!priorSupervisor) {
         if (prior.configuration !== configuration)
-          throw new ListenStateError(
-            "Stop the existing listener before changing receiving options.",
-          );
+          throw keptWithOtherOptions(options.threadId);
         if (!startFailureCurrent(current)) clearStartFailure(paths);
         return { started: false, status: current };
       }

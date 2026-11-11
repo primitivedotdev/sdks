@@ -923,11 +923,15 @@ parsers.
   a receiver started by this version or later. A start that changes
   contacts, contact requests, senders, events or the session socket while a
   receiver runs is still refused.
+- A refused `listen --background` start now says why: the running listener
+  was started by an older version of the CLI or with different receiving
+  options. It names the `listen --notify-session <session> --stop` command to
+  run before running the same command again.
 - A listener started by an earlier release is handed to a supervisor of the
   new version when its worker next restarts. If that attempt does not
   complete, a later restart tries again after at least a minute. Until the
-  handover, the same `listen --background` command is refused as a change of
-  receiving options, and `agent connect` reports the receiver as not ready.
+  handover, the same `listen --background` command is refused with that
+  message, and `agent connect` reports the receiver as not ready.
   During it, `listen --status` shows `reconnecting` with `crashed` for a
   moment, then `stopped` for about a second, then the new supervisor starting
   and receiving. A handover, like a worker replacing its lost supervisor,
