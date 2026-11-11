@@ -234,6 +234,10 @@ export function formatKeyDetail(key: KeyView): string {
     `Last used:    ${key.last_used_at ?? "never"}`,
     `Suspended:    ${key.suspended ? "yes" : "no"}`,
   ];
+  // GET /keys/{id} also answers a revoked key, which never works again.
+  if (key.status === "revoked") {
+    lines.push(`Revoked:      ${key.revoked_at ?? "yes"}`);
+  }
   if (key.agent_address) lines.push(`Agent:        ${key.agent_address}`);
   if (key.grant.template) {
     lines.push(`Permissions:  ${describePermissions(key.grant)}`);
@@ -1265,7 +1269,12 @@ export class KeysRevokeCommand extends Command {
       this.log(JSON.stringify(result.data, null, 2));
       return;
     }
-    this.log(`Revoked key ${args.id}.`);
+    // Revoking a key that is already revoked changes nothing.
+    this.log(
+      result.data.already_revoked === true
+        ? `Key ${args.id} was already revoked; nothing changed.`
+        : `Revoked key ${args.id}.`,
+    );
     const summary = standingSummary(
       (result.data as { standing_objects?: unknown }).standing_objects,
     );

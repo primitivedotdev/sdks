@@ -217,6 +217,30 @@ describe("keys helpers", () => {
       "Mail:         addresses a@example.com; domains example.org",
     );
     expect(detail).toContain("Permissions:\n  mail:read\n  mail:send");
+    expect(detail).not.toContain("Revoked:");
+  });
+
+  it("says when the key read is a revoked key", () => {
+    const grant = {
+      template: null,
+      permissions: ["mail:read"],
+      mail_scope: "org",
+    };
+    expect(
+      formatKeyDetail(
+        keyRow(grant, {
+          status: "revoked",
+          revoked_at: "2026-11-02T00:00:00.000Z",
+          revoked_by: "user-1",
+        }),
+      ),
+    ).toContain("Revoked:      2026-11-02T00:00:00.000Z");
+    expect(
+      formatKeyDetail(keyRow(grant, { status: "revoked", revoked_at: null })),
+    ).toContain("Revoked:      yes");
+    expect(
+      formatKeyDetail(keyRow(grant, { status: "active", revoked_at: null })),
+    ).not.toContain("Revoked:");
   });
 
   it("builds a new key's grant only from an explicit choice", () => {
@@ -1486,6 +1510,27 @@ describe("keys commands", () => {
       id: KEY_ID,
     });
     expect(revoked.stdout).toContain(`Revoked key ${KEY_ID}.`);
+  });
+
+  it("revoke says when the key was already revoked", async () => {
+    useServer(() =>
+      Response.json({
+        success: true,
+        data: {
+          revoked: 0,
+          kind: "org_key",
+          id: KEY_ID,
+          standing_objects: [],
+          already_revoked: true,
+        },
+      }),
+    );
+    const again = await run(KeysRevokeCommand, [KEY_ID, "--yes"]);
+    expect(again.exitCode).toBeUndefined();
+    expect(again.stdout).toContain(
+      `Key ${KEY_ID} was already revoked; nothing changed.`,
+    );
+    expect(again.stdout).not.toContain(`Revoked key ${KEY_ID}.`);
   });
 
   it("revoke takes an approval token, and without one prints the approval link and how to rerun", async () => {
