@@ -36,6 +36,12 @@ import {
   versionMovedHint,
 } from "./email-rule-authoring.js";
 import {
+  emptyEmailListHint,
+  listFilters,
+  ORG_EMPTY_HINT,
+  readCallerMailScope,
+} from "./empty-mail-hint.js";
+import {
   bodyHasRules,
   currentEndpointRules,
   EVENT_TYPES_FLAG_DESCRIPTION,
@@ -2087,13 +2093,28 @@ export function createOperationCommand(
         // AGX walkthrough flagged this: `list-deliveries` returning
         // `[]` left the agent unsure whether they had an empty
         // delivery log or no endpoints configured at all.
-        if (Array.isArray(envelope?.data) && envelope.data.length === 0) {
-          const hint = EMPTY_RESULT_HINTS[operation.sdkName];
-          // Under --json the hint rides in the envelope's summary when
-          // one is printed; a bare data payload has nowhere to carry it.
-          if (hint && jsonOutput) {
-            if (withEnvelope) summary.push(hint);
-          } else if (hint) process.stderr.write(`${hint}\n`);
+        // Under --json the hint rides in the envelope's summary when one is
+        // printed; a bare data payload has nowhere to carry it, so nothing
+        // more is read for it.
+        if (
+          Array.isArray(envelope?.data) &&
+          envelope.data.length === 0 &&
+          (!jsonOutput || withEnvelope)
+        ) {
+          // An empty email list says what was asked and what this
+          // credential reads, not that the account has no mail.
+          const hint =
+            operation.sdkName === "listEmails"
+              ? emptyEmailListHint({
+                  filterFlags: listFilters(query).map(
+                    (name) => `--${parameterFlagName(operation.sdkName, name)}`,
+                  ),
+                  paged: query.cursor !== undefined,
+                  mailScope: await readCallerMailScope(apiClient.client),
+                })
+              : EMPTY_RESULT_HINTS[operation.sdkName];
+          if (hint && jsonOutput) summary.push(hint);
+          else if (hint) process.stderr.write(`${hint}\n`);
         }
 
         // A connected address's sent list also carries delivered sends
@@ -2234,8 +2255,10 @@ export const EMPTY_RESULT_HINTS: Record<string, string> = {
     "(no results) No webhook deliveries logged yet. If you have an endpoint configured but expected to see test fires here: test deliveries from `primitive endpoints test` are NOT logged in this list, they're synchronous and visible only in the test-endpoint command's response. Real deliveries are logged when an event fans out to your endpoints: an inbound `email.received`, or a `sent_email.*` event for an endpoint that lists it in rules.event_types (they arrive within a few minutes of the result). If you have no endpoints, run `primitive endpoints list` to check.",
   listEndpoints:
     "(no results) No webhook endpoints configured. Add one with `primitive endpoints create --url <your-url>`.",
-  listEmails:
-    "(no results) No inbound emails received yet on this account. Send one to a verified domain to populate this list. For a compact view, prefer `primitive emails latest`.",
+  // An empty listEmails picks its hint from the credential and the filters
+  // (emptyEmailListHint); this is what it says for one that reads every
+  // mailbox and asked for everything.
+  listEmails: ORG_EMPTY_HINT,
   listDomains:
     "(no results) No domains on this account. Add one with `primitive domains add --domain <yourdomain.example>`.",
   listFilters: "(no results) No filter rules configured.",
