@@ -203,13 +203,15 @@ function childFiles() {
       const { startBackgroundListen } = await import('./listen-background.js');
       const relaunchTarget = JSON.parse(process.env.TEST_LISTEN_TARGET);
       const startedAt = Date.now();
+      // The test reads this to know the relaunch has finished, and why not.
+      const note = (row) => appendFileSync(process.env.TEST_RELAUNCH_LOG ?? '/dev/null', JSON.stringify({ after: Date.now() - startedAt, ...row }) + '\\n');
       try {
         await startBackgroundListen({ ...relaunchTarget, argv: [process.argv[1]], startupTimeoutMs: 5000 });
       } catch (error) {
-        const { appendFileSync } = await import('node:fs');
-        appendFileSync(process.env.TEST_RELAUNCH_LOG ?? '/dev/null', JSON.stringify({ after: Date.now() - startedAt, error: String(error?.message ?? error) }) + '\\n');
+        note({ error: String(error?.message ?? error) });
         throw error;
       }
+      note({ started: true });
       process.exit(0);
     }
     import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
@@ -1251,7 +1253,9 @@ describe("detached synthetic listener processes", () => {
       const supervisorPid = result.status.supervisorPid as number;
       expect(supervisorPid).toBeGreaterThan(0);
       const startedAt = Date.now();
-      // Everything that says why the replacement is not healthy, for a failure.
+      // Everything that says why the replacement is not healthy. Built only
+      // once a check has failed: reading it on every poll shifts the timing
+      // this test depends on.
       const diagnosis = () => {
         const folder = join(stateFile(), "..");
         const read = (name: string) => {
@@ -1273,33 +1277,41 @@ describe("detached synthetic listener processes", () => {
             : null,
         });
       };
+      const explained = (check: () => void) => () => {
+        try {
+          check();
+        } catch (error) {
+          throw new Error(`${(error as Error).message}\n${diagnosis()}`);
+        }
+      };
+      const relaunched = () =>
+        existsSync(relaunchLog) &&
+        readFileSync(relaunchLog, "utf8").includes('"started":true');
       process.kill(supervisorPid, "SIGKILL");
       await vi.waitFor(
-        () => {
+        explained(() => {
           const current = backgroundListenStatus(target);
-          expect(current, diagnosis()).toMatchObject({
-            phase: "receiving",
-            healthy: true,
-          });
+          expect(current).toMatchObject({ phase: "receiving", healthy: true });
           expect(current.supervisorPid).toBeGreaterThan(0);
           expect(current.supervisorPid).not.toBe(supervisorPid);
-        },
+          // The relaunching command checks the new worker after it reports
+          // receiving, and stops the new supervisor if that worker is gone by
+          // then. Killing the worker before that check has finished tests the
+          // relaunch failing, not the replacement restarting its worker.
+          expect(relaunched()).toBe(true);
+        }),
         { timeout: 15_000 },
       );
-      const firstPhase = diagnosis();
       // The replacement is a normal supervisor: it restarts its own worker.
       const replaced = backgroundListenStatus(target);
       process.kill(replaced.pid as number, "SIGKILL");
       await vi.waitFor(
-        () => {
+        explained(() => {
           const current = backgroundListenStatus(target);
-          expect(current, `${firstPhase} then ${diagnosis()}`).toMatchObject({
-            phase: "receiving",
-            healthy: true,
-          });
+          expect(current).toMatchObject({ phase: "receiving", healthy: true });
           expect(current.pid).not.toBe(replaced.pid);
           expect(current.supervisorPid).toBe(replaced.supervisorPid);
-        },
+        }),
         { timeout: 10_000 },
       );
       expect((await stopBackgroundListen(target)).phase).toBe("stopped");
