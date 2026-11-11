@@ -6,6 +6,7 @@ import {
   type CredentialsGetKeyResult,
   type CredentialsListKeysResult,
   type CredentialsRevokeCredentialResult,
+  type CredentialsRotateKeyInput,
   type CredentialsRotateKeyResult,
   type CredentialsUpdateKeyInput,
   type CredentialsUpdateKeyResult,
@@ -93,6 +94,33 @@ type SdkResult = {
   error?: unknown;
   response?: Response;
 };
+
+/**
+ * A new expiry from --expires-at or --no-expiry: a time with its time zone
+ * (the API takes no other), null for none, or undefined when neither was given.
+ */
+export function expiryFromFlags(flags: {
+  "expires-at"?: string;
+  "no-expiry"?: boolean;
+}):
+  | { ok: true; expiresAt: string | null | undefined }
+  | { ok: false; message: string } {
+  if (flags["no-expiry"]) return { ok: true, expiresAt: null };
+  const at = flags["expires-at"]?.trim();
+  if (at === undefined) return { ok: true, expiresAt: undefined };
+  if (
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/i.test(
+      at,
+    ) ||
+    Number.isNaN(Date.parse(at))
+  ) {
+    return {
+      ok: false,
+      message: `--expires-at takes an ISO 8601 time with its time zone, such as 2027-02-08T00:00:00Z, not ${JSON.stringify(at)}.`,
+    };
+  }
+  return { ok: true, expiresAt: at };
+}
 
 function unwrap<T>(data: unknown): T {
   return ((data as { data?: T } | undefined)?.data ?? data) as T;
@@ -729,6 +757,8 @@ export class KeysRotateCommand extends Command {
   static description =
     `Rotate an API key: make a successor with the same permissions and print its secret once. The old key keeps working for the overlap, then stops.
 
+  The new key keeps the old key's expiry: rotating alone does not extend a key. Pass --expires-at to give the new key another one, within your organization's credential policy, or --no-expiry for none where the policy allows. Either needs keys:manage. The old key never outlives the new one.
+
   The rotation runs directly; if your organization requires approval, the command prints the approval link and takes --step-up-token, as for a new key. Store the new secret right away: it is not shown again and the CLI does not save it.`;
 
   static summary = "Rotate an API key";
@@ -736,6 +766,7 @@ export class KeysRotateCommand extends Command {
   static examples = [
     "<%= config.bin %> keys rotate 0f0e0d0c-0b0a-4908-8706-050403020100",
     "<%= config.bin %> keys rotate 0f0e0d0c-0b0a-4908-8706-050403020100 --overlap-seconds 0",
+    "<%= config.bin %> keys rotate 0f0e0d0c-0b0a-4908-8706-050403020100 --expires-at 2027-02-08T00:00:00Z",
   ];
 
   static args = {
@@ -750,6 +781,15 @@ export class KeysRotateCommand extends Command {
         "How long the old key keeps working, in seconds. 0 stops it now.",
       min: 0,
     }),
+    "expires-at": Flags.string({
+      description:
+        "Give the new key this expiry (ISO 8601 with a time zone) instead of the old key's.",
+      exclusive: ["no-expiry"],
+    }),
+    "no-expiry": Flags.boolean({
+      description: "Give the new key no expiry, where the policy allows.",
+      exclusive: ["expires-at"],
+    }),
     ...APPROVAL_FLAGS,
     json: Flags.boolean({
       description: "Print the new key, its secret included, as JSON.",
@@ -758,11 +798,17 @@ export class KeysRotateCommand extends Command {
 
   async run(): Promise<void> {
     const { args, flags } = await this.parse(KeysRotateCommand);
+    const expiry = expiryFromFlags(flags);
+    if (!expiry.ok) this.error(expiry.message, { exit: 2 });
     const auth = await authenticate(this, flags);
-    const body =
-      flags["overlap-seconds"] === undefined
+    const body: CredentialsRotateKeyInput = {
+      ...(flags["overlap-seconds"] === undefined
         ? {}
-        : { overlap_seconds: flags["overlap-seconds"] };
+        : { overlap_seconds: flags["overlap-seconds"] }),
+      ...(expiry.expiresAt === undefined
+        ? {}
+        : { expires_at: expiry.expiresAt }),
+    };
     const result = await withApproval(
       (token) =>
         call<CredentialsRotateKeyResult>(
@@ -785,16 +831,16 @@ export class KeysRotateCommand extends Command {
       Boolean(flags.json),
       rotated,
       rotated.key,
-      `Rotated key ${rotated.previous_key_id}. The new key is ${rotated.id}, prefix ${rotated.key_prefix}. The old key works until ${rotated.previous_key_expires_at}.`,
+      `Rotated key ${rotated.previous_key_id}. The new key is ${rotated.id}, prefix ${rotated.key_prefix}, and expires ${rotated.expires_at ?? "never"}. The old key works until ${rotated.previous_key_expires_at}.`,
     );
   }
 }
 
 export class KeysUpdateCommand extends Command {
   static description =
-    `Change an API key's permissions, email rules or name. It keeps its id and secret.
+    `Change an API key's permissions, email rules, name or expiry. It keeps its id and secret.
 
-  --add and --remove take permissions (repeatable, or comma-separated). --rule sets the email rules the key reaches, replacing the ones it has. Everything else about the key stays as it is.
+  --add and --remove take permissions (repeatable, or comma-separated). --rule sets the email rules the key reaches, replacing the ones it has. --expires-at gives it a new expiry: a later one extends it, within your organization's credential policy, and is how to keep a key working past its expiry (rotating keeps the expiry). --no-expiry removes it where the policy allows. An expired key cannot be extended. Everything else about the key stays as it is.
 
   The change runs directly; if your organization requires approval, the command prints the approval link and takes --step-up-token, as for a new key. A key never holds more than you do.
 
@@ -806,6 +852,7 @@ export class KeysUpdateCommand extends Command {
     "<%= config.bin %> keys update 0f0e0d0c-0b0a-4908-8706-050403020100 --add mail:send,mail:reply",
     "<%= config.bin %> keys update 0f0e0d0c-0b0a-4908-8706-050403020100 --remove mail:send",
     "<%= config.bin %> keys update 0f0e0d0c-0b0a-4908-8706-050403020100 --rule 3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f",
+    "<%= config.bin %> keys update 0f0e0d0c-0b0a-4908-8706-050403020100 --expires-at 2027-02-08T00:00:00Z",
   ];
 
   static args = {
@@ -829,12 +876,23 @@ export class KeysUpdateCommand extends Command {
       multiple: true,
     }),
     name: Flags.string({ description: "A new name for the key." }),
+    "expires-at": Flags.string({
+      description:
+        "A new expiry, ISO 8601 with a time zone. A later one extends the key.",
+      exclusive: ["no-expiry"],
+    }),
+    "no-expiry": Flags.boolean({
+      description: "Remove the key's expiry, where the policy allows.",
+      exclusive: ["expires-at"],
+    }),
     ...APPROVAL_FLAGS,
     json: Flags.boolean({ description: "Print the result as JSON." }),
   };
 
   async run(): Promise<void> {
     const { args, flags } = await this.parse(KeysUpdateCommand);
+    const expiry = expiryFromFlags(flags);
+    if (!expiry.ok) this.error(expiry.message, { exit: 2 });
     const add = listFlag(flags.add);
     const remove = listFlag(flags.remove);
     const rules = flags.rule ? listFlag(flags.rule) : undefined;
@@ -843,14 +901,22 @@ export class KeysUpdateCommand extends Command {
       this.error(`Both added and removed: ${both.join(", ")}.`, { exit: 2 });
     }
     const changesGrant = add.length > 0 || remove.length > 0 || !!rules;
-    if (!changesGrant && flags.name === undefined) {
-      this.error("Nothing to change: pass --add, --remove, --rule or --name.", {
-        exit: 2,
-      });
+    if (
+      !changesGrant &&
+      flags.name === undefined &&
+      expiry.expiresAt === undefined
+    ) {
+      this.error(
+        "Nothing to change: pass --add, --remove, --rule, --name, --expires-at or --no-expiry.",
+        { exit: 2 },
+      );
     }
     const auth = await authenticate(this, flags);
     const body: CredentialsUpdateKeyInput = {
       ...(flags.name !== undefined ? { name: flags.name } : {}),
+      ...(expiry.expiresAt !== undefined
+        ? { expires_at: expiry.expiresAt }
+        : {}),
     };
     if (changesGrant) {
       const current = await call<KeyView>(
@@ -926,13 +992,36 @@ export class KeysUpdateCommand extends Command {
       this.log(`Permissions: ${describePermissions(after.data.grant)}`);
       this.log(`Mail: ${describeMailScope(after.data.grant)}`);
     }
+    if (changed.includes("expires_at")) {
+      this.log(`Expires: ${expiry.expiresAt ?? "never"}`);
+    }
     if (grantChanged) process.stderr.write(`${HELD_REQUEST_NOTICE}\n`);
   }
 }
 
+/**
+ * What a revoked key set up, split as revocation splits it: what the
+ * organization owns keeps working, and what the key itself owned (its own
+ * webhooks, say) stops with it. Null when it set up nothing.
+ */
+export function standingSummary(standing: unknown): string | null {
+  if (!Array.isArray(standing) || standing.length === 0) return null;
+  const stopped = standing.filter(
+    (item) => (item as { org_owned?: unknown }).org_owned === false,
+  ).length;
+  const kept = standing.length - stopped;
+  const parts = [
+    ...(kept > 0
+      ? [`${kept} item(s) it set up for the organization keep working.`]
+      : []),
+    ...(stopped > 0 ? [`${stopped} item(s) the key owned stop with it.`] : []),
+  ];
+  return `${parts.join(" ")} Review them with --json.`;
+}
+
 export class KeysRevokeCommand extends Command {
   static description =
-    `Revoke an API key. It stops working at once; what it set up keeps working and is listed for review.
+    `Revoke an API key. It stops working at once. What it set up for the organization keeps working; webhooks and anything else the key itself owns stop with it. Both are listed for review.
 
   Asks for confirmation first; pass --yes to skip the prompt in scripts. Revoking runs directly. If your organization requires approval, the command prints the approval link, opens it where it can and waits for the one-time token; in a script, approve and run it again with --step-up-token.`;
 
@@ -1002,12 +1091,9 @@ export class KeysRevokeCommand extends Command {
       return;
     }
     this.log(`Revoked key ${args.id}.`);
-    const standing = (result.data as { standing_objects?: unknown[] })
-      .standing_objects;
-    if (Array.isArray(standing) && standing.length > 0) {
-      this.log(
-        `It set up ${standing.length} item(s) that keep working. Review them with --json.`,
-      );
-    }
+    const summary = standingSummary(
+      (result.data as { standing_objects?: unknown }).standing_objects,
+    );
+    if (summary) this.log(summary);
   }
 }
