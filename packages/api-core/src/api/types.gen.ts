@@ -6002,7 +6002,7 @@ export type GetWebhookDeliveryStatsResult = {
 
 export type ListActivityObjectsResult = {
     /**
-     * you: what a person created through any credential of theirs (their dashboard session, their own CLI or app login, apps and agent delegates acting for them, their API keys while theirs, their personal agents). this_credential: what the calling key, app or agent created itself.
+     * you: what a person created through any credential of theirs, or with relation=asked what others asked of them (their dashboard session, their own CLI or app login, apps and agent delegates acting for them, their API keys while theirs, their personal agents). this_credential: what the calling key, app or agent created itself.
      */
     covers: string;
     items: Array<{
@@ -6025,20 +6025,20 @@ export type ListActivityObjectsResult = {
          */
         ended_at: string | null;
         /**
-         * you: it is still yours: never transferred, or transferred back to you. someone_else: it was transferred and another person holds it now.
+         * you: it is still yours: never transferred, or transferred back to you. someone_else: it was transferred and another person holds it now, or, with relation=asked, another member made it.
          */
         owned_now: 'you' | 'someone_else';
         created_through: {
             /**
-             * The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves).
+             * The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves). With relation=asked, member: the member who asked.
              */
             kind: string;
             /**
-             * In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself.
+             * In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself. With relation=asked, the user id of the member who asked.
              */
             id: string | null;
             /**
-             * In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves.
+             * In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves. With relation=asked, the name of the member who asked.
              */
             name: string | null;
         };
@@ -19671,7 +19671,11 @@ export type ListActivityObjectsData = {
     path?: never;
     query?: {
         /**
-         * Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request. Defaults to every kind the caller can have created (a person's own kinds only for a person).
+         * created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you. asked is for a person's own view only, and kind may then name only email_rule_request.
+         */
+        relation?: 'created' | 'asked';
+        /**
+         * Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request. Defaults to every kind the caller can have created (a person's own kinds only for a person). With relation=asked, only email_rule_request, which is also the default.
          */
         kind?: string;
         /**
@@ -19713,7 +19717,7 @@ export type ListActivityObjectsError = ListActivityObjectsErrors[keyof ListActiv
 
 export type ListActivityObjectsResponses = {
     /**
-     * List what you created
+     * List what you created, or what you were asked
      */
     200: SuccessEnvelope & {
         data: ListActivityObjectsResult;

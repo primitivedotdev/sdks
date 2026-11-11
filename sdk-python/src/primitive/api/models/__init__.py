@@ -788,6 +788,7 @@ from .invite_organization_member_response_200 import InviteOrganizationMemberRes
 from .invite_project_member_response_200 import InviteProjectMemberResponse200
 from .leave_organization_response_200 import LeaveOrganizationResponse200
 from .leave_organization_result import LeaveOrganizationResult
+from .list_activity_objects_relation import ListActivityObjectsRelation
 from .list_activity_objects_response_200 import ListActivityObjectsResponse200
 from .list_activity_objects_result import ListActivityObjectsResult
 from .list_activity_objects_result_items_item import ListActivityObjectsResultItemsItem
@@ -2505,6 +2506,7 @@ __all__ = (
     "InviteProjectMemberResponse200",
     "LeaveOrganizationResponse200",
     "LeaveOrganizationResult",
+    "ListActivityObjectsRelation",
     "ListActivityObjectsResponse200",
     "ListActivityObjectsResult",
     "ListActivityObjectsResultItemsItem",

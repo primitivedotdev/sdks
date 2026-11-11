@@ -1055,7 +1055,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-activity-objects",
-    "description": "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules and rule requests. Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self.",
+    "description": "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules and rule requests. Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked it lists instead what other members asked of the person, open or answered: the rule requests made to them, under their current membership, each naming the member who asked in created_through. A key, an app or an agent has none, and gets email_rule_request in withheld.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listActivityObjects",
@@ -1063,7 +1063,18 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [
       {
-        "description": "Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request. Defaults to every kind the caller can have created (a person's own kinds only for a person).",
+        "default": "created",
+        "description": "created (the default) or asked.",
+        "enum": [
+          "created",
+          "asked"
+        ],
+        "name": "relation",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request. Defaults to every kind the caller can have created (a person's own kinds only for a person). With relation=asked, only email_rule_request, which is also the default.",
         "enum": null,
         "name": "kind",
         "required": false,
@@ -1110,7 +1121,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "properties": {
         "covers": {
           "type": "string",
-          "description": "you: what a person created through any credential of theirs (their dashboard session, their own CLI or app login, apps and agent delegates acting for them, their API keys while theirs, their personal agents). this_credential: what the calling key, app or agent created itself."
+          "description": "you: what a person created through any credential of theirs, or with relation=asked what others asked of them (their dashboard session, their own CLI or app login, apps and agent delegates acting for them, their API keys while theirs, their personal agents). this_credential: what the calling key, app or agent created itself."
         },
         "items": {
           "type": "array",
@@ -1153,24 +1164,24 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "you",
                   "someone_else"
                 ],
-                "description": "you: it is still yours: never transferred, or transferred back to you. someone_else: it was transferred and another person holds it now."
+                "description": "you: it is still yours: never transferred, or transferred back to you. someone_else: it was transferred and another person holds it now, or, with relation=asked, another member made it."
               },
               "created_through": {
                 "type": "object",
                 "properties": {
                   "kind": {
                     "type": "string",
-                    "description": "The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves)."
+                    "description": "The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves). With relation=asked, member: the member who asked."
                   },
                   "id": {
-                    "description": "In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself.",
+                    "description": "In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself. With relation=asked, the user id of the member who asked.",
                     "type": [
                       "string",
                       "null"
                     ]
                   },
                   "name": {
-                    "description": "In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves.",
+                    "description": "In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves. With relation=asked, the name of the member who asked.",
                     "type": [
                       "string",
                       "null"
@@ -1244,7 +1255,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       ]
     },
     "sdkName": "listActivityObjects",
-    "summary": "List what you created",
+    "summary": "List what you created, or what you were asked",
     "tag": "Activity",
     "tagCommand": "activity"
   },

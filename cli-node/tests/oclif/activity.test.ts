@@ -9,10 +9,12 @@ vi.mock("../../src/oclif/api-client.js", async (original) => ({
 }));
 
 import {
+  ActivityAskedCommand,
   ActivityCreatedCommand,
   type ActivityItem,
   ALL_PAGES_LIMIT,
   formatActivityRows,
+  formatAskedRows,
   formatWithheld,
   resumeCommand,
   throughLabel,
@@ -288,5 +290,54 @@ describe("activity created command", () => {
     expect(process.exitCode).toBe(1);
     expect(lines).toEqual([]);
     expect(stderr.join("")).toContain("Not for this credential");
+  });
+});
+
+describe("activity asked command", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    auth.create.mockReset();
+    process.exitCode = undefined;
+  });
+
+  it("is registered beside activity created", () => {
+    expect(COMMANDS["activity:asked"]).toBeDefined();
+  });
+
+  it("lists what was asked of you, naming who asked, and asks the API for exactly that", async () => {
+    const urls = useApi([
+      page(
+        [
+          item({
+            kind: "email_rule_request",
+            name: "Vendor billing",
+            state: "pending",
+            owned_now: "someone_else",
+            created_through: { kind: "member", id: "u-1", name: "Ethan Byrd" },
+          }),
+        ],
+        null,
+      ),
+    ]);
+    const lines: string[] = [];
+    vi.spyOn(ActivityAskedCommand.prototype, "log").mockImplementation(
+      (message?: string) => {
+        lines.push(message ?? "");
+      },
+    );
+    await ActivityAskedCommand.run(["--state", "live"], { root });
+    expect(Object.fromEntries(urls[0]?.searchParams ?? [])).toEqual({
+      relation: "asked",
+      state: "live",
+      limit: "50",
+    });
+    const out = lines.join("\n");
+    expect(out).toMatch(/^STATE\s+ASKED \(UTC\)\s+NAME\s+FROM\s+ID$/m);
+    expect(out).toContain("Vendor billing");
+    expect(out).toContain("Ethan Byrd");
+  });
+
+  it("says so when nobody has asked for anything", () => {
+    expect(formatAskedRows([])).toBe("Nobody has asked you for anything.");
   });
 });

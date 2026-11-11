@@ -54645,11 +54645,56 @@ func (s *ListActivityObjectsOK) SetData(val ListActivityObjectsResult) {
 
 func (*ListActivityObjectsOK) listActivityObjectsRes() {}
 
+// Created (the default): what you created. asked: what other members asked of you, open or answered:
+// rule requests made to you. asked is for a person's own view only, and kind may then name only
+// email_rule_request.
+type ListActivityObjectsRelation string
+
+const (
+	ListActivityObjectsRelationCreated ListActivityObjectsRelation = "created"
+	ListActivityObjectsRelationAsked   ListActivityObjectsRelation = "asked"
+)
+
+// AllValues returns all ListActivityObjectsRelation values.
+func (ListActivityObjectsRelation) AllValues() []ListActivityObjectsRelation {
+	return []ListActivityObjectsRelation{
+		ListActivityObjectsRelationCreated,
+		ListActivityObjectsRelationAsked,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListActivityObjectsRelation) MarshalText() ([]byte, error) {
+	switch s {
+	case ListActivityObjectsRelationCreated:
+		return []byte(s), nil
+	case ListActivityObjectsRelationAsked:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListActivityObjectsRelation) UnmarshalText(data []byte) error {
+	switch ListActivityObjectsRelation(data) {
+	case ListActivityObjectsRelationCreated:
+		*s = ListActivityObjectsRelationCreated
+		return nil
+	case ListActivityObjectsRelationAsked:
+		*s = ListActivityObjectsRelationAsked
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Ref: #/components/schemas/ListActivityObjectsResult
 type ListActivityObjectsResult struct {
-	// You: what a person created through any credential of theirs (their dashboard session, their own
-	// CLI or app login, apps and agent delegates acting for them, their API keys while theirs, their
-	// personal agents). this_credential: what the calling key, app or agent created itself.
+	// You: what a person created through any credential of theirs, or with relation=asked what others
+	// asked of them (their dashboard session, their own CLI or app login, apps and agent delegates
+	// acting for them, their API keys while theirs, their personal agents). this_credential: what the
+	// calling key, app or agent created itself.
 	Covers string                               `json:"covers"`
 	Items  []ListActivityObjectsResultItemsItem `json:"items"`
 	// Kinds left out because the caller could not list them through their own routes. Nothing is said
@@ -54722,7 +54767,7 @@ type ListActivityObjectsResultItemsItem struct {
 	// or when a rule request was decided (accepted, declined or withdrawn); null otherwise.
 	EndedAt NilDateTime `json:"ended_at"`
 	// You: it is still yours: never transferred, or transferred back to you. someone_else: it was
-	// transferred and another person holds it now.
+	// transferred and another person holds it now, or, with relation=asked, another member made it.
 	OwnedNow       ListActivityObjectsResultItemsItemOwnedNow       `json:"owned_now"`
 	CreatedThrough ListActivityObjectsResultItemsItemCreatedThrough `json:"created_through"`
 }
@@ -54809,14 +54854,17 @@ func (s *ListActivityObjectsResultItemsItem) SetCreatedThrough(val ListActivityO
 
 type ListActivityObjectsResultItemsItemCreatedThrough struct {
 	// The kind of credential it was created through: org_key, function_key, connected_key, oauth,
-	// agent_delegate or member (the person themselves).
+	// agent_delegate or member (the person themselves). With relation=asked, member: the member who
+	// asked.
 	Kind string `json:"kind"`
 	// In a person's view, the person's own user id for member, and an API key's id where they may read
 	// their keys (for a person limited to their own keys, only a key they still hold). Null otherwise,
-	// and always null in one credential's view, where it is the calling credential itself.
+	// and always null in one credential's view, where it is the calling credential itself. With
+	// relation=asked, the user id of the member who asked.
 	ID NilString `json:"id"`
 	// In a person's view, what that credential of theirs is called: an app login by its app, an API key
-	// by its name, an agent's key by its address. Null otherwise, and for the person themselves.
+	// by its name, an agent's key by its address. Null otherwise, and for the person themselves. With
+	// relation=asked, the name of the member who asked.
 	Name NilString `json:"name"`
 }
 
@@ -54851,7 +54899,7 @@ func (s *ListActivityObjectsResultItemsItemCreatedThrough) SetName(val NilString
 }
 
 // You: it is still yours: never transferred, or transferred back to you. someone_else: it was
-// transferred and another person holds it now.
+// transferred and another person holds it now, or, with relation=asked, another member made it.
 type ListActivityObjectsResultItemsItemOwnedNow string
 
 const (
@@ -79368,6 +79416,52 @@ func (o OptInviteAgentConnectionOKCacheControl) Get() (v InviteAgentConnectionOK
 
 // Or returns value if set, or given parameter if does not.
 func (o OptInviteAgentConnectionOKCacheControl) Or(d InviteAgentConnectionOKCacheControl) InviteAgentConnectionOKCacheControl {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptListActivityObjectsRelation returns new OptListActivityObjectsRelation with value set to v.
+func NewOptListActivityObjectsRelation(v ListActivityObjectsRelation) OptListActivityObjectsRelation {
+	return OptListActivityObjectsRelation{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListActivityObjectsRelation is optional ListActivityObjectsRelation.
+type OptListActivityObjectsRelation struct {
+	Value ListActivityObjectsRelation
+	Set   bool
+}
+
+// IsSet returns true if OptListActivityObjectsRelation was set.
+func (o OptListActivityObjectsRelation) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListActivityObjectsRelation) Reset() {
+	var v ListActivityObjectsRelation
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListActivityObjectsRelation) SetTo(v ListActivityObjectsRelation) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListActivityObjectsRelation) Get() (v ListActivityObjectsRelation, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListActivityObjectsRelation) Or(d ListActivityObjectsRelation) ListActivityObjectsRelation {
 	if v, ok := o.Get(); ok {
 		return v
 	}

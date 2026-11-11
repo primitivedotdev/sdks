@@ -33824,6 +33824,18 @@ func (s *ListActivityObjectsOK) Validate() error {
 	return nil
 }
 
+func (s ListActivityObjectsRelation) Validate() error {
+	switch s {
+	case "created":
+		return nil
+	case "asked":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
 func (s *ListActivityObjectsResult) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -77663,6 +77675,17 @@ func (s InstallTemplateBodyRuntimeGrant1MailScope) validateKnown() error {
 func (s InviteAgentConnectionOKCacheControl) validateKnown() error {
 	switch s {
 	case "no-store":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s ListActivityObjectsRelation) validateKnown() error {
+	switch s {
+	case "created":
+		return nil
+	case "asked":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)

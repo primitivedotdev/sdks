@@ -1776,7 +1776,10 @@ type Handler interface {
 	// what they created through any credential of theirs, each item naming it, and also their API keys,
 	// personal agents, email rules and rule requests. Each kind is listed only if the caller could list
 	// it through that kind's own route; a kind it could not is named in withheld, with no count. Ids,
-	// names and states only: never a webhook URL or mail content. Needs activity:read_self.
+	// names and states only: never a webhook URL or mail content. Needs activity:read_self. With
+	// relation=asked it lists instead what other members asked of the person, open or answered: the rule
+	// requests made to them, under their current membership, each naming the member who asked in
+	// created_through. A key, an app or an agent has none, and gets email_rule_request in withheld.
 	//
 	// GET /activity/objects
 	ListActivityObjects(ctx context.Context, params ListActivityObjectsParams) (ListActivityObjectsRes, error)

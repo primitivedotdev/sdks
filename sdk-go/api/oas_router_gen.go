@@ -9976,7 +9976,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							switch method {
 							case "GET":
 								r.name = ListActivityObjectsOperation
-								r.summary = "List what you created"
+								r.summary = "List what you created, or what you were asked"
 								r.operationID = "listActivityObjects"
 								r.operationGroup = ""
 								r.pathPattern = "/activity/objects"
