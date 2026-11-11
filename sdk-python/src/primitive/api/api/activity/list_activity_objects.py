@@ -9,6 +9,7 @@ from ...types import Response, UNSET
 from ... import errors
 
 from ...models.error_response import ErrorResponse
+from ...models.list_activity_objects_relation import ListActivityObjectsRelation
 from ...models.list_activity_objects_response_200 import ListActivityObjectsResponse200
 from ...models.list_activity_objects_state import ListActivityObjectsState
 from ...types import UNSET, Unset
@@ -18,6 +19,7 @@ from typing import cast
 
 def _get_kwargs(
     *,
+    relation: ListActivityObjectsRelation | Unset = ListActivityObjectsRelation.CREATED,
     kind: str | Unset = UNSET,
     state: ListActivityObjectsState | Unset = ListActivityObjectsState.ALL,
     limit: int | Unset = 50,
@@ -29,6 +31,12 @@ def _get_kwargs(
     
 
     params: dict[str, Any] = {}
+
+    json_relation: str | Unset = UNSET
+    if not isinstance(relation, Unset):
+        json_relation = relation.value
+
+    params["relation"] = json_relation
 
     params["kind"] = kind
 
@@ -111,13 +119,14 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
+    relation: ListActivityObjectsRelation | Unset = ListActivityObjectsRelation.CREATED,
     kind: str | Unset = UNSET,
     state: ListActivityObjectsState | Unset = ListActivityObjectsState.ALL,
     limit: int | Unset = 50,
     cursor: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListActivityObjectsResponse200]:
-    """ List what you created
+    """ List what you created, or what you were asked
 
      The objects the caller created, newest first, each with where it stands now, including ones since
     disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers,
@@ -127,9 +136,16 @@ def sync_detailed(
     they created through any credential of theirs, each item naming it, and also their API keys,
     personal agents, email rules and rule requests. Each kind is listed only if the caller could list it
     through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names
-    and states only: never a webhook URL or mail content. Needs activity:read_self.
+    and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked
+    it lists instead what other members asked of the person, open or answered: the rule requests made to
+    them, under their current membership, each naming the member who asked in created_through. A key, an
+    app or an agent has none, and gets email_rule_request in withheld.
 
     Args:
+        relation (ListActivityObjectsRelation | Unset): created (the default): what you created.
+            asked: what other members asked of you, open or answered: rule requests made to you. asked
+            is for a person's own view only, and kind may then name only email_rule_request. Default:
+            ListActivityObjectsRelation.CREATED.
         kind (str | Unset):
         state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.
         limit (int | Unset):  Default: 50.
@@ -145,7 +161,8 @@ def sync_detailed(
 
 
     kwargs = _get_kwargs(
-        kind=kind,
+        relation=relation,
+kind=kind,
 state=state,
 limit=limit,
 cursor=cursor,
@@ -161,13 +178,14 @@ cursor=cursor,
 def sync(
     *,
     client: AuthenticatedClient | Client,
+    relation: ListActivityObjectsRelation | Unset = ListActivityObjectsRelation.CREATED,
     kind: str | Unset = UNSET,
     state: ListActivityObjectsState | Unset = ListActivityObjectsState.ALL,
     limit: int | Unset = 50,
     cursor: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListActivityObjectsResponse200 | None:
-    """ List what you created
+    """ List what you created, or what you were asked
 
      The objects the caller created, newest first, each with where it stands now, including ones since
     disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers,
@@ -177,9 +195,16 @@ def sync(
     they created through any credential of theirs, each item naming it, and also their API keys,
     personal agents, email rules and rule requests. Each kind is listed only if the caller could list it
     through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names
-    and states only: never a webhook URL or mail content. Needs activity:read_self.
+    and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked
+    it lists instead what other members asked of the person, open or answered: the rule requests made to
+    them, under their current membership, each naming the member who asked in created_through. A key, an
+    app or an agent has none, and gets email_rule_request in withheld.
 
     Args:
+        relation (ListActivityObjectsRelation | Unset): created (the default): what you created.
+            asked: what other members asked of you, open or answered: rule requests made to you. asked
+            is for a person's own view only, and kind may then name only email_rule_request. Default:
+            ListActivityObjectsRelation.CREATED.
         kind (str | Unset):
         state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.
         limit (int | Unset):  Default: 50.
@@ -196,6 +221,7 @@ def sync(
 
     return sync_detailed(
         client=client,
+relation=relation,
 kind=kind,
 state=state,
 limit=limit,
@@ -206,13 +232,14 @@ cursor=cursor,
 async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
+    relation: ListActivityObjectsRelation | Unset = ListActivityObjectsRelation.CREATED,
     kind: str | Unset = UNSET,
     state: ListActivityObjectsState | Unset = ListActivityObjectsState.ALL,
     limit: int | Unset = 50,
     cursor: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListActivityObjectsResponse200]:
-    """ List what you created
+    """ List what you created, or what you were asked
 
      The objects the caller created, newest first, each with where it stands now, including ones since
     disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers,
@@ -222,9 +249,16 @@ async def asyncio_detailed(
     they created through any credential of theirs, each item naming it, and also their API keys,
     personal agents, email rules and rule requests. Each kind is listed only if the caller could list it
     through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names
-    and states only: never a webhook URL or mail content. Needs activity:read_self.
+    and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked
+    it lists instead what other members asked of the person, open or answered: the rule requests made to
+    them, under their current membership, each naming the member who asked in created_through. A key, an
+    app or an agent has none, and gets email_rule_request in withheld.
 
     Args:
+        relation (ListActivityObjectsRelation | Unset): created (the default): what you created.
+            asked: what other members asked of you, open or answered: rule requests made to you. asked
+            is for a person's own view only, and kind may then name only email_rule_request. Default:
+            ListActivityObjectsRelation.CREATED.
         kind (str | Unset):
         state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.
         limit (int | Unset):  Default: 50.
@@ -240,7 +274,8 @@ async def asyncio_detailed(
 
 
     kwargs = _get_kwargs(
-        kind=kind,
+        relation=relation,
+kind=kind,
 state=state,
 limit=limit,
 cursor=cursor,
@@ -256,13 +291,14 @@ cursor=cursor,
 async def asyncio(
     *,
     client: AuthenticatedClient | Client,
+    relation: ListActivityObjectsRelation | Unset = ListActivityObjectsRelation.CREATED,
     kind: str | Unset = UNSET,
     state: ListActivityObjectsState | Unset = ListActivityObjectsState.ALL,
     limit: int | Unset = 50,
     cursor: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListActivityObjectsResponse200 | None:
-    """ List what you created
+    """ List what you created, or what you were asked
 
      The objects the caller created, newest first, each with where it stands now, including ones since
     disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers,
@@ -272,9 +308,16 @@ async def asyncio(
     they created through any credential of theirs, each item naming it, and also their API keys,
     personal agents, email rules and rule requests. Each kind is listed only if the caller could list it
     through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names
-    and states only: never a webhook URL or mail content. Needs activity:read_self.
+    and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked
+    it lists instead what other members asked of the person, open or answered: the rule requests made to
+    them, under their current membership, each naming the member who asked in created_through. A key, an
+    app or an agent has none, and gets email_rule_request in withheld.
 
     Args:
+        relation (ListActivityObjectsRelation | Unset): created (the default): what you created.
+            asked: what other members asked of you, open or answered: rule requests made to you. asked
+            is for a person's own view only, and kind may then name only email_rule_request. Default:
+            ListActivityObjectsRelation.CREATED.
         kind (str | Unset):
         state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.
         limit (int | Unset):  Default: 50.
@@ -291,6 +334,7 @@ async def asyncio(
 
     return (await asyncio_detailed(
         client=client,
+relation=relation,
 kind=kind,
 state=state,
 limit=limit,

@@ -20,6 +20,17 @@ var EmailEventTypes = []string{
 	"email.dmarc_failure",
 }
 
+// EmailRuleRequestEventTypes are the four opt-in email_rule_request.* events
+// (subject = a rule request one member made to another). Each goes to the
+// person who did not act, and an endpoint receives them only when its
+// rules.event_types lists them.
+var EmailRuleRequestEventTypes = []string{
+	"email_rule_request.created",
+	"email_rule_request.accepted",
+	"email_rule_request.declined",
+	"email_rule_request.withdrawn",
+}
+
 // InteractionEventTypes are the interaction step events (subject = an
 // interaction), named interaction.<protocolShort>.<suffix>.
 var InteractionEventTypes = []string{
@@ -31,12 +42,13 @@ var InteractionEventTypes = []string{
 }
 
 // WebhookEventTypes is the full enumerated catalog of every current webhook
-// event type: the five email.*, the four opt-in sent_email.*, and every
-// interaction.<protocol>.<suffix>.
+// event type: the five email.*, the four opt-in sent_email.*, the four opt-in
+// email_rule_request.*, and every interaction.<protocol>.<suffix>.
 var WebhookEventTypes = func() []string {
-	all := make([]string, 0, len(EmailEventTypes)+len(SentEmailEventTypes)+len(InteractionEventTypes))
+	all := make([]string, 0, len(EmailEventTypes)+len(SentEmailEventTypes)+len(EmailRuleRequestEventTypes)+len(InteractionEventTypes))
 	all = append(all, EmailEventTypes...)
 	all = append(all, SentEmailEventTypes...)
+	all = append(all, EmailRuleRequestEventTypes...)
 	all = append(all, InteractionEventTypes...)
 	return all
 }()

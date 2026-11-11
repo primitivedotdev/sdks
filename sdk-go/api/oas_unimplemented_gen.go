@@ -19,10 +19,16 @@ var _ Handler = UnimplementedHandler{}
 // from now on with the member who asked. Send no body to accept it as asked, or change it first with
 // english and tree together (and an explanation, or the server writes one). Because this gives your
 // mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and
-// agent tokens are refused. Also needs mail:share_own (sharing your own mail through email rules,
-// which only shows it and never sends): a role without it is refused, whether or not it can send.
-// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-// narrowed token), and the email rules feature.
+// agent tokens are refused. Test it before accepting: on your mail with POST /v1/email-rules/test
+// and the request's tree, and on mail that has not arrived. Mail already received shows only what
+// has arrived. To see what the rule would do with an email that has not, such as one they would
+// never want shared, the member asked can pass the request's tree to POST
+// /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules
+// test-email-rule-on-sample --body-file sample.json) with an email they make up. Nothing is stored,
+// and it needs no access beyond testing a rule of their own. Also needs mail:share_own (sharing your
+// own mail through email rules, which only shows it and never sends): a role without it is refused,
+// whether or not it can send. Needs mail:read, a member's own credential with their full access (not
+// an API key, agent key or narrowed token), and the email rules feature.
 //
 // POST /email-rule-requests/{id}/accept
 func (UnimplementedHandler) AcceptEmailRuleRequest(ctx context.Context, req OptAcceptEmailRuleRequestRequest, params AcceptEmailRuleRequestParams) (r AcceptEmailRuleRequestRes, _ error) {
@@ -464,12 +470,13 @@ func (UnimplementedHandler) CreateEmailRule(ctx context.Context, req *CreateEmai
 // a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified
 // work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated
 // and nothing is shared until they accept, and they may change the rule first; they see the request
-// and can preview what it matches in their own mail. You may have at most 5 pending requests to one
-// member and 50 in all. If you can list members (members:read), the answer also says whether they
-// can accept it under their role (target_can_accept), and if not, why (target_warning); the request
-// is sent either way. To find out before asking, use POST /v1/email-rule-requests/target-check.
-// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-// narrowed token), and the email rules feature.
+// and can preview what it matches in their own mail. A message (up to 500 characters) tells them why
+// you are asking; they see it with the request, and it cannot be changed later. You may have at most
+// 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer
+// also says whether they can accept it under their role (target_can_accept), and if not, why
+// (target_warning); the request is sent either way. To find out before asking, use POST
+// /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full
+// access (not an API key, agent key or narrowed token), and the email rules feature.
 //
 // POST /email-rule-requests
 func (UnimplementedHandler) CreateEmailRuleRequest(ctx context.Context, req *CreateEmailRuleRequestRequest, params CreateEmailRuleRequestParams) (r CreateEmailRuleRequestRes, _ error) {
@@ -774,12 +781,13 @@ func (UnimplementedHandler) DecideSuspension(ctx context.Context, req *DecideSus
 
 // DeclineEmailRuleRequest implements declineEmailRuleRequest operation.
 //
-// Declines a pending request made to you. Nothing is written but the decision. Needs mail:read, a
-// member's own credential with their full access (not an API key, agent key or narrowed token), and
-// the email rules feature.
+// Declines a pending request made to you. Nothing is written but the decision and, if you give one,
+// its reason (reason, up to 500 characters), which the member who asked sees with the request. Needs
+// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+// token), and the email rules feature.
 //
 // POST /email-rule-requests/{id}/decline
-func (UnimplementedHandler) DeclineEmailRuleRequest(ctx context.Context, params DeclineEmailRuleRequestParams) (r DeclineEmailRuleRequestRes, _ error) {
+func (UnimplementedHandler) DeclineEmailRuleRequest(ctx context.Context, req OptDeclineEmailRuleRequestRequest, params DeclineEmailRuleRequestParams) (r DeclineEmailRuleRequestRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1568,8 +1576,15 @@ func (UnimplementedHandler) GetEmailRule(ctx context.Context, params GetEmailRul
 //
 // A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a
 // member. A request is visible to the member who made it, the member it was made to, and the
-// organization's owners and admins. Needs mail:read, a member's own credential with their full
-// access (not an API key, agent key or narrowed token), and the email rules feature.
+// organization's owners and admins. The member asked can try the rule as proposed before answering:
+// on mail they have, with POST /v1/email-rules/test and the request's tree, and on mail that has not
+// arrived. Mail already received shows only what has arrived. To see what the rule would do with an
+// email that has not, such as one they would never want shared, the member asked can pass the
+// request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI,
+// primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email they make
+// up. Nothing is stored, and it needs no access beyond testing a rule of their own. Needs mail:read,
+// a member's own credential with their full access (not an API key, agent key or narrowed token),
+// and the email rules feature.
 //
 // GET /email-rule-requests/{id}
 func (UnimplementedHandler) GetEmailRuleRequest(ctx context.Context, params GetEmailRuleRequestParams) (r GetEmailRuleRequestRes, _ error) {
@@ -2251,7 +2266,10 @@ func (UnimplementedHandler) LeaveOrganization(ctx context.Context, params LeaveO
 // what they created through any credential of theirs, each item naming it, and also their API keys,
 // personal agents, email rules and rule requests. Each kind is listed only if the caller could list
 // it through that kind's own route; a kind it could not is named in withheld, with no count. Ids,
-// names and states only: never a webhook URL or mail content. Needs activity:read_self.
+// names and states only: never a webhook URL or mail content. Needs activity:read_self. With
+// relation=asked it lists instead what other members asked of the person, open or answered: the rule
+// requests made to them, under their current membership, each naming the member who asked in
+// created_through. A key, an app or an agent has none, and gets email_rule_request in withheld.
 //
 // GET /activity/objects
 func (UnimplementedHandler) ListActivityObjects(ctx context.Context, params ListActivityObjectsParams) (r ListActivityObjectsRes, _ error) {

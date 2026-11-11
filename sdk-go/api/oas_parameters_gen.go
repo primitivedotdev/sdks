@@ -14916,10 +14916,13 @@ func decodeLeaveOrganizationParams(args [0]string, argsEscaped bool, r *http.Req
 
 // ListActivityObjectsParams is parameters of listActivityObjects operation.
 type ListActivityObjectsParams struct {
+	// Created (the default) or asked.
+	Relation OptListActivityObjectsRelation `json:",omitempty,omitzero"`
 	// Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription,
 	// recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key,
 	// agent_connection, email_rule, email_rule_request. Defaults to every kind the caller can have
-	// created (a person's own kinds only for a person).
+	// created (a person's own kinds only for a person). With relation=asked, only email_rule_request,
+	// which is also the default.
 	Kind OptString `json:",omitempty,omitzero"`
 	// All (the default), live (still there, enabled or not) or ended (deleted, replaced or finished).
 	State OptListActivityObjectsState `json:",omitempty,omitzero"`
@@ -14930,6 +14933,15 @@ type ListActivityObjectsParams struct {
 }
 
 func unpackListActivityObjectsParams(packed middleware.Parameters) (params ListActivityObjectsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "relation",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Relation = v.(OptListActivityObjectsRelation)
+		}
+	}
 	{
 		key := middleware.ParameterKey{
 			Name: "kind",
@@ -14971,6 +14983,67 @@ func unpackListActivityObjectsParams(packed middleware.Parameters) (params ListA
 
 func decodeListActivityObjectsParams(args [0]string, argsEscaped bool, r *http.Request) (params ListActivityObjectsParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
+	// Set default value for query: relation.
+	{
+		val := ListActivityObjectsRelation("created")
+		params.Relation.SetTo(val)
+	}
+	// Decode query: relation.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "relation",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotRelationVal ListActivityObjectsRelation
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotRelationVal = ListActivityObjectsRelation(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Relation.SetTo(paramsDotRelationVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Relation.Get(); ok {
+					if err := func() error {
+						if err := validateParameter(value); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "relation",
+			In:   "query",
+			Err:  err,
+		}
+	}
 	// Decode query: kind.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{

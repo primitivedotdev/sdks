@@ -12867,6 +12867,9 @@ type CreateEmailRuleRequestRequest struct {
 	TargetEmail OptString `json:"target_email"`
 	// A short name for the rule.
 	Name string `json:"name"`
+	// A short note to the member asked about why you are asking, up to 500 characters; null or absent
+	// for none. They see it with the request; it cannot be changed later.
+	Message OptNilString `json:"message"`
 	// The plain-English description the rule was compiled from.
 	English string `json:"english"`
 	// The rule tree. Checked against the column contract on save.
@@ -12898,6 +12901,11 @@ func (s *CreateEmailRuleRequestRequest) GetTargetEmail() OptString {
 // GetName returns the value of Name.
 func (s *CreateEmailRuleRequestRequest) GetName() string {
 	return s.Name
+}
+
+// GetMessage returns the value of Message.
+func (s *CreateEmailRuleRequestRequest) GetMessage() OptNilString {
+	return s.Message
 }
 
 // GetEnglish returns the value of English.
@@ -12943,6 +12951,11 @@ func (s *CreateEmailRuleRequestRequest) SetTargetEmail(val OptString) {
 // SetName sets the value of Name.
 func (s *CreateEmailRuleRequestRequest) SetName(val string) {
 	s.Name = val
+}
+
+// SetMessage sets the value of Message.
+func (s *CreateEmailRuleRequestRequest) SetMessage(val OptNilString) {
+	s.Message = val
 }
 
 // SetEnglish sets the value of English.
@@ -13000,6 +13013,10 @@ type CreateEmailRuleRequestResult struct {
 	IsTarget           bool      `json:"is_target"`
 	// The share accepting created, while it exists.
 	ShareID NilUUID `json:"share_id"`
+	// What the member asking wrote about why; null when they wrote nothing.
+	Message OptNilString `json:"message"`
+	// Why the member asked declined it; null unless they gave a reason when declining.
+	DeclineReason OptNilString `json:"decline_reason"`
 	// Whether the member asked can accept it now under their role. Null unless you can list members and
 	// their roles (members:read), or when it could not be read.
 	TargetCanAccept OptNilBool `json:"target_can_accept"`
@@ -13106,6 +13123,16 @@ func (s *CreateEmailRuleRequestResult) GetIsTarget() bool {
 // GetShareID returns the value of ShareID.
 func (s *CreateEmailRuleRequestResult) GetShareID() NilUUID {
 	return s.ShareID
+}
+
+// GetMessage returns the value of Message.
+func (s *CreateEmailRuleRequestResult) GetMessage() OptNilString {
+	return s.Message
+}
+
+// GetDeclineReason returns the value of DeclineReason.
+func (s *CreateEmailRuleRequestResult) GetDeclineReason() OptNilString {
+	return s.DeclineReason
 }
 
 // GetTargetCanAccept returns the value of TargetCanAccept.
@@ -13216,6 +13243,16 @@ func (s *CreateEmailRuleRequestResult) SetIsTarget(val bool) {
 // SetShareID sets the value of ShareID.
 func (s *CreateEmailRuleRequestResult) SetShareID(val NilUUID) {
 	s.ShareID = val
+}
+
+// SetMessage sets the value of Message.
+func (s *CreateEmailRuleRequestResult) SetMessage(val OptNilString) {
+	s.Message = val
+}
+
+// SetDeclineReason sets the value of DeclineReason.
+func (s *CreateEmailRuleRequestResult) SetDeclineReason(val OptNilString) {
+	s.DeclineReason = val
 }
 
 // SetTargetCanAccept sets the value of TargetCanAccept.
@@ -23765,6 +23802,10 @@ type DecideSuspensionUnauthorized ErrorResponseHeaders
 
 func (*DecideSuspensionUnauthorized) decideSuspensionRes() {}
 
+type DeclineEmailRuleRequestBadRequest ErrorResponse
+
+func (*DeclineEmailRuleRequestBadRequest) declineEmailRuleRequestRes() {}
+
 type DeclineEmailRuleRequestConflict ErrorResponse
 
 func (*DeclineEmailRuleRequestConflict) declineEmailRuleRequestRes() {}
@@ -23804,6 +23845,23 @@ func (s *DeclineEmailRuleRequestOK) SetData(val EmailRuleRequest) {
 }
 
 func (*DeclineEmailRuleRequestOK) declineEmailRuleRequestRes() {}
+
+// Ref: #/components/schemas/DeclineEmailRuleRequestRequest
+type DeclineEmailRuleRequestRequest struct {
+	// Why you are declining, up to 500 characters; null or absent for none. The member who asked sees it
+	// with the request.
+	Reason OptNilString `json:"reason"`
+}
+
+// GetReason returns the value of Reason.
+func (s *DeclineEmailRuleRequestRequest) GetReason() OptNilString {
+	return s.Reason
+}
+
+// SetReason sets the value of Reason.
+func (s *DeclineEmailRuleRequestRequest) SetReason(val OptNilString) {
+	s.Reason = val
+}
 
 type DeclineEmailRuleRequestTooManyRequests ErrorResponseHeaders
 
@@ -31802,6 +31860,10 @@ type EmailRuleRequest struct {
 	IsTarget           bool      `json:"is_target"`
 	// The share accepting created, while it exists.
 	ShareID NilUUID `json:"share_id"`
+	// What the member asking wrote about why; null when they wrote nothing.
+	Message OptNilString `json:"message"`
+	// Why the member asked declined it; null unless they gave a reason when declining.
+	DeclineReason OptNilString `json:"decline_reason"`
 }
 
 // GetID returns the value of ID.
@@ -31904,6 +31966,16 @@ func (s *EmailRuleRequest) GetShareID() NilUUID {
 	return s.ShareID
 }
 
+// GetMessage returns the value of Message.
+func (s *EmailRuleRequest) GetMessage() OptNilString {
+	return s.Message
+}
+
+// GetDeclineReason returns the value of DeclineReason.
+func (s *EmailRuleRequest) GetDeclineReason() OptNilString {
+	return s.DeclineReason
+}
+
 // SetID sets the value of ID.
 func (s *EmailRuleRequest) SetID(val uuid.UUID) {
 	s.ID = val
@@ -32002,6 +32074,16 @@ func (s *EmailRuleRequest) SetIsTarget(val bool) {
 // SetShareID sets the value of ShareID.
 func (s *EmailRuleRequest) SetShareID(val NilUUID) {
 	s.ShareID = val
+}
+
+// SetMessage sets the value of Message.
+func (s *EmailRuleRequest) SetMessage(val OptNilString) {
+	s.Message = val
+}
+
+// SetDeclineReason sets the value of DeclineReason.
+func (s *EmailRuleRequest) SetDeclineReason(val OptNilString) {
+	s.DeclineReason = val
 }
 
 // Session: the proposer's own session; oauth: an OAuth or CLI token acting for them.
@@ -54645,11 +54727,56 @@ func (s *ListActivityObjectsOK) SetData(val ListActivityObjectsResult) {
 
 func (*ListActivityObjectsOK) listActivityObjectsRes() {}
 
+// Created (the default): what you created. asked: what other members asked of you, open or answered:
+// rule requests made to you. asked is for a person's own view only, and kind may then name only
+// email_rule_request.
+type ListActivityObjectsRelation string
+
+const (
+	ListActivityObjectsRelationCreated ListActivityObjectsRelation = "created"
+	ListActivityObjectsRelationAsked   ListActivityObjectsRelation = "asked"
+)
+
+// AllValues returns all ListActivityObjectsRelation values.
+func (ListActivityObjectsRelation) AllValues() []ListActivityObjectsRelation {
+	return []ListActivityObjectsRelation{
+		ListActivityObjectsRelationCreated,
+		ListActivityObjectsRelationAsked,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListActivityObjectsRelation) MarshalText() ([]byte, error) {
+	switch s {
+	case ListActivityObjectsRelationCreated:
+		return []byte(s), nil
+	case ListActivityObjectsRelationAsked:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListActivityObjectsRelation) UnmarshalText(data []byte) error {
+	switch ListActivityObjectsRelation(data) {
+	case ListActivityObjectsRelationCreated:
+		*s = ListActivityObjectsRelationCreated
+		return nil
+	case ListActivityObjectsRelationAsked:
+		*s = ListActivityObjectsRelationAsked
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Ref: #/components/schemas/ListActivityObjectsResult
 type ListActivityObjectsResult struct {
-	// You: what a person created through any credential of theirs (their dashboard session, their own
-	// CLI or app login, apps and agent delegates acting for them, their API keys while theirs, their
-	// personal agents). this_credential: what the calling key, app or agent created itself.
+	// You: what a person created through any credential of theirs, or with relation=asked what others
+	// asked of them (their dashboard session, their own CLI or app login, apps and agent delegates
+	// acting for them, their API keys while theirs, their personal agents). this_credential: what the
+	// calling key, app or agent created itself.
 	Covers string                               `json:"covers"`
 	Items  []ListActivityObjectsResultItemsItem `json:"items"`
 	// Kinds left out because the caller could not list them through their own routes. Nothing is said
@@ -54722,7 +54849,7 @@ type ListActivityObjectsResultItemsItem struct {
 	// or when a rule request was decided (accepted, declined or withdrawn); null otherwise.
 	EndedAt NilDateTime `json:"ended_at"`
 	// You: it is still yours: never transferred, or transferred back to you. someone_else: it was
-	// transferred and another person holds it now.
+	// transferred and another person holds it now, or, with relation=asked, another member made it.
 	OwnedNow       ListActivityObjectsResultItemsItemOwnedNow       `json:"owned_now"`
 	CreatedThrough ListActivityObjectsResultItemsItemCreatedThrough `json:"created_through"`
 }
@@ -54809,14 +54936,17 @@ func (s *ListActivityObjectsResultItemsItem) SetCreatedThrough(val ListActivityO
 
 type ListActivityObjectsResultItemsItemCreatedThrough struct {
 	// The kind of credential it was created through: org_key, function_key, connected_key, oauth,
-	// agent_delegate or member (the person themselves).
+	// agent_delegate or member (the person themselves). With relation=asked, member: the member who
+	// asked.
 	Kind string `json:"kind"`
 	// In a person's view, the person's own user id for member, and an API key's id where they may read
 	// their keys (for a person limited to their own keys, only a key they still hold). Null otherwise,
-	// and always null in one credential's view, where it is the calling credential itself.
+	// and always null in one credential's view, where it is the calling credential itself. With
+	// relation=asked, the user id of the member who asked.
 	ID NilString `json:"id"`
 	// In a person's view, what that credential of theirs is called: an app login by its app, an API key
-	// by its name, an agent's key by its address. Null otherwise, and for the person themselves.
+	// by its name, an agent's key by its address. Null otherwise, and for the person themselves. With
+	// relation=asked, the name of the member who asked.
 	Name NilString `json:"name"`
 }
 
@@ -54851,7 +54981,7 @@ func (s *ListActivityObjectsResultItemsItemCreatedThrough) SetName(val NilString
 }
 
 // You: it is still yours: never transferred, or transferred back to you. someone_else: it was
-// transferred and another person holds it now.
+// transferred and another person holds it now, or, with relation=asked, another member made it.
 type ListActivityObjectsResultItemsItemOwnedNow string
 
 const (
@@ -75878,6 +76008,52 @@ func (o OptDecideSuspensionResultFunctionStopped) Or(d DecideSuspensionResultFun
 	return d
 }
 
+// NewOptDeclineEmailRuleRequestRequest returns new OptDeclineEmailRuleRequestRequest with value set to v.
+func NewOptDeclineEmailRuleRequestRequest(v DeclineEmailRuleRequestRequest) OptDeclineEmailRuleRequestRequest {
+	return OptDeclineEmailRuleRequestRequest{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptDeclineEmailRuleRequestRequest is optional DeclineEmailRuleRequestRequest.
+type OptDeclineEmailRuleRequestRequest struct {
+	Value DeclineEmailRuleRequestRequest
+	Set   bool
+}
+
+// IsSet returns true if OptDeclineEmailRuleRequestRequest was set.
+func (o OptDeclineEmailRuleRequestRequest) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptDeclineEmailRuleRequestRequest) Reset() {
+	var v DeclineEmailRuleRequestRequest
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptDeclineEmailRuleRequestRequest) SetTo(v DeclineEmailRuleRequestRequest) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptDeclineEmailRuleRequestRequest) Get() (v DeclineEmailRuleRequestRequest, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptDeclineEmailRuleRequestRequest) Or(d DeclineEmailRuleRequestRequest) DeclineEmailRuleRequestRequest {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptDeleteAddressNoteOKCacheControl returns new OptDeleteAddressNoteOKCacheControl with value set to v.
 func NewOptDeleteAddressNoteOKCacheControl(v DeleteAddressNoteOKCacheControl) OptDeleteAddressNoteOKCacheControl {
 	return OptDeleteAddressNoteOKCacheControl{
@@ -79368,6 +79544,52 @@ func (o OptInviteAgentConnectionOKCacheControl) Get() (v InviteAgentConnectionOK
 
 // Or returns value if set, or given parameter if does not.
 func (o OptInviteAgentConnectionOKCacheControl) Or(d InviteAgentConnectionOKCacheControl) InviteAgentConnectionOKCacheControl {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptListActivityObjectsRelation returns new OptListActivityObjectsRelation with value set to v.
+func NewOptListActivityObjectsRelation(v ListActivityObjectsRelation) OptListActivityObjectsRelation {
+	return OptListActivityObjectsRelation{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListActivityObjectsRelation is optional ListActivityObjectsRelation.
+type OptListActivityObjectsRelation struct {
+	Value ListActivityObjectsRelation
+	Set   bool
+}
+
+// IsSet returns true if OptListActivityObjectsRelation was set.
+func (o OptListActivityObjectsRelation) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListActivityObjectsRelation) Reset() {
+	var v ListActivityObjectsRelation
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListActivityObjectsRelation) SetTo(v ListActivityObjectsRelation) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListActivityObjectsRelation) Get() (v ListActivityObjectsRelation, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListActivityObjectsRelation) Or(d ListActivityObjectsRelation) ListActivityObjectsRelation {
 	if v, ok := o.Get(); ok {
 		return v
 	}

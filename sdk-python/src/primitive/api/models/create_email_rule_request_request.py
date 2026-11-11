@@ -33,6 +33,8 @@ class CreateEmailRuleRequestRequest:
             target_email (str | Unset): The member asked for the rule, by their member mailbox address, or by their verified
                 work email if you can list members. Give target_user_id or target_email, not both. Looking members up by address
                 is limited to 30 an hour, and unless you can list members the answer does not say who it was.
+            message (None | str | Unset): A short note to the member asked about why you are asking, up to 500 characters;
+                null or absent for none. They see it with the request; it cannot be changed later.
             explanation (str | Unset): What the rule matches, in plain English. Left out, the server writes one from the
                 tree.
             assumptions (list[str] | Unset): Readings chosen where the description was open to more than one, as the compile
@@ -49,6 +51,7 @@ class CreateEmailRuleRequestRequest:
     tree: EmailRuleTreeInput
     target_user_id: UUID | Unset = UNSET
     target_email: str | Unset = UNSET
+    message: None | str | Unset = UNSET
     explanation: str | Unset = UNSET
     assumptions: list[str] | Unset = UNSET
     warnings: list[str] | Unset = UNSET
@@ -71,6 +74,12 @@ class CreateEmailRuleRequestRequest:
             target_user_id = str(self.target_user_id)
 
         target_email = self.target_email
+
+        message: None | str | Unset
+        if isinstance(self.message, Unset):
+            message = UNSET
+        else:
+            message = self.message
 
         explanation = self.explanation
 
@@ -100,6 +109,8 @@ class CreateEmailRuleRequestRequest:
             field_dict["target_user_id"] = target_user_id
         if target_email is not UNSET:
             field_dict["target_email"] = target_email
+        if message is not UNSET:
+            field_dict["message"] = message
         if explanation is not UNSET:
             field_dict["explanation"] = explanation
         if assumptions is not UNSET:
@@ -138,6 +149,16 @@ class CreateEmailRuleRequestRequest:
 
         target_email = d.pop("target_email", UNSET)
 
+        def _parse_message(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        message = _parse_message(d.pop("message", UNSET))
+
+
         explanation = d.pop("explanation", UNSET)
 
         assumptions = cast(list[str], d.pop("assumptions", UNSET))
@@ -154,6 +175,7 @@ class CreateEmailRuleRequestRequest:
             tree=tree,
             target_user_id=target_user_id,
             target_email=target_email,
+            message=message,
             explanation=explanation,
             assumptions=assumptions,
             warnings=warnings,

@@ -263,7 +263,7 @@ var (
 		"POST": "Authorization,Content-Type,Idempotency-Key",
 	}
 	rn80AllowedHeaders = map[string]string{
-		"POST": "Authorization,Idempotency-Key",
+		"POST": "Authorization,Content-Type,Idempotency-Key",
 	}
 	rn398AllowedHeaders = map[string]string{
 		"POST": "Authorization,Idempotency-Key",
@@ -3692,7 +3692,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 													s.notAllowed(w, r, notAllowedParams{
 														allowedMethods: "POST",
 														allowedHeaders: rn80AllowedHeaders,
-														acceptPost:     "",
+														acceptPost:     "application/json",
 														acceptPatch:    "",
 													})
 												}
@@ -9976,7 +9976,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							switch method {
 							case "GET":
 								r.name = ListActivityObjectsOperation
-								r.summary = "List what you created"
+								r.summary = "List what you created, or what you were asked"
 								r.operationID = "listActivityObjects"
 								r.operationGroup = ""
 								r.pathPattern = "/activity/objects"

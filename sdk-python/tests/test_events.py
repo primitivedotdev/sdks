@@ -6,6 +6,7 @@ import json
 
 from primitive import (
     EMAIL_EVENT_TYPES,
+    EMAIL_RULE_REQUEST_EVENT_TYPES,
     INTERACTION_EVENT_TYPES,
     WEBHOOK_EVENT_TYPES,
     handle_webhook_event,
@@ -59,6 +60,26 @@ def test_catalog_contains_email_sent_email_and_interaction_events() -> None:
     assert "sent_email.delivered" in WEBHOOK_EVENT_TYPES
     assert "email.bounced" in EMAIL_EVENT_TYPES
     assert "interaction.ack.expired" in INTERACTION_EVENT_TYPES
+
+
+def test_catalog_lists_the_opt_in_rule_request_events() -> None:
+    assert EMAIL_RULE_REQUEST_EVENT_TYPES == (
+        "email_rule_request.created",
+        "email_rule_request.accepted",
+        "email_rule_request.declined",
+        "email_rule_request.withdrawn",
+    )
+    for event_type in EMAIL_RULE_REQUEST_EVENT_TYPES:
+        assert is_known_webhook_event_type(event_type)
+    event = parse_webhook_event(
+        {
+            "id": "evt_1",
+            "type": "email_rule_request.created",
+            "email_rule_request": {"id": "req_1"},
+        },
+        "email_rule_request.created",
+    )
+    assert _event_name(event) == "email_rule_request.created"
 
 
 def test_catalog_no_longer_lists_payment_events() -> None:

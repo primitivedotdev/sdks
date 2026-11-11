@@ -24,12 +24,14 @@ class ListActivityObjectsResultItemsItemCreatedThrough:
     """ 
         Attributes:
             kind (str): The kind of credential it was created through: org_key, function_key, connected_key, oauth,
-                agent_delegate or member (the person themselves).
+                agent_delegate or member (the person themselves). With relation=asked, member: the member who asked.
             id (None | str): In a person's view, the person's own user id for member, and an API key's id where they may
                 read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always
-                null in one credential's view, where it is the calling credential itself.
+                null in one credential's view, where it is the calling credential itself. With relation=asked, the user id of
+                the member who asked.
             name (None | str): In a person's view, what that credential of theirs is called: an app login by its app, an API
-                key by its name, an agent's key by its address. Null otherwise, and for the person themselves.
+                key by its name, an agent's key by its address. Null otherwise, and for the person themselves. With
+                relation=asked, the name of the member who asked.
      """
 
     kind: str

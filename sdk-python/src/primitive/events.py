@@ -31,6 +31,16 @@ SENT_EMAIL_EVENT_TYPES: tuple[str, ...] = (
     "sent_email.completed",
 )
 
+#: The four opt-in ``email_rule_request.*`` events (subject = a rule request
+#: one member made to another). Each goes to the person who did not act, and
+#: an endpoint receives them only when its ``rules.event_types`` lists them.
+EMAIL_RULE_REQUEST_EVENT_TYPES: tuple[str, ...] = (
+    "email_rule_request.created",
+    "email_rule_request.accepted",
+    "email_rule_request.declined",
+    "email_rule_request.withdrawn",
+)
+
 #: The interaction step events (subject = an interaction), named
 #: ``interaction.<protocolShort>.<suffix>``.
 INTERACTION_EVENT_TYPES: tuple[str, ...] = (
@@ -45,6 +55,7 @@ INTERACTION_EVENT_TYPES: tuple[str, ...] = (
 WEBHOOK_EVENT_TYPES: tuple[str, ...] = (
     *EMAIL_EVENT_TYPES,
     *SENT_EMAIL_EVENT_TYPES,
+    *EMAIL_RULE_REQUEST_EVENT_TYPES,
     *INTERACTION_EVENT_TYPES,
 )
 

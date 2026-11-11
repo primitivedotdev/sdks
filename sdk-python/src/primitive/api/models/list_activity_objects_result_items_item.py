@@ -42,7 +42,8 @@ class ListActivityObjectsResultItemsItem:
             ended_at (datetime.datetime | None): When it was deleted, replaced or revoked, when an API key expired, when a
                 repeating send stopped, or when a rule request was decided (accepted, declined or withdrawn); null otherwise.
             owned_now (ListActivityObjectsResultItemsItemOwnedNow): you: it is still yours: never transferred, or
-                transferred back to you. someone_else: it was transferred and another person holds it now.
+                transferred back to you. someone_else: it was transferred and another person holds it now, or, with
+                relation=asked, another member made it.
             created_through (ListActivityObjectsResultItemsItemCreatedThrough):
      """
 

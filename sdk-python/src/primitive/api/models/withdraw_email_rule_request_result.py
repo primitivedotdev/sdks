@@ -53,6 +53,9 @@ class WithdrawEmailRuleRequestResult:
             is_proposer (bool):
             is_target (bool):
             share_id (None | UUID): The share accepting created, while it exists.
+            message (None | str | Unset): What the member asking wrote about why; null when they wrote nothing.
+            decline_reason (None | str | Unset): Why the member asked declined it; null unless they gave a reason when
+                declining.
      """
 
     id: UUID
@@ -75,6 +78,8 @@ class WithdrawEmailRuleRequestResult:
     is_proposer: bool
     is_target: bool
     share_id: None | UUID
+    message: None | str | Unset = UNSET
+    decline_reason: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -142,6 +147,18 @@ class WithdrawEmailRuleRequestResult:
         else:
             share_id = self.share_id
 
+        message: None | str | Unset
+        if isinstance(self.message, Unset):
+            message = UNSET
+        else:
+            message = self.message
+
+        decline_reason: None | str | Unset
+        if isinstance(self.decline_reason, Unset):
+            decline_reason = UNSET
+        else:
+            decline_reason = self.decline_reason
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -167,6 +184,10 @@ class WithdrawEmailRuleRequestResult:
             "is_target": is_target,
             "share_id": share_id,
         })
+        if message is not UNSET:
+            field_dict["message"] = message
+        if decline_reason is not UNSET:
+            field_dict["decline_reason"] = decline_reason
 
         return field_dict
 
@@ -295,6 +316,26 @@ class WithdrawEmailRuleRequestResult:
         share_id = _parse_share_id(d.pop("share_id"))
 
 
+        def _parse_message(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        message = _parse_message(d.pop("message", UNSET))
+
+
+        def _parse_decline_reason(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        decline_reason = _parse_decline_reason(d.pop("decline_reason", UNSET))
+
+
         withdraw_email_rule_request_result = cls(
             id=id,
             status=status,
@@ -316,6 +357,8 @@ class WithdrawEmailRuleRequestResult:
             is_proposer=is_proposer,
             is_target=is_target,
             share_id=share_id,
+            message=message,
+            decline_reason=decline_reason,
         )
 
 

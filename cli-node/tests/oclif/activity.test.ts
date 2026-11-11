@@ -9,10 +9,12 @@ vi.mock("../../src/oclif/api-client.js", async (original) => ({
 }));
 
 import {
+  ActivityAskedCommand,
   ActivityCreatedCommand,
   type ActivityItem,
   ALL_PAGES_LIMIT,
   formatActivityRows,
+  formatAskedRows,
   formatWithheld,
   resumeCommand,
   throughLabel,
@@ -288,5 +290,110 @@ describe("activity created command", () => {
     expect(process.exitCode).toBe(1);
     expect(lines).toEqual([]);
     expect(stderr.join("")).toContain("Not for this credential");
+  });
+});
+
+describe("activity asked command", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    auth.create.mockReset();
+    process.exitCode = undefined;
+  });
+
+  it("is registered beside activity created", () => {
+    expect(COMMANDS["activity:asked"]).toBeDefined();
+  });
+
+  it("lists what was asked of you, naming who asked, and asks the API for exactly that", async () => {
+    const urls = useApi([
+      page(
+        [
+          item({
+            kind: "email_rule_request",
+            name: "Vendor billing",
+            state: "pending",
+            owned_now: "someone_else",
+            created_through: { kind: "member", id: "u-1", name: "Sam Rivera" },
+          }),
+        ],
+        null,
+      ),
+    ]);
+    const lines: string[] = [];
+    vi.spyOn(ActivityAskedCommand.prototype, "log").mockImplementation(
+      (message?: string) => {
+        lines.push(message ?? "");
+      },
+    );
+    await ActivityAskedCommand.run(["--state", "live"], { root });
+    expect(Object.fromEntries(urls[0]?.searchParams ?? [])).toEqual({
+      relation: "asked",
+      state: "live",
+      limit: "50",
+    });
+    const out = lines.join("\n");
+    expect(out).toMatch(/^STATE\s+ASKED \(UTC\)\s+NAME\s+FROM\s+ID$/m);
+    expect(out).toContain("Vendor billing");
+    expect(out).toContain("Sam Rivera");
+  });
+
+  it("says nobody has asked only when the listing is the whole of it", () => {
+    expect(formatAskedRows([], true)).toBe(
+      "Nobody has asked you for anything.",
+    );
+    expect(formatAskedRows([])).toBe("Nothing to show.");
+  });
+
+  it("names who asked by id when it has no name, and continues with activity asked", async () => {
+    useApi([
+      page(
+        [
+          item({
+            kind: "email_rule_request",
+            name: "Vendor billing",
+            state: "pending",
+            created_through: { kind: "member", id: "u-9", name: null },
+          }),
+        ],
+        "next-page",
+      ),
+    ]);
+    const lines: string[] = [];
+    vi.spyOn(ActivityAskedCommand.prototype, "log").mockImplementation(
+      (message?: string) => {
+        lines.push(message ?? "");
+      },
+    );
+    await ActivityAskedCommand.run([], { root });
+    const out = lines.join("\n");
+    expect(out).toContain("u-9");
+    expect(out).toMatch(/More: \S+ activity asked --cursor next-page$/m);
+  });
+
+  it("does not say nobody asked when an empty page has more after it", async () => {
+    useApi([page([], "next-page")]);
+    const lines: string[] = [];
+    vi.spyOn(ActivityAskedCommand.prototype, "log").mockImplementation(
+      (message?: string) => {
+        lines.push(message ?? "");
+      },
+    );
+    await ActivityAskedCommand.run([], { root });
+    const out = lines.join("\n");
+    expect(out).toContain("Nothing to show.");
+    expect(out).not.toContain("Nobody has asked");
+    expect(out).toMatch(/More: \S+ activity asked --cursor next-page$/m);
+  });
+
+  it("says nothing to show, not that nobody asked, for a filtered listing", async () => {
+    useApi([page([], null)]);
+    const lines: string[] = [];
+    vi.spyOn(ActivityAskedCommand.prototype, "log").mockImplementation(
+      (message?: string) => {
+        lines.push(message ?? "");
+      },
+    );
+    await ActivityAskedCommand.run(["--state", "ended"], { root });
+    expect(lines.join("\n")).toContain("Nothing to show.");
   });
 });

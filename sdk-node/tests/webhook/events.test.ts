@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   EMAIL_EVENT_TYPES,
+  EMAIL_RULE_REQUEST_EVENT_TYPES,
   getEventHeader,
   handleWebhookEvent,
   INTERACTION_EVENT_TYPES,
   isEmailReceivedEvent,
+  isEmailRuleRequestEvent,
   isKnownWebhookEventType,
   parseWebhookEvent,
   WEBHOOK_EVENT_TYPES,
@@ -54,6 +56,57 @@ describe("header-keyed event parsing", () => {
     expect(WEBHOOK_EVENT_TYPES).toContain("sent_email.delivered");
     expect(EMAIL_EVENT_TYPES).toContain("email.bounced");
     expect(INTERACTION_EVENT_TYPES).toContain("interaction.ack.expired");
+  });
+
+  it("lists the opt-in rule request events and parses one by its header", () => {
+    expect([...EMAIL_RULE_REQUEST_EVENT_TYPES]).toEqual([
+      "email_rule_request.created",
+      "email_rule_request.accepted",
+      "email_rule_request.declined",
+      "email_rule_request.withdrawn",
+    ]);
+    for (const type of EMAIL_RULE_REQUEST_EVENT_TYPES) {
+      expect(WEBHOOK_EVENT_TYPES).toContain(type);
+      expect(isKnownWebhookEventType(type)).toBe(true);
+    }
+    const body = {
+      id: "evt_1",
+      type: "email_rule_request.created",
+      occurred_at: "2026-11-11T03:16:16.848Z",
+      email_rule_request: {
+        id: "req_1",
+        name: "Vendor billing",
+        status: "pending",
+        created_at: "2026-11-11T03:16:16.848Z",
+        decided_at: null,
+        message: "For the vendor invoices only, please.",
+        decline_reason: null,
+      },
+      proposer: { user_id: "user_1", name: "Sam Rivera" },
+    };
+    const event = parseWebhookEvent(body, "email_rule_request.created");
+    expect(isEmailRuleRequestEvent(event)).toBe(true);
+    if (isEmailRuleRequestEvent(event)) {
+      expect(event.email_rule_request.name).toBe("Vendor billing");
+      expect(event.email_rule_request.message).toBe(
+        "For the vendor invoices only, please.",
+      );
+      expect(event.email_rule_request.decline_reason).toBeNull();
+      expect(event.proposer?.name).toBe("Sam Rivera");
+    }
+    for (const notAnEvent of [
+      null,
+      undefined,
+      "email_rule_request.created",
+      42,
+    ]) {
+      expect(isEmailRuleRequestEvent(notAnEvent)).toBe(false);
+    }
+    expect(
+      isEmailRuleRequestEvent(
+        parseWebhookEvent({ interaction: {} }, "interaction.ack.acked"),
+      ),
+    ).toBe(false);
   });
 
   it("no longer lists the payment events", () => {

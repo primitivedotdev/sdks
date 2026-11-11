@@ -2925,9 +2925,9 @@ export const getWebhookDeliveryStats = <ThrowOnError extends boolean = false>(op
 });
 
 /**
- * List what you created
+ * List what you created, or what you were asked
  *
- * The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules and rule requests. Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self.
+ * The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules and rule requests. Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked it lists instead what other members asked of the person, open or answered: the rule requests made to them, under their current membership, each naming the member who asked in created_through. A key, an app or an agent has none, and gets email_rule_request in withheld.
  */
 export const listActivityObjects = <ThrowOnError extends boolean = false>(options?: Options<ListActivityObjectsData, ThrowOnError>): RequestResult<ListActivityObjectsResponses, ListActivityObjectsErrors, ThrowOnError> => (options?.client ?? client).get<ListActivityObjectsResponses, ListActivityObjectsErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -3123,7 +3123,7 @@ export const listEmailRuleRequests = <ThrowOnError extends boolean = false>(opti
 /**
  * Ask a member for a rule
  *
- * Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated and nothing is shared until they accept, and they may change the rule first; they see the request and can preview what it matches in their own mail. You may have at most 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer also says whether they can accept it under their role (target_can_accept), and if not, why (target_warning); the request is sent either way. To find out before asking, use POST /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+ * Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated and nothing is shared until they accept, and they may change the rule first; they see the request and can preview what it matches in their own mail. A message (up to 500 characters) tells them why you are asking; they see it with the request, and it cannot be changed later. You may have at most 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer also says whether they can accept it under their role (target_can_accept), and if not, why (target_warning); the request is sent either way. To find out before asking, use POST /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
  */
 export const createEmailRuleRequest = <ThrowOnError extends boolean = false>(options: Options<CreateEmailRuleRequestData, ThrowOnError>): RequestResult<CreateEmailRuleRequestResponses, CreateEmailRuleRequestErrors, ThrowOnError> => (options.client ?? client).post<CreateEmailRuleRequestResponses, CreateEmailRuleRequestErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -3164,7 +3164,7 @@ export const deleteEmailRuleRequest = <ThrowOnError extends boolean = false>(opt
 /**
  * Read a rule request
  *
- * A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a member. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+ * A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a member. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. The member asked can try the rule as proposed before answering: on mail they have, with POST /v1/email-rules/test and the request's tree, and on mail that has not arrived. Mail already received shows only what has arrived. To see what the rule would do with an email that has not, such as one they would never want shared, the member asked can pass the request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email they make up. Nothing is stored, and it needs no access beyond testing a rule of their own. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
  */
 export const getEmailRuleRequest = <ThrowOnError extends boolean = false>(options: Options<GetEmailRuleRequestData, ThrowOnError>): RequestResult<GetEmailRuleRequestResponses, GetEmailRuleRequestErrors, ThrowOnError> => (options.client ?? client).get<GetEmailRuleRequestResponses, GetEmailRuleRequestErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -3175,12 +3175,16 @@ export const getEmailRuleRequest = <ThrowOnError extends boolean = false>(option
 /**
  * Decline a rule request
  *
- * Declines a pending request made to you. Nothing is written but the decision. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+ * Declines a pending request made to you. Nothing is written but the decision and, if you give one, its reason (reason, up to 500 characters), which the member who asked sees with the request. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
  */
 export const declineEmailRuleRequest = <ThrowOnError extends boolean = false>(options: Options<DeclineEmailRuleRequestData, ThrowOnError>): RequestResult<DeclineEmailRuleRequestResponses, DeclineEmailRuleRequestErrors, ThrowOnError> => (options.client ?? client).post<DeclineEmailRuleRequestResponses, DeclineEmailRuleRequestErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/email-rule-requests/{id}/decline',
-    ...options
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
 });
 
 /**
@@ -3197,7 +3201,7 @@ export const withdrawEmailRuleRequest = <ThrowOnError extends boolean = false>(o
 /**
  * Accept a rule request
  *
- * Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from now on with the member who asked. Send no body to accept it as asked, or change it first with english and tree together (and an explanation, or the server writes one). Because this gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused. Also needs mail:share_own (sharing your own mail through email rules, which only shows it and never sends): a role without it is refused, whether or not it can send. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+ * Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from now on with the member who asked. Send no body to accept it as asked, or change it first with english and tree together (and an explanation, or the server writes one). Because this gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused. Test it before accepting: on your mail with POST /v1/email-rules/test and the request's tree, and on mail that has not arrived. Mail already received shows only what has arrived. To see what the rule would do with an email that has not, such as one they would never want shared, the member asked can pass the request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email they make up. Nothing is stored, and it needs no access beyond testing a rule of their own. Also needs mail:share_own (sharing your own mail through email rules, which only shows it and never sends): a role without it is refused, whether or not it can send. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
  */
 export const acceptEmailRuleRequest = <ThrowOnError extends boolean = false>(options: Options<AcceptEmailRuleRequestData, ThrowOnError>): RequestResult<AcceptEmailRuleRequestResponses, AcceptEmailRuleRequestErrors, ThrowOnError> => (options.client ?? client).post<AcceptEmailRuleRequestResponses, AcceptEmailRuleRequestErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
