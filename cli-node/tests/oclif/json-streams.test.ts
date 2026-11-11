@@ -69,9 +69,8 @@ type Responder = (
 ) => Response;
 
 /**
- * A GET /whoami/grant answer whose grant reaches `mailScope`. GET /whoami
- * itself is refused, as it is for a key without account:read, so a test that
- * reads the grant from the wrong endpoint fails.
+ * A GET /whoami/grant answer whose grant reaches `mailScope`. GET /whoami is
+ * refused here, so a test that reads the grant from the wrong endpoint fails.
  */
 function grantWithScope(mailScope: unknown, credentialKind = "org_key") {
   return {
@@ -640,11 +639,11 @@ describe("generated commands with --json", () => {
       expect(result.exitCode).toBe(0);
       expect(result.stderr).not.toContain("received yet on this account");
       expect(result.stderr).toContain(
-        "(no results) No mail this key's rules granted is readable now. This key reads only mail its 1 email rule granted. A rule grants an email that matches it on arrival while the rule is active, and the key reads that mail only while the rule stays active.",
+        "(no results) No mail this key's rules granted is readable now. This key reads only mail its 1 email rule granted. A rule grants an email it matches when the email is evaluated, shortly after it arrives, while the rule is active, and the key reads that mail only while the rule stays active.",
       );
       // A key cannot read rules, so the hint names the rule and who can check it.
       expect(result.stderr).toContain(
-        `The rule's author, signed in as themselves, can check its state with \`primitive email-rules get-email-rule --id <rule-id>\` (${RULE}).`,
+        `Each id (${RULE}) is an email rule or a rule shared with the key's holder: a rule's author, signed in as themselves, can check it with \`primitive email-rules get-email-rule --id <id>\``,
       );
       // Read from the endpoint any credential may ask about itself.
       expect(fetchCalls.map((c) => c.url.pathname)).toEqual([
@@ -676,7 +675,8 @@ describe("generated commands with --json", () => {
             org_id: "00000000-0000-4000-8000-0000000000aa",
             grant: {
               credential_kind: "oauth",
-              permissions: ["mail:read", "mail:send"],
+              // A permission held over fewer mailboxes is listed only under scoped_permissions.
+              permissions: ["mail:send"],
               mail_scope: "org",
               scoped_permissions: {
                 "mail:read": {
@@ -696,6 +696,30 @@ describe("generated commands with --json", () => {
       expect(result.stderr).toContain(
         "This credential reads only a@example.test;",
       );
+    });
+
+    it("never asks GET /whoami/grant with a connected agent's key, which may not ask it", async () => {
+      process.env.PRIMITIVE_API_KEY = "pconn_test_json_streams";
+      responder = (url) =>
+        url.pathname.endsWith("/whoami/grant")
+          ? jsonResponse(403, {
+              success: false,
+              error: {
+                code: "agent_connection_scope_forbidden",
+                message: "Not for a connection key",
+              },
+            })
+          : jsonResponse(200, {
+              success: true,
+              data: [],
+              meta: { cursor: null },
+            });
+      const result = await runMerged("emails:list", []);
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toContain(
+        "This connection key reads only the mail of the address it was connected for.",
+      );
+      expect(fetchCalls.map((c) => c.url.pathname)).toEqual(["/v1/emails"]);
     });
 
     it("says no email matched the filters, rather than that none was received", async () => {

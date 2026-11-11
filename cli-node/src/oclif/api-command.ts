@@ -38,7 +38,7 @@ import {
 import {
   emptyEmailListHint,
   listFilters,
-  readCallerMail,
+  readCallerMailFor,
 } from "./empty-mail-hint.js";
 import {
   bodyHasRules,
@@ -2116,7 +2116,9 @@ export function createOperationCommand(
                     : query.cursor !== undefined
                       ? { pastFlag: "--cursor" as const }
                       : {}),
-                  caller: tail ? null : await readCallerMail(apiClient.client),
+                  caller: tail
+                    ? null
+                    : await readCallerMailFor(auth, apiClient.client),
                 })
               : EMPTY_RESULT_HINTS[operation.sdkName];
           if (hint && jsonOutput) summary.push(hint);

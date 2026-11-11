@@ -1,9 +1,12 @@
+import { PrimitiveApiClient } from "@primitivedotdev/api-core";
 import { describe, expect, it } from "vitest";
 import {
   emptyEmailListHint,
   listFilters,
   mailReach,
   ORG_EMPTY_HINT,
+  readCallerMail,
+  readCallerMailFor,
 } from "../../src/oclif/empty-mail-hint.js";
 
 const RULE = "1b1b1b1b-0000-4000-8000-000000000001";
@@ -58,7 +61,9 @@ describe("mailReach", () => {
       }),
     ).toEqual({
       kind: "mailboxes",
-      names: ["addresses at x.test other than personal mailboxes"],
+      names: [
+        "addresses at x.test other than other members' personal mailboxes",
+      ],
       rules: [],
     });
   });
@@ -76,7 +81,7 @@ describe("emptyEmailListHint", () => {
     ).toBe("Nothing yet.");
   });
 
-  it("tells a rules-only key how its rules grant mail, naming the rules for their author to check", () => {
+  it("tells a rules-only key how its rules grant mail, naming the ids for their author or a share's holder to check", () => {
     expect(
       hint(
         key({
@@ -87,7 +92,7 @@ describe("emptyEmailListHint", () => {
         }),
       ),
     ).toBe(
-      `(no results) No mail this key's rules granted is readable now. This key reads only mail its 2 email rules granted. A rule grants an email that matches it on arrival while the rule is active, and the key reads that mail only while the rule stays active. The rules' author, signed in as themselves, can check each one's state with \`primitive email-rules get-email-rule --id <rule-id>\` (${RULE} and ${RULE2}).`,
+      `(no results) No mail this key's rules granted is readable now. This key reads only mail its 2 email rules granted. A rule grants an email it matches when the email is evaluated, shortly after it arrives, while the rule is active, and the key reads that mail only while the rule stays active. Each id (${RULE} and ${RULE2}) is an email rule or a rule shared with the key's holder: a rule's author, signed in as themselves, can check it with \`primitive email-rules get-email-rule --id <id>\`, and a share's holder with \`primitive email-rules get-email-rule-share --id <id>\`.`,
     );
   });
 
@@ -122,7 +127,19 @@ describe("emptyEmailListHint", () => {
     expect(
       hint(key({ addresses: [], domains: [], depth: "content" })),
     ).toContain(
-      "This key reads no mail: its grant names no mailbox, domain or email rule.",
+      "This key reads no mail: its grant names no mailbox or domain, and no email rule that still exists.",
+    );
+    expect(
+      hint(
+        key({
+          addresses: ["a@x.test"],
+          domains: [],
+          direction: "outbound",
+          depth: "content",
+        }),
+      ),
+    ).toContain(
+      "This key reads no received mail: its grant covers sent mail only.",
     );
     expect(hint(key("unreadable"))).toContain(
       "The server could not read this credential's stored mail scope, so it reaches no mail.",
@@ -145,7 +162,7 @@ describe("emptyEmailListHint", () => {
       /^\(no results\) No inbound emails match the filters given \(--search\)\. This key reads only mail its 1 email rule granted\./,
     );
     expect(hint(key("org"), { pastFlag: "--cursor" })).toBe(
-      "(no results) No inbound emails after the given --cursor.",
+      "(no results) No more inbound emails past the given --cursor.",
     );
     // A tail poll reads no grant, so it says only that it is caught up.
     expect(hint(null, { pastFlag: "--since" })).toBe(
@@ -162,7 +179,6 @@ describe("listFilters", () => {
         cursor: "c",
         since: "s",
         include: "x",
-        include_presence: true,
         wait: 10,
         group: "thread",
         search: "a",
@@ -170,9 +186,54 @@ describe("listFilters", () => {
         recipient: "b@x.test",
       }),
     ).toEqual(["search", "recipient"]);
-    // Turning an exclusion off narrows nothing; turning it on does.
-    expect(listFilters({ exclude_fyi: false, exclude_muted: true })).toEqual([
-      "exclude_muted",
+    // As the CLI sends them, as text: turning an exclusion off narrows nothing, and leaving presence mail out does.
+    expect(
+      listFilters({ exclude_fyi: "false", exclude_muted: "true" }),
+    ).toEqual(["exclude_muted"]);
+    expect(listFilters({ include_presence: "false" })).toEqual([
+      "include_presence",
     ]);
+    expect(listFilters({ include_presence: "true" })).toEqual([]);
+  });
+});
+
+describe("readCallerMailFor", () => {
+  it("answers a connected agent's key from the address it was connected for, without asking the server", async () => {
+    const client = {
+      get: () => Promise.reject(new Error("must not be called")),
+    } as unknown as Parameters<typeof readCallerMail>[0];
+    expect(
+      await readCallerMailFor(
+        { apiKey: "pconn_x", connectedAgent: { agentAddress: "agent@x.test" } },
+        client,
+      ),
+    ).toEqual({
+      credentialKind: "agent_connection",
+      mailScope: { addresses: ["agent@x.test"], domains: [] },
+    });
+    const bare = await readCallerMailFor({ apiKey: "pconn_x" }, client);
+    expect(bare).toEqual({
+      credentialKind: "agent_connection",
+      mailScope: undefined,
+    });
+    expect(emptyEmailListHint({ filterFlags: [], caller: bare })).toBe(
+      "(no results) No inbound emails to show. This connection key reads only the mail of the address it was connected for.",
+    );
+  });
+
+  it("gives up on a grant read that does not answer in time", async () => {
+    const hanging = new PrimitiveApiClient({
+      apiKey: "prim_test",
+      apiBaseUrl: "https://api.example.test/v1",
+      fetch: ((input: Request) =>
+        new Promise<Response>((_resolve, reject) => {
+          input.signal.addEventListener("abort", () =>
+            reject(input.signal.reason),
+          );
+        })) as typeof fetch,
+    });
+    const started = Date.now();
+    expect(await readCallerMail(hanging.client, 50)).toBeUndefined();
+    expect(Date.now() - started).toBeLessThan(1_000);
   });
 });
