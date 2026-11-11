@@ -744,6 +744,14 @@ downgrading, or sign in again afterwards.
   change is refused if the grant changed after the read. If the server's key
   read does not show resource limits, a grant change is refused and nothing
   is sent.
+- `keys update` takes `--add-rule` and `--remove-rule`, which add email rules
+  to a key or take them off and keep its other rules. `--rule` still replaces
+  every rule the key has, says so in its help, and cannot be combined with
+  them. The output lists any rules a change took off (`rules_removed` with
+  `--json`) and any asked to be taken off that the key did not have
+  (`rules_not_on_key`); a change that leaves the grant as it is sends no
+  grant change, and nothing at all unless `--name`, `--expires-at` or
+  `--no-expiry` is also given.
 
 #### Rule request webhook events
 

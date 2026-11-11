@@ -31,6 +31,7 @@ import {
   KeysRevokeCommand,
   KeysRotateCommand,
   KeysUpdateCommand,
+  nextRules,
   STORE_SECRET_NOTICE,
   standingSummary,
   stepUpUrlOf,
@@ -410,6 +411,84 @@ describe("keys helpers", () => {
     });
   });
 
+  it("adds rules to a key or takes them off, keeping the others, where --rule replaces them all", () => {
+    const A = RULE_ID;
+    const B = "9c1d2e3f-4a5b-4c6d-8e7f-0a1b2c3d4e5f";
+    const C = "5e5e5e5e-0000-4000-8000-000000000003";
+    expect(nextRules([A, B], { add: [], remove: [], addRules: [C] })).toEqual([
+      A,
+      B,
+      C,
+    ]);
+    expect(
+      nextRules([A, B], { add: [], remove: [], removeRules: [A] }),
+    ).toEqual([B]);
+    expect(
+      nextRules([A, B], {
+        add: [],
+        remove: [],
+        addRules: [C],
+        removeRules: [B],
+      }),
+    ).toEqual([A, C]);
+    // As the server stores them, lowercase: a rule the key has is neither added twice nor missed on removal.
+    expect(
+      nextRules([A], { add: [], remove: [], addRules: [A.toUpperCase()] }),
+    ).toEqual([A]);
+    expect(
+      nextRules([A, B], {
+        add: [],
+        remove: [],
+        removeRules: [B.toUpperCase()],
+      }),
+    ).toEqual([A]);
+    expect(nextRules([A, B], { add: [], remove: [], rules: [C] })).toEqual([C]);
+    const ruled = {
+      template: null,
+      resources: null,
+      permissions: ["mail:read"],
+      mail_scope: {
+        addresses: ["a@example.com"],
+        domains: [],
+        rules: [A, B],
+        depth: "content",
+      },
+    };
+    expect(
+      buildUpdatedGrant(ruled, { add: [], remove: [], addRules: [C] }),
+    ).toEqual({
+      ok: true,
+      grant: {
+        preset: "custom",
+        permissions: ["mail:read"],
+        addresses: ["a@example.com"],
+        rules: [A, B, C],
+      },
+      permissions: ["mail:read"],
+    });
+    // Taking off the last rule of a key that reads nothing else is refused, as clearing it with --rule would be.
+    const onlyRules = {
+      ...ruled,
+      mail_scope: { addresses: [], domains: [], rules: [A] },
+    };
+    expect(
+      buildUpdatedGrant(onlyRules, { add: [], remove: [], removeRules: [A] }),
+    ).toMatchObject({
+      ok: false,
+      message:
+        "The key would reach no mail. Keep at least one address, domain or rule.",
+    });
+    // A key that reaches every mailbox takes no rules, added or removed.
+    expect(
+      buildUpdatedGrant(READER.grant, { add: [], remove: [], addRules: [A] })
+        .ok,
+    ).toBe(false);
+    expect(
+      buildUpdatedGrant(READER.grant, { add: [], remove: [], removeRules: [A] })
+        .ok,
+    ).toBe(false);
+  });
+
   it("asks for approval, waits for the token, and sends the request again with it", async () => {
     const tokens: Array<string | undefined> = [];
     const opened: string[] = [];
@@ -737,6 +816,297 @@ describe("keys commands", () => {
     expect(result.stderr).toContain(HELD_REQUEST_NOTICE);
   });
 
+  it("update --add-rule keeps the key's rules and adds one, and --remove-rule names what it took off", async () => {
+    const B = "9c1d2e3f-4a5b-4c6d-8e7f-0a1b2c3d4e5f";
+    const C = "5e5e5e5e-0000-4000-8000-000000000003";
+    const ruledKey = (rules: string[], ref: string) =>
+      keyRow({
+        template: null,
+        permissions: ["mail:read"],
+        mail_scope: { addresses: [], domains: [], rules, depth: "content" },
+        ref,
+      });
+    const serve = (before: string[], after: string[]) => {
+      let reads = 0;
+      return useServer((request) => {
+        if (request.method === "GET") {
+          reads += 1;
+          return Response.json({
+            success: true,
+            data:
+              reads === 1
+                ? ruledKey(before, "grant-7")
+                : ruledKey(after, "grant-8"),
+          });
+        }
+        return Response.json({
+          success: true,
+          data: { id: KEY_ID, changed: ["grant"], warnings: [] },
+        });
+      });
+    };
+    let requests = serve([RULE_ID, B], [RULE_ID, B, C]);
+    const added = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--add-rule",
+      C,
+      "--step-up-token",
+      "pstep_a",
+    ]);
+    expect(added.exitCode).toBeUndefined();
+    expect(
+      await (requests.find((r) => r.method === "PATCH") as Request).json(),
+    ).toEqual({
+      grant: {
+        preset: "custom",
+        permissions: ["mail:read"],
+        rules: [RULE_ID, B, C],
+      },
+      expected_grant_ref: "grant-7",
+    });
+    expect(added.stdout).not.toContain("Rules taken off");
+
+    requests = serve([RULE_ID, B], [B]);
+    const removed = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--remove-rule",
+      RULE_ID,
+      "--step-up-token",
+      "pstep_b",
+    ]);
+    expect(
+      await (requests.find((r) => r.method === "PATCH") as Request).json(),
+    ).toEqual({
+      grant: { preset: "custom", permissions: ["mail:read"], rules: [B] },
+      expected_grant_ref: "grant-7",
+    });
+    expect(removed.stdout).toContain(`Rules taken off: ${RULE_ID}`);
+
+    // --rule replaces them all, and says which it took off.
+    requests = serve([RULE_ID, B], [C]);
+    const replaced = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--rule",
+      C,
+      "--step-up-token",
+      "pstep_c",
+    ]);
+    expect(replaced.stdout).toContain(`Rules taken off: ${RULE_ID}, ${B}`);
+
+    // Taking off a rule the key does not have changes nothing: it says so and sends no change.
+    const withAddress = keyRow({
+      template: null,
+      permissions: ["mail:read"],
+      mail_scope: {
+        addresses: ["a@example.com"],
+        domains: [],
+        rules: [B],
+        depth: "content",
+      },
+    });
+    requests = useServer(() =>
+      Response.json({ success: true, data: withAddress }),
+    );
+    const absent = await run(KeysUpdateCommand, [KEY_ID, "--remove-rule", C]);
+    expect(absent.exitCode).toBeUndefined();
+    expect(absent.stderr).toContain(
+      `Not on this key, so nothing to take off: ${C}.`,
+    );
+    expect(absent.stdout).toContain(
+      `Key ${KEY_ID} already matched; nothing changed.`,
+    );
+    expect(requests.filter((r) => r.method === "PATCH")).toHaveLength(0);
+    // Adding one it already has, in another case, is the same.
+    const again = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--add-rule",
+      B.toUpperCase(),
+      "--json",
+    ]);
+    expect(JSON.parse(again.stdout)).toMatchObject({
+      id: KEY_ID,
+      changed: [],
+      warnings: [],
+    });
+    expect(requests.filter((r) => r.method === "PATCH")).toHaveLength(0);
+    // With a new expiry, the expiry is still sent, alone: the rule change adds nothing to it.
+    requests = useServer((request) =>
+      request.method === "GET"
+        ? Response.json({ success: true, data: withAddress })
+        : Response.json({
+            success: true,
+            data: { id: KEY_ID, changed: ["expires_at"], warnings: [] },
+          }),
+    );
+    const expiring = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--add-rule",
+      B,
+      "--expires-at",
+      "2027-02-08T00:00:00Z",
+    ]);
+    expect(expiring.exitCode).toBeUndefined();
+    const patches = requests.filter((r) => r.method === "PATCH");
+    expect(patches).toHaveLength(1);
+    expect(await (patches[0] as Request).json()).toEqual({
+      expires_at: "2027-02-08T00:00:00Z",
+    });
+    expect(expiring.stdout).toContain("Expires: 2027-02-08T00:00:00Z");
+    // So is --no-expiry, which removes it.
+    const unexpiring = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--add-rule",
+      B,
+      "--no-expiry",
+    ]);
+    expect(unexpiring.exitCode).toBeUndefined();
+    const second = requests.filter((r) => r.method === "PATCH");
+    expect(await (second[1] as Request).json()).toEqual({ expires_at: null });
+    // A rule change that does change the grant goes in the same request as the expiry, guarded by the grant it read.
+    requests = useServer((request) =>
+      request.method === "GET"
+        ? Response.json({ success: true, data: withAddress })
+        : Response.json({
+            success: true,
+            data: {
+              id: KEY_ID,
+              changed: ["grant", "expires_at"],
+              warnings: [],
+            },
+          }),
+    );
+    const both = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--remove-rule",
+      B,
+      "--expires-at",
+      "2027-02-08T00:00:00Z",
+      "--step-up-token",
+      "pstep_both",
+    ]);
+    expect(both.exitCode).toBeUndefined();
+    const combined = requests.filter((r) => r.method === "PATCH");
+    expect(combined).toHaveLength(1);
+    const sent = (await (combined[0] as Request).json()) as {
+      grant: { rules?: string[]; addresses?: string[] };
+    };
+    expect(sent).toMatchObject({
+      expires_at: "2027-02-08T00:00:00Z",
+      expected_grant_ref: withAddress.grant.ref,
+      grant: { addresses: ["a@example.com"] },
+    });
+    expect(sent.grant.rules ?? []).not.toContain(B);
+    expect(both.stdout).toContain(`Rules taken off: ${B}`);
+    expect(both.stdout).toContain("Expires: 2027-02-08T00:00:00Z");
+  });
+
+  it("update --json says which rules a change took off and which were not on the key", async () => {
+    const B = "9c1d2e3f-4a5b-4c6d-8e7f-0a1b2c3d4e5f";
+    const C = "5e5e5e5e-0000-4000-8000-000000000003";
+    const before = keyRow({
+      template: null,
+      permissions: ["mail:read"],
+      mail_scope: {
+        addresses: ["a@example.com"],
+        domains: [],
+        rules: [RULE_ID, B],
+        depth: "content",
+      },
+    });
+    const after = keyRow({
+      template: null,
+      permissions: ["mail:read"],
+      mail_scope: {
+        addresses: ["a@example.com"],
+        domains: [],
+        rules: [B],
+        depth: "content",
+      },
+    });
+    let reads = 0;
+    useServer((request) => {
+      if (request.method !== "GET")
+        return Response.json({
+          success: true,
+          data: { id: KEY_ID, changed: ["grant"], warnings: [] },
+        });
+      reads += 1;
+      return Response.json({
+        success: true,
+        data: reads === 1 ? before : after,
+      });
+    });
+    const result = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--remove-rule",
+      `${RULE_ID},${C}`,
+      "--step-up-token",
+      "pstep_e",
+      "--json",
+    ]);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      rules_removed: [RULE_ID],
+      rules_not_on_key: [C],
+      changed: ["grant"],
+    });
+    expect(result.stderr).not.toContain("Not on this key");
+  });
+
+  it("update refuses --rule with --add-rule or --remove-rule, and a rule both added and removed, sending nothing", async () => {
+    const requests = useServer(() =>
+      Response.json({ success: true, data: READER }),
+    );
+    const mixed = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--rule",
+      RULE_ID,
+      "--add-rule",
+      RULE_ID,
+    ]);
+    // oclif refuses the pair as a usage error, either way round.
+    expect((mixed.error as { oclif?: { exit?: number } }).oclif?.exit).toBe(2);
+    expect(String((mixed.error as Error).message)).toContain(
+      "cannot also be provided when using --rule",
+    );
+    const removing = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--remove-rule",
+      RULE_ID,
+      "--rule",
+      RULE_ID,
+    ]);
+    expect((removing.error as { oclif?: { exit?: number } }).oclif?.exit).toBe(
+      2,
+    );
+    const twice = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--add-rule",
+      RULE_ID,
+      "--remove-rule",
+      RULE_ID.toUpperCase(),
+    ]);
+    expect(String((twice.error as Error).message)).toContain(
+      "Both added and removed",
+    );
+    expect((twice.error as { oclif?: { exit?: number } }).oclif?.exit).toBe(2);
+    expect(requests).toHaveLength(0);
+  });
+
+  it("says in help that --rule replaces every rule, and offers --add-rule and --remove-rule", () => {
+    expect(KeysUpdateCommand.flags.rule.description).toContain(
+      "Replaces every rule the key has",
+    );
+    expect(KeysUpdateCommand.flags["add-rule"].description).toContain(
+      "Its other rules stay.",
+    );
+    expect(KeysUpdateCommand.flags["remove-rule"].description).toContain(
+      "Its other rules stay.",
+    );
+    expect(KeysUpdateCommand.description).toContain(
+      "--add-rule and --remove-rule",
+    );
+  });
+
   it("update --json prints the key at the top level, as keys get does, with what changed alongside", async () => {
     const after = keyRow({
       template: null,
@@ -900,7 +1270,8 @@ describe("keys commands", () => {
       "Note: the server did not say which grant this key holds, so this change is not checked against changes made since it was read.",
     );
     const patch = requests.find((r) => r.method === "PATCH") as Request;
-    expect(await patch.json()).not.toHaveProperty("expected_grant_ref"); // Under --json the note stays out of stderr.
+    expect(await patch.json()).not.toHaveProperty("expected_grant_ref");
+    // Under --json the note stays out of stderr.
     const json = await run(KeysUpdateCommand, [
       KEY_ID,
       "--add",
