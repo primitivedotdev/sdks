@@ -56,6 +56,12 @@ const AGENT = "agent@acme.primitive.email";
 type FakeEmail = {
   id: string;
   created_at: string;
+  /**
+   * When it became visible, which the API stamps at accept, after created_at.
+   * The forward tail orders and cursors on it; rows do not carry it.
+   * Defaults to created_at.
+   */
+  visible_at?: string;
   awaiting: "you" | "them";
   reply_count: number;
   sender: string;
@@ -86,6 +92,11 @@ type ServerMode =
 
 // In-memory stand-in for the three endpoints `inbox next` reads, with
 // the same forward-tail and long-poll semantics as the real API.
+/** A cursor with its time at microseconds (a millisecond time padded). */
+function normalCursor(cursor: string): string {
+  return cursor.replace(/(\.\d{3})Z\|/, "$1000Z|");
+}
+
 class FakeInbox {
   emails: FakeEmail[] = [];
   mode: ServerMode = "current";
@@ -168,8 +179,12 @@ class FakeInbox {
     return base;
   }
 
+  /**
+   * The forward tail's position for an email: when it became visible, at
+   * microseconds, so positions compare as text the way the API compares them.
+   */
   private cursorOf(email: FakeEmail): string {
-    return `${email.created_at}|${email.id}`;
+    return normalCursor(`${email.visible_at ?? email.created_at}|${email.id}`);
   }
 
   api(): InboxNextApi {
@@ -228,7 +243,7 @@ class FakeInbox {
           this.verdict(e).automated === filterAutomated);
       const limit = Number(query.limit ?? 50);
       if (typeof query.since === "string") {
-        const since = query.since;
+        const since = normalCursor(query.since);
         const select = () =>
           [...this.emails]
             .sort((a, b) => this.cursorOf(a).localeCompare(this.cursorOf(b)))
@@ -758,6 +773,47 @@ describe("--wait helpers", () => {
     );
   });
 
+  it("builds the baseline at the tail's own position, past mail already visible", async () => {
+    // The tail orders on visibility, stamped after created_at, so a cursor
+    // from the newest row's created_at sits before that row on the tail.
+    const inbox = new FakeInbox();
+    inbox.add({
+      id: "slow",
+      created_at: "2026-09-18T00:00:00.000Z",
+      visible_at: "2026-09-19T00:00:05.000000Z",
+    });
+    inbox.add({
+      id: "newest",
+      created_at: "2026-09-19T00:00:00.000Z",
+      visible_at: "2026-09-19T00:00:01.250731Z",
+    });
+    expect(await baselineCursor({ apiClient, api: inbox.api() })).toBe(
+      "2026-09-19T00:00:05.000000Z|slow",
+    );
+    const reads = inbox.calls.map((call) => call.query);
+    expect(reads).toEqual([
+      { limit: 1 },
+      { limit: 100, since: "2026-09-19T00:00:00.000Z|newest" },
+    ]);
+  });
+
+  it("reads the tail a page at a time to its end, and no further than five pages", async () => {
+    const inbox = new FakeInbox();
+    // Every row became visible after the newest one's created_at.
+    for (let i = 0; i < 600; i += 1) {
+      const n = String(i).padStart(3, "0");
+      inbox.add({
+        id: `m${n}`,
+        created_at: "2026-09-18T00:00:00.000Z",
+        visible_at: `2026-09-19T00:00:00.${n}000Z`,
+      });
+    }
+    const cursor = await baselineCursor({ apiClient, api: inbox.api() });
+    const tailReads = inbox.calls.filter((call) => call.query?.since);
+    expect(tailReads).toHaveLength(5);
+    expect(cursor).toBe("2026-09-19T00:00:00.499000Z|m499");
+  });
+
   it("long-polls from the cursor and advances on arrival", async () => {
     const inbox = new FakeInbox();
     inbox.add({ id: "a", created_at: "2026-09-18T00:00:00.000Z" });
@@ -769,7 +825,7 @@ describe("--wait helpers", () => {
       seconds: 120,
       api: inbox.api(),
     });
-    expect(next).toBe("2026-09-19T00:00:00.000Z|b");
+    expect(next).toBe("2026-09-19T00:00:00.000000Z|b");
     const waitCall = inbox.calls.find((c) => c.op === "list");
     expect(waitCall?.query).toEqual({
       limit: 100,
@@ -1452,18 +1508,46 @@ describe("inbox next command", () => {
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout).email.id).toBe("new");
     const lists = inbox.calls.filter((c) => c.op === "list");
-    // 1: baseline (newest row), 2: state check, 3: long-poll from the
-    // baseline, 4: state check after the wake.
+    // 1: baseline (newest row), 2: the tail from it, caught up, 3: state
+    // check, 4: long-poll from the baseline, 5: state check after the wake.
     expect(lists[0]?.query).toEqual({ limit: 1 });
-    expect(lists[1]?.query).toMatchObject({
+    expect(lists[1]?.query).toEqual({
+      limit: 100,
+      since: "2026-09-18T00:00:00.000Z|old",
+    });
+    expect(lists[2]?.query).toMatchObject({
       awaiting: "you",
       automated: "false",
     });
-    expect(lists[2]?.query).toMatchObject({
+    expect(lists[3]?.query).toMatchObject({
       since: "2026-09-18T00:00:00.000Z|old",
       wait: expect.any(Number),
     });
-    expect(lists[3]?.query).toMatchObject({ awaiting: "you" });
+    expect(lists[4]?.query).toMatchObject({ awaiting: "you" });
+  });
+
+  it("--wait does not wake for the newest email it already saw", async () => {
+    // Visible after its created_at, as on the API: a baseline from created_at
+    // would hand it back at once and spend a wake on it.
+    inbox.add({
+      id: "old",
+      created_at: "2026-09-18T00:00:00.000Z",
+      visible_at: "2026-09-18T00:00:01.250731Z",
+      awaiting: "them",
+      reply_count: 1,
+    });
+    inbox.onWait = () =>
+      inbox.add({ id: "new", created_at: "2026-09-19T00:00:00.000Z" });
+    const result = await runCommand(["--wait", "--timeout", "60", "--json"]);
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout).email.id).toBe("new");
+    const longPolls = inbox.calls.filter(
+      (c) => c.op === "list" && c.query?.wait !== undefined,
+    );
+    expect(longPolls).toHaveLength(1);
+    expect(longPolls[0]?.query).toMatchObject({
+      since: "2026-09-18T00:00:01.250731Z|old",
+    });
   });
 
   it("--wait returns at once when something already awaits", async () => {

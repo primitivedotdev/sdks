@@ -30,6 +30,7 @@ import {
   type InboxNextApi,
   InboxNextApiError,
   sanitizeForTerminal,
+  TIME_CURSOR_ID,
   waitingInboxApi,
 } from "./inbox-next.js";
 
@@ -41,9 +42,11 @@ import {
 // It reads the inbound forward tail (`GET /emails?since=&wait=`), the same
 // long-poll `inbox next --wait` and `agent check-mail` use, so it works under
 // a connected agent profile (whose reads are scoped to its own address) and
-// under a member login alike. The starting position is the newest email's,
-// read before the wait begins, so nothing that lands after the command
-// starts is missed.
+// under a member login alike. Mail counts as new when it became visible
+// after the command started: what became visible while it started up is read
+// from the tail by visibility time from the start, and the long-poll then
+// follows the tail from its own end (baselineCursor), so nothing already
+// there is taken for new mail.
 
 /** Exit codes. 2 is oclif's invalid-flags exit. */
 export const WAIT_EXIT_CODES = {
@@ -57,6 +60,11 @@ export const DEFAULT_WAIT_TIMEOUT = "5m";
 const MAX_LONG_POLL_SECONDS = 30;
 const TAIL_PAGE_SIZE = 100;
 const EXISTING_PAGE_SIZE = 50;
+/**
+ * Pages of mail made visible since the start that are read before the
+ * long-poll; any more are walked by the long-poll itself.
+ */
+const SINCE_START_PAGES = 5;
 const PRINTED_BODY_CHARS = 1200;
 const JSON_TEXT_CHARS = 4000;
 
@@ -293,9 +301,21 @@ async function firstMatch(
   return null;
 }
 
-function arrivedSince(row: Row, threshold: number): boolean {
-  const at = Date.parse(str(row.created_at) ?? str(row.received_at) ?? "");
-  return Number.isFinite(at) && at >= threshold;
+/**
+ * The forward-tail cursor for an instant, on the client clock: the tail
+ * returns what became visible after it.
+ */
+export function tailCursorAt(at: number): string {
+  return `${new Date(at).toISOString().replace(/Z$/, "000Z")}|${TIME_CURSOR_ID}`;
+}
+
+/**
+ * Whether tail cursor `a` sorts before `b`. A cursor's time is microseconds
+ * from the tail and milliseconds from a list row, so it is padded first.
+ */
+export function cursorBefore(a: string, b: string): boolean {
+  const pad = (cursor: string) => cursor.replace(/(\.\d{3})Z\|/, "$1000Z|");
+  return pad(a) < pad(b);
 }
 
 /**
@@ -335,21 +355,36 @@ async function tailForEmail(
 ): Promise<EmailDetail | null> {
   const { apiClient, filters, deadline } = params;
   const seen = new Set<string>(params.skipIds ?? []);
-  // Taken before the recent page is read, so mail that lands during that
-  // read is returned by the tail.
+  // Where the long-poll starts: the tail's own end, past every email already
+  // visible. Taken from the server's answers alone, so a skewed client clock
+  // never makes the long-poll miss new mail.
   let since = await baselineCursor({ apiClient, api });
-  // Mail that arrived between the command starting and the baseline (during
-  // authentication, say) sits at or before the baseline. Check it from the
-  // newest page, oldest first, before tailing past it. The boundary is the
-  // start time itself, with no allowance before it, so a retried login does
-  // not pick up the previous attempt's email.
-  const recent = await listRows(api, apiClient, { limit: EXISTING_PAGE_SIZE });
-  const sinceStart = recent.rows
-    .filter((row) => arrivedSince(row, params.startedAt))
-    .reverse();
-  const early = await firstMatch(api, apiClient, sinceStart, filters, seen);
-  if (early) return early;
+  // Mail made visible after the command started and before that baseline:
+  // during authentication, or an email inserted earlier and accepted since
+  // (a code the sender has only just sent). Read it from the tail by
+  // visibility time, oldest first. The boundary is the start time itself,
+  // with no allowance before it, so a retried login does not pick up the
+  // previous attempt's email.
+  let fromStart = tailCursorAt(params.startedAt);
+  let caughtUp = false;
+  for (let read = 0; read < SINCE_START_PAGES && !caughtUp; read += 1) {
+    const page = await listRows(api, apiClient, {
+      limit: TAIL_PAGE_SIZE,
+      since: fromStart,
+    });
+    const early = await firstMatch(api, apiClient, page.rows, filters, seen);
+    if (early) return early;
+    if (page.rows.length < TAIL_PAGE_SIZE || !page.cursor) caughtUp = true;
+    else fromStart = page.cursor;
+  }
+  // More made visible since the start than those pages hold: the long-poll
+  // walks the rest from where the read stopped, a position the tail gave,
+  // rather than jump past it to the baseline.
+  if (!caughtUp && cursorBefore(fromStart, since)) since = fromStart;
   if (params.includeExisting) {
+    const recent = await listRows(api, apiClient, {
+      limit: EXISTING_PAGE_SIZE,
+    });
     const found = await firstMatch(api, apiClient, recent.rows, filters, seen);
     if (found) return found;
   }

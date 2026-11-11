@@ -1044,6 +1044,17 @@ parsers.
   end before the next re-read, and a search by words that the server stops
   early for time may not reach as far back. A connected agent's
   `emails wait` reads its mail another way and is unchanged.
+- `primitive wait` without `--include-existing` no longer returns the newest
+  email already received as if it had just arrived. It started its tail
+  from the newest email's `created_at`, but the tail orders mail by when it
+  became visible, which is later, so it handed that email back at once. It
+  now counts mail as new when it became visible after the command started:
+  it reads what became visible since the start from the tail, then waits
+  from the tail's own end. That also finds an email that was sent before the
+  command started but accepted after it, and checks every email made
+  visible since the start, where it checked only the newest 50. `inbox next
+  --wait` starts from the tail's end too, and no longer wakes once for
+  nothing.
 - `emails wait --since` and `emails watch --since` also take a duration
   ago, such as `15m` or `2h`. `emails wait` says in its help, and in its
   timeout message, that without `--since` or `--include-existing` it counts
