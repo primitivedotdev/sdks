@@ -30,6 +30,7 @@ import {
 import { isConnectedChatCredential } from "../scoped-chat.js";
 import { guardedSession } from "../session-address-guard.js";
 import { agentIdentitySource } from "../session-agent-env.js";
+import { isBuiltInRoleKey } from "../user-grant.js";
 
 // `primitive whoami` is the credentials smoke test. Default output stays
 // intentionally sparse so routine auth checks do not expose account internals;
@@ -97,7 +98,20 @@ export function formatGrantLines(
     ? `${options.orgName} (${identity.org_id})`
     : identity.org_id;
   lines.push(`Organization: ${org}`);
-  lines.push(`Role: ${identity.role}`);
+  // GET /whoami's role is the built-in role the request runs as, not the
+  // role the organization assigned: a template or custom role shows as the
+  // largest built-in role it fully includes, or member when it includes
+  // none (where the CLI login says restricted). Only a person has a role;
+  // for anything else the grant says what the credential does.
+  if (isPersonIdentity(identity)) {
+    lines.push(
+      identity.role === "member"
+        ? "Built-in role: member (also shown for a template or custom role that does not fully include member; the Grant line is what this login can do)"
+        : isBuiltInRoleKey(identity.role)
+          ? `Built-in role: ${identity.role}`
+          : `Role key: ${identity.role}`,
+    );
+  }
   const grant = identity.grant as GrantDescription | null | undefined;
   if (grant) lines.push(...formatGrant(grant));
   if (options.userLogin) {
@@ -113,20 +127,72 @@ export function formatPermissionCheck(check: PermissionCheck): string {
   return `${check.permission}: not allowed${check.reason ? ` (${check.reason})` : ""}`;
 }
 
+type IdentityFields = Pick<
+  CallerIdentity,
+  "auth_method" | "key_id" | "member_address" | "member_address_suggestion"
+>;
+
+/** Whether GET /whoami answered for an API key. */
+function isKeyIdentity(
+  identity: Partial<Pick<CallerIdentity, "auth_method" | "key_id">>,
+): boolean {
+  return Boolean(identity.key_id) || identity.auth_method === "api_key";
+}
+
+/** Whether GET /whoami answered for a person's own session or OAuth login. */
+const PERSON_AUTH_METHODS = new Set(["oauth", "session", "dashboard_bridge"]);
+function isPersonIdentity(
+  identity: Partial<Pick<CallerIdentity, "auth_method" | "key_id">>,
+): boolean {
+  return (
+    !isKeyIdentity(identity) &&
+    typeof identity.auth_method === "string" &&
+    PERSON_AUTH_METHODS.has(identity.auth_method)
+  );
+}
+
+/** What the summary's first line says about who is calling. */
+function identityLine(identity: IdentityFields | null): string {
+  // Say only what the server reported: no answer, no claim about an address.
+  if (!identity || identity.member_address === undefined) {
+    return "Authenticated";
+  }
+  if (identity.member_address) {
+    return `Authenticated as ${identity.member_address.address} (your member address)`;
+  }
+  if (isKeyIdentity(identity)) {
+    return "Authenticated (API keys have no member address)";
+  }
+  if (!isPersonIdentity(identity)) {
+    return "Authenticated (this credential has no member address)";
+  }
+  const claim = identity.member_address_suggestion
+    ? `; \`primitive account provision-member-address --address ${identity.member_address_suggestion}\` sets one`
+    : "";
+  return `Authenticated (you have no member address in this organization${claim})`;
+}
+
 // The account id is the organization's id. Its name comes from the saved
 // OAuth login (recorded at sign-in); an API key alone carries no name.
+// The account's email is the email the account was opened with, which is
+// not necessarily the caller's: the caller is named by their own member
+// address, from GET /whoami, when the server reports one.
 export function formatWhoamiSummary(
   account: Account,
   managedInboxDomain: string | null,
   orgName: string | null = null,
+  identity: IdentityFields | null = null,
 ): string {
   const lines = [
-    account.email
-      ? `Authenticated as ${account.email}`
-      : "Authenticated (this credential may not see the account email)",
+    identityLine(identity),
     orgName
       ? `Organization: ${orgName} (${account.id})`
       : `Organization id: ${account.id}`,
+    ...(account.email
+      ? [
+          `Account email: ${account.email} (the email the account was opened with)`,
+        ]
+      : []),
     `Plan: ${account.plan}`,
   ];
   if (managedInboxDomain) {
@@ -198,7 +264,7 @@ class WhoamiCommand extends Command {
     }),
     grant: Flags.boolean({
       description:
-        "With --json, add `grant`: the organization, role and grant of this credential. The summary always shows them when the server reports them.",
+        "With --json, add `grant`: the organization, role and grant of this credential. The summary shows them when the server reports them; only a person's own login has a role line.",
     }),
     check: Flags.string({
       description:
@@ -461,7 +527,7 @@ class WhoamiCommand extends Command {
       }
 
       const summary = [
-        formatWhoamiSummary(account, managedInboxDomain, orgName),
+        formatWhoamiSummary(account, managedInboxDomain, orgName, identity),
       ];
       // Only where the server reports a grant, so the summary from a server
       // without grants reads exactly as before. The organization is already

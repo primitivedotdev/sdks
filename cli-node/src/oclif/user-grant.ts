@@ -44,6 +44,37 @@ export const USER_LOGIN_EXPIRED_MESSAGE =
 export const NO_CURRENT_ORG_MESSAGE =
   "No organization is selected for this login. Run `primitive orgs` to see where you can use the CLI, then `primitive org use <org>`.";
 
+/**
+ * The CLI login and the organization list report a person's stored role:
+ * the largest built-in role (owner, admin or member) their access fully
+ * includes, or `restricted` when it includes none or they hold no role at
+ * all. The role's own name is not in these answers.
+ */
+// Not api-core's BUILTIN_ROLE_KEYS: that list, generated from the published
+// spec, names operator, which the server stores as a template role.
+const BUILT_IN_ROLE_KEYS = new Set(["owner", "admin", "member"]);
+
+/** Whether a role key names one of the built-in roles. */
+export function isBuiltInRoleKey(role: string): boolean {
+  return BUILT_IN_ROLE_KEYS.has(role);
+}
+
+/** What the role key `restricted` stands for. */
+export const RESTRICTED_ROLE_NOTE =
+  "a template or custom role that does not fully include member, because it lacks some member permission (as Operator does) or reaches only some mailboxes";
+
+/** A stored role key, labelled for what it is: "built-in role admin", "role restricted". */
+export function roleKeyLabel(role: string): string {
+  return isBuiltInRoleKey(role) ? `built-in role ${role}` : `role ${role}`;
+}
+
+/** A stored role key for a sentence, saying what `restricted` stands for. */
+export function roleKeyText(role: string): string {
+  return role === "restricted"
+    ? `role restricted (${RESTRICTED_ROLE_NOTE})`
+    : roleKeyLabel(role);
+}
+
 /** Why the CLI cannot be used in an organization, as the server names it. */
 export type CliOrgRefusalReason =
   | "not_a_member"

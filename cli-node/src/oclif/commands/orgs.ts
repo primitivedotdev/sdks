@@ -7,6 +7,9 @@ import {
   type CliOrgEntry,
   CliOrgRefusedError,
   fetchCliOrgs,
+  RESTRICTED_ROLE_NOTE,
+  roleKeyLabel,
+  roleKeyText,
   switchCurrentOrg,
 } from "../user-grant.js";
 
@@ -32,17 +35,19 @@ export type OrgRow = CliOrgEntry & { current: boolean };
 /** One line per organization, the current one marked with `*`. */
 export function formatOrgRows(rows: readonly OrgRow[]): string {
   if (rows.length === 0) return "You do not belong to any organization.";
-  return rows
-    .map((row) => {
-      const marker = row.current ? "*" : " ";
-      const name = row.name ?? "(unnamed)";
-      const role = row.role ? ` ${row.role}` : "";
-      const status = row.available
-        ? "available"
-        : `unavailable: ${row.message ?? row.reason ?? "no CLI access"}${row.reason ? ` [${row.reason}]` : ""}`;
-      return `${marker} ${name} (${row.id})${role}, ${status}`;
-    })
-    .join("\n");
+  const lines = rows.map((row) => {
+    const marker = row.current ? "*" : " ";
+    const name = row.name ?? "(unnamed)";
+    const role = row.role ? ` ${roleKeyLabel(row.role)}` : "";
+    const status = row.available
+      ? "available"
+      : `unavailable: ${row.message ?? row.reason ?? "no CLI access"}${row.reason ? ` [${row.reason}]` : ""}`;
+    return `${marker} ${name} (${row.id})${role}, ${status}`;
+  });
+  if (rows.some((row) => row.role === "restricted")) {
+    lines.push(`role restricted: no role at all, or ${RESTRICTED_ROLE_NOTE}.`);
+  }
+  return lines.join("\n");
 }
 
 export class OrgsCommand extends Command {
@@ -187,7 +192,7 @@ export class OrgUseCommand extends Command {
         return;
       }
       this.log(
-        `Now using ${org.org_name ?? org.org_id} (${org.org_id}), role ${org.role ?? "unknown"}.`,
+        `Now using ${org.org_name ?? org.org_id} (${org.org_id}), ${org.role ? roleKeyText(org.role) : "role unknown"}.`,
       );
     } catch (error) {
       if (error instanceof CliOrgRefusedError) {

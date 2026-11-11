@@ -388,6 +388,18 @@ Go (package `api`):
   `--accept-terms`. An answer piped on stdin (`echo yes | ...`) no longer
   accepts the terms, and continuing a pending code also needs the flag.
 
+#### CLI whoami and role text
+
+- `primitive whoami` text output changed: the first line names your member
+  address instead of the account's email, and the role line reads
+  `Built-in role:`. A script that reads the email should use `whoami --json`
+  and its `email` field, which is unchanged. API keys and other credentials
+  that are not a person's login no longer print a role line; read `role`
+  from `whoami --json --grant`. `orgs` rows read `built-in role <key>` or
+  `role restricted`, followed by a `role restricted:` note line when a row
+  is restricted, `org use` labels the role the same way, and `roles groups`
+  rows read `role id`.
+
 ### Additions
 
 #### Conversation sync helper
@@ -972,3 +984,30 @@ parsers.
 - `primitive login --help` and `signin --help` no longer say they are only
   for existing accounts: an emailed code logs in to the account that uses
   the address, or creates a new account when none does.
+- `primitive whoami` no longer prints the account's email as "Authenticated
+  as". That email is the one the account was opened with, not necessarily
+  yours, so a member who can read it was shown as someone else. The first
+  line now names your member address. Without one it says that you have
+  none (and gives the command that sets one when the server suggests an
+  address), that an API key has none, or, for any other credential, that it
+  has none. When the server says nothing about an address, the line is a
+  plain "Authenticated". The account's email appears as "Account email"
+  when you may see it. Bare `primitive` prints "Signed in as" your member
+  address, or "Signed in" with the organization, from `GET /whoami`.
+  `doctor`'s API auth check
+  now starts its message with "account email". `whoami --json` is
+  unchanged.
+- The role lines say what they report. Where the server reports a grant,
+  `whoami` prints `Built-in role:` for a person's login: the built-in role
+  a request runs as, which for a template or custom role is the largest
+  built-in role it fully includes, or member when it includes none. It
+  prints no role line for an API key or any other credential that is not a
+  person's login, and a role value that is not a built-in role prints as
+  `Role key:`. `login`, `org use` and `orgs` print
+  the stored role as `built-in role owner`, `built-in role admin` or
+  `built-in role member`, or as `role restricted`, and explain `restricted`:
+  a template or custom role that does not fully include member, because it
+  lacks some member permission (as Operator does) or reaches only some
+  mailboxes (and, in `orgs`, no role at all).
+  `roles groups` labels a group's role as `role id`, and `roles list` help
+  names Operator as a template, not a built-in role.
