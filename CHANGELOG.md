@@ -1058,8 +1058,8 @@ parsers.
   working, and what the key owned itself or carried on for the keys it was
   rotated from, such as its own webhooks, which keeps working only while
   someone can still act for it, such as a key of the same rotation that still
-  works. Its help no longer says that
-  everything the key set up keeps working.
+  works. Its help no longer says that everything the key set up keeps
+  working.
 - Generated commands the API answers only in a dashboard session, such as
   `credentials list-credentials` and `credentials list-credential-events`,
   say so: their summary, which short help prints, ends with `(dashboard
