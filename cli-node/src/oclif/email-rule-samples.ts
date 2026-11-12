@@ -445,10 +445,13 @@ export function lookAlikesReport(
   const requestId =
     typeof body.request_id === "string" ? body.request_id : null;
   const target = typeof file === "string" ? shellWord(file) : "<file>";
-  // A saved rule keeps them now; a tree's rule, once created.
+  // A saved rule keeps them now; a request's rule, once accepted; a tree's,
+  // once created.
   const save = ruleId
     ? `\`primitive email-rules update-email-rule ${ruleId} --${ADD_SAMPLES_FILE_FLAG} ${target}${pick}\``
-    : `\`primitive email-rules create-email-rule ... --${SAMPLES_FILE_FLAG} ${target}${pick}\` when you save the rule`;
+    : requestId
+      ? `\`primitive email-rules accept-email-rule-request ${requestId} --${SAMPLES_FILE_FLAG} ${target}${pick}\` when the member asked accepts it`
+      : `\`primitive email-rules create-email-rule ... --${SAMPLES_FILE_FLAG} ${target}${pick}\` when you save the rule`;
   const one = (count: number, single: string, many: string) =>
     count === 1 ? single : many;
   // None decided: saved as they are, they would stay undecided.
@@ -466,11 +469,6 @@ export function lookAlikesReport(
     matched.length > 0
       ? ` Test an edited rule on ${one(matched.length, "it", "them")} with \`primitive email-rules test-email-rule ${ruleId ? `--rule-id ${ruleId}` : "--body-file <body.json>"} --${EXPECT_SAMPLES_FILE_FLAG} ${target}${pick}\`.`
       : "";
-  // A request's rule keeps them once accepted: its accept takes them as
-  // expectation_samples.
-  const requestKeep = requestId
-    ? `${which}: when the member asked accepts request ${requestId}, the accept keeps those its body sends as expectation_samples on the rule it writes${chosen.length > 0 ? ` (${one(chosen.length, "number", "numbers")} ${chosen.join(", ")} above)` : ""}.`
-    : "";
   if (typeof file === "string") {
     const samples = entries.map((entry) => entry.sample);
     // Nothing to write: leave the file as it is, since an empty list would
@@ -501,14 +499,10 @@ export function lookAlikesReport(
     lines.push(
       noneDecided
         ? `${wrote} ${noneDecided}`
-        : requestKeep
-          ? `${wrote} ${requestKeep}${test}`
-          : `${wrote} ${which} with ${save}; --pick takes any of the numbers.${test}`,
+        : `${wrote} ${which} with ${save}; --pick takes any of the numbers.${test}`,
     );
   } else if (noneDecided) {
     lines.push(noneDecided);
-  } else if (requestKeep) {
-    lines.push(`${requestKeep}${test}`);
   } else if (entries.length > 0) {
     lines.push(
       `${which}: save the JSON printed above to a file and give it to ${save}; --pick takes any of the numbers above.${test}`,

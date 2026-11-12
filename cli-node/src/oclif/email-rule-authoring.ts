@@ -1569,10 +1569,22 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
   generateLookAlikes: {
     flags: {
       [LOOK_ALIKES_SAMPLES_FILE_FLAG]: Flags.string({
-        description: `Also write the look-alikes to this JSON file as made-up emails the rule must not match, a JSON array numbered from 1 in the order the report prints them. Save the ones you choose with create-email-rule --${SAMPLES_FILE_FLAG} or update-email-rule --${ADD_SAMPLES_FILE_FLAG}, with --pick; test an edited rule on them with test-email-rule --${EXPECT_SAMPLES_FILE_FLAG}. Replaces the file if it exists, once the call succeeds; when no look-alikes came back it leaves the file as it was and exits 1.`,
+        description: `Also write the look-alikes to this JSON file as made-up emails the rule must not match, a JSON array numbered from 1 in the order the report prints them. Save the ones you choose with create-email-rule --${SAMPLES_FILE_FLAG}, update-email-rule --${ADD_SAMPLES_FILE_FLAG} or, for a request, accept-email-rule-request --${SAMPLES_FILE_FLAG}, with --pick; test an edited rule on them with test-email-rule --${EXPECT_SAMPLES_FILE_FLAG}. Replaces the file if it exists, once the call succeeds; when no look-alikes came back it leaves the file as it was and exits 1.`,
       }),
     },
     report: lookAlikesReport,
+  },
+  acceptEmailRuleRequest: {
+    flags: {
+      [SAMPLES_FILE_FLAG]: Flags.string({
+        description: `${SAMPLES_FILE_SHAPE} Sets expectation_samples (at most ${SAMPLES_MAX}), over any in --body-file or --raw-body: they are kept on the rule this accept writes, such as the look-alikes of the request it must never match.`,
+      }),
+      [PICK_FLAG]: Flags.string({
+        description: pickFlagHelp([SAMPLES_FILE_FLAG]),
+      }),
+    },
+    bodyFields: samplesBodyFields(false),
+    bodyProperties: ["expectation_samples"],
   },
   compileEmailRule: {
     flags: {},

@@ -387,14 +387,14 @@ describe("lookAlikesReport", () => {
     );
   });
 
-  it("says a request's rule keeps them once accepted", () => {
+  it("saves a request's look-alikes on the rule its accept writes", () => {
     const REQUEST = "00000000-0000-4000-8000-0000000000ee";
     const report = lookAlikesReport(THREE, {
       body: { request_id: REQUEST },
       flags: {},
     });
     expect(report.lines.at(-1)).toBe(
-      `Keep the ones it matched as emails it must not match: when the member asked accepts request ${REQUEST}, the accept keeps those its body sends as expectation_samples on the rule it writes (numbers 1, 3 above). Test an edited rule on them with \`primitive email-rules test-email-rule --body-file <body.json> --expect-samples-file <file> --pick 1,3\`.`,
+      `Keep the ones it matched as emails it must not match: save the JSON printed above to a file and give it to \`primitive email-rules accept-email-rule-request ${REQUEST} --expectation-samples-file <file> --pick 1,3\` when the member asked accepts it; --pick takes any of the numbers above. Test an edited rule on them with \`primitive email-rules test-email-rule --body-file <body.json> --expect-samples-file <file> --pick 1,3\`.`,
     );
   });
 

@@ -1875,6 +1875,74 @@ describe("email-rules generate-look-alikes", () => {
   });
 });
 
+describe("email-rules accept-email-rule-request --expectation-samples-file", () => {
+  const REQUEST = "00000000-0000-4000-8000-0000000000ee";
+  const sample = (subject: string) => ({
+    expected: "no_match",
+    label: `medical: ${subject}`,
+    email: {
+      from: { address: "billing@clinic.example" },
+      to: ["me@acme.example"],
+      subject,
+      text: `${subject}, the text.`,
+    },
+  });
+  const samples = [sample("one"), sample("two"), sample("three")];
+
+  it("keeps the picked samples on the rule the accept writes", async () => {
+    answer({ request: { id: REQUEST }, rule: { id: RULE }, share: {} });
+    const result = await run("email-rules:accept-email-rule-request", [
+      REQUEST,
+      "--expectation-samples-file",
+      tempFile("samples.json", JSON.stringify(samples)),
+      "--pick",
+      "3,1",
+    ]);
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(calls[0]?.url.pathname).toBe(
+      `/v1/email-rule-requests/${REQUEST}/accept`,
+    );
+    expect(calls[0]?.body).toEqual({
+      expectation_samples: [samples[2], samples[0]],
+    });
+  });
+
+  it("writes look-alikes for a request with --request-id", async () => {
+    answer({
+      rule: { id: null, version: null, vocabulary: "v1" },
+      look_alikes: [],
+      counts: { passed: 0, failed: 0, undecided: 0, dropped: 0 },
+      note: "Made up.",
+    });
+    const result = await run("email-rules:generate-look-alikes", [
+      "--request-id",
+      REQUEST,
+    ]);
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(calls[0]?.body).toEqual({ request_id: REQUEST });
+  });
+
+  it("refuses an empty file and a number it does not hold, sending nothing", async () => {
+    const empty = await run("email-rules:accept-email-rule-request", [
+      REQUEST,
+      "--expectation-samples-file",
+      tempFile("empty.json", "[]"),
+    ]);
+    expect(empty.exitCode).toBe(2);
+    expect(empty.stderr).toContain("holds no samples");
+    const out = await run("email-rules:accept-email-rule-request", [
+      REQUEST,
+      "--expectation-samples-file",
+      tempFile("samples.json", JSON.stringify(samples)),
+      "--pick",
+      "4",
+    ]);
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("4 is not a sample number");
+    expect(calls).toEqual([]);
+  });
+});
+
 describe("email-rules made-up emails in test and write reports", () => {
   const written = {
     id: RULE,

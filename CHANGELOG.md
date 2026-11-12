@@ -1112,6 +1112,10 @@ parsers.
   when the write replaced them, and when it added some, each by its place
   in the set judged, the rule's saved ones first. One undecided for no
   reason given exits 1, since sending the write again may not decide it.
+- `email-rules accept-email-rule-request --expectation-samples-file` (with
+  `--pick`) keeps made-up emails from such a file on the rule the accept
+  writes, such as a request's look-alikes it must never match;
+  `generate-look-alikes --request-id` says so in its save hint.
 - Without `--json`, `test-email-rule` names each made-up email that did not
   pass: by its number in the samples file, or as `saved sample N` for the
   rule's own. With or without `--json`, its exit code counts them: 1 when
