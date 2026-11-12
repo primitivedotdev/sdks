@@ -126,6 +126,17 @@ describe("parseEventTypesFlag", () => {
     expect(parseEventTypesFlag(["constructor"])).toEqual(["constructor"]);
   });
 
+  it("expands email_rule_objection.* to the four objection events, which this CLI knows", () => {
+    const expanded = parseEventTypesFlag(["email_rule_objection.*"]);
+    expect(expanded).toEqual([
+      "email_rule_objection.created",
+      "email_rule_objection.accepted",
+      "email_rule_objection.declined",
+      "email_rule_objection.withdrawn",
+    ]);
+    expect(unknownEventTypes(expanded)).toEqual([]);
+  });
+
   it("rejects an empty list and more than 50 names", () => {
     expect(() => parseEventTypesFlag([" , "])).toThrow(EventTypesFlagError);
     const many = Array.from({ length: 51 }, (_, i) => `custom.${i}`);
@@ -426,6 +437,14 @@ describe("a refused webhook for rule request events", () => {
       updateEndpointRuleRequestHint(
         "forbidden",
         { rules: { event_types: ["email_rule_request.*"] } },
+        reason,
+      ),
+    ).toBe(RULE_REQUEST_WEBHOOK_SUBSCRIBE_HINT);
+    // Objection events are kept to such a webhook too.
+    expect(
+      updateEndpointRuleRequestHint(
+        "forbidden",
+        { rules: { event_types: ["email_rule_objection.created"] } },
         reason,
       ),
     ).toBe(RULE_REQUEST_WEBHOOK_SUBSCRIBE_HINT);

@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   EMAIL_EVENT_TYPES,
+  EMAIL_RULE_OBJECTION_EVENT_TYPES,
   EMAIL_RULE_REQUEST_EVENT_TYPES,
   getEventHeader,
   handleWebhookEvent,
   INTERACTION_EVENT_TYPES,
   isEmailReceivedEvent,
+  isEmailRuleObjectionEvent,
   isEmailRuleRequestEvent,
   isKnownWebhookEventType,
   parseWebhookEvent,
@@ -105,6 +107,49 @@ describe("header-keyed event parsing", () => {
     expect(
       isEmailRuleRequestEvent(
         parseWebhookEvent({ interaction: {} }, "interaction.ack.acked"),
+      ),
+    ).toBe(false);
+  });
+
+  it("lists the opt-in rule objection events and parses one by its header", () => {
+    expect([...EMAIL_RULE_OBJECTION_EVENT_TYPES]).toEqual([
+      "email_rule_objection.created",
+      "email_rule_objection.accepted",
+      "email_rule_objection.declined",
+      "email_rule_objection.withdrawn",
+    ]);
+    for (const type of EMAIL_RULE_OBJECTION_EVENT_TYPES) {
+      expect(WEBHOOK_EVENT_TYPES).toContain(type);
+      expect(isKnownWebhookEventType(type)).toBe(true);
+    }
+    const body = {
+      id: "evt_2",
+      type: "email_rule_objection.created",
+      occurred_at: "2026-11-12T03:16:16.848Z",
+      email_rule_objection: {
+        id: "obj_1",
+        rule: { id: "rule_1", name: "Archive newsletters" },
+        status: "pending",
+        created_at: "2026-11-12T03:16:16.848Z",
+        decided_at: null,
+        decline_reason: null,
+      },
+      objector: { user_id: "user_2", name: "Ana Lima" },
+    };
+    const event = parseWebhookEvent(body, "email_rule_objection.created");
+    expect(isEmailRuleObjectionEvent(event)).toBe(true);
+    expect(isEmailRuleRequestEvent(event)).toBe(false);
+    if (isEmailRuleObjectionEvent(event)) {
+      expect(event.event).toBe("email_rule_objection.created");
+      expect(event.email_rule_objection.rule.name).toBe("Archive newsletters");
+      expect(event.objector?.name).toBe("Ana Lima");
+    }
+    expect(
+      isEmailRuleObjectionEvent(
+        parseWebhookEvent(
+          { type: "email_rule_request.created" },
+          "email_rule_request.created",
+        ),
       ),
     ).toBe(false);
   });

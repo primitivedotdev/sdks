@@ -5,8 +5,8 @@
  * Primitive posts every webhook with the event name in the `X-Webhook-Event`
  * HEADER, not in the body. The stored payload is sent verbatim with no
  * envelope: an `email.*` or `sent_email.*` body carries `event`, an
- * `email_rule_request.*` body carries `type` but not `event`, and an
- * `interaction.*` body is just
+ * `email_rule_request.*` or `email_rule_objection.*` body carries `type` but
+ * not `event`, and an `interaction.*` body is just
  * `{ interaction: { ... } }` with no event/type field at all. The HEADER is
  * therefore the only reliable discriminator across all the families, which is
  * why the parser keys on it.
@@ -58,21 +58,38 @@ export const EMAIL_RULE_REQUEST_EVENT_TYPES = [
 ] as const;
 
 /**
+ * The rule objection events (subject = an objection: a member asked the
+ * author of a rule over their own mail to turn it off). Each goes to the
+ * person who did not act: `created` and `withdrawn` to the rule's author,
+ * `accepted` and `declined` to the member who objected. They are opt-in, and
+ * only a webhook that person made for them receives them.
+ */
+export const EMAIL_RULE_OBJECTION_EVENT_TYPES = [
+  "email_rule_objection.created",
+  "email_rule_objection.accepted",
+  "email_rule_objection.declined",
+  "email_rule_objection.withdrawn",
+] as const;
+
+/**
  * The full enumerated catalog of every current webhook event type: the five
  * email.*, the four opt-in sent_email.*, the four opt-in
- * email_rule_request.*, and every interaction.<protocol>.<suffix>.
+ * email_rule_request.*, the four opt-in email_rule_objection.*, and every
+ * interaction.<protocol>.<suffix>.
  */
 export const WEBHOOK_EVENT_TYPES = [
   ...EMAIL_EVENT_TYPES,
   ...SENT_EMAIL_EVENT_TYPES,
   ...EMAIL_RULE_REQUEST_EVENT_TYPES,
+  ...EMAIL_RULE_OBJECTION_EVENT_TYPES,
   ...INTERACTION_EVENT_TYPES,
 ] as const;
 
 /**
  * Any current catalog value: every `email.*`, `sent_email.*`,
- * `email_rule_request.*` and `interaction.ack.*` event the platform emits, surfaced
- * in the `X-Webhook-Event` header. Use this to type a switch over the header.
+ * `email_rule_request.*`, `email_rule_objection.*` and `interaction.ack.*`
+ * event the platform emits, surfaced in the `X-Webhook-Event` header. Use
+ * this to type a switch over the header.
  */
 export type WebhookEventType = (typeof WEBHOOK_EVENT_TYPES)[number];
 
@@ -179,5 +196,52 @@ export function isEmailRuleRequestEvent(
   return (
     name !== undefined &&
     (EMAIL_RULE_REQUEST_EVENT_TYPES as readonly string[]).includes(name)
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Rule objection events
+// -----------------------------------------------------------------------------
+
+/**
+ * The body of an `email_rule_objection.*` webhook. It names the objection and
+ * its rule, says where it stands, and carries a decline's reason, null when
+ * there is none. It never carries the objector's message (withdrawing clears
+ * it), the rule itself or anything read from mail: read the objection with
+ * `getEmailRuleObjection` for the rest. Pass the `X-Webhook-Event` header to
+ * the parser, since the body has `type` and no `event`.
+ */
+export interface EmailRuleObjectionEvent {
+  /** The event name, overlaid from the `X-Webhook-Event` header by the parser. */
+  event: (typeof EMAIL_RULE_OBJECTION_EVENT_TYPES)[number];
+  /** The webhook event's id. */
+  id: string;
+  /** The event name as the body carries it. */
+  type: (typeof EMAIL_RULE_OBJECTION_EVENT_TYPES)[number];
+  occurred_at: string;
+  email_rule_objection: {
+    id: string;
+    /** The rule objected to: its id (null once deleted outright) and its name when the objection was made. */
+    rule: { id: string | null; name: string; [key: string]: unknown };
+    status: "pending" | "accepted" | "declined" | "withdrawn";
+    created_at: string;
+    decided_at: string | null;
+    /** Why the rule's author declined; null unless they gave a reason. */
+    decline_reason: string | null;
+    [key: string]: unknown;
+  };
+  /** On `created` and `withdrawn`: the member who objected. */
+  objector?: { user_id: string; name: string | null };
+  [key: string]: unknown;
+}
+
+/** True when `event` is an `email_rule_objection.*` event. */
+export function isEmailRuleObjectionEvent(
+  event: unknown,
+): event is EmailRuleObjectionEvent {
+  const name = eventName(event);
+  return (
+    name !== undefined &&
+    (EMAIL_RULE_OBJECTION_EVENT_TYPES as readonly string[]).includes(name)
   );
 }

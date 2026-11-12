@@ -6,6 +6,7 @@ import json
 
 from primitive import (
     EMAIL_EVENT_TYPES,
+    EMAIL_RULE_OBJECTION_EVENT_TYPES,
     EMAIL_RULE_REQUEST_EVENT_TYPES,
     INTERACTION_EVENT_TYPES,
     WEBHOOK_EVENT_TYPES,
@@ -80,6 +81,27 @@ def test_catalog_lists_the_opt_in_rule_request_events() -> None:
         "email_rule_request.created",
     )
     assert _event_name(event) == "email_rule_request.created"
+
+
+def test_catalog_lists_the_opt_in_rule_objection_events() -> None:
+    assert EMAIL_RULE_OBJECTION_EVENT_TYPES == (
+        "email_rule_objection.created",
+        "email_rule_objection.accepted",
+        "email_rule_objection.declined",
+        "email_rule_objection.withdrawn",
+    )
+    for event_type in EMAIL_RULE_OBJECTION_EVENT_TYPES:
+        assert event_type in WEBHOOK_EVENT_TYPES
+        assert is_known_webhook_event_type(event_type)
+    event = parse_webhook_event(
+        {
+            "id": "evt_2",
+            "type": "email_rule_objection.created",
+            "email_rule_objection": {"id": "obj_1"},
+        },
+        "email_rule_objection.created",
+    )
+    assert _event_name(event) == "email_rule_objection.created"
 
 
 def test_catalog_no_longer_lists_payment_events() -> None:
