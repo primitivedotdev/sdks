@@ -10,11 +10,13 @@ vi.mock("../../src/oclif/api-client.js", async (original) => ({
 
 import {
   ActivityAskedCommand,
+  ActivityConcerningCommand,
   ActivityCreatedCommand,
   type ActivityItem,
   ALL_PAGES_LIMIT,
   formatActivityRows,
   formatAskedRows,
+  formatConcerningRows,
   formatWithheld,
   resumeCommand,
   throughLabel,
@@ -407,5 +409,77 @@ describe("activity asked command", () => {
     );
     await ActivityAskedCommand.run(["--state", "ended"], { root });
     expect(lines.join("\n")).toContain("Nothing to show.");
+  });
+});
+
+describe("activity concerning command", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    auth.create.mockReset();
+    process.exitCode = undefined;
+  });
+
+  it("is registered beside activity asked", () => {
+    expect(COMMANDS["activity:concerning"]).toBeDefined();
+  });
+
+  it("lists coverage notices with the rule's author, and asks the API for exactly that", async () => {
+    const urls = useApi([
+      page(
+        [
+          item({
+            kind: "email_rule_coverage",
+            id: "6e2d3c4b-5a69-4b1a-9c8d-7e6f5a4b3c2d",
+            name: "Vendor invoices",
+            state: "new_version",
+            owned_now: "someone_else",
+            created_through: { kind: "member", id: "u-3", name: "Sam Rivera" },
+          }),
+          item({
+            kind: "email_rule_coverage",
+            name: "Vendor invoices",
+            state: "started",
+            owned_now: "someone_else",
+            created_through: { kind: "member", id: "u-3", name: null },
+          }),
+        ],
+        "next-page",
+      ),
+    ]);
+    const lines: string[] = [];
+    vi.spyOn(ActivityConcerningCommand.prototype, "log").mockImplementation(
+      (message?: string) => {
+        lines.push(message ?? "");
+      },
+    );
+    await ActivityConcerningCommand.run([], { root });
+    expect(Object.fromEntries(urls[0]?.searchParams ?? [])).toEqual({
+      relation: "concerning",
+      state: "all",
+      limit: "50",
+    });
+    const out = lines.join("\n");
+    expect(out).toMatch(/^NOTICE\s+WHEN \(UTC\)\s+RULE\s+AUTHOR\s+ID$/m);
+    expect(out).toMatch(/^new_version\s+.*Vendor invoices\s+Sam Rivera\s/m);
+    expect(out).toMatch(/^started\s+.*Vendor invoices\s+u-3\s/m);
+    expect(out).toMatch(/More: \S+ activity concerning --cursor next-page$/m);
+  });
+
+  it("says no rule has covered your mail only when the listing is the whole of it", async () => {
+    expect(formatConcerningRows([], true)).toBe(
+      "No other member's rule has covered your mail.",
+    );
+    expect(formatConcerningRows([])).toBe("Nothing to show.");
+    useApi([page([], null)]);
+    const lines: string[] = [];
+    vi.spyOn(ActivityConcerningCommand.prototype, "log").mockImplementation(
+      (message?: string) => {
+        lines.push(message ?? "");
+      },
+    );
+    await ActivityConcerningCommand.run([], { root });
+    expect(lines.join("\n")).toContain(
+      "No other member's rule has covered your mail.",
+    );
   });
 });

@@ -2210,6 +2210,7 @@ export function createOperationCommand(
                       : await readCallerMailFor(auth, apiClient.client),
                 })
               : (emptyRuleListHint(operation.sdkName, query) ??
+                emptyDeliveriesHint(operation.sdkName, query) ??
                 EMPTY_RESULT_HINTS[operation.sdkName]);
           if (hint && jsonOutput) summary.push(hint);
           else if (hint) process.stderr.write(`${hint}\n`);
@@ -2440,6 +2441,22 @@ export function emptyRuleListHint(
     ]);
   }
   return undefined;
+}
+
+/**
+ * An empty delivery list filtered by --endpoint-id says the filter hid the
+ * rest, in place of the general hint, which reads as if nothing was ever
+ * delivered. Undefined for any other list, or when no endpoint was named.
+ */
+export function emptyDeliveriesHint(
+  sdkName: string,
+  query: Record<string, unknown>,
+): string | undefined {
+  if (sdkName !== "listDeliveries" || query.endpoint_id === undefined)
+    return undefined;
+  return query.cursor !== undefined
+    ? "(no results) No more deliveries to this endpoint."
+    : "(no results) No deliveries to this endpoint match. Leave out --endpoint-id to list deliveries to every endpoint you can see.";
 }
 
 function canonicalizeCliReferences(description: string): string {

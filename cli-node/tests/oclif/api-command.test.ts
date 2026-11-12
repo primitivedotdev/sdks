@@ -12,6 +12,7 @@ import {
   DASHBOARD_ONLY_NOTE,
   domainVerificationFailedHint,
   EMPTY_RESULT_HINTS,
+  emptyDeliveriesHint,
   emptyRuleListHint,
   extractErrorCode,
   extractErrorPayload,
@@ -842,6 +843,28 @@ describe("emptyRuleListHint", () => {
         box: "all",
         status: "any",
       }),
+    ).toBeUndefined();
+  });
+});
+
+describe("emptyDeliveriesHint", () => {
+  it("says --endpoint-id hid the rest, and nothing without it", () => {
+    expect(
+      emptyDeliveriesHint("listDeliveries", {
+        endpoint_id: "0b0f6a43-3c1c-4d4e-9b1a-1f2d3c4b5a69",
+      }),
+    ).toBe(
+      "(no results) No deliveries to this endpoint match. Leave out --endpoint-id to list deliveries to every endpoint you can see.",
+    );
+    expect(
+      emptyDeliveriesHint("listDeliveries", {
+        endpoint_id: "0b0f6a43-3c1c-4d4e-9b1a-1f2d3c4b5a69",
+        cursor: "c",
+      }),
+    ).toBe("(no results) No more deliveries to this endpoint.");
+    expect(emptyDeliveriesHint("listDeliveries", {})).toBeUndefined();
+    expect(
+      emptyDeliveriesHint("listEndpoints", { endpoint_id: "x" }),
     ).toBeUndefined();
   });
 });

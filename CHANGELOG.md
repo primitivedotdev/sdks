@@ -183,6 +183,10 @@ no longer `UNSET` in Python, plain or `Nil*` fields rather than `Opt*` in Go):
   that does not hold `org:read`, and other account fields as null when the
   credential lacks the permission each one needs.
 - An email's parsed content and a conversation message's `text` can be null.
+- `testEndpoint`'s `body` (`TestResult.body`, the receiver's answer) is null
+  for a caller without organization-wide `mail.raw:read`, since a receiver
+  can echo a raw download link: Node `string | null`, Python `str | None`,
+  Go `NilString`.
 - An enum field that can be null lists null among its values in the published
   spec, so a 3.1 validator accepts it, and the Node types include `| null`
   (for example `Endpoint.owner_key_status`). In Python such a field is typed
@@ -613,7 +617,11 @@ date-time is kept as null and sorts last. A sync stops with an error after
   A rule you can read only because it decided on your mail before has
   `covers_now` false, a `note` saying what is withheld, `name`, `covers`
   and `current_version` null, and as `current` the newest version that
-  decided on your mail. They need `mail:read` on a member's own
+  decided on your mail. Each covering rule carries `receivers`
+  (`EmailRuleReceivers`): the working API keys and webhooks that receive
+  what it shares, each by its owner and a count, and its live share by the
+  member it gives to; null when they could not be read in time. They need
+  `mail:read` on a member's own
   session or the CLI, not narrowed. In the CLI: `email-rule-oversight
   list-email-rules-covering-me`, `get-email-rule-covering-me` and
   `list-email-rule-decisions-on-my-mail`.
@@ -653,11 +661,22 @@ date-time is kept as null and sorts last. A sync stops with an error after
 
 - `rotateKey` takes `expires_at`: the new key's expiry, a time or null for
   none, instead of the old key's.
-- `listActivityObjects` takes `relation`: `created` (the default) or `asked`,
+- `listActivityObjects` takes `relation`: `created` (the default), `asked`,
   what other members asked of you: rule requests made to you, and
-  objections to rules you wrote. Its `kind` can be `email_rule_objection`:
-  with `created`, your own objections (on the dashboard or in the CLI
-  only); with `asked`, the objections to rules you wrote.
+  objections to rules you wrote, or `concerning`, what other members' rules
+  did to your own mail. Its `kind` can be `email_rule_objection`: with
+  `created`, your own objections (on the dashboard or in the CLI only);
+  with `asked`, the objections to rules you wrote. With `concerning` the
+  only kind is `email_rule_coverage`, a coverage notice (on the dashboard or
+  in the CLI only): its `state` is `started` (a rule began covering one of
+  your mailboxes), `new_version`, or `baseline` (it already covered you when
+  notices began), its `name` is the rule's name then, and
+  `created_through` names the rule's author.
+- A rule request, in every answer that returns one, and
+  `createEmailRuleRequest`'s answer can carry `server_notes`: the API's own
+  notes on the rule as asked, never written by the member who asked.
+- A rule listed `read_only` in `listEmailRuleResults` carries `receivers`
+  (`EmailRuleReceivers`) while it covers you, and null otherwise.
 - `listDeliveries` takes `endpoint_id`: only deliveries to that endpoint.
 - For a caller who cannot read the webhook, a delivery's `response_body`
   is null, its `last_error` gives the status and a note without quoting
@@ -1124,6 +1143,18 @@ downgrading, or sign in again afterwards.
 - `--event-types 'email_rule_request.*'` expands to the four events, as
   `sent_email.*` does. When creating or changing such a webhook is refused,
   `endpoints create-endpoint` and `update-endpoint` say what to do instead.
+- The catalogs also list the rule objection events,
+  `email_rule_objection.created`, `accepted`, `declined` and `withdrawn`
+  (`EMAIL_RULE_OBJECTION_EVENT_TYPES` in Node and Python,
+  `EmailRuleObjectionEventTypes` in Go): `created` and `withdrawn` go to the
+  rule's author, `accepted` and `declined` to the member who objected. The
+  body names the objection and its rule, its `status` and a decline's
+  `decline_reason`, and on `created` and `withdrawn` the `objector`; never
+  the objector's message.
+- The Node SDK has its shape (`EmailRuleObjectionEvent`) and a type guard
+  (`isEmailRuleObjectionEvent`). The objection events are opt-in and kept to
+  a webhook its person made for them, as the rule request events are, and
+  `--event-types` expands `email_rule_objection.*`.
 
 #### Values the API adds later
 
@@ -1228,7 +1259,9 @@ parsers.
   list-email-rule-requests`, `list-email-rule-shares` or
   `list-given-email-rule-shares`, or `email-rule-oversight
   list-email-rule-objections`, says which default filter hid the rest
-  (`--box all`, `--status any`, `--live any`).
+  (`--box all`, `--status any`, `--live any`). An empty `webhook-deliveries
+  list-deliveries --endpoint-id` says the filter hid the rest instead of
+  saying no deliveries were logged.
 - `keys create` and `keys update` print the answer's `address_warnings`
   without `--json`, such as an address or domain listed beside `--rule`,
   which the key reads in full.
@@ -1283,6 +1316,10 @@ parsers.
   objections to rules you wrote, each with its kind, state, who asked or
   objected, and its id. It takes `--state`, `--limit`, `--cursor`,
   `--all` and `--json`.
+- `primitive activity concerning` lists what other members' rules did to
+  your own mail, newest first: each coverage notice (`started`,
+  `new_version` or `baseline`), when, the rule's name then and its author.
+  It takes `--limit`, `--cursor`, `--all` and `--json`.
 - `primitive activity created` lists what you created, newest first, with
   where each object stands now. Signed in with `primitive login`, it covers
   what you created through any credential of yours, names the credential on
