@@ -27465,8 +27465,10 @@ func (s *CreateAgentConnectionOKData) encodeFields(e *jx.Encoder) {
 		s.Invitation.Encode(e)
 	}
 	{
-		e.FieldStart("recovered")
-		e.Bool(true)
+		if s.Recovered.Set {
+			e.FieldStart("recovered")
+			s.Recovered.Encode(e)
+		}
 	}
 }
 
@@ -34654,8 +34656,10 @@ func (s *CreateRoleRequestMailScope1) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		e.FieldStart("self")
-		e.Bool(true)
+		if s.Self.Set {
+			e.FieldStart("self")
+			s.Self.Encode(e)
+		}
 	}
 }
 
@@ -51623,8 +51627,10 @@ func (s *CredentialsUpdateKeyResult) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		e.FieldStart("grant_unguarded")
-		e.Bool(true)
+		if s.GrantUnguarded.Set {
+			e.FieldStart("grant_unguarded")
+			s.GrantUnguarded.Encode(e)
+		}
 	}
 	for k, elem := range s.AdditionalProps {
 		e.FieldStart(k)
@@ -73821,8 +73827,10 @@ func (s *EmailRuleDecisionOnMyMail) encodeFields(e *jx.Encoder) {
 		e.ArrEnd()
 	}
 	{
-		e.FieldStart("detail_withheld")
-		e.Bool(true)
+		if s.DetailWithheld.Set {
+			e.FieldStart("detail_withheld")
+			s.DetailWithheld.Encode(e)
+		}
 	}
 	{
 		e.FieldStart("created_at")
@@ -198046,8 +198054,10 @@ func (s *PutAgentContactRequest) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		e.FieldStart("if_absent")
-		e.Bool(true)
+		if s.IfAbsent.Set {
+			e.FieldStart("if_absent")
+			s.IfAbsent.Encode(e)
+		}
 	}
 	{
 		if s.IfVersion.Set {
@@ -199049,8 +199059,10 @@ func (s *PutContactRequest) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		e.FieldStart("if_absent")
-		e.Bool(true)
+		if s.IfAbsent.Set {
+			e.FieldStart("if_absent")
+			s.IfAbsent.Encode(e)
+		}
 	}
 	{
 		if s.IfVersion.Set {
@@ -264131,8 +264143,10 @@ func (s *UpdateRoleRequestMailScope1) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		e.FieldStart("self")
-		e.Bool(true)
+		if s.Self.Set {
+			e.FieldStart("self")
+			s.Self.Encode(e)
+		}
 	}
 }
 

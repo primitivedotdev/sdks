@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -85,5 +86,36 @@ func TestErrorCodeNotInTheSpecStillDecodes(t *testing.T) {
 	}
 	if string(failure.Error.Code) != "some_future_code" {
 		t.Fatalf("unexpected error code %q", failure.Error.Code)
+	}
+}
+
+// An optional const field is written back only when the API sent it: a
+// readable decision about your own mail re-encodes without detail_withheld,
+// and a withheld one keeps it.
+func TestDecisionOnMyMailReencodesDetailWithheldOnlyWhenSet(t *testing.T) {
+	readable := []byte(`{"id":"3c9e7a1b-2d4f-4b6a-8c0e-1f2a3b4c5d6e","email_id":"4c9e7a1b-2d4f-4b6a-8c0e-1f2a3b4c5d6e","rule_version":1,"classification_id":"5c9e7a1b-2d4f-4b6a-8c0e-1f2a3b4c5d6e","matched":true,"near_miss":false,"parts":[],"question_answers":[],"created_at":"2026-11-12T00:00:00Z","from_address":"a@b.example","subject":"s","received_at":"2026-11-12T00:00:00Z"}`)
+	var decision api.EmailRuleDecisionOnMyMail
+	if err := decision.UnmarshalJSON(readable); err != nil {
+		t.Fatal(err)
+	}
+	out, err := decision.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(out), "detail_withheld") {
+		t.Fatalf("a readable decision re-encoded with detail_withheld: %s", out)
+	}
+
+	withheld := strings.Replace(string(readable), `"matched":true`, `"matched":true,"detail_withheld":true`, 1)
+	var hidden api.EmailRuleDecisionOnMyMail
+	if err := hidden.UnmarshalJSON([]byte(withheld)); err != nil {
+		t.Fatal(err)
+	}
+	out, err = hidden.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(out), `"detail_withheld":true`) {
+		t.Fatalf("a withheld decision lost detail_withheld: %s", out)
 	}
 }
