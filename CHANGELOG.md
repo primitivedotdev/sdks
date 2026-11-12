@@ -673,8 +673,10 @@ date-time is kept as null and sorts last. A sync stops with an error after
   notices began), its `name` is the rule's name then, and
   `created_through` names the rule's author.
 - A rule request, in every answer that returns one, and
-  `createEmailRuleRequest`'s answer can carry `server_notes`: the API's own
-  notes on the rule as asked, never written by the member who asked. A rule
+  `createEmailRuleRequest`'s answer can carry `server_explanation`, the
+  API's own reading of what the rule as asked does (null when its tree no
+  longer reads as one), and `server_notes`, the API's own notes on the rule
+  as asked. Neither is written by the member who asked. A rule
   request's `warnings` are those the member who asked sent, then every
   compiler note on the rule's tree and words they lack.
 - A rule listed `read_only` in `listEmailRuleResults` carries `receivers`

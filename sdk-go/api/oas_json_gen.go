@@ -29916,6 +29916,12 @@ func (s *CreateEmailRuleRequestResult) encodeFields(e *jx.Encoder) {
 		e.ArrEnd()
 	}
 	{
+		if s.ServerExplanation.Set {
+			e.FieldStart("server_explanation")
+			s.ServerExplanation.Encode(e)
+		}
+	}
+	{
 		if s.ServerNotes != nil {
 			e.FieldStart("server_notes")
 			e.ArrStart()
@@ -30011,7 +30017,7 @@ func (s *CreateEmailRuleRequestResult) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfCreateEmailRuleRequestResult = [27]string{
+var jsonFieldsNameOfCreateEmailRuleRequestResult = [28]string{
 	0:  "id",
 	1:  "status",
 	2:  "name",
@@ -30020,25 +30026,26 @@ var jsonFieldsNameOfCreateEmailRuleRequestResult = [27]string{
 	5:  "explanation",
 	6:  "assumptions",
 	7:  "warnings",
-	8:  "server_notes",
-	9:  "compiled_by",
-	10: "vocabulary",
-	11: "proposed_via",
-	12: "created_at",
-	13: "decided_at",
-	14: "decided_by_user_id",
-	15: "proposer",
-	16: "target",
-	17: "target_address_typed",
-	18: "is_proposer",
-	19: "is_target",
-	20: "share_id",
-	21: "message",
-	22: "decline_reason",
-	23: "edited_on_accept",
-	24: "notice",
-	25: "target_can_accept",
-	26: "target_warning",
+	8:  "server_explanation",
+	9:  "server_notes",
+	10: "compiled_by",
+	11: "vocabulary",
+	12: "proposed_via",
+	13: "created_at",
+	14: "decided_at",
+	15: "decided_by_user_id",
+	16: "proposer",
+	17: "target",
+	18: "target_address_typed",
+	19: "is_proposer",
+	20: "is_target",
+	21: "share_id",
+	22: "message",
+	23: "decline_reason",
+	24: "edited_on_accept",
+	25: "notice",
+	26: "target_can_accept",
+	27: "target_warning",
 }
 
 // Decode decodes CreateEmailRuleRequestResult from json.
@@ -30158,6 +30165,16 @@ func (s *CreateEmailRuleRequestResult) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"warnings\"")
 			}
+		case "server_explanation":
+			if err := func() error {
+				s.ServerExplanation.Reset()
+				if err := s.ServerExplanation.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"server_explanation\"")
+			}
 		case "server_notes":
 			if err := func() error {
 				s.ServerNotes = make([]string, 0)
@@ -30178,7 +30195,7 @@ func (s *CreateEmailRuleRequestResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"server_notes\"")
 			}
 		case "compiled_by":
-			requiredBitSet[1] |= 1 << 1
+			requiredBitSet[1] |= 1 << 2
 			if err := func() error {
 				v, err := d.Str()
 				s.CompiledBy = string(v)
@@ -30190,7 +30207,7 @@ func (s *CreateEmailRuleRequestResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"compiled_by\"")
 			}
 		case "vocabulary":
-			requiredBitSet[1] |= 1 << 2
+			requiredBitSet[1] |= 1 << 3
 			if err := func() error {
 				v, err := d.Str()
 				s.Vocabulary = string(v)
@@ -30202,7 +30219,7 @@ func (s *CreateEmailRuleRequestResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"vocabulary\"")
 			}
 		case "proposed_via":
-			requiredBitSet[1] |= 1 << 3
+			requiredBitSet[1] |= 1 << 4
 			if err := func() error {
 				if err := s.ProposedVia.Decode(d); err != nil {
 					return err
@@ -30212,7 +30229,7 @@ func (s *CreateEmailRuleRequestResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"proposed_via\"")
 			}
 		case "created_at":
-			requiredBitSet[1] |= 1 << 4
+			requiredBitSet[1] |= 1 << 5
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.CreatedAt = v
@@ -30224,7 +30241,7 @@ func (s *CreateEmailRuleRequestResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"created_at\"")
 			}
 		case "decided_at":
-			requiredBitSet[1] |= 1 << 5
+			requiredBitSet[1] |= 1 << 6
 			if err := func() error {
 				if err := s.DecidedAt.Decode(d, json.DecodeDateTime); err != nil {
 					return err
@@ -30234,7 +30251,7 @@ func (s *CreateEmailRuleRequestResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"decided_at\"")
 			}
 		case "decided_by_user_id":
-			requiredBitSet[1] |= 1 << 6
+			requiredBitSet[1] |= 1 << 7
 			if err := func() error {
 				if err := s.DecidedByUserID.Decode(d); err != nil {
 					return err
@@ -30244,7 +30261,7 @@ func (s *CreateEmailRuleRequestResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"decided_by_user_id\"")
 			}
 		case "proposer":
-			requiredBitSet[1] |= 1 << 7
+			requiredBitSet[2] |= 1 << 0
 			if err := func() error {
 				if err := s.Proposer.Decode(d); err != nil {
 					return err
@@ -30254,7 +30271,7 @@ func (s *CreateEmailRuleRequestResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"proposer\"")
 			}
 		case "target":
-			requiredBitSet[2] |= 1 << 0
+			requiredBitSet[2] |= 1 << 1
 			if err := func() error {
 				if err := s.Target.Decode(d); err != nil {
 					return err
@@ -30264,7 +30281,7 @@ func (s *CreateEmailRuleRequestResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"target\"")
 			}
 		case "target_address_typed":
-			requiredBitSet[2] |= 1 << 1
+			requiredBitSet[2] |= 1 << 2
 			if err := func() error {
 				if err := s.TargetAddressTyped.Decode(d); err != nil {
 					return err
@@ -30274,7 +30291,7 @@ func (s *CreateEmailRuleRequestResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"target_address_typed\"")
 			}
 		case "is_proposer":
-			requiredBitSet[2] |= 1 << 2
+			requiredBitSet[2] |= 1 << 3
 			if err := func() error {
 				v, err := d.Bool()
 				s.IsProposer = bool(v)
@@ -30286,7 +30303,7 @@ func (s *CreateEmailRuleRequestResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"is_proposer\"")
 			}
 		case "is_target":
-			requiredBitSet[2] |= 1 << 3
+			requiredBitSet[2] |= 1 << 4
 			if err := func() error {
 				v, err := d.Bool()
 				s.IsTarget = bool(v)
@@ -30298,7 +30315,7 @@ func (s *CreateEmailRuleRequestResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"is_target\"")
 			}
 		case "share_id":
-			requiredBitSet[2] |= 1 << 4
+			requiredBitSet[2] |= 1 << 5
 			if err := func() error {
 				if err := s.ShareID.Decode(d); err != nil {
 					return err
@@ -30378,8 +30395,8 @@ func (s *CreateEmailRuleRequestResult) Decode(d *jx.Decoder) error {
 	var failures []validate.FieldError
 	for i, mask := range [4]uint8{
 		0b11111111,
-		0b11111110,
-		0b00011111,
+		0b11111100,
+		0b00111111,
 		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
@@ -78704,6 +78721,12 @@ func (s *EmailRuleRequest) encodeFields(e *jx.Encoder) {
 		e.ArrEnd()
 	}
 	{
+		if s.ServerExplanation.Set {
+			e.FieldStart("server_explanation")
+			s.ServerExplanation.Encode(e)
+		}
+	}
+	{
 		if s.ServerNotes != nil {
 			e.FieldStart("server_notes")
 			e.ArrStart()
@@ -78787,7 +78810,7 @@ func (s *EmailRuleRequest) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfEmailRuleRequest = [25]string{
+var jsonFieldsNameOfEmailRuleRequest = [26]string{
 	0:  "id",
 	1:  "status",
 	2:  "name",
@@ -78796,23 +78819,24 @@ var jsonFieldsNameOfEmailRuleRequest = [25]string{
 	5:  "explanation",
 	6:  "assumptions",
 	7:  "warnings",
-	8:  "server_notes",
-	9:  "compiled_by",
-	10: "vocabulary",
-	11: "proposed_via",
-	12: "created_at",
-	13: "decided_at",
-	14: "decided_by_user_id",
-	15: "proposer",
-	16: "target",
-	17: "target_address_typed",
-	18: "is_proposer",
-	19: "is_target",
-	20: "share_id",
-	21: "message",
-	22: "decline_reason",
-	23: "edited_on_accept",
-	24: "notice",
+	8:  "server_explanation",
+	9:  "server_notes",
+	10: "compiled_by",
+	11: "vocabulary",
+	12: "proposed_via",
+	13: "created_at",
+	14: "decided_at",
+	15: "decided_by_user_id",
+	16: "proposer",
+	17: "target",
+	18: "target_address_typed",
+	19: "is_proposer",
+	20: "is_target",
+	21: "share_id",
+	22: "message",
+	23: "decline_reason",
+	24: "edited_on_accept",
+	25: "notice",
 }
 
 // Decode decodes EmailRuleRequest from json.
@@ -78932,6 +78956,16 @@ func (s *EmailRuleRequest) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"warnings\"")
 			}
+		case "server_explanation":
+			if err := func() error {
+				s.ServerExplanation.Reset()
+				if err := s.ServerExplanation.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"server_explanation\"")
+			}
 		case "server_notes":
 			if err := func() error {
 				s.ServerNotes = make([]string, 0)
@@ -78952,7 +78986,7 @@ func (s *EmailRuleRequest) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"server_notes\"")
 			}
 		case "compiled_by":
-			requiredBitSet[1] |= 1 << 1
+			requiredBitSet[1] |= 1 << 2
 			if err := func() error {
 				v, err := d.Str()
 				s.CompiledBy = string(v)
@@ -78964,7 +78998,7 @@ func (s *EmailRuleRequest) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"compiled_by\"")
 			}
 		case "vocabulary":
-			requiredBitSet[1] |= 1 << 2
+			requiredBitSet[1] |= 1 << 3
 			if err := func() error {
 				v, err := d.Str()
 				s.Vocabulary = string(v)
@@ -78976,7 +79010,7 @@ func (s *EmailRuleRequest) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"vocabulary\"")
 			}
 		case "proposed_via":
-			requiredBitSet[1] |= 1 << 3
+			requiredBitSet[1] |= 1 << 4
 			if err := func() error {
 				if err := s.ProposedVia.Decode(d); err != nil {
 					return err
@@ -78986,7 +79020,7 @@ func (s *EmailRuleRequest) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"proposed_via\"")
 			}
 		case "created_at":
-			requiredBitSet[1] |= 1 << 4
+			requiredBitSet[1] |= 1 << 5
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.CreatedAt = v
@@ -78998,7 +79032,7 @@ func (s *EmailRuleRequest) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"created_at\"")
 			}
 		case "decided_at":
-			requiredBitSet[1] |= 1 << 5
+			requiredBitSet[1] |= 1 << 6
 			if err := func() error {
 				if err := s.DecidedAt.Decode(d, json.DecodeDateTime); err != nil {
 					return err
@@ -79008,7 +79042,7 @@ func (s *EmailRuleRequest) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"decided_at\"")
 			}
 		case "decided_by_user_id":
-			requiredBitSet[1] |= 1 << 6
+			requiredBitSet[1] |= 1 << 7
 			if err := func() error {
 				if err := s.DecidedByUserID.Decode(d); err != nil {
 					return err
@@ -79018,7 +79052,7 @@ func (s *EmailRuleRequest) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"decided_by_user_id\"")
 			}
 		case "proposer":
-			requiredBitSet[1] |= 1 << 7
+			requiredBitSet[2] |= 1 << 0
 			if err := func() error {
 				if err := s.Proposer.Decode(d); err != nil {
 					return err
@@ -79028,7 +79062,7 @@ func (s *EmailRuleRequest) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"proposer\"")
 			}
 		case "target":
-			requiredBitSet[2] |= 1 << 0
+			requiredBitSet[2] |= 1 << 1
 			if err := func() error {
 				if err := s.Target.Decode(d); err != nil {
 					return err
@@ -79038,7 +79072,7 @@ func (s *EmailRuleRequest) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"target\"")
 			}
 		case "target_address_typed":
-			requiredBitSet[2] |= 1 << 1
+			requiredBitSet[2] |= 1 << 2
 			if err := func() error {
 				if err := s.TargetAddressTyped.Decode(d); err != nil {
 					return err
@@ -79048,7 +79082,7 @@ func (s *EmailRuleRequest) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"target_address_typed\"")
 			}
 		case "is_proposer":
-			requiredBitSet[2] |= 1 << 2
+			requiredBitSet[2] |= 1 << 3
 			if err := func() error {
 				v, err := d.Bool()
 				s.IsProposer = bool(v)
@@ -79060,7 +79094,7 @@ func (s *EmailRuleRequest) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"is_proposer\"")
 			}
 		case "is_target":
-			requiredBitSet[2] |= 1 << 3
+			requiredBitSet[2] |= 1 << 4
 			if err := func() error {
 				v, err := d.Bool()
 				s.IsTarget = bool(v)
@@ -79072,7 +79106,7 @@ func (s *EmailRuleRequest) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"is_target\"")
 			}
 		case "share_id":
-			requiredBitSet[2] |= 1 << 4
+			requiredBitSet[2] |= 1 << 5
 			if err := func() error {
 				if err := s.ShareID.Decode(d); err != nil {
 					return err
@@ -79132,8 +79166,8 @@ func (s *EmailRuleRequest) Decode(d *jx.Decoder) error {
 	var failures []validate.FieldError
 	for i, mask := range [4]uint8{
 		0b11111111,
-		0b11111110,
-		0b00011111,
+		0b11111100,
+		0b00111111,
 		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {

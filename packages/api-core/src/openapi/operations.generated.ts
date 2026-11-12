@@ -18792,6 +18792,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               },
               "description": "As the member who asked sent them, normally from their compile, then every compiler note on the rule's tree and words they lack. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them."
             },
+            "server_explanation": {
+              "description": "What the rule as asked actually does: Primitive's own reading of the request's tree, never the words of the member who asked or of a model. Null when the tree no longer reads as one.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "server_notes": {
               "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
               "type": "array",
@@ -18943,7 +18950,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "notice": {
-              "description": "For the member asked, while pending: what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
+              "description": "For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, then what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
               "type": [
                 "string",
                 "null"
@@ -20799,6 +20806,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "description": "As the member who asked sent them, normally from their compile, then every compiler note on the rule's tree and words they lack. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them."
         },
+        "server_explanation": {
+          "description": "What the rule as asked actually does: Primitive's own reading of the request's tree, never the words of the member who asked or of a model. Null when the tree no longer reads as one.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "server_notes": {
           "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
           "type": "array",
@@ -20950,7 +20964,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "notice": {
-          "description": "For the member asked, while pending: what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
+          "description": "For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, then what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
           "type": [
             "string",
             "null"
@@ -21118,6 +21132,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "description": "As the member who asked sent them, normally from their compile, then every compiler note on the rule's tree and words they lack. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them."
         },
+        "server_explanation": {
+          "description": "What the rule as asked actually does: Primitive's own reading of the request's tree, never the words of the member who asked or of a model. Null when the tree no longer reads as one.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "server_notes": {
           "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
           "type": "array",
@@ -21269,7 +21290,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "notice": {
-          "description": "For the member asked, while pending: what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
+          "description": "For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, then what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
           "type": [
             "string",
             "null"
@@ -22376,6 +22397,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "description": "As the member who asked sent them, normally from their compile, then every compiler note on the rule's tree and words they lack. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them."
         },
+        "server_explanation": {
+          "description": "What the rule as asked actually does: Primitive's own reading of the request's tree, never the words of the member who asked or of a model. Null when the tree no longer reads as one.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "server_notes": {
           "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
           "type": "array",
@@ -22527,7 +22555,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "notice": {
-          "description": "For the member asked, while pending: what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
+          "description": "For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, then what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
           "type": [
             "string",
             "null"
@@ -23469,6 +23497,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "description": "As the member who asked sent them, normally from their compile, then every compiler note on the rule's tree and words they lack. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them."
           },
+          "server_explanation": {
+            "description": "What the rule as asked actually does: Primitive's own reading of the request's tree, never the words of the member who asked or of a model. Null when the tree no longer reads as one.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "server_notes": {
             "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
             "type": "array",
@@ -23620,7 +23655,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ]
           },
           "notice": {
-            "description": "For the member asked, while pending: what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
+            "description": "For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, then what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
             "type": [
               "string",
               "null"
@@ -28188,6 +28223,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "description": "As the member who asked sent them, normally from their compile, then every compiler note on the rule's tree and words they lack. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them."
         },
+        "server_explanation": {
+          "description": "What the rule as asked actually does: Primitive's own reading of the request's tree, never the words of the member who asked or of a model. Null when the tree no longer reads as one.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "server_notes": {
           "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
           "type": "array",
@@ -28339,7 +28381,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "notice": {
-          "description": "For the member asked, while pending: what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
+          "description": "For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, then what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
           "type": [
             "string",
             "null"

@@ -7609,6 +7609,10 @@ export type CreateEmailRuleRequestResult = {
      */
     warnings: Array<string>;
     /**
+     * What the rule as asked actually does: Primitive's own reading of the request's tree, never the words of the member who asked or of a model. Null when the tree no longer reads as one.
+     */
+    server_explanation?: string | null;
+    /**
      * Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.
      */
     server_notes?: Array<string>;
@@ -7646,7 +7650,7 @@ export type CreateEmailRuleRequestResult = {
      */
     edited_on_accept?: boolean | null;
     /**
-     * For the member asked, while pending: what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
+     * For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, then what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
      */
     notice?: string | null;
     /**
@@ -7703,6 +7707,10 @@ export type EmailRuleRequest = {
      */
     warnings: Array<string>;
     /**
+     * What the rule as asked actually does: Primitive's own reading of the request's tree, never the words of the member who asked or of a model. Null when the tree no longer reads as one.
+     */
+    server_explanation?: string | null;
+    /**
      * Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.
      */
     server_notes?: Array<string>;
@@ -7740,7 +7748,7 @@ export type EmailRuleRequest = {
      */
     edited_on_accept?: boolean | null;
     /**
-     * For the member asked, while pending: what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
+     * For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, then what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
      */
     notice?: string | null;
 };

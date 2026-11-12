@@ -55,6 +55,9 @@ class GetEmailRuleRequestResult:
             is_proposer (bool):
             is_target (bool):
             share_id (None | UUID): The share accepting created, while it exists.
+            server_explanation (None | str | Unset): What the rule as asked actually does: Primitive's own reading of the
+                request's tree, never the words of the member who asked or of a model. Null when the tree no longer reads as
+                one.
             server_notes (list[str] | Unset): Primitive's own notes on the rule as asked, worked out from its tree and
                 description each time the request is read, and to the member asked while pending, how to test it on look-alikes.
                 Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.
@@ -63,8 +66,9 @@ class GetEmailRuleRequestResult:
                 declining.
             edited_on_accept (bool | None | Unset): Once accepted: whether the rule was changed first, as on the share. Null
                 until then, or when unreadable.
-            notice (None | str | Unset): For the member asked, while pending: what accepting would share. For the member who
-                asked, once accepted with changes: that the request is not what is shared. Else null.
+            notice (None | str | Unset): For the member asked, while pending: what the rule actually does
+                (server_explanation), Primitive's warnings, then what accepting would share. For the member who asked, once
+                accepted with changes: that the request is not what is shared. Else null.
      """
 
     id: UUID
@@ -87,6 +91,7 @@ class GetEmailRuleRequestResult:
     is_proposer: bool
     is_target: bool
     share_id: None | UUID
+    server_explanation: None | str | Unset = UNSET
     server_notes: list[str] | Unset = UNSET
     message: None | str | Unset = UNSET
     decline_reason: None | str | Unset = UNSET
@@ -159,6 +164,12 @@ class GetEmailRuleRequestResult:
         else:
             share_id = self.share_id
 
+        server_explanation: None | str | Unset
+        if isinstance(self.server_explanation, Unset):
+            server_explanation = UNSET
+        else:
+            server_explanation = self.server_explanation
+
         server_notes: list[str] | Unset = UNSET
         if not isinstance(self.server_notes, Unset):
             server_notes = self.server_notes
@@ -214,6 +225,8 @@ class GetEmailRuleRequestResult:
             "is_target": is_target,
             "share_id": share_id,
         })
+        if server_explanation is not UNSET:
+            field_dict["server_explanation"] = server_explanation
         if server_notes is not UNSET:
             field_dict["server_notes"] = server_notes
         if message is not UNSET:
@@ -352,6 +365,16 @@ class GetEmailRuleRequestResult:
         share_id = _parse_share_id(d.pop("share_id"))
 
 
+        def _parse_server_explanation(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        server_explanation = _parse_server_explanation(d.pop("server_explanation", UNSET))
+
+
         server_notes = cast(list[str], d.pop("server_notes", UNSET))
 
 
@@ -416,6 +439,7 @@ class GetEmailRuleRequestResult:
             is_proposer=is_proposer,
             is_target=is_target,
             share_id=share_id,
+            server_explanation=server_explanation,
             server_notes=server_notes,
             message=message,
             decline_reason=decline_reason,

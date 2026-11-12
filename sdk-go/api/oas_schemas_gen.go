@@ -13236,6 +13236,9 @@ type CreateEmailRuleRequestResult struct {
 	// rule's tree and words they lack. The compiler's note that the rule matches nearly everything, in
 	// its own wording, counted that member's recent mail: anyone else reads it naming them.
 	Warnings []string `json:"warnings"`
+	// What the rule as asked actually does: Primitive's own reading of the request's tree, never the
+	// words of the member who asked or of a model. Null when the tree no longer reads as one.
+	ServerExplanation OptNilString `json:"server_explanation"`
 	// Primitive's own notes on the rule as asked, worked out from its tree and description each time the
 	// request is read, and to the member asked while pending, how to test it on look-alikes. Unlike
 	// warnings, never written by the member who asked, though a note can quote their words or tree
@@ -13263,8 +13266,9 @@ type CreateEmailRuleRequestResult struct {
 	// Once accepted: whether the rule was changed first, as on the share. Null until then, or when
 	// unreadable.
 	EditedOnAccept OptNilBool `json:"edited_on_accept"`
-	// For the member asked, while pending: what accepting would share. For the member who asked, once
-	// accepted with changes: that the request is not what is shared. Else null.
+	// For the member asked, while pending: what the rule actually does (server_explanation), Primitive's
+	// warnings, then what accepting would share. For the member who asked, once accepted with changes:
+	// that the request is not what is shared. Else null.
 	Notice OptNilString `json:"notice"`
 	// Whether the member asked can accept it now under their role. Null unless you can list members and
 	// their roles (members:read), or when it could not be read.
@@ -13312,6 +13316,11 @@ func (s *CreateEmailRuleRequestResult) GetAssumptions() []string {
 // GetWarnings returns the value of Warnings.
 func (s *CreateEmailRuleRequestResult) GetWarnings() []string {
 	return s.Warnings
+}
+
+// GetServerExplanation returns the value of ServerExplanation.
+func (s *CreateEmailRuleRequestResult) GetServerExplanation() OptNilString {
+	return s.ServerExplanation
 }
 
 // GetServerNotes returns the value of ServerNotes.
@@ -13447,6 +13456,11 @@ func (s *CreateEmailRuleRequestResult) SetAssumptions(val []string) {
 // SetWarnings sets the value of Warnings.
 func (s *CreateEmailRuleRequestResult) SetWarnings(val []string) {
 	s.Warnings = val
+}
+
+// SetServerExplanation sets the value of ServerExplanation.
+func (s *CreateEmailRuleRequestResult) SetServerExplanation(val OptNilString) {
+	s.ServerExplanation = val
 }
 
 // SetServerNotes sets the value of ServerNotes.
@@ -35123,6 +35137,9 @@ type EmailRuleRequest struct {
 	// rule's tree and words they lack. The compiler's note that the rule matches nearly everything, in
 	// its own wording, counted that member's recent mail: anyone else reads it naming them.
 	Warnings []string `json:"warnings"`
+	// What the rule as asked actually does: Primitive's own reading of the request's tree, never the
+	// words of the member who asked or of a model. Null when the tree no longer reads as one.
+	ServerExplanation OptNilString `json:"server_explanation"`
 	// Primitive's own notes on the rule as asked, worked out from its tree and description each time the
 	// request is read, and to the member asked while pending, how to test it on look-alikes. Unlike
 	// warnings, never written by the member who asked, though a note can quote their words or tree
@@ -35150,8 +35167,9 @@ type EmailRuleRequest struct {
 	// Once accepted: whether the rule was changed first, as on the share. Null until then, or when
 	// unreadable.
 	EditedOnAccept OptNilBool `json:"edited_on_accept"`
-	// For the member asked, while pending: what accepting would share. For the member who asked, once
-	// accepted with changes: that the request is not what is shared. Else null.
+	// For the member asked, while pending: what the rule actually does (server_explanation), Primitive's
+	// warnings, then what accepting would share. For the member who asked, once accepted with changes:
+	// that the request is not what is shared. Else null.
 	Notice OptNilString `json:"notice"`
 }
 
@@ -35193,6 +35211,11 @@ func (s *EmailRuleRequest) GetAssumptions() []string {
 // GetWarnings returns the value of Warnings.
 func (s *EmailRuleRequest) GetWarnings() []string {
 	return s.Warnings
+}
+
+// GetServerExplanation returns the value of ServerExplanation.
+func (s *EmailRuleRequest) GetServerExplanation() OptNilString {
+	return s.ServerExplanation
 }
 
 // GetServerNotes returns the value of ServerNotes.
@@ -35318,6 +35341,11 @@ func (s *EmailRuleRequest) SetAssumptions(val []string) {
 // SetWarnings sets the value of Warnings.
 func (s *EmailRuleRequest) SetWarnings(val []string) {
 	s.Warnings = val
+}
+
+// SetServerExplanation sets the value of ServerExplanation.
+func (s *EmailRuleRequest) SetServerExplanation(val OptNilString) {
+	s.ServerExplanation = val
 }
 
 // SetServerNotes sets the value of ServerNotes.
