@@ -130,6 +130,78 @@ export function lookAlikeSamples(answer: unknown): ExpectationSample[] {
   return lookAlikeEntries(answer).map((entry) => entry.sample);
 }
 
+/** The fields a saved made-up email takes, and the API's bounds on them. */
+const SAMPLE_EMAIL_KEYS = new Set([
+  "from",
+  "to",
+  "cc",
+  "subject",
+  "text",
+  "attachment_types",
+  "automated",
+  "from_mailing_list",
+  "spam_score",
+]);
+const SAMPLE_TEXT_MAX = 4_000;
+const SAMPLE_SUBJECT_MAX = 998;
+const SAMPLE_LIST_MAX = 10;
+
+/**
+ * Refuse, naming the sample and the field, a made-up email the API would
+ * refuse to keep: the fields it takes and their bounds. The API checks the
+ * rest (address forms, a NUL).
+ */
+function checkSampleEmail(email: Record<string, unknown>, at: string): void {
+  const fail = (what: string) => {
+    throw usageError(`${at}: email ${what}.`);
+  };
+  const unknown = Object.keys(email).find((key) => !SAMPLE_EMAIL_KEYS.has(key));
+  if (unknown !== undefined)
+    fail(
+      `takes no "${unknown}" (it takes ${[...SAMPLE_EMAIL_KEYS].join(", ")})`,
+    );
+  if (!isRecord(email.from) || typeof email.from.address !== "string")
+    fail("needs from.address");
+  const list = (key: string, min: number) => {
+    const value = email[key];
+    if (value === undefined && min === 0) return;
+    if (
+      !Array.isArray(value) ||
+      value.some((entry) => typeof entry !== "string") ||
+      value.length < min ||
+      value.length > SAMPLE_LIST_MAX
+    )
+      fail(
+        `${key} must be a list of ${min > 0 ? `${min} to ` : "at most "}${SAMPLE_LIST_MAX} strings`,
+      );
+  };
+  list("to", 1);
+  list("cc", 0);
+  list("attachment_types", 0);
+  if (
+    email.subject !== undefined &&
+    (typeof email.subject !== "string" ||
+      email.subject.length > SAMPLE_SUBJECT_MAX)
+  )
+    fail(
+      `subject must be a string of at most ${SAMPLE_SUBJECT_MAX} characters`,
+    );
+  if (
+    typeof email.text !== "string" ||
+    email.text.length === 0 ||
+    email.text.length > SAMPLE_TEXT_MAX
+  )
+    fail(`text must be 1 to ${SAMPLE_TEXT_MAX} characters`);
+  for (const key of ["automated", "from_mailing_list"])
+    if (email[key] !== undefined && typeof email[key] !== "boolean")
+      fail(`${key} must be true or false`);
+  if (
+    email.spam_score !== undefined &&
+    (typeof email.spam_score !== "number" || !Number.isFinite(email.spam_score))
+  )
+    fail("spam_score must be a number");
+}
+
 /** The most made-up emails one rule keeps, and one test or write sends. */
 export const SAMPLES_MAX = 20;
 
@@ -154,6 +226,9 @@ export function samplesFromJson(
       throw usageError(
         `${source} is a generate-look-alikes answer with no look-alikes in it.`,
       );
+    samples.forEach((sample, index) => {
+      checkSampleEmail(sample.email, `${source}, look-alike ${index + 1}`);
+    });
     return samples;
   }
   if (!Array.isArray(data))
@@ -174,6 +249,7 @@ export function samplesFromJson(
       throw usageError(
         `${at}: email must be an object, as test-email-rule-on-sample takes it.`,
       );
+    checkSampleEmail(item.email, at);
     const label = item.label;
     if (label !== undefined && label !== null) {
       if (typeof label !== "string")
