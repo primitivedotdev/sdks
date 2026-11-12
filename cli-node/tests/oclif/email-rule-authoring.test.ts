@@ -1943,6 +1943,143 @@ describe("email-rules update-email-rule: the server's write guards", () => {
 });
 
 describe("email-rules compile-email-rule and get-email-rule reports", () => {
+  it("prints each compile warning before the breadth", async () => {
+    answer({
+      tree: { version: 1, vocabulary: "v1", when: { all: [] } },
+      explanation: "Invoices from Acme.",
+      assumptions: [],
+      warnings: [
+        "The description names Acme but gives no domain, so the sender is judged by sender_relationship alone.",
+        "  ",
+      ],
+      breadth: { checked: 20, matched: 3 },
+    });
+    const result = await run("email-rules:compile-email-rule", [
+      "--english",
+      "invoices from Acme",
+    ]);
+    expect(result.exitCode).toBe(0);
+    expect(stderrLines(result)).toEqual([
+      "Warning: The description names Acme but gives no domain, so the sender is judged by sender_relationship alone.",
+      "Breadth: its conditions hold for 3 of 20 recent emails checked in your own mailboxes, whatever scope you save it with.",
+    ]);
+  });
+
+  it("prints the warnings with no breadth, and nothing under --json", async () => {
+    answer({
+      tree: { version: 1, vocabulary: "v1", when: { all: [] } },
+      explanation: "Invoices from Acme.",
+      assumptions: [],
+      warnings: ["A grant worded as a prohibition."],
+      breadth: null,
+    });
+    const plain = await run("email-rules:compile-email-rule", [
+      "--english",
+      "invoices",
+    ]);
+    expect(stderrLines(plain)).toEqual([
+      "Warning: A grant worded as a prohibition.",
+    ]);
+    const quiet = await run("email-rules:compile-email-rule", [
+      "--english",
+      "invoices",
+      "--json",
+    ]);
+    expect(quiet.exitCode).toBe(0);
+    expect(quiet.stderr).toBe("");
+  });
+
+  it("prints a protective rule's protection_note on create, get and list", async () => {
+    const rule = {
+      id: RULE,
+      name: "Never share medical mail",
+      state: "observe",
+      kind: "do_not_share",
+      protection_note: "It protects nothing yet: it is not active.",
+      current_version: 1,
+      author_user_id: "00000000-0000-4000-8000-0000000000f1",
+      is_author: true,
+      created_at: "2026-11-01T00:00:00Z",
+      updated_at: "2026-11-10T00:00:00Z",
+      current: null,
+    };
+    answer(rule);
+    const created = await run("email-rules:create-email-rule", [
+      "--raw-body",
+      JSON.stringify({
+        tree: { version: 1, vocabulary: "v1", when: { all: [] } },
+        name: "Never share medical mail",
+        english: "medical mail",
+        kind: "do_not_share",
+      }),
+    ]);
+    expect(created.exitCode).toBe(0);
+    expect(stderrLines(created).slice(0, 2)).toEqual([
+      "This rule blocks sharing (kind do_not_share): while it is active, no rule shares an email it matches.",
+      "Protection: It protects nothing yet: it is not active.",
+    ]);
+    const updated = await run("email-rules:update-email-rule", [
+      RULE,
+      "--name",
+      "Never share medical mail",
+    ]);
+    expect(stderrLines(updated)).toContain(
+      "Protection: It protects nothing yet: it is not active.",
+    );
+    const got = await run("email-rules:get-email-rule", [RULE]);
+    expect(stderrLines(got)).toContain(
+      "Protection: It protects nothing yet: it is not active.",
+    );
+    answer([
+      rule,
+      {
+        ...rule,
+        id: B,
+        name: "Other",
+        kind: "grant",
+        protection_note: undefined,
+      },
+    ]);
+    const listed = await run("email-rules:list-email-rules", []);
+    expect(listed.exitCode).toBe(0);
+    expect(stderrLines(listed)).toEqual([
+      `Protection of ${RULE} (Never share medical mail): It protects nothing yet: it is not active.`,
+    ]);
+    const quiet = await run("email-rules:list-email-rules", ["--json"]);
+    expect(quiet.stderr).toBe("");
+    // An older server sends no note: the earlier wording.
+    answer({ ...rule, protection_note: undefined });
+    const older = await run("email-rules:create-email-rule", [
+      "--raw-body",
+      JSON.stringify({
+        tree: { version: 1, vocabulary: "v1", when: { all: [] } },
+        name: "n",
+        english: "e",
+        kind: "do_not_share",
+      }),
+    ]);
+    expect(stderrLines(older)[0]).toBe(
+      "This rule blocks sharing (kind do_not_share): while it is active, no rule shares an email it matches. It blocks nothing until it is active.",
+    );
+  });
+
+  it("creates a do-not-share rule active with --state active", async () => {
+    answer({ id: RULE, name: "n", state: "active", kind: "do_not_share" });
+    const result = await run("email-rules:create-email-rule", [
+      "--raw-body",
+      JSON.stringify({
+        tree: { version: 1, vocabulary: "v1", when: { all: [] } },
+        name: "n",
+        english: "e",
+        kind: "do_not_share",
+      }),
+      "--state",
+      "active",
+    ]);
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(calls[0]?.body).toMatchObject({ state: "active" });
+  });
+
   it("says how many recent emails a compiled rule holds for, and nothing when not counted", async () => {
     answer({
       tree: { version: 1, vocabulary: "v1", when: { all: [] } },

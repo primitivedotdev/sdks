@@ -1084,6 +1084,14 @@ parsers.
 
 #### CLI
 
+- Without `--json`, `email-rules compile-email-rule` prints each of the
+  compile answer's warnings (such as a sender judged by the classifier
+  alone, or a grant worded as a prohibition) before its breadth, and
+  `create-email-rule`, `update-email-rule`, `get-email-rule` and
+  `list-email-rules` print a do-not-share rule's `protection_note` (that it
+  protects nothing yet, or that a classifier fact narrows it).
+  `create-email-rule --state active` can create a do-not-share rule
+  already active; a grant rule is still refused.
 - `email-rules update-email-rule --fail-on-expectations` sends
   `if_expectations_pass`: the server judges the rule as the write would
   leave it before saving, and saves nothing when an expectation failed (exit
