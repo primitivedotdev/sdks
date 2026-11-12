@@ -1599,6 +1599,490 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
   });
 });
 
+describe("email-rules samples files and --pick", () => {
+  const written = {
+    id: RULE,
+    name: "Bills",
+    state: "observe",
+    current_version: 2,
+    author_user_id: "00000000-0000-4000-8000-0000000000f1",
+    is_author: true,
+    created_at: "2026-11-01T00:00:00Z",
+    updated_at: "2026-11-10T00:00:00Z",
+    current: null,
+  };
+  const tree = { version: 1, vocabulary: "v1", when: { all: [] } };
+  const sample = (subject: string) => ({
+    expected: "no_match",
+    label: `medical: ${subject}`,
+    email: {
+      from: { address: "billing@clinic.example" },
+      to: ["me@acme.example"],
+      subject,
+      text: `${subject}, the text.`,
+    },
+  });
+  const samples = [sample("one"), sample("two"), sample("three")];
+
+  it("adds the flags, each samples file flag beside --pick", () => {
+    const flags = (id: string) => (COMMANDS[id] as unknown as Runnable).flags;
+    expect(flags("email-rules:create-email-rule")).toHaveProperty(
+      "expectation-samples-file",
+    );
+    expect(flags("email-rules:create-email-rule").pick?.description).toContain(
+      "by their numbers from 1 as generate-look-alikes printed them",
+    );
+    const update = flags("email-rules:update-email-rule");
+    expect(update["expectation-samples-file"]?.exclusive).toEqual([
+      "add-expectation-samples-file",
+    ]);
+    expect(update["add-expectation-samples-file"]?.exclusive).toEqual([
+      "expectation-samples-file",
+    ]);
+  });
+
+  it("sets the picked samples on create, in the order --pick names them", async () => {
+    answer(written);
+    const result = await run("email-rules:create-email-rule", [
+      "--raw-body",
+      JSON.stringify({ tree, expectation_samples: [sample("raw")] }),
+      "--name",
+      "Bills",
+      "--english",
+      "bills",
+      "--expectation-samples-file",
+      tempFile("samples.json", JSON.stringify(samples)),
+      "--pick",
+      "3,1",
+    ]);
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(calls[0]?.body).toEqual({
+      tree,
+      name: "Bills",
+      english: "bills",
+      expectation_samples: [samples[2], samples[0]],
+    });
+  });
+
+  it("adds on update with --add-expectation-samples-file, and replaces with --expectation-samples-file", async () => {
+    answer(written);
+    const file = tempFile("samples.json", JSON.stringify(samples));
+    const added = await run("email-rules:update-email-rule", [
+      RULE,
+      "--add-expectation-samples-file",
+      file,
+      "--pick",
+      "2",
+    ]);
+    expect(added.exitCode, added.stderr).toBe(0);
+    expect(calls[0]?.body).toEqual({ add_expectation_samples: [samples[1]] });
+    const removed = await run("email-rules:update-email-rule", [
+      RULE,
+      "--expectation-samples-file",
+      tempFile("empty.json", "[]"),
+    ]);
+    expect(removed.exitCode, removed.stderr).toBe(0);
+    expect(calls[1]?.body).toEqual({ expectation_samples: [] });
+  });
+
+  it("refuses a --pick number the file does not hold, and --pick without a file, sending nothing", async () => {
+    const file = tempFile("samples.json", JSON.stringify(samples));
+    const out = await run("email-rules:update-email-rule", [
+      RULE,
+      "--add-expectation-samples-file",
+      file,
+      "--pick",
+      "2,4",
+    ]);
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain(
+      `--pick 2,4: 4 is not a sample number; --add-expectation-samples-file ${file} holds samples 1 to 3.`,
+    );
+    const alone = await run("email-rules:create-email-rule", [
+      "--raw-body",
+      JSON.stringify({ tree, name: "n", english: "e" }),
+      "--pick",
+      "1",
+    ]);
+    expect(alone.exitCode).toBe(2);
+    expect(alone.stderr).toContain(
+      "--pick chooses from a samples file: pass it with --expectation-samples-file.",
+    );
+    const both = await run("email-rules:update-email-rule", [
+      RULE,
+      "--add-expectation-samples-file",
+      file,
+      "--expectation-samples-file",
+      file,
+    ]);
+    expect(both.exitCode).toBe(2);
+    expect(calls).toEqual([]);
+  });
+});
+
+describe("email-rules generate-look-alikes", () => {
+  const lookAlike = (subject: string, status: string, outcome: string) => ({
+    kind: "medical",
+    why: `${subject} is private.`,
+    email: {
+      from: { address: "billing@clinic.example" },
+      to: ["me@acme.example"],
+      cc: [],
+      subject,
+      text: `${subject}, the text.`,
+      attachment_types: [],
+      automated: false,
+      from_mailing_list: false,
+    },
+    outcome,
+    status,
+    question_answers: [],
+  });
+  const data = {
+    rule: { id: RULE, version: 2, vocabulary: "v1" },
+    look_alikes: [
+      lookAlike("Your dental invoice", "failed", "matched"),
+      lookAlike("Lab results", "passed", "no_match"),
+    ],
+    counts: { passed: 1, failed: 1, undecided: 0, dropped: 0 },
+    note: "These emails are made up.",
+  };
+
+  it("sends the rule, prints each look-alike numbered, and writes them to --samples-file in that order", async () => {
+    answer(data);
+    const path = join(tempHome, "look-alikes.json");
+    const result = await run("email-rules:generate-look-alikes", [
+      "--rule-id",
+      RULE,
+      "--samples-file",
+      path,
+    ]);
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(calls[0]?.url.pathname).toBe("/v1/email-rules/look-alikes");
+    expect(calls[0]?.body).toEqual({ rule_id: RULE });
+    expect(stderrLines(result).slice(0, 2)).toEqual([
+      '1. failed  medical  "Your dental invoice" from billing@clinic.example',
+      "   Why it should not match: Your dental invoice is private.",
+    ]);
+    const written = JSON.parse(readFileSync(path, "utf8"));
+    expect(
+      written.map((s: { email: { subject: string } }) => s.email.subject),
+    ).toEqual(["Your dental invoice", "Lab results"]);
+    expect(written[0]).toMatchObject({
+      expected: "no_match",
+      label: "medical: Your dental invoice is private.",
+    });
+    // And an update takes the file by those numbers.
+    answer({ id: RULE, name: "Bills", state: "observe", current_version: 2 });
+    await run("email-rules:update-email-rule", [
+      RULE,
+      "--add-expectation-samples-file",
+      path,
+      "--pick",
+      "1",
+    ]);
+    expect(calls[1]?.body).toEqual({ add_expectation_samples: [written[0]] });
+  });
+
+  it("writes the file under --json too, and exits 1 with samples_file_not_written when it cannot", async () => {
+    answer(data);
+    const path = join(tempHome, "quiet.json");
+    const quiet = await run("email-rules:generate-look-alikes", [
+      "--rule-id",
+      RULE,
+      "--samples-file",
+      path,
+      "--json",
+    ]);
+    expect(quiet.exitCode).toBe(0);
+    expect(quiet.stderr).toBe("");
+    expect(JSON.parse(readFileSync(path, "utf8"))).toHaveLength(2);
+    const failed = await run("email-rules:generate-look-alikes", [
+      "--rule-id",
+      RULE,
+      "--samples-file",
+      join(tempHome, "no-such-dir", "f.json"),
+      "--json",
+    ]);
+    expect(failed.exitCode).toBe(1);
+    expect(JSON.parse(failed.merged).error.code).toBe(
+      "samples_file_not_written",
+    );
+  });
+});
+
+describe("email-rules made-up emails in write reports", () => {
+  const written = {
+    id: RULE,
+    name: "Bills",
+    state: "observe",
+    current_version: 1,
+    author_user_id: "00000000-0000-4000-8000-0000000000f1",
+    is_author: true,
+    created_at: "2026-11-01T00:00:00Z",
+    updated_at: "2026-11-10T00:00:00Z",
+    current: null,
+  };
+  const tree = { version: 1, vocabulary: "v1", when: { all: [] } };
+  const sample = (subject: string) => ({
+    expected: "no_match",
+    label: `medical: ${subject}`,
+    email: {
+      from: { address: "billing@clinic.example" },
+      to: ["me@acme.example"],
+      subject,
+      text: `${subject}, the text.`,
+    },
+  });
+  const samples = [sample("one"), sample("two"), sample("three")];
+
+  it("says a write does not judge the made-up emails it saved, and --fail-on-expectations exits 3", async () => {
+    const data = {
+      ...written,
+      expectation_samples: [
+        {
+          id: "00000000-0000-4000-8000-0000000000c1",
+          created_at: "2026-11-10T00:00:00Z",
+          ...sample("one"),
+        },
+        {
+          id: "00000000-0000-4000-8000-0000000000c2",
+          created_at: "2026-11-10T00:00:00Z",
+          ...sample("two"),
+          label: null,
+        },
+      ],
+      expectations_check: {
+        version: 1,
+        passed: null,
+        decided: false,
+        failed: [],
+        undecided: [],
+        failed_samples: [],
+        undecided_samples: [0, 1],
+      },
+    };
+    answer(data);
+    const argv = [
+      "--raw-body",
+      JSON.stringify({ tree, name: "Bills", english: "bills" }),
+      "--expectation-samples-file",
+      tempFile("samples.json", JSON.stringify(samples)),
+      "--pick",
+      "2,3",
+    ];
+    const plain = await run("email-rules:create-email-rule", argv);
+    expect(plain.exitCode).toBe(0);
+    expect(stderrLines(plain)).toContain(
+      // Sent as --pick 2,3: named by their numbers in the file.
+      `Expectations on version 1: none failed, 2 made-up emails not judged by this write (sample 2 ("medical: two"), sample 3 ("medical: three")). To decide the rest, run \`primitive email-rules test-email-rule --rule-id ${RULE}\`.`,
+    );
+    const failing = await run("email-rules:create-email-rule", [
+      ...argv,
+      "--fail-on-expectations",
+      "--json",
+    ]);
+    expect(failing.exitCode).toBe(3);
+    expect(JSON.parse(failing.merged).error.message).toBe(
+      `2 expectations are undecided on this write, which judges them without classifying mail or asking the rule's questions, and leaves made-up emails unjudged: sample 2 ("medical: two"), sample 3 ("medical: three"). Test them with \`primitive email-rules test-email-rule --rule-id ${RULE}\`.`,
+    );
+  });
+
+  it("names the made-up emails a guarded update failed on, and exits 1", async () => {
+    responder = () =>
+      jsonResponse(409, {
+        success: false,
+        error: {
+          code: "expectations_failed",
+          message: "Refused.",
+          details: {
+            expectations_check: {
+              version: null,
+              passed: false,
+              decided: true,
+              failed: [],
+              undecided: [],
+              failed_samples: [1],
+              undecided_samples: [],
+            },
+          },
+        },
+      });
+    const result = await run("email-rules:update-email-rule", [
+      RULE,
+      "--state",
+      "active",
+      "--fail-on-expectations",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(stderrLines(result).at(-1)).toBe(
+      "Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Expectations failed: saved sample 2. The command exits 1.",
+    );
+  });
+
+  const refusedWith = (check: Record<string, unknown>, reason?: string) => {
+    responder = () =>
+      jsonResponse(409, {
+        success: false,
+        error: {
+          code: check.failed_samples
+            ? "expectations_failed"
+            : "expectations_undecided",
+          message: "Refused.",
+          details: {
+            ...(reason ? { reason } : {}),
+            expectations_check: {
+              version: null,
+              passed: null,
+              decided: false,
+              failed: [],
+              undecided: [],
+              ...check,
+            },
+          },
+        },
+      });
+  };
+
+  it("names a refused write's own samples by their numbers in the file, or says where an added one may be", async () => {
+    const file = tempFile("samples.json", JSON.stringify(samples));
+    refusedWith({ failed_samples: [0] });
+    const replaced = await run("email-rules:update-email-rule", [
+      RULE,
+      "--expectation-samples-file",
+      file,
+      "--pick",
+      "3",
+      "--fail-on-expectations",
+    ]);
+    expect(stderrLines(replaced).at(-1)).toContain(
+      'Expectations failed: sample 3 ("medical: three").',
+    );
+    refusedWith({ failed_samples: [4] });
+    const added = await run("email-rules:update-email-rule", [
+      RULE,
+      "--add-expectation-samples-file",
+      file,
+      "--fail-on-expectations",
+    ]);
+    expect(stderrLines(added).at(-1)).toContain(
+      "Expectations failed: made-up email 5. Made-up emails are numbered from 1: the rule's saved ones first, then those this write adds.",
+    );
+  });
+
+  it("exits 1 when a refused write's made-up email is undecided for no reason given, and 3 when the judgment ran out of time", async () => {
+    refusedWith({ undecided_samples: [0] });
+    const stays = await run("email-rules:update-email-rule", [
+      RULE,
+      "--state",
+      "active",
+      "--fail-on-expectations",
+    ]);
+    expect(stays.exitCode).toBe(1);
+    expect(stderrLines(stays).at(-1)).toBe(
+      `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Expectations undecided: saved sample 1. A made-up email undecided for no reason given may stay so (a spam score it does not carry, a fact its classification left out, or a failed classification), so sending the write again may not decide it. To see why, test rule ${RULE} on each with \`primitive email-rules test-email-rule-on-sample\` (\`primitive email-rules get-email-rule ${RULE}\` lists its saved ones). The command exits 1.`,
+    );
+    refusedWith({ undecided_samples: [0] }, "deadline");
+    const later = await run("email-rules:update-email-rule", [
+      RULE,
+      "--state",
+      "active",
+      "--fail-on-expectations",
+    ]);
+    expect(later.exitCode).toBe(3);
+    expect(stderrLines(later).at(-1)).toContain(
+      "The judgment ran out of time; send the write again.",
+    );
+    // A reason given says what to do: a rule that cannot run as its author
+    // stays undecided, and a test of it would fail the same way.
+    refusedWith(
+      { undecided: [E], undecided_samples: [0] },
+      "author_unresolvable",
+    );
+    const author = await run("email-rules:update-email-rule", [
+      RULE,
+      "--state",
+      "active",
+      "--fail-on-expectations",
+    ]);
+    expect(author.exitCode).toBe(1);
+    const hint = stderrLines(author).at(-1) ?? "";
+    expect(hint).toContain(
+      "The rule cannot run as its author over the mail it would cover (details.author_reason), so sending the write again will not decide them.",
+    );
+    expect(hint).not.toContain("may stay so");
+  });
+
+  it("says how to see why a refused write's made-up emails are undecided, for the tree, the restored version or the samples it sent", async () => {
+    const hintFor = async (argv: string[]) => {
+      refusedWith({ undecided_samples: [0] });
+      const result = await run("email-rules:update-email-rule", [
+        RULE,
+        ...argv,
+        "--fail-on-expectations",
+      ]);
+      expect(result.exitCode).toBe(1);
+      return stderrLines(result).at(-1) ?? "";
+    };
+    expect(
+      await hintFor([
+        "--raw-body",
+        JSON.stringify({
+          tree: { version: 1, vocabulary: "v1", when: { all: [] } },
+          english: "e",
+        }),
+      ]),
+    ).toContain(
+      "To see why, test the tree this write sent on each with `primitive email-rules test-email-rule-on-sample`.",
+    );
+    expect(await hintFor(["--restore-version", "2"])).toContain(
+      `To see why, test version 2's tree (\`primitive email-rules list-email-rule-versions ${RULE} --versions 2\`) on each with \`primitive email-rules test-email-rule-on-sample\`.`,
+    );
+    expect(
+      await hintFor([
+        "--add-expectation-samples-file",
+        tempFile("samples.json", JSON.stringify(samples)),
+      ]),
+    ).toContain(
+      `To see why, test rule ${RULE} on each with \`primitive email-rules test-email-rule-on-sample\` (\`primitive email-rules get-email-rule ${RULE}\` lists its saved ones).`,
+    );
+  });
+
+  it("names an added sample by its number in the file once the answer lists the rule's samples", async () => {
+    const saved = (subject: string, id: string) => ({
+      id,
+      created_at: "2026-11-10T00:00:00Z",
+      ...sample(subject),
+    });
+    answer({
+      ...written,
+      expectation_samples: [
+        saved("kept", "00000000-0000-4000-8000-0000000000c1"),
+        saved("two", "00000000-0000-4000-8000-0000000000c2"),
+      ],
+      expectations_check: {
+        version: 1,
+        passed: null,
+        decided: false,
+        failed: [],
+        undecided: [],
+        failed_samples: [],
+        undecided_samples: [0, 1],
+      },
+    });
+    const result = await run("email-rules:update-email-rule", [
+      RULE,
+      "--add-expectation-samples-file",
+      tempFile("samples.json", JSON.stringify(samples)),
+      "--pick",
+      "2",
+    ]);
+    expect(stderrLines(result)).toContain(
+      `Expectations on version 1: none failed, 2 made-up emails not judged by this write (saved sample 1 ("medical: kept"), sample 2 ("medical: two")). To decide the rest, run \`primitive email-rules test-email-rule --rule-id ${RULE}\`.`,
+    );
+  });
+});
+
 describe("email-rules update-email-rule: 409 version_moved", () => {
   const conflict = {
     success: false,
@@ -1835,7 +2319,7 @@ describe("email-rules update-email-rule: the server's write guards", () => {
     ]);
     expect(result.exitCode).toBe(1);
     expect(stderrLines(result).at(-1)).toBe(
-      "Hint: nothing was saved. Give the rule expectations with --expectations-file (in this write or before it), or send the write without if_expectations_pass (--fail-on-expectations or --if-expectations-pass).",
+      "Hint: nothing was saved. Give the rule expectations with --expectations-file or made-up emails with --expectation-samples-file or --add-expectation-samples-file (in this write or before it), or send the write without if_expectations_pass (--fail-on-expectations or --if-expectations-pass).",
     );
   });
 

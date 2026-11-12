@@ -1092,6 +1092,26 @@ parsers.
   protects nothing yet, or that a classifier fact narrows it).
   `create-email-rule --state active` can create a do-not-share rule
   already active; a grant rule is still refused.
+- Without `--json`, `email-rules generate-look-alikes` prints each
+  look-alike email it wrote, numbered from 1: its status, kind, subject and
+  sender, why the rule should not match it and what the rule decided, then
+  the counts, the answer's note and which to save, with the command that
+  saves them. With `--samples-file <file>`, with or without `--json`, it
+  writes them to that file as a JSON array of must-not-match samples in the
+  same order. It exits 1 (`samples_file_not_written`) when it cannot, and
+  when no look-alikes came back, leaving an existing file as it was.
+- `email-rules create-email-rule --expectation-samples-file` and
+  `update-email-rule --expectation-samples-file` (replace; a file holding
+  `[]` removes them) or `--add-expectation-samples-file` (add), not both,
+  save made-up emails from such a file, or from a saved
+  `generate-look-alikes` answer. `--pick 2,4` takes only those numbers and
+  refuses one the file does not hold. A rule write's report names the
+  made-up emails its check failed on or did not judge, by their numbers in
+  the file, and an update refused by `--fail-on-expectations` names them
+  too: by their numbers in the file when the write replaced them, and when
+  it added some, each by its place in the set judged, the rule's saved ones
+  first. One undecided for no reason given exits 1, since sending the write
+  again may not decide it.
 - `email-rules update-email-rule --fail-on-expectations` sends
   `if_expectations_pass`: the server judges the rule as the write would
   leave it before saving, and saves nothing when an expectation failed (exit
