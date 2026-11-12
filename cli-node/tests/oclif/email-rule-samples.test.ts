@@ -41,9 +41,11 @@ function lookAlike(
   status: "passed" | "failed" | "undecided",
   outcome: "matched" | "near_miss" | "no_match" | "not_decided",
   kind = "medical",
+  expected?: "match" | "no_match",
 ) {
   return {
     kind,
+    ...(expected ? { expected } : {}),
     why: `${subject} is private.`,
     email: email(subject),
     outcome,
@@ -118,6 +120,23 @@ describe("lookAlikeSample", () => {
 
   it("skips one without an email", () => {
     expect(lookAlikeSample({ kind: "medical", why: "x" })).toBeNull();
+  });
+
+  it("keeps a look-alike's expected, so a near case the rule should take is saved as must-match", () => {
+    expect(
+      lookAlikeSample(
+        lookAlike("Referral for Miri", "passed", "matched", "other", "match"),
+      )?.expected,
+    ).toBe("match");
+    expect(
+      lookAlikeSample(
+        lookAlike("All clear", "passed", "no_match", "other", "no_match"),
+      )?.expected,
+    ).toBe("no_match");
+    // An answer from an older server has no expected: must-not-match, as before.
+    expect(
+      lookAlikeSample(lookAlike("x", "passed", "no_match"))?.expected,
+    ).toBe("no_match");
   });
 });
 
@@ -368,6 +387,59 @@ describe("lookAlikesReport", () => {
     // match, since an undecided one stays undecided as a sample.
     expect(report.lines.at(-1)).toBe(
       "Keep the one it did not match as an email it must not match (an undecided one may stay undecided as a sample): save the JSON printed above to a file and give it to `primitive email-rules create-email-rule ... --expectation-samples-file <file> --pick 4` when you save the rule; --pick takes any of the numbers above.",
+    );
+  });
+
+  it("says why a must-match one should match, what a miss means, and keeps both kinds of failure", () => {
+    const mixed = answer([
+      lookAlike("All clear", "failed", "matched", "other", "no_match"),
+      lookAlike("Referral for Miri", "failed", "no_match", "other", "match"),
+      lookAlike("Escalation", "passed", "matched", "other", "match"),
+    ]);
+    const path = join(dir, "mixed.json");
+    const report = lookAlikesReport(mixed, {
+      body: { rule_id: RULE },
+      flags: { "samples-file": path },
+    });
+    expect(report.lines.slice(0, 9)).toEqual([
+      '1. failed  other  "All clear" from billing@clinic.example',
+      "   Why it should not match: All clear is private.",
+      "   The rule matched it, so mail like it would be shared.",
+      '2. failed  other  "Referral for Miri" from billing@clinic.example',
+      "   Why it should match: Referral for Miri is private.",
+      "   The rule did not match it, but it should: mail like it would be missed.",
+      '3. passed  other  "Escalation" from billing@clinic.example',
+      "   Why it should match: Escalation is private.",
+      "   The rule matched it, as it should.",
+    ]);
+    expect(report.lines.at(-1)).toContain(
+      "Keep the one it matched as an email it must not match, and the one it missed as an email it must match with",
+    );
+    expect(report.lines.at(-1)).toContain("--pick 1,2");
+    // The file keeps each one's expected, so saving them keeps the right way round.
+    expect(
+      JSON.parse(readFileSync(path, "utf8")).map(
+        (s: { expected: string }) => s.expected,
+      ),
+    ).toEqual(["no_match", "match", "match"]);
+    // Only a miss: kept as must-match.
+    const missedOnly = lookAlikesReport(
+      answer([lookAlike("Referral", "failed", "no_match", "other", "match")]),
+      { body: { rule_id: RULE }, flags: {} },
+    );
+    expect(missedOnly.lines.at(-1)).toMatch(
+      /^Keep the one it missed as an email it must match: /,
+    );
+    // None wrong, some undecided: those decided as expected, each keeping its expected.
+    const asExpected = lookAlikesReport(
+      answer([
+        lookAlike("a", "undecided", "not_decided"),
+        lookAlike("Referral", "passed", "matched", "other", "match"),
+      ]),
+      { body: { tree: {} }, flags: {} },
+    );
+    expect(asExpected.lines.at(-1)).toMatch(
+      /^Keep the one it decided as expected \(each keeps whether it must match; an undecided one may stay undecided as a sample\): /,
     );
   });
 

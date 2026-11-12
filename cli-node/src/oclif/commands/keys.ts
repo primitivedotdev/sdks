@@ -848,7 +848,7 @@ export class KeysCreateCommand extends Command {
     }),
     rule: Flags.string({
       description:
-        "An email rule id whose matching mail the key reaches (repeatable).",
+        "An email rule id whose matching mail the key reaches (repeatable). An --address or --domain given beside it is read in full, not only the rule's mail.",
       multiple: true,
     }),
     "all-mailboxes": Flags.boolean({
@@ -911,7 +911,12 @@ export class KeysCreateCommand extends Command {
       return;
     }
     const key = result.data;
-    if (!flags.json) writeWarnings(key.warnings);
+    // address_warnings say what a listed address or domain reads, such as one
+    // beside --rule, which the key reads in full; --json carries them as is.
+    if (!flags.json) {
+      writeWarnings(key.warnings);
+      writeWarnings(key.address_warnings);
+    }
     printSecret(
       this,
       Boolean(flags.json),
@@ -1257,6 +1262,7 @@ export class KeysUpdateCommand extends Command {
       return;
     }
     writeWarnings(result.data.warnings);
+    writeWarnings(result.data.address_warnings);
     const changed = result.data.changed;
     this.log(
       changed.length > 0
@@ -1334,8 +1340,10 @@ function reportsCascade(standing: readonly StandingObject[]): boolean {
 
 /**
  * A standing object's label. A Function trigger's label is only "function" and
- * an unnamed pull subscription's only "pull", so those carry their id; a
- * webhook's URL loses its query and fragment, which can hold a token.
+ * an unnamed pull subscription's only "pull", so those carry their id. A
+ * webhook's label is its URL's scheme and host (the server hides the path and
+ * query); against an older server, which sent the whole URL, it is cut at
+ * `?` or `#`, which can hold a token.
  */
 function standingLabel(item: StandingObject): string {
   const id = typeof item.id === "string" ? item.id : String(item.id);

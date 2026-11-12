@@ -2195,7 +2195,8 @@ export function createOperationCommand(
                       ? null
                       : await readCallerMailFor(auth, apiClient.client),
                 })
-              : EMPTY_RESULT_HINTS[operation.sdkName];
+              : (emptyRuleListHint(operation.sdkName, query) ??
+                EMPTY_RESULT_HINTS[operation.sdkName]);
           if (hint && jsonOutput) summary.push(hint);
           else if (hint) process.stderr.write(`${hint}\n`);
         }
@@ -2333,6 +2334,46 @@ export function createOperationCommand(
 // in the setup chain isn't done?" Keys are the manifest's
 // `sdkName` for the operation. Operations without an entry fall
 // back to no hint (silent empty array, same as before).
+/**
+ * An empty rule request or share list, read by the filters the call left at
+ * their defaults: each list shows only part of what you can see by default
+ * (requests made to you that are pending; live shares made with you), so an
+ * empty answer says which flags widen it. Undefined for any other list, or
+ * when every filter was given.
+ */
+export function emptyRuleListHint(
+  sdkName: string,
+  query: Record<string, unknown>,
+): string | undefined {
+  const unset = (name: string) => query[name] === undefined;
+  const widen = (parts: Array<[boolean, string, string]>) => {
+    const left = parts.filter(([isUnset]) => isUnset);
+    if (left.length === 0) return undefined;
+    return `By default this lists only ${left.map(([, what]) => what).join(" and ")}: add ${left.map(([, , flag]) => `\`${flag}\``).join(" ")} to widen it.`;
+  };
+  if (sdkName === "listEmailRuleRequests") {
+    const next = widen([
+      [unset("box"), "requests made to you", "--box all"],
+      [unset("status"), "pending ones", "--status any"],
+    ]);
+    return next ? `(no results) No requests match. ${next}` : undefined;
+  }
+  if (sdkName === "listEmailRuleShares") {
+    const next = widen([
+      [unset("box"), "shares made with you", "--box all"],
+      [unset("live"), "live ones", "--live any"],
+    ]);
+    return next ? `(no results) No shares match. ${next}` : undefined;
+  }
+  if (sdkName === "listGivenEmailRuleShares") {
+    const next = widen([
+      [unset("live"), "live shares of your mail", "--live any"],
+    ]);
+    return next ? `(no results) No shares match. ${next}` : undefined;
+  }
+  return undefined;
+}
+
 export const EMPTY_RESULT_HINTS: Record<string, string> = {
   listDeliveries:
     "(no results) No webhook deliveries logged yet. If you have an endpoint configured but expected to see test fires here: test deliveries from `primitive endpoints test` are NOT logged in this list, they're synchronous and visible only in the test-endpoint command's response. Real deliveries are logged when an event fans out to your endpoints: an inbound `email.received`, or a `sent_email.*` event for an endpoint that lists it in rules.event_types (they arrive within a few minutes of the result). If you have no endpoints, run `primitive endpoints list` to check.",

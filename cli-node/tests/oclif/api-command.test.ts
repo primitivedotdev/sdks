@@ -12,6 +12,7 @@ import {
   DASHBOARD_ONLY_NOTE,
   domainVerificationFailedHint,
   EMPTY_RESULT_HINTS,
+  emptyRuleListHint,
   extractErrorCode,
   extractErrorPayload,
   flagForParameter,
@@ -778,6 +779,27 @@ describe("OPERATION_HINTS", () => {
       "functions set-secret",
     );
     expect(OPERATION_HINTS.setFunctionSecret).toContain("functions set-secret");
+  });
+});
+
+describe("emptyRuleListHint", () => {
+  it("says which default filters hid rule requests and shares, and nothing once every one is given", () => {
+    expect(emptyRuleListHint("listEmailRuleRequests", {})).toBe(
+      "(no results) No requests match. By default this lists only requests made to you and pending ones: add `--box all` `--status any` to widen it.",
+    );
+    expect(emptyRuleListHint("listEmailRuleRequests", { box: "all" })).toBe(
+      "(no results) No requests match. By default this lists only pending ones: add `--status any` to widen it.",
+    );
+    expect(
+      emptyRuleListHint("listEmailRuleRequests", { box: "all", status: "any" }),
+    ).toBeUndefined();
+    expect(emptyRuleListHint("listEmailRuleShares", { live: "false" })).toBe(
+      "(no results) No shares match. By default this lists only shares made with you: add `--box all` to widen it.",
+    );
+    expect(emptyRuleListHint("listGivenEmailRuleShares", {})).toBe(
+      "(no results) No shares match. By default this lists only live shares of your mail: add `--live any` to widen it.",
+    );
+    expect(emptyRuleListHint("listEmails", {})).toBeUndefined();
   });
 });
 

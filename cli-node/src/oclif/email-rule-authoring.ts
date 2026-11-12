@@ -1219,8 +1219,8 @@ function readAgain(id: string): string {
  * The hint for update-email-rule's refusals: an email_rule_conflict by its
  * details.reason (version_moved, revision_moved, expectations_moved,
  * rule_changed), and the expectations guard's expectations_failed,
- * expectations_undecided and no_expectations. Nothing was saved in any of
- * them.
+ * expectations_undecided, expectations_unreadable and no_expectations.
+ * Nothing was saved in any of them.
  */
 export function updateEmailRuleErrorHint(
   code: string | undefined,
@@ -1302,6 +1302,17 @@ export function updateEmailRuleErrorHint(
           : ` ${byReason}`;
     return `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved.${which}${next} The command exits ${updateEmailRuleErrorExitCode(payload) ?? EXIT_EXPECTATION_FAILED}.`;
   }
+  if (code === "expectations_unreadable") {
+    // Emails the rule cannot read (deleted, or outside its scope or its
+    // author's mail): no later write decides them, so it exits 1, not 3.
+    const unreadable = Array.isArray(details.unreadable)
+      ? details.unreadable.filter(
+          (entry): entry is string => typeof entry === "string",
+        )
+      : [];
+    const named = unreadable.length > 0 ? `: ${unreadable.join(", ")}` : "";
+    return `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Some expectations name emails this rule cannot read (deleted, or outside its scope or its author's mail)${named}. Sending the write again will not decide them: send --expectations-file without them, or a scope that reads them. The command exits ${EXIT_EXPECTATION_FAILED}.`;
+  }
   if (code === "no_expectations")
     return "Hint: nothing was saved. Give the rule expectations with --expectations-file or made-up emails with --expectation-samples-file or --add-expectation-samples-file (in this write or before it), or send the write without if_expectations_pass (--fail-on-expectations or --if-expectations-pass).";
   return undefined;
@@ -1352,15 +1363,17 @@ const UNDECIDED_NEXT_STEP: Readonly<Record<string, string>> = {
 
 /**
  * update-email-rule's exit code for the expectations guard's refusals: 1 when
- * one failed, or when they may not be decided by trying again (the rule
- * cannot run as its author, or a made-up email is undecided for no reason
- * the answer gives); 3 when trying again later can decide them.
+ * one failed, or when they may not be decided by trying again (an expectation
+ * names an email the rule cannot read, the rule cannot run as its author, or
+ * a made-up email is undecided for no reason the answer gives); 3 when trying
+ * again later can decide them.
  */
 export function updateEmailRuleErrorExitCode(
   payload: unknown,
 ): number | undefined {
   const code = isRecord(payload) ? payload.code : undefined;
-  if (code === "expectations_failed") return EXIT_EXPECTATION_FAILED;
+  if (code === "expectations_failed" || code === "expectations_unreadable")
+    return EXIT_EXPECTATION_FAILED;
   if (code !== "expectations_undecided") return undefined;
   const details = errorDetails(payload);
   if (details.reason === "author_unresolvable") return EXIT_EXPECTATION_FAILED;
@@ -1486,6 +1499,17 @@ function expectationsGuardBodyFields(
   ];
 }
 
+/**
+ * The stderr report of end-email-rule-share: the answer's note, which says
+ * the rule itself is left as it was (ending a share does not turn it off)
+ * and, to the member who shared, how to stop it.
+ */
+export function endEmailRuleShareReport(data: unknown): OperationReport {
+  const note =
+    isRecord(data) && typeof data.note === "string" ? data.note.trim() : "";
+  return { lines: note ? [note] : [] };
+}
+
 export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
   string,
   OperationExtension
@@ -1589,7 +1613,7 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
   generateLookAlikes: {
     flags: {
       [LOOK_ALIKES_SAMPLES_FILE_FLAG]: Flags.string({
-        description: `Also write the look-alikes to this JSON file as made-up emails the rule must not match, a JSON array numbered from 1 in the order the report prints them. Save the ones you choose with create-email-rule --${SAMPLES_FILE_FLAG}, update-email-rule --${ADD_SAMPLES_FILE_FLAG} or, for a request, accept-email-rule-request --${SAMPLES_FILE_FLAG}, with --pick; test an edited rule on them with test-email-rule --${EXPECT_SAMPLES_FILE_FLAG}. Replaces the file if it exists, once the call succeeds; when no look-alikes came back it leaves the file as it was and exits 1.`,
+        description: `Also write the look-alikes to this JSON file as made-up emails the rule must match or not (each keeps its expected: most must not match, and a near case it should take must match), a JSON array numbered from 1 in the order the report prints them. Save the ones you choose with create-email-rule --${SAMPLES_FILE_FLAG}, update-email-rule --${ADD_SAMPLES_FILE_FLAG} or, for a request, accept-email-rule-request --${SAMPLES_FILE_FLAG}, with --pick; test an edited rule on them with test-email-rule --${EXPECT_SAMPLES_FILE_FLAG}. Replaces the file if it exists, once the call succeeds; when no look-alikes came back it leaves the file as it was and exits 1. The numbered report is printed on stderr, and only without --json, which prints exactly one JSON document and nothing on stderr; the answer's look_alikes and this file hold the same emails in the same order, so with --json the file still gives the numbered set to --pick from.`,
       }),
     },
     report: lookAlikesReport,
@@ -1609,6 +1633,10 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
   compileEmailRule: {
     flags: {},
     report: compileEmailRuleReport,
+  },
+  endEmailRuleShare: {
+    flags: {},
+    report: endEmailRuleShareReport,
   },
   getEmailRule: {
     flags: {},

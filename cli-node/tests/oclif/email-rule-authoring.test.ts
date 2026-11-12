@@ -11,6 +11,7 @@ import {
   OPERATION_EXTENSIONS,
 } from "../../src/oclif/api-command.js";
 import {
+  endEmailRuleShareReport,
   formatFact,
   NOT_MATCHED_LIST_LIMIT,
   testEmailRuleReport,
@@ -2573,6 +2574,45 @@ describe("email-rules update-email-rule: the server's write guards", () => {
     );
   });
 
+  it("exits 1 when an expectation names an email the rule cannot read, since sending again never decides it", async () => {
+    const body = refusal("expectations_unreadable", {
+      current_version: 5,
+      state: "observe",
+      unreadable: [C],
+      expectations_check: {
+        version: null,
+        passed: null,
+        decided: false,
+        failed: [],
+        undecided: [C],
+      },
+    });
+    responder = () => jsonResponse(409, body);
+    const result = await run("email-rules:update-email-rule", [
+      RULE,
+      "--state",
+      "active",
+      "--fail-on-expectations",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(stderrLines(result).at(-1)).toBe(
+      `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Some expectations name emails this rule cannot read (deleted, or outside its scope or its author's mail): ${C}. Sending the write again will not decide them: send --expectations-file without them, or a scope that reads them. The command exits 1.`,
+    );
+    // Under --json too: never the retry-later 3.
+    const json = await run("email-rules:update-email-rule", [
+      RULE,
+      "--state",
+      "active",
+      "--fail-on-expectations",
+      "--json",
+    ]);
+    expect(json.exitCode).toBe(1);
+    expect(JSON.parse(json.merged)).toMatchObject({
+      error: body.error,
+      exit_code: 1,
+    });
+  });
+
   it("exits 1 with how to give the rule expectations when it has none", async () => {
     responder = () =>
       jsonResponse(
@@ -3246,5 +3286,21 @@ describe("formatFact", () => {
       "tags: [] at 0.50",
     );
     expect(formatFact("tags", { value: ["a", "b"] })).toBe("tags: [a, b]");
+  });
+});
+
+describe("end-email-rule-share", () => {
+  it("prints the answer's note, that the rule itself is left as it was, and nothing without one", () => {
+    const note =
+      "The share is ended. The rule itself is unchanged: it is still active and decides your mail. Set it to draft or delete it to stop it.";
+    expect(
+      endEmailRuleShareReport({ ended: true, rule_id: RULE, note }),
+    ).toEqual({ lines: [note] });
+    expect(endEmailRuleShareReport({ ended: true })).toEqual({ lines: [] });
+    expect(endEmailRuleShareReport(null)).toEqual({ lines: [] });
+    // The generated command reports it.
+    expect(OPERATION_EXTENSIONS.endEmailRuleShare?.report).toBe(
+      endEmailRuleShareReport,
+    );
   });
 });
