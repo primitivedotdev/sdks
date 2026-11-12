@@ -299,7 +299,7 @@ export const getAccount = <ThrowOnError extends boolean = false>(options?: Optio
 /**
  * Update account settings
  *
- * Update the mutable account settings (such as display name and notification preferences) for the authenticated organization.
+ * Update the organization's spam threshold (spam_threshold) and whether an email's content is discarded once a webhook confirms receipt (discard_content_on_webhook_confirmed), the opt-in POST /emails/{id}/discard-content needs.
  */
 export const updateAccount = <ThrowOnError extends boolean = false>(options: Options<UpdateAccountData, ThrowOnError>): RequestResult<UpdateAccountResponses, UpdateAccountErrors, ThrowOnError> => (options.client ?? client).patch<UpdateAccountResponses, UpdateAccountErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -2953,7 +2953,7 @@ export const getEmailRuleVocabulary = <ThrowOnError extends boolean = false>(opt
 /**
  * Compile a rule description
  *
- * Turns a plain-English description of which received emails to match into a rule tree over the published column contract, with a plain-English explanation of what it matches, the assumptions made, and warnings for anything the columns cannot express. Where the columns fall short the rule may carry up to five yes/no questions, asked about an email only after its conditions match. Nothing is saved. A rule with no questions has its conditions counted, read only, over the caller's recent classified mail (what a test of it covers by default): breadth is that count, and a warning says when it matches nearly all of it. The SQL the rule renders to is returned only when include_sql is true. kind do_not_share compiles a do-not-share rule for recall: conditions only as narrow as the description says, the judgement of what it describes put into questions, and with nothing a column decides for certain, conditions that hold for every email. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+ * Turns a plain-English description of which received emails to match into a rule tree over the published column contract, with a plain-English explanation of what it matches, the assumptions made, and warnings for anything the columns cannot express. Where the columns fall short the rule may carry up to five yes/no questions, asked about an email only after its conditions match; they read its subject, its new text and its attachments' file names, never what is inside an attachment, and warnings say when a question mentions attachments. Nothing is saved. A rule with no questions has its conditions counted, read only, over the caller's recent classified mail (what a test of it covers by default): breadth is that count, and a warning says when it matches nearly all of it. The SQL the rule renders to is returned only when include_sql is true. kind do_not_share compiles a do-not-share rule for recall: conditions only as narrow as the description says, the judgement of what it describes put into questions, and with nothing a column decides for certain, conditions that hold for every email. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
  */
 export const compileEmailRule = <ThrowOnError extends boolean = false>(options: Options<CompileEmailRuleData, ThrowOnError>): RequestResult<CompileEmailRuleResponses, CompileEmailRuleErrors, ThrowOnError> => (options.client ?? client).post<CompileEmailRuleResponses, CompileEmailRuleErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -2981,9 +2981,9 @@ export const testEmailRule = <ThrowOnError extends boolean = false>(options: Opt
 });
 
 /**
- * Write look-alike emails a rule should not match
+ * Write look-alike emails a rule should or should not match
  *
- * Writes made-up emails that come close to what a grant rule describes but are private (a personal medical bill, pay for named people, a personal purchase, personal banking or tax, or another near case), and reports what the rule decides for each, as test-sample would. failed means the rule matched it, so it would be shared. Nothing is stored and no mail is read. Keep the ones it must never match with add_expectation_samples, or for a request with the accept's expectation_samples. Limited to 20 an hour per member. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+ * Writes made-up emails that come close to what a grant rule describes, and reports what the rule decides for each, as test-sample would. Most should not match (expected no_match): business near misses from its senders and topic (kind other: an all-clear, a reply with nothing new, a related document, another subject) and private mail (a personal medical bill, pay for named people, a personal purchase, personal banking or tax). By default a third, rounded down, are near cases it should match (expected match, kind other). failed means the rule decided one against expected. Nothing is stored and no mail is read. Keep them, with their expected, with add_expectation_samples, or for a request with the accept's expectation_samples. Limited to 20 an hour per member. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
  */
 export const generateLookAlikes = <ThrowOnError extends boolean = false>(options: Options<GenerateLookAlikesData, ThrowOnError>): RequestResult<GenerateLookAlikesResponses, GenerateLookAlikesErrors, ThrowOnError> => (options.client ?? client).post<GenerateLookAlikesResponses, GenerateLookAlikesErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -3257,7 +3257,7 @@ export const listGivenEmailRuleShares = <ThrowOnError extends boolean = false>(o
 /**
  * End a rule share
  *
- * Stops sharing. Either person on the share can do this, or an owner or admin who manages members. The share is kept, marked as ended. This needs no mail access and does not depend on the email rules feature. An owner or admin not on the share must use a dashboard session. Otherwise use your own session, or an OAuth or CLI token that acts with your full access: API keys and agent keys are refused.
+ * Stops sharing; the rule itself is left unchanged, as the answer's note says. Either person on the share can do this, or an owner or admin who manages members. The share is kept, marked as ended. This needs no mail access and does not depend on the email rules feature. An owner or admin not on the share must use a dashboard session. Otherwise use your own session, or an OAuth or CLI token that acts with your full access: API keys and agent keys are refused.
  */
 export const endEmailRuleShare = <ThrowOnError extends boolean = false>(options: Options<EndEmailRuleShareData, ThrowOnError>): RequestResult<EndEmailRuleShareResponses, EndEmailRuleShareErrors, ThrowOnError> => (options.client ?? client).delete<EndEmailRuleShareResponses, EndEmailRuleShareErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -4331,7 +4331,7 @@ export const updateSearchSettings = <ThrowOnError extends boolean = false>(optio
 /**
  * List roles
  *
- * Every role in the organization (built-in, template copies and custom roles), with how many members and groups hold each, the templates not yet copied, and whether roles can be assigned now. `unassigned` describes role restricted on a member with no role_id, which is not a role and is never in `roles`. Any person (a session or OAuth token); API keys are refused.
+ * Every role in the organization (built-in, template copies and custom roles), with how many members and groups hold each, the templates not yet copied, and whether roles can be assigned now. `unassigned` describes role restricted on a member with no role_id, which is not a role and is never in `roles`. Needs members:read (owners, admins, members and roles that grant it); API keys are refused.
  */
 export const listRoles = <ThrowOnError extends boolean = false>(options?: Options<ListRolesData, ThrowOnError>): RequestResult<ListRolesResponses, ListRolesErrors, ThrowOnError> => (options?.client ?? client).get<ListRolesResponses, ListRolesErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -4420,7 +4420,7 @@ export const leaveOrganization = <ThrowOnError extends boolean = false>(options?
 /**
  * Get the mailbox access mode
  *
- * Whole-org or delegated mailbox access. Holders of roles:assign also get the preview of a switch (every item that needs a decision, each with the decision_options it takes, worded for what the switch does) and the decisions made, plus notices: member and group domain entries that delegated mode keeps off personal mailboxes, each with how many it leaves out. Notices are informational, never decided, and never hold the switch (notices_truncated past 500, notices_unavailable when they could not be read). In whole-org mode it also lists narrowed_agents: every live agent connection the switch narrows to an own-address key (personal agents of members, and shared agents), informational in the same way (narrowed_agents_truncated past 500, narrowed_agents_unavailable when they could not be read). Any person; API keys are refused.
+ * Whole-org or delegated mailbox access. Holders of roles:assign also get the preview of a switch (every item that needs a decision, each with the decision_options it takes, worded for what the switch does) and the decisions made, plus notices: member and group domain entries that delegated mode keeps off personal mailboxes, each with how many it leaves out. Notices are informational, never decided, and never hold the switch (notices_truncated past 500, notices_unavailable when they could not be read). In whole-org mode it also lists narrowed_agents: every live agent connection the switch narrows to an own-address key (personal agents of members, and shared agents), informational in the same way (narrowed_agents_truncated past 500, narrowed_agents_unavailable when they could not be read). Needs members:read (owners, admins, members and roles that grant it); API keys are refused.
  */
 export const getAccessMode = <ThrowOnError extends boolean = false>(options?: Options<GetAccessModeData, ThrowOnError>): RequestResult<GetAccessModeResponses, GetAccessModeErrors, ThrowOnError> => (options?.client ?? client).get<GetAccessModeResponses, GetAccessModeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],

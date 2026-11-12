@@ -108,11 +108,11 @@ def sync_detailed(
 ) -> Response[EndEmailRuleShareResponse200 | ErrorResponse]:
     """ End a rule share
 
-     Stops sharing. Either person on the share can do this, or an owner or admin who manages members. The
-    share is kept, marked as ended. This needs no mail access and does not depend on the email rules
-    feature. An owner or admin not on the share must use a dashboard session. Otherwise use your own
-    session, or an OAuth or CLI token that acts with your full access: API keys and agent keys are
-    refused.
+     Stops sharing; the rule itself is left unchanged, as the answer's note says. Either person on the
+    share can do this, or an owner or admin who manages members. The share is kept, marked as ended.
+    This needs no mail access and does not depend on the email rules feature. An owner or admin not on
+    the share must use a dashboard session. Otherwise use your own session, or an OAuth or CLI token
+    that acts with your full access: API keys and agent keys are refused.
 
     Args:
         id (UUID):
@@ -145,11 +145,11 @@ def sync(
 ) -> EndEmailRuleShareResponse200 | ErrorResponse | None:
     """ End a rule share
 
-     Stops sharing. Either person on the share can do this, or an owner or admin who manages members. The
-    share is kept, marked as ended. This needs no mail access and does not depend on the email rules
-    feature. An owner or admin not on the share must use a dashboard session. Otherwise use your own
-    session, or an OAuth or CLI token that acts with your full access: API keys and agent keys are
-    refused.
+     Stops sharing; the rule itself is left unchanged, as the answer's note says. Either person on the
+    share can do this, or an owner or admin who manages members. The share is kept, marked as ended.
+    This needs no mail access and does not depend on the email rules feature. An owner or admin not on
+    the share must use a dashboard session. Otherwise use your own session, or an OAuth or CLI token
+    that acts with your full access: API keys and agent keys are refused.
 
     Args:
         id (UUID):
@@ -177,11 +177,11 @@ async def asyncio_detailed(
 ) -> Response[EndEmailRuleShareResponse200 | ErrorResponse]:
     """ End a rule share
 
-     Stops sharing. Either person on the share can do this, or an owner or admin who manages members. The
-    share is kept, marked as ended. This needs no mail access and does not depend on the email rules
-    feature. An owner or admin not on the share must use a dashboard session. Otherwise use your own
-    session, or an OAuth or CLI token that acts with your full access: API keys and agent keys are
-    refused.
+     Stops sharing; the rule itself is left unchanged, as the answer's note says. Either person on the
+    share can do this, or an owner or admin who manages members. The share is kept, marked as ended.
+    This needs no mail access and does not depend on the email rules feature. An owner or admin not on
+    the share must use a dashboard session. Otherwise use your own session, or an OAuth or CLI token
+    that acts with your full access: API keys and agent keys are refused.
 
     Args:
         id (UUID):
@@ -214,11 +214,11 @@ async def asyncio(
 ) -> EndEmailRuleShareResponse200 | ErrorResponse | None:
     """ End a rule share
 
-     Stops sharing. Either person on the share can do this, or an owner or admin who manages members. The
-    share is kept, marked as ended. This needs no mail access and does not depend on the email rules
-    feature. An owner or admin not on the share must use a dashboard session. Otherwise use your own
-    session, or an OAuth or CLI token that acts with your full access: API keys and agent keys are
-    refused.
+     Stops sharing; the rule itself is left unchanged, as the answer's note says. Either person on the
+    share can do this, or an owner or admin who manages members. The share is kept, marked as ended.
+    This needs no mail access and does not depend on the email rules feature. An owner or admin not on
+    the share must use a dashboard session. Otherwise use your own session, or an OAuth or CLI token
+    that acts with your full access: API keys and agent keys are refused.
 
     Args:
         id (UUID):

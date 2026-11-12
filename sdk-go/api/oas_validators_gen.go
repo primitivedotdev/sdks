@@ -21354,6 +21354,17 @@ func (s *EmailRuleLookAlike) Validate() error {
 		})
 	}
 	if err := func() error {
+		if err := s.Expected.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "expected",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if err := s.Email.Validate(); err != nil {
 			return err
 		}
@@ -21463,6 +21474,18 @@ func (s *EmailRuleLookAlikeEmail) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s EmailRuleLookAlikeExpected) Validate() error {
+	switch s {
+	case "match":
+		return nil
+	case "no_match":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
 }
 
 func (s EmailRuleLookAlikeKind) Validate() error {
@@ -25939,6 +25962,8 @@ func (s ErrorResponseErrorCode) Validate() error {
 	case "expectations_failed":
 		return nil
 	case "expectations_undecided":
+		return nil
+	case "expectations_unreadable":
 		return nil
 	case "expired":
 		return nil
@@ -79054,6 +79079,17 @@ func (s EmailRuleKind) validateKnown() error {
 	}
 }
 
+func (s EmailRuleLookAlikeExpected) validateKnown() error {
+	switch s {
+	case "match":
+		return nil
+	case "no_match":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s EmailRuleLookAlikeKind) validateKnown() error {
 	switch s {
 	case "medical":
@@ -79963,6 +79999,8 @@ func (s ErrorResponseErrorCode) validateKnown() error {
 	case "expectations_failed":
 		return nil
 	case "expectations_undecided":
+		return nil
+	case "expectations_unreadable":
 		return nil
 	case "expired":
 		return nil

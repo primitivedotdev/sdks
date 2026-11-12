@@ -104,9 +104,12 @@ class ConversationMessage:
             sent_email_id (UUID | Unset): The org's send of this message, when the entry is an inbound copy and you can read
                 the send. On a `since` read, when you read the send as its sender, the entry's `status` and `hold` describe the
                 send.
-            hold (ConversationMessageHold | Unset): Only on a held scheduled send: its OAuth grant was revoked after refresh
-                token reuse, so it waits until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days.
-                Status stays scheduled.
+            hold (ConversationMessageHold | Unset): Only on a scheduled send that is not going out yet; status stays
+                scheduled. credential_reuse_hold: its OAuth grant was revoked after refresh token reuse, so it waits until
+                released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your
+                dedicated sending address is at today's warm-up limit or paused, so it goes out on its own within the hour after
+                the limit resets at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds); no release needed. On sent-
+                email reads and conversation messages.
      """
 
     role: ConversationMessageRole

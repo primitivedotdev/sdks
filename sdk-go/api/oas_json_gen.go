@@ -73088,6 +73088,10 @@ func (s *EmailRuleLookAlike) encodeFields(e *jx.Encoder) {
 		s.Kind.Encode(e)
 	}
 	{
+		e.FieldStart("expected")
+		s.Expected.Encode(e)
+	}
+	{
 		e.FieldStart("why")
 		e.Str(s.Why)
 	}
@@ -73113,13 +73117,14 @@ func (s *EmailRuleLookAlike) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfEmailRuleLookAlike = [6]string{
+var jsonFieldsNameOfEmailRuleLookAlike = [7]string{
 	0: "kind",
-	1: "why",
-	2: "email",
-	3: "outcome",
-	4: "status",
-	5: "question_answers",
+	1: "expected",
+	2: "why",
+	3: "email",
+	4: "outcome",
+	5: "status",
+	6: "question_answers",
 }
 
 // Decode decodes EmailRuleLookAlike from json.
@@ -73141,8 +73146,18 @@ func (s *EmailRuleLookAlike) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"kind\"")
 			}
-		case "why":
+		case "expected":
 			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Expected.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"expected\"")
+			}
+		case "why":
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
 				v, err := d.Str()
 				s.Why = string(v)
@@ -73154,7 +73169,7 @@ func (s *EmailRuleLookAlike) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"why\"")
 			}
 		case "email":
-			requiredBitSet[0] |= 1 << 2
+			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
 				if err := s.Email.Decode(d); err != nil {
 					return err
@@ -73164,7 +73179,7 @@ func (s *EmailRuleLookAlike) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"email\"")
 			}
 		case "outcome":
-			requiredBitSet[0] |= 1 << 3
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
 				if err := s.Outcome.Decode(d); err != nil {
 					return err
@@ -73174,7 +73189,7 @@ func (s *EmailRuleLookAlike) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"outcome\"")
 			}
 		case "status":
-			requiredBitSet[0] |= 1 << 4
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
 				if err := s.Status.Decode(d); err != nil {
 					return err
@@ -73184,7 +73199,7 @@ func (s *EmailRuleLookAlike) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"status\"")
 			}
 		case "question_answers":
-			requiredBitSet[0] |= 1 << 5
+			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
 				s.QuestionAnswers = make([]EmailRuleLookAlikeQuestionAnswersItem, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -73211,7 +73226,7 @@ func (s *EmailRuleLookAlike) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00111111,
+		0b01111111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -73615,6 +73630,46 @@ func (s *EmailRuleLookAlikeEmailFrom) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *EmailRuleLookAlikeEmailFrom) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailRuleLookAlikeExpected as json.
+func (s EmailRuleLookAlikeExpected) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EmailRuleLookAlikeExpected from json.
+func (s *EmailRuleLookAlikeExpected) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailRuleLookAlikeExpected to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EmailRuleLookAlikeExpected(v) {
+	case EmailRuleLookAlikeExpectedMatch:
+		*s = EmailRuleLookAlikeExpectedMatch
+	case EmailRuleLookAlikeExpectedNoMatch:
+		*s = EmailRuleLookAlikeExpectedNoMatch
+	default:
+		*s = EmailRuleLookAlikeExpected(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EmailRuleLookAlikeExpected) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailRuleLookAlikeExpected) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -86189,10 +86244,31 @@ func (s *EndEmailRuleShareResult) encodeFields(e *jx.Encoder) {
 		e.FieldStart("ended")
 		e.Bool(s.Ended)
 	}
+	{
+		if s.RuleID.Set {
+			e.FieldStart("rule_id")
+			s.RuleID.Encode(e)
+		}
+	}
+	{
+		if s.Note.Set {
+			e.FieldStart("note")
+			s.Note.Encode(e)
+		}
+	}
+	for k, elem := range s.AdditionalProps {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
 }
 
-var jsonFieldsNameOfEndEmailRuleShareResult = [1]string{
+var jsonFieldsNameOfEndEmailRuleShareResult = [3]string{
 	0: "ended",
+	1: "rule_id",
+	2: "note",
 }
 
 // Decode decodes EndEmailRuleShareResult from json.
@@ -86201,6 +86277,7 @@ func (s *EndEmailRuleShareResult) Decode(d *jx.Decoder) error {
 		return errors.New("invalid: unable to decode EndEmailRuleShareResult to nil")
 	}
 	var requiredBitSet [1]uint8
+	s.AdditionalProps = map[string]jx.Raw{}
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -86216,8 +86293,39 @@ func (s *EndEmailRuleShareResult) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"ended\"")
 			}
+		case "rule_id":
+			if err := func() error {
+				s.RuleID.Reset()
+				if err := s.RuleID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"rule_id\"")
+			}
+		case "note":
+			if err := func() error {
+				s.Note.Reset()
+				if err := s.Note.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"note\"")
+			}
 		default:
-			return d.Skip()
+			var elem jx.Raw
+			if err := func() error {
+				v, err := d.RawAppend(nil)
+				elem = jx.Raw(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrapf(err, "decode field %q", k)
+			}
+			s.AdditionalProps[string(k)] = elem
 		}
 		return nil
 	}); err != nil {
@@ -86268,6 +86376,64 @@ func (s *EndEmailRuleShareResult) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *EndEmailRuleShareResult) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s EndEmailRuleShareResultAdditional) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields implements json.Marshaler.
+func (s EndEmailRuleShareResultAdditional) encodeFields(e *jx.Encoder) {
+	for k, elem := range s {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
+}
+
+// Decode decodes EndEmailRuleShareResultAdditional from json.
+func (s *EndEmailRuleShareResultAdditional) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EndEmailRuleShareResultAdditional to nil")
+	}
+	m := s.init()
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		var elem jx.Raw
+		if err := func() error {
+			v, err := d.RawAppend(nil)
+			elem = jx.Raw(v)
+			if err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
+			return errors.Wrapf(err, "decode field %q", k)
+		}
+		m[string(k)] = elem
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EndEmailRuleShareResultAdditional")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EndEmailRuleShareResultAdditional) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EndEmailRuleShareResultAdditional) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -89444,6 +89610,8 @@ func (s *ErrorResponseErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorResponseErrorCodeExpectationsFailed
 	case ErrorResponseErrorCodeExpectationsUndecided:
 		*s = ErrorResponseErrorCodeExpectationsUndecided
+	case ErrorResponseErrorCodeExpectationsUnreadable:
+		*s = ErrorResponseErrorCodeExpectationsUnreadable
 	case ErrorResponseErrorCodeExpired:
 		*s = ErrorResponseErrorCodeExpired
 	case ErrorResponseErrorCodeFeatureNotEnabled:

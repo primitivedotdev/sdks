@@ -12827,7 +12827,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										switch method {
 										case "POST":
 											r.name = GenerateLookAlikesOperation
-											r.summary = "Write look-alike emails a rule should not match"
+											r.summary = "Write look-alike emails a rule should or should not match"
 											r.operationID = "generateLookAlikes"
 											r.operationGroup = ""
 											r.pathPattern = "/email-rules/look-alikes"

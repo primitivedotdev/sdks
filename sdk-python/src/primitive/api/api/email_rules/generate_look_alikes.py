@@ -132,15 +132,18 @@ def sync_detailed(
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | GenerateLookAlikesResponse200]:
-    """ Write look-alike emails a rule should not match
+    """ Write look-alike emails a rule should or should not match
 
-     Writes made-up emails that come close to what a grant rule describes but are private (a personal
-    medical bill, pay for named people, a personal purchase, personal banking or tax, or another near
-    case), and reports what the rule decides for each, as test-sample would. failed means the rule
-    matched it, so it would be shared. Nothing is stored and no mail is read. Keep the ones it must
-    never match with add_expectation_samples, or for a request with the accept's expectation_samples.
-    Limited to 20 an hour per member. Needs mail:read, a member's own credential with their full access
-    (not an API key, agent key or narrowed token), and the email rules feature.
+     Writes made-up emails that come close to what a grant rule describes, and reports what the rule
+    decides for each, as test-sample would. Most should not match (expected no_match): business near
+    misses from its senders and topic (kind other: an all-clear, a reply with nothing new, a related
+    document, another subject) and private mail (a personal medical bill, pay for named people, a
+    personal purchase, personal banking or tax). By default a third, rounded down, are near cases it
+    should match (expected match, kind other). failed means the rule decided one against expected.
+    Nothing is stored and no mail is read. Keep them, with their expected, with add_expectation_samples,
+    or for a request with the accept's expectation_samples. Limited to 20 an hour per member. Needs
+    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+    token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -174,15 +177,18 @@ def sync(
     idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | GenerateLookAlikesResponse200 | None:
-    """ Write look-alike emails a rule should not match
+    """ Write look-alike emails a rule should or should not match
 
-     Writes made-up emails that come close to what a grant rule describes but are private (a personal
-    medical bill, pay for named people, a personal purchase, personal banking or tax, or another near
-    case), and reports what the rule decides for each, as test-sample would. failed means the rule
-    matched it, so it would be shared. Nothing is stored and no mail is read. Keep the ones it must
-    never match with add_expectation_samples, or for a request with the accept's expectation_samples.
-    Limited to 20 an hour per member. Needs mail:read, a member's own credential with their full access
-    (not an API key, agent key or narrowed token), and the email rules feature.
+     Writes made-up emails that come close to what a grant rule describes, and reports what the rule
+    decides for each, as test-sample would. Most should not match (expected no_match): business near
+    misses from its senders and topic (kind other: an all-clear, a reply with nothing new, a related
+    document, another subject) and private mail (a personal medical bill, pay for named people, a
+    personal purchase, personal banking or tax). By default a third, rounded down, are near cases it
+    should match (expected match, kind other). failed means the rule decided one against expected.
+    Nothing is stored and no mail is read. Keep them, with their expected, with add_expectation_samples,
+    or for a request with the accept's expectation_samples. Limited to 20 an hour per member. Needs
+    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+    token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -211,15 +217,18 @@ async def asyncio_detailed(
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | GenerateLookAlikesResponse200]:
-    """ Write look-alike emails a rule should not match
+    """ Write look-alike emails a rule should or should not match
 
-     Writes made-up emails that come close to what a grant rule describes but are private (a personal
-    medical bill, pay for named people, a personal purchase, personal banking or tax, or another near
-    case), and reports what the rule decides for each, as test-sample would. failed means the rule
-    matched it, so it would be shared. Nothing is stored and no mail is read. Keep the ones it must
-    never match with add_expectation_samples, or for a request with the accept's expectation_samples.
-    Limited to 20 an hour per member. Needs mail:read, a member's own credential with their full access
-    (not an API key, agent key or narrowed token), and the email rules feature.
+     Writes made-up emails that come close to what a grant rule describes, and reports what the rule
+    decides for each, as test-sample would. Most should not match (expected no_match): business near
+    misses from its senders and topic (kind other: an all-clear, a reply with nothing new, a related
+    document, another subject) and private mail (a personal medical bill, pay for named people, a
+    personal purchase, personal banking or tax). By default a third, rounded down, are near cases it
+    should match (expected match, kind other). failed means the rule decided one against expected.
+    Nothing is stored and no mail is read. Keep them, with their expected, with add_expectation_samples,
+    or for a request with the accept's expectation_samples. Limited to 20 an hour per member. Needs
+    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+    token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -253,15 +262,18 @@ async def asyncio(
     idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | GenerateLookAlikesResponse200 | None:
-    """ Write look-alike emails a rule should not match
+    """ Write look-alike emails a rule should or should not match
 
-     Writes made-up emails that come close to what a grant rule describes but are private (a personal
-    medical bill, pay for named people, a personal purchase, personal banking or tax, or another near
-    case), and reports what the rule decides for each, as test-sample would. failed means the rule
-    matched it, so it would be shared. Nothing is stored and no mail is read. Keep the ones it must
-    never match with add_expectation_samples, or for a request with the accept's expectation_samples.
-    Limited to 20 an hour per member. Needs mail:read, a member's own credential with their full access
-    (not an API key, agent key or narrowed token), and the email rules feature.
+     Writes made-up emails that come close to what a grant rule describes, and reports what the rule
+    decides for each, as test-sample would. Most should not match (expected no_match): business near
+    misses from its senders and topic (kind other: an all-clear, a reply with nothing new, a related
+    document, another subject) and private mail (a personal medical bill, pay for named people, a
+    personal purchase, personal banking or tax). By default a third, rounded down, are near cases it
+    should match (expected match, kind other). failed means the rule decided one against expected.
+    Nothing is stored and no mail is read. Keep them, with their expected, with add_expectation_samples,
+    or for a request with the accept's expectation_samples. Limited to 20 an hour per member. Needs
+    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+    token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):

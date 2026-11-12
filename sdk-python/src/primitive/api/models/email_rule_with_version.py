@@ -45,8 +45,8 @@ class EmailRuleWithVersion:
                 warnings) and who compiled it. current_version is its number. GET /email-rules lists rules without it.
             kind (EmailRuleWithVersionKind | Unset): grant: what it matches can be shared. do_not_share: it blocks sharing
                 what it matches. Optional only for an older core-api: every answer carries it.
-            protection_note (str | Unset): On a do_not_share rule only: it protects nothing yet (not active), or a
-                classifier fact narrows it.
+            protection_note (str | Unset): On a do_not_share rule only: it protects nothing yet (not active), a classifier
+                fact narrows it, or its several questions are alternatives.
             evaluation_scope (EmailRuleWithVersionEvaluationScope | Unset): Whose mail it runs over, as stored (GET /email-
                 rules/{id}/scope: what that is now).
             scope_selection (EmailRuleScopeNames | None | Unset): What a selected rule names; null for any other scope.

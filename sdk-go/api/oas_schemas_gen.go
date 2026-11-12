@@ -6631,9 +6631,12 @@ type ChangeOutboundMessage struct {
 	// hidden recipient. Null when the request uses an address-bound agent connection key whose address
 	// is not the sender, because the count would reveal Bcc recipients.
 	RecipientCount OptNilInt `json:"recipient_count"`
-	// Only on a held scheduled send: its OAuth grant was revoked after refresh token reuse, so it waits
-	// until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. Status stays
-	// scheduled.
+	// Only on a scheduled send that is not going out yet; status stays scheduled. credential_reuse_hold:
+	// its OAuth grant was revoked after refresh token reuse, so it waits until released (POST
+	// /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your
+	// dedicated sending address is at today's warm-up limit or paused, so it goes out on its own within
+	// the hour after the limit resets at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds);
+	//  no release needed. On sent-email reads and conversation messages.
 	Hold      OptChangeOutboundMessageHold   `json:"hold"`
 	Direction ChangeOutboundMessageDirection `json:"direction"`
 }
@@ -7328,11 +7331,15 @@ func (s *ChangeOutboundMessageDirection) UnmarshalText(data []byte) error {
 	}
 }
 
-// Only on a held scheduled send: its OAuth grant was revoked after refresh token reuse, so it waits
-// until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. Status stays
-// scheduled.
+// Only on a scheduled send that is not going out yet; status stays scheduled. credential_reuse_hold:
+// its OAuth grant was revoked after refresh token reuse, so it waits until released (POST
+// /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your
+// dedicated sending address is at today's warm-up limit or paused, so it goes out on its own within
+// the hour after the limit resets at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds);
+//
+//	no release needed. On sent-email reads and conversation messages.
 type ChangeOutboundMessageHold struct {
-	// Open: credential_reuse_hold.
+	// Open: credential_reuse_hold, sending_ip_warmup_cap.
 	Reason string      `json:"reason"`
 	Since  NilDateTime `json:"since"`
 }
@@ -11583,9 +11590,12 @@ type ConversationMessage struct {
 	// `since` read, when you read the send as its sender, the entry's `status` and `hold` describe the
 	// send.
 	SentEmailID OptUUID `json:"sent_email_id"`
-	// Only on a held scheduled send: its OAuth grant was revoked after refresh token reuse, so it waits
-	// until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. Status stays
-	// scheduled.
+	// Only on a scheduled send that is not going out yet; status stays scheduled. credential_reuse_hold:
+	// its OAuth grant was revoked after refresh token reuse, so it waits until released (POST
+	// /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your
+	// dedicated sending address is at today's warm-up limit or paused, so it goes out on its own within
+	// the hour after the limit resets at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds);
+	//  no release needed. On sent-email reads and conversation messages.
 	Hold OptConversationMessageHold `json:"hold"`
 }
 
@@ -11871,11 +11881,15 @@ func (s *ConversationMessageDirection) UnmarshalText(data []byte) error {
 	}
 }
 
-// Only on a held scheduled send: its OAuth grant was revoked after refresh token reuse, so it waits
-// until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. Status stays
-// scheduled.
+// Only on a scheduled send that is not going out yet; status stays scheduled. credential_reuse_hold:
+// its OAuth grant was revoked after refresh token reuse, so it waits until released (POST
+// /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your
+// dedicated sending address is at today's warm-up limit or paused, so it goes out on its own within
+// the hour after the limit resets at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds);
+//
+//	no release needed. On sent-email reads and conversation messages.
 type ConversationMessageHold struct {
-	// Open: credential_reuse_hold.
+	// Open: credential_reuse_hold, sending_ip_warmup_cap.
 	Reason string      `json:"reason"`
 	Since  NilDateTime `json:"since"`
 }
@@ -21466,9 +21480,10 @@ type CredentialsRevokeCredentialResultStandingObjectsItem struct {
 	// Endpoint, function_trigger, pull_subscription, recipient_route, filter_rule or wake_schedule.
 	Kind string `json:"kind"`
 	ID   string `json:"id"`
-	// A webhook's URL, a pull subscription's name (or pull when it has none), a route's or filter's
-	// pattern, or a wake schedule's command and the address it wakes (command to address). A Function
-	// trigger's label is function: look it up by id.
+	// A webhook's scheme and host, followed by "/... (path and query hidden)" when its URL has more (GET
+	// /v1/endpoints/{id} has the whole URL), a pull subscription's name (or pull when it has none), a
+	// route's or filter's pattern, or a wake schedule's command and the address it wakes (command to
+	// address). A Function trigger's label is function: look it up by id.
 	Label string `json:"label"`
 	// True: the organization owns it, and it keeps working. false: the credential owns it itself, as
 	// with everything a third-party app or agent delegate made, a webhook made with a narrowed API key,
@@ -32070,7 +32085,8 @@ type EmailRule struct {
 	// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
 	// only for an older core-api: every answer carries it.
 	Kind OptEmailRuleKind `json:"kind"`
-	// On a do_not_share rule only: it protects nothing yet (not active), or a classifier fact narrows it.
+	// On a do_not_share rule only: it protects nothing yet (not active), a classifier fact narrows it,
+	// or its several questions are alternatives.
 	ProtectionNote OptString `json:"protection_note"`
 	// Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
 	EvaluationScope OptEmailRuleEvaluationScope `json:"evaluation_scope"`
@@ -32593,14 +32609,17 @@ func (s *EmailRuleKind) UnmarshalText(data []byte) error {
 // Ref: #/components/schemas/EmailRuleLookAlike
 type EmailRuleLookAlike struct {
 	Kind EmailRuleLookAlikeKind `json:"kind"`
-	// Why the rule should not match it.
+	// Match: a near case the rule should match; no_match: one it should not.
+	Expected EmailRuleLookAlikeExpected `json:"expected"`
+	// Why the rule should, or should not, match it.
 	Why string `json:"why"`
 	// A made-up email, as test-sample takes it.
 	Email   EmailRuleLookAlikeEmail   `json:"email"`
 	Outcome EmailRuleLookAlikeOutcome `json:"outcome"`
-	// Failed: the rule matched it, so it would be shared. undecided: the rule reads a spam score, which
-	// it cannot carry, whatever it decided; or not matched on something it could not decide (not
-	// classified, a fact or answer missing, or not reached in time).
+	// Failed: the rule decided it against expected (shared one it should not, or missed one it should
+	// match). undecided: the rule reads a spam score, which it cannot carry, whatever it decided; or not
+	// matched on something it could not decide (not classified, a fact or answer missing, or not reached
+	// in time).
 	Status          EmailRuleLookAlikeStatus                `json:"status"`
 	QuestionAnswers []EmailRuleLookAlikeQuestionAnswersItem `json:"question_answers"`
 }
@@ -32608,6 +32627,11 @@ type EmailRuleLookAlike struct {
 // GetKind returns the value of Kind.
 func (s *EmailRuleLookAlike) GetKind() EmailRuleLookAlikeKind {
 	return s.Kind
+}
+
+// GetExpected returns the value of Expected.
+func (s *EmailRuleLookAlike) GetExpected() EmailRuleLookAlikeExpected {
+	return s.Expected
 }
 
 // GetWhy returns the value of Why.
@@ -32638,6 +32662,11 @@ func (s *EmailRuleLookAlike) GetQuestionAnswers() []EmailRuleLookAlikeQuestionAn
 // SetKind sets the value of Kind.
 func (s *EmailRuleLookAlike) SetKind(val EmailRuleLookAlikeKind) {
 	s.Kind = val
+}
+
+// SetExpected sets the value of Expected.
+func (s *EmailRuleLookAlike) SetExpected(val EmailRuleLookAlikeExpected) {
+	s.Expected = val
 }
 
 // SetWhy sets the value of Why.
@@ -32780,6 +32809,48 @@ func (s *EmailRuleLookAlikeEmailFrom) SetAddress(val string) {
 // SetName sets the value of Name.
 func (s *EmailRuleLookAlikeEmailFrom) SetName(val OptString) {
 	s.Name = val
+}
+
+// Match: a near case the rule should match; no_match: one it should not.
+type EmailRuleLookAlikeExpected string
+
+const (
+	EmailRuleLookAlikeExpectedMatch   EmailRuleLookAlikeExpected = "match"
+	EmailRuleLookAlikeExpectedNoMatch EmailRuleLookAlikeExpected = "no_match"
+)
+
+// AllValues returns all EmailRuleLookAlikeExpected values.
+func (EmailRuleLookAlikeExpected) AllValues() []EmailRuleLookAlikeExpected {
+	return []EmailRuleLookAlikeExpected{
+		EmailRuleLookAlikeExpectedMatch,
+		EmailRuleLookAlikeExpectedNoMatch,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailRuleLookAlikeExpected) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailRuleLookAlikeExpectedMatch:
+		return []byte(s), nil
+	case EmailRuleLookAlikeExpectedNoMatch:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailRuleLookAlikeExpected) UnmarshalText(data []byte) error {
+	switch EmailRuleLookAlikeExpected(data) {
+	case EmailRuleLookAlikeExpectedMatch:
+		*s = EmailRuleLookAlikeExpectedMatch
+		return nil
+	case EmailRuleLookAlikeExpectedNoMatch:
+		*s = EmailRuleLookAlikeExpectedNoMatch
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 type EmailRuleLookAlikeKind string
@@ -32946,9 +33017,10 @@ func (s *EmailRuleLookAlikeQuestionAnswersItem) SetErrorClass(val OptString) {
 	s.ErrorClass = val
 }
 
-// Failed: the rule matched it, so it would be shared. undecided: the rule reads a spam score, which
-// it cannot carry, whatever it decided; or not matched on something it could not decide (not
-// classified, a fact or answer missing, or not reached in time).
+// Failed: the rule decided it against expected (shared one it should not, or missed one it should
+// match). undecided: the rule reads a spam score, which it cannot carry, whatever it decided; or not
+// matched on something it could not decide (not classified, a fact or answer missing, or not reached
+// in time).
 type EmailRuleLookAlikeStatus string
 
 const (
@@ -33005,7 +33077,8 @@ type EmailRuleRead struct {
 	// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
 	// only for an older core-api: every answer carries it.
 	Kind OptEmailRuleReadKind `json:"kind"`
-	// On a do_not_share rule only: it protects nothing yet (not active), or a classifier fact narrows it.
+	// On a do_not_share rule only: it protects nothing yet (not active), a classifier fact narrows it,
+	// or its several questions are alternatives.
 	ProtectionNote OptString `json:"protection_note"`
 	// Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
 	EvaluationScope OptEmailRuleReadEvaluationScope `json:"evaluation_scope"`
@@ -34974,7 +35047,9 @@ type EmailRuleTree struct {
 	// A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...
 	// ]}, {any: [...]}, {not: ...}.
 	When EmailRuleTreeWhen `json:"when"`
-	// Yes/no questions asked once the conditions match; all must be yes.
+	// Yes/no questions asked once the conditions match, over the email's text and attachment names,
+	// never attachment contents. A grant rule needs every one yes; a do_not_share rule matches on any
+	// yes.
 	Questions []string `json:"questions"`
 }
 
@@ -35026,7 +35101,9 @@ type EmailRuleTreeInput struct {
 	// A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...
 	// ]}, {any: [...]}, {not: ...}.
 	When EmailRuleTreeInputWhen `json:"when"`
-	// Yes/no questions asked once the conditions match; all must be yes. Left out, none.
+	// Yes/no questions asked once the conditions match, over the email's text and attachment names,
+	// never attachment contents. A grant rule needs every one yes; a do_not_share rule matches on any
+	// yes. Left out, none.
 	Questions []string `json:"questions"`
 }
 
@@ -35274,7 +35351,8 @@ type EmailRuleWithVersion struct {
 	// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
 	// only for an older core-api: every answer carries it.
 	Kind OptEmailRuleWithVersionKind `json:"kind"`
-	// On a do_not_share rule only: it protects nothing yet (not active), or a classifier fact narrows it.
+	// On a do_not_share rule only: it protects nothing yet (not active), a classifier fact narrows it,
+	// or its several questions are alternatives.
 	ProtectionNote OptString `json:"protection_note"`
 	// Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
 	EvaluationScope OptEmailRuleWithVersionEvaluationScope `json:"evaluation_scope"`
@@ -35683,7 +35761,8 @@ type EmailRuleWritten struct {
 	// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
 	// only for an older core-api: every answer carries it.
 	Kind OptEmailRuleWrittenKind `json:"kind"`
-	// On a do_not_share rule only: it protects nothing yet (not active), or a classifier fact narrows it.
+	// On a do_not_share rule only: it protects nothing yet (not active), a classifier fact narrows it,
+	// or its several questions are alternatives.
 	ProtectionNote OptString `json:"protection_note"`
 	// Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
 	EvaluationScope OptEmailRuleWrittenEvaluationScope `json:"evaluation_scope"`
@@ -39497,7 +39576,10 @@ func (*EndEmailRuleShareOK) endEmailRuleShareRes() {}
 
 // Ref: #/components/schemas/EndEmailRuleShareResult
 type EndEmailRuleShareResult struct {
-	Ended bool `json:"ended"`
+	Ended           bool      `json:"ended"`
+	RuleID          OptString `json:"rule_id"`
+	Note            OptString `json:"note"`
+	AdditionalProps EndEmailRuleShareResultAdditional
 }
 
 // GetEnded returns the value of Ended.
@@ -39505,9 +39587,50 @@ func (s *EndEmailRuleShareResult) GetEnded() bool {
 	return s.Ended
 }
 
+// GetRuleID returns the value of RuleID.
+func (s *EndEmailRuleShareResult) GetRuleID() OptString {
+	return s.RuleID
+}
+
+// GetNote returns the value of Note.
+func (s *EndEmailRuleShareResult) GetNote() OptString {
+	return s.Note
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *EndEmailRuleShareResult) GetAdditionalProps() EndEmailRuleShareResultAdditional {
+	return s.AdditionalProps
+}
+
 // SetEnded sets the value of Ended.
 func (s *EndEmailRuleShareResult) SetEnded(val bool) {
 	s.Ended = val
+}
+
+// SetRuleID sets the value of RuleID.
+func (s *EndEmailRuleShareResult) SetRuleID(val OptString) {
+	s.RuleID = val
+}
+
+// SetNote sets the value of Note.
+func (s *EndEmailRuleShareResult) SetNote(val OptString) {
+	s.Note = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *EndEmailRuleShareResult) SetAdditionalProps(val EndEmailRuleShareResultAdditional) {
+	s.AdditionalProps = val
+}
+
+type EndEmailRuleShareResultAdditional map[string]jx.Raw
+
+func (s *EndEmailRuleShareResultAdditional) init() EndEmailRuleShareResultAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
 }
 
 type EndEmailRuleShareServiceUnavailable ErrorResponse
@@ -40939,6 +41062,7 @@ const (
 	ErrorResponseErrorCodeEntitlement                              ErrorResponseErrorCode = "entitlement"
 	ErrorResponseErrorCodeExpectationsFailed                       ErrorResponseErrorCode = "expectations_failed"
 	ErrorResponseErrorCodeExpectationsUndecided                    ErrorResponseErrorCode = "expectations_undecided"
+	ErrorResponseErrorCodeExpectationsUnreadable                   ErrorResponseErrorCode = "expectations_unreadable"
 	ErrorResponseErrorCodeExpired                                  ErrorResponseErrorCode = "expired"
 	ErrorResponseErrorCodeFeatureNotEnabled                        ErrorResponseErrorCode = "feature_not_enabled"
 	ErrorResponseErrorCodeFreshSendNotAuthorized                   ErrorResponseErrorCode = "fresh_send_not_authorized"
@@ -41283,6 +41407,7 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeEntitlement,
 		ErrorResponseErrorCodeExpectationsFailed,
 		ErrorResponseErrorCodeExpectationsUndecided,
+		ErrorResponseErrorCodeExpectationsUnreadable,
 		ErrorResponseErrorCodeExpired,
 		ErrorResponseErrorCodeFeatureNotEnabled,
 		ErrorResponseErrorCodeFreshSendNotAuthorized,
@@ -41793,6 +41918,8 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeExpectationsFailed:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeExpectationsUndecided:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeExpectationsUnreadable:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeExpired:
 		return []byte(s), nil
@@ -42645,6 +42772,9 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeExpectationsUndecided:
 		*s = ErrorResponseErrorCodeExpectationsUndecided
+		return nil
+	case ErrorResponseErrorCodeExpectationsUnreadable:
+		*s = ErrorResponseErrorCodeExpectationsUnreadable
 		return nil
 	case ErrorResponseErrorCodeExpired:
 		*s = ErrorResponseErrorCodeExpired
@@ -46685,7 +46815,8 @@ type GenerateLookAlikesRequest struct {
 	Kind OptGenerateLookAlikesRequestKind `json:"kind"`
 	// How many, 1 to 8; 6 by default.
 	Count OptInt `json:"count"`
-	// Which kinds, taken in turn; all by default, the private ones first.
+	// Which kinds, taken in turn, all expected no_match; other is a business near miss. Left out, a
+	// default mix.
 	Kinds []GenerateLookAlikesRequestKindsItem `json:"kinds"`
 	// The mailbox they arrive in; by default the rule author's (a request's target's) sign-in address
 	// when you may see it, else yours.
@@ -47001,7 +47132,8 @@ type GenerateLookAlikesResultCounts struct {
 	Passed    int `json:"passed"`
 	Failed    int `json:"failed"`
 	Undecided int `json:"undecided"`
-	// Asked for but not returned: not written, outside the sample bounds, or of a kind not asked for.
+	// Asked for but not returned: not written, outside the sample bounds, or of a kind and expected not
+	// asked for.
 	Dropped int `json:"dropped"`
 }
 
@@ -61467,9 +61599,10 @@ type ListEmailRuleDecisionsResultItem struct {
 	RuleVersion      int       `json:"rule_version"`
 	ClassificationID uuid.UUID `json:"classification_id"`
 	Matched          bool      `json:"matched"`
-	// Not matched, but nearly: its questions did not all say yes, or it needs several parts and exactly
-	// one failed while at least one part that held is not an exclusion (a top-level not, or is_false).
-	// Decisions recorded under the earlier definition counted an exclusion too.
+	// Not matched, but nearly: its conditions held and its questions did not match it, or it needs
+	// several parts and exactly one failed while at least one part that held is not an exclusion (a
+	// top-level not, or is_false). Decisions recorded under the earlier definition counted an exclusion
+	// too.
 	NearMiss bool `json:"near_miss"`
 	// How each top-level part of the rule decided.
 	Parts []jx.Raw `json:"parts"`
@@ -62326,10 +62459,10 @@ type ListEmailRuleResultsResultRulesItemDecision struct {
 	// The version of the rule that decided.
 	RuleVersion int  `json:"rule_version"`
 	Matched     bool `json:"matched"`
-	// Not matched, but nearly: its questions did not all say yes, or it needs several parts and exactly
-	// one failed while at least one part that held is not an exclusion (a top-level not, or is_false).
-	// False when detail_withheld is true. Decisions recorded under the earlier definition counted an
-	// exclusion too.
+	// Not matched, but nearly: its conditions held and its questions did not match it, or it needs
+	// several parts and exactly one failed while at least one part that held is not an exclusion (a
+	// top-level not, or is_false). False when detail_withheld is true. Decisions recorded under the
+	// earlier definition counted an exclusion too.
 	NearMiss OptBool `json:"near_miss"`
 	// How each top-level part of the rule decided. Empty when a fact the rule reads was missing, so it
 	// was not evaluated, or when detail_withheld is true.
@@ -115862,9 +115995,12 @@ type SentEmailDetail struct {
 	// hidden recipient. Null when the request uses an address-bound agent connection key whose address
 	// is not the sender, because the count would reveal Bcc recipients.
 	RecipientCount OptNilInt `json:"recipient_count"`
-	// Only on a held scheduled send: its OAuth grant was revoked after refresh token reuse, so it waits
-	// until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. Status stays
-	// scheduled.
+	// Only on a scheduled send that is not going out yet; status stays scheduled. credential_reuse_hold:
+	// its OAuth grant was revoked after refresh token reuse, so it waits until released (POST
+	// /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your
+	// dedicated sending address is at today's warm-up limit or paused, so it goes out on its own within
+	// the hour after the limit resets at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds);
+	//  no release needed. On sent-email reads and conversation messages.
 	Hold OptSentEmailDetailHold `json:"hold"`
 	// Every normalized To recipient of the send. Always populated on
 	// new sends (a single-recipient send carries a one-element array);
@@ -116636,11 +116772,15 @@ func (s *SentEmailDetailDeliveryRecipientsItemResult) UnmarshalText(data []byte)
 	}
 }
 
-// Only on a held scheduled send: its OAuth grant was revoked after refresh token reuse, so it waits
-// until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. Status stays
-// scheduled.
+// Only on a scheduled send that is not going out yet; status stays scheduled. credential_reuse_hold:
+// its OAuth grant was revoked after refresh token reuse, so it waits until released (POST
+// /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your
+// dedicated sending address is at today's warm-up limit or paused, so it goes out on its own within
+// the hour after the limit resets at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds);
+//
+//	no release needed. On sent-email reads and conversation messages.
 type SentEmailDetailHold struct {
-	// Open: credential_reuse_hold.
+	// Open: credential_reuse_hold, sending_ip_warmup_cap.
 	Reason string      `json:"reason"`
 	Since  NilDateTime `json:"since"`
 }
@@ -117179,9 +117319,12 @@ type SentEmailSummary struct {
 	// hidden recipient. Null when the request uses an address-bound agent connection key whose address
 	// is not the sender, because the count would reveal Bcc recipients.
 	RecipientCount OptNilInt `json:"recipient_count"`
-	// Only on a held scheduled send: its OAuth grant was revoked after refresh token reuse, so it waits
-	// until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. Status stays
-	// scheduled.
+	// Only on a scheduled send that is not going out yet; status stays scheduled. credential_reuse_hold:
+	// its OAuth grant was revoked after refresh token reuse, so it waits until released (POST
+	// /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your
+	// dedicated sending address is at today's warm-up limit or paused, so it goes out on its own within
+	// the hour after the limit resets at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds);
+	//  no release needed. On sent-email reads and conversation messages.
 	Hold OptSentEmailSummaryHold `json:"hold"`
 }
 
@@ -117831,11 +117974,15 @@ func (s *SentEmailSummaryDeliveryRecipientsItemResult) UnmarshalText(data []byte
 	}
 }
 
-// Only on a held scheduled send: its OAuth grant was revoked after refresh token reuse, so it waits
-// until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. Status stays
-// scheduled.
+// Only on a scheduled send that is not going out yet; status stays scheduled. credential_reuse_hold:
+// its OAuth grant was revoked after refresh token reuse, so it waits until released (POST
+// /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your
+// dedicated sending address is at today's warm-up limit or paused, so it goes out on its own within
+// the hour after the limit resets at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds);
+//
+//	no release needed. On sent-email reads and conversation messages.
 type SentEmailSummaryHold struct {
-	// Open: credential_reuse_hold.
+	// Open: credential_reuse_hold, sending_ip_warmup_cap.
 	Reason string      `json:"reason"`
 	Since  NilDateTime `json:"since"`
 }
@@ -124862,9 +125009,9 @@ type TestEmailRuleOnSampleResult struct {
 	Rule TestEmailRuleOnSampleResultRule `json:"rule"`
 	// When the made-up email counts as received (now): a rule on received_at is decided on it.
 	ReceivedAt time.Time `json:"received_at"`
-	// Near_miss: Not matched, but nearly: its questions did not all say yes, or it needs several parts
-	// and exactly one failed while at least one part that held is not an exclusion (a top-level not, or
-	// is_false).
+	// Near_miss: Not matched, but nearly: its conditions held and its questions did not match it, or it
+	// needs several parts and exactly one failed while at least one part that held is not an exclusion
+	// (a top-level not, or is_false).
 	Outcome TestEmailRuleOnSampleResultOutcome `json:"outcome"`
 	// How each top-level part of the rule decided.
 	Parts []TestEmailRuleOnSampleResultPartsItem `json:"parts"`
@@ -125096,9 +125243,9 @@ func (s *TestEmailRuleOnSampleResultFactsItem) SetConfidence(val float64) {
 	s.Confidence = val
 }
 
-// Near_miss: Not matched, but nearly: its questions did not all say yes, or it needs several parts
-// and exactly one failed while at least one part that held is not an exclusion (a top-level not, or
-// is_false).
+// Near_miss: Not matched, but nearly: its conditions held and its questions did not match it, or it
+// needs several parts and exactly one failed while at least one part that held is not an exclusion
+// (a top-level not, or is_false).
 type TestEmailRuleOnSampleResultOutcome string
 
 const (
@@ -126279,11 +126426,11 @@ func (s *TestEmailRuleResultQuestions) SetStored(val OptInt) {
 
 type TestEmailRuleResultResultsItem struct {
 	EmailID uuid.UUID `json:"email_id"`
-	// Near_miss: Not matched, but nearly: its questions did not all say yes, or it needs several parts
-	// and exactly one failed while at least one part that held is not an exclusion (a top-level not, or
-	// is_false). skipped: an email you can see that cannot be tested; skipped_reason says why.
-	// not_found: no such email, or not one the rule can read (or not settled, or awaiting sender
-	// authentication).
+	// Near_miss: Not matched, but nearly: its conditions held and its questions did not match it, or it
+	// needs several parts and exactly one failed while at least one part that held is not an exclusion
+	// (a top-level not, or is_false). skipped: an email you can see that cannot be tested;
+	// skipped_reason says why. not_found: no such email, or not one the rule can read (or not settled,
+	// or awaiting sender authentication).
 	Outcome     TestEmailRuleResultResultsItemOutcome `json:"outcome"`
 	ReceivedAt  OptDateTime                           `json:"received_at"`
 	FromAddress OptNilString                          `json:"from_address"`
@@ -126447,11 +126594,11 @@ func (s *TestEmailRuleResultResultsItem) SetUnclassifiedReason(val OptTestEmailR
 	s.UnclassifiedReason = val
 }
 
-// Near_miss: Not matched, but nearly: its questions did not all say yes, or it needs several parts
-// and exactly one failed while at least one part that held is not an exclusion (a top-level not, or
-// is_false). skipped: an email you can see that cannot be tested; skipped_reason says why.
-// not_found: no such email, or not one the rule can read (or not settled, or awaiting sender
-// authentication).
+// Near_miss: Not matched, but nearly: its conditions held and its questions did not match it, or it
+// needs several parts and exactly one failed while at least one part that held is not an exclusion
+// (a top-level not, or is_false). skipped: an email you can see that cannot be tested;
+// skipped_reason says why. not_found: no such email, or not one the rule can read (or not settled,
+// or awaiting sender authentication).
 type TestEmailRuleResultResultsItemOutcome string
 
 const (
@@ -130319,10 +130466,11 @@ type UpdateEmailRuleRequest struct {
 	IfRevision OptInt `json:"if_revision"`
 	// True: judge the rule as this write leaves it (new tree, restored version, new scope, or the
 	// version it activates) against the expectations it leaves, as POST /email-rules/test would, before
-	// saving; it can take as long as a test. Failed: 409 expectations_failed; undecided: 409
-	// expectations_undecided (both with details.expectations_check); none to judge: 400 no_expectations.
-	// Refused writes save nothing; a pass saves unless the rule moved meanwhile (409
-	// email_rule_conflict). Only writes that save a version or activate the rule are judged.
+	// saving; it can take as long as a test. Failed: 409 expectations_failed; on emails the rule cannot
+	// read: 409 expectations_unreadable; undecided: 409 expectations_undecided (each with details.
+	// expectations_check); none to judge: 400 no_expectations. Refused writes save nothing; a pass saves
+	// unless the rule moved meanwhile (409 email_rule_conflict). Only writes that save a version or
+	// activate the rule are judged.
 	IfExpectationsPass OptBool `json:"if_expectations_pass"`
 	// Save version n again as the next version (author only): its english, tree, explanation,
 	// assumptions, warnings and compiled_by. A version carries no scope: the rule keeps its own unless

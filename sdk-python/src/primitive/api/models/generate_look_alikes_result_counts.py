@@ -25,7 +25,8 @@ class GenerateLookAlikesResultCounts:
             passed (int):
             failed (int):
             undecided (int):
-            dropped (int): Asked for but not returned: not written, outside the sample bounds, or of a kind not asked for.
+            dropped (int): Asked for but not returned: not written, outside the sample bounds, or of a kind and expected not
+                asked for.
      """
 
     passed: int

@@ -34,10 +34,11 @@ class TestEmailRuleResultResultsItem:
     """ 
         Attributes:
             email_id (UUID):
-            outcome (TestEmailRuleResultResultsItemOutcome): near_miss: Not matched, but nearly: its questions did not all
-                say yes, or it needs several parts and exactly one failed while at least one part that held is not an exclusion
-                (a top-level not, or is_false). skipped: an email you can see that cannot be tested; skipped_reason says why.
-                not_found: no such email, or not one the rule can read (or not settled, or awaiting sender authentication).
+            outcome (TestEmailRuleResultResultsItemOutcome): near_miss: Not matched, but nearly: its conditions held and its
+                questions did not match it, or it needs several parts and exactly one failed while at least one part that held
+                is not an exclusion (a top-level not, or is_false). skipped: an email you can see that cannot be tested;
+                skipped_reason says why. not_found: no such email, or not one the rule can read (or not settled, or awaiting
+                sender authentication).
             received_at (datetime.datetime | Unset):
             from_address (None | str | Unset):
             recipient (str | Unset): The mailbox this copy of the email was received in, as GET /v1/emails/{id} shows it.

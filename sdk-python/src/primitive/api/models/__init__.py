@@ -470,6 +470,7 @@ from .email_rule_kind import EmailRuleKind
 from .email_rule_look_alike import EmailRuleLookAlike
 from .email_rule_look_alike_email import EmailRuleLookAlikeEmail
 from .email_rule_look_alike_email_from import EmailRuleLookAlikeEmailFrom
+from .email_rule_look_alike_expected import EmailRuleLookAlikeExpected
 from .email_rule_look_alike_kind import EmailRuleLookAlikeKind
 from .email_rule_look_alike_outcome import EmailRuleLookAlikeOutcome
 from .email_rule_look_alike_question_answers_item import EmailRuleLookAlikeQuestionAnswersItem
@@ -2242,6 +2243,7 @@ __all__ = (
     "EmailRuleLookAlike",
     "EmailRuleLookAlikeEmail",
     "EmailRuleLookAlikeEmailFrom",
+    "EmailRuleLookAlikeExpected",
     "EmailRuleLookAlikeKind",
     "EmailRuleLookAlikeOutcome",
     "EmailRuleLookAlikeQuestionAnswersItem",

@@ -197,9 +197,12 @@ class ChangeOutboundMessage:
                 once: the size of `to_addresses`, `cc` and `bcc` combined without duplicates. On a mail relay send `bcc` lists
                 every hidden recipient. Null when the request uses an address-bound agent connection key whose address is not
                 the sender, because the count would reveal Bcc recipients.
-            hold (SentEmailSummaryHold | Unset): Only on a held scheduled send: its OAuth grant was revoked after refresh
-                token reuse, so it waits until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days.
-                Status stays scheduled.
+            hold (SentEmailSummaryHold | Unset): Only on a scheduled send that is not going out yet; status stays scheduled.
+                credential_reuse_hold: its OAuth grant was revoked after refresh token reuse, so it waits until released (POST
+                /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your dedicated sending
+                address is at today's warm-up limit or paused, so it goes out on its own within the hour after the limit resets
+                at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds); no release needed. On sent-email reads and
+                conversation messages.
      """
 
     id: UUID

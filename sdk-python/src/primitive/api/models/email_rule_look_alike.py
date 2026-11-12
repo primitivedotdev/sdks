@@ -8,6 +8,7 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.email_rule_look_alike_expected import EmailRuleLookAlikeExpected
 from ..models.email_rule_look_alike_kind import EmailRuleLookAlikeKind
 from ..models.email_rule_look_alike_outcome import EmailRuleLookAlikeOutcome
 from ..models.email_rule_look_alike_status import EmailRuleLookAlikeStatus
@@ -30,16 +31,19 @@ class EmailRuleLookAlike:
     """ 
         Attributes:
             kind (EmailRuleLookAlikeKind):
-            why (str): Why the rule should not match it.
+            expected (EmailRuleLookAlikeExpected): match: a near case the rule should match; no_match: one it should not.
+            why (str): Why the rule should, or should not, match it.
             email (EmailRuleLookAlikeEmail): A made-up email, as test-sample takes it.
             outcome (EmailRuleLookAlikeOutcome):
-            status (EmailRuleLookAlikeStatus): failed: the rule matched it, so it would be shared. undecided: the rule reads
-                a spam score, which it cannot carry, whatever it decided; or not matched on something it could not decide (not
-                classified, a fact or answer missing, or not reached in time).
+            status (EmailRuleLookAlikeStatus): failed: the rule decided it against expected (shared one it should not, or
+                missed one it should match). undecided: the rule reads a spam score, which it cannot carry, whatever it decided;
+                or not matched on something it could not decide (not classified, a fact or answer missing, or not reached in
+                time).
             question_answers (list[EmailRuleLookAlikeQuestionAnswersItem]):
      """
 
     kind: EmailRuleLookAlikeKind
+    expected: EmailRuleLookAlikeExpected
     why: str
     email: EmailRuleLookAlikeEmail
     outcome: EmailRuleLookAlikeOutcome
@@ -55,6 +59,8 @@ class EmailRuleLookAlike:
         from ..models.email_rule_look_alike_email import EmailRuleLookAlikeEmail # noqa: PLC0415
         from ..models.email_rule_look_alike_question_answers_item import EmailRuleLookAlikeQuestionAnswersItem # noqa: PLC0415
         kind = self.kind.value
+
+        expected = self.expected.value
 
         why = self.why
 
@@ -76,6 +82,7 @@ class EmailRuleLookAlike:
         field_dict.update(self.additional_properties)
         field_dict.update({
             "kind": kind,
+            "expected": expected,
             "why": why,
             "email": email,
             "outcome": outcome,
@@ -93,6 +100,11 @@ class EmailRuleLookAlike:
         from ..models.email_rule_look_alike_question_answers_item import EmailRuleLookAlikeQuestionAnswersItem # noqa: PLC0415
         d = dict(src_dict)
         kind = EmailRuleLookAlikeKind(d.pop("kind"))
+
+
+
+
+        expected = EmailRuleLookAlikeExpected(d.pop("expected"))
 
 
 
@@ -126,6 +138,7 @@ class EmailRuleLookAlike:
 
         email_rule_look_alike = cls(
             kind=kind,
+            expected=expected,
             why=why,
             email=email,
             outcome=outcome,

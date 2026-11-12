@@ -101,7 +101,8 @@ def sync_detailed(
      Every role in the organization (built-in, template copies and custom roles), with how many members
     and groups hold each, the templates not yet copied, and whether roles can be assigned now.
     `unassigned` describes role restricted on a member with no role_id, which is not a role and is never
-    in `roles`. Any person (a session or OAuth token); API keys are refused.
+    in `roles`. Needs members:read (owners, admins, members and roles that grant it); API keys are
+    refused.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -132,7 +133,8 @@ def sync(
      Every role in the organization (built-in, template copies and custom roles), with how many members
     and groups hold each, the templates not yet copied, and whether roles can be assigned now.
     `unassigned` describes role restricted on a member with no role_id, which is not a role and is never
-    in `roles`. Any person (a session or OAuth token); API keys are refused.
+    in `roles`. Needs members:read (owners, admins, members and roles that grant it); API keys are
+    refused.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -158,7 +160,8 @@ async def asyncio_detailed(
      Every role in the organization (built-in, template copies and custom roles), with how many members
     and groups hold each, the templates not yet copied, and whether roles can be assigned now.
     `unassigned` describes role restricted on a member with no role_id, which is not a role and is never
-    in `roles`. Any person (a session or OAuth token); API keys are refused.
+    in `roles`. Needs members:read (owners, admins, members and roles that grant it); API keys are
+    refused.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -189,7 +192,8 @@ async def asyncio(
      Every role in the organization (built-in, template copies and custom roles), with how many members
     and groups hold each, the templates not yet copied, and whether roles can be assigned now.
     `unassigned` describes role restricted on a member with no role_id, which is not a role and is never
-    in `roles`. Any person (a session or OAuth token); API keys are refused.
+    in `roles`. Needs members:read (owners, admins, members and roles that grant it); API keys are
+    refused.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

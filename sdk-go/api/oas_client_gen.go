@@ -305,15 +305,16 @@ type Invoker interface {
 	// Turns a plain-English description of which received emails to match into a rule tree over the
 	// published column contract, with a plain-English explanation of what it matches, the assumptions
 	// made, and warnings for anything the columns cannot express. Where the columns fall short the rule
-	// may carry up to five yes/no questions, asked about an email only after its conditions match.
-	// Nothing is saved. A rule with no questions has its conditions counted, read only, over the
-	// caller's recent classified mail (what a test of it covers by default): breadth is that count, and
-	// a warning says when it matches nearly all of it. The SQL the rule renders to is returned only when
-	// include_sql is true. kind do_not_share compiles a do-not-share rule for recall: conditions only as
-	// narrow as the description says, the judgement of what it describes put into questions, and with
-	// nothing a column decides for certain, conditions that hold for every email. Needs mail:read, a
-	// member's own credential with their full access (not an API key, agent key or narrowed token), and
-	// the email rules feature.
+	// may carry up to five yes/no questions, asked about an email only after its conditions match; they
+	// read its subject, its new text and its attachments' file names, never what is inside an attachment,
+	//  and warnings say when a question mentions attachments. Nothing is saved. A rule with no questions
+	// has its conditions counted, read only, over the caller's recent classified mail (what a test of it
+	// covers by default): breadth is that count, and a warning says when it matches nearly all of it.
+	// The SQL the rule renders to is returned only when include_sql is true. kind do_not_share compiles
+	// a do-not-share rule for recall: conditions only as narrow as the description says, the judgement
+	// of what it describes put into questions, and with nothing a column decides for certain, conditions
+	// that hold for every email. Needs mail:read, a member's own credential with their full access (not
+	// an API key, agent key or narrowed token), and the email rules feature.
 	//
 	// POST /email-rules/compile
 	CompileEmailRule(ctx context.Context, request *CompileEmailRuleRequest, params CompileEmailRuleParams) (CompileEmailRuleRes, error)
@@ -1011,23 +1012,26 @@ type Invoker interface {
 	EndBreakGlass(ctx context.Context, params EndBreakGlassParams) (EndBreakGlassRes, error)
 	// EndEmailRuleShare invokes endEmailRuleShare operation.
 	//
-	// Stops sharing. Either person on the share can do this, or an owner or admin who manages members.
-	// The share is kept, marked as ended. This needs no mail access and does not depend on the email
-	// rules feature. An owner or admin not on the share must use a dashboard session. Otherwise use your
-	// own session, or an OAuth or CLI token that acts with your full access: API keys and agent keys are
-	// refused.
+	// Stops sharing; the rule itself is left unchanged, as the answer's note says. Either person on the
+	// share can do this, or an owner or admin who manages members. The share is kept, marked as ended.
+	// This needs no mail access and does not depend on the email rules feature. An owner or admin not on
+	// the share must use a dashboard session. Otherwise use your own session, or an OAuth or CLI token
+	// that acts with your full access: API keys and agent keys are refused.
 	//
 	// DELETE /email-rule-shares/{id}
 	EndEmailRuleShare(ctx context.Context, params EndEmailRuleShareParams) (EndEmailRuleShareRes, error)
 	// GenerateLookAlikes invokes generateLookAlikes operation.
 	//
-	// Writes made-up emails that come close to what a grant rule describes but are private (a personal
-	// medical bill, pay for named people, a personal purchase, personal banking or tax, or another near
-	// case), and reports what the rule decides for each, as test-sample would. failed means the rule
-	// matched it, so it would be shared. Nothing is stored and no mail is read. Keep the ones it must
-	// never match with add_expectation_samples, or for a request with the accept's expectation_samples.
-	// Limited to 20 an hour per member. Needs mail:read, a member's own credential with their full
-	// access (not an API key, agent key or narrowed token), and the email rules feature.
+	// Writes made-up emails that come close to what a grant rule describes, and reports what the rule
+	// decides for each, as test-sample would. Most should not match (expected no_match): business near
+	// misses from its senders and topic (kind other: an all-clear, a reply with nothing new, a related
+	// document, another subject) and private mail (a personal medical bill, pay for named people, a
+	// personal purchase, personal banking or tax). By default a third, rounded down, are near cases it
+	// should match (expected match, kind other). failed means the rule decided one against expected.
+	// Nothing is stored and no mail is read. Keep them, with their expected, with
+	// add_expectation_samples, or for a request with the accept's expectation_samples. Limited to 20 an
+	// hour per member. Needs mail:read, a member's own credential with their full access (not an API key,
+	//  agent key or narrowed token), and the email rules feature.
 	//
 	// POST /email-rules/look-alikes
 	GenerateLookAlikes(ctx context.Context, request *GenerateLookAlikesRequest, params GenerateLookAlikesParams) (GenerateLookAlikesRes, error)
@@ -1041,7 +1045,8 @@ type Invoker interface {
 	// they could not be read). In whole-org mode it also lists narrowed_agents: every live agent
 	// connection the switch narrows to an own-address key (personal agents of members, and shared
 	// agents), informational in the same way (narrowed_agents_truncated past 500,
-	// narrowed_agents_unavailable when they could not be read). Any person; API keys are refused.
+	// narrowed_agents_unavailable when they could not be read). Needs members:read (owners, admins,
+	// members and roles that grant it); API keys are refused.
 	//
 	// GET /access-mode
 	GetAccessMode(ctx context.Context) (GetAccessModeRes, error)
@@ -2427,7 +2432,8 @@ type Invoker interface {
 	// Every role in the organization (built-in, template copies and custom roles), with how many members
 	// and groups hold each, the templates not yet copied, and whether roles can be assigned now.
 	// `unassigned` describes role restricted on a member with no role_id, which is not a role and is
-	// never in `roles`. Any person (a session or OAuth token); API keys are refused.
+	// never in `roles`. Needs members:read (owners, admins, members and roles that grant it); API keys
+	// are refused.
 	//
 	// GET /roles
 	ListRoles(ctx context.Context) (ListRolesRes, error)
@@ -3530,8 +3536,9 @@ type Invoker interface {
 	UnsetFunctionRoute(ctx context.Context, params UnsetFunctionRouteParams) (UnsetFunctionRouteRes, error)
 	// UpdateAccount invokes updateAccount operation.
 	//
-	// Update the mutable account settings (such as display name and notification preferences) for the
-	// authenticated organization.
+	// Update the organization's spam threshold (spam_threshold) and whether an email's content is
+	// discarded once a webhook confirms receipt (discard_content_on_webhook_confirmed), the opt-in POST
+	// /emails/{id}/discard-content needs.
 	//
 	// PATCH /account
 	UpdateAccount(ctx context.Context, request *UpdateAccountInput) (UpdateAccountRes, error)
@@ -7231,15 +7238,18 @@ func (c *Client) sendCliLogout(ctx context.Context, request OptCliLogoutInput, p
 // Turns a plain-English description of which received emails to match into a rule tree over the
 // published column contract, with a plain-English explanation of what it matches, the assumptions
 // made, and warnings for anything the columns cannot express. Where the columns fall short the rule
-// may carry up to five yes/no questions, asked about an email only after its conditions match.
-// Nothing is saved. A rule with no questions has its conditions counted, read only, over the
-// caller's recent classified mail (what a test of it covers by default): breadth is that count, and
-// a warning says when it matches nearly all of it. The SQL the rule renders to is returned only when
-// include_sql is true. kind do_not_share compiles a do-not-share rule for recall: conditions only as
-// narrow as the description says, the judgement of what it describes put into questions, and with
-// nothing a column decides for certain, conditions that hold for every email. Needs mail:read, a
-// member's own credential with their full access (not an API key, agent key or narrowed token), and
-// the email rules feature.
+// may carry up to five yes/no questions, asked about an email only after its conditions match; they
+// read its subject, its new text and its attachments' file names, never what is inside an attachment,
+//
+//	and warnings say when a question mentions attachments. Nothing is saved. A rule with no questions
+//
+// has its conditions counted, read only, over the caller's recent classified mail (what a test of it
+// covers by default): breadth is that count, and a warning says when it matches nearly all of it.
+// The SQL the rule renders to is returned only when include_sql is true. kind do_not_share compiles
+// a do-not-share rule for recall: conditions only as narrow as the description says, the judgement
+// of what it describes put into questions, and with nothing a column decides for certain, conditions
+// that hold for every email. Needs mail:read, a member's own credential with their full access (not
+// an API key, agent key or narrowed token), and the email rules feature.
 //
 // POST /email-rules/compile
 func (c *Client) CompileEmailRule(ctx context.Context, request *CompileEmailRuleRequest, params CompileEmailRuleParams) (CompileEmailRuleRes, error) {
@@ -15253,11 +15263,11 @@ func (c *Client) sendEndBreakGlass(ctx context.Context, params EndBreakGlassPara
 
 // EndEmailRuleShare invokes endEmailRuleShare operation.
 //
-// Stops sharing. Either person on the share can do this, or an owner or admin who manages members.
-// The share is kept, marked as ended. This needs no mail access and does not depend on the email
-// rules feature. An owner or admin not on the share must use a dashboard session. Otherwise use your
-// own session, or an OAuth or CLI token that acts with your full access: API keys and agent keys are
-// refused.
+// Stops sharing; the rule itself is left unchanged, as the answer's note says. Either person on the
+// share can do this, or an owner or admin who manages members. The share is kept, marked as ended.
+// This needs no mail access and does not depend on the email rules feature. An owner or admin not on
+// the share must use a dashboard session. Otherwise use your own session, or an OAuth or CLI token
+// that acts with your full access: API keys and agent keys are refused.
 //
 // DELETE /email-rule-shares/{id}
 func (c *Client) EndEmailRuleShare(ctx context.Context, params EndEmailRuleShareParams) (EndEmailRuleShareRes, error) {
@@ -15382,13 +15392,17 @@ func (c *Client) sendEndEmailRuleShare(ctx context.Context, params EndEmailRuleS
 
 // GenerateLookAlikes invokes generateLookAlikes operation.
 //
-// Writes made-up emails that come close to what a grant rule describes but are private (a personal
-// medical bill, pay for named people, a personal purchase, personal banking or tax, or another near
-// case), and reports what the rule decides for each, as test-sample would. failed means the rule
-// matched it, so it would be shared. Nothing is stored and no mail is read. Keep the ones it must
-// never match with add_expectation_samples, or for a request with the accept's expectation_samples.
-// Limited to 20 an hour per member. Needs mail:read, a member's own credential with their full
-// access (not an API key, agent key or narrowed token), and the email rules feature.
+// Writes made-up emails that come close to what a grant rule describes, and reports what the rule
+// decides for each, as test-sample would. Most should not match (expected no_match): business near
+// misses from its senders and topic (kind other: an all-clear, a reply with nothing new, a related
+// document, another subject) and private mail (a personal medical bill, pay for named people, a
+// personal purchase, personal banking or tax). By default a third, rounded down, are near cases it
+// should match (expected match, kind other). failed means the rule decided one against expected.
+// Nothing is stored and no mail is read. Keep them, with their expected, with
+// add_expectation_samples, or for a request with the accept's expectation_samples. Limited to 20 an
+// hour per member. Needs mail:read, a member's own credential with their full access (not an API key,
+//
+//	agent key or narrowed token), and the email rules feature.
 //
 // POST /email-rules/look-alikes
 func (c *Client) GenerateLookAlikes(ctx context.Context, request *GenerateLookAlikesRequest, params GenerateLookAlikesParams) (GenerateLookAlikesRes, error) {
@@ -15523,7 +15537,8 @@ func (c *Client) sendGenerateLookAlikes(ctx context.Context, request *GenerateLo
 // they could not be read). In whole-org mode it also lists narrowed_agents: every live agent
 // connection the switch narrows to an own-address key (personal agents of members, and shared
 // agents), informational in the same way (narrowed_agents_truncated past 500,
-// narrowed_agents_unavailable when they could not be read). Any person; API keys are refused.
+// narrowed_agents_unavailable when they could not be read). Needs members:read (owners, admins,
+// members and roles that grant it); API keys are refused.
 //
 // GET /access-mode
 func (c *Client) GetAccessMode(ctx context.Context) (GetAccessModeRes, error) {
@@ -33341,7 +33356,8 @@ func (c *Client) sendListRepeatingSends(ctx context.Context, params ListRepeatin
 // Every role in the organization (built-in, template copies and custom roles), with how many members
 // and groups hold each, the templates not yet copied, and whether roles can be assigned now.
 // `unassigned` describes role restricted on a member with no role_id, which is not a role and is
-// never in `roles`. Any person (a session or OAuth token); API keys are refused.
+// never in `roles`. Needs members:read (owners, admins, members and roles that grant it); API keys
+// are refused.
 //
 // GET /roles
 func (c *Client) ListRoles(ctx context.Context) (ListRolesRes, error) {
@@ -46219,8 +46235,9 @@ func (c *Client) sendUnsetFunctionRoute(ctx context.Context, params UnsetFunctio
 
 // UpdateAccount invokes updateAccount operation.
 //
-// Update the mutable account settings (such as display name and notification preferences) for the
-// authenticated organization.
+// Update the organization's spam threshold (spam_threshold) and whether an email's content is
+// discarded once a webhook confirms receipt (discard_content_on_webhook_confirmed), the opt-in POST
+// /emails/{id}/discard-content needs.
 //
 // PATCH /account
 func (c *Client) UpdateAccount(ctx context.Context, request *UpdateAccountInput) (UpdateAccountRes, error) {

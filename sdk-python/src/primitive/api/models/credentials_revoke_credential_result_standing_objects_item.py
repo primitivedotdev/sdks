@@ -25,9 +25,10 @@ class CredentialsRevokeCredentialResultStandingObjectsItem:
         Attributes:
             kind (str): endpoint, function_trigger, pull_subscription, recipient_route, filter_rule or wake_schedule.
             id (str):
-            label (str): A webhook's URL, a pull subscription's name (or pull when it has none), a route's or filter's
-                pattern, or a wake schedule's command and the address it wakes (command to address). A Function trigger's label
-                is function: look it up by id.
+            label (str): A webhook's scheme and host, followed by "/... (path and query hidden)" when its URL has more (GET
+                /v1/endpoints/{id} has the whole URL), a pull subscription's name (or pull when it has none), a route's or
+                filter's pattern, or a wake schedule's command and the address it wakes (command to address). A Function
+                trigger's label is function: look it up by id.
             org_owned (bool): true: the organization owns it, and it keeps working. false: the credential owns it itself, as
                 with everything a third-party app or agent delegate made, a webhook made with a narrowed API key, or a wake
                 schedule made with a key that does not cover super_admin. It keeps working only while someone can still act for
