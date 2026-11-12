@@ -53,7 +53,7 @@ What `3.0.0-preview.8` (`3.0.0rc8`) changes from `3.0.0-preview.7`:
   CLI moves from 1.75.0.
 - The Go module path is `github.com/primitivedotdev/sdks/sdk-go/v3`. Update
   imports from `.../sdk-go/v2` and `.../sdk-go/v2/api`.
-- `primitive functions init` scaffolds projects on `^3.0.0-preview.7` of both
+- `primitive functions init` scaffolds projects on `^3.0.0-preview.8` of both
   `@primitivedotdev/sdk` and `primitive`.
 
 #### Removed code
