@@ -1678,7 +1678,8 @@ export function createOperationCommand(
 
     async run(): Promise<void> {
       // `--enabled false` is read as `--no-enabled`, never as an argument.
-      const argv = withBooleanFlagValues(this.argv, flags);
+      // argv is unset only when run() is called without oclif's own setup.
+      const argv = withBooleanFlagValues(this.argv ?? [], flags);
       const { args, flags: parsed } = await this.parse(
         OperationCommand as never,
         argv,
