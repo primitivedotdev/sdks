@@ -1303,9 +1303,155 @@ export function standingSummary(standing: unknown): string | null {
   return `${parts.join(" ")} Review them with --json.`;
 }
 
+/** How many standing objects the summary lists one by one. */
+const STANDING_LIST_LIMIT = 10;
+
+const STANDING_KIND_LABELS: Record<string, string> = {
+  endpoint: "webhook",
+  function_trigger: "Function trigger",
+  pull_subscription: "pull subscription",
+  recipient_route: "route",
+  filter_rule: "filter",
+  wake_schedule: "wake schedule",
+};
+
+type StandingObject = {
+  kind?: unknown;
+  id?: unknown;
+  label?: unknown;
+  org_owned?: unknown;
+  still_acting?: unknown;
+  acting_key_id?: unknown;
+  delivering?: unknown;
+};
+
+/** Whether a revoke answer says, per item, what still acts for it or delivers. */
+function reportsCascade(standing: readonly StandingObject[]): boolean {
+  return standing.some(
+    (item) => "still_acting" in item || "delivering" in item,
+  );
+}
+
+/**
+ * A standing object's label. A Function trigger's label is only "function" and
+ * an unnamed pull subscription's only "pull", so those carry their id; a
+ * webhook's URL loses its query and fragment, which can hold a token.
+ */
+function standingLabel(item: StandingObject): string {
+  const id = typeof item.id === "string" ? item.id : String(item.id);
+  const label = typeof item.label === "string" && item.label ? item.label : id;
+  // A Function trigger's label is only "function": its id says which.
+  if (item.kind === "function_trigger") return id;
+  if (item.kind === "pull_subscription")
+    return label === id || label === "pull" ? id : `${label} (${id})`;
+  if (item.kind === "endpoint") {
+    const cut = label.search(/[?#]/);
+    return cut >= 0 ? `${label.slice(0, cut)}?...` : label;
+  }
+  return label;
+}
+
+/** One standing object, with who still acts for it and whether it delivers. */
+function standingLine(
+  item: StandingObject,
+  leftWorking: ReadonlySet<string>,
+): string {
+  const kind =
+    typeof item.kind === "string"
+      ? (STANDING_KIND_LABELS[item.kind] ?? item.kind)
+      : "item";
+  let acting: string;
+  // org_owned is always sent; read a missing one as standingSummary does.
+  if (item.org_owned !== false) {
+    acting = "the organization owns it, so revoking does not stop it";
+  } else if (item.still_acting === true) {
+    const by =
+      typeof item.acting_key_id === "string" && item.acting_key_id
+        ? item.acting_key_id
+        : null;
+    acting = !by
+      ? "owned by the revoked key; someone still acts for it, so it keeps working while they do"
+      : leftWorking.has(by)
+        ? `owned by the revoked key; key ${by} still acts for it until that key's overlap ends`
+        : `owned by the revoked key; key ${by} still acts for it, so it keeps working while that key does`;
+  } else if (item.still_acting === false) {
+    acting =
+      "owned by the revoked key; nothing acts for it, so it does not work";
+  } else if (item.still_acting === null) {
+    acting =
+      "owned by the revoked key; whether anything still acts for it could not be read, and it works only while something does";
+  } else {
+    acting =
+      "owned by the revoked key; it keeps working only while someone can still act for it";
+  }
+  const delivering =
+    item.delivering === true
+      ? "; still delivering received mail"
+      : item.delivering === false
+        ? "; not delivering received mail"
+        : item.delivering === null
+          ? "; whether it still delivers could not be read"
+          : "";
+  return `  ${kind} ${standingLabel(item)}: ${acting}${delivering}.`;
+}
+
+/**
+ * What a revoke did beyond the key itself, from the answer: the keys it
+ * replaced that were revoked with it or left working, and, for each item the
+ * key set up or owns, whether anything still acts for it and whether it still
+ * delivers. Lines, empty when the answer has none of these. An answer from a
+ * server that does not report them per item falls back to standingSummary.
+ */
+export function revokeCascadeLines(data: unknown): string[] {
+  if (!data || typeof data !== "object") return [];
+  const answer = data as {
+    standing_objects?: unknown;
+    predecessors_revoked_count?: unknown;
+    predecessors_left?: unknown;
+    predecessors_revoked?: unknown;
+    predecessors_not_revoked?: unknown;
+  };
+  const lines: string[] = [];
+  const ids = (value: unknown) =>
+    Array.isArray(value)
+      ? value.filter((id): id is string => typeof id === "string")
+      : [];
+  const named = (list: string[]) =>
+    list.length > 0 ? `: ${list.join(", ")}` : "";
+  const revoked = answer.predecessors_revoked_count;
+  if (typeof revoked === "number" && revoked > 0)
+    lines.push(
+      `Also revoked ${revoked === 1 ? "1 key" : `${revoked} keys`} it replaced, still in ${revoked === 1 ? "its" : "their"} rotation overlap${named(ids(answer.predecessors_revoked))}.`,
+    );
+  const left = answer.predecessors_left;
+  if (typeof left === "number" && left > 0)
+    lines.push(
+      `${left === 1 ? "1 key" : `${left} keys`} it replaced ${left === 1 ? "is" : "are"} left working until ${left === 1 ? "its" : "their"} overlap ends, because you may not revoke ${left === 1 ? "it" : "them"}${named(ids(answer.predecessors_not_revoked))}; what ${left === 1 ? "it acts" : "they act"} for keeps working until then.`,
+    );
+  const leftWorking = new Set(ids(answer.predecessors_not_revoked));
+  const standing = Array.isArray(answer.standing_objects)
+    ? (answer.standing_objects.filter(
+        (item) => item !== null && typeof item === "object",
+      ) as StandingObject[])
+    : [];
+  if (standing.length > 0 && reportsCascade(standing)) {
+    lines.push(
+      "What it set up, owns or carried on for the keys it replaced (revoking deletes none of it):",
+    );
+    for (const item of standing.slice(0, STANDING_LIST_LIMIT))
+      lines.push(standingLine(item, leftWorking));
+    const more = standing.length - STANDING_LIST_LIMIT;
+    if (more > 0) lines.push(`  ${more} more; --json lists them all.`);
+  } else {
+    const summary = standingSummary(answer.standing_objects);
+    if (summary) lines.push(summary);
+  }
+  return lines;
+}
+
 export class KeysRevokeCommand extends Command {
   static description =
-    `Revoke an API key. It stops working at once. What the organization owns keeps working; what the key itself owns, such as its own webhooks, keeps working only while someone can still act for it, such as a key of the same rotation that still works. What it set up or owns is listed for review.
+    `Revoke an API key. It stops working at once. What the organization owns keeps working; what the key itself owns, such as its own webhooks, keeps working only while someone can still act for it, such as a key of the same rotation that still works. What it set up or owns is listed for review, each with whether anything still acts for it and, for a webhook, whether it still delivers received mail. Keys it replaced that are still in their rotation overlap are revoked with it, except any you may not revoke; the output counts both, and names them and the key acting for each item when you may read the organization's keys.
 
   Asks for confirmation first; pass --yes to skip the prompt in scripts. Revoking runs directly. If your organization requires approval, the command prints the approval link, opens it where it can and waits for the one-time token; in a script, approve and run it again with --step-up-token.`;
 
@@ -1375,12 +1521,18 @@ export class KeysRevokeCommand extends Command {
       return;
     }
     // Revoking a key that is already revoked changes nothing.
+    // Revoking a key already revoked still revokes the keys it replaced
+    // that are in their overlap; only with none of those did nothing change.
+    const replaced = (result.data as Record<string, unknown>)
+      .predecessors_revoked_count;
+    const alsoRevoked = typeof replaced === "number" && replaced > 0;
     this.log(
       result.data.already_revoked === true
-        ? `Key ${args.id} was already revoked; nothing changed.`
+        ? alsoRevoked
+          ? `Key ${args.id} was already revoked.`
+          : `Key ${args.id} was already revoked; nothing changed.`
         : `Revoked key ${args.id}.`,
     );
-    const summary = standingSummary(result.data.standing_objects);
-    if (summary) this.log(summary);
+    for (const line of revokeCascadeLines(result.data)) this.log(line);
   }
 }
