@@ -173,6 +173,7 @@ const (
 	ListDomainsOperation                          OperationName = "ListDomains"
 	ListEmailAttachmentArchiveMembersOperation    OperationName = "ListEmailAttachmentArchiveMembers"
 	ListEmailRuleDecisionsOperation               OperationName = "ListEmailRuleDecisions"
+	ListEmailRuleDecisionsOnMyMailOperation       OperationName = "ListEmailRuleDecisionsOnMyMail"
 	ListEmailRuleRequestsOperation                OperationName = "ListEmailRuleRequests"
 	ListEmailRuleResultsOperation                 OperationName = "ListEmailRuleResults"
 	ListEmailRuleScopeOptionsOperation            OperationName = "ListEmailRuleScopeOptions"

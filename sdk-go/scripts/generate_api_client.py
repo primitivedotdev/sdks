@@ -89,7 +89,8 @@ _CONST_FIELD = re.compile(
     r"\t\{\n\t\te\.FieldStart\(\"(?P<json>[^\"]+)\"\)\n\t\te\.(?:Bool|Str|Int|Float64)\([^\n]*\)\n\t\}"
 )
 _STRUCT = re.compile(r"type (?P<type>\w+) struct \{\n(?P<body>.*?)\n\}\n", re.S)
-_OPT_FIELD = re.compile(r"\t(?P<name>\w+) Opt\w+ `json:\"(?P<json>[^\"]+)\"`")
+# gofmt aligns a struct's field types and tags with runs of spaces, so any run is matched.
+_OPT_FIELD = re.compile(r"\t(?P<name>\w+)\s+Opt\w+\s+`json:\"(?P<json>[^\"]+)\"`")
 
 
 def encode_optional_consts_only_when_set(directory: Path) -> None:

@@ -32588,8 +32588,9 @@ func (s *EmailRuleCoveringMeKind) UnmarshalText(data []byte) error {
 
 // Ref: #/components/schemas/EmailRuleCoveringMeRead
 type EmailRuleCoveringMeRead struct {
-	ID   uuid.UUID `json:"id"`
-	Name string    `json:"name"`
+	ID uuid.UUID `json:"id"`
+	// Null when covers_now is false: its name now may describe something else.
+	Name NilString `json:"name"`
 	// Draft: it decides nothing. observe: it decides and records, and shares nothing. active: it decides
 	// and, for a grant rule, shares what it matches.
 	State EmailRuleCoveringMeReadState `json:"state"`
@@ -32598,12 +32599,20 @@ type EmailRuleCoveringMeRead struct {
 	// Who wrote it.
 	Author EmailRuleCoveringAuthor `json:"author"`
 	// Whether you wrote it.
-	IsAuthor       bool              `json:"is_author"`
-	Covers         EmailRuleCoverage `json:"covers"`
-	CurrentVersion NilInt            `json:"current_version"`
-	CreatedAt      time.Time         `json:"created_at"`
-	// Its current version: what it asks of each email.
+	IsAuthor bool `json:"is_author"`
+	// Null when it no longer covers your mailboxes and you see it because it decided on your mail.
+	Covers NilEmailRuleCoverage `json:"covers"`
+	// Null when covers_now is false.
+	CurrentVersion NilInt    `json:"current_version"`
+	CreatedAt      time.Time `json:"created_at"`
+	// Whether it covers one of your own mailboxes now. False for a rule you see only because it decided
+	// on mail at your own mailbox before.
+	CoversNow bool `json:"covers_now"`
+	// Its current version: what it asks of each email. When covers_now is false, the newest version that
+	// decided on your mail instead.
 	Current NilEmailRuleCoveringMeVersion `json:"current"`
+	// Present when covers_now is false: what is withheld, and why.
+	Note OptString `json:"note"`
 }
 
 // GetID returns the value of ID.
@@ -32612,7 +32621,7 @@ func (s *EmailRuleCoveringMeRead) GetID() uuid.UUID {
 }
 
 // GetName returns the value of Name.
-func (s *EmailRuleCoveringMeRead) GetName() string {
+func (s *EmailRuleCoveringMeRead) GetName() NilString {
 	return s.Name
 }
 
@@ -32637,7 +32646,7 @@ func (s *EmailRuleCoveringMeRead) GetIsAuthor() bool {
 }
 
 // GetCovers returns the value of Covers.
-func (s *EmailRuleCoveringMeRead) GetCovers() EmailRuleCoverage {
+func (s *EmailRuleCoveringMeRead) GetCovers() NilEmailRuleCoverage {
 	return s.Covers
 }
 
@@ -32651,9 +32660,19 @@ func (s *EmailRuleCoveringMeRead) GetCreatedAt() time.Time {
 	return s.CreatedAt
 }
 
+// GetCoversNow returns the value of CoversNow.
+func (s *EmailRuleCoveringMeRead) GetCoversNow() bool {
+	return s.CoversNow
+}
+
 // GetCurrent returns the value of Current.
 func (s *EmailRuleCoveringMeRead) GetCurrent() NilEmailRuleCoveringMeVersion {
 	return s.Current
+}
+
+// GetNote returns the value of Note.
+func (s *EmailRuleCoveringMeRead) GetNote() OptString {
+	return s.Note
 }
 
 // SetID sets the value of ID.
@@ -32662,7 +32681,7 @@ func (s *EmailRuleCoveringMeRead) SetID(val uuid.UUID) {
 }
 
 // SetName sets the value of Name.
-func (s *EmailRuleCoveringMeRead) SetName(val string) {
+func (s *EmailRuleCoveringMeRead) SetName(val NilString) {
 	s.Name = val
 }
 
@@ -32687,7 +32706,7 @@ func (s *EmailRuleCoveringMeRead) SetIsAuthor(val bool) {
 }
 
 // SetCovers sets the value of Covers.
-func (s *EmailRuleCoveringMeRead) SetCovers(val EmailRuleCoverage) {
+func (s *EmailRuleCoveringMeRead) SetCovers(val NilEmailRuleCoverage) {
 	s.Covers = val
 }
 
@@ -32701,9 +32720,19 @@ func (s *EmailRuleCoveringMeRead) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
 
+// SetCoversNow sets the value of CoversNow.
+func (s *EmailRuleCoveringMeRead) SetCoversNow(val bool) {
+	s.CoversNow = val
+}
+
 // SetCurrent sets the value of Current.
 func (s *EmailRuleCoveringMeRead) SetCurrent(val NilEmailRuleCoveringMeVersion) {
 	s.Current = val
+}
+
+// SetNote sets the value of Note.
+func (s *EmailRuleCoveringMeRead) SetNote(val OptString) {
+	s.Note = val
 }
 
 // Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
@@ -32940,6 +32969,161 @@ func (s *EmailRuleCoveringMeVersion) SetVocabulary(val string) {
 // SetCreatedAt sets the value of CreatedAt.
 func (s *EmailRuleCoveringMeVersion) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
+}
+
+// Ref: #/components/schemas/EmailRuleDecisionOnMyMail
+type EmailRuleDecisionOnMyMail struct {
+	ID               uuid.UUID `json:"id"`
+	EmailID          uuid.UUID `json:"email_id"`
+	RuleVersion      int       `json:"rule_version"`
+	ClassificationID uuid.UUID `json:"classification_id"`
+	Matched          bool      `json:"matched"`
+	// Not matched, but nearly. False when detail_withheld is true.
+	NearMiss bool `json:"near_miss"`
+	// How each top-level part of the rule decided.
+	Parts []jx.Raw `json:"parts"`
+	// The answers to the rule's own questions, when they were asked.
+	QuestionAnswers []jx.Raw `json:"question_answers"`
+	// Present, as true, when the email's content cannot be read: matched still says what the rule
+	// decided, and parts and question_answers are empty.
+	DetailWithheld OptBool   `json:"detail_withheld"`
+	CreatedAt      time.Time `json:"created_at"`
+	// The email's sender address, as GET /v1/emails/{id} shows it.
+	FromAddress NilString `json:"from_address"`
+	Subject     NilString `json:"subject"`
+	// When the email arrived. Null, with the other two, when you are not shown the email (it awaits
+	// sender authentication).
+	ReceivedAt NilDateTime `json:"received_at"`
+}
+
+// GetID returns the value of ID.
+func (s *EmailRuleDecisionOnMyMail) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetEmailID returns the value of EmailID.
+func (s *EmailRuleDecisionOnMyMail) GetEmailID() uuid.UUID {
+	return s.EmailID
+}
+
+// GetRuleVersion returns the value of RuleVersion.
+func (s *EmailRuleDecisionOnMyMail) GetRuleVersion() int {
+	return s.RuleVersion
+}
+
+// GetClassificationID returns the value of ClassificationID.
+func (s *EmailRuleDecisionOnMyMail) GetClassificationID() uuid.UUID {
+	return s.ClassificationID
+}
+
+// GetMatched returns the value of Matched.
+func (s *EmailRuleDecisionOnMyMail) GetMatched() bool {
+	return s.Matched
+}
+
+// GetNearMiss returns the value of NearMiss.
+func (s *EmailRuleDecisionOnMyMail) GetNearMiss() bool {
+	return s.NearMiss
+}
+
+// GetParts returns the value of Parts.
+func (s *EmailRuleDecisionOnMyMail) GetParts() []jx.Raw {
+	return s.Parts
+}
+
+// GetQuestionAnswers returns the value of QuestionAnswers.
+func (s *EmailRuleDecisionOnMyMail) GetQuestionAnswers() []jx.Raw {
+	return s.QuestionAnswers
+}
+
+// GetDetailWithheld returns the value of DetailWithheld.
+func (s *EmailRuleDecisionOnMyMail) GetDetailWithheld() OptBool {
+	return s.DetailWithheld
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *EmailRuleDecisionOnMyMail) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetFromAddress returns the value of FromAddress.
+func (s *EmailRuleDecisionOnMyMail) GetFromAddress() NilString {
+	return s.FromAddress
+}
+
+// GetSubject returns the value of Subject.
+func (s *EmailRuleDecisionOnMyMail) GetSubject() NilString {
+	return s.Subject
+}
+
+// GetReceivedAt returns the value of ReceivedAt.
+func (s *EmailRuleDecisionOnMyMail) GetReceivedAt() NilDateTime {
+	return s.ReceivedAt
+}
+
+// SetID sets the value of ID.
+func (s *EmailRuleDecisionOnMyMail) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetEmailID sets the value of EmailID.
+func (s *EmailRuleDecisionOnMyMail) SetEmailID(val uuid.UUID) {
+	s.EmailID = val
+}
+
+// SetRuleVersion sets the value of RuleVersion.
+func (s *EmailRuleDecisionOnMyMail) SetRuleVersion(val int) {
+	s.RuleVersion = val
+}
+
+// SetClassificationID sets the value of ClassificationID.
+func (s *EmailRuleDecisionOnMyMail) SetClassificationID(val uuid.UUID) {
+	s.ClassificationID = val
+}
+
+// SetMatched sets the value of Matched.
+func (s *EmailRuleDecisionOnMyMail) SetMatched(val bool) {
+	s.Matched = val
+}
+
+// SetNearMiss sets the value of NearMiss.
+func (s *EmailRuleDecisionOnMyMail) SetNearMiss(val bool) {
+	s.NearMiss = val
+}
+
+// SetParts sets the value of Parts.
+func (s *EmailRuleDecisionOnMyMail) SetParts(val []jx.Raw) {
+	s.Parts = val
+}
+
+// SetQuestionAnswers sets the value of QuestionAnswers.
+func (s *EmailRuleDecisionOnMyMail) SetQuestionAnswers(val []jx.Raw) {
+	s.QuestionAnswers = val
+}
+
+// SetDetailWithheld sets the value of DetailWithheld.
+func (s *EmailRuleDecisionOnMyMail) SetDetailWithheld(val OptBool) {
+	s.DetailWithheld = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *EmailRuleDecisionOnMyMail) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetFromAddress sets the value of FromAddress.
+func (s *EmailRuleDecisionOnMyMail) SetFromAddress(val NilString) {
+	s.FromAddress = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *EmailRuleDecisionOnMyMail) SetSubject(val NilString) {
+	s.Subject = val
+}
+
+// SetReceivedAt sets the value of ReceivedAt.
+func (s *EmailRuleDecisionOnMyMail) SetReceivedAt(val NilDateTime) {
+	s.ReceivedAt = val
 }
 
 // Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
@@ -62270,6 +62454,109 @@ func (s *ListEmailRuleDecisionsOK) SetMeta(val CursorPageMeta) {
 
 func (*ListEmailRuleDecisionsOK) listEmailRuleDecisionsRes() {}
 
+type ListEmailRuleDecisionsOnMyMailBadRequest ErrorResponse
+
+func (*ListEmailRuleDecisionsOnMyMailBadRequest) listEmailRuleDecisionsOnMyMailRes() {}
+
+type ListEmailRuleDecisionsOnMyMailForbidden ErrorResponse
+
+func (*ListEmailRuleDecisionsOnMyMailForbidden) listEmailRuleDecisionsOnMyMailRes() {}
+
+// Only decisions that matched (true) or did not (false).
+type ListEmailRuleDecisionsOnMyMailMatched string
+
+const (
+	ListEmailRuleDecisionsOnMyMailMatchedTrue  ListEmailRuleDecisionsOnMyMailMatched = "true"
+	ListEmailRuleDecisionsOnMyMailMatchedFalse ListEmailRuleDecisionsOnMyMailMatched = "false"
+)
+
+// AllValues returns all ListEmailRuleDecisionsOnMyMailMatched values.
+func (ListEmailRuleDecisionsOnMyMailMatched) AllValues() []ListEmailRuleDecisionsOnMyMailMatched {
+	return []ListEmailRuleDecisionsOnMyMailMatched{
+		ListEmailRuleDecisionsOnMyMailMatchedTrue,
+		ListEmailRuleDecisionsOnMyMailMatchedFalse,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListEmailRuleDecisionsOnMyMailMatched) MarshalText() ([]byte, error) {
+	switch s {
+	case ListEmailRuleDecisionsOnMyMailMatchedTrue:
+		return []byte(s), nil
+	case ListEmailRuleDecisionsOnMyMailMatchedFalse:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListEmailRuleDecisionsOnMyMailMatched) UnmarshalText(data []byte) error {
+	switch ListEmailRuleDecisionsOnMyMailMatched(data) {
+	case ListEmailRuleDecisionsOnMyMailMatchedTrue:
+		*s = ListEmailRuleDecisionsOnMyMailMatchedTrue
+		return nil
+	case ListEmailRuleDecisionsOnMyMailMatchedFalse:
+		*s = ListEmailRuleDecisionsOnMyMailMatchedFalse
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type ListEmailRuleDecisionsOnMyMailNotFound ErrorResponse
+
+func (*ListEmailRuleDecisionsOnMyMailNotFound) listEmailRuleDecisionsOnMyMailRes() {}
+
+// Merged schema.
+type ListEmailRuleDecisionsOnMyMailOK struct {
+	Success bool                                 `json:"success"`
+	Data    ListEmailRuleDecisionsOnMyMailResult `json:"data"`
+	Meta    CursorPageMeta                       `json:"meta"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListEmailRuleDecisionsOnMyMailOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListEmailRuleDecisionsOnMyMailOK) GetData() ListEmailRuleDecisionsOnMyMailResult {
+	return s.Data
+}
+
+// GetMeta returns the value of Meta.
+func (s *ListEmailRuleDecisionsOnMyMailOK) GetMeta() CursorPageMeta {
+	return s.Meta
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListEmailRuleDecisionsOnMyMailOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListEmailRuleDecisionsOnMyMailOK) SetData(val ListEmailRuleDecisionsOnMyMailResult) {
+	s.Data = val
+}
+
+// SetMeta sets the value of Meta.
+func (s *ListEmailRuleDecisionsOnMyMailOK) SetMeta(val CursorPageMeta) {
+	s.Meta = val
+}
+
+func (*ListEmailRuleDecisionsOnMyMailOK) listEmailRuleDecisionsOnMyMailRes() {}
+
+type ListEmailRuleDecisionsOnMyMailResult []EmailRuleDecisionOnMyMail
+
+type ListEmailRuleDecisionsOnMyMailTooManyRequests ErrorResponseHeaders
+
+func (*ListEmailRuleDecisionsOnMyMailTooManyRequests) listEmailRuleDecisionsOnMyMailRes() {}
+
+type ListEmailRuleDecisionsOnMyMailUnauthorized ErrorResponseHeaders
+
+func (*ListEmailRuleDecisionsOnMyMailUnauthorized) listEmailRuleDecisionsOnMyMailRes() {}
+
 type ListEmailRuleDecisionsResult []ListEmailRuleDecisionsResultItem
 
 type ListEmailRuleDecisionsResultItem struct {
@@ -62662,11 +62949,13 @@ func (*ListEmailRuleResultsOK) listEmailRuleResultsRes() {}
 type ListEmailRuleResultsResult struct {
 	// The email these results are about, so a saved answer says which one it was.
 	Email OptListEmailRuleResultsResultEmail `json:"email"`
-	// Every rule the caller can see: those that matched this email, then those that did not, then those
-	// that have not run on it; newest rule first within each.
+	// Rules you can see, and read_only ones: matched first, then not matched, then not run; newest first
+	// within each.
 	Rules []ListEmailRuleResultsResultRulesItem `json:"rules"`
-	// How many more rules the caller can see that are not listed.
+	// Rules that decided on this email that you cannot see.
 	Hidden int `json:"hidden"`
+	// Rules you can see past the 50 listed.
+	NotListed OptInt `json:"not_listed"`
 	// What the classifier read from this email (one classification per vocabulary); null when it has
 	// none (not classified, or never will be), or while the email's content is withheld, discarded or
 	// failed to parse.
@@ -62688,6 +62977,11 @@ func (s *ListEmailRuleResultsResult) GetHidden() int {
 	return s.Hidden
 }
 
+// GetNotListed returns the value of NotListed.
+func (s *ListEmailRuleResultsResult) GetNotListed() OptInt {
+	return s.NotListed
+}
+
 // GetClassification returns the value of Classification.
 func (s *ListEmailRuleResultsResult) GetClassification() OptNilListEmailRuleResultsResultClassification {
 	return s.Classification
@@ -62706,6 +63000,11 @@ func (s *ListEmailRuleResultsResult) SetRules(val []ListEmailRuleResultsResultRu
 // SetHidden sets the value of Hidden.
 func (s *ListEmailRuleResultsResult) SetHidden(val int) {
 	s.Hidden = val
+}
+
+// SetNotListed sets the value of NotListed.
+func (s *ListEmailRuleResultsResult) SetNotListed(val OptInt) {
+	s.NotListed = val
 }
 
 // SetClassification sets the value of Classification.
@@ -63046,7 +63345,7 @@ func (s *ListEmailRuleResultsResultEmail) SetReceivedAt(val time.Time) {
 
 type ListEmailRuleResultsResultRulesItem struct {
 	ID    uuid.UUID                                `json:"id"`
-	Name  string                                   `json:"name"`
+	Name  NilString                                `json:"name"`
 	State ListEmailRuleResultsResultRulesItemState `json:"state"`
 	// Grant: the rule shares what it matches. do_not_share: the rule blocks sharing of what it matches.
 	// While it is active, no rule shares an email it has matched from then on; anything shared before,
@@ -63061,6 +63360,11 @@ type ListEmailRuleResultsResultRulesItem struct {
 	// On a do-not-share rule whose author is no longer a member of the organization: it blocks nothing
 	// now, whatever it decided. Absent otherwise.
 	AuthorLeft OptBool `json:"author_left"`
+	// Another member's rule that decided on your own mail; dashboard and CLI only. name is null once it
+	// no longer covers you.
+	ReadOnly OptBool `json:"read_only"`
+	// With read_only: who wrote it.
+	Author OptEmailRuleCoveringAuthor `json:"author"`
 }
 
 // GetID returns the value of ID.
@@ -63069,7 +63373,7 @@ func (s *ListEmailRuleResultsResultRulesItem) GetID() uuid.UUID {
 }
 
 // GetName returns the value of Name.
-func (s *ListEmailRuleResultsResultRulesItem) GetName() string {
+func (s *ListEmailRuleResultsResultRulesItem) GetName() NilString {
 	return s.Name
 }
 
@@ -63098,13 +63402,23 @@ func (s *ListEmailRuleResultsResultRulesItem) GetAuthorLeft() OptBool {
 	return s.AuthorLeft
 }
 
+// GetReadOnly returns the value of ReadOnly.
+func (s *ListEmailRuleResultsResultRulesItem) GetReadOnly() OptBool {
+	return s.ReadOnly
+}
+
+// GetAuthor returns the value of Author.
+func (s *ListEmailRuleResultsResultRulesItem) GetAuthor() OptEmailRuleCoveringAuthor {
+	return s.Author
+}
+
 // SetID sets the value of ID.
 func (s *ListEmailRuleResultsResultRulesItem) SetID(val uuid.UUID) {
 	s.ID = val
 }
 
 // SetName sets the value of Name.
-func (s *ListEmailRuleResultsResultRulesItem) SetName(val string) {
+func (s *ListEmailRuleResultsResultRulesItem) SetName(val NilString) {
 	s.Name = val
 }
 
@@ -63131,6 +63445,16 @@ func (s *ListEmailRuleResultsResultRulesItem) SetNotRunReason(val NilListEmailRu
 // SetAuthorLeft sets the value of AuthorLeft.
 func (s *ListEmailRuleResultsResultRulesItem) SetAuthorLeft(val OptBool) {
 	s.AuthorLeft = val
+}
+
+// SetReadOnly sets the value of ReadOnly.
+func (s *ListEmailRuleResultsResultRulesItem) SetReadOnly(val OptBool) {
+	s.ReadOnly = val
+}
+
+// SetAuthor sets the value of Author.
+func (s *ListEmailRuleResultsResultRulesItem) SetAuthor(val OptEmailRuleCoveringAuthor) {
+	s.Author = val
 }
 
 // What the rule most recently decided about this email; null when it has not run on it.
@@ -74636,6 +74960,51 @@ func (o NilEmailReadableParseStatus) Or(d EmailReadableParseStatus) EmailReadabl
 	return d
 }
 
+// NewNilEmailRuleCoverage returns new NilEmailRuleCoverage with value set to v.
+func NewNilEmailRuleCoverage(v EmailRuleCoverage) NilEmailRuleCoverage {
+	return NilEmailRuleCoverage{
+		Value: v,
+	}
+}
+
+// NilEmailRuleCoverage is nullable EmailRuleCoverage.
+type NilEmailRuleCoverage struct {
+	Value EmailRuleCoverage
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilEmailRuleCoverage) SetTo(v EmailRuleCoverage) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilEmailRuleCoverage) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilEmailRuleCoverage) SetToNull() {
+	o.Null = true
+	var v EmailRuleCoverage
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilEmailRuleCoverage) Get() (v EmailRuleCoverage, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilEmailRuleCoverage) Or(d EmailRuleCoverage) EmailRuleCoverage {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilEmailRuleCoveringMeVersion returns new NilEmailRuleCoveringMeVersion with value set to v.
 func NewNilEmailRuleCoveringMeVersion(v EmailRuleCoveringMeVersion) NilEmailRuleCoveringMeVersion {
 	return NilEmailRuleCoveringMeVersion{
@@ -81164,6 +81533,52 @@ func (o OptEmailRuleAuthor) Or(d EmailRuleAuthor) EmailRuleAuthor {
 	return d
 }
 
+// NewOptEmailRuleCoveringAuthor returns new OptEmailRuleCoveringAuthor with value set to v.
+func NewOptEmailRuleCoveringAuthor(v EmailRuleCoveringAuthor) OptEmailRuleCoveringAuthor {
+	return OptEmailRuleCoveringAuthor{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptEmailRuleCoveringAuthor is optional EmailRuleCoveringAuthor.
+type OptEmailRuleCoveringAuthor struct {
+	Value EmailRuleCoveringAuthor
+	Set   bool
+}
+
+// IsSet returns true if OptEmailRuleCoveringAuthor was set.
+func (o OptEmailRuleCoveringAuthor) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptEmailRuleCoveringAuthor) Reset() {
+	var v EmailRuleCoveringAuthor
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptEmailRuleCoveringAuthor) SetTo(v EmailRuleCoveringAuthor) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptEmailRuleCoveringAuthor) Get() (v EmailRuleCoveringAuthor, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptEmailRuleCoveringAuthor) Or(d EmailRuleCoveringAuthor) EmailRuleCoveringAuthor {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptEmailRuleEvaluationScope returns new OptEmailRuleEvaluationScope with value set to v.
 func NewOptEmailRuleEvaluationScope(v EmailRuleEvaluationScope) OptEmailRuleEvaluationScope {
 	return OptEmailRuleEvaluationScope{
@@ -85068,6 +85483,52 @@ func (o OptListEmailRuleDecisionsMatched) Get() (v ListEmailRuleDecisionsMatched
 
 // Or returns value if set, or given parameter if does not.
 func (o OptListEmailRuleDecisionsMatched) Or(d ListEmailRuleDecisionsMatched) ListEmailRuleDecisionsMatched {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptListEmailRuleDecisionsOnMyMailMatched returns new OptListEmailRuleDecisionsOnMyMailMatched with value set to v.
+func NewOptListEmailRuleDecisionsOnMyMailMatched(v ListEmailRuleDecisionsOnMyMailMatched) OptListEmailRuleDecisionsOnMyMailMatched {
+	return OptListEmailRuleDecisionsOnMyMailMatched{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListEmailRuleDecisionsOnMyMailMatched is optional ListEmailRuleDecisionsOnMyMailMatched.
+type OptListEmailRuleDecisionsOnMyMailMatched struct {
+	Value ListEmailRuleDecisionsOnMyMailMatched
+	Set   bool
+}
+
+// IsSet returns true if OptListEmailRuleDecisionsOnMyMailMatched was set.
+func (o OptListEmailRuleDecisionsOnMyMailMatched) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListEmailRuleDecisionsOnMyMailMatched) Reset() {
+	var v ListEmailRuleDecisionsOnMyMailMatched
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListEmailRuleDecisionsOnMyMailMatched) SetTo(v ListEmailRuleDecisionsOnMyMailMatched) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListEmailRuleDecisionsOnMyMailMatched) Get() (v ListEmailRuleDecisionsOnMyMailMatched, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListEmailRuleDecisionsOnMyMailMatched) Or(d ListEmailRuleDecisionsOnMyMailMatched) ListEmailRuleDecisionsOnMyMailMatched {
 	if v, ok := o.Get(); ok {
 		return v
 	}

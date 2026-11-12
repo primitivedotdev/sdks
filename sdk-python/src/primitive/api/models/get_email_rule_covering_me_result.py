@@ -32,29 +32,36 @@ class GetEmailRuleCoveringMeResult:
     """ 
         Attributes:
             id (UUID):
-            name (str):
+            name (None | str): Null when covers_now is false: its name now may describe something else.
             state (GetEmailRuleCoveringMeResultState): draft: it decides nothing. observe: it decides and records, and
                 shares nothing. active: it decides and, for a grant rule, shares what it matches.
             kind (GetEmailRuleCoveringMeResultKind): grant: what it matches can be shared. do_not_share: it blocks sharing
                 what it matches.
             author (EmailRuleCoveringAuthor):
             is_author (bool): Whether you wrote it.
-            covers (EmailRuleCoverage):
-            current_version (int | None):
+            covers (EmailRuleCoverage | None): Null when it no longer covers your mailboxes and you see it because it
+                decided on your mail.
+            current_version (int | None): Null when covers_now is false.
             created_at (datetime.datetime):
-            current (EmailRuleCoveringMeVersion | None): Its current version: what it asks of each email.
+            covers_now (bool): Whether it covers one of your own mailboxes now. False for a rule you see only because it
+                decided on mail at your own mailbox before.
+            current (EmailRuleCoveringMeVersion | None): Its current version: what it asks of each email. When covers_now is
+                false, the newest version that decided on your mail instead.
+            note (str | Unset): Present when covers_now is false: what is withheld, and why.
      """
 
     id: UUID
-    name: str
+    name: None | str
     state: GetEmailRuleCoveringMeResultState
     kind: GetEmailRuleCoveringMeResultKind
     author: EmailRuleCoveringAuthor
     is_author: bool
-    covers: EmailRuleCoverage
+    covers: EmailRuleCoverage | None
     current_version: int | None
     created_at: datetime.datetime
+    covers_now: bool
     current: EmailRuleCoveringMeVersion | None
+    note: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -67,6 +74,7 @@ class GetEmailRuleCoveringMeResult:
         from ..models.email_rule_covering_me_version import EmailRuleCoveringMeVersion # noqa: PLC0415
         id = str(self.id)
 
+        name: None | str
         name = self.name
 
         state = self.state.value
@@ -77,18 +85,26 @@ class GetEmailRuleCoveringMeResult:
 
         is_author = self.is_author
 
-        covers = self.covers.to_dict()
+        covers: dict[str, Any] | None
+        if isinstance(self.covers, EmailRuleCoverage):
+            covers = self.covers.to_dict()
+        else:
+            covers = self.covers
 
         current_version: int | None
         current_version = self.current_version
 
         created_at = self.created_at.isoformat()
 
+        covers_now = self.covers_now
+
         current: dict[str, Any] | None
         if isinstance(self.current, EmailRuleCoveringMeVersion):
             current = self.current.to_dict()
         else:
             current = self.current
+
+        note = self.note
 
 
         field_dict: dict[str, Any] = {}
@@ -103,8 +119,11 @@ class GetEmailRuleCoveringMeResult:
             "covers": covers,
             "current_version": current_version,
             "created_at": created_at,
+            "covers_now": covers_now,
             "current": current,
         })
+        if note is not UNSET:
+            field_dict["note"] = note
 
         return field_dict
 
@@ -121,7 +140,13 @@ class GetEmailRuleCoveringMeResult:
 
 
 
-        name = d.pop("name")
+        def _parse_name(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        name = _parse_name(d.pop("name"))
+
 
         state = GetEmailRuleCoveringMeResultState(d.pop("state"))
 
@@ -140,9 +165,22 @@ class GetEmailRuleCoveringMeResult:
 
         is_author = d.pop("is_author")
 
-        covers = EmailRuleCoverage.from_dict(d.pop("covers"))
+        def _parse_covers(data: object) -> EmailRuleCoverage | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                covers_type_1 = EmailRuleCoverage.from_dict(data)
 
 
+
+                return covers_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailRuleCoverage | None, data)
+
+        covers = _parse_covers(d.pop("covers"))
 
 
         def _parse_current_version(data: object) -> int | None:
@@ -157,6 +195,8 @@ class GetEmailRuleCoveringMeResult:
 
 
 
+
+        covers_now = d.pop("covers_now")
 
         def _parse_current(data: object) -> EmailRuleCoveringMeVersion | None:
             if data is None:
@@ -176,6 +216,8 @@ class GetEmailRuleCoveringMeResult:
         current = _parse_current(d.pop("current"))
 
 
+        note = d.pop("note", UNSET)
+
         get_email_rule_covering_me_result = cls(
             id=id,
             name=name,
@@ -186,7 +228,9 @@ class GetEmailRuleCoveringMeResult:
             covers=covers,
             current_version=current_version,
             created_at=created_at,
+            covers_now=covers_now,
             current=current,
+            note=note,
         )
 
 
