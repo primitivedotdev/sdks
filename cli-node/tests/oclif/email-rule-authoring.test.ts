@@ -1981,6 +1981,40 @@ describe("email-rules made-up emails in test and write reports", () => {
       message:
         "1 expectation is undecided: saved sample 1 (it was not reached in time, or deciding it failed). Test again later.",
     });
+    // A question left unanswered, with none answered no, can be decided by a
+    // later test: exit 3 too.
+    answer(
+      testResult(
+        expectations(
+          [
+            judged(2, "undecided", "near_miss", {
+              question_answers: [
+                { question: "Is it a bill?", answer: null, probability: null },
+              ],
+            }),
+          ],
+          { undecided: 1 },
+        ),
+      ),
+    );
+    const unanswered = await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+    ]);
+    expect(unanswered.exitCode).toBe(3);
+    expect(lines(unanswered)).toContain(
+      '  undecided: saved sample 3 ("medical: three") expected no_match, got near_miss (a question went unanswered; test again later)',
+    );
+    const unansweredJson = await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+      "--json",
+    ]);
+    expect(JSON.parse(unansweredJson.merged).error).toEqual({
+      code: "expectations_undecided",
+      message:
+        "1 expectation is undecided: saved sample 3 (a question went unanswered). Test again later.",
+    });
     answer(
       testResult(
         expectations([judged(1, "undecided", "no_match")], { undecided: 1 }),
