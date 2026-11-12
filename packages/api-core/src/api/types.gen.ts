@@ -4267,9 +4267,9 @@ export type TestResult = {
      */
     status: number;
     /**
-     * Response body (truncated to 1000 characters)
+     * The receiver response text, only with organization-wide mail.raw:read. Null without that access because a receiver can echo a raw download link.
      */
-    body: string;
+    body: string | null;
     /**
      * The signature header value sent, answered to a caller who may see it: for a webhook signed with the organization's secret, a caller who may read that secret; for one signed with its own, the person who owns it, calling as themselves.
      */
@@ -6121,16 +6121,16 @@ export type ListActivityObjectsResult = {
     covers: string;
     items: Array<{
         /**
-         * One of: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request, email_rule_objection.
+         * One of: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request, email_rule_objection, email_rule_coverage.
          */
         kind: string;
         id: string;
         /**
-         * The name the object is known by: an endpoint's display name, a route's or filter's pattern, a Function's name, a send's From address, a wake schedule's command and the address it wakes, an API key's name, an agent's address, a rule's or rule request's name, and for an objection the name its rule had when the objection was made. Never a webhook URL and never mail content.
+         * The name the object is known by: an endpoint's display name, a route's or filter's pattern, a Function's name, a send's From address, a wake schedule's command and the address it wakes, an API key's name, an agent's address, a rule's or rule request's name, and for an objection or a coverage notice the name its rule had then. Never a webhook URL and never mail content.
          */
         name: string | null;
         /**
-         * Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections).
+         * Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice what it told: started (a rule began covering your mailbox), new_version, or baseline (it already covered you when notices began).
          */
         state: string;
         created_at: string;
@@ -6139,20 +6139,20 @@ export type ListActivityObjectsResult = {
          */
         ended_at: string | null;
         /**
-         * you: it is still yours: never transferred, or transferred back to you. someone_else: it was transferred and another person holds it now, or, with relation=asked, another member made it.
+         * you: it is still yours: never transferred, or transferred back to you. someone_else: it was transferred and another person holds it now, or, with relation=asked or concerning, another member made it.
          */
         owned_now: 'you' | 'someone_else';
         created_through: {
             /**
-             * The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves). With relation=asked, member: the member who asked or objected.
+             * The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves). With relation=asked, member: the member who asked or objected; with relation=concerning, member: the rule's author.
              */
             kind: string;
             /**
-             * In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself. With relation=asked, the user id of the member who asked or objected.
+             * In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself. With relation=asked, the user id of the member who asked or objected; with relation=concerning, of the rule's author.
              */
             id: string | null;
             /**
-             * In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves. With relation=asked, the name of the member who asked or objected.
+             * In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves. With relation=asked, the name of the member who asked or objected; with relation=concerning, of the rule's author.
              */
             name: string | null;
         };
@@ -6992,7 +6992,7 @@ export type CreateEmailRuleRequest = {
      */
     assumptions?: Array<string>;
     /**
-     * The compile response's warnings. Stored as sent.
+     * The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).
      */
     warnings?: Array<string>;
     /**
@@ -7133,7 +7133,7 @@ export type UpdateEmailRuleRequest = {
      */
     assumptions?: Array<string>;
     /**
-     * The compile response's warnings. Stored as sent.
+     * The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).
      */
     warnings?: Array<string>;
     /**
@@ -7270,6 +7270,63 @@ export type EmailRuleCoveringAuthor = {
     email: string | null;
 };
 
+/**
+ * Who receives what the rule shares now, by person and count; empty unless it is an active grant rule.
+ */
+export type EmailRuleReceivers = {
+    /**
+     * API keys that work now (not revoked, expired or suspended) whose access lists the rule, or its live share: they read what it matches. Owner: the member who holds each, or the organization.
+     */
+    keys: Array<{
+        owner: {
+            kind: 'member' | 'organization';
+            /**
+             * The member's user id.
+             */
+            user_id?: string;
+            /**
+             * Their name; null when they have none set.
+             */
+            name?: string | null;
+        };
+        count: number;
+    }>;
+    /**
+     * Webhooks that are sent what it matches: those whose key, as delivery acts as it, lists the rule or its live share (owner: the member who holds that key, or the organization), and the webhooks of the member the rule is shared with (owner: that member).
+     */
+    webhooks: Array<{
+        owner: {
+            kind: 'member' | 'organization';
+            /**
+             * The member's user id.
+             */
+            user_id?: string;
+            /**
+             * Their name; null when they have none set.
+             */
+            name?: string | null;
+        };
+        count: number;
+    }>;
+    /**
+     * The rule's live share, if it has one (a rule is shared at most once): the member it gives what it matches to.
+     */
+    shares: Array<{
+        beneficiary: {
+            kind: 'member';
+            /**
+             * The member's user id.
+             */
+            user_id: string;
+            /**
+             * Their name; null when they have none set.
+             */
+            name: string | null;
+        };
+        count: number;
+    }>;
+};
+
 export type ListEmailRuleResultsResult = {
     /**
      * The email these results are about, so a saved answer says which one it was.
@@ -7359,6 +7416,10 @@ export type ListEmailRuleResultsResult = {
          */
         read_only?: boolean;
         author?: EmailRuleCoveringAuthor;
+        /**
+         * With read_only: who receives what it shares; null unless it covers you now.
+         */
+        receivers?: EmailRuleReceivers | null;
     }>;
     /**
      * Rules that decided on this email that you cannot see.
@@ -7522,7 +7583,7 @@ export type CreateEmailRuleRequestRequest = {
      */
     assumptions?: Array<string>;
     /**
-     * The compile response's warnings. Stored as sent.
+     * The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).
      */
     warnings?: Array<string>;
     /**
@@ -7544,9 +7605,17 @@ export type CreateEmailRuleRequestResult = {
     explanation: string;
     assumptions: Array<string>;
     /**
-     * As the member who asked sent them, normally from their compile. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them.
+     * As the member who asked sent them, normally from their compile, then every compiler note on the rule's tree and words they lack. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them.
      */
     warnings: Array<string>;
+    /**
+     * What the rule as asked actually does: Primitive's own reading of the request's tree, never the words of the member who asked or of a model. Null when the tree no longer reads as one.
+     */
+    server_explanation?: string | null;
+    /**
+     * Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.
+     */
+    server_notes?: Array<string>;
     compiled_by: string;
     vocabulary: string;
     /**
@@ -7581,7 +7650,7 @@ export type CreateEmailRuleRequestResult = {
      */
     edited_on_accept?: boolean | null;
     /**
-     * For the member asked, while pending: what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
+     * For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, then what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
      */
     notice?: string | null;
     /**
@@ -7634,9 +7703,17 @@ export type EmailRuleRequest = {
     explanation: string;
     assumptions: Array<string>;
     /**
-     * As the member who asked sent them, normally from their compile. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them.
+     * As the member who asked sent them, normally from their compile, then every compiler note on the rule's tree and words they lack. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them.
      */
     warnings: Array<string>;
+    /**
+     * What the rule as asked actually does: Primitive's own reading of the request's tree, never the words of the member who asked or of a model. Null when the tree no longer reads as one.
+     */
+    server_explanation?: string | null;
+    /**
+     * Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.
+     */
+    server_notes?: Array<string>;
     compiled_by: string;
     vocabulary: string;
     /**
@@ -7671,7 +7748,7 @@ export type EmailRuleRequest = {
      */
     edited_on_accept?: boolean | null;
     /**
-     * For the member asked, while pending: what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
+     * For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, then what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
      */
     notice?: string | null;
 };
@@ -7831,7 +7908,7 @@ export type AcceptEmailRuleRequestRequest = {
      */
     assumptions?: Array<string>;
     /**
-     * The compile response's warnings. Stored as sent.
+     * The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).
      */
     warnings?: Array<string>;
     /**
@@ -7979,6 +8056,10 @@ export type EmailRuleCoveringMe = {
     is_author: boolean;
     covers: EmailRuleCoverage;
     current_version: number | null;
+    /**
+     * Null when it could not be read in time; try again.
+     */
+    receivers: EmailRuleReceivers | null;
     created_at: string;
 };
 
@@ -8022,6 +8103,10 @@ export type EmailRuleCoveringMeRead = {
      * Null when covers_now is false.
      */
     current_version: number | null;
+    /**
+     * Null when covers_now is false (who receives it now is not about your mail), or when it could not be read in time.
+     */
+    receivers: EmailRuleReceivers | null;
     created_at: string;
     /**
      * Whether it covers one of your own mailboxes now. False for a rule you see only because it decided on mail at your own mailbox before.
@@ -20596,11 +20681,11 @@ export type ListActivityObjectsData = {
     path?: never;
     query?: {
         /**
-         * created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you, and objections to rules you wrote. asked is for a person's own view only, and kind may then name only email_rule_request and email_rule_objection.
+         * created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you, and objections to rules you wrote; kind may then name only email_rule_request and email_rule_objection. concerning: what other members did that concerns your own mail: a rule that started covering one of your mailboxes, or saved a new version while covering it (email_rule_coverage, the only kind it takes). asked and concerning are for a person's own view only.
          */
-        relation?: 'created' | 'asked';
+        relation?: 'created' | 'asked' | 'concerning';
         /**
-         * Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request, email_rule_objection. Defaults to every kind the caller can have created (a person's own kinds only for a person). With relation=asked, only email_rule_request and email_rule_objection, which are also the default.
+         * Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request, email_rule_objection, email_rule_coverage. Defaults to every kind the caller can have created (a person's own kinds only for a person). With relation=asked, only email_rule_request and email_rule_objection, which are also the default; with relation=concerning, only email_rule_coverage, the default. email_rule_coverage is listed only with relation=concerning.
          */
         kind?: string;
         /**

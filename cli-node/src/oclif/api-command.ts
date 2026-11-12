@@ -2210,6 +2210,7 @@ export function createOperationCommand(
                       : await readCallerMailFor(auth, apiClient.client),
                 })
               : (emptyRuleListHint(operation.sdkName, query) ??
+                emptyDeliveriesHint(operation.sdkName, query) ??
                 EMPTY_RESULT_HINTS[operation.sdkName]);
           if (hint && jsonOutput) summary.push(hint);
           else if (hint) process.stderr.write(`${hint}\n`);
@@ -2440,6 +2441,31 @@ export function emptyRuleListHint(
     ]);
   }
   return undefined;
+}
+
+/**
+ * An empty delivery list narrowed by a filter (--endpoint-id, --status,
+ * --event-type and the rest) names the filters given, in place of the general
+ * hint, which reads as if nothing was ever delivered, and keeps its point that
+ * test fires are not logged. Undefined for any other list, or when no filter
+ * was given.
+ */
+export function emptyDeliveriesHint(
+  sdkName: string,
+  query: Record<string, unknown>,
+): string | undefined {
+  if (sdkName !== "listDeliveries") return undefined;
+  const flags = listFilters(query).map(
+    (name) => `--${parameterFlagName(sdkName, name)}`,
+  );
+  if (flags.length === 0) return undefined;
+  if (query.cursor !== undefined)
+    return "(no results) No more deliveries match these filters.";
+  const named =
+    flags.length === 1
+      ? flags[0]
+      : `${flags.slice(0, -1).join(", ")} and ${flags[flags.length - 1]}`;
+  return `(no results) No deliveries match ${named}. Test fires from \`primitive endpoints test\` are not logged here; real deliveries are, when an event fans out to the endpoint. Leave out ${flags.length === 1 ? flags[0] : "a filter"} to list more.`;
 }
 
 function canonicalizeCliReferences(description: string): string {

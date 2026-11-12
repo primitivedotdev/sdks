@@ -5,8 +5,9 @@ package primitive
 //
 // Primitive posts every webhook with the event name in the X-Webhook-Event
 // HEADER, not in the body. The stored payload is sent verbatim with no
-// envelope: an email.* or sent_email.* body carries "event", and an
-// interaction.* body is just
+// envelope: an email.* or sent_email.* body carries "event", an
+// email_rule_request.* or email_rule_objection.* body carries "type" but not
+// "event", and an interaction.* body is just
 // {"interaction": {...}} with no event/type field at all. The HEADER is
 // therefore the only reliable discriminator across all the families, which is
 // why the parser keys on it.
@@ -31,6 +32,18 @@ var EmailRuleRequestEventTypes = []string{
 	"email_rule_request.withdrawn",
 }
 
+// EmailRuleObjectionEventTypes are the four opt-in email_rule_objection.*
+// events (subject = an objection a member made, asking the author of a rule
+// over their own mail to turn it off). Each goes to the person who did not
+// act, and an endpoint receives them only when its rules.event_types lists
+// them.
+var EmailRuleObjectionEventTypes = []string{
+	"email_rule_objection.created",
+	"email_rule_objection.accepted",
+	"email_rule_objection.declined",
+	"email_rule_objection.withdrawn",
+}
+
 // InteractionEventTypes are the interaction step events (subject = an
 // interaction), named interaction.<protocolShort>.<suffix>.
 var InteractionEventTypes = []string{
@@ -43,12 +56,14 @@ var InteractionEventTypes = []string{
 
 // WebhookEventTypes is the full enumerated catalog of every current webhook
 // event type: the five email.*, the four opt-in sent_email.*, the four opt-in
-// email_rule_request.*, and every interaction.<protocol>.<suffix>.
+// email_rule_request.*, the four opt-in email_rule_objection.*, and every
+// interaction.<protocol>.<suffix>.
 var WebhookEventTypes = func() []string {
-	all := make([]string, 0, len(EmailEventTypes)+len(SentEmailEventTypes)+len(EmailRuleRequestEventTypes)+len(InteractionEventTypes))
+	all := make([]string, 0, len(EmailEventTypes)+len(SentEmailEventTypes)+len(EmailRuleRequestEventTypes)+len(EmailRuleObjectionEventTypes)+len(InteractionEventTypes))
 	all = append(all, EmailEventTypes...)
 	all = append(all, SentEmailEventTypes...)
 	all = append(all, EmailRuleRequestEventTypes...)
+	all = append(all, EmailRuleObjectionEventTypes...)
 	all = append(all, InteractionEventTypes...)
 	return all
 }()

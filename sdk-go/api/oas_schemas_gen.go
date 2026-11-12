@@ -116,7 +116,9 @@ type AcceptEmailRuleRequestRequest struct {
 	Explanation OptString `json:"explanation"`
 	// The compile response's assumptions. Stored as sent.
 	Assumptions []string `json:"assumptions"`
-	// The compile response's warnings. Stored as sent.
+	// The compile response's warnings. Stored as sent, then any server note they lack on an address or
+	// domain the description names that the rule does not test (on a rule request, every compiler note
+	// on the rule).
 	Warnings []string `json:"warnings"`
 	// Who produced the tree (not verified): the compile response's compiled_by, or member (the default)
 	// for a tree you wrote or edited.
@@ -12762,7 +12764,9 @@ type CreateEmailRuleRequest struct {
 	Explanation OptString `json:"explanation"`
 	// The compile response's assumptions. Stored as sent.
 	Assumptions []string `json:"assumptions"`
-	// The compile response's warnings. Stored as sent.
+	// The compile response's warnings. Stored as sent, then any server note they lack on an address or
+	// domain the description names that the rule does not test (on a rule request, every compiler note
+	// on the rule).
 	Warnings []string `json:"warnings"`
 	// Who produced the tree (not verified): the compile response's compiled_by, or member (the default)
 	// for a tree you wrote or edited.
@@ -13098,7 +13102,9 @@ type CreateEmailRuleRequestRequest struct {
 	Explanation OptString `json:"explanation"`
 	// The compile response's assumptions. Stored as sent.
 	Assumptions []string `json:"assumptions"`
-	// The compile response's warnings. Stored as sent.
+	// The compile response's warnings. Stored as sent, then any server note they lack on an address or
+	// domain the description names that the rule does not test (on a rule request, every compiler note
+	// on the rule).
 	Warnings []string `json:"warnings"`
 	// Who produced the tree (not verified): the compile response's compiled_by, or member (the default)
 	// for a tree you wrote or edited.
@@ -13226,12 +13232,20 @@ type CreateEmailRuleRequestResult struct {
 	Tree        EmailRuleTree                      `json:"tree"`
 	Explanation string                             `json:"explanation"`
 	Assumptions []string                           `json:"assumptions"`
-	// As the member who asked sent them, normally from their compile. The compiler's note that the rule
-	// matches nearly everything, in its own wording, counted that member's recent mail: anyone else
-	// reads it naming them.
-	Warnings   []string `json:"warnings"`
-	CompiledBy string   `json:"compiled_by"`
-	Vocabulary string   `json:"vocabulary"`
+	// As the member who asked sent them, normally from their compile, then every compiler note on the
+	// rule's tree and words they lack. The compiler's note that the rule matches nearly everything, in
+	// its own wording, counted that member's recent mail: anyone else reads it naming them.
+	Warnings []string `json:"warnings"`
+	// What the rule as asked actually does: Primitive's own reading of the request's tree, never the
+	// words of the member who asked or of a model. Null when the tree no longer reads as one.
+	ServerExplanation OptNilString `json:"server_explanation"`
+	// Primitive's own notes on the rule as asked, worked out from its tree and description each time the
+	// request is read, and to the member asked while pending, how to test it on look-alikes. Unlike
+	// warnings, never written by the member who asked, though a note can quote their words or tree
+	// values.
+	ServerNotes []string `json:"server_notes"`
+	CompiledBy  string   `json:"compiled_by"`
+	Vocabulary  string   `json:"vocabulary"`
 	// Session: the proposer's own session; oauth: an OAuth or CLI token acting for them.
 	ProposedVia     CreateEmailRuleRequestResultProposedVia `json:"proposed_via"`
 	CreatedAt       time.Time                               `json:"created_at"`
@@ -13252,8 +13266,9 @@ type CreateEmailRuleRequestResult struct {
 	// Once accepted: whether the rule was changed first, as on the share. Null until then, or when
 	// unreadable.
 	EditedOnAccept OptNilBool `json:"edited_on_accept"`
-	// For the member asked, while pending: what accepting would share. For the member who asked, once
-	// accepted with changes: that the request is not what is shared. Else null.
+	// For the member asked, while pending: what the rule actually does (server_explanation), Primitive's
+	// warnings, then what accepting would share. For the member who asked, once accepted with changes:
+	// that the request is not what is shared. Else null.
 	Notice OptNilString `json:"notice"`
 	// Whether the member asked can accept it now under their role. Null unless you can list members and
 	// their roles (members:read), or when it could not be read.
@@ -13301,6 +13316,16 @@ func (s *CreateEmailRuleRequestResult) GetAssumptions() []string {
 // GetWarnings returns the value of Warnings.
 func (s *CreateEmailRuleRequestResult) GetWarnings() []string {
 	return s.Warnings
+}
+
+// GetServerExplanation returns the value of ServerExplanation.
+func (s *CreateEmailRuleRequestResult) GetServerExplanation() OptNilString {
+	return s.ServerExplanation
+}
+
+// GetServerNotes returns the value of ServerNotes.
+func (s *CreateEmailRuleRequestResult) GetServerNotes() []string {
+	return s.ServerNotes
 }
 
 // GetCompiledBy returns the value of CompiledBy.
@@ -13431,6 +13456,16 @@ func (s *CreateEmailRuleRequestResult) SetAssumptions(val []string) {
 // SetWarnings sets the value of Warnings.
 func (s *CreateEmailRuleRequestResult) SetWarnings(val []string) {
 	s.Warnings = val
+}
+
+// SetServerExplanation sets the value of ServerExplanation.
+func (s *CreateEmailRuleRequestResult) SetServerExplanation(val OptNilString) {
+	s.ServerExplanation = val
+}
+
+// SetServerNotes sets the value of ServerNotes.
+func (s *CreateEmailRuleRequestResult) SetServerNotes(val []string) {
+	s.ServerNotes = val
 }
 
 // SetCompiledBy sets the value of CompiledBy.
@@ -32652,7 +32687,9 @@ type EmailRuleCoveringMe struct {
 	IsAuthor       bool              `json:"is_author"`
 	Covers         EmailRuleCoverage `json:"covers"`
 	CurrentVersion NilInt            `json:"current_version"`
-	CreatedAt      time.Time         `json:"created_at"`
+	// Null when it could not be read in time; try again.
+	Receivers NilEmailRuleReceivers `json:"receivers"`
+	CreatedAt time.Time             `json:"created_at"`
 }
 
 // GetID returns the value of ID.
@@ -32693,6 +32730,11 @@ func (s *EmailRuleCoveringMe) GetCovers() EmailRuleCoverage {
 // GetCurrentVersion returns the value of CurrentVersion.
 func (s *EmailRuleCoveringMe) GetCurrentVersion() NilInt {
 	return s.CurrentVersion
+}
+
+// GetReceivers returns the value of Receivers.
+func (s *EmailRuleCoveringMe) GetReceivers() NilEmailRuleReceivers {
+	return s.Receivers
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -32738,6 +32780,11 @@ func (s *EmailRuleCoveringMe) SetCovers(val EmailRuleCoverage) {
 // SetCurrentVersion sets the value of CurrentVersion.
 func (s *EmailRuleCoveringMe) SetCurrentVersion(val NilInt) {
 	s.CurrentVersion = val
+}
+
+// SetReceivers sets the value of Receivers.
+func (s *EmailRuleCoveringMe) SetReceivers(val NilEmailRuleReceivers) {
+	s.Receivers = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
@@ -32804,8 +32851,11 @@ type EmailRuleCoveringMeRead struct {
 	// Null when it no longer covers your mailboxes and you see it because it decided on your mail.
 	Covers NilEmailRuleCoverage `json:"covers"`
 	// Null when covers_now is false.
-	CurrentVersion NilInt    `json:"current_version"`
-	CreatedAt      time.Time `json:"created_at"`
+	CurrentVersion NilInt `json:"current_version"`
+	// Null when covers_now is false (who receives it now is not about your mail), or when it could not
+	// be read in time.
+	Receivers NilEmailRuleReceivers `json:"receivers"`
+	CreatedAt time.Time             `json:"created_at"`
 	// Whether it covers one of your own mailboxes now. False for a rule you see only because it decided
 	// on mail at your own mailbox before.
 	CoversNow bool `json:"covers_now"`
@@ -32854,6 +32904,11 @@ func (s *EmailRuleCoveringMeRead) GetCovers() NilEmailRuleCoverage {
 // GetCurrentVersion returns the value of CurrentVersion.
 func (s *EmailRuleCoveringMeRead) GetCurrentVersion() NilInt {
 	return s.CurrentVersion
+}
+
+// GetReceivers returns the value of Receivers.
+func (s *EmailRuleCoveringMeRead) GetReceivers() NilEmailRuleReceivers {
+	return s.Receivers
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -32914,6 +32969,11 @@ func (s *EmailRuleCoveringMeRead) SetCovers(val NilEmailRuleCoverage) {
 // SetCurrentVersion sets the value of CurrentVersion.
 func (s *EmailRuleCoveringMeRead) SetCurrentVersion(val NilInt) {
 	s.CurrentVersion = val
+}
+
+// SetReceivers sets the value of Receivers.
+func (s *EmailRuleCoveringMeRead) SetReceivers(val NilEmailRuleReceivers) {
+	s.Receivers = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
@@ -34713,6 +34773,357 @@ func (s *EmailRuleReadState) UnmarshalText(data []byte) error {
 	}
 }
 
+// Who receives what the rule shares now, by person and count; empty unless it is an active grant
+// rule.
+// Ref: #/components/schemas/EmailRuleReceivers
+type EmailRuleReceivers struct {
+	// API keys that work now (not revoked, expired or suspended) whose access lists the rule, or its
+	// live share: they read what it matches. Owner: the member who holds each, or the organization.
+	Keys []EmailRuleReceiversKeysItem `json:"keys"`
+	// Webhooks that are sent what it matches: those whose key, as delivery acts as it, lists the rule or
+	// its live share (owner: the member who holds that key, or the organization), and the webhooks of
+	// the member the rule is shared with (owner: that member).
+	Webhooks []EmailRuleReceiversWebhooksItem `json:"webhooks"`
+	// The rule's live share, if it has one (a rule is shared at most once): the member it gives what it
+	// matches to.
+	Shares []EmailRuleReceiversSharesItem `json:"shares"`
+}
+
+// GetKeys returns the value of Keys.
+func (s *EmailRuleReceivers) GetKeys() []EmailRuleReceiversKeysItem {
+	return s.Keys
+}
+
+// GetWebhooks returns the value of Webhooks.
+func (s *EmailRuleReceivers) GetWebhooks() []EmailRuleReceiversWebhooksItem {
+	return s.Webhooks
+}
+
+// GetShares returns the value of Shares.
+func (s *EmailRuleReceivers) GetShares() []EmailRuleReceiversSharesItem {
+	return s.Shares
+}
+
+// SetKeys sets the value of Keys.
+func (s *EmailRuleReceivers) SetKeys(val []EmailRuleReceiversKeysItem) {
+	s.Keys = val
+}
+
+// SetWebhooks sets the value of Webhooks.
+func (s *EmailRuleReceivers) SetWebhooks(val []EmailRuleReceiversWebhooksItem) {
+	s.Webhooks = val
+}
+
+// SetShares sets the value of Shares.
+func (s *EmailRuleReceivers) SetShares(val []EmailRuleReceiversSharesItem) {
+	s.Shares = val
+}
+
+type EmailRuleReceiversKeysItem struct {
+	Owner EmailRuleReceiversKeysItemOwner `json:"owner"`
+	Count int                             `json:"count"`
+}
+
+// GetOwner returns the value of Owner.
+func (s *EmailRuleReceiversKeysItem) GetOwner() EmailRuleReceiversKeysItemOwner {
+	return s.Owner
+}
+
+// GetCount returns the value of Count.
+func (s *EmailRuleReceiversKeysItem) GetCount() int {
+	return s.Count
+}
+
+// SetOwner sets the value of Owner.
+func (s *EmailRuleReceiversKeysItem) SetOwner(val EmailRuleReceiversKeysItemOwner) {
+	s.Owner = val
+}
+
+// SetCount sets the value of Count.
+func (s *EmailRuleReceiversKeysItem) SetCount(val int) {
+	s.Count = val
+}
+
+type EmailRuleReceiversKeysItemOwner struct {
+	Kind EmailRuleReceiversKeysItemOwnerKind `json:"kind"`
+	// The member's user id.
+	UserID OptUUID `json:"user_id"`
+	// Their name; null when they have none set.
+	Name OptNilString `json:"name"`
+}
+
+// GetKind returns the value of Kind.
+func (s *EmailRuleReceiversKeysItemOwner) GetKind() EmailRuleReceiversKeysItemOwnerKind {
+	return s.Kind
+}
+
+// GetUserID returns the value of UserID.
+func (s *EmailRuleReceiversKeysItemOwner) GetUserID() OptUUID {
+	return s.UserID
+}
+
+// GetName returns the value of Name.
+func (s *EmailRuleReceiversKeysItemOwner) GetName() OptNilString {
+	return s.Name
+}
+
+// SetKind sets the value of Kind.
+func (s *EmailRuleReceiversKeysItemOwner) SetKind(val EmailRuleReceiversKeysItemOwnerKind) {
+	s.Kind = val
+}
+
+// SetUserID sets the value of UserID.
+func (s *EmailRuleReceiversKeysItemOwner) SetUserID(val OptUUID) {
+	s.UserID = val
+}
+
+// SetName sets the value of Name.
+func (s *EmailRuleReceiversKeysItemOwner) SetName(val OptNilString) {
+	s.Name = val
+}
+
+type EmailRuleReceiversKeysItemOwnerKind string
+
+const (
+	EmailRuleReceiversKeysItemOwnerKindMember       EmailRuleReceiversKeysItemOwnerKind = "member"
+	EmailRuleReceiversKeysItemOwnerKindOrganization EmailRuleReceiversKeysItemOwnerKind = "organization"
+)
+
+// AllValues returns all EmailRuleReceiversKeysItemOwnerKind values.
+func (EmailRuleReceiversKeysItemOwnerKind) AllValues() []EmailRuleReceiversKeysItemOwnerKind {
+	return []EmailRuleReceiversKeysItemOwnerKind{
+		EmailRuleReceiversKeysItemOwnerKindMember,
+		EmailRuleReceiversKeysItemOwnerKindOrganization,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailRuleReceiversKeysItemOwnerKind) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailRuleReceiversKeysItemOwnerKindMember:
+		return []byte(s), nil
+	case EmailRuleReceiversKeysItemOwnerKindOrganization:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailRuleReceiversKeysItemOwnerKind) UnmarshalText(data []byte) error {
+	switch EmailRuleReceiversKeysItemOwnerKind(data) {
+	case EmailRuleReceiversKeysItemOwnerKindMember:
+		*s = EmailRuleReceiversKeysItemOwnerKindMember
+		return nil
+	case EmailRuleReceiversKeysItemOwnerKindOrganization:
+		*s = EmailRuleReceiversKeysItemOwnerKindOrganization
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type EmailRuleReceiversSharesItem struct {
+	Beneficiary EmailRuleReceiversSharesItemBeneficiary `json:"beneficiary"`
+	Count       int                                     `json:"count"`
+}
+
+// GetBeneficiary returns the value of Beneficiary.
+func (s *EmailRuleReceiversSharesItem) GetBeneficiary() EmailRuleReceiversSharesItemBeneficiary {
+	return s.Beneficiary
+}
+
+// GetCount returns the value of Count.
+func (s *EmailRuleReceiversSharesItem) GetCount() int {
+	return s.Count
+}
+
+// SetBeneficiary sets the value of Beneficiary.
+func (s *EmailRuleReceiversSharesItem) SetBeneficiary(val EmailRuleReceiversSharesItemBeneficiary) {
+	s.Beneficiary = val
+}
+
+// SetCount sets the value of Count.
+func (s *EmailRuleReceiversSharesItem) SetCount(val int) {
+	s.Count = val
+}
+
+type EmailRuleReceiversSharesItemBeneficiary struct {
+	Kind EmailRuleReceiversSharesItemBeneficiaryKind `json:"kind"`
+	// The member's user id.
+	UserID uuid.UUID `json:"user_id"`
+	// Their name; null when they have none set.
+	Name NilString `json:"name"`
+}
+
+// GetKind returns the value of Kind.
+func (s *EmailRuleReceiversSharesItemBeneficiary) GetKind() EmailRuleReceiversSharesItemBeneficiaryKind {
+	return s.Kind
+}
+
+// GetUserID returns the value of UserID.
+func (s *EmailRuleReceiversSharesItemBeneficiary) GetUserID() uuid.UUID {
+	return s.UserID
+}
+
+// GetName returns the value of Name.
+func (s *EmailRuleReceiversSharesItemBeneficiary) GetName() NilString {
+	return s.Name
+}
+
+// SetKind sets the value of Kind.
+func (s *EmailRuleReceiversSharesItemBeneficiary) SetKind(val EmailRuleReceiversSharesItemBeneficiaryKind) {
+	s.Kind = val
+}
+
+// SetUserID sets the value of UserID.
+func (s *EmailRuleReceiversSharesItemBeneficiary) SetUserID(val uuid.UUID) {
+	s.UserID = val
+}
+
+// SetName sets the value of Name.
+func (s *EmailRuleReceiversSharesItemBeneficiary) SetName(val NilString) {
+	s.Name = val
+}
+
+type EmailRuleReceiversSharesItemBeneficiaryKind string
+
+const (
+	EmailRuleReceiversSharesItemBeneficiaryKindMember EmailRuleReceiversSharesItemBeneficiaryKind = "member"
+)
+
+// AllValues returns all EmailRuleReceiversSharesItemBeneficiaryKind values.
+func (EmailRuleReceiversSharesItemBeneficiaryKind) AllValues() []EmailRuleReceiversSharesItemBeneficiaryKind {
+	return []EmailRuleReceiversSharesItemBeneficiaryKind{
+		EmailRuleReceiversSharesItemBeneficiaryKindMember,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailRuleReceiversSharesItemBeneficiaryKind) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailRuleReceiversSharesItemBeneficiaryKindMember:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailRuleReceiversSharesItemBeneficiaryKind) UnmarshalText(data []byte) error {
+	switch EmailRuleReceiversSharesItemBeneficiaryKind(data) {
+	case EmailRuleReceiversSharesItemBeneficiaryKindMember:
+		*s = EmailRuleReceiversSharesItemBeneficiaryKindMember
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type EmailRuleReceiversWebhooksItem struct {
+	Owner EmailRuleReceiversWebhooksItemOwner `json:"owner"`
+	Count int                                 `json:"count"`
+}
+
+// GetOwner returns the value of Owner.
+func (s *EmailRuleReceiversWebhooksItem) GetOwner() EmailRuleReceiversWebhooksItemOwner {
+	return s.Owner
+}
+
+// GetCount returns the value of Count.
+func (s *EmailRuleReceiversWebhooksItem) GetCount() int {
+	return s.Count
+}
+
+// SetOwner sets the value of Owner.
+func (s *EmailRuleReceiversWebhooksItem) SetOwner(val EmailRuleReceiversWebhooksItemOwner) {
+	s.Owner = val
+}
+
+// SetCount sets the value of Count.
+func (s *EmailRuleReceiversWebhooksItem) SetCount(val int) {
+	s.Count = val
+}
+
+type EmailRuleReceiversWebhooksItemOwner struct {
+	Kind EmailRuleReceiversWebhooksItemOwnerKind `json:"kind"`
+	// The member's user id.
+	UserID OptUUID `json:"user_id"`
+	// Their name; null when they have none set.
+	Name OptNilString `json:"name"`
+}
+
+// GetKind returns the value of Kind.
+func (s *EmailRuleReceiversWebhooksItemOwner) GetKind() EmailRuleReceiversWebhooksItemOwnerKind {
+	return s.Kind
+}
+
+// GetUserID returns the value of UserID.
+func (s *EmailRuleReceiversWebhooksItemOwner) GetUserID() OptUUID {
+	return s.UserID
+}
+
+// GetName returns the value of Name.
+func (s *EmailRuleReceiversWebhooksItemOwner) GetName() OptNilString {
+	return s.Name
+}
+
+// SetKind sets the value of Kind.
+func (s *EmailRuleReceiversWebhooksItemOwner) SetKind(val EmailRuleReceiversWebhooksItemOwnerKind) {
+	s.Kind = val
+}
+
+// SetUserID sets the value of UserID.
+func (s *EmailRuleReceiversWebhooksItemOwner) SetUserID(val OptUUID) {
+	s.UserID = val
+}
+
+// SetName sets the value of Name.
+func (s *EmailRuleReceiversWebhooksItemOwner) SetName(val OptNilString) {
+	s.Name = val
+}
+
+type EmailRuleReceiversWebhooksItemOwnerKind string
+
+const (
+	EmailRuleReceiversWebhooksItemOwnerKindMember       EmailRuleReceiversWebhooksItemOwnerKind = "member"
+	EmailRuleReceiversWebhooksItemOwnerKindOrganization EmailRuleReceiversWebhooksItemOwnerKind = "organization"
+)
+
+// AllValues returns all EmailRuleReceiversWebhooksItemOwnerKind values.
+func (EmailRuleReceiversWebhooksItemOwnerKind) AllValues() []EmailRuleReceiversWebhooksItemOwnerKind {
+	return []EmailRuleReceiversWebhooksItemOwnerKind{
+		EmailRuleReceiversWebhooksItemOwnerKindMember,
+		EmailRuleReceiversWebhooksItemOwnerKindOrganization,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailRuleReceiversWebhooksItemOwnerKind) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailRuleReceiversWebhooksItemOwnerKindMember:
+		return []byte(s), nil
+	case EmailRuleReceiversWebhooksItemOwnerKindOrganization:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailRuleReceiversWebhooksItemOwnerKind) UnmarshalText(data []byte) error {
+	switch EmailRuleReceiversWebhooksItemOwnerKind(data) {
+	case EmailRuleReceiversWebhooksItemOwnerKindMember:
+		*s = EmailRuleReceiversWebhooksItemOwnerKindMember
+		return nil
+	case EmailRuleReceiversWebhooksItemOwnerKindOrganization:
+		*s = EmailRuleReceiversWebhooksItemOwnerKindOrganization
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Ref: #/components/schemas/EmailRuleRequest
 type EmailRuleRequest struct {
 	ID          uuid.UUID              `json:"id"`
@@ -34722,12 +35133,20 @@ type EmailRuleRequest struct {
 	Tree        EmailRuleTree          `json:"tree"`
 	Explanation string                 `json:"explanation"`
 	Assumptions []string               `json:"assumptions"`
-	// As the member who asked sent them, normally from their compile. The compiler's note that the rule
-	// matches nearly everything, in its own wording, counted that member's recent mail: anyone else
-	// reads it naming them.
-	Warnings   []string `json:"warnings"`
-	CompiledBy string   `json:"compiled_by"`
-	Vocabulary string   `json:"vocabulary"`
+	// As the member who asked sent them, normally from their compile, then every compiler note on the
+	// rule's tree and words they lack. The compiler's note that the rule matches nearly everything, in
+	// its own wording, counted that member's recent mail: anyone else reads it naming them.
+	Warnings []string `json:"warnings"`
+	// What the rule as asked actually does: Primitive's own reading of the request's tree, never the
+	// words of the member who asked or of a model. Null when the tree no longer reads as one.
+	ServerExplanation OptNilString `json:"server_explanation"`
+	// Primitive's own notes on the rule as asked, worked out from its tree and description each time the
+	// request is read, and to the member asked while pending, how to test it on look-alikes. Unlike
+	// warnings, never written by the member who asked, though a note can quote their words or tree
+	// values.
+	ServerNotes []string `json:"server_notes"`
+	CompiledBy  string   `json:"compiled_by"`
+	Vocabulary  string   `json:"vocabulary"`
 	// Session: the proposer's own session; oauth: an OAuth or CLI token acting for them.
 	ProposedVia     EmailRuleRequestProposedVia `json:"proposed_via"`
 	CreatedAt       time.Time                   `json:"created_at"`
@@ -34748,8 +35167,9 @@ type EmailRuleRequest struct {
 	// Once accepted: whether the rule was changed first, as on the share. Null until then, or when
 	// unreadable.
 	EditedOnAccept OptNilBool `json:"edited_on_accept"`
-	// For the member asked, while pending: what accepting would share. For the member who asked, once
-	// accepted with changes: that the request is not what is shared. Else null.
+	// For the member asked, while pending: what the rule actually does (server_explanation), Primitive's
+	// warnings, then what accepting would share. For the member who asked, once accepted with changes:
+	// that the request is not what is shared. Else null.
 	Notice OptNilString `json:"notice"`
 }
 
@@ -34791,6 +35211,16 @@ func (s *EmailRuleRequest) GetAssumptions() []string {
 // GetWarnings returns the value of Warnings.
 func (s *EmailRuleRequest) GetWarnings() []string {
 	return s.Warnings
+}
+
+// GetServerExplanation returns the value of ServerExplanation.
+func (s *EmailRuleRequest) GetServerExplanation() OptNilString {
+	return s.ServerExplanation
+}
+
+// GetServerNotes returns the value of ServerNotes.
+func (s *EmailRuleRequest) GetServerNotes() []string {
+	return s.ServerNotes
 }
 
 // GetCompiledBy returns the value of CompiledBy.
@@ -34911,6 +35341,16 @@ func (s *EmailRuleRequest) SetAssumptions(val []string) {
 // SetWarnings sets the value of Warnings.
 func (s *EmailRuleRequest) SetWarnings(val []string) {
 	s.Warnings = val
+}
+
+// SetServerExplanation sets the value of ServerExplanation.
+func (s *EmailRuleRequest) SetServerExplanation(val OptNilString) {
+	s.ServerExplanation = val
+}
+
+// SetServerNotes sets the value of ServerNotes.
+func (s *EmailRuleRequest) SetServerNotes(val []string) {
+	s.ServerNotes = val
 }
 
 // SetCompiledBy sets the value of CompiledBy.
@@ -59380,13 +59820,17 @@ func (s *ListActivityObjectsOK) SetData(val ListActivityObjectsResult) {
 func (*ListActivityObjectsOK) listActivityObjectsRes() {}
 
 // Created (the default): what you created. asked: what other members asked of you, open or answered:
-// rule requests made to you, and objections to rules you wrote. asked is for a person's own view
-// only, and kind may then name only email_rule_request and email_rule_objection.
+// rule requests made to you, and objections to rules you wrote; kind may then name only
+// email_rule_request and email_rule_objection. concerning: what other members did that concerns your
+// own mail: a rule that started covering one of your mailboxes, or saved a new version while
+// covering it (email_rule_coverage, the only kind it takes). asked and concerning are for a person's
+// own view only.
 type ListActivityObjectsRelation string
 
 const (
-	ListActivityObjectsRelationCreated ListActivityObjectsRelation = "created"
-	ListActivityObjectsRelationAsked   ListActivityObjectsRelation = "asked"
+	ListActivityObjectsRelationCreated    ListActivityObjectsRelation = "created"
+	ListActivityObjectsRelationAsked      ListActivityObjectsRelation = "asked"
+	ListActivityObjectsRelationConcerning ListActivityObjectsRelation = "concerning"
 )
 
 // AllValues returns all ListActivityObjectsRelation values.
@@ -59394,6 +59838,7 @@ func (ListActivityObjectsRelation) AllValues() []ListActivityObjectsRelation {
 	return []ListActivityObjectsRelation{
 		ListActivityObjectsRelationCreated,
 		ListActivityObjectsRelationAsked,
+		ListActivityObjectsRelationConcerning,
 	}
 }
 
@@ -59403,6 +59848,8 @@ func (s ListActivityObjectsRelation) MarshalText() ([]byte, error) {
 	case ListActivityObjectsRelationCreated:
 		return []byte(s), nil
 	case ListActivityObjectsRelationAsked:
+		return []byte(s), nil
+	case ListActivityObjectsRelationConcerning:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -59417,6 +59864,9 @@ func (s *ListActivityObjectsRelation) UnmarshalText(data []byte) error {
 		return nil
 	case ListActivityObjectsRelationAsked:
 		*s = ListActivityObjectsRelationAsked
+		return nil
+	case ListActivityObjectsRelationConcerning:
+		*s = ListActivityObjectsRelationConcerning
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -59482,26 +59932,29 @@ func (s *ListActivityObjectsResult) SetNextCursor(val NilString) {
 type ListActivityObjectsResultItemsItem struct {
 	// One of: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule,
 	// wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule,
-	// email_rule_request, email_rule_objection.
+	// email_rule_request, email_rule_objection, email_rule_coverage.
 	Kind string `json:"kind"`
 	ID   string `json:"id"`
 	// The name the object is known by: an endpoint's display name, a route's or filter's pattern, a
 	// Function's name, a send's From address, a wake schedule's command and the address it wakes, an API
-	// key's name, an agent's address, a rule's or rule request's name, and for an objection the name its
-	// rule had when the objection was made. Never a webhook URL and never mail content.
+	// key's name, an agent's address, a rule's or rule request's name, and for an objection or a
+	// coverage notice the name its rule had then. Never a webhook URL and never mail content.
 	Name NilString `json:"name"`
 	// Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or
 	// disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or
 	// ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API
 	// keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules),
-	// pending, accepted, declined or withdrawn (rule requests and objections).
+	// pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice
+	// what it told: started (a rule began covering your mailbox), new_version, or baseline (it already
+	// covered you when notices began).
 	State     string    `json:"state"`
 	CreatedAt time.Time `json:"created_at"`
 	// When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped,
 	// or when a rule request or objection was decided (accepted, declined or withdrawn); null otherwise.
 	EndedAt NilDateTime `json:"ended_at"`
 	// You: it is still yours: never transferred, or transferred back to you. someone_else: it was
-	// transferred and another person holds it now, or, with relation=asked, another member made it.
+	// transferred and another person holds it now, or, with relation=asked or concerning, another member
+	// made it.
 	OwnedNow       ListActivityObjectsResultItemsItemOwnedNow       `json:"owned_now"`
 	CreatedThrough ListActivityObjectsResultItemsItemCreatedThrough `json:"created_through"`
 }
@@ -59589,16 +60042,18 @@ func (s *ListActivityObjectsResultItemsItem) SetCreatedThrough(val ListActivityO
 type ListActivityObjectsResultItemsItemCreatedThrough struct {
 	// The kind of credential it was created through: org_key, function_key, connected_key, oauth,
 	// agent_delegate or member (the person themselves). With relation=asked, member: the member who
-	// asked or objected.
+	// asked or objected; with relation=concerning, member: the rule's author.
 	Kind string `json:"kind"`
 	// In a person's view, the person's own user id for member, and an API key's id where they may read
 	// their keys (for a person limited to their own keys, only a key they still hold). Null otherwise,
 	// and always null in one credential's view, where it is the calling credential itself. With
-	// relation=asked, the user id of the member who asked or objected.
+	// relation=asked, the user id of the member who asked or objected; with relation=concerning, of the
+	// rule's author.
 	ID NilString `json:"id"`
 	// In a person's view, what that credential of theirs is called: an app login by its app, an API key
 	// by its name, an agent's key by its address. Null otherwise, and for the person themselves. With
-	// relation=asked, the name of the member who asked or objected.
+	// relation=asked, the name of the member who asked or objected; with relation=concerning, of the
+	// rule's author.
 	Name NilString `json:"name"`
 }
 
@@ -59633,7 +60088,8 @@ func (s *ListActivityObjectsResultItemsItemCreatedThrough) SetName(val NilString
 }
 
 // You: it is still yours: never transferred, or transferred back to you. someone_else: it was
-// transferred and another person holds it now, or, with relation=asked, another member made it.
+// transferred and another person holds it now, or, with relation=asked or concerning, another member
+// made it.
 type ListActivityObjectsResultItemsItemOwnedNow string
 
 const (
@@ -64038,6 +64494,8 @@ type ListEmailRuleResultsResultRulesItem struct {
 	ReadOnly OptBool `json:"read_only"`
 	// With read_only: who wrote it.
 	Author OptEmailRuleCoveringAuthor `json:"author"`
+	// With read_only: who receives what it shares; null unless it covers you now.
+	Receivers OptNilEmailRuleReceivers `json:"receivers"`
 }
 
 // GetID returns the value of ID.
@@ -64085,6 +64543,11 @@ func (s *ListEmailRuleResultsResultRulesItem) GetAuthor() OptEmailRuleCoveringAu
 	return s.Author
 }
 
+// GetReceivers returns the value of Receivers.
+func (s *ListEmailRuleResultsResultRulesItem) GetReceivers() OptNilEmailRuleReceivers {
+	return s.Receivers
+}
+
 // SetID sets the value of ID.
 func (s *ListEmailRuleResultsResultRulesItem) SetID(val uuid.UUID) {
 	s.ID = val
@@ -64128,6 +64591,11 @@ func (s *ListEmailRuleResultsResultRulesItem) SetReadOnly(val OptBool) {
 // SetAuthor sets the value of Author.
 func (s *ListEmailRuleResultsResultRulesItem) SetAuthor(val OptEmailRuleCoveringAuthor) {
 	s.Author = val
+}
+
+// SetReceivers sets the value of Receivers.
+func (s *ListEmailRuleResultsResultRulesItem) SetReceivers(val OptNilEmailRuleReceivers) {
+	s.Receivers = val
 }
 
 // What the rule most recently decided about this email; null when it has not run on it.
@@ -75717,6 +76185,51 @@ func (o NilEmailRuleCoveringMeVersion) Get() (v EmailRuleCoveringMeVersion, ok b
 
 // Or returns value if set, or given parameter if does not.
 func (o NilEmailRuleCoveringMeVersion) Or(d EmailRuleCoveringMeVersion) EmailRuleCoveringMeVersion {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilEmailRuleReceivers returns new NilEmailRuleReceivers with value set to v.
+func NewNilEmailRuleReceivers(v EmailRuleReceivers) NilEmailRuleReceivers {
+	return NilEmailRuleReceivers{
+		Value: v,
+	}
+}
+
+// NilEmailRuleReceivers is nullable EmailRuleReceivers.
+type NilEmailRuleReceivers struct {
+	Value EmailRuleReceivers
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilEmailRuleReceivers) SetTo(v EmailRuleReceivers) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilEmailRuleReceivers) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilEmailRuleReceivers) SetToNull() {
+	o.Null = true
+	var v EmailRuleReceivers
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilEmailRuleReceivers) Get() (v EmailRuleReceivers, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilEmailRuleReceivers) Or(d EmailRuleReceivers) EmailRuleReceivers {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -90249,6 +90762,69 @@ func (o OptNilEmailRuleExpectationSampleInputArray) Get() (v []EmailRuleExpectat
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilEmailRuleExpectationSampleInputArray) Or(d []EmailRuleExpectationSampleInput) []EmailRuleExpectationSampleInput {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilEmailRuleReceivers returns new OptNilEmailRuleReceivers with value set to v.
+func NewOptNilEmailRuleReceivers(v EmailRuleReceivers) OptNilEmailRuleReceivers {
+	return OptNilEmailRuleReceivers{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailRuleReceivers is optional nullable EmailRuleReceivers.
+type OptNilEmailRuleReceivers struct {
+	Value EmailRuleReceivers
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailRuleReceivers was set.
+func (o OptNilEmailRuleReceivers) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailRuleReceivers) Reset() {
+	var v EmailRuleReceivers
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailRuleReceivers) SetTo(v EmailRuleReceivers) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailRuleReceivers) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailRuleReceivers) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailRuleReceivers
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailRuleReceivers) Get() (v EmailRuleReceivers, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailRuleReceivers) Or(d EmailRuleReceivers) EmailRuleReceivers {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -130105,8 +130681,9 @@ func (s *TestInvocationResult) SetTraceURL(val string) {
 type TestResult struct {
 	// HTTP status code returned by the endpoint.
 	Status int `json:"status"`
-	// Response body (truncated to 1000 characters).
-	Body string `json:"body"`
+	// The receiver response text, only with organization-wide mail.raw:read. Null without that access
+	// because a receiver can echo a raw download link.
+	Body NilString `json:"body"`
 	// The signature header value sent, answered to a caller who may see it: for a webhook signed with
 	// the organization's secret, a caller who may read that secret; for one signed with its own, the
 	// person who owns it, calling as themselves.
@@ -130125,7 +130702,7 @@ func (s *TestResult) GetStatus() int {
 }
 
 // GetBody returns the value of Body.
-func (s *TestResult) GetBody() string {
+func (s *TestResult) GetBody() NilString {
 	return s.Body
 }
 
@@ -130150,7 +130727,7 @@ func (s *TestResult) SetStatus(val int) {
 }
 
 // SetBody sets the value of Body.
-func (s *TestResult) SetBody(val string) {
+func (s *TestResult) SetBody(val NilString) {
 	s.Body = val
 }
 
@@ -132489,7 +133066,9 @@ type UpdateEmailRuleRequest struct {
 	Explanation OptString `json:"explanation"`
 	// The compile response's assumptions. Stored as sent.
 	Assumptions []string `json:"assumptions"`
-	// The compile response's warnings. Stored as sent.
+	// The compile response's warnings. Stored as sent, then any server note they lack on an address or
+	// domain the description names that the rule does not test (on a rule request, every compiler note
+	// on the rule).
 	Warnings []string `json:"warnings"`
 	// Who produced the tree (not verified): the compile response's compiled_by, or member (the default)
 	// for a tree you wrote or edited.

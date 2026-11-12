@@ -26,7 +26,8 @@ class TestResult:
     """ 
         Attributes:
             status (int): HTTP status code returned by the endpoint
-            body (str): Response body (truncated to 1000 characters)
+            body (None | str): The receiver response text, only with organization-wide mail.raw:read. Null without that
+                access because a receiver can echo a raw download link.
             reachable (bool): Whether the endpoint answered the test with a 2xx status: the request reached it and its
                 handler accepted it. It says nothing about whether real mail is sent to it: see delivery.
             delivery (None | TestResultDeliveryType0): Whether real email.received events would be sent to this endpoint,
@@ -37,7 +38,7 @@ class TestResult:
      """
 
     status: int
-    body: str
+    body: None | str
     reachable: bool
     delivery: None | TestResultDeliveryType0
     signature: str | Unset = UNSET
@@ -51,6 +52,7 @@ class TestResult:
         from ..models.test_result_delivery_type_0 import TestResultDeliveryType0 # noqa: PLC0415
         status = self.status
 
+        body: None | str
         body = self.body
 
         reachable = self.reachable
@@ -85,7 +87,13 @@ class TestResult:
         d = dict(src_dict)
         status = d.pop("status")
 
-        body = d.pop("body")
+        def _parse_body(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        body = _parse_body(d.pop("body"))
+
 
         reachable = d.pop("reachable")
 

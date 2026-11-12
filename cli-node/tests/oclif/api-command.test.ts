@@ -12,6 +12,7 @@ import {
   DASHBOARD_ONLY_NOTE,
   domainVerificationFailedHint,
   EMPTY_RESULT_HINTS,
+  emptyDeliveriesHint,
   emptyRuleListHint,
   extractErrorCode,
   extractErrorPayload,
@@ -842,6 +843,44 @@ describe("emptyRuleListHint", () => {
         box: "all",
         status: "any",
       }),
+    ).toBeUndefined();
+  });
+});
+
+describe("emptyDeliveriesHint", () => {
+  it("names the filters given and keeps the test-fire note, and says nothing without a filter", () => {
+    expect(
+      emptyDeliveriesHint("listDeliveries", {
+        endpoint_id: "0b0f6a43-3c1c-4d4e-9b1a-1f2d3c4b5a69",
+        limit: 10,
+      }),
+    ).toBe(
+      "(no results) No deliveries match --endpoint-id. Test fires from `primitive endpoints test` are not logged here; real deliveries are, when an event fans out to the endpoint. Leave out --endpoint-id to list more.",
+    );
+    expect(
+      emptyDeliveriesHint("listDeliveries", {
+        endpoint_id: "0b0f6a43-3c1c-4d4e-9b1a-1f2d3c4b5a69",
+        status: "failed",
+        event_type: "sent_email.delivered",
+      }),
+    ).toBe(
+      "(no results) No deliveries match --endpoint-id, --status and --event-type. Test fires from `primitive endpoints test` are not logged here; real deliveries are, when an event fans out to the endpoint. Leave out a filter to list more.",
+    );
+    expect(emptyDeliveriesHint("listDeliveries", { date_from: "x" })).toBe(
+      "(no results) No deliveries match --date-from. Test fires from `primitive endpoints test` are not logged here; real deliveries are, when an event fans out to the endpoint. Leave out --date-from to list more.",
+    );
+    expect(
+      emptyDeliveriesHint("listDeliveries", {
+        endpoint_id: "0b0f6a43-3c1c-4d4e-9b1a-1f2d3c4b5a69",
+        cursor: "c",
+      }),
+    ).toBe("(no results) No more deliveries match these filters.");
+    expect(emptyDeliveriesHint("listDeliveries", {})).toBeUndefined();
+    expect(
+      emptyDeliveriesHint("listDeliveries", { limit: 10, cursor: "c" }),
+    ).toBeUndefined();
+    expect(
+      emptyDeliveriesHint("listEndpoints", { endpoint_id: "x" }),
     ).toBeUndefined();
   });
 });

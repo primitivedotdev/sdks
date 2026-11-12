@@ -41,6 +41,7 @@ from .event_receiver import (
 )
 from .events import (
     EMAIL_EVENT_TYPES,
+    EMAIL_RULE_OBJECTION_EVENT_TYPES,
     EMAIL_RULE_REQUEST_EVENT_TYPES,
     INTERACTION_EVENT_TYPES,
     SENT_EMAIL_EVENT_TYPES,
@@ -274,6 +275,7 @@ __all__ = [
     "WEBHOOK_EVENT_TYPES",
     "SENT_EMAIL_EVENT_TYPES",
     "EMAIL_RULE_REQUEST_EVENT_TYPES",
+    "EMAIL_RULE_OBJECTION_EVENT_TYPES",
     "SentEmailAcceptedEvent",
     "SentEmailCompletedEvent",
     "SentEmailCompletedSummary",

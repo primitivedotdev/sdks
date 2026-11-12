@@ -14,9 +14,10 @@ import {
 // What you created, or what other members asked of you (relation=asked), read
 // from GET /activity/objects. A key, an app or an agent sees what it created
 // itself; a person signed in with `primitive login` sees what they created
-// through any credential of theirs, and the rule requests made to them and
-// the objections to rules they wrote. Ids, names and states only: never a
-// webhook URL or mail content.
+// through any credential of theirs, the rule requests made to them and the
+// objections to rules they wrote (relation=asked), and the coverage notices
+// about rules over their own mail (relation=concerning). Ids, names and states
+// only: never a webhook URL or mail content.
 
 const API_KEY_FLAG = Flags.string({
   description:
@@ -164,6 +165,41 @@ export function formatAskedRows(
   return [line(header), ...rows.map(line)].join("\n");
 }
 
+/**
+ * One line per coverage notice: what it told (started, new_version, or
+ * baseline for a rule that already covered you when notices began), when, the
+ * rule's name then, and its author. No id: a notice's id is not a rule's, and
+ * no command takes it. `complete` says the listing is the whole of it (from
+ * the first page to the last, nothing withheld), the only time an empty one
+ * means no notice has been written for you.
+ */
+export function formatConcerningRows(
+  items: readonly ActivityItem[],
+  complete = false,
+): string {
+  if (items.length === 0)
+    return complete
+      ? "No other member's rule has covered your mail since these notices began."
+      : "Nothing to show.";
+  const rows = items.map((item) => [
+    item.state,
+    minute(item.created_at),
+    item.name ?? "(unnamed)",
+    item.created_through.name ?? item.created_through.id ?? "",
+  ]);
+  const header = ["NOTICE", "WHEN (UTC)", "RULE", "AUTHOR"];
+  const widths = header.map((h, i) =>
+    Math.max(h.length, ...rows.map((row) => (row[i] ?? "").length)),
+  );
+  const line = (cells: readonly string[]) =>
+    cells
+      .map((cell, i) =>
+        i === cells.length - 1 ? cell : cell.padEnd(widths[i] ?? 0),
+      )
+      .join("  ");
+  return [line(header), ...rows.map(line)].join("\n");
+}
+
 /** What was left out, and why: no counts, only the kinds and what would show them. */
 export function formatWithheld(
   withheld: readonly WithheldKind[],
@@ -190,7 +226,7 @@ export function resumeCommand(
   bin: string,
   flags: { kind?: string; state: string; limit: number; all?: boolean },
   cursor: string,
-  subcommand: "created" | "asked" = "created",
+  subcommand: Relation = "created",
 ): string {
   return [
     `${bin} activity ${subcommand}`,
@@ -213,11 +249,13 @@ type ListFlags = {
   json?: boolean;
 };
 
-/** List one page, or every page with --all, of what the caller created or was asked. */
+type Relation = "created" | "asked" | "concerning";
+
+/** List one page, or every page with --all, of what the caller created, was asked, or what concerns their mail. */
 async function runActivityList(
   command: Command,
   flags: ListFlags,
-  relation: "created" | "asked",
+  relation: Relation,
 ): Promise<void> {
   const auth = await createAuthenticatedCliApiClient({
     apiKey: flags["api-key"],
@@ -233,7 +271,7 @@ async function runActivityList(
       listActivityObjects({
         client: auth.apiClient.client,
         query: {
-          ...(relation === "asked" ? { relation } : {}),
+          ...(relation !== "created" ? { relation } : {}),
           state: flags.state as "all" | "live" | "ended",
           limit: flags.limit,
           ...(flags.kind ? { kind: flags.kind } : {}),
@@ -270,17 +308,15 @@ async function runActivityList(
     );
     return;
   }
+  // Every state, from the first page to the last, with nothing withheld.
+  const complete =
+    flags.state === "all" && !flags.cursor && !cursor && withheld.length === 0;
   command.log(
     relation === "asked"
-      ? formatAskedRows(
-          items,
-          // Every state, from the first page to the last, with nothing withheld.
-          flags.state === "all" &&
-            !flags.cursor &&
-            !cursor &&
-            withheld.length === 0,
-        )
-      : formatActivityRows(covers, items),
+      ? formatAskedRows(items, complete)
+      : relation === "concerning"
+        ? formatConcerningRows(items, complete)
+        : formatActivityRows(covers, items),
   );
   const notShown = formatWithheld(withheld);
   if (notShown) command.log(`\n${notShown}`);
@@ -381,5 +417,43 @@ export class ActivityAskedCommand extends Command {
   async run(): Promise<void> {
     const { flags } = await this.parse(ActivityAskedCommand);
     await runActivityList(this, flags, "asked");
+  }
+}
+
+export class ActivityConcerningCommand extends Command {
+  static description =
+    `List what other members did that concerns your own mail, newest first: each time another member's rule started covering one of your mailboxes (started), or saved a new version while covering it (new_version), named as the rule was then, with its author. A rule that already covered you when these notices began is listed once as baseline.
+
+  Signed in with \`primitive login\`, you see the notices about your own mail under your current membership. A key, an app or an agent has none. The rules that cover you now, with their ids, are listed by \`primitive email-rule-oversight list-email-rules-covering-me\`; ask a rule's author to turn it off with \`primitive email-rule-oversight create-email-rule-objection --rule-id <rule-id>\`. With --json each item's id is the notice's, not the rule's.`;
+
+  static summary = "List rules that started covering your mail or changed";
+
+  static examples = [
+    "<%= config.bin %> activity concerning",
+    "<%= config.bin %> activity concerning --all --json",
+  ];
+
+  static flags = {
+    "api-key": API_KEY_FLAG,
+    "api-base-url": API_BASE_URL_FLAG,
+    limit: Flags.integer({
+      description: "Notices per page, 1 to 200.",
+      min: 1,
+      max: 200,
+      default: DEFAULT_LIMIT,
+    }),
+    cursor: Flags.string({
+      description: "Resume from a next_cursor an earlier page printed.",
+    }),
+    all: Flags.boolean({
+      description: `Follow every page (at most ${ALL_PAGES_LIMIT}).`,
+    }),
+    json: Flags.boolean({ description: "Print the answer as JSON." }),
+  };
+
+  async run(): Promise<void> {
+    const { flags } = await this.parse(ActivityConcerningCommand);
+    // A notice never ends, so the listing is never filtered by state.
+    await runActivityList(this, { ...flags, state: "all" }, "concerning");
   }
 }

@@ -64,11 +64,14 @@ export {
 // Event catalog, typed interaction events, and type guards
 export {
   EMAIL_EVENT_TYPES,
+  EMAIL_RULE_OBJECTION_EVENT_TYPES,
   EMAIL_RULE_REQUEST_EVENT_TYPES,
+  type EmailRuleObjectionEvent,
   type EmailRuleRequestEvent,
   INTERACTION_EVENT_TYPES,
   type InteractionEvent,
   isEmailReceivedEvent,
+  isEmailRuleObjectionEvent,
   isEmailRuleRequestEvent,
   isKnownWebhookEventType,
   WEBHOOK_EVENT_TYPES,

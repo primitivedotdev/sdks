@@ -5,6 +5,7 @@ import { setKnownCommands } from "./api-path-commands.js";
 import { cliOperationManifest } from "./cli-operations.js";
 import {
   ActivityAskedCommand,
+  ActivityConcerningCommand,
   ActivityCreatedCommand,
 } from "./commands/activity.js";
 import AgentCheckMailCommand from "./commands/agent-check-mail.js";
@@ -803,11 +804,13 @@ export const COMMANDS: Record<string, typeof Command> = {
   // API keys. Writes go through these commands, which handle browser approval
   // when it is required, not generated ones; see KEY_WRITE_OPERATION_IDS in
   // cli-operations.ts.
-  // What you created, and what other members asked of you (rule requests
-  // made to you, objections to rules you wrote), with where each stands now.
-  // The generated `activity:list-activity-objects` stays available for raw
-  // API parity.
+  // What you created, what other members asked of you (rule requests made to
+  // you, objections to rules you wrote), and what other members' rules did to
+  // your own mail (coverage notices), with where each stands now. The
+  // generated `activity:list-activity-objects` stays available for raw API
+  // parity.
   "activity:asked": ActivityAskedCommand,
+  "activity:concerning": ActivityConcerningCommand,
   "activity:created": ActivityCreatedCommand,
   "keys:list": KeysListCommand,
   "keys:get": KeysGetCommand,

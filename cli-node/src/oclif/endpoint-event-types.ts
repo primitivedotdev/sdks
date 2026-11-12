@@ -10,15 +10,16 @@
 //
 // The server matches the list by exact string and does not reject unknown
 // names, so a typo silently matches nothing. The CLI warns about names it
-// does not know, and expands the `sent_email.*` and `email_rule_request.*`
-// shorthands (which the server would otherwise store as literals that match
-// nothing) to the four events each.
+// does not know, and expands the `sent_email.*`, `email_rule_request.*` and
+// `email_rule_objection.*` shorthands (which the server would otherwise store
+// as literals that match nothing) to the four events each.
 //
 // PATCH replaces `rules` as a whole. So on update, unless the caller also
 // passes `rules` through `--raw-body`, the CLI reads the endpoint's current
 // rules and changes only `event_types`, keeping its sender and size rules.
 
 import {
+  EMAIL_RULE_OBJECTION_EVENT_TYPES,
   EMAIL_RULE_REQUEST_EVENT_TYPES,
   SENT_EMAIL_EVENT_TYPES,
   WEBHOOK_EVENT_TYPES,
@@ -31,7 +32,7 @@ export const EVENT_TYPES_FLAG_OPERATIONS = new Set([
 ]);
 
 export const EVENT_TYPES_FLAG_DESCRIPTION =
-  "Event types this endpoint subscribes to, comma separated or repeated (sets rules.event_types). Omitting the subscription means every event type except the opt-in sent_email.* and email_rule_request.* events, which an endpoint receives only when it lists them; sent_email.* and email_rule_request.* each expand to all four. Rule request events can be listed only when the webhook is created, signed in as yourself; such a webhook is yours and always a route target. Keep email.received in the list if the endpoint also handles inbound mail. On update, the endpoint's other rules are kept.";
+  "Event types this endpoint subscribes to, comma separated or repeated (sets rules.event_types). Omitting the subscription means every event type except the opt-in sent_email.*, email_rule_request.* and email_rule_objection.* events, which an endpoint receives only when it lists them; each of those shorthands expands to all four. Rule request and objection events can be listed only when the webhook is created, signed in as yourself; such a webhook is yours and always a route target. Keep email.received in the list if the endpoint also handles inbound mail. On update, the endpoint's other rules are kept.";
 
 export const MAX_EVENT_TYPES = 50;
 
@@ -39,6 +40,7 @@ export const MAX_EVENT_TYPES = 50;
 const WILDCARDS: Readonly<Record<string, readonly string[]>> = {
   "sent_email.*": SENT_EMAIL_EVENT_TYPES,
   "email_rule_request.*": EMAIL_RULE_REQUEST_EVENT_TYPES,
+  "email_rule_objection.*": EMAIL_RULE_OBJECTION_EVENT_TYPES,
 };
 const KNOWN_EVENT_TYPES = new Set<string>(WEBHOOK_EVENT_TYPES);
 
@@ -46,8 +48,8 @@ export class EventTypesFlagError extends Error {}
 
 /**
  * Turn the raw `--event-types` values into the list to store: split on
- * commas, trim, expand `sent_email.*` and `email_rule_request.*`, and drop duplicates while keeping the
- * order the caller gave.
+ * commas, trim, expand the shorthands in WILDCARDS, and drop duplicates while
+ * keeping the order the caller gave.
  */
 export function parseEventTypesFlag(values: readonly string[]): string[] {
   const out: string[] = [];
@@ -68,7 +70,7 @@ export function parseEventTypesFlag(values: readonly string[]): string[] {
   }
   if (out.length === 0) {
     throw new EventTypesFlagError(
-      "--event-types needs at least one event type. To receive every event type except the opt-in sent_email.* and email_rule_request.* events, omit the subscription instead.",
+      "--event-types needs at least one event type. To receive every event type except the opt-in sent_email.*, email_rule_request.* and email_rule_objection.* events, omit the subscription instead.",
     );
   }
   if (out.length > MAX_EVENT_TYPES) {

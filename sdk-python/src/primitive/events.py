@@ -2,8 +2,9 @@
 
 Primitive posts every webhook with the event name in the ``X-Webhook-Event``
 HEADER, not in the body. The stored payload is sent verbatim with no envelope:
-an ``email.*`` or ``sent_email.*`` body carries ``event``, and an
-``interaction.*`` body is just
+an ``email.*`` or ``sent_email.*`` body carries ``event``, an
+``email_rule_request.*`` or ``email_rule_objection.*`` body carries ``type``
+but not ``event``, and an ``interaction.*`` body is just
 ``{"interaction": {...}}`` with no event/type field at all. The HEADER is
 therefore the only reliable discriminator across all the families, which is
 why the parser keys on it.
@@ -41,6 +42,17 @@ EMAIL_RULE_REQUEST_EVENT_TYPES: tuple[str, ...] = (
     "email_rule_request.withdrawn",
 )
 
+#: The four opt-in ``email_rule_objection.*`` events (subject = an objection a
+#: member made, asking the author of a rule over their own mail to turn it
+#: off). Each goes to the person who did not act, and an endpoint receives them
+#: only when its ``rules.event_types`` lists them.
+EMAIL_RULE_OBJECTION_EVENT_TYPES: tuple[str, ...] = (
+    "email_rule_objection.created",
+    "email_rule_objection.accepted",
+    "email_rule_objection.declined",
+    "email_rule_objection.withdrawn",
+)
+
 #: The interaction step events (subject = an interaction), named
 #: ``interaction.<protocolShort>.<suffix>``.
 INTERACTION_EVENT_TYPES: tuple[str, ...] = (
@@ -56,6 +68,7 @@ WEBHOOK_EVENT_TYPES: tuple[str, ...] = (
     *EMAIL_EVENT_TYPES,
     *SENT_EMAIL_EVENT_TYPES,
     *EMAIL_RULE_REQUEST_EVENT_TYPES,
+    *EMAIL_RULE_OBJECTION_EVENT_TYPES,
     *INTERACTION_EVENT_TYPES,
 )
 
