@@ -27,7 +27,7 @@ pip install primitivedotdev
 The 3.0.0 preview is a prerelease, so `pip install primitivedotdev` stays on the latest stable version. To try it:
 
 ```bash
-pip install primitivedotdev==3.0.0rc7
+pip install primitivedotdev==3.0.0rc8
 ```
 
 ## Upgrading to 3.0
