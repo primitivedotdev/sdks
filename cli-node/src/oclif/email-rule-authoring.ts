@@ -31,6 +31,8 @@ import type {
 import { withCliCommands } from "./api-path-commands.js";
 import {
   ADD_SAMPLES_FILE_FLAG,
+  EXPECT_SAMPLES_FILE_FLAG,
+  expectSamples,
   LOOK_ALIKES_SAMPLES_FILE_FLAG,
   lookAlikesReport,
   PICK_FLAG,
@@ -137,7 +139,9 @@ export function checkExpectations(value: unknown, label: string): Expectations {
   for (const [key, list] of Object.entries(value)) {
     if (key !== "match" && key !== "no_match")
       throw usageError(
-        `${label} takes only "match" and "no_match"; "${key}" is not one of them.`,
+        key === "samples"
+          ? `${label} takes emails by id only; give made-up emails with ${label.startsWith("--expectations-file") ? "--expectation-samples-file" : "--expect-samples-file"}.`
+          : `${label} takes only "match" and "no_match"; "${key}" is not one of them.`,
       );
     if (!Array.isArray(list) || list.some((id) => typeof id !== "string"))
       throw usageError(`${label}: "${key}" must be a list of email ids.`);
@@ -162,26 +166,27 @@ export function checkExpectations(value: unknown, label: string): Expectations {
   return expectations;
 }
 
-/** `expect` for test-email-rule, from --expect-file or the id flags. */
+/**
+ * `expect` for test-email-rule, from --expect-file or the id flags, with the
+ * made-up emails --expect-samples-file holds in expect.samples.
+ */
 export function expectBodyFields(
   flags: Record<string, unknown>,
 ): ExtensionBodyField[] {
+  const samples = expectSamples(flags);
   const file = flags["expect-file"];
-  if (typeof file === "string") {
-    const label = `--expect-file ${file}`;
-    return [
-      {
-        flag: "--expect-file",
-        property: "expect",
-        value: checkExpectations(
-          readJsonFileFlag(file, "--expect-file"),
-          label,
-        ),
-      },
-    ];
-  }
-  const expect: Expectations = {};
+  const expect: Expectations & { samples?: unknown[] } = {};
   const given: string[] = [];
+  if (typeof file === "string") {
+    Object.assign(
+      expect,
+      checkExpectations(
+        readJsonFileFlag(file, "--expect-file"),
+        `--expect-file ${file}`,
+      ),
+    );
+    given.push("--expect-file");
+  }
   const match = flags["expect-match"];
   if (Array.isArray(match)) {
     expect.match = parseEmailIdList(match as string[], "--expect-match");
@@ -195,8 +200,12 @@ export function expectBodyFields(
     );
     given.push("--expect-no-match");
   }
-  if (given.length === 0) return [];
   assertDisjoint(expect, given.join(" and "));
+  if (samples) {
+    expect.samples = samples;
+    given.push(`--${EXPECT_SAMPLES_FILE_FLAG}`);
+  }
+  if (given.length === 0) return [];
   return [{ flag: given.join(", "), property: "expect", value: expect }];
 }
 
@@ -429,9 +438,104 @@ function expectationLine(
   return `  ${result.status}: ${result.email_id} expected ${result.expected}, got ${result.outcome}${note ? ` (${note})` : ""}`;
 }
 
+/** A made-up email the API judged, as a test's expectations carry it. */
+type SampleJudgment = {
+  index: number;
+  label: string | null;
+  expected: string;
+  outcome: string;
+  status: string;
+  question_answers: QuestionAnswer[];
+};
+
+/** The made-up emails a test's expectations judged, in order. */
+function sampleJudgments(expectations: unknown): SampleJudgment[] {
+  const list =
+    isRecord(expectations) && Array.isArray(expectations.samples)
+      ? expectations.samples
+      : [];
+  return list.filter(isRecord).map((item, position) => ({
+    index: typeof item.index === "number" ? item.index : position,
+    label: typeof item.label === "string" ? item.label : null,
+    expected: String(item.expected ?? ""),
+    outcome: String(item.outcome ?? "not_decided"),
+    status: String(item.status ?? "undecided"),
+    question_answers: Array.isArray(item.question_answers)
+      ? (item.question_answers.filter(isRecord) as QuestionAnswer[])
+      : [],
+  }));
+}
+
+/**
+ * How a test names a made-up email: by its number in the samples file when
+ * --expect-samples-file sent it (the one --pick took it by), else by its
+ * place among the rule's saved ones, from 1; with its label.
+ */
+type SampleNamer = (sample: Pick<SampleJudgment, "index" | "label">) => string;
+
+function sampleNamer(request?: {
+  body?: unknown;
+  flags?: Record<string, unknown>;
+}): SampleNamer {
+  const sent =
+    isRecord(request?.body) &&
+    isRecord(request.body.expect) &&
+    Array.isArray(request.body.expect.samples);
+  const fromFile =
+    sent && typeof request?.flags?.[EXPECT_SAMPLES_FILE_FLAG] === "string";
+  return ({ index, label }) => {
+    const n = fromFile ? sentSampleNumber(index, request?.flags) : index + 1;
+    const name = sent ? `sample ${n}` : `saved sample ${n}`;
+    return label ? `${name} ("${label}")` : name;
+  };
+}
+
+/**
+ * Why a made-up email is undecided, and whether a later test can decide it:
+ * yes when it was not reached or a question went unanswered; maybe not
+ * otherwise, since a spam score it does not carry, a fact its
+ * classification left out or a failed classification look the same. A
+ * spam score left unset makes one undecided even with a question
+ * unanswered, which then reads as decidable later: the answer cannot tell.
+ */
+function sampleUndecidedReason(sample: SampleJudgment): UndecidedReason {
+  if (sample.outcome === "not_decided")
+    return {
+      why: "it was not reached in time, or deciding it failed",
+      resolvable: true,
+    };
+  const answers = sample.question_answers;
+  if (
+    answers.some((answer) => answer.answer === null) &&
+    !answers.some((answer) => answer.answer === false)
+  )
+    return { why: "a question went unanswered", resolvable: true };
+  return {
+    why: "it reads a spam score the sample does not carry, a fact its classification left out, or its classification failed",
+    resolvable: false,
+    may: true,
+  };
+}
+
+function sampleLines(sample: SampleJudgment, name: SampleNamer): string[] {
+  const note =
+    sample.status === "undecided"
+      ? ` (${undecidedNote(sampleUndecidedReason(sample))})`
+      : "";
+  const lines = [
+    `  ${sample.status}: ${name(sample)} expected ${sample.expected}, got ${sample.outcome}${note}`,
+  ];
+  if (sample.question_answers.length > 0)
+    lines.push(
+      `    questions: ${sample.question_answers.map(answerText).join("; ")}`,
+    );
+  return lines;
+}
+
 function expectationsLines(
   expectations: TestEmailRuleResult["expectations"],
   testResults: readonly TestResult[],
+  name: SampleNamer = sampleNamer(),
 ): string[] {
   if (!expectations) return [];
   const results = Array.isArray(expectations.results)
@@ -452,6 +556,9 @@ function expectationsLines(
     ...results
       .filter((result) => result.status !== "passed")
       .map((result) => expectationLine(result, testResults)),
+    ...sampleJudgments(expectations)
+      .filter((sample) => sample.status !== "passed")
+      .flatMap((sample) => sampleLines(sample, name)),
   ];
 }
 
@@ -551,20 +658,36 @@ function notMatchedLines(
 export function expectationsOutcome(
   expectations: TestEmailRuleResult["expectations"],
   testResults: readonly TestResult[] = [],
+  name: SampleNamer = sampleNamer(),
 ): Pick<OperationReport, "exitCode" | "error"> {
   if (!expectations) return {};
   const results = Array.isArray(expectations.results)
     ? expectations.results
     : [];
-  const failed = results
-    .filter((result) => result.status === "failed")
-    .map((result) => result.email_id);
-  const undecided = results
-    .filter((result) => result.status === "undecided")
-    .map((result) => ({
-      id: result.email_id,
-      reason: undecidedReason(result, testResults),
-    }));
+  const samples = sampleJudgments(expectations);
+  const failed = [
+    ...results
+      .filter((result) => result.status === "failed")
+      .map((result) => result.email_id),
+    // Named without their labels here: the message adds its own reasons.
+    ...samples
+      .filter((sample) => sample.status === "failed")
+      .map((sample) => name({ index: sample.index, label: null })),
+  ];
+  const undecided = [
+    ...results
+      .filter((result) => result.status === "undecided")
+      .map((result) => ({
+        id: result.email_id,
+        reason: undecidedReason(result, testResults),
+      })),
+    ...samples
+      .filter((sample) => sample.status === "undecided")
+      .map((sample) => ({
+        id: name({ index: sample.index, label: null }),
+        reason: sampleUndecidedReason(sample),
+      })),
+  ];
   const unresolvable = undecided.filter(({ reason }) => !reason.resolvable);
   const failedCount = Math.max(expectations.counts?.failed ?? 0, failed.length);
   const undecidedCount = Math.max(
@@ -586,7 +709,7 @@ export function expectationsOutcome(
       exitCode: EXIT_EXPECTATION_FAILED,
       error: {
         code: "expectations_unresolvable",
-        message: `${plural(unresolvable.length, "expectation is", "expectations are")} undecided, and testing again will not decide ${unresolvable.length === 1 ? "it" : "them"}: ${why(unresolvable)}.`,
+        message: `${plural(unresolvable.length, "expectation is", "expectations are")} undecided, and testing again ${unresolvable.every(({ reason }) => reason.may) ? "may not decide" : "will not decide"} ${unresolvable.length === 1 ? "it" : "them"}: ${why(unresolvable)}.`,
       },
     };
   if (undecidedCount > 0)
@@ -601,8 +724,12 @@ export function expectationsOutcome(
 }
 
 /** The stderr report and exit code of a test-email-rule answer. */
-export function testEmailRuleReport(data: unknown): OperationReport {
+export function testEmailRuleReport(
+  data: unknown,
+  request?: { body?: unknown; flags?: Record<string, unknown> },
+): OperationReport {
   if (!isRecord(data)) return { lines: [] };
+  const name = sampleNamer(request);
   const result = data as Partial<TestEmailRuleResult>;
   const results = Array.isArray(result.results) ? result.results : [];
   const summary = isRecord(result.summary) ? result.summary : undefined;
@@ -613,10 +740,13 @@ export function testEmailRuleReport(data: unknown): OperationReport {
     ...scopeWarningLines(result.scope_warnings),
     ...conditionLines(summary),
     ...questionLines(summary, results),
-    ...expectationsLines(result.expectations, results),
+    ...expectationsLines(result.expectations, results, name),
     ...notMatchedLines(results, result.expectations),
   ];
-  return { lines, ...expectationsOutcome(result.expectations, results) };
+  return {
+    lines,
+    ...expectationsOutcome(result.expectations, results, name),
+  };
 }
 
 // create-email-rule and update-email-rule
@@ -1374,8 +1504,14 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
       }),
       "expect-file": Flags.string({
         description:
-          'A JSON file holding the request\'s expect, such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}. Not with --expect-match or --expect-no-match.',
+          'A JSON file holding the emails the request\'s expect names by id, such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}; made-up emails go in --expect-samples-file. Not with --expect-match or --expect-no-match.',
         exclusive: ["expect-match", "expect-no-match"],
+      }),
+      [EXPECT_SAMPLES_FILE_FLAG]: Flags.string({
+        description: `${SAMPLES_FILE_SHAPE} Sets expect.samples (at most ${SAMPLES_MAX}), beside any emails by id; the answer judges each in expectations.samples (index from 0 over those sent), and the report names each by its number in the file. Like any expect, it replaces a saved rule's own expectations and samples for this test. ${EXPECTATION_FLAG_NOTE}`,
+      }),
+      [PICK_FLAG]: Flags.string({
+        description: pickFlagHelp([EXPECT_SAMPLES_FILE_FLAG]),
       }),
     },
     bodyFields: expectBodyFields,
@@ -1453,10 +1589,22 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
   generateLookAlikes: {
     flags: {
       [LOOK_ALIKES_SAMPLES_FILE_FLAG]: Flags.string({
-        description: `Also write the look-alikes to this JSON file as made-up emails the rule must not match, a JSON array numbered from 1 in the order the report prints them. Save the ones you choose with create-email-rule --${SAMPLES_FILE_FLAG} or update-email-rule --${ADD_SAMPLES_FILE_FLAG}, with --pick. Replaces the file if it exists, once the call succeeds; when no look-alikes came back it leaves the file as it was and exits 1.`,
+        description: `Also write the look-alikes to this JSON file as made-up emails the rule must not match, a JSON array numbered from 1 in the order the report prints them. Save the ones you choose with create-email-rule --${SAMPLES_FILE_FLAG}, update-email-rule --${ADD_SAMPLES_FILE_FLAG} or, for a request, accept-email-rule-request --${SAMPLES_FILE_FLAG}, with --pick; test an edited rule on them with test-email-rule --${EXPECT_SAMPLES_FILE_FLAG}. Replaces the file if it exists, once the call succeeds; when no look-alikes came back it leaves the file as it was and exits 1.`,
       }),
     },
     report: lookAlikesReport,
+  },
+  acceptEmailRuleRequest: {
+    flags: {
+      [SAMPLES_FILE_FLAG]: Flags.string({
+        description: `${SAMPLES_FILE_SHAPE} Sets expectation_samples (at most ${SAMPLES_MAX}), over any in --body-file or --raw-body: they are kept on the rule this accept writes, such as the look-alikes of the request it must never match.`,
+      }),
+      [PICK_FLAG]: Flags.string({
+        description: pickFlagHelp([SAMPLES_FILE_FLAG]),
+      }),
+    },
+    bodyFields: samplesBodyFields(false),
+    bodyProperties: ["expectation_samples"],
   },
   compileEmailRule: {
     flags: {},

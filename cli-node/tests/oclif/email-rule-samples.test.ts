@@ -3,12 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  expectSamples,
   lookAlikeSample,
   lookAlikeSamples,
   lookAlikesReport,
   pickSamples,
   samplesBodyFields,
   samplesFromJson,
+  sentSampleNumber,
 } from "../../src/oclif/email-rule-samples.js";
 
 const RULE = "00000000-0000-4000-8000-0000000000aa";
@@ -230,7 +232,7 @@ describe("pickSamples", () => {
   });
 });
 
-describe("samplesBodyFields", () => {
+describe("samplesBodyFields and expectSamples", () => {
   it("sets expectation_samples on create, the picked ones only", () => {
     const path = file("s.json", lookAlikeSamples(THREE));
     expect(
@@ -277,10 +279,11 @@ describe("samplesBodyFields", () => {
     expect(() => samplesBodyFields(true)({ pick: "1" })).toThrow(
       "--pick chooses from a samples file: pass it with --expectation-samples-file or --add-expectation-samples-file.",
     );
-    expect(() => samplesBodyFields(false)({ pick: "1" })).toThrow(
-      "pass it with --expectation-samples-file.",
+    expect(() => expectSamples({ pick: "1" })).toThrow(
+      "pass it with --expect-samples-file.",
     );
     expect(samplesBodyFields(true)({})).toEqual([]);
+    expect(expectSamples({})).toBeNull();
   });
 
   it("refuses more than 20 samples, after --pick", () => {
@@ -289,32 +292,29 @@ describe("samplesBodyFields", () => {
       email: email(`s${i}`),
     }));
     const path = file("many.json", many);
-    expect(() =>
-      samplesBodyFields(false)({ "expectation-samples-file": path }),
-    ).toThrow(
-      `--expectation-samples-file ${path} holds 21 samples, and a rule or a test takes at most 20; take some with --pick.`,
+    expect(() => expectSamples({ "expect-samples-file": path })).toThrow(
+      `--expect-samples-file ${path} holds 21 samples, and a rule or a test takes at most 20; take some with --pick.`,
     );
     expect(
-      samplesBodyFields(false)({
-        "expectation-samples-file": path,
-        pick: "21,1",
-      })[0]?.value,
+      expectSamples({ "expect-samples-file": path, pick: "21,1" }),
     ).toEqual([
       { expected: "no_match", email: email("s20") },
       { expected: "no_match", email: email("s0") },
     ]);
   });
 
+  it("names a sent sample by its number in the file when --pick chose it", () => {
+    expect(sentSampleNumber(0, { pick: "3,1" })).toBe(3);
+    expect(sentSampleNumber(1, { pick: "3 1" })).toBe(1);
+    expect(sentSampleNumber(1, {})).toBe(2);
+  });
+
   it("fails like --body-file on a file it cannot read or parse", () => {
     expect(() =>
-      samplesBodyFields(true)({
-        "add-expectation-samples-file": join(dir, "missing.json"),
-      }),
-    ).toThrow("Could not read --add-expectation-samples-file");
+      expectSamples({ "expect-samples-file": join(dir, "missing.json") }),
+    ).toThrow("Could not read --expect-samples-file");
     expect(() =>
-      samplesBodyFields(true)({
-        "add-expectation-samples-file": file("bad.json", "{"),
-      }),
+      expectSamples({ "expect-samples-file": file("bad.json", "{") }),
     ).toThrow("is not valid JSON");
   });
 });
@@ -338,7 +338,7 @@ describe("lookAlikesReport", () => {
       "   The rule matched it, so mail like it would be shared.",
       "Counts: 1 passed, 2 failed, 0 undecided.",
       "These emails are made up; none was sent or stored.",
-      `Keep the ones it matched as emails it must not match: save the JSON printed above to a file and give it to \`primitive email-rules update-email-rule ${RULE} --add-expectation-samples-file <file> --pick 1,3\`; --pick takes any of the numbers above.`,
+      `Keep the ones it matched as emails it must not match: save the JSON printed above to a file and give it to \`primitive email-rules update-email-rule ${RULE} --add-expectation-samples-file <file> --pick 1,3\`; --pick takes any of the numbers above. Test an edited rule on them with \`primitive email-rules test-email-rule --rule-id ${RULE} --expect-samples-file <file> --pick 1,3\`.`,
     ]);
   });
 
@@ -393,7 +393,7 @@ describe("lookAlikesReport", () => {
       '2. failed  medical  "second" from billing@clinic.example',
     ]);
     expect(report.lines.at(-1)).toBe(
-      `Wrote the 2 look-alikes to ${path}, numbered as above. Keep the one it matched as an email it must not match with \`primitive email-rules update-email-rule ${RULE} --add-expectation-samples-file ${path} --pick 2\`; --pick takes any of the numbers.`,
+      `Wrote the 2 look-alikes to ${path}, numbered as above. Keep the one it matched as an email it must not match with \`primitive email-rules update-email-rule ${RULE} --add-expectation-samples-file ${path} --pick 2\`; --pick takes any of the numbers. Test an edited rule on it with \`primitive email-rules test-email-rule --rule-id ${RULE} --expect-samples-file ${path} --pick 2\`.`,
     );
     // The file it wrote is what --pick reads, numbered the same.
     expect(
@@ -401,25 +401,25 @@ describe("lookAlikesReport", () => {
     ).toEqual(email("second"));
   });
 
-  it("quotes a path with spaces in the command it suggests", () => {
+  it("quotes a path with spaces in the commands it suggests, and tests a tree by its body", () => {
     const path = join(dir, "my look-alikes.json");
     const report = lookAlikesReport(THREE, {
       body: { tree: {} },
       flags: { "samples-file": path },
     });
     expect(report.lines.at(-1)).toBe(
-      `Wrote the 3 look-alikes to ${path}, numbered as above. Keep the ones it matched as emails it must not match with \`primitive email-rules create-email-rule ... --expectation-samples-file '${path}' --pick 1,3\` when you save the rule; --pick takes any of the numbers.`,
+      `Wrote the 3 look-alikes to ${path}, numbered as above. Keep the ones it matched as emails it must not match with \`primitive email-rules create-email-rule ... --expectation-samples-file '${path}' --pick 1,3\` when you save the rule; --pick takes any of the numbers. Test an edited rule on them with \`primitive email-rules test-email-rule --body-file <body.json> --expect-samples-file '${path}' --pick 1,3\`.`,
     );
   });
 
-  it("says a request's rule keeps them once accepted", () => {
+  it("saves a request's look-alikes on the rule its accept writes", () => {
     const REQUEST = "00000000-0000-4000-8000-0000000000ee";
     const report = lookAlikesReport(THREE, {
       body: { request_id: REQUEST },
       flags: {},
     });
     expect(report.lines.at(-1)).toBe(
-      `Keep the ones it matched as emails it must not match: when the member the request asks accepts request ${REQUEST}, the accept keeps those its body sends as expectation_samples on the rule it writes (numbers 1, 3 above).`,
+      `Keep the ones it matched as emails it must not match: save the JSON printed above to a file and give it to \`primitive email-rules accept-email-rule-request ${REQUEST} --expectation-samples-file <file> --pick 1,3\` when the member the request asks accepts it; --pick takes any of the numbers above. Test an edited rule on them with \`primitive email-rules test-email-rule --body-file <body.json> --expect-samples-file <file> --pick 1,3\`.`,
     );
     // None came back: nothing to keep, so no sentence about it.
     const none = lookAlikesReport(answer([], 6), {

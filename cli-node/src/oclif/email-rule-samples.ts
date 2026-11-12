@@ -334,9 +334,10 @@ export function sentSampleNumber(
   }
 }
 
-/** The samples file flags: replace (create and update) and add (update). */
+/** The samples file flags: replace (create and update), add (update), and test. */
 export const SAMPLES_FILE_FLAG = "expectation-samples-file";
 export const ADD_SAMPLES_FILE_FLAG = "add-expectation-samples-file";
+export const EXPECT_SAMPLES_FILE_FLAG = "expect-samples-file";
 export const PICK_FLAG = "pick";
 /** generate-look-alikes' flag for the file it writes them to. */
 export const LOOK_ALIKES_SAMPLES_FILE_FLAG = "samples-file";
@@ -402,6 +403,23 @@ export function samplesBodyFields(
       },
     ];
   };
+}
+
+/**
+ * The samples test-email-rule expects, from --expect-samples-file (only
+ * those --pick chooses if given), or null without the flag. They go in
+ * expect.samples.
+ */
+export function expectSamples(
+  flags: Record<string, unknown>,
+): ExpectationSample[] | null {
+  const flag = givenSamplesFlag(flags, [EXPECT_SAMPLES_FILE_FLAG]);
+  if (flag === null) return null;
+  const path = flags[flag] as string;
+  const samples = readSamplesFile(path, flag, flags[PICK_FLAG]);
+  if (samples.length === 0)
+    throw usageError(`--${flag} ${path} holds no samples.`);
+  return samples;
 }
 
 /** --pick's help, naming the flags it chooses from. */
@@ -503,10 +521,13 @@ export function lookAlikesReport(
   const requestId =
     typeof body.request_id === "string" ? body.request_id : null;
   const target = typeof file === "string" ? shellWord(file) : "<file>";
-  // A saved rule keeps them now; a tree's rule, once created.
+  // A saved rule keeps them now; a request's rule, once accepted; a tree's,
+  // once created.
   const save = ruleId
     ? `\`primitive email-rules update-email-rule ${ruleId} --${ADD_SAMPLES_FILE_FLAG} ${target}${pick}\``
-    : `\`primitive email-rules create-email-rule ... --${SAMPLES_FILE_FLAG} ${target}${pick}\` when you save the rule`;
+    : requestId
+      ? `\`primitive email-rules accept-email-rule-request ${requestId} --${SAMPLES_FILE_FLAG} ${target}${pick}\` when the member the request asks accepts it`
+      : `\`primitive email-rules create-email-rule ... --${SAMPLES_FILE_FLAG} ${target}${pick}\` when you save the rule`;
   const one = (count: number, single: string, many: string) =>
     count === 1 ? single : many;
   // None decided: saved as they are, they would stay undecided.
@@ -520,11 +541,9 @@ export function lookAlikesReport(
       : chosen.length > 0
         ? `Keep ${one(chosen.length, "the one it did not match as an email", "the ones it did not match as emails")} it must not match (an undecided one may stay undecided as a sample)`
         : `Keep ${one(entries.length, "it as an email", "them as emails")} the rule must not match`;
-  // A request's rule keeps them once accepted: its accept takes them as
-  // expectation_samples.
-  const requestKeep =
-    requestId && entries.length > 0
-      ? `${which}: when the member the request asks accepts request ${requestId}, the accept keeps those its body sends as expectation_samples on the rule it writes${chosen.length > 0 ? ` (${one(chosen.length, "number", "numbers")} ${chosen.join(", ")} above)` : ""}.`
+  const test =
+    matched.length > 0
+      ? ` Test an edited rule on ${one(matched.length, "it", "them")} with \`primitive email-rules test-email-rule ${ruleId ? `--rule-id ${ruleId}` : "--body-file <body.json>"} --${EXPECT_SAMPLES_FILE_FLAG} ${target}${pick}\`.`
       : "";
   if (typeof file === "string") {
     const samples = entries.map((entry) => entry.sample);
@@ -556,17 +575,13 @@ export function lookAlikesReport(
     lines.push(
       noneDecided
         ? `${wrote} ${noneDecided}`
-        : requestKeep
-          ? `${wrote} ${requestKeep}`
-          : `${wrote} ${which} with ${save}; --pick takes any of the numbers.`,
+        : `${wrote} ${which} with ${save}; --pick takes any of the numbers.${test}`,
     );
   } else if (noneDecided) {
     lines.push(noneDecided);
-  } else if (requestKeep) {
-    lines.push(requestKeep);
   } else if (entries.length > 0) {
     lines.push(
-      `${which}: save the JSON printed above to a file and give it to ${save}; --pick takes any of the numbers above.`,
+      `${which}: save the JSON printed above to a file and give it to ${save}; --pick takes any of the numbers above.${test}`,
     );
   }
   return { lines };
