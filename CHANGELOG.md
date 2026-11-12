@@ -822,8 +822,11 @@ date-time is kept as null and sorts last. A sync stops with an error after
     and a grant worded as a prohibition.
   - A rule may ask up to five yes/no questions, no longer three.
   - A rule request (`EmailRuleRequest`, and the `createEmailRuleRequest`
-    answer) carries `notice`, what accepting would share or that the
-    request is not what is shared, and `edited_on_accept`.
+    answer) carries `notice` and `edited_on_accept`. For the member asked,
+    while pending, `notice` says what the rule actually does
+    (`server_explanation`), the API's warnings, then what accepting would
+    share; for the member who asked, once accepted with changes, that the
+    request is not what is shared.
     `acceptEmailRuleRequest` answers with `notice`, what is now shared,
     and takes `expectation_samples`, made-up emails kept on the rule it
     writes.
@@ -1264,8 +1267,9 @@ parsers.
   `list-given-email-rule-shares`, or `email-rule-oversight
   list-email-rule-objections`, says which default filter hid the rest
   (`--box all`, `--status any`, `--live any`). An empty `webhook-deliveries
-  list-deliveries --endpoint-id` names the filters given, and that test
-  fires are not logged, instead of saying no deliveries were logged.
+  list-deliveries` narrowed by a filter (such as `--endpoint-id` or
+  `--status`) names the filters given and notes that test fires are not
+  logged, instead of saying no deliveries were logged.
 - `keys create` and `keys update` print the answer's `address_warnings`
   without `--json`, such as an address or domain listed beside `--rule`,
   which the key reads in full.

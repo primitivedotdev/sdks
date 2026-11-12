@@ -467,9 +467,9 @@ describe("activity concerning command", () => {
     expect(out).toMatch(/More: \S+ activity concerning --cursor next-page$/m);
   });
 
-  it("says no rule has started covering your mail only when the listing is the whole of it", async () => {
+  it("says no rule has covered your mail only when the listing is the whole of it", async () => {
     const none =
-      "No other member's rule has started covering your mail, or changed while covering it, since these notices began.";
+      "No other member's rule has covered your mail since these notices began.";
     expect(formatConcerningRows([], true)).toBe(none);
     expect(formatConcerningRows([])).toBe("Nothing to show.");
     useApi([page([], null)]);

@@ -2444,30 +2444,28 @@ export function emptyRuleListHint(
 }
 
 /**
- * An empty delivery list filtered by --endpoint-id names the filters given, in
- * place of the general hint, which reads as if nothing was ever delivered,
- * and keeps its point that test fires are not logged. Undefined for any other
- * list, or when no endpoint was named.
+ * An empty delivery list narrowed by a filter (--endpoint-id, --status,
+ * --event-type and the rest) names the filters given, in place of the general
+ * hint, which reads as if nothing was ever delivered, and keeps its point that
+ * test fires are not logged. Undefined for any other list, or when no filter
+ * was given.
  */
 export function emptyDeliveriesHint(
   sdkName: string,
   query: Record<string, unknown>,
 ): string | undefined {
-  if (sdkName !== "listDeliveries" || query.endpoint_id === undefined)
-    return undefined;
+  if (sdkName !== "listDeliveries") return undefined;
+  const flags = listFilters(query).map(
+    (name) => `--${parameterFlagName(sdkName, name)}`,
+  );
+  if (flags.length === 0) return undefined;
   if (query.cursor !== undefined)
-    return "(no results) No more deliveries to this endpoint.";
-  const flags = [
-    "--endpoint-id",
-    ...listFilters(query)
-      .filter((name) => name !== "endpoint_id")
-      .map((name) => `--${parameterFlagName(sdkName, name)}`),
-  ];
+    return "(no results) No more deliveries match these filters.";
   const named =
     flags.length === 1
       ? flags[0]
       : `${flags.slice(0, -1).join(", ")} and ${flags[flags.length - 1]}`;
-  return `(no results) No deliveries match ${named}. Test fires from \`primitive endpoints test\` are not logged here; real deliveries are, when an event fans out to the endpoint. Leave out ${flags.length === 1 ? "--endpoint-id" : "a filter"} to list more.`;
+  return `(no results) No deliveries match ${named}. Test fires from \`primitive endpoints test\` are not logged here; real deliveries are, when an event fans out to the endpoint. Leave out ${flags.length === 1 ? flags[0] : "a filter"} to list more.`;
 }
 
 function canonicalizeCliReferences(description: string): string {
