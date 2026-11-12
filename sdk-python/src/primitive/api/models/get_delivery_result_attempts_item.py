@@ -26,7 +26,8 @@ class GetDeliveryResultAttemptsItem:
             id (str):
             attempt_count (int):
             status (str):
-            last_error_code (None | str):
+            last_error_code (None | str): Machine-readable code for the last failure, or null. A code the webhook chose in
+                its answer is shown only to a caller who can read the webhook; anyone else gets handler_4xx or handler_5xx.
             duration_ms (int | None):
             created_at (str):
             response_status (int | None): The HTTP status the endpoint answered this attempt with: a webhook's own answer,
@@ -37,8 +38,11 @@ class GetDeliveryResultAttemptsItem:
                 that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was
                 sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is
                 deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null
-                for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden
-                wherever it repeats them.
+                for a redirect (3xx), whose body repeats its Location; otherwise, in answers recorded since November 2026, the
+                webhook URL's query string, its parameters, values long enough to be a credential and any userinfo are hidden
+                wherever it repeats them, and the rest is as the endpoint wrote it. Null for a caller who cannot read the
+                webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook), since a receiver's
+                answer can restate its URL's credential.
             retry_scheduled (bool | None): Whether an automatic retry will try this delivery again. A retry is a delivery
                 pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the
                 current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its

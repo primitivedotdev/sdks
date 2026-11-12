@@ -137,18 +137,11 @@ def sync_detailed(
     with english and tree together (and an explanation, or the server writes one). Because this gives
     your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps
     and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to
-    POST /v1/email-rules/test. A test on mail already received shows only what has arrived. To see what
-    the rule would do with an email that has not, such as one you would never want shared, pass the
-    request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI,
-    primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up,
-    or have look-alikes written for it (POST /v1/email-rules/look-alikes with request_id; primitive
-    email-rules generate-look-alikes). Neither stores anything, and neither needs access beyond testing
-    a rule of your own; the accept keeps any you send as expectation_samples on the rule it writes.
-    Made-up emails sent in expectation_samples are kept on the rule this writes, where GET /v1/email-
-    rules/{id} lists them. Accepting also needs mail:share_own (sharing your own mail through email
-    rules, which only shows it and never sends): a role without it is refused, whether or not it can
-    send. Needs mail:read, a member's own credential with their full access (not an API key, agent key
-    or narrowed token), and the email rules feature.
+    POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree to
+    POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-
+    rules/look-alikes with request_id); neither stores anything. expectation_samples are kept on the
+    rule it writes. Accepting also needs mail:share_own. Needs mail:read, a member's own credential with
+    their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -193,18 +186,11 @@ def sync(
     with english and tree together (and an explanation, or the server writes one). Because this gives
     your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps
     and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to
-    POST /v1/email-rules/test. A test on mail already received shows only what has arrived. To see what
-    the rule would do with an email that has not, such as one you would never want shared, pass the
-    request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI,
-    primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up,
-    or have look-alikes written for it (POST /v1/email-rules/look-alikes with request_id; primitive
-    email-rules generate-look-alikes). Neither stores anything, and neither needs access beyond testing
-    a rule of your own; the accept keeps any you send as expectation_samples on the rule it writes.
-    Made-up emails sent in expectation_samples are kept on the rule this writes, where GET /v1/email-
-    rules/{id} lists them. Accepting also needs mail:share_own (sharing your own mail through email
-    rules, which only shows it and never sends): a role without it is refused, whether or not it can
-    send. Needs mail:read, a member's own credential with their full access (not an API key, agent key
-    or narrowed token), and the email rules feature.
+    POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree to
+    POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-
+    rules/look-alikes with request_id); neither stores anything. expectation_samples are kept on the
+    rule it writes. Accepting also needs mail:share_own. Needs mail:read, a member's own credential with
+    their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -244,18 +230,11 @@ async def asyncio_detailed(
     with english and tree together (and an explanation, or the server writes one). Because this gives
     your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps
     and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to
-    POST /v1/email-rules/test. A test on mail already received shows only what has arrived. To see what
-    the rule would do with an email that has not, such as one you would never want shared, pass the
-    request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI,
-    primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up,
-    or have look-alikes written for it (POST /v1/email-rules/look-alikes with request_id; primitive
-    email-rules generate-look-alikes). Neither stores anything, and neither needs access beyond testing
-    a rule of your own; the accept keeps any you send as expectation_samples on the rule it writes.
-    Made-up emails sent in expectation_samples are kept on the rule this writes, where GET /v1/email-
-    rules/{id} lists them. Accepting also needs mail:share_own (sharing your own mail through email
-    rules, which only shows it and never sends): a role without it is refused, whether or not it can
-    send. Needs mail:read, a member's own credential with their full access (not an API key, agent key
-    or narrowed token), and the email rules feature.
+    POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree to
+    POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-
+    rules/look-alikes with request_id); neither stores anything. expectation_samples are kept on the
+    rule it writes. Accepting also needs mail:share_own. Needs mail:read, a member's own credential with
+    their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -300,18 +279,11 @@ async def asyncio(
     with english and tree together (and an explanation, or the server writes one). Because this gives
     your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps
     and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to
-    POST /v1/email-rules/test. A test on mail already received shows only what has arrived. To see what
-    the rule would do with an email that has not, such as one you would never want shared, pass the
-    request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI,
-    primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up,
-    or have look-alikes written for it (POST /v1/email-rules/look-alikes with request_id; primitive
-    email-rules generate-look-alikes). Neither stores anything, and neither needs access beyond testing
-    a rule of your own; the accept keeps any you send as expectation_samples on the rule it writes.
-    Made-up emails sent in expectation_samples are kept on the rule this writes, where GET /v1/email-
-    rules/{id} lists them. Accepting also needs mail:share_own (sharing your own mail through email
-    rules, which only shows it and never sends): a role without it is refused, whether or not it can
-    send. Needs mail:read, a member's own credential with their full access (not an API key, agent key
-    or narrowed token), and the email rules feature.
+    POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree to
+    POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-
+    rules/look-alikes with request_id); neither stores anything. expectation_samples are kept on the
+    rule it writes. Accepting also needs mail:share_own. Needs mail:read, a member's own credential with
+    their full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):

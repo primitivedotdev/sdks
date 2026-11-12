@@ -28,7 +28,8 @@ class ListActivityObjectsResultWithheldItem:
             reason (ListActivityObjectsResultWithheldItemReason): permission_missing: the caller lacks the permission the
                 kind's own list needs (named in permission). mail_scope: listed only to a caller that reads every mailbox.
                 not_for_this_credential: this kind of credential never lists them (a person's own kinds asked for by a key, an
-                app or an agent).
+                app or an agent), or the kind's own list refuses it (email rules, rule requests and objections for a token
+                narrowed below the person; objections anywhere but the dashboard and the Primitive CLI).
             permission (None | str):
      """
 

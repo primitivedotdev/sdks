@@ -26,7 +26,14 @@ T = TypeVar("T", bound="UpdateEndpointInput")
 class UpdateEndpointInput:
     """ 
         Attributes:
-            url (str | Unset): New webhook URL (triggers endpoint rotation)
+            url (str | Unset): New URL, for a webhook (kind=http) only. The endpoint keeps its id, routes, stats, signing
+                secret and owed deliveries, and its consecutive failure count starts again; a webhook turned off because its
+                owner changed is turned back on (the change is refused when it could not be turned on, for example at the plan's
+                webhook limit), unless the same request sets enabled to false. A URL another endpoint on the same domain already
+                uses (enabled or not; endpoints with no domain count as one domain) is refused. A caller limited to its own
+                endpoints (an API key or a person limited to some mailboxes) cannot change the URL of an API key's webhook that
+                signs with the organization's secret: give it a signing secret of its own first. Owners, admins and other
+                callers with the whole organization's mail can change it.
             enabled (bool | Unset):
             domain_id (None | Unset | UUID):
             rules (UpdateEndpointInputRules | Unset):

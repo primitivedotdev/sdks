@@ -6,6 +6,7 @@ package api
 type OperationName = string
 
 const (
+	AcceptEmailRuleObjectionOperation             OperationName = "AcceptEmailRuleObjection"
 	AcceptEmailRuleRequestOperation               OperationName = "AcceptEmailRuleRequest"
 	AddDefaultNetworkMemberOperation              OperationName = "AddDefaultNetworkMember"
 	AddDomainOperation                            OperationName = "AddDomain"
@@ -36,6 +37,7 @@ const (
 	CreateAgentClaimLinkOperation                 OperationName = "CreateAgentClaimLink"
 	CreateAgentConnectionOperation                OperationName = "CreateAgentConnection"
 	CreateEmailRuleOperation                      OperationName = "CreateEmailRule"
+	CreateEmailRuleObjectionOperation             OperationName = "CreateEmailRuleObjection"
 	CreateEmailRuleRequestOperation               OperationName = "CreateEmailRuleRequest"
 	CreateEndpointOperation                       OperationName = "CreateEndpoint"
 	CreateFilterOperation                         OperationName = "CreateFilter"
@@ -51,6 +53,7 @@ const (
 	CreateWakeScheduleOperation                   OperationName = "CreateWakeSchedule"
 	DecideAccessModeOperation                     OperationName = "DecideAccessMode"
 	DecideSuspensionOperation                     OperationName = "DecideSuspension"
+	DeclineEmailRuleObjectionOperation            OperationName = "DeclineEmailRuleObjection"
 	DeclineEmailRuleRequestOperation              OperationName = "DeclineEmailRuleRequest"
 	DeleteAddressNoteOperation                    OperationName = "DeleteAddressNote"
 	DeleteAgentContactOperation                   OperationName = "DeleteAgentContact"
@@ -104,6 +107,7 @@ const (
 	GetEmailReadableOperation                     OperationName = "GetEmailReadable"
 	GetEmailRuleOperation                         OperationName = "GetEmailRule"
 	GetEmailRuleCoveringMeOperation               OperationName = "GetEmailRuleCoveringMe"
+	GetEmailRuleObjectionOperation                OperationName = "GetEmailRuleObjection"
 	GetEmailRuleRequestOperation                  OperationName = "GetEmailRuleRequest"
 	GetEmailRuleScopeOperation                    OperationName = "GetEmailRuleScope"
 	GetEmailRuleShareOperation                    OperationName = "GetEmailRuleShare"
@@ -174,6 +178,7 @@ const (
 	ListEmailAttachmentArchiveMembersOperation    OperationName = "ListEmailAttachmentArchiveMembers"
 	ListEmailRuleDecisionsOperation               OperationName = "ListEmailRuleDecisions"
 	ListEmailRuleDecisionsOnMyMailOperation       OperationName = "ListEmailRuleDecisionsOnMyMail"
+	ListEmailRuleObjectionsOperation              OperationName = "ListEmailRuleObjections"
 	ListEmailRuleRequestsOperation                OperationName = "ListEmailRuleRequests"
 	ListEmailRuleResultsOperation                 OperationName = "ListEmailRuleResults"
 	ListEmailRuleScopeOptionsOperation            OperationName = "ListEmailRuleScopeOptions"
@@ -328,5 +333,6 @@ const (
 	VerifyCliSignupOperation                      OperationName = "VerifyCliSignup"
 	VerifyDomainOperation                         OperationName = "VerifyDomain"
 	WhoamiOperation                               OperationName = "Whoami"
+	WithdrawEmailRuleObjectionOperation           OperationName = "WithdrawEmailRuleObjection"
 	WithdrawEmailRuleRequestOperation             OperationName = "WithdrawEmailRuleRequest"
 )

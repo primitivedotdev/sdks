@@ -16,6 +16,153 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
+// AcceptEmailRuleObjectionParams is parameters of acceptEmailRuleObjection operation.
+type AcceptEmailRuleObjectionParams struct {
+	// The objection id.
+	ID uuid.UUID
+	// Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with
+	// the same key runs the request again. Operations that need a credential refuse a key that is empty,
+	// longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one
+	// in the Idempotency-Key response header; operations that need none ignore it.
+	IdempotencyKey OptString `json:",omitempty,omitzero"`
+}
+
+func unpackAcceptEmailRuleObjectionParams(packed middleware.Parameters) (params AcceptEmailRuleObjectionParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "Idempotency-Key",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.IdempotencyKey = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeAcceptEmailRuleObjectionParams(args [1]string, argsEscaped bool, r *http.Request) (params AcceptEmailRuleObjectionParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode header: Idempotency-Key.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIdempotencyKeyVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotIdempotencyKeyVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.IdempotencyKey.SetTo(paramsDotIdempotencyKeyVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.IdempotencyKey.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     255,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Idempotency-Key",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // AcceptEmailRuleRequestParams is parameters of acceptEmailRuleRequest operation.
 type AcceptEmailRuleRequestParams struct {
 	// The request id.
@@ -3301,6 +3448,99 @@ func decodeCreateEmailRuleParams(args [0]string, argsEscaped bool, r *http.Reque
 	return params, nil
 }
 
+// CreateEmailRuleObjectionParams is parameters of createEmailRuleObjection operation.
+type CreateEmailRuleObjectionParams struct {
+	// Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with
+	// the same key runs the request again. Operations that need a credential refuse a key that is empty,
+	// longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one
+	// in the Idempotency-Key response header; operations that need none ignore it.
+	IdempotencyKey OptString `json:",omitempty,omitzero"`
+}
+
+func unpackCreateEmailRuleObjectionParams(packed middleware.Parameters) (params CreateEmailRuleObjectionParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "Idempotency-Key",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.IdempotencyKey = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeCreateEmailRuleObjectionParams(args [0]string, argsEscaped bool, r *http.Request) (params CreateEmailRuleObjectionParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: Idempotency-Key.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIdempotencyKeyVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotIdempotencyKeyVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.IdempotencyKey.SetTo(paramsDotIdempotencyKeyVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.IdempotencyKey.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     255,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Idempotency-Key",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // CreateEmailRuleRequestParams is parameters of createEmailRuleRequest operation.
 type CreateEmailRuleRequestParams struct {
 	// Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with
@@ -5278,6 +5518,153 @@ func decodeDecideSuspensionParams(args [1]string, argsEscaped bool, r *http.Requ
 		return params, &ogenerrors.DecodeParamError{
 			Name: "Primitive-Step-Up",
 			In:   "header",
+			Err:  err,
+		}
+	}
+	// Decode header: Idempotency-Key.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIdempotencyKeyVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotIdempotencyKeyVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.IdempotencyKey.SetTo(paramsDotIdempotencyKeyVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.IdempotencyKey.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     255,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Idempotency-Key",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// DeclineEmailRuleObjectionParams is parameters of declineEmailRuleObjection operation.
+type DeclineEmailRuleObjectionParams struct {
+	// The objection id.
+	ID uuid.UUID
+	// Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with
+	// the same key runs the request again. Operations that need a credential refuse a key that is empty,
+	// longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one
+	// in the Idempotency-Key response header; operations that need none ignore it.
+	IdempotencyKey OptString `json:",omitempty,omitzero"`
+}
+
+func unpackDeclineEmailRuleObjectionParams(packed middleware.Parameters) (params DeclineEmailRuleObjectionParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "Idempotency-Key",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.IdempotencyKey = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeDeclineEmailRuleObjectionParams(args [1]string, argsEscaped bool, r *http.Request) (params DeclineEmailRuleObjectionParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
 			Err:  err,
 		}
 	}
@@ -11400,6 +11787,72 @@ func decodeGetEmailRuleCoveringMeParams(args [1]string, argsEscaped bool, r *htt
 	return params, nil
 }
 
+// GetEmailRuleObjectionParams is parameters of getEmailRuleObjection operation.
+type GetEmailRuleObjectionParams struct {
+	// The objection id.
+	ID uuid.UUID
+}
+
+func unpackGetEmailRuleObjectionParams(packed middleware.Parameters) (params GetEmailRuleObjectionParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeGetEmailRuleObjectionParams(args [1]string, argsEscaped bool, r *http.Request) (params GetEmailRuleObjectionParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // GetEmailRuleRequestParams is parameters of getEmailRuleRequest operation.
 type GetEmailRuleRequestParams struct {
 	// The request id.
@@ -15079,9 +15532,9 @@ type ListActivityObjectsParams struct {
 	Relation OptListActivityObjectsRelation `json:",omitempty,omitzero"`
 	// Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription,
 	// recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key,
-	// agent_connection, email_rule, email_rule_request. Defaults to every kind the caller can have
-	// created (a person's own kinds only for a person). With relation=asked, only email_rule_request,
-	// which is also the default.
+	// agent_connection, email_rule, email_rule_request, email_rule_objection. Defaults to every kind the
+	// caller can have created (a person's own kinds only for a person). With relation=asked, only
+	// email_rule_request and email_rule_objection, which are also the default.
 	Kind OptString `json:",omitempty,omitzero"`
 	// All (the default), live (still there, enabled or not) or ended (deleted, replaced or finished).
 	State OptListActivityObjectsState `json:",omitempty,omitzero"`
@@ -18482,6 +18935,9 @@ type ListDeliveriesParams struct {
 	EventType OptString `json:",omitempty,omitzero"`
 	// Only deliveries of outbound events about this sent email.
 	SentEmailID OptUUID `json:",omitempty,omitzero"`
+	// Only deliveries to this endpoint (an id from listEndpoints). A caller limited to some mailboxes
+	// still sees only deliveries of mail it reads.
+	EndpointID OptUUID `json:",omitempty,omitzero"`
 }
 
 func unpackListDeliveriesParams(packed middleware.Parameters) (params ListDeliveriesParams) {
@@ -18555,6 +19011,15 @@ func unpackListDeliveriesParams(packed middleware.Parameters) (params ListDelive
 		}
 		if v, ok := packed[key]; ok {
 			params.SentEmailID = v.(OptUUID)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "endpoint_id",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.EndpointID = v.(OptUUID)
 		}
 	}
 	return params
@@ -18958,6 +19423,47 @@ func decodeListDeliveriesParams(args [0]string, argsEscaped bool, r *http.Reques
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "sent_email_id",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: endpoint_id.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "endpoint_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotEndpointIDVal uuid.UUID
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToUUID(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotEndpointIDVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.EndpointID.SetTo(paramsDotEndpointIDVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "endpoint_id",
 			In:   "query",
 			Err:  err,
 		}
@@ -19692,6 +20198,325 @@ func decodeListEmailRuleDecisionsOnMyMailParams(args [1]string, argsEscaped bool
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "matched",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// ListEmailRuleObjectionsParams is parameters of listEmailRuleObjections operation.
+type ListEmailRuleObjectionsParams struct {
+	// Outgoing (the default): objections you made. incoming: objections to rules you wrote. all: every
+	// objection you can see.
+	Box OptListEmailRuleObjectionsBox `json:",omitempty,omitzero"`
+	// Pending (the default), decided, or any.
+	Status OptListEmailRuleObjectionsStatus `json:",omitempty,omitzero"`
+	// Objections per page, from 1 to 100; defaults to 25.
+	Limit OptInt `json:",omitempty,omitzero"`
+	// Meta.cursor from the preceding page. Omit for the first page.
+	Cursor OptString `json:",omitempty,omitzero"`
+}
+
+func unpackListEmailRuleObjectionsParams(packed middleware.Parameters) (params ListEmailRuleObjectionsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "box",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Box = v.(OptListEmailRuleObjectionsBox)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "status",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Status = v.(OptListEmailRuleObjectionsStatus)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "limit",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Limit = v.(OptInt)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "cursor",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Cursor = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeListEmailRuleObjectionsParams(args [0]string, argsEscaped bool, r *http.Request) (params ListEmailRuleObjectionsParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Set default value for query: box.
+	{
+		val := ListEmailRuleObjectionsBox("outgoing")
+		params.Box.SetTo(val)
+	}
+	// Decode query: box.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "box",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotBoxVal ListEmailRuleObjectionsBox
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotBoxVal = ListEmailRuleObjectionsBox(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Box.SetTo(paramsDotBoxVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Box.Get(); ok {
+					if err := func() error {
+						if err := validateParameter(value); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "box",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Set default value for query: status.
+	{
+		val := ListEmailRuleObjectionsStatus("pending")
+		params.Status.SetTo(val)
+	}
+	// Decode query: status.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "status",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotStatusVal ListEmailRuleObjectionsStatus
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotStatusVal = ListEmailRuleObjectionsStatus(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Status.SetTo(paramsDotStatusVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Status.Get(); ok {
+					if err := func() error {
+						if err := validateParameter(value); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "status",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Set default value for query: limit.
+	{
+		val := int(25)
+		params.Limit.SetTo(val)
+	}
+	// Decode query: limit.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotLimitVal int
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotLimitVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Limit.SetTo(paramsDotLimitVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Limit.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "limit",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: cursor.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotCursorVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotCursorVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Cursor.SetTo(paramsDotCursorVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Cursor.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     200,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "cursor",
 			In:   "query",
 			Err:  err,
 		}
@@ -43400,6 +44225,153 @@ func decodeWhoamiParams(args [0]string, argsEscaped bool, r *http.Request) (para
 		return params, &ogenerrors.DecodeParamError{
 			Name: "resource",
 			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// WithdrawEmailRuleObjectionParams is parameters of withdrawEmailRuleObjection operation.
+type WithdrawEmailRuleObjectionParams struct {
+	// The objection id.
+	ID uuid.UUID
+	// Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with
+	// the same key runs the request again. Operations that need a credential refuse a key that is empty,
+	// longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one
+	// in the Idempotency-Key response header; operations that need none ignore it.
+	IdempotencyKey OptString `json:",omitempty,omitzero"`
+}
+
+func unpackWithdrawEmailRuleObjectionParams(packed middleware.Parameters) (params WithdrawEmailRuleObjectionParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "Idempotency-Key",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.IdempotencyKey = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeWithdrawEmailRuleObjectionParams(args [1]string, argsEscaped bool, r *http.Request) (params WithdrawEmailRuleObjectionParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode header: Idempotency-Key.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIdempotencyKeyVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotIdempotencyKeyVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.IdempotencyKey.SetTo(paramsDotIdempotencyKeyVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.IdempotencyKey.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     255,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Idempotency-Key",
+			In:   "header",
 			Err:  err,
 		}
 	}

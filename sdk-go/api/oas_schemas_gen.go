@@ -12,6 +12,54 @@ import (
 	"github.com/google/uuid"
 )
 
+type AcceptEmailRuleObjectionConflict ErrorResponse
+
+func (*AcceptEmailRuleObjectionConflict) acceptEmailRuleObjectionRes() {}
+
+type AcceptEmailRuleObjectionForbidden ErrorResponse
+
+func (*AcceptEmailRuleObjectionForbidden) acceptEmailRuleObjectionRes() {}
+
+type AcceptEmailRuleObjectionNotFound ErrorResponse
+
+func (*AcceptEmailRuleObjectionNotFound) acceptEmailRuleObjectionRes() {}
+
+// Merged schema.
+type AcceptEmailRuleObjectionOK struct {
+	Success bool               `json:"success"`
+	Data    EmailRuleObjection `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *AcceptEmailRuleObjectionOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *AcceptEmailRuleObjectionOK) GetData() EmailRuleObjection {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *AcceptEmailRuleObjectionOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *AcceptEmailRuleObjectionOK) SetData(val EmailRuleObjection) {
+	s.Data = val
+}
+
+func (*AcceptEmailRuleObjectionOK) acceptEmailRuleObjectionRes() {}
+
+type AcceptEmailRuleObjectionTooManyRequests ErrorResponseHeaders
+
+func (*AcceptEmailRuleObjectionTooManyRequests) acceptEmailRuleObjectionRes() {}
+
+type AcceptEmailRuleObjectionUnauthorized ErrorResponseHeaders
+
+func (*AcceptEmailRuleObjectionUnauthorized) acceptEmailRuleObjectionRes() {}
+
 type AcceptEmailRuleRequestBadRequest ErrorResponse
 
 func (*AcceptEmailRuleRequestBadRequest) acceptEmailRuleRequestRes() {}
@@ -66,12 +114,9 @@ type AcceptEmailRuleRequestRequest struct {
 	Tree OptEmailRuleTreeInput `json:"tree"`
 	// What the rule matches, in plain English. Left out, the server writes one from the tree.
 	Explanation OptString `json:"explanation"`
-	// Readings chosen where the description was open to more than one, as the compile response returned
-	// them (including its lines naming any condition, question or confidence bar the description did not
-	// ask for). Stored as sent.
+	// The compile response's assumptions. Stored as sent.
 	Assumptions []string `json:"assumptions"`
-	// Parts of the description the rule does not express, as the compile response returned them
-	// (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
+	// The compile response's warnings. Stored as sent.
 	Warnings []string `json:"warnings"`
 	// Who produced the tree (not verified): the compile response's compiled_by, or member (the default)
 	// for a tree you wrote or edited.
@@ -12602,6 +12647,92 @@ type CreateEmailRuleForbidden ErrorResponse
 
 func (*CreateEmailRuleForbidden) createEmailRuleRes() {}
 
+type CreateEmailRuleObjectionBadRequest ErrorResponse
+
+func (*CreateEmailRuleObjectionBadRequest) createEmailRuleObjectionRes() {}
+
+type CreateEmailRuleObjectionConflict ErrorResponse
+
+func (*CreateEmailRuleObjectionConflict) createEmailRuleObjectionRes() {}
+
+type CreateEmailRuleObjectionForbidden ErrorResponse
+
+func (*CreateEmailRuleObjectionForbidden) createEmailRuleObjectionRes() {}
+
+type CreateEmailRuleObjectionNotFound ErrorResponse
+
+func (*CreateEmailRuleObjectionNotFound) createEmailRuleObjectionRes() {}
+
+// Merged schema.
+type CreateEmailRuleObjectionOK struct {
+	Success bool               `json:"success"`
+	Data    EmailRuleObjection `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CreateEmailRuleObjectionOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CreateEmailRuleObjectionOK) GetData() EmailRuleObjection {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CreateEmailRuleObjectionOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CreateEmailRuleObjectionOK) SetData(val EmailRuleObjection) {
+	s.Data = val
+}
+
+func (*CreateEmailRuleObjectionOK) createEmailRuleObjectionRes() {}
+
+// Ref: #/components/schemas/CreateEmailRuleObjectionRequest
+type CreateEmailRuleObjectionRequest struct {
+	// A rule that covers one of your own mailboxes now (GET /email-rules/covering-me), written by
+	// another member.
+	RuleID uuid.UUID `json:"rule_id"`
+	// Why you object, up to 500 characters; null or absent for none. The rule's author and the
+	// organization's owners and admins see it while it stands; withdrawing clears it.
+	Message OptNilString `json:"message"`
+}
+
+// GetRuleID returns the value of RuleID.
+func (s *CreateEmailRuleObjectionRequest) GetRuleID() uuid.UUID {
+	return s.RuleID
+}
+
+// GetMessage returns the value of Message.
+func (s *CreateEmailRuleObjectionRequest) GetMessage() OptNilString {
+	return s.Message
+}
+
+// SetRuleID sets the value of RuleID.
+func (s *CreateEmailRuleObjectionRequest) SetRuleID(val uuid.UUID) {
+	s.RuleID = val
+}
+
+// SetMessage sets the value of Message.
+func (s *CreateEmailRuleObjectionRequest) SetMessage(val OptNilString) {
+	s.Message = val
+}
+
+type CreateEmailRuleObjectionServiceUnavailable ErrorResponse
+
+func (*CreateEmailRuleObjectionServiceUnavailable) createEmailRuleObjectionRes() {}
+
+type CreateEmailRuleObjectionTooManyRequests ErrorResponseHeaders
+
+func (*CreateEmailRuleObjectionTooManyRequests) createEmailRuleObjectionRes() {}
+
+type CreateEmailRuleObjectionUnauthorized ErrorResponseHeaders
+
+func (*CreateEmailRuleObjectionUnauthorized) createEmailRuleObjectionRes() {}
+
 // Ref: #/components/schemas/CreateEmailRuleRequest
 type CreateEmailRuleRequest struct {
 	// A short name for the rule.
@@ -12629,12 +12760,9 @@ type CreateEmailRuleRequest struct {
 	Tree EmailRuleTreeInput `json:"tree"`
 	// What the rule matches, in plain English. Left out, the server writes one from the tree.
 	Explanation OptString `json:"explanation"`
-	// Readings chosen where the description was open to more than one, as the compile response returned
-	// them (including its lines naming any condition, question or confidence bar the description did not
-	// ask for). Stored as sent.
+	// The compile response's assumptions. Stored as sent.
 	Assumptions []string `json:"assumptions"`
-	// Parts of the description the rule does not express, as the compile response returned them
-	// (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
+	// The compile response's warnings. Stored as sent.
 	Warnings []string `json:"warnings"`
 	// Who produced the tree (not verified): the compile response's compiled_by, or member (the default)
 	// for a tree you wrote or edited.
@@ -12968,12 +13096,9 @@ type CreateEmailRuleRequestRequest struct {
 	Tree EmailRuleTreeInput `json:"tree"`
 	// What the rule matches, in plain English. Left out, the server writes one from the tree.
 	Explanation OptString `json:"explanation"`
-	// Readings chosen where the description was open to more than one, as the compile response returned
-	// them (including its lines naming any condition, question or confidence bar the description did not
-	// ask for). Stored as sent.
+	// The compile response's assumptions. Stored as sent.
 	Assumptions []string `json:"assumptions"`
-	// Parts of the description the rule does not express, as the compile response returned them
-	// (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
+	// The compile response's warnings. Stored as sent.
 	Warnings []string `json:"warnings"`
 	// Who produced the tree (not verified): the compile response's compiled_by, or member (the default)
 	// for a tree you wrote or edited.
@@ -24406,6 +24531,75 @@ type DecideSuspensionUnauthorized ErrorResponseHeaders
 
 func (*DecideSuspensionUnauthorized) decideSuspensionRes() {}
 
+type DeclineEmailRuleObjectionBadRequest ErrorResponse
+
+func (*DeclineEmailRuleObjectionBadRequest) declineEmailRuleObjectionRes() {}
+
+type DeclineEmailRuleObjectionConflict ErrorResponse
+
+func (*DeclineEmailRuleObjectionConflict) declineEmailRuleObjectionRes() {}
+
+type DeclineEmailRuleObjectionForbidden ErrorResponse
+
+func (*DeclineEmailRuleObjectionForbidden) declineEmailRuleObjectionRes() {}
+
+type DeclineEmailRuleObjectionNotFound ErrorResponse
+
+func (*DeclineEmailRuleObjectionNotFound) declineEmailRuleObjectionRes() {}
+
+// Merged schema.
+type DeclineEmailRuleObjectionOK struct {
+	Success bool               `json:"success"`
+	Data    EmailRuleObjection `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *DeclineEmailRuleObjectionOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *DeclineEmailRuleObjectionOK) GetData() EmailRuleObjection {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *DeclineEmailRuleObjectionOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *DeclineEmailRuleObjectionOK) SetData(val EmailRuleObjection) {
+	s.Data = val
+}
+
+func (*DeclineEmailRuleObjectionOK) declineEmailRuleObjectionRes() {}
+
+// Ref: #/components/schemas/DeclineEmailRuleObjectionRequest
+type DeclineEmailRuleObjectionRequest struct {
+	// Why you are declining, up to 500 characters; null or absent for none. The member who objected sees
+	// it.
+	Reason OptNilString `json:"reason"`
+}
+
+// GetReason returns the value of Reason.
+func (s *DeclineEmailRuleObjectionRequest) GetReason() OptNilString {
+	return s.Reason
+}
+
+// SetReason sets the value of Reason.
+func (s *DeclineEmailRuleObjectionRequest) SetReason(val OptNilString) {
+	s.Reason = val
+}
+
+type DeclineEmailRuleObjectionTooManyRequests ErrorResponseHeaders
+
+func (*DeclineEmailRuleObjectionTooManyRequests) declineEmailRuleObjectionRes() {}
+
+type DeclineEmailRuleObjectionUnauthorized ErrorResponseHeaders
+
+func (*DeclineEmailRuleObjectionUnauthorized) declineEmailRuleObjectionRes() {}
+
 type DeclineEmailRuleRequestBadRequest ErrorResponse
 
 func (*DeclineEmailRuleRequestBadRequest) declineEmailRuleRequestRes() {}
@@ -26165,18 +26359,23 @@ type DeliverySummary struct {
 	// Delivery status. skipped_by_rules: the endpoint's rules filtered the event out. held: kept back,
 	// unsent, until an owner or admin decides on the route that matched it. discarded: a held delivery
 	// that decision dropped.
-	Status       DeliverySummaryStatus      `json:"status"`
-	AttemptCount int                        `json:"attempt_count"`
-	DurationMs   OptNilInt                  `json:"duration_ms"`
-	LastError    OptNilString               `json:"last_error"`
-	CreatedAt    time.Time                  `json:"created_at"`
-	UpdatedAt    time.Time                  `json:"updated_at"`
-	Email        OptNilDeliverySummaryEmail `json:"email"`
+	Status       DeliverySummaryStatus `json:"status"`
+	AttemptCount int                   `json:"attempt_count"`
+	DurationMs   OptNilInt             `json:"duration_ms"`
+	// Why the last attempt failed, or null. A webhook's answer is quoted after its status (HTTP 404: ...
+	// ) only for a caller who can read the webhook (GET /endpoints/{id}; a deleted webhook only for a
+	// caller who reads every webhook); anyone else gets the status and a note. Text the platform writes
+	// (a redirect not followed, a network error) is shown to everyone.
+	LastError OptNilString               `json:"last_error"`
+	CreatedAt time.Time                  `json:"created_at"`
+	UpdatedAt time.Time                  `json:"updated_at"`
+	Email     OptNilDeliverySummaryEmail `json:"email"`
 	// The event type delivered, or null for a delivery recorded before event types existed.
 	EventType NilString `json:"event_type"`
 	// The sent email an outbound sent_email.* delivery is about, otherwise null.
 	SentEmailID NilUUID `json:"sent_email_id"`
-	// Machine-readable code for the last failure, or null.
+	// Machine-readable code for the last failure, or null. A code the webhook chose in its answer is
+	// shown only to a caller who can read the webhook; anyone else gets handler_4xx or handler_5xx.
 	LastErrorCode NilString `json:"last_error_code"`
 	// The HTTP status the endpoint answered this attempt with: a webhook's own answer, or for a Function
 	// what its runtime answered, which is the platform's own error when the Function could not be run.
@@ -26187,8 +26386,12 @@ type DeliverySummary struct {
 	// and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was
 	// sent. Null when no answer came back, and cleared when the message's content is discarded or the
 	// sent email is deleted. Withheld from a caller who cannot read message content, since an answer can
-	// echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the
-	// webhook URL's path and query are hidden wherever it repeats them.
+	// echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise, in
+	// answers recorded since November 2026, the webhook URL's query string, its parameters, values long
+	// enough to be a credential and any userinfo are hidden wherever it repeats them, and the rest is as
+	// the endpoint wrote it. Null for a caller who cannot read the webhook (GET /endpoints/{id}; a
+	// deleted webhook only for a caller who reads every webhook), since a receiver's answer can restate
+	// its URL's credential.
 	ResponseBody NilString `json:"response_body"`
 	// Whether this is the latest attempt of its delivery: the one recorded last, where a record of no
 	// attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A
@@ -32086,8 +32289,7 @@ type EmailRule struct {
 	ID    uuid.UUID      `json:"id"`
 	Name  string         `json:"name"`
 	State EmailRuleState `json:"state"`
-	// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
-	// only for an older core-api: every answer carries it.
+	// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
 	Kind OptEmailRuleKind `json:"kind"`
 	// On a do_not_share rule only: it protects nothing yet (not active), a classifier fact narrows it,
 	// or its several questions are alternatives.
@@ -32102,8 +32304,7 @@ type EmailRule struct {
 	AuthorUserID uuid.UUID `json:"author_user_id"`
 	// Who wrote it: author_user_id with their name and sign-in email.
 	Author OptEmailRuleAuthor `json:"author"`
-	// Whether you are its author, in your current membership. Only its author edits it; others who see
-	// it may only disable or delete it (while shared, only if they manage members).
+	// Whether you are its author, in your current membership. Only its author edits it.
 	IsAuthor  bool      `json:"is_author"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -33376,8 +33577,7 @@ func (s *EmailRuleExpectationSampleInputExpected) UnmarshalText(data []byte) err
 	}
 }
 
-// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
-// only for an older core-api: every answer carries it.
+// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
 type EmailRuleKind string
 
 const (
@@ -33882,13 +34082,275 @@ func (s *EmailRuleLookAlikeStatus) UnmarshalText(data []byte) error {
 	}
 }
 
+// Ref: #/components/schemas/EmailRuleObjection
+type EmailRuleObjection struct {
+	ID uuid.UUID `json:"id"`
+	// Pending until the rule's author accepts it (turning the rule off) or declines it, or the member
+	// who made it withdraws it; never changes after.
+	Status EmailRuleObjectionStatus `json:"status"`
+	Rule   EmailRuleObjectionRule   `json:"rule"`
+	// Who objected.
+	Objector EmailRuleObjectionPerson `json:"objector"`
+	// Who wrote the rule.
+	Author     EmailRuleObjectionPerson `json:"author"`
+	IsObjector bool                     `json:"is_objector"`
+	IsAuthor   bool                     `json:"is_author"`
+	// Why the objector objects; null when none was given, or once withdrawn.
+	Message         NilString   `json:"message"`
+	DeclineReason   NilString   `json:"decline_reason"`
+	CreatedAt       time.Time   `json:"created_at"`
+	DecidedAt       NilDateTime `json:"decided_at"`
+	DecidedByUserID NilUUID     `json:"decided_by_user_id"`
+}
+
+// GetID returns the value of ID.
+func (s *EmailRuleObjection) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetStatus returns the value of Status.
+func (s *EmailRuleObjection) GetStatus() EmailRuleObjectionStatus {
+	return s.Status
+}
+
+// GetRule returns the value of Rule.
+func (s *EmailRuleObjection) GetRule() EmailRuleObjectionRule {
+	return s.Rule
+}
+
+// GetObjector returns the value of Objector.
+func (s *EmailRuleObjection) GetObjector() EmailRuleObjectionPerson {
+	return s.Objector
+}
+
+// GetAuthor returns the value of Author.
+func (s *EmailRuleObjection) GetAuthor() EmailRuleObjectionPerson {
+	return s.Author
+}
+
+// GetIsObjector returns the value of IsObjector.
+func (s *EmailRuleObjection) GetIsObjector() bool {
+	return s.IsObjector
+}
+
+// GetIsAuthor returns the value of IsAuthor.
+func (s *EmailRuleObjection) GetIsAuthor() bool {
+	return s.IsAuthor
+}
+
+// GetMessage returns the value of Message.
+func (s *EmailRuleObjection) GetMessage() NilString {
+	return s.Message
+}
+
+// GetDeclineReason returns the value of DeclineReason.
+func (s *EmailRuleObjection) GetDeclineReason() NilString {
+	return s.DeclineReason
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *EmailRuleObjection) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetDecidedAt returns the value of DecidedAt.
+func (s *EmailRuleObjection) GetDecidedAt() NilDateTime {
+	return s.DecidedAt
+}
+
+// GetDecidedByUserID returns the value of DecidedByUserID.
+func (s *EmailRuleObjection) GetDecidedByUserID() NilUUID {
+	return s.DecidedByUserID
+}
+
+// SetID sets the value of ID.
+func (s *EmailRuleObjection) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetStatus sets the value of Status.
+func (s *EmailRuleObjection) SetStatus(val EmailRuleObjectionStatus) {
+	s.Status = val
+}
+
+// SetRule sets the value of Rule.
+func (s *EmailRuleObjection) SetRule(val EmailRuleObjectionRule) {
+	s.Rule = val
+}
+
+// SetObjector sets the value of Objector.
+func (s *EmailRuleObjection) SetObjector(val EmailRuleObjectionPerson) {
+	s.Objector = val
+}
+
+// SetAuthor sets the value of Author.
+func (s *EmailRuleObjection) SetAuthor(val EmailRuleObjectionPerson) {
+	s.Author = val
+}
+
+// SetIsObjector sets the value of IsObjector.
+func (s *EmailRuleObjection) SetIsObjector(val bool) {
+	s.IsObjector = val
+}
+
+// SetIsAuthor sets the value of IsAuthor.
+func (s *EmailRuleObjection) SetIsAuthor(val bool) {
+	s.IsAuthor = val
+}
+
+// SetMessage sets the value of Message.
+func (s *EmailRuleObjection) SetMessage(val NilString) {
+	s.Message = val
+}
+
+// SetDeclineReason sets the value of DeclineReason.
+func (s *EmailRuleObjection) SetDeclineReason(val NilString) {
+	s.DeclineReason = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *EmailRuleObjection) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetDecidedAt sets the value of DecidedAt.
+func (s *EmailRuleObjection) SetDecidedAt(val NilDateTime) {
+	s.DecidedAt = val
+}
+
+// SetDecidedByUserID sets the value of DecidedByUserID.
+func (s *EmailRuleObjection) SetDecidedByUserID(val NilUUID) {
+	s.DecidedByUserID = val
+}
+
+// Ref: #/components/schemas/EmailRuleObjectionPerson
+type EmailRuleObjectionPerson struct {
+	UserID uuid.UUID `json:"user_id"`
+	Name   NilString `json:"name"`
+	// Sign-in email; null unless you can list member emails or this is you.
+	Email NilString `json:"email"`
+}
+
+// GetUserID returns the value of UserID.
+func (s *EmailRuleObjectionPerson) GetUserID() uuid.UUID {
+	return s.UserID
+}
+
+// GetName returns the value of Name.
+func (s *EmailRuleObjectionPerson) GetName() NilString {
+	return s.Name
+}
+
+// GetEmail returns the value of Email.
+func (s *EmailRuleObjectionPerson) GetEmail() NilString {
+	return s.Email
+}
+
+// SetUserID sets the value of UserID.
+func (s *EmailRuleObjectionPerson) SetUserID(val uuid.UUID) {
+	s.UserID = val
+}
+
+// SetName sets the value of Name.
+func (s *EmailRuleObjectionPerson) SetName(val NilString) {
+	s.Name = val
+}
+
+// SetEmail sets the value of Email.
+func (s *EmailRuleObjectionPerson) SetEmail(val NilString) {
+	s.Email = val
+}
+
+type EmailRuleObjectionRule struct {
+	// Null once the rule was deleted outright.
+	ID NilUUID `json:"id"`
+	// Its name when the objection was made.
+	Name string `json:"name"`
+}
+
+// GetID returns the value of ID.
+func (s *EmailRuleObjectionRule) GetID() NilUUID {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *EmailRuleObjectionRule) GetName() string {
+	return s.Name
+}
+
+// SetID sets the value of ID.
+func (s *EmailRuleObjectionRule) SetID(val NilUUID) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *EmailRuleObjectionRule) SetName(val string) {
+	s.Name = val
+}
+
+// Pending until the rule's author accepts it (turning the rule off) or declines it, or the member
+// who made it withdraws it; never changes after.
+type EmailRuleObjectionStatus string
+
+const (
+	EmailRuleObjectionStatusPending   EmailRuleObjectionStatus = "pending"
+	EmailRuleObjectionStatusAccepted  EmailRuleObjectionStatus = "accepted"
+	EmailRuleObjectionStatusDeclined  EmailRuleObjectionStatus = "declined"
+	EmailRuleObjectionStatusWithdrawn EmailRuleObjectionStatus = "withdrawn"
+)
+
+// AllValues returns all EmailRuleObjectionStatus values.
+func (EmailRuleObjectionStatus) AllValues() []EmailRuleObjectionStatus {
+	return []EmailRuleObjectionStatus{
+		EmailRuleObjectionStatusPending,
+		EmailRuleObjectionStatusAccepted,
+		EmailRuleObjectionStatusDeclined,
+		EmailRuleObjectionStatusWithdrawn,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailRuleObjectionStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailRuleObjectionStatusPending:
+		return []byte(s), nil
+	case EmailRuleObjectionStatusAccepted:
+		return []byte(s), nil
+	case EmailRuleObjectionStatusDeclined:
+		return []byte(s), nil
+	case EmailRuleObjectionStatusWithdrawn:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailRuleObjectionStatus) UnmarshalText(data []byte) error {
+	switch EmailRuleObjectionStatus(data) {
+	case EmailRuleObjectionStatusPending:
+		*s = EmailRuleObjectionStatusPending
+		return nil
+	case EmailRuleObjectionStatusAccepted:
+		*s = EmailRuleObjectionStatusAccepted
+		return nil
+	case EmailRuleObjectionStatusDeclined:
+		*s = EmailRuleObjectionStatusDeclined
+		return nil
+	case EmailRuleObjectionStatusWithdrawn:
+		*s = EmailRuleObjectionStatusWithdrawn
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Ref: #/components/schemas/EmailRuleRead
 type EmailRuleRead struct {
 	ID    uuid.UUID          `json:"id"`
 	Name  string             `json:"name"`
 	State EmailRuleReadState `json:"state"`
-	// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
-	// only for an older core-api: every answer carries it.
+	// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
 	Kind OptEmailRuleReadKind `json:"kind"`
 	// On a do_not_share rule only: it protects nothing yet (not active), a classifier fact narrows it,
 	// or its several questions are alternatives.
@@ -33903,8 +34365,7 @@ type EmailRuleRead struct {
 	AuthorUserID uuid.UUID `json:"author_user_id"`
 	// Who wrote it: author_user_id with their name and sign-in email.
 	Author OptEmailRuleAuthor `json:"author"`
-	// Whether you are its author, in your current membership. Only its author edits it; others who see
-	// it may only disable or delete it (while shared, only if they manage members).
+	// Whether you are its author, in your current membership. Only its author edits it.
 	IsAuthor  bool      `json:"is_author"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -34162,8 +34623,7 @@ func (s *EmailRuleReadExpectations) SetNoMatch(val []uuid.UUID) {
 	s.NoMatch = val
 }
 
-// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
-// only for an older core-api: every answer carries it.
+// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
 type EmailRuleReadKind string
 
 const (
@@ -36161,8 +36621,7 @@ type EmailRuleWithVersion struct {
 	ID    uuid.UUID                 `json:"id"`
 	Name  string                    `json:"name"`
 	State EmailRuleWithVersionState `json:"state"`
-	// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
-	// only for an older core-api: every answer carries it.
+	// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
 	Kind OptEmailRuleWithVersionKind `json:"kind"`
 	// On a do_not_share rule only: it protects nothing yet (not active), a classifier fact narrows it,
 	// or its several questions are alternatives.
@@ -36177,8 +36636,7 @@ type EmailRuleWithVersion struct {
 	AuthorUserID uuid.UUID `json:"author_user_id"`
 	// Who wrote it: author_user_id with their name and sign-in email.
 	Author OptEmailRuleAuthor `json:"author"`
-	// Whether you are its author, in your current membership. Only its author edits it; others who see
-	// it may only disable or delete it (while shared, only if they manage members).
+	// Whether you are its author, in your current membership. Only its author edits it.
 	IsAuthor  bool      `json:"is_author"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -36386,8 +36844,7 @@ func (s *EmailRuleWithVersionEvaluationScope) UnmarshalText(data []byte) error {
 	}
 }
 
-// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
-// only for an older core-api: every answer carries it.
+// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
 type EmailRuleWithVersionKind string
 
 const (
@@ -36571,8 +37028,7 @@ type EmailRuleWritten struct {
 	ID    uuid.UUID             `json:"id"`
 	Name  string                `json:"name"`
 	State EmailRuleWrittenState `json:"state"`
-	// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
-	// only for an older core-api: every answer carries it.
+	// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
 	Kind OptEmailRuleWrittenKind `json:"kind"`
 	// On a do_not_share rule only: it protects nothing yet (not active), a classifier fact narrows it,
 	// or its several questions are alternatives.
@@ -36587,8 +37043,7 @@ type EmailRuleWritten struct {
 	AuthorUserID uuid.UUID `json:"author_user_id"`
 	// Who wrote it: author_user_id with their name and sign-in email.
 	Author OptEmailRuleAuthor `json:"author"`
-	// Whether you are its author, in your current membership. Only its author edits it; others who see
-	// it may only disable or delete it (while shared, only if they manage members).
+	// Whether you are its author, in your current membership. Only its author edits it.
 	IsAuthor  bool      `json:"is_author"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -37013,8 +37468,7 @@ func (s *EmailRuleWrittenExpectationsCheck) SetNote(val OptString) {
 	s.Note = val
 }
 
-// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional
-// only for an older core-api: every answer carries it.
+// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
 type EmailRuleWrittenKind string
 
 const (
@@ -49810,11 +50264,17 @@ type GetDeliveryResult struct {
 	// Where it was sent: a webhook's scheme and host, followed by "/... (path and query hidden)" when
 	// its URL has more (GET /endpoints/{id} has the whole URL), function://<id> for a Function, or pull:
 	// for a pull subscription.
-	EndpointURL   string    `json:"endpoint_url"`
-	Status        string    `json:"status"`
-	AttemptCount  int       `json:"attempt_count"`
-	DurationMs    NilInt    `json:"duration_ms"`
-	LastError     NilString `json:"last_error"`
+	EndpointURL  string `json:"endpoint_url"`
+	Status       string `json:"status"`
+	AttemptCount int    `json:"attempt_count"`
+	DurationMs   NilInt `json:"duration_ms"`
+	// Why the last attempt failed, or null. A webhook's answer is quoted after its status (HTTP 404: ...
+	// ) only for a caller who can read the webhook (GET /endpoints/{id}; a deleted webhook only for a
+	// caller who reads every webhook); anyone else gets the status and a note. Text the platform writes
+	// (a redirect not followed, a network error) is shown to everyone.
+	LastError NilString `json:"last_error"`
+	// Machine-readable code for the last failure, or null. A code the webhook chose in its answer is
+	// shown only to a caller who can read the webhook; anyone else gets handler_4xx or handler_5xx.
 	LastErrorCode NilString `json:"last_error_code"`
 	// The HTTP status the endpoint answered this attempt with: a webhook's own answer, or for a Function
 	// what its runtime answered, which is the platform's own error when the Function could not be run.
@@ -49825,8 +50285,12 @@ type GetDeliveryResult struct {
 	// and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was
 	// sent. Null when no answer came back, and cleared when the message's content is discarded or the
 	// sent email is deleted. Withheld from a caller who cannot read message content, since an answer can
-	// echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the
-	// webhook URL's path and query are hidden wherever it repeats them.
+	// echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise, in
+	// answers recorded since November 2026, the webhook URL's query string, its parameters, values long
+	// enough to be a credential and any userinfo are hidden wherever it repeats them, and the rest is as
+	// the endpoint wrote it. Null for a caller who cannot read the webhook (GET /endpoints/{id}; a
+	// deleted webhook only for a caller who reads every webhook), since a receiver's answer can restate
+	// its URL's credential.
 	ResponseBody NilString                 `json:"response_body"`
 	CreatedAt    string                    `json:"created_at"`
 	UpdatedAt    string                    `json:"updated_at"`
@@ -50085,9 +50549,11 @@ func (s *GetDeliveryResult) SetAttempts(val []GetDeliveryResultAttemptsItem) {
 }
 
 type GetDeliveryResultAttemptsItem struct {
-	ID            string    `json:"id"`
-	AttemptCount  int       `json:"attempt_count"`
-	Status        string    `json:"status"`
+	ID           string `json:"id"`
+	AttemptCount int    `json:"attempt_count"`
+	Status       string `json:"status"`
+	// Machine-readable code for the last failure, or null. A code the webhook chose in its answer is
+	// shown only to a caller who can read the webhook; anyone else gets handler_4xx or handler_5xx.
 	LastErrorCode NilString `json:"last_error_code"`
 	DurationMs    NilInt    `json:"duration_ms"`
 	CreatedAt     string    `json:"created_at"`
@@ -50100,8 +50566,12 @@ type GetDeliveryResultAttemptsItem struct {
 	// and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was
 	// sent. Null when no answer came back, and cleared when the message's content is discarded or the
 	// sent email is deleted. Withheld from a caller who cannot read message content, since an answer can
-	// echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the
-	// webhook URL's path and query are hidden wherever it repeats them.
+	// echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise, in
+	// answers recorded since November 2026, the webhook URL's query string, its parameters, values long
+	// enough to be a credential and any userinfo are hidden wherever it repeats them, and the rest is as
+	// the endpoint wrote it. Null for a caller who cannot read the webhook (GET /endpoints/{id}; a
+	// deleted webhook only for a caller who reads every webhook), since a receiver's answer can restate
+	// its URL's credential.
 	ResponseBody NilString `json:"response_body"`
 	// Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email:
 	// it sends again to the endpoint the email's routing resolves then (its recorded route, or the
@@ -50617,6 +51087,50 @@ func (s *GetEmailRuleOK) SetData(val EmailRuleRead) {
 }
 
 func (*GetEmailRuleOK) getEmailRuleRes() {}
+
+type GetEmailRuleObjectionForbidden ErrorResponse
+
+func (*GetEmailRuleObjectionForbidden) getEmailRuleObjectionRes() {}
+
+type GetEmailRuleObjectionNotFound ErrorResponse
+
+func (*GetEmailRuleObjectionNotFound) getEmailRuleObjectionRes() {}
+
+// Merged schema.
+type GetEmailRuleObjectionOK struct {
+	Success bool               `json:"success"`
+	Data    EmailRuleObjection `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetEmailRuleObjectionOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetEmailRuleObjectionOK) GetData() EmailRuleObjection {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetEmailRuleObjectionOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetEmailRuleObjectionOK) SetData(val EmailRuleObjection) {
+	s.Data = val
+}
+
+func (*GetEmailRuleObjectionOK) getEmailRuleObjectionRes() {}
+
+type GetEmailRuleObjectionTooManyRequests ErrorResponseHeaders
+
+func (*GetEmailRuleObjectionTooManyRequests) getEmailRuleObjectionRes() {}
+
+type GetEmailRuleObjectionUnauthorized ErrorResponseHeaders
+
+func (*GetEmailRuleObjectionUnauthorized) getEmailRuleObjectionRes() {}
 
 type GetEmailRuleRequestForbidden ErrorResponse
 
@@ -58866,8 +59380,8 @@ func (s *ListActivityObjectsOK) SetData(val ListActivityObjectsResult) {
 func (*ListActivityObjectsOK) listActivityObjectsRes() {}
 
 // Created (the default): what you created. asked: what other members asked of you, open or answered:
-// rule requests made to you. asked is for a person's own view only, and kind may then name only
-// email_rule_request.
+// rule requests made to you, and objections to rules you wrote. asked is for a person's own view
+// only, and kind may then name only email_rule_request and email_rule_objection.
 type ListActivityObjectsRelation string
 
 const (
@@ -58968,23 +59482,23 @@ func (s *ListActivityObjectsResult) SetNextCursor(val NilString) {
 type ListActivityObjectsResultItemsItem struct {
 	// One of: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule,
 	// wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule,
-	// email_rule_request.
+	// email_rule_request, email_rule_objection.
 	Kind string `json:"kind"`
 	ID   string `json:"id"`
 	// The name the object is known by: an endpoint's display name, a route's or filter's pattern, a
 	// Function's name, a send's From address, a wake schedule's command and the address it wakes, an API
-	// key's name, an agent's address, a rule's or rule request's name. Never a webhook URL and never
-	// mail content.
+	// key's name, an agent's address, a rule's or rule request's name, and for an objection the name its
+	// rule had when the objection was made. Never a webhook URL and never mail content.
 	Name NilString `json:"name"`
 	// Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or
 	// disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or
 	// ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API
 	// keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules),
-	// pending, accepted, declined or withdrawn (rule requests).
+	// pending, accepted, declined or withdrawn (rule requests and objections).
 	State     string    `json:"state"`
 	CreatedAt time.Time `json:"created_at"`
 	// When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped,
-	// or when a rule request was decided (accepted, declined or withdrawn); null otherwise.
+	// or when a rule request or objection was decided (accepted, declined or withdrawn); null otherwise.
 	EndedAt NilDateTime `json:"ended_at"`
 	// You: it is still yours: never transferred, or transferred back to you. someone_else: it was
 	// transferred and another person holds it now, or, with relation=asked, another member made it.
@@ -59075,16 +59589,16 @@ func (s *ListActivityObjectsResultItemsItem) SetCreatedThrough(val ListActivityO
 type ListActivityObjectsResultItemsItemCreatedThrough struct {
 	// The kind of credential it was created through: org_key, function_key, connected_key, oauth,
 	// agent_delegate or member (the person themselves). With relation=asked, member: the member who
-	// asked.
+	// asked or objected.
 	Kind string `json:"kind"`
 	// In a person's view, the person's own user id for member, and an API key's id where they may read
 	// their keys (for a person limited to their own keys, only a key they still hold). Null otherwise,
 	// and always null in one credential's view, where it is the calling credential itself. With
-	// relation=asked, the user id of the member who asked.
+	// relation=asked, the user id of the member who asked or objected.
 	ID NilString `json:"id"`
 	// In a person's view, what that credential of theirs is called: an app login by its app, an API key
 	// by its name, an agent's key by its address. Null otherwise, and for the person themselves. With
-	// relation=asked, the name of the member who asked.
+	// relation=asked, the name of the member who asked or objected.
 	Name NilString `json:"name"`
 }
 
@@ -59166,7 +59680,9 @@ type ListActivityObjectsResultWithheldItem struct {
 	// Permission_missing: the caller lacks the permission the kind's own list needs (named in
 	// permission). mail_scope: listed only to a caller that reads every mailbox.
 	// not_for_this_credential: this kind of credential never lists them (a person's own kinds asked for
-	// by a key, an app or an agent).
+	// by a key, an app or an agent), or the kind's own list refuses it (email rules, rule requests and
+	// objections for a token narrowed below the person; objections anywhere but the dashboard and the
+	// Primitive CLI).
 	Reason     ListActivityObjectsResultWithheldItemReason `json:"reason"`
 	Permission NilString                                   `json:"permission"`
 }
@@ -59204,7 +59720,9 @@ func (s *ListActivityObjectsResultWithheldItem) SetPermission(val NilString) {
 // Permission_missing: the caller lacks the permission the kind's own list needs (named in
 // permission). mail_scope: listed only to a caller that reads every mailbox.
 // not_for_this_credential: this kind of credential never lists them (a person's own kinds asked for
-// by a key, an app or an agent).
+// by a key, an app or an agent), or the kind's own list refuses it (email rules, rule requests and
+// objections for a token narrowed below the person; objections anywhere but the dashboard and the
+// Primitive CLI).
 type ListActivityObjectsResultWithheldItemReason string
 
 const (
@@ -62754,6 +63272,161 @@ type ListEmailRuleDecisionsUnauthorized ErrorResponseHeaders
 
 func (*ListEmailRuleDecisionsUnauthorized) listEmailRuleDecisionsRes() {}
 
+type ListEmailRuleObjectionsBadRequest ErrorResponse
+
+func (*ListEmailRuleObjectionsBadRequest) listEmailRuleObjectionsRes() {}
+
+// Outgoing: objections you made; incoming: objections to rules you wrote; all: every objection you
+// can see (owners and admins see the organization's).
+type ListEmailRuleObjectionsBox string
+
+const (
+	ListEmailRuleObjectionsBoxOutgoing ListEmailRuleObjectionsBox = "outgoing"
+	ListEmailRuleObjectionsBoxIncoming ListEmailRuleObjectionsBox = "incoming"
+	ListEmailRuleObjectionsBoxAll      ListEmailRuleObjectionsBox = "all"
+)
+
+// AllValues returns all ListEmailRuleObjectionsBox values.
+func (ListEmailRuleObjectionsBox) AllValues() []ListEmailRuleObjectionsBox {
+	return []ListEmailRuleObjectionsBox{
+		ListEmailRuleObjectionsBoxOutgoing,
+		ListEmailRuleObjectionsBoxIncoming,
+		ListEmailRuleObjectionsBoxAll,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListEmailRuleObjectionsBox) MarshalText() ([]byte, error) {
+	switch s {
+	case ListEmailRuleObjectionsBoxOutgoing:
+		return []byte(s), nil
+	case ListEmailRuleObjectionsBoxIncoming:
+		return []byte(s), nil
+	case ListEmailRuleObjectionsBoxAll:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListEmailRuleObjectionsBox) UnmarshalText(data []byte) error {
+	switch ListEmailRuleObjectionsBox(data) {
+	case ListEmailRuleObjectionsBoxOutgoing:
+		*s = ListEmailRuleObjectionsBoxOutgoing
+		return nil
+	case ListEmailRuleObjectionsBoxIncoming:
+		*s = ListEmailRuleObjectionsBoxIncoming
+		return nil
+	case ListEmailRuleObjectionsBoxAll:
+		*s = ListEmailRuleObjectionsBoxAll
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type ListEmailRuleObjectionsForbidden ErrorResponse
+
+func (*ListEmailRuleObjectionsForbidden) listEmailRuleObjectionsRes() {}
+
+// Merged schema.
+type ListEmailRuleObjectionsOK struct {
+	Success bool                          `json:"success"`
+	Data    ListEmailRuleObjectionsResult `json:"data"`
+	Meta    CursorPageMeta                `json:"meta"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListEmailRuleObjectionsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListEmailRuleObjectionsOK) GetData() ListEmailRuleObjectionsResult {
+	return s.Data
+}
+
+// GetMeta returns the value of Meta.
+func (s *ListEmailRuleObjectionsOK) GetMeta() CursorPageMeta {
+	return s.Meta
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListEmailRuleObjectionsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListEmailRuleObjectionsOK) SetData(val ListEmailRuleObjectionsResult) {
+	s.Data = val
+}
+
+// SetMeta sets the value of Meta.
+func (s *ListEmailRuleObjectionsOK) SetMeta(val CursorPageMeta) {
+	s.Meta = val
+}
+
+func (*ListEmailRuleObjectionsOK) listEmailRuleObjectionsRes() {}
+
+type ListEmailRuleObjectionsResult []EmailRuleObjection
+
+type ListEmailRuleObjectionsStatus string
+
+const (
+	ListEmailRuleObjectionsStatusPending ListEmailRuleObjectionsStatus = "pending"
+	ListEmailRuleObjectionsStatusDecided ListEmailRuleObjectionsStatus = "decided"
+	ListEmailRuleObjectionsStatusAny     ListEmailRuleObjectionsStatus = "any"
+)
+
+// AllValues returns all ListEmailRuleObjectionsStatus values.
+func (ListEmailRuleObjectionsStatus) AllValues() []ListEmailRuleObjectionsStatus {
+	return []ListEmailRuleObjectionsStatus{
+		ListEmailRuleObjectionsStatusPending,
+		ListEmailRuleObjectionsStatusDecided,
+		ListEmailRuleObjectionsStatusAny,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListEmailRuleObjectionsStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case ListEmailRuleObjectionsStatusPending:
+		return []byte(s), nil
+	case ListEmailRuleObjectionsStatusDecided:
+		return []byte(s), nil
+	case ListEmailRuleObjectionsStatusAny:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListEmailRuleObjectionsStatus) UnmarshalText(data []byte) error {
+	switch ListEmailRuleObjectionsStatus(data) {
+	case ListEmailRuleObjectionsStatusPending:
+		*s = ListEmailRuleObjectionsStatusPending
+		return nil
+	case ListEmailRuleObjectionsStatusDecided:
+		*s = ListEmailRuleObjectionsStatusDecided
+		return nil
+	case ListEmailRuleObjectionsStatusAny:
+		*s = ListEmailRuleObjectionsStatusAny
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type ListEmailRuleObjectionsTooManyRequests ErrorResponseHeaders
+
+func (*ListEmailRuleObjectionsTooManyRequests) listEmailRuleObjectionsRes() {}
+
+type ListEmailRuleObjectionsUnauthorized ErrorResponseHeaders
+
+func (*ListEmailRuleObjectionsUnauthorized) listEmailRuleObjectionsRes() {}
+
 type ListEmailRuleRequestsBadRequest ErrorResponse
 
 func (*ListEmailRuleRequestsBadRequest) listEmailRuleRequestsRes() {}
@@ -63360,8 +64033,8 @@ type ListEmailRuleResultsResultRulesItem struct {
 	// On a do-not-share rule whose author is no longer a member of the organization: it blocks nothing
 	// now, whatever it decided. Absent otherwise.
 	AuthorLeft OptBool `json:"author_left"`
-	// Another member's rule that decided on your own mail; dashboard and CLI only. name is null once it
-	// no longer covers you.
+	// Another member's rule that decided on your own mail; dashboard and CLI only. name is null unless
+	// known to cover you.
 	ReadOnly OptBool `json:"read_only"`
 	// With read_only: who wrote it.
 	Author OptEmailRuleCoveringAuthor `json:"author"`
@@ -80705,6 +81378,52 @@ func (o OptDecideSuspensionResultFunctionStopped) Or(d DecideSuspensionResultFun
 	return d
 }
 
+// NewOptDeclineEmailRuleObjectionRequest returns new OptDeclineEmailRuleObjectionRequest with value set to v.
+func NewOptDeclineEmailRuleObjectionRequest(v DeclineEmailRuleObjectionRequest) OptDeclineEmailRuleObjectionRequest {
+	return OptDeclineEmailRuleObjectionRequest{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptDeclineEmailRuleObjectionRequest is optional DeclineEmailRuleObjectionRequest.
+type OptDeclineEmailRuleObjectionRequest struct {
+	Value DeclineEmailRuleObjectionRequest
+	Set   bool
+}
+
+// IsSet returns true if OptDeclineEmailRuleObjectionRequest was set.
+func (o OptDeclineEmailRuleObjectionRequest) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptDeclineEmailRuleObjectionRequest) Reset() {
+	var v DeclineEmailRuleObjectionRequest
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptDeclineEmailRuleObjectionRequest) SetTo(v DeclineEmailRuleObjectionRequest) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptDeclineEmailRuleObjectionRequest) Get() (v DeclineEmailRuleObjectionRequest, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptDeclineEmailRuleObjectionRequest) Or(d DeclineEmailRuleObjectionRequest) DeclineEmailRuleObjectionRequest {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptDeclineEmailRuleRequestRequest returns new OptDeclineEmailRuleRequestRequest with value set to v.
 func NewOptDeclineEmailRuleRequestRequest(v DeclineEmailRuleRequestRequest) OptDeclineEmailRuleRequestRequest {
 	return OptDeclineEmailRuleRequestRequest{
@@ -85529,6 +86248,98 @@ func (o OptListEmailRuleDecisionsOnMyMailMatched) Get() (v ListEmailRuleDecision
 
 // Or returns value if set, or given parameter if does not.
 func (o OptListEmailRuleDecisionsOnMyMailMatched) Or(d ListEmailRuleDecisionsOnMyMailMatched) ListEmailRuleDecisionsOnMyMailMatched {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptListEmailRuleObjectionsBox returns new OptListEmailRuleObjectionsBox with value set to v.
+func NewOptListEmailRuleObjectionsBox(v ListEmailRuleObjectionsBox) OptListEmailRuleObjectionsBox {
+	return OptListEmailRuleObjectionsBox{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListEmailRuleObjectionsBox is optional ListEmailRuleObjectionsBox.
+type OptListEmailRuleObjectionsBox struct {
+	Value ListEmailRuleObjectionsBox
+	Set   bool
+}
+
+// IsSet returns true if OptListEmailRuleObjectionsBox was set.
+func (o OptListEmailRuleObjectionsBox) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListEmailRuleObjectionsBox) Reset() {
+	var v ListEmailRuleObjectionsBox
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListEmailRuleObjectionsBox) SetTo(v ListEmailRuleObjectionsBox) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListEmailRuleObjectionsBox) Get() (v ListEmailRuleObjectionsBox, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListEmailRuleObjectionsBox) Or(d ListEmailRuleObjectionsBox) ListEmailRuleObjectionsBox {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptListEmailRuleObjectionsStatus returns new OptListEmailRuleObjectionsStatus with value set to v.
+func NewOptListEmailRuleObjectionsStatus(v ListEmailRuleObjectionsStatus) OptListEmailRuleObjectionsStatus {
+	return OptListEmailRuleObjectionsStatus{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListEmailRuleObjectionsStatus is optional ListEmailRuleObjectionsStatus.
+type OptListEmailRuleObjectionsStatus struct {
+	Value ListEmailRuleObjectionsStatus
+	Set   bool
+}
+
+// IsSet returns true if OptListEmailRuleObjectionsStatus was set.
+func (o OptListEmailRuleObjectionsStatus) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListEmailRuleObjectionsStatus) Reset() {
+	var v ListEmailRuleObjectionsStatus
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListEmailRuleObjectionsStatus) SetTo(v ListEmailRuleObjectionsStatus) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListEmailRuleObjectionsStatus) Get() (v ListEmailRuleObjectionsStatus, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListEmailRuleObjectionsStatus) Or(d ListEmailRuleObjectionsStatus) ListEmailRuleObjectionsStatus {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -131676,12 +132487,9 @@ type UpdateEmailRuleRequest struct {
 	Tree OptEmailRuleTreeInput `json:"tree"`
 	// What the rule matches, in plain English. Left out, the server writes one from the tree.
 	Explanation OptString `json:"explanation"`
-	// Readings chosen where the description was open to more than one, as the compile response returned
-	// them (including its lines naming any condition, question or confidence bar the description did not
-	// ask for). Stored as sent.
+	// The compile response's assumptions. Stored as sent.
 	Assumptions []string `json:"assumptions"`
-	// Parts of the description the rule does not express, as the compile response returned them
-	// (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
+	// The compile response's warnings. Stored as sent.
 	Warnings []string `json:"warnings"`
 	// Who produced the tree (not verified): the compile response's compiled_by, or member (the default)
 	// for a tree you wrote or edited.
@@ -132053,7 +132861,15 @@ func (*UpdateEndpointForbidden) updateEndpointRes() {}
 
 // Ref: #/components/schemas/UpdateEndpointInput
 type UpdateEndpointInput struct {
-	// New webhook URL (triggers endpoint rotation).
+	// New URL, for a webhook (kind=http) only. The endpoint keeps its id, routes, stats, signing secret
+	// and owed deliveries, and its consecutive failure count starts again; a webhook turned off because
+	// its owner changed is turned back on (the change is refused when it could not be turned on, for
+	// example at the plan's webhook limit), unless the same request sets enabled to false. A URL another
+	// endpoint on the same domain already uses (enabled or not; endpoints with no domain count as one
+	// domain) is refused. A caller limited to its own endpoints (an API key or a person limited to some
+	// mailboxes) cannot change the URL of an API key's webhook that signs with the organization's
+	// secret: give it a signing secret of its own first. Owners, admins and other callers with the whole
+	// organization's mail can change it.
 	URL      OptString                   `json:"url"`
 	Enabled  OptBool                     `json:"enabled"`
 	DomainID OptNilUUID                  `json:"domain_id"`
@@ -137433,6 +138249,54 @@ func (*WhoamiTooManyRequests) whoamiRes() {}
 type WhoamiUnauthorized ErrorResponseHeaders
 
 func (*WhoamiUnauthorized) whoamiRes() {}
+
+type WithdrawEmailRuleObjectionConflict ErrorResponse
+
+func (*WithdrawEmailRuleObjectionConflict) withdrawEmailRuleObjectionRes() {}
+
+type WithdrawEmailRuleObjectionForbidden ErrorResponse
+
+func (*WithdrawEmailRuleObjectionForbidden) withdrawEmailRuleObjectionRes() {}
+
+type WithdrawEmailRuleObjectionNotFound ErrorResponse
+
+func (*WithdrawEmailRuleObjectionNotFound) withdrawEmailRuleObjectionRes() {}
+
+// Merged schema.
+type WithdrawEmailRuleObjectionOK struct {
+	Success bool               `json:"success"`
+	Data    EmailRuleObjection `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *WithdrawEmailRuleObjectionOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *WithdrawEmailRuleObjectionOK) GetData() EmailRuleObjection {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *WithdrawEmailRuleObjectionOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *WithdrawEmailRuleObjectionOK) SetData(val EmailRuleObjection) {
+	s.Data = val
+}
+
+func (*WithdrawEmailRuleObjectionOK) withdrawEmailRuleObjectionRes() {}
+
+type WithdrawEmailRuleObjectionTooManyRequests ErrorResponseHeaders
+
+func (*WithdrawEmailRuleObjectionTooManyRequests) withdrawEmailRuleObjectionRes() {}
+
+type WithdrawEmailRuleObjectionUnauthorized ErrorResponseHeaders
+
+func (*WithdrawEmailRuleObjectionUnauthorized) withdrawEmailRuleObjectionRes() {}
 
 type WithdrawEmailRuleRequestConflict ErrorResponse
 

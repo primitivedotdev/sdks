@@ -311,6 +311,20 @@ describe("writeErrorWithHints", () => {
     expect(writes).toHaveLength(1);
   });
 
+  it("prints the server's message for an error code the spec does not list", () => {
+    const envelope = {
+      success: false,
+      error: {
+        code: "code_not_in_the_spec",
+        message: "What the server said",
+      },
+    };
+    writeErrorWithHints(envelope);
+
+    expect(writes).toHaveLength(1);
+    expect(JSON.parse(writes[0] ?? "")).toEqual(envelope);
+  });
+
   it("does not append a hint when no code can be extracted", () => {
     writeErrorWithHints({ message: "mystery failure" });
 
@@ -807,6 +821,28 @@ describe("emptyRuleListHint", () => {
       "(no results) No shares match. By default this lists only live shares of your mail: add `--live any` to widen it.",
     );
     expect(emptyRuleListHint("listEmails", {})).toBeUndefined();
+  });
+
+  it("says which default filters hid objections", () => {
+    expect(emptyRuleListHint("listEmailRuleObjections", {})).toBe(
+      "(no results) No objections match. By default this lists only pending objections you made: add `--box all --status any` to widen it.",
+    );
+    expect(
+      emptyRuleListHint("listEmailRuleObjections", { box: "incoming" }),
+    ).toBe(
+      "(no results) No objections match. By default this lists only pending objections: add `--status any` to widen it.",
+    );
+    expect(
+      emptyRuleListHint("listEmailRuleObjections", { status: "decided" }),
+    ).toBe(
+      "(no results) No objections match. By default this lists only objections you made: add `--box all` to widen it.",
+    );
+    expect(
+      emptyRuleListHint("listEmailRuleObjections", {
+        box: "all",
+        status: "any",
+      }),
+    ).toBeUndefined();
   });
 });
 

@@ -521,7 +521,7 @@ date-time is kept as null and sorts last. A sync stops with an error after
 
 #### New operations
 
-166 operations, by area:
+177 operations, by area:
 
 - Account: `getOwnGrant`, `getSendFrom` (the addresses a credential may
   send from, and the one a send that names no From should use).
@@ -618,6 +618,22 @@ date-time is kept as null and sorts last. A sync stops with an error after
   session or the CLI, not narrowed. In the CLI: `email-rule-oversight
   list-email-rules-covering-me`, `get-email-rule-covering-me` and
   `list-email-rule-decisions-on-my-mail`.
+  Objections (`/email-rule-objections`, each an `EmailRuleObjection`) ask
+  the author of a rule that covers one of your own mailboxes now to turn
+  it off: `createEmailRuleObjection` (`rule_id` and an optional `message`),
+  `listEmailRuleObjections` (`box` `outgoing`, the default, `incoming` or
+  `all`; `status` `pending`, the default, `decided` or `any`),
+  `getEmailRuleObjection`, `withdrawEmailRuleObjection` (by the member who
+  objected), and `declineEmailRuleObjection` (with an optional `reason`)
+  and `acceptEmailRuleObjection` (which turns the rule off, state `draft`)
+  by the rule's author. A decided or withdrawn objection answers `409`
+  `not_pending`; a second pending objection to the same rule, or one more
+  while you have 50 pending, answers `409` `conflict` with `details.reason`
+  `objection_pending` or `objection_limit`. They need the same credential
+  as the reads above. In the CLI: `email-rule-oversight
+  create-email-rule-objection`, `list-email-rule-objections`,
+  `get-email-rule-objection`, `withdraw-email-rule-objection`,
+  `decline-email-rule-objection` and `accept-email-rule-objection`.
 - Email rule shares: `listEmailRuleShares`, `listGivenEmailRuleShares`,
   `getEmailRuleShare`, `listEmailRuleShareEmails`, `endEmailRuleShare`
   (whose answer carries a `note` saying the rule itself is left unchanged,
@@ -637,7 +653,17 @@ date-time is kept as null and sorts last. A sync stops with an error after
 - `rotateKey` takes `expires_at`: the new key's expiry, a time or null for
   none, instead of the old key's.
 - `listActivityObjects` takes `relation`: `created` (the default) or `asked`,
-  what other members asked of you.
+  what other members asked of you: rule requests made to you, and
+  objections to rules you wrote. Its `kind` can be `email_rule_objection`:
+  with `created`, a person's own objections (on the dashboard or in the
+  CLI only); with `asked`, the objections to rules they wrote.
+- `listDeliveries` takes `endpoint_id`: only deliveries to that endpoint.
+- A delivery's `response_body` is null, and its `last_error_code` is
+  `handler_4xx` or `handler_5xx` in place of a code the webhook chose, for
+  a caller who cannot read the webhook. In answers recorded since November
+  2026, `response_body` hides the webhook URL's query string, its
+  parameters, values long enough to be a credential and any userinfo, and
+  keeps the rest as the endpoint wrote it.
 - `deleteEmailRule` answers `ended_shares`, `keys` and `other_keys` beside
   `deleted` (`DeleteEmailRuleResult`): the shares the delete ended, the keys
   that are not revoked and still list the rule that you may read, by id, name
@@ -1171,7 +1197,8 @@ parsers.
 - `email-rules end-email-rule-share` prints the answer's note, that ending
   a share leaves the rule itself as it was. An empty `email-rules
   list-email-rule-requests`, `list-email-rule-shares` or
-  `list-given-email-rule-shares` says which default filter hid the rest
+  `list-given-email-rule-shares`, or `email-rule-oversight
+  list-email-rule-objections`, says which default filter hid the rest
   (`--box all`, `--status any`, `--live any`).
 - `keys create` and `keys update` print the answer's `address_warnings`
   without `--json`, such as an address or domain listed beside `--rule`,
@@ -1223,8 +1250,8 @@ parsers.
   (and there every Member reads all of its mail), so from the CLI invite
   with `--role none` and give a role once they have joined.
 - `primitive activity asked` lists what other members asked of you, newest
-  first, open or answered: the rule requests made to you, each with its
-  state, who asked and its id. It takes `--state`, `--limit`, `--cursor`,
+  first, open or answered: the rule requests made to you and the objections
+  to rules you wrote, each with its kind, state, who asked and its id. It takes `--state`, `--limit`, `--cursor`,
   `--all` and `--json`.
 - `primitive activity created` lists what you created, newest first, with
   where each object stands now. Signed in with `primitive login`, it covers

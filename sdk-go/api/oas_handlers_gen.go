@@ -33,6 +33,200 @@ func (c *codeRecorder) Unwrap() http.ResponseWriter {
 	return c.ResponseWriter
 }
 
+// handleAcceptEmailRuleObjectionRequest handles acceptEmailRuleObjection operation.
+//
+// Accepts a pending objection to a rule you wrote: turns the rule off (state draft), as updating it
+// would, and records the objection accepted, together. You can turn the rule on again later. Needs
+// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+// token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.
+//
+// POST /email-rule-objections/{id}/accept
+func (s *Server) handleAcceptEmailRuleObjectionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("acceptEmailRuleObjection"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/email-rule-objections/{id}/accept"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), AcceptEmailRuleObjectionOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: AcceptEmailRuleObjectionOperation,
+			ID:   "acceptEmailRuleObjection",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, AcceptEmailRuleObjectionOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeAcceptEmailRuleObjectionParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response AcceptEmailRuleObjectionRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    AcceptEmailRuleObjectionOperation,
+			OperationSummary: "Accept an objection to your rule",
+			OperationID:      "acceptEmailRuleObjection",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = AcceptEmailRuleObjectionParams
+			Response = AcceptEmailRuleObjectionRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackAcceptEmailRuleObjectionParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.AcceptEmailRuleObjection(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.AcceptEmailRuleObjection(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeAcceptEmailRuleObjectionResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleAcceptEmailRuleRequestRequest handles acceptEmailRuleRequest operation.
 //
 // Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches
@@ -41,18 +235,12 @@ func (c *codeRecorder) Unwrap() http.ResponseWriter {
 // first with english and tree together (and an explanation, or the server writes one). Because this
 // gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth
 // apps and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree
-// to POST /v1/email-rules/test. A test on mail already received shows only what has arrived. To see
-// what the rule would do with an email that has not, such as one you would never want shared, pass
-// the request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive
-// CLI, primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you
-// make up, or have look-alikes written for it (POST /v1/email-rules/look-alikes with request_id;
-// primitive email-rules generate-look-alikes). Neither stores anything, and neither needs access
-// beyond testing a rule of your own; the accept keeps any you send as expectation_samples on the
-// rule it writes. Made-up emails sent in expectation_samples are kept on the rule this writes, where
-// GET /v1/email-rules/{id} lists them. Accepting also needs mail:share_own (sharing your own mail
-// through email rules, which only shows it and never sends): a role without it is refused, whether
-// or not it can send. Needs mail:read, a member's own credential with their full access (not an API
-// key, agent key or narrowed token), and the email rules feature.
+// to POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree
+// to POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST
+// /v1/email-rules/look-alikes with request_id); neither stores anything. expectation_samples are
+// kept on the rule it writes. Accepting also needs mail:share_own. Needs mail:read, a member's own
+// credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature.
 //
 // POST /email-rule-requests/{id}/accept
 func (s *Server) handleAcceptEmailRuleRequestRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -4754,20 +4942,14 @@ func (s *Server) handleCliLogoutRequest(args [0]string, argsEscaped bool, w http
 // handleCompileEmailRuleRequest handles compileEmailRule operation.
 //
 // Turns a plain-English description of which received emails to match into a rule tree over the
-// published column contract, with a plain-English explanation of what it matches, the assumptions
-// made, and warnings for anything the columns cannot express. Where the columns fall short the rule
-// may carry up to five yes/no questions, asked about an email only after its conditions match; they
-// read its subject, its new text and its attachments' file names, never what is inside an attachment,
-//
-//	and warnings say when a question mentions attachments. Nothing is saved. A rule with no questions
-//
-// has its conditions counted, read only, over the caller's recent classified mail (what a test of it
-// covers by default): breadth is that count, and a warning says when it matches nearly all of it.
-// The SQL the rule renders to is returned only when include_sql is true. kind do_not_share compiles
-// a do-not-share rule for recall: conditions only as narrow as the description says, the judgement
-// of what it describes put into questions, and with nothing a column decides for certain, conditions
-// that hold for every email. Needs mail:read, a member's own credential with their full access (not
-// an API key, agent key or narrowed token), and the email rules feature.
+// column contract, with an explanation of what it matches, the assumptions made, and warnings for
+// what the columns cannot express. Where the columns fall short it adds up to five yes/no questions,
+// asked only after the conditions match; they read the subject, the new text and attachment file
+// names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts,
+// read only, how much of your recent classified mail its conditions match. include_sql returns the
+// SQL it renders to. kind do_not_share compiles for recall. Needs mail:read, a member's own
+// credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature.
 //
 // POST /email-rules/compile
 func (s *Server) handleCompileEmailRuleRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -5773,16 +5955,13 @@ func (s *Server) handleCreateAgentConnectionRequest(args [0]string, argsEscaped 
 // handleCreateEmailRuleRequest handles createEmailRule operation.
 //
 // Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column
-// contract; without an explanation the server writes one. It starts in observe (what it matches is
-// recorded, nothing granted or blocked) unless state is draft (not evaluated), or active for a
-// do_not_share rule. You are its author, and it never reaches mail you cannot read. evaluation_scope
-// is own_mailboxes (your own mail) unless you name author (all you can read) or selected;
-// scope_selection may name only what you can read. The answer carries the scope as stored.
-// expectations saves emails it must match and must not; the answer judges them (expectations_check).
-// kind do_not_share blocks sharing: it runs before every other rule, and while active no rule shares
-// an email it matches or cannot decide; a key cannot list it (details.reason rule_blocks_sharing).
-// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-// narrowed token), and the email rules feature.
+// contract. It starts in observe (recorded, nothing granted or blocked) unless state is draft, or
+// active for a do_not_share rule. You are its author, and it never reaches mail you cannot read.
+// evaluation_scope is own_mailboxes unless you name author or selected (scope_selection names only
+// what you can read). expectations are judged in expectations_check. kind do_not_share blocks
+// sharing what it matches; a key cannot list it (details.reason rule_blocks_sharing). Needs
+// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+// token), and the email rules feature.
 //
 // POST /email-rules
 func (s *Server) handleCreateEmailRuleRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -5982,19 +6161,227 @@ func (s *Server) handleCreateEmailRuleRequest(args [0]string, argsEscaped bool, 
 	}
 }
 
+// handleCreateEmailRuleObjectionRequest handles createEmailRuleObjection operation.
+//
+// Asks the author of a rule that covers one of your own mailboxes now to turn it off. Only a rule
+// that covers you now: one you see only because it once decided on your mail cannot be objected to.
+// An objection is seen by the member who made it, the rule's author and the organization's owners
+// and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines
+// it, or the member who made it withdraws it, which clears its message. It never changes after that.
+// You may have one pending objection per rule and 50 in all, and object to the same rule again only
+// 10 minutes after you last did, whatever became of it. Needs mail:read, a member's own credential
+// with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+// Only on your own dashboard session or the Primitive CLI.
+//
+// POST /email-rule-objections
+func (s *Server) handleCreateEmailRuleObjectionRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createEmailRuleObjection"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/email-rule-objections"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), CreateEmailRuleObjectionOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: CreateEmailRuleObjectionOperation,
+			ID:   "createEmailRuleObjection",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, CreateEmailRuleObjectionOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeCreateEmailRuleObjectionParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeCreateEmailRuleObjectionRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response CreateEmailRuleObjectionRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    CreateEmailRuleObjectionOperation,
+			OperationSummary: "Object to a rule over your mail",
+			OperationID:      "createEmailRuleObjection",
+			Body:             request,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = *CreateEmailRuleObjectionRequest
+			Params   = CreateEmailRuleObjectionParams
+			Response = CreateEmailRuleObjectionRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackCreateEmailRuleObjectionParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.CreateEmailRuleObjection(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.CreateEmailRuleObjection(ctx, request, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeCreateEmailRuleObjectionResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleCreateEmailRuleRequestRequest handles createEmailRuleRequest operation.
 //
 // Asks another member of the organization for a rule over their own mail, from a compile response or
 // a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified
 // work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated
-// and nothing is shared until they accept, and they may change the rule first; they see the request
-// and can preview what it matches in their own mail. A message (up to 500 characters) tells them why
-// you are asking; they see it with the request, and it cannot be changed later. You may have at most
-// 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer
-// also says whether they can accept it under their role (target_can_accept), and if not, why
-// (target_warning); the request is sent either way. To find out before asking, use POST
-// /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full
-// access (not an API key, agent key or narrowed token), and the email rules feature.
+// or shared until they accept, and they may change the rule first. A message (up to 500 characters,
+// fixed once sent) tells them why you ask. At most 5 pending requests to one member and 50 in all.
+// With members:read the answer says whether they can accept it under their role (target_can_accept,
+// target_warning); POST /v1/email-rule-requests/target-check checks first. Needs mail:read, a
+// member's own credential with their full access (not an API key, agent key or narrowed token), and
+// the email rules feature.
 //
 // POST /email-rule-requests
 func (s *Server) handleCreateEmailRuleRequestRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -9234,6 +9621,215 @@ func (s *Server) handleDecideSuspensionRequest(args [1]string, argsEscaped bool,
 	}
 }
 
+// handleDeclineEmailRuleObjectionRequest handles declineEmailRuleObjection operation.
+//
+// Declines a pending objection to a rule you wrote, optionally saying why; the rule stays as it is.
+// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+// narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive
+// CLI.
+//
+// POST /email-rule-objections/{id}/decline
+func (s *Server) handleDeclineEmailRuleObjectionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("declineEmailRuleObjection"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/email-rule-objections/{id}/decline"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), DeclineEmailRuleObjectionOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: DeclineEmailRuleObjectionOperation,
+			ID:   "declineEmailRuleObjection",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, DeclineEmailRuleObjectionOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeDeclineEmailRuleObjectionParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeDeclineEmailRuleObjectionRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response DeclineEmailRuleObjectionRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    DeclineEmailRuleObjectionOperation,
+			OperationSummary: "Decline an objection to your rule",
+			OperationID:      "declineEmailRuleObjection",
+			Body:             request,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = OptDeclineEmailRuleObjectionRequest
+			Params   = DeclineEmailRuleObjectionParams
+			Response = DeclineEmailRuleObjectionRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackDeclineEmailRuleObjectionParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.DeclineEmailRuleObjection(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.DeclineEmailRuleObjection(ctx, request, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeDeclineEmailRuleObjectionResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleDeclineEmailRuleRequestRequest handles declineEmailRuleRequest operation.
 //
 // Declines a pending request made to you. Nothing is written but the decision and, if you give one,
@@ -10439,15 +11035,12 @@ func (s *Server) handleDeleteEmailRequest(args [1]string, argsEscaped bool, w ht
 
 // handleDeleteEmailRuleRequest handles deleteEmailRule operation.
 //
-// Deletes a rule with its versions, its decisions and the access it granted. A rule that was ever
-// shared with another member keeps the record of its share: the share ends with end_reason
-// rule_deleted, and the member who shared can still list what it handed over, while the rule is no
-// longer shown and reads nothing. The answer lists the shares the delete ended (ended_shares) and
-// the keys, not revoked, that still list the rule, which now read nothing through it: those you may
-// read as key metadata by id, name and prefix (keys), and how many others (other_keys). keys and
-// other_keys are left out when the keys could not be read. The author, or a caller who reads the
-// whole organization's mail, may delete it; while it is shared with another member, only the author
-// or someone who manages members from the dashboard. Needs mail:read, a member's own credential with
+// Deletes a rule with its versions, its decisions and the access it granted. A share of it ends
+// (end_reason rule_deleted), and the member who shared can still list what it handed over. The
+// answer lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which
+// now read nothing through it (keys, other_keys; left out when they could not be read). The author
+// or a reader of all the organization's mail may delete it; while it is shared, only the author or
+// someone who manages members from the dashboard. Needs mail:read, a member's own credential with
 // their full access (not an API key, agent key or narrowed token), and the email rules feature.
 //
 // DELETE /email-rules/{id}
@@ -12937,7 +13530,13 @@ func (s *Server) handleDeleteRouteRequest(args [1]string, argsEscaped bool, w ht
 // already admitted. A minimal non-content record preserves occupied idempotency keys and
 // delivered-reply deduplication. Keys already released by cancellation, gate denial or a
 // never-attempted failure remain reusable; deleting those records does not revoke their existing
-// retry permission. Repeating a completed deletion returns success; unknown or foreign IDs return
+// retry permission. Unknown IDs return 404. Needs sent:manage, and follows mail access rather than
+// role: a caller with the whole organization's mail (an owner, admin or member whose access covers
+// every mailbox, or an organization-wide key) can delete any send in the organization; a caller
+// limited to some mailboxes, an owner or admin included, can delete only sends from addresses its
+// access covers, made since that access starts (a member limited to their own mail: their own), and
+// any other send returns 404. Repeating a completed deletion returns success; for a caller limited
+// to some mailboxes, only when the send was from an address its access names one by one, otherwise
 // 404. Organization API keys, sessions and OAuth are supported; Function and connected-agent
 // credentials are denied.
 //
@@ -19658,21 +20257,209 @@ func (s *Server) handleGetEmailRuleCoveringMeRequest(args [1]string, argsEscaped
 	}
 }
 
+// handleGetEmailRuleObjectionRequest handles getEmailRuleObjection operation.
+//
+// One objection you can see. An objection is seen by the member who made it, the rule's author and
+// the organization's owners and admins. It stays pending until the rule's author accepts it, turning
+// the rule off, or declines it, or the member who made it withdraws it, which clears its message. It
+// never changes after that. Needs mail:read, a member's own credential with their full access (not
+// an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard
+// session or the Primitive CLI.
+//
+// GET /email-rule-objections/{id}
+func (s *Server) handleGetEmailRuleObjectionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getEmailRuleObjection"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/email-rule-objections/{id}"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), GetEmailRuleObjectionOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: GetEmailRuleObjectionOperation,
+			ID:   "getEmailRuleObjection",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, GetEmailRuleObjectionOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeGetEmailRuleObjectionParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response GetEmailRuleObjectionRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    GetEmailRuleObjectionOperation,
+			OperationSummary: "Get an objection",
+			OperationID:      "getEmailRuleObjection",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = GetEmailRuleObjectionParams
+			Response = GetEmailRuleObjectionRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackGetEmailRuleObjectionParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.GetEmailRuleObjection(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.GetEmailRuleObjection(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeGetEmailRuleObjectionResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleGetEmailRuleRequestRequest handles getEmailRuleRequest operation.
 //
 // A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a
 // member. A request is visible to the member who made it, the member it was made to, and the
 // organization's owners and admins. If you are the member asked, you can try the rule as proposed
 // before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have
-// received. A test on mail already received shows only what has arrived. To see what the rule would
-// do with an email that has not, such as one you would never want shared, pass the request's tree to
-// POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive
-// email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up, or have
-// look-alikes written for it (POST /v1/email-rules/look-alikes with request_id; primitive
-// email-rules generate-look-alikes). Neither stores anything, and neither needs access beyond
-// testing a rule of your own; the accept keeps any you send as expectation_samples on the rule it
-// writes. Needs mail:read, a member's own credential with their full access (not an API key, agent
-// key or narrowed token), and the email rules feature.
+// received. To try it on an email that has not arrived, pass the request's tree to POST
+// /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST
+// /v1/email-rules/look-alikes with request_id); neither stores anything. Needs mail:read, a member's
+// own credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature.
 //
 // GET /email-rule-requests/{id}
 func (s *Server) handleGetEmailRuleRequestRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -29236,12 +30023,14 @@ func (s *Server) handleLeaveOrganizationRequest(args [0]string, argsEscaped bool
 // sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key
 // lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees
 // what they created through any credential of theirs, each item naming it, and also their API keys,
-// personal agents, email rules and rule requests. Each kind is listed only if the caller could list
-// it through that kind's own route; a kind it could not is named in withheld, with no count. Ids,
-// names and states only: never a webhook URL or mail content. Needs activity:read_self. With
+// personal agents, email rules, rule requests and objections to rules over their mail (objections
+// only on the dashboard or the Primitive CLI). Each kind is listed only if the caller could list it
+// through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names
+// and states only: never a webhook URL or mail content. Needs activity:read_self. With
 // relation=asked it lists instead what other members asked of the person, open or answered: the rule
-// requests made to them, under their current membership, each naming the member who asked in
-// created_through. A key, an app or an agent has none, and gets email_rule_request in withheld.
+// requests made to them, and the objections to rules they wrote, under their current membership,
+// each naming the member who asked or objected in created_through. A key, an app or an agent has
+// none, and gets both kinds in withheld.
 //
 // GET /activity/objects
 func (s *Server) handleListActivityObjectsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -32241,6 +33030,10 @@ func (s *Server) handleListDeliveriesRequest(args [0]string, argsEscaped bool, w
 					Name: "sent_email_id",
 					In:   "query",
 				}: params.SentEmailID,
+				{
+					Name: "endpoint_id",
+					In:   "query",
+				}: params.EndpointID,
 			},
 			Raw: r,
 		}
@@ -33051,6 +33844,211 @@ func (s *Server) handleListEmailRuleDecisionsOnMyMailRequest(args [1]string, arg
 	}
 
 	if err := encodeListEmailRuleDecisionsOnMyMailResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleListEmailRuleObjectionsRequest handles listEmailRuleObjections operation.
+//
+// Objections you made, objections to rules you wrote, or every objection you can see, newest first.
+// An objection is seen by the member who made it, the rule's author and the organization's owners
+// and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines
+// it, or the member who made it withdraws it, which clears its message. It never changes after that.
+// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+// narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive
+// CLI.
+//
+// GET /email-rule-objections
+func (s *Server) handleListEmailRuleObjectionsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listEmailRuleObjections"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/email-rule-objections"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), ListEmailRuleObjectionsOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: ListEmailRuleObjectionsOperation,
+			ID:   "listEmailRuleObjections",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, ListEmailRuleObjectionsOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeListEmailRuleObjectionsParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response ListEmailRuleObjectionsRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    ListEmailRuleObjectionsOperation,
+			OperationSummary: "List objections",
+			OperationID:      "listEmailRuleObjections",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "box",
+					In:   "query",
+				}: params.Box,
+				{
+					Name: "status",
+					In:   "query",
+				}: params.Status,
+				{
+					Name: "limit",
+					In:   "query",
+				}: params.Limit,
+				{
+					Name: "cursor",
+					In:   "query",
+				}: params.Cursor,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = ListEmailRuleObjectionsParams
+			Response = ListEmailRuleObjectionsRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackListEmailRuleObjectionsParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.ListEmailRuleObjections(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.ListEmailRuleObjections(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeListEmailRuleObjectionsResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -35705,7 +36703,7 @@ func (s *Server) handleListFunctionDeploymentsRequest(args [1]string, argsEscape
 //
 // Each run of the function, newest first, with its outcome, timings, response status and exception.
 // Lists runs only: a webhook delivery that never reached the function (for example one refused
-// before it ran) is not an invocation; find those with listDeliveries.
+// before it ran) is not an invocation; find those with listDeliveries and its endpoint_id filter.
 //
 // GET /functions/{id}/invocations
 func (s *Server) handleListFunctionInvocationsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -56289,19 +57287,15 @@ func (s *Server) handleSuspendFunctionRuntimeKeyRequest(args [1]string, argsEsca
 //
 // Runs a rule over received mail and reports what it would decide for each email (matched, near_miss,
 //
-//	no_match, unclassified, skipped or not_found), with a summary: how each top-level condition and
+//	no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and
 //
-// question decided and, when nothing matched, what stopped it. Test an unsaved tree from a compile
-// response, or a saved rule by rule_id (its current version, run with its author's access). The rule
-// reads only mail its author can read and its scope covers; an unsaved tree covers only your own
-// mail unless evaluation_scope names more. Without email_ids, the newest emails it can read are
-// tested, at most 200 and none older than 30 days; expected emails (expect, or a saved rule's saved
-// expectations) are tested whatever their age. Unclassified emails more than 2 hours old are
-// classified first and their classification saved, unless classify_missing is false; newer ones are
-// reported unclassified, pending. The rule itself records and grants nothing. Classification and the
-// rule's questions stop at about 90 seconds; a rerun continues the classification where it stopped.
-// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-// narrowed token), and the email rules feature.
+// question decided. Test an unsaved tree, or a saved rule by rule_id (its current version, as its
+// author). It reads only mail its author can read and its scope covers. Without email_ids it tests
+// the newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified
+// emails over 2 hours old are classified first unless classify_missing is false. It records no
+// decision and grants nothing, and stops at about 90 seconds. Needs mail:read, a member's own
+// credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature.
 //
 // POST /email-rules/test
 func (s *Server) handleTestEmailRuleRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -56504,11 +57498,9 @@ func (s *Server) handleTestEmailRuleRequest(args [0]string, argsEscaped bool, w 
 // handleTestEmailRuleOnSampleRequest handles testEmailRuleOnSample operation.
 //
 // Reports what a rule would decide for an email you describe (sender, recipients, subject, plain
-// text, attachment types; optionally whether it is automated or from a mailing list, and its spam
-// score), received now: it is classified, and the conditions and questions decided, as received mail
-// would be. By default it is not automated or from a list; a rule reading a spam score you gave none
-// for decides on none (spam_score is then in unset_columns). Nothing is stored. Test an unsaved tree
-// (covering only your own mail unless evaluation_scope names more) or a saved rule by rule_id. The
+// text, attachment types; optionally automated, from a mailing list, and a spam score), classified
+// and decided as received mail would be. A rule reading a spam score you gave none for decides on
+// none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The
 // answer includes what the classifier read. Needs mail:read, a member's own credential with their
 // full access (not an API key, agent key or narrowed token), and the email rules feature.
 //
@@ -58937,19 +59929,16 @@ func (s *Server) handleUpdateDomainRequest(args [1]string, argsEscaped bool, w h
 
 // handleUpdateEmailRuleRequest handles updateEmailRule operation.
 //
-// Renames the rule, saves a new version (english and tree together, with an explanation or one the
-// server writes; earlier versions stay) or an earlier one again (restore_version), changes its state
-// (draft is off; observe; active), whose mail it runs over (evaluation_scope, with scope_selection
-// when selected) or its saved expectations (each saved version and new set is judged in
-// expectations_check). Anyone but its author who sees it may only disable it (state draft), and
-// while it is shared only if they manage members from the dashboard. Without evaluation_scope the
-// scope stays; a scope change saves a new version with the same conditions, and what was granted
-// stays. A shared rule keeps its scope; a kind never changes. A saved version takes effect at once
-// (an active rule stays active); affects counts what it reaches. Send if_version, the
-// current_version you read, so a write never replaces a version saved since, or if_revision to
-// refuse it after any update. Without if_expectations_pass a version is saved even when its
-// expectations_check fails. Needs mail:read, a member's own credential with their full access (not
-// an API key, agent key or narrowed token), and the email rules feature.
+// Renames the rule, saves a new version (english and tree together; earlier versions stay) or
+// restores one (restore_version), changes its state (draft is off; observe; active), its scope
+// (evaluation_scope, with scope_selection when selected) or its saved expectations (judged in
+// expectations_check). Anyone but its author who sees it may only set state draft, and while it is
+// shared only if they manage members from the dashboard. A scope change saves a new version; a
+// shared rule keeps its scope, and a kind never changes. A saved version takes effect at once.
+// if_version refuses a write once a version was saved since you read it; if_revision, once anything
+// changed. Without if_expectations_pass a version is saved even when its expectations fail. Needs
+// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+// token), and the email rules feature.
 //
 // PATCH /email-rules/{id}
 func (s *Server) handleUpdateEmailRuleRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -63990,6 +64979,199 @@ func (s *Server) handleWhoamiRequest(args [0]string, argsEscaped bool, w http.Re
 	}
 
 	if err := encodeWhoamiResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleWithdrawEmailRuleObjectionRequest handles withdrawEmailRuleObjection operation.
+//
+// Withdraws a pending objection you made, and clears its message. Needs mail:read, a member's own
+// credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature. Only on your own dashboard session or the Primitive CLI.
+//
+// POST /email-rule-objections/{id}/withdraw
+func (s *Server) handleWithdrawEmailRuleObjectionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("withdrawEmailRuleObjection"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/email-rule-objections/{id}/withdraw"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), WithdrawEmailRuleObjectionOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: WithdrawEmailRuleObjectionOperation,
+			ID:   "withdrawEmailRuleObjection",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, WithdrawEmailRuleObjectionOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeWithdrawEmailRuleObjectionParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response WithdrawEmailRuleObjectionRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    WithdrawEmailRuleObjectionOperation,
+			OperationSummary: "Withdraw an objection",
+			OperationID:      "withdrawEmailRuleObjection",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = WithdrawEmailRuleObjectionParams
+			Response = WithdrawEmailRuleObjectionRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackWithdrawEmailRuleObjectionParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.WithdrawEmailRuleObjection(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.WithdrawEmailRuleObjection(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeWithdrawEmailRuleObjectionResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)

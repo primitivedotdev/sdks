@@ -40,11 +40,8 @@ class UpdateEmailRuleRequest:
             tree (EmailRuleTreeInput | Unset):
             explanation (str | Unset): What the rule matches, in plain English. Left out, the server writes one from the
                 tree.
-            assumptions (list[str] | Unset): Readings chosen where the description was open to more than one, as the compile
-                response returned them (including its lines naming any condition, question or confidence bar the description did
-                not ask for). Stored as sent.
-            warnings (list[str] | Unset): Parts of the description the rule does not express, as the compile response
-                returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
+            assumptions (list[str] | Unset): The compile response's assumptions. Stored as sent.
+            warnings (list[str] | Unset): The compile response's warnings. Stored as sent.
             compiled_by (str | Unset): Who produced the tree (not verified): the compile response's compiled_by, or member
                 (the default) for a tree you wrote or edited.
             breadth (EmailRuleBreadth | None | Unset): Ignored (the compile answer's breadth).

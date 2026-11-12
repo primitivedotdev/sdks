@@ -14,8 +14,9 @@ import {
 // What you created, or what other members asked of you (relation=asked), read
 // from GET /activity/objects. A key, an app or an agent sees what it created
 // itself; a person signed in with `primitive login` sees what they created
-// through any credential of theirs, and the rule requests made to them. Ids,
-// names and states only: never a webhook URL or mail content.
+// through any credential of theirs, and the rule requests made to them and
+// the objections to rules they wrote. Ids, names and states only: never a
+// webhook URL or mail content.
 
 const API_KEY_FLAG = Flags.string({
   description:
@@ -130,8 +131,8 @@ export function formatActivityRows(
 }
 
 /**
- * One line per request asked of you: its state, when it was asked, its name,
- * and who asked. `complete` says the listing is the whole of it (every state,
+ * One line per thing asked of you (a rule request, or an objection to a rule
+ * you wrote): its kind, its state, when it was asked, its name, and who asked. `complete` says the listing is the whole of it (every state,
  * from the first page to the last, nothing withheld), the only time an empty one means
  * nobody has asked.
  */
@@ -142,13 +143,14 @@ export function formatAskedRows(
   if (items.length === 0)
     return complete ? "Nobody has asked you for anything." : "Nothing to show.";
   const rows = items.map((item) => [
+    item.kind,
     item.state,
     minute(item.created_at),
     item.name ?? item.id,
     item.created_through.name ?? item.created_through.id ?? "",
     item.id,
   ]);
-  const header = ["STATE", "ASKED (UTC)", "NAME", "FROM", "ID"];
+  const header = ["KIND", "STATE", "ASKED (UTC)", "NAME", "FROM", "ID"];
   const widths = header.map((h, i) =>
     Math.max(h.length, ...rows.map((row) => (row[i] ?? "").length)),
   );
@@ -339,9 +341,9 @@ export class ActivityCreatedCommand extends Command {
 
 export class ActivityAskedCommand extends Command {
   static description =
-    `List what other members asked of you, newest first, open or answered: rule requests made to you for an email rule over your own mail, each with where it stands and who asked.
+    `List what other members asked of you, newest first, open or answered: rule requests made to you for an email rule over your own mail, and objections to rules you wrote, each with its kind, where it stands and who asked.
 
-  Signed in with \`primitive login\`, you see the requests made to you under your current membership. A key, an app or an agent is asked nothing. Read one with \`primitive email-rules get-email-rule-request --id <id>\`, then accept or decline it.`;
+  Signed in with \`primitive login\`, you see what was asked of you under your current membership. A key, an app or an agent is asked nothing. Read a request (email_rule_request) with \`primitive email-rules get-email-rule-request --id <id>\`, and an objection (email_rule_objection) with \`primitive email-rule-oversight get-email-rule-objection --id <id>\`, then accept or decline it.`;
 
   static summary = "List what other members asked of you";
 
@@ -361,7 +363,7 @@ export class ActivityAskedCommand extends Command {
       default: "all",
     }),
     limit: Flags.integer({
-      description: "Requests per page, 1 to 200.",
+      description: "Items per page, 1 to 200.",
       min: 1,
       max: 200,
       default: DEFAULT_LIMIT,

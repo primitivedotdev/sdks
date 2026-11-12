@@ -304,7 +304,7 @@ describe("activity asked command", () => {
     expect(COMMANDS["activity:asked"]).toBeDefined();
   });
 
-  it("lists what was asked of you, naming who asked, and asks the API for exactly that", async () => {
+  it("lists what was asked of you, naming its kind and who asked, and asks the API for exactly that", async () => {
     const urls = useApi([
       page(
         [
@@ -314,6 +314,14 @@ describe("activity asked command", () => {
             state: "pending",
             owned_now: "someone_else",
             created_through: { kind: "member", id: "u-1", name: "Sam Rivera" },
+          }),
+          item({
+            kind: "email_rule_objection",
+            id: "5d1c2b3a-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+            name: "Archive newsletters",
+            state: "pending",
+            owned_now: "someone_else",
+            created_through: { kind: "member", id: "u-2", name: "Ana Lima" },
           }),
         ],
         null,
@@ -332,9 +340,13 @@ describe("activity asked command", () => {
       limit: "50",
     });
     const out = lines.join("\n");
-    expect(out).toMatch(/^STATE\s+ASKED \(UTC\)\s+NAME\s+FROM\s+ID$/m);
-    expect(out).toContain("Vendor billing");
-    expect(out).toContain("Sam Rivera");
+    expect(out).toMatch(/^KIND\s+STATE\s+ASKED \(UTC\)\s+NAME\s+FROM\s+ID$/m);
+    expect(out).toMatch(
+      /^email_rule_request\s+pending\s+.*Vendor billing\s+Sam Rivera\s/m,
+    );
+    expect(out).toMatch(
+      /^email_rule_objection\s+pending\s+.*Archive newsletters\s+Ana Lima\s/m,
+    );
   });
 
   it("says nobody has asked only when the listing is the whole of it", () => {

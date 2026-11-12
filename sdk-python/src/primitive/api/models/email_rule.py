@@ -36,12 +36,11 @@ class EmailRule:
             state (EmailRuleState):
             current_version (int | None):
             author_user_id (UUID):
-            is_author (bool): Whether you are its author, in your current membership. Only its author edits it; others who
-                see it may only disable or delete it (while shared, only if they manage members).
+            is_author (bool): Whether you are its author, in your current membership. Only its author edits it.
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
             kind (EmailRuleKind | Unset): grant: what it matches can be shared. do_not_share: it blocks sharing what it
-                matches. Optional only for an older core-api: every answer carries it.
+                matches.
             protection_note (str | Unset): On a do_not_share rule only: it protects nothing yet (not active), a classifier
                 fact narrows it, or its several questions are alternatives.
             evaluation_scope (EmailRuleEvaluationScope | Unset): Whose mail it runs over, as stored (GET /email-

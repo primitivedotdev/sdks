@@ -96,6 +96,9 @@ export type Permission = (typeof PERMISSIONS)[number];
 
 /** The permissions each operation requires, all of them, by operation id. */
 export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[]>> = {
+  "acceptEmailRuleObjection": [
+    "mail:read"
+  ],
   "acceptEmailRuleRequest": [
     "mail:read",
     "mail:share_own"
@@ -179,6 +182,9 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   "createEmailRule": [
     "mail:read"
   ],
+  "createEmailRuleObjection": [
+    "mail:read"
+  ],
   "createEmailRuleRequest": [
     "mail:read"
   ],
@@ -225,6 +231,9 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   ],
   "decideSuspension": [
     "members:manage"
+  ],
+  "declineEmailRuleObjection": [
+    "mail:read"
   ],
   "declineEmailRuleRequest": [
     "mail:read"
@@ -378,6 +387,9 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
     "mail:read"
   ],
   "getEmailRuleCoveringMe": [
+    "mail:read"
+  ],
+  "getEmailRuleObjection": [
     "mail:read"
   ],
   "getEmailRuleRequest": [
@@ -565,6 +577,9 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
     "mail:read"
   ],
   "listEmailRuleDecisionsOnMyMail": [
+    "mail:read"
+  ],
+  "listEmailRuleObjections": [
     "mail:read"
   ],
   "listEmailRuleRequests": [
@@ -993,6 +1008,9 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   ],
   "verifyDomain": [
     "domains:manage"
+  ],
+  "withdrawEmailRuleObjection": [
+    "mail:read"
   ],
   "withdrawEmailRuleRequest": [
     "mail:read"
