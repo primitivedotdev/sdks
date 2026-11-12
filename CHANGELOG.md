@@ -584,10 +584,16 @@ date-time is kept as null and sorts last. A sync stops with an error after
   rules that reach your own mailboxes, whoever wrote them, read-only
   (`EmailRuleCoveringMe`, `EmailRuleCoveringMeRead`: `name`, `state`,
   `kind`, `author`, `is_author`, `covers` as `EmailRuleCoverage` with the
-  `addresses` it reaches and `via`, and the current version). They need
-  `mail:read` on a member's own session or the CLI, not narrowed. In the
-  CLI: `email-rule-oversight list-email-rules-covering-me` and
-  `get-email-rule-covering-me`.
+  `addresses` it reaches and `via`, and the current version), and
+  `listEmailRuleDecisionsOnMyMail` (`GET /email-rules/covering-me/{id}/decisions`,
+  `EmailRuleDecisionOnMyMail`, with `matched`, `limit` and `cursor`), what
+  such a rule decided about mail at your own mailboxes, never anyone else's.
+  A rule you can read only because it decided on your mail before has
+  `covers_now` false, a `note` saying what is withheld, and `name`, `covers`
+  and `current_version` null. They need `mail:read` on a member's own
+  session or the CLI, not narrowed. In the CLI: `email-rule-oversight
+  list-email-rules-covering-me`, `get-email-rule-covering-me` and
+  `list-email-rule-decisions-on-my-mail`.
 - Email rule shares: `listEmailRuleShares`, `listGivenEmailRuleShares`,
   `getEmailRuleShare`, `listEmailRuleShareEmails`, `endEmailRuleShare`
   (whose answer carries a `note` saying the rule itself is left unchanged,
@@ -751,7 +757,12 @@ date-time is kept as null and sorts last. A sync stops with an error after
     `question_answers_source`, and `testEmailRuleOnSample` answers with
     `values`.
   - `getEmailRuleScope` carries `scope_warnings` and `reads_nothing`.
-  - `listEmailRuleResults` carries the email's `classification`.
+  - `listEmailRuleResults` carries the email's `classification`. Its
+    `hidden` counts rules that decided on the email that you cannot see,
+    and `not_listed` the rules you can see past the 50 listed. A rule
+    listed `read_only` is another member's rule that decided on your own
+    mail, with its `author`; its `name` is null once it no longer covers
+    you.
   - `listEmailRuleDecisions` carries each email's `from_address`, `subject`
     and `received_at`.
   - `listEmailRuleVersions` lists versions newest first with `limit` and

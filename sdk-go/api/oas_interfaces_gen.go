@@ -661,6 +661,10 @@ type ListEmailAttachmentArchiveMembersRes interface {
 	listEmailAttachmentArchiveMembersRes()
 }
 
+type ListEmailRuleDecisionsOnMyMailRes interface {
+	listEmailRuleDecisionsOnMyMailRes()
+}
+
 type ListEmailRuleDecisionsRes interface {
 	listEmailRuleDecisionsRes()
 }

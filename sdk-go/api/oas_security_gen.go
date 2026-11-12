@@ -207,6 +207,7 @@ var operationRolesBearerAuth = map[string][]string{
 	ListDomainsOperation:                          []string{},
 	ListEmailAttachmentArchiveMembersOperation:    []string{},
 	ListEmailRuleDecisionsOperation:               []string{},
+	ListEmailRuleDecisionsOnMyMailOperation:       []string{},
 	ListEmailRuleRequestsOperation:                []string{},
 	ListEmailRuleResultsOperation:                 []string{},
 	ListEmailRuleScopeOptionsOperation:            []string{},

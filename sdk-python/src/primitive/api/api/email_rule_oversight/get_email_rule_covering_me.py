@@ -94,13 +94,15 @@ def sync_detailed(
 ) -> Response[ErrorResponse | GetEmailRuleCoveringMeResponse200]:
     """ Get a rule over your mail
 
-     One rule that covers one of your own mailboxes, read-only, with its current version. You see its
-    name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its
-    wording and tree are shown as written, so they can name other addresses (a condition on who an email
-    is from or to). You do not see the other inboxes and domains its scope names, its saved
-    expectations, or the keys, shares and webhooks that use it. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature. Only on your own dashboard session or the Primitive CLI.
+     One rule that covers one of your own mailboxes, read-only, with its current version; or one that no
+    longer does but decided on mail at your own mailbox (covers_now false), shown as the version that
+    last decided on your mail, without its current name. You see its name, wording, current tree, state,
+    kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as
+    written, so they can name other addresses (a condition on who an email is from or to). You do not
+    see the other inboxes and domains its scope names, its saved expectations, or the keys, shares and
+    webhooks that use it. Needs mail:read, a member's own credential with their full access (not an API
+    key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session
+    or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -133,13 +135,15 @@ def sync(
 ) -> ErrorResponse | GetEmailRuleCoveringMeResponse200 | None:
     """ Get a rule over your mail
 
-     One rule that covers one of your own mailboxes, read-only, with its current version. You see its
-    name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its
-    wording and tree are shown as written, so they can name other addresses (a condition on who an email
-    is from or to). You do not see the other inboxes and domains its scope names, its saved
-    expectations, or the keys, shares and webhooks that use it. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature. Only on your own dashboard session or the Primitive CLI.
+     One rule that covers one of your own mailboxes, read-only, with its current version; or one that no
+    longer does but decided on mail at your own mailbox (covers_now false), shown as the version that
+    last decided on your mail, without its current name. You see its name, wording, current tree, state,
+    kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as
+    written, so they can name other addresses (a condition on who an email is from or to). You do not
+    see the other inboxes and domains its scope names, its saved expectations, or the keys, shares and
+    webhooks that use it. Needs mail:read, a member's own credential with their full access (not an API
+    key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session
+    or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -167,13 +171,15 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | GetEmailRuleCoveringMeResponse200]:
     """ Get a rule over your mail
 
-     One rule that covers one of your own mailboxes, read-only, with its current version. You see its
-    name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its
-    wording and tree are shown as written, so they can name other addresses (a condition on who an email
-    is from or to). You do not see the other inboxes and domains its scope names, its saved
-    expectations, or the keys, shares and webhooks that use it. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature. Only on your own dashboard session or the Primitive CLI.
+     One rule that covers one of your own mailboxes, read-only, with its current version; or one that no
+    longer does but decided on mail at your own mailbox (covers_now false), shown as the version that
+    last decided on your mail, without its current name. You see its name, wording, current tree, state,
+    kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as
+    written, so they can name other addresses (a condition on who an email is from or to). You do not
+    see the other inboxes and domains its scope names, its saved expectations, or the keys, shares and
+    webhooks that use it. Needs mail:read, a member's own credential with their full access (not an API
+    key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session
+    or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -206,13 +212,15 @@ async def asyncio(
 ) -> ErrorResponse | GetEmailRuleCoveringMeResponse200 | None:
     """ Get a rule over your mail
 
-     One rule that covers one of your own mailboxes, read-only, with its current version. You see its
-    name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its
-    wording and tree are shown as written, so they can name other addresses (a condition on who an email
-    is from or to). You do not see the other inboxes and domains its scope names, its saved
-    expectations, or the keys, shares and webhooks that use it. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature. Only on your own dashboard session or the Primitive CLI.
+     One rule that covers one of your own mailboxes, read-only, with its current version; or one that no
+    longer does but decided on mail at your own mailbox (covers_now false), shown as the version that
+    last decided on your mail, without its current name. You see its name, wording, current tree, state,
+    kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as
+    written, so they can name other addresses (a condition on who an email is from or to). You do not
+    see the other inboxes and domains its scope names, its saved expectations, or the keys, shares and
+    webhooks that use it. Needs mail:read, a member's own credential with their full access (not an API
+    key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session
+    or the Primitive CLI.
 
     Args:
         id (UUID):

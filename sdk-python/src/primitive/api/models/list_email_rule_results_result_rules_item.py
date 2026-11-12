@@ -17,6 +17,7 @@ from typing import cast
 from uuid import UUID
 
 if TYPE_CHECKING:
+  from ..models.email_rule_covering_author import EmailRuleCoveringAuthor
   from ..models.list_email_rule_results_result_rules_item_decision_type_0 import ListEmailRuleResultsResultRulesItemDecisionType0
 
 
@@ -32,7 +33,7 @@ class ListEmailRuleResultsResultRulesItem:
     """ 
         Attributes:
             id (UUID):
-            name (str):
+            name (None | str):
             state (ListEmailRuleResultsResultRulesItemState):
             decision (ListEmailRuleResultsResultRulesItemDecisionType0 | None): What the rule most recently decided about
                 this email; null when it has not run on it.
@@ -46,15 +47,20 @@ class ListEmailRuleResultsResultRulesItem:
                 on; anything shared before, including while it was in observe, stays shared.
             author_left (bool | Unset): On a do-not-share rule whose author is no longer a member of the organization: it
                 blocks nothing now, whatever it decided. Absent otherwise.
+            read_only (bool | Unset): Another member's rule that decided on your own mail; dashboard and CLI only. name is
+                null once it no longer covers you.
+            author (EmailRuleCoveringAuthor | Unset):
      """
 
     id: UUID
-    name: str
+    name: None | str
     state: ListEmailRuleResultsResultRulesItemState
     decision: ListEmailRuleResultsResultRulesItemDecisionType0 | None
     not_run_reason: ListEmailRuleResultsResultRulesItemNotRunReasonType1 | ListEmailRuleResultsResultRulesItemNotRunReasonType2Type1 | ListEmailRuleResultsResultRulesItemNotRunReasonType3Type1 | None
     kind: ListEmailRuleResultsResultRulesItemKind | Unset = UNSET
     author_left: bool | Unset = UNSET
+    read_only: bool | Unset = UNSET
+    author: EmailRuleCoveringAuthor | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -62,9 +68,11 @@ class ListEmailRuleResultsResultRulesItem:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_rule_covering_author import EmailRuleCoveringAuthor # noqa: PLC0415
         from ..models.list_email_rule_results_result_rules_item_decision_type_0 import ListEmailRuleResultsResultRulesItemDecisionType0 # noqa: PLC0415
         id = str(self.id)
 
+        name: None | str
         name = self.name
 
         state = self.state.value
@@ -92,6 +100,12 @@ class ListEmailRuleResultsResultRulesItem:
 
         author_left = self.author_left
 
+        read_only = self.read_only
+
+        author: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.author, Unset):
+            author = self.author.to_dict()
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -106,6 +120,10 @@ class ListEmailRuleResultsResultRulesItem:
             field_dict["kind"] = kind
         if author_left is not UNSET:
             field_dict["author_left"] = author_left
+        if read_only is not UNSET:
+            field_dict["read_only"] = read_only
+        if author is not UNSET:
+            field_dict["author"] = author
 
         return field_dict
 
@@ -113,6 +131,7 @@ class ListEmailRuleResultsResultRulesItem:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_rule_covering_author import EmailRuleCoveringAuthor # noqa: PLC0415
         from ..models.list_email_rule_results_result_rules_item_decision_type_0 import ListEmailRuleResultsResultRulesItemDecisionType0 # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
@@ -120,7 +139,13 @@ class ListEmailRuleResultsResultRulesItem:
 
 
 
-        name = d.pop("name")
+        def _parse_name(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        name = _parse_name(d.pop("name"))
+
 
         state = ListEmailRuleResultsResultRulesItemState(d.pop("state"))
 
@@ -195,6 +220,18 @@ class ListEmailRuleResultsResultRulesItem:
 
         author_left = d.pop("author_left", UNSET)
 
+        read_only = d.pop("read_only", UNSET)
+
+        _author = d.pop("author", UNSET)
+        author: EmailRuleCoveringAuthor | Unset
+        if isinstance(_author,  Unset):
+            author = UNSET
+        else:
+            author = EmailRuleCoveringAuthor.from_dict(_author)
+
+
+
+
         list_email_rule_results_result_rules_item = cls(
             id=id,
             name=name,
@@ -203,6 +240,8 @@ class ListEmailRuleResultsResultRulesItem:
             not_run_reason=not_run_reason,
             kind=kind,
             author_left=author_left,
+            read_only=read_only,
+            author=author,
         )
 
 

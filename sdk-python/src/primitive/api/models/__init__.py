@@ -471,6 +471,7 @@ from .email_rule_covering_me_read_kind import EmailRuleCoveringMeReadKind
 from .email_rule_covering_me_read_state import EmailRuleCoveringMeReadState
 from .email_rule_covering_me_state import EmailRuleCoveringMeState
 from .email_rule_covering_me_version import EmailRuleCoveringMeVersion
+from .email_rule_decision_on_my_mail import EmailRuleDecisionOnMyMail
 from .email_rule_evaluation_scope import EmailRuleEvaluationScope
 from .email_rule_expectation_sample import EmailRuleExpectationSample
 from .email_rule_expectation_sample_expected import EmailRuleExpectationSampleExpected
@@ -902,6 +903,8 @@ from .list_deliveries_status import ListDeliveriesStatus
 from .list_domains_response_200 import ListDomainsResponse200
 from .list_email_attachment_archive_members_response_200 import ListEmailAttachmentArchiveMembersResponse200
 from .list_email_rule_decisions_matched import ListEmailRuleDecisionsMatched
+from .list_email_rule_decisions_on_my_mail_matched import ListEmailRuleDecisionsOnMyMailMatched
+from .list_email_rule_decisions_on_my_mail_response_200 import ListEmailRuleDecisionsOnMyMailResponse200
 from .list_email_rule_decisions_response_200 import ListEmailRuleDecisionsResponse200
 from .list_email_rule_decisions_result_item import ListEmailRuleDecisionsResultItem
 from .list_email_rule_requests_box import ListEmailRuleRequestsBox
@@ -2259,6 +2262,7 @@ __all__ = (
     "EmailRuleCoveringMeReadState",
     "EmailRuleCoveringMeState",
     "EmailRuleCoveringMeVersion",
+    "EmailRuleDecisionOnMyMail",
     "EmailRuleEvaluationScope",
     "EmailRuleExpectationSample",
     "EmailRuleExpectationSampleExpected",
@@ -2690,6 +2694,8 @@ __all__ = (
     "ListDomainsResponse200",
     "ListEmailAttachmentArchiveMembersResponse200",
     "ListEmailRuleDecisionsMatched",
+    "ListEmailRuleDecisionsOnMyMailMatched",
+    "ListEmailRuleDecisionsOnMyMailResponse200",
     "ListEmailRuleDecisionsResponse200",
     "ListEmailRuleDecisionsResultItem",
     "ListEmailRuleRequestsBox",

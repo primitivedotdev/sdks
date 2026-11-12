@@ -7255,6 +7255,18 @@ export type ListEmailRuleDecisionsResult = Array<{
     received_at?: string | null;
 }>;
 
+export type EmailRuleCoveringAuthor = {
+    user_id: string;
+    /**
+     * Their name; null when they have none set.
+     */
+    name: string | null;
+    /**
+     * Sign-in email; null unless you can list member emails or this is you.
+     */
+    email: string | null;
+};
+
 export type ListEmailRuleResultsResult = {
     /**
      * The email these results are about, so a saved answer says which one it was.
@@ -7273,11 +7285,11 @@ export type ListEmailRuleResultsResult = {
         received_at: string;
     };
     /**
-     * Every rule the caller can see: those that matched this email, then those that did not, then those that have not run on it; newest rule first within each.
+     * Rules you can see, and read_only ones: matched first, then not matched, then not run; newest first within each.
      */
     rules: Array<{
         id: string;
-        name: string;
+        name: string | null;
         state: 'draft' | 'observe' | 'active';
         /**
          * grant: the rule shares what it matches. do_not_share: the rule blocks sharing of what it matches. While it is active, no rule shares an email it has matched from then on; anything shared before, including while it was in observe, stays shared.
@@ -7339,11 +7351,20 @@ export type ListEmailRuleResultsResult = {
          * On a do-not-share rule whose author is no longer a member of the organization: it blocks nothing now, whatever it decided. Absent otherwise.
          */
         author_left?: boolean;
+        /**
+         * Another member's rule that decided on your own mail; dashboard and CLI only. name is null once it no longer covers you.
+         */
+        read_only?: boolean;
+        author?: EmailRuleCoveringAuthor;
     }>;
     /**
-     * How many more rules the caller can see that are not listed.
+     * Rules that decided on this email that you cannot see.
      */
     hidden: number;
+    /**
+     * Rules you can see past the 50 listed.
+     */
+    not_listed?: number;
     /**
      * What the classifier read from this email (one classification per vocabulary); null when it has none (not classified, or never will be), or while the email's content is withheld, discarded or failed to parse.
      */
@@ -7958,18 +7979,6 @@ export type EmailRuleCoveringMe = {
     created_at: string;
 };
 
-export type EmailRuleCoveringAuthor = {
-    user_id: string;
-    /**
-     * Their name; null when they have none set.
-     */
-    name: string | null;
-    /**
-     * Sign-in email; null unless you can list member emails or this is you.
-     */
-    email: string | null;
-};
-
 export type EmailRuleCoverage = {
     /**
      * Your own mailboxes (your member mailbox and your personal agents' addresses) it reaches now, lowercase.
@@ -7985,7 +7994,10 @@ export type ListEmailRulesCoveringMeResult = Array<EmailRuleCoveringMe>;
 
 export type EmailRuleCoveringMeRead = {
     id: string;
-    name: string;
+    /**
+     * Null when covers_now is false: its name now may describe something else.
+     */
+    name: string | null;
     /**
      * draft: it decides nothing. observe: it decides and records, and shares nothing. active: it decides and, for a grant rule, shares what it matches.
      */
@@ -7999,13 +8011,27 @@ export type EmailRuleCoveringMeRead = {
      * Whether you wrote it.
      */
     is_author: boolean;
-    covers: EmailRuleCoverage;
+    /**
+     * Null when it no longer covers your mailboxes and you see it because it decided on your mail.
+     */
+    covers: EmailRuleCoverage | null;
+    /**
+     * Null when covers_now is false.
+     */
     current_version: number | null;
     created_at: string;
     /**
-     * Its current version: what it asks of each email.
+     * Whether it covers one of your own mailboxes now. False for a rule you see only because it decided on mail at your own mailbox before.
+     */
+    covers_now: boolean;
+    /**
+     * Its current version: what it asks of each email. When covers_now is false, the newest version that decided on your mail instead.
      */
     current: EmailRuleCoveringMeVersion | null;
+    /**
+     * Present when covers_now is false: what is withheld, and why.
+     */
+    note?: string;
 };
 
 export type EmailRuleCoveringMeVersion = {
@@ -8026,6 +8052,42 @@ export type EmailRuleCoveringMeVersion = {
 };
 
 export type GetEmailRuleCoveringMeResult = EmailRuleCoveringMeRead;
+
+export type EmailRuleDecisionOnMyMail = {
+    id: string;
+    email_id: string;
+    rule_version: number;
+    classification_id: string;
+    matched: boolean;
+    /**
+     * Not matched, but nearly. False when detail_withheld is true.
+     */
+    near_miss: boolean;
+    /**
+     * How each top-level part of the rule decided.
+     */
+    parts: Array<unknown>;
+    /**
+     * The answers to the rule's own questions, when they were asked.
+     */
+    question_answers: Array<unknown>;
+    /**
+     * Present, as true, when the email's content cannot be read: matched still says what the rule decided, and parts and question_answers are empty.
+     */
+    detail_withheld?: boolean;
+    created_at: string;
+    /**
+     * The email's sender address, as GET /v1/emails/{id} shows it.
+     */
+    from_address: string | null;
+    subject: string | null;
+    /**
+     * When the email arrived. Null, with the other two, when you are not shown the email (it awaits sender authentication).
+     */
+    received_at: string | null;
+};
+
+export type ListEmailRuleDecisionsOnMyMailResult = Array<EmailRuleDecisionOnMyMail>;
 
 export type GetDomainAgentAuthorizationResult = {
     domain_id: string;
@@ -22042,7 +22104,7 @@ export type GetEmailRuleCoveringMeErrors = {
      */
     403: ErrorResponse;
     /**
-     * not_found: no rule with this id covers your mailboxes.
+     * not_found: no rule with this id covers your mailboxes or decided on your mail.
      */
     404: ErrorResponse;
     /**
@@ -22063,6 +22125,68 @@ export type GetEmailRuleCoveringMeResponses = {
 };
 
 export type GetEmailRuleCoveringMeResponse = GetEmailRuleCoveringMeResponses[keyof GetEmailRuleCoveringMeResponses];
+
+export type ListEmailRuleDecisionsOnMyMailData = {
+    body?: never;
+    path: {
+        /**
+         * The rule id.
+         */
+        id: string;
+    };
+    query?: {
+        /**
+         * Decisions per page, from 1 to 100; defaults to 50.
+         */
+        limit?: number;
+        /**
+         * meta.cursor from the preceding page. Omit for the first page.
+         */
+        cursor?: string;
+        /**
+         * Only decisions that matched (true) or did not (false).
+         */
+        matched?: 'true' | 'false';
+    };
+    url: '/email-rules/covering-me/{id}/decisions';
+};
+
+export type ListEmailRuleDecisionsOnMyMailErrors = {
+    /**
+     * validation_error: a cursor not returned in meta.cursor.
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what emails say.
+     */
+    403: ErrorResponse;
+    /**
+     * not_found: no rule with this id covers your mailboxes or decided on your mail.
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type ListEmailRuleDecisionsOnMyMailError = ListEmailRuleDecisionsOnMyMailErrors[keyof ListEmailRuleDecisionsOnMyMailErrors];
+
+export type ListEmailRuleDecisionsOnMyMailResponses = {
+    /**
+     * List what a rule decided about your mail
+     */
+    200: SuccessEnvelope & {
+        data: ListEmailRuleDecisionsOnMyMailResult;
+        meta: CursorPageMeta;
+    };
+};
+
+export type ListEmailRuleDecisionsOnMyMailResponse = ListEmailRuleDecisionsOnMyMailResponses[keyof ListEmailRuleDecisionsOnMyMailResponses];
 
 export type GetDomainAgentAuthorizationData = {
     body?: never;

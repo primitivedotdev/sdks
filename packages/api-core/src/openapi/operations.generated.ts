@@ -16400,7 +16400,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email-rule-covering-me",
-    "description": "One rule that covers one of your own mailboxes, read-only, with its current version. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). You do not see the other inboxes and domains its scope names, its saved expectations, or the keys, shares and webhooks that use it. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+    "description": "One rule that covers one of your own mailboxes, read-only, with its current version; or one that no longer does but decided on mail at your own mailbox (covers_now false), shown as the version that last decided on your mail, without its current name. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). You do not see the other inboxes and domains its scope names, its saved expectations, or the keys, shares and webhooks that use it. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEmailRuleCoveringMe",
@@ -16429,7 +16429,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "format": "uuid"
         },
         "name": {
-          "type": "string"
+          "description": "Null when covers_now is false: its name now may describe something else.",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "state": {
           "type": "string",
@@ -16481,28 +16485,36 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "description": "Whether you wrote it."
         },
         "covers": {
-          "type": "object",
-          "properties": {
-            "addresses": {
-              "type": "array",
-              "items": {
-                "type": "string"
+          "description": "Null when it no longer covers your mailboxes and you see it because it decided on your mail.",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "addresses": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Your own mailboxes (your member mailbox and your personal agents' addresses) it reaches now, lowercase."
+                },
+                "via": {
+                  "type": "string",
+                  "enum": [
+                    "author_reach",
+                    "selected",
+                    "own_mailboxes"
+                  ],
+                  "description": "author_reach: it runs over everything its author can read, which includes these. selected: it names these mailboxes or their domain. own_mailboxes: it is your own rule over your own mail."
+                }
               },
-              "description": "Your own mailboxes (your member mailbox and your personal agents' addresses) it reaches now, lowercase."
+              "required": [
+                "addresses",
+                "via"
+              ]
             },
-            "via": {
-              "type": "string",
-              "enum": [
-                "author_reach",
-                "selected",
-                "own_mailboxes"
-              ],
-              "description": "author_reach: it runs over everything its author can read, which includes these. selected: it names these mailboxes or their domain. own_mailboxes: it is your own rule over your own mail."
+            {
+              "type": "null"
             }
-          },
-          "required": [
-            "addresses",
-            "via"
           ]
         },
         "current_version": {
@@ -16510,14 +16522,19 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "integer",
             "null"
           ],
-          "exclusiveMinimum": 0
+          "exclusiveMinimum": 0,
+          "description": "Null when covers_now is false."
         },
         "created_at": {
           "type": "string",
           "format": "date-time"
         },
+        "covers_now": {
+          "type": "boolean",
+          "description": "Whether it covers one of your own mailboxes now. False for a rule you see only because it decided on mail at your own mailbox before."
+        },
         "current": {
-          "description": "Its current version: what it asks of each email.",
+          "description": "Its current version: what it asks of each email. When covers_now is false, the newest version that decided on your mail instead.",
           "anyOf": [
             {
               "type": "object",
@@ -16600,6 +16617,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "type": "null"
             }
           ]
+        },
+        "note": {
+          "description": "Present when covers_now is false: what is withheld, and why.",
+          "type": "string"
         }
       },
       "required": [
@@ -16612,11 +16633,155 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "covers",
         "current_version",
         "created_at",
+        "covers_now",
         "current"
       ]
     },
     "sdkName": "getEmailRuleCoveringMe",
     "summary": "Get a rule over your mail",
+    "tag": "Email Rule Oversight",
+    "tagCommand": "email-rule-oversight"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-email-rule-decisions-on-my-mail",
+    "description": "What a rule that covers your mailboxes, or decided on your mail, decided about mail at your own mailboxes, newest first: never about anyone else's mail. Each decision is in the words of the version that made it, which can be earlier than the current one: the questions it asked about that email (question_answers) and the columns its conditions read (parts). Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listEmailRuleDecisionsOnMyMail",
+    "path": "/email-rules/covering-me/{id}/decisions",
+    "pathParams": [
+      {
+        "description": "The rule id.",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [
+      {
+        "default": 50,
+        "description": "Decisions per page, from 1 to 100; defaults to 50.",
+        "enum": null,
+        "maximum": 100,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "meta.cursor from the preceding page. Omit for the first page.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "true for matches only, false for the rest.",
+        "enum": [
+          "true",
+          "false"
+        ],
+        "name": "matched",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
+    "access": null,
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rule_version": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "classification_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "matched": {
+            "type": "boolean"
+          },
+          "near_miss": {
+            "type": "boolean",
+            "description": "Not matched, but nearly. False when detail_withheld is true."
+          },
+          "parts": {
+            "type": "array",
+            "items": {},
+            "description": "How each top-level part of the rule decided."
+          },
+          "question_answers": {
+            "type": "array",
+            "items": {},
+            "description": "The answers to the rule's own questions, when they were asked."
+          },
+          "detail_withheld": {
+            "description": "Present, as true, when the email's content cannot be read: matched still says what the rule decided, and parts and question_answers are empty.",
+            "type": "boolean",
+            "const": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "from_address": {
+            "description": "The email's sender address, as GET /v1/emails/{id} shows it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "subject": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "received_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the email arrived. Null, with the other two, when you are not shown the email (it awaits sender authentication)."
+          }
+        },
+        "required": [
+          "id",
+          "email_id",
+          "rule_version",
+          "classification_id",
+          "matched",
+          "near_miss",
+          "parts",
+          "question_answers",
+          "created_at",
+          "from_address",
+          "subject",
+          "received_at"
+        ]
+      }
+    },
+    "sdkName": "listEmailRuleDecisionsOnMyMail",
+    "summary": "List what a rule decided about your mail",
     "tag": "Email Rule Oversight",
     "tagCommand": "email-rule-oversight"
   },
@@ -21946,7 +22111,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rule-results",
-    "description": "Every rule you can see and what it decided about this email (matched, not matched, or not run, with what is known), in the words of the version that decided. A matched do_not_share rule keeps rules from sharing the email while it is active; what was shared before then stays shared. Only a caller who can read the email gets an answer. classification is what the classifier read from the email, every fact as rule conditions read it, so you can see why a rule did or did not match. At most 50 rules are listed, those with a result first; hidden counts the rest. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "What each rule you can see decided about this email (matched, not matched, or not run), in the words of the deciding version. A do_not_share rule that matched it blocks sharing while active; earlier shares stay. Only a caller who can read the email gets an answer. classification is every fact the classifier read, as rule conditions read it. At most 50 rules are listed, results first; not_listed counts the rest. Another member's rule that decided on your own mail is listed read_only (dashboard and CLI only); hidden counts deciding rules you cannot see. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleResults",
@@ -22018,7 +22183,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "format": "uuid"
               },
               "name": {
-                "type": "string"
+                "type": [
+                  "string",
+                  "null"
+                ]
               },
               "state": {
                 "type": "string",
@@ -22226,6 +22394,39 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "description": "On a do-not-share rule whose author is no longer a member of the organization: it blocks nothing now, whatever it decided. Absent otherwise.",
                 "type": "boolean",
                 "const": true
+              },
+              "read_only": {
+                "description": "Another member's rule that decided on your own mail; dashboard and CLI only. name is null once it no longer covers you.",
+                "type": "boolean",
+                "const": true
+              },
+              "author": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "description": "Their name; null when they have none set.",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "email": {
+                    "description": "Sign-in email; null unless you can list member emails or this is you.",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "user_id",
+                  "name",
+                  "email"
+                ]
               }
             },
             "required": [
@@ -22236,12 +22437,17 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "not_run_reason"
             ]
           },
-          "description": "Every rule the caller can see: those that matched this email, then those that did not, then those that have not run on it; newest rule first within each."
+          "description": "Rules you can see, and read_only ones: matched first, then not matched, then not run; newest first within each."
         },
         "hidden": {
           "type": "integer",
           "minimum": 0,
-          "description": "How many more rules the caller can see that are not listed."
+          "description": "Rules that decided on this email that you cannot see."
+        },
+        "not_listed": {
+          "description": "Rules you can see past the 50 listed.",
+          "type": "integer",
+          "minimum": 0
         },
         "classification": {
           "type": [

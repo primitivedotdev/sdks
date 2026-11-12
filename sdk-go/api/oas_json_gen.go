@@ -73163,7 +73163,7 @@ func (s *EmailRuleCoveringMeRead) encodeFields(e *jx.Encoder) {
 	}
 	{
 		e.FieldStart("name")
-		e.Str(s.Name)
+		s.Name.Encode(e)
 	}
 	{
 		e.FieldStart("state")
@@ -73194,22 +73194,34 @@ func (s *EmailRuleCoveringMeRead) encodeFields(e *jx.Encoder) {
 		json.EncodeDateTime(e, s.CreatedAt)
 	}
 	{
+		e.FieldStart("covers_now")
+		e.Bool(s.CoversNow)
+	}
+	{
 		e.FieldStart("current")
 		s.Current.Encode(e)
 	}
+	{
+		if s.Note.Set {
+			e.FieldStart("note")
+			s.Note.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfEmailRuleCoveringMeRead = [10]string{
-	0: "id",
-	1: "name",
-	2: "state",
-	3: "kind",
-	4: "author",
-	5: "is_author",
-	6: "covers",
-	7: "current_version",
-	8: "created_at",
-	9: "current",
+var jsonFieldsNameOfEmailRuleCoveringMeRead = [12]string{
+	0:  "id",
+	1:  "name",
+	2:  "state",
+	3:  "kind",
+	4:  "author",
+	5:  "is_author",
+	6:  "covers",
+	7:  "current_version",
+	8:  "created_at",
+	9:  "covers_now",
+	10: "current",
+	11: "note",
 }
 
 // Decode decodes EmailRuleCoveringMeRead from json.
@@ -73236,9 +73248,7 @@ func (s *EmailRuleCoveringMeRead) Decode(d *jx.Decoder) error {
 		case "name":
 			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
-				v, err := d.Str()
-				s.Name = string(v)
-				if err != nil {
+				if err := s.Name.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -73319,8 +73329,20 @@ func (s *EmailRuleCoveringMeRead) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"created_at\"")
 			}
-		case "current":
+		case "covers_now":
 			requiredBitSet[1] |= 1 << 1
+			if err := func() error {
+				v, err := d.Bool()
+				s.CoversNow = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"covers_now\"")
+			}
+		case "current":
+			requiredBitSet[1] |= 1 << 2
 			if err := func() error {
 				if err := s.Current.Decode(d); err != nil {
 					return err
@@ -73328,6 +73350,16 @@ func (s *EmailRuleCoveringMeRead) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"current\"")
+			}
+		case "note":
+			if err := func() error {
+				s.Note.Reset()
+				if err := s.Note.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"note\"")
 			}
 		default:
 			return d.Skip()
@@ -73340,7 +73372,7 @@ func (s *EmailRuleCoveringMeRead) Decode(d *jx.Decoder) error {
 	var failures []validate.FieldError
 	for i, mask := range [2]uint8{
 		0b11111111,
-		0b00000011,
+		0b00000111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -73731,6 +73763,327 @@ func (s *EmailRuleCoveringMeVersion) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *EmailRuleCoveringMeVersion) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *EmailRuleDecisionOnMyMail) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EmailRuleDecisionOnMyMail) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("id")
+		json.EncodeUUID(e, s.ID)
+	}
+	{
+		e.FieldStart("email_id")
+		json.EncodeUUID(e, s.EmailID)
+	}
+	{
+		e.FieldStart("rule_version")
+		e.Int(s.RuleVersion)
+	}
+	{
+		e.FieldStart("classification_id")
+		json.EncodeUUID(e, s.ClassificationID)
+	}
+	{
+		e.FieldStart("matched")
+		e.Bool(s.Matched)
+	}
+	{
+		e.FieldStart("near_miss")
+		e.Bool(s.NearMiss)
+	}
+	{
+		e.FieldStart("parts")
+		e.ArrStart()
+		for _, elem := range s.Parts {
+			if len(elem) != 0 {
+				e.Raw(elem)
+			}
+		}
+		e.ArrEnd()
+	}
+	{
+		e.FieldStart("question_answers")
+		e.ArrStart()
+		for _, elem := range s.QuestionAnswers {
+			if len(elem) != 0 {
+				e.Raw(elem)
+			}
+		}
+		e.ArrEnd()
+	}
+	{
+		e.FieldStart("detail_withheld")
+		e.Bool(true)
+	}
+	{
+		e.FieldStart("created_at")
+		json.EncodeDateTime(e, s.CreatedAt)
+	}
+	{
+		e.FieldStart("from_address")
+		s.FromAddress.Encode(e)
+	}
+	{
+		e.FieldStart("subject")
+		s.Subject.Encode(e)
+	}
+	{
+		e.FieldStart("received_at")
+		s.ReceivedAt.Encode(e, json.EncodeDateTime)
+	}
+}
+
+var jsonFieldsNameOfEmailRuleDecisionOnMyMail = [13]string{
+	0:  "id",
+	1:  "email_id",
+	2:  "rule_version",
+	3:  "classification_id",
+	4:  "matched",
+	5:  "near_miss",
+	6:  "parts",
+	7:  "question_answers",
+	8:  "detail_withheld",
+	9:  "created_at",
+	10: "from_address",
+	11: "subject",
+	12: "received_at",
+}
+
+// Decode decodes EmailRuleDecisionOnMyMail from json.
+func (s *EmailRuleDecisionOnMyMail) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailRuleDecisionOnMyMail to nil")
+	}
+	var requiredBitSet [2]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.ID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"id\"")
+			}
+		case "email_id":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.EmailID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"email_id\"")
+			}
+		case "rule_version":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Int()
+				s.RuleVersion = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"rule_version\"")
+			}
+		case "classification_id":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.ClassificationID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"classification_id\"")
+			}
+		case "matched":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				v, err := d.Bool()
+				s.Matched = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"matched\"")
+			}
+		case "near_miss":
+			requiredBitSet[0] |= 1 << 5
+			if err := func() error {
+				v, err := d.Bool()
+				s.NearMiss = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"near_miss\"")
+			}
+		case "parts":
+			requiredBitSet[0] |= 1 << 6
+			if err := func() error {
+				s.Parts = make([]jx.Raw, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem jx.Raw
+					v, err := d.RawAppend(nil)
+					elem = jx.Raw(v)
+					if err != nil {
+						return err
+					}
+					s.Parts = append(s.Parts, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"parts\"")
+			}
+		case "question_answers":
+			requiredBitSet[0] |= 1 << 7
+			if err := func() error {
+				s.QuestionAnswers = make([]jx.Raw, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem jx.Raw
+					v, err := d.RawAppend(nil)
+					elem = jx.Raw(v)
+					if err != nil {
+						return err
+					}
+					s.QuestionAnswers = append(s.QuestionAnswers, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"question_answers\"")
+			}
+		case "detail_withheld":
+			if err := func() error {
+				s.DetailWithheld.Reset()
+				if err := s.DetailWithheld.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"detail_withheld\"")
+			}
+		case "created_at":
+			requiredBitSet[1] |= 1 << 1
+			if err := func() error {
+				v, err := json.DecodeDateTime(d)
+				s.CreatedAt = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"created_at\"")
+			}
+		case "from_address":
+			requiredBitSet[1] |= 1 << 2
+			if err := func() error {
+				if err := s.FromAddress.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"from_address\"")
+			}
+		case "subject":
+			requiredBitSet[1] |= 1 << 3
+			if err := func() error {
+				if err := s.Subject.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"subject\"")
+			}
+		case "received_at":
+			requiredBitSet[1] |= 1 << 4
+			if err := func() error {
+				if err := s.ReceivedAt.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"received_at\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailRuleDecisionOnMyMail")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [2]uint8{
+		0b11111111,
+		0b00011110,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEmailRuleDecisionOnMyMail) {
+					name = jsonFieldsNameOfEmailRuleDecisionOnMyMail[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EmailRuleDecisionOnMyMail) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailRuleDecisionOnMyMail) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -135574,6 +135927,296 @@ func (s *ListEmailRuleDecisionsOK) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes ListEmailRuleDecisionsOnMyMailBadRequest as json.
+func (s *ListEmailRuleDecisionsOnMyMailBadRequest) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes ListEmailRuleDecisionsOnMyMailBadRequest from json.
+func (s *ListEmailRuleDecisionsOnMyMailBadRequest) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ListEmailRuleDecisionsOnMyMailBadRequest to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = ListEmailRuleDecisionsOnMyMailBadRequest(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ListEmailRuleDecisionsOnMyMailBadRequest) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ListEmailRuleDecisionsOnMyMailBadRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ListEmailRuleDecisionsOnMyMailForbidden as json.
+func (s *ListEmailRuleDecisionsOnMyMailForbidden) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes ListEmailRuleDecisionsOnMyMailForbidden from json.
+func (s *ListEmailRuleDecisionsOnMyMailForbidden) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ListEmailRuleDecisionsOnMyMailForbidden to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = ListEmailRuleDecisionsOnMyMailForbidden(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ListEmailRuleDecisionsOnMyMailForbidden) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ListEmailRuleDecisionsOnMyMailForbidden) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ListEmailRuleDecisionsOnMyMailNotFound as json.
+func (s *ListEmailRuleDecisionsOnMyMailNotFound) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes ListEmailRuleDecisionsOnMyMailNotFound from json.
+func (s *ListEmailRuleDecisionsOnMyMailNotFound) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ListEmailRuleDecisionsOnMyMailNotFound to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = ListEmailRuleDecisionsOnMyMailNotFound(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ListEmailRuleDecisionsOnMyMailNotFound) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ListEmailRuleDecisionsOnMyMailNotFound) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ListEmailRuleDecisionsOnMyMailOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ListEmailRuleDecisionsOnMyMailOK) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("success")
+		e.Bool(true)
+	}
+	{
+		e.FieldStart("data")
+		s.Data.Encode(e)
+	}
+	{
+		e.FieldStart("meta")
+		s.Meta.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfListEmailRuleDecisionsOnMyMailOK = [3]string{
+	0: "success",
+	1: "data",
+	2: "meta",
+}
+
+// Decode decodes ListEmailRuleDecisionsOnMyMailOK from json.
+func (s *ListEmailRuleDecisionsOnMyMailOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ListEmailRuleDecisionsOnMyMailOK to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "success":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Success = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"success\"")
+			}
+		case "data":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Data.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"data\"")
+			}
+		case "meta":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				if err := s.Meta.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"meta\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ListEmailRuleDecisionsOnMyMailOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfListEmailRuleDecisionsOnMyMailOK) {
+					name = jsonFieldsNameOfListEmailRuleDecisionsOnMyMailOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ListEmailRuleDecisionsOnMyMailOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ListEmailRuleDecisionsOnMyMailOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ListEmailRuleDecisionsOnMyMailResult as json.
+func (s ListEmailRuleDecisionsOnMyMailResult) Encode(e *jx.Encoder) {
+	unwrapped := []EmailRuleDecisionOnMyMail(s)
+
+	e.ArrStart()
+	for _, elem := range unwrapped {
+		elem.Encode(e)
+	}
+	e.ArrEnd()
+}
+
+// Decode decodes ListEmailRuleDecisionsOnMyMailResult from json.
+func (s *ListEmailRuleDecisionsOnMyMailResult) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ListEmailRuleDecisionsOnMyMailResult to nil")
+	}
+	var unwrapped []EmailRuleDecisionOnMyMail
+	if err := func() error {
+		unwrapped = make([]EmailRuleDecisionOnMyMail, 0)
+		if err := d.Arr(func(d *jx.Decoder) error {
+			var elem EmailRuleDecisionOnMyMail
+			if err := elem.Decode(d); err != nil {
+				return err
+			}
+			unwrapped = append(unwrapped, elem)
+			return nil
+		}); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = ListEmailRuleDecisionsOnMyMailResult(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ListEmailRuleDecisionsOnMyMailResult) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ListEmailRuleDecisionsOnMyMailResult) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes ListEmailRuleDecisionsResult as json.
 func (s ListEmailRuleDecisionsResult) Encode(e *jx.Encoder) {
 	unwrapped := []ListEmailRuleDecisionsResultItem(s)
@@ -136465,6 +137108,12 @@ func (s *ListEmailRuleResultsResult) encodeFields(e *jx.Encoder) {
 		e.Int(s.Hidden)
 	}
 	{
+		if s.NotListed.Set {
+			e.FieldStart("not_listed")
+			s.NotListed.Encode(e)
+		}
+	}
+	{
 		if s.Classification.Set {
 			e.FieldStart("classification")
 			s.Classification.Encode(e)
@@ -136472,11 +137121,12 @@ func (s *ListEmailRuleResultsResult) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfListEmailRuleResultsResult = [4]string{
+var jsonFieldsNameOfListEmailRuleResultsResult = [5]string{
 	0: "email",
 	1: "rules",
 	2: "hidden",
-	3: "classification",
+	3: "not_listed",
+	4: "classification",
 }
 
 // Decode decodes ListEmailRuleResultsResult from json.
@@ -136527,6 +137177,16 @@ func (s *ListEmailRuleResultsResult) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"hidden\"")
+			}
+		case "not_listed":
+			if err := func() error {
+				s.NotListed.Reset()
+				if err := s.NotListed.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"not_listed\"")
 			}
 		case "classification":
 			if err := func() error {
@@ -137240,7 +137900,7 @@ func (s *ListEmailRuleResultsResultRulesItem) encodeFields(e *jx.Encoder) {
 	}
 	{
 		e.FieldStart("name")
-		e.Str(s.Name)
+		s.Name.Encode(e)
 	}
 	{
 		e.FieldStart("state")
@@ -137266,9 +137926,21 @@ func (s *ListEmailRuleResultsResultRulesItem) encodeFields(e *jx.Encoder) {
 			s.AuthorLeft.Encode(e)
 		}
 	}
+	{
+		if s.ReadOnly.Set {
+			e.FieldStart("read_only")
+			s.ReadOnly.Encode(e)
+		}
+	}
+	{
+		if s.Author.Set {
+			e.FieldStart("author")
+			s.Author.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfListEmailRuleResultsResultRulesItem = [7]string{
+var jsonFieldsNameOfListEmailRuleResultsResultRulesItem = [9]string{
 	0: "id",
 	1: "name",
 	2: "state",
@@ -137276,6 +137948,8 @@ var jsonFieldsNameOfListEmailRuleResultsResultRulesItem = [7]string{
 	4: "decision",
 	5: "not_run_reason",
 	6: "author_left",
+	7: "read_only",
+	8: "author",
 }
 
 // Decode decodes ListEmailRuleResultsResultRulesItem from json.
@@ -137283,7 +137957,7 @@ func (s *ListEmailRuleResultsResultRulesItem) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode ListEmailRuleResultsResultRulesItem to nil")
 	}
-	var requiredBitSet [1]uint8
+	var requiredBitSet [2]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -137302,9 +137976,7 @@ func (s *ListEmailRuleResultsResultRulesItem) Decode(d *jx.Decoder) error {
 		case "name":
 			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
-				v, err := d.Str()
-				s.Name = string(v)
-				if err != nil {
+				if err := s.Name.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -137361,6 +138033,26 @@ func (s *ListEmailRuleResultsResultRulesItem) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"author_left\"")
 			}
+		case "read_only":
+			if err := func() error {
+				s.ReadOnly.Reset()
+				if err := s.ReadOnly.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"read_only\"")
+			}
+		case "author":
+			if err := func() error {
+				s.Author.Reset()
+				if err := s.Author.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"author\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -137370,8 +138062,9 @@ func (s *ListEmailRuleResultsResultRulesItem) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
+	for i, mask := range [2]uint8{
 		0b00110111,
+		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -165439,6 +166132,50 @@ func (s *NilEmailReadableParseStatus) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes EmailRuleCoverage as json.
+func (o NilEmailRuleCoverage) Encode(e *jx.Encoder) {
+	if o.Null {
+		e.Null()
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes EmailRuleCoverage from json.
+func (o *NilEmailRuleCoverage) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode NilEmailRuleCoverage to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v EmailRuleCoverage
+		o.Value = v
+		o.Null = true
+		return nil
+	}
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s NilEmailRuleCoverage) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *NilEmailRuleCoverage) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes EmailRuleCoveringMeVersion as json.
 func (o NilEmailRuleCoveringMeVersion) Encode(e *jx.Encoder) {
 	if o.Null {
@@ -170000,6 +170737,39 @@ func (s OptEmailRuleAuthor) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptEmailRuleAuthor) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailRuleCoveringAuthor as json.
+func (o OptEmailRuleCoveringAuthor) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes EmailRuleCoveringAuthor from json.
+func (o *OptEmailRuleCoveringAuthor) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptEmailRuleCoveringAuthor to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptEmailRuleCoveringAuthor) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptEmailRuleCoveringAuthor) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

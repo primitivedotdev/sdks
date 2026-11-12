@@ -1610,13 +1610,15 @@ func (UnimplementedHandler) GetEmailRule(ctx context.Context, params GetEmailRul
 
 // GetEmailRuleCoveringMe implements getEmailRuleCoveringMe operation.
 //
-// One rule that covers one of your own mailboxes, read-only, with its current version. You see its
-// name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches.
-// Its wording and tree are shown as written, so they can name other addresses (a condition on who an
-// email is from or to). You do not see the other inboxes and domains its scope names, its saved
-// expectations, or the keys, shares and webhooks that use it. Needs mail:read, a member's own
-// credential with their full access (not an API key, agent key or narrowed token), and the email
-// rules feature. Only on your own dashboard session or the Primitive CLI.
+// One rule that covers one of your own mailboxes, read-only, with its current version; or one that
+// no longer does but decided on mail at your own mailbox (covers_now false), shown as the version
+// that last decided on your mail, without its current name. You see its name, wording, current tree,
+// state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown
+// as written, so they can name other addresses (a condition on who an email is from or to). You do
+// not see the other inboxes and domains its scope names, its saved expectations, or the keys, shares
+// and webhooks that use it. Needs mail:read, a member's own credential with their full access (not
+// an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard
+// session or the Primitive CLI.
 //
 // GET /email-rules/covering-me/{id}
 func (UnimplementedHandler) GetEmailRuleCoveringMe(ctx context.Context, params GetEmailRuleCoveringMeParams) (r GetEmailRuleCoveringMeRes, _ error) {
@@ -2611,6 +2613,20 @@ func (UnimplementedHandler) ListEmailRuleDecisions(ctx context.Context, params L
 	return r, ht.ErrNotImplemented
 }
 
+// ListEmailRuleDecisionsOnMyMail implements listEmailRuleDecisionsOnMyMail operation.
+//
+// What a rule that covers your mailboxes, or decided on your mail, decided about mail at your own
+// mailboxes, newest first: never about anyone else's mail. Each decision is in the words of the
+// version that made it, which can be earlier than the current one: the questions it asked about that
+// email (question_answers) and the columns its conditions read (parts). Needs mail:read, a member's
+// own credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature. Only on your own dashboard session or the Primitive CLI.
+//
+// GET /email-rules/covering-me/{id}/decisions
+func (UnimplementedHandler) ListEmailRuleDecisionsOnMyMail(ctx context.Context, params ListEmailRuleDecisionsOnMyMailParams) (r ListEmailRuleDecisionsOnMyMailRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListEmailRuleRequests implements listEmailRuleRequests operation.
 //
 // Rule requests, newest first: those made to you (box incoming, the default), those you made
@@ -2629,14 +2645,14 @@ func (UnimplementedHandler) ListEmailRuleRequests(ctx context.Context, params Li
 
 // ListEmailRuleResults implements listEmailRuleResults operation.
 //
-// Every rule you can see and what it decided about this email (matched, not matched, or not run,
-// with what is known), in the words of the version that decided. A matched do_not_share rule keeps
-// rules from sharing the email while it is active; what was shared before then stays shared. Only a
-// caller who can read the email gets an answer. classification is what the classifier read from the
-// email, every fact as rule conditions read it, so you can see why a rule did or did not match. At
-// most 50 rules are listed, those with a result first; hidden counts the rest. Needs mail:read, a
-// member's own credential with their full access (not an API key, agent key or narrowed token), and
-// the email rules feature.
+// What each rule you can see decided about this email (matched, not matched, or not run), in the
+// words of the deciding version. A do_not_share rule that matched it blocks sharing while active;
+// earlier shares stay. Only a caller who can read the email gets an answer. classification is every
+// fact the classifier read, as rule conditions read it. At most 50 rules are listed, results first;
+// not_listed counts the rest. Another member's rule that decided on your own mail is listed
+// read_only (dashboard and CLI only); hidden counts deciding rules you cannot see. Needs mail:read,
+// a member's own credential with their full access (not an API key, agent key or narrowed token),
+// and the email rules feature.
 //
 // GET /emails/{id}/rule-results
 func (UnimplementedHandler) ListEmailRuleResults(ctx context.Context, params ListEmailRuleResultsParams) (r ListEmailRuleResultsRes, _ error) {

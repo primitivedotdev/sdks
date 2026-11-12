@@ -36667,7 +36667,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "listEmailRuleResults",
         "summary": "List every rule's result on an email",
-        "description": "Every rule you can see and what it decided about this email (matched, not matched, or not run, with what is known), in the words of the version that decided. A matched do_not_share rule keeps rules from sharing the email while it is active; what was shared before then stays shared. Only a caller who can read the email gets an answer. classification is what the classifier read from the email, every fact as rule conditions read it, so you can see why a rule did or did not match. At most 50 rules are listed, those with a result first; hidden counts the rest. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+        "description": "What each rule you can see decided about this email (matched, not matched, or not run), in the words of the deciding version. A do_not_share rule that matched it blocks sharing while active; earlier shares stay. Only a caller who can read the email gets an answer. classification is every fact the classifier read, as rule conditions read it. At most 50 rules are listed, results first; not_listed counts the rest. Another member's rule that decided on your own mail is listed read_only (dashboard and CLI only); hidden counts deciding rules you cannot see. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
         "tags": [
           "Email Rules"
         ],
@@ -39980,7 +39980,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "getEmailRuleCoveringMe",
         "summary": "Get a rule over your mail",
-        "description": "One rule that covers one of your own mailboxes, read-only, with its current version. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). You do not see the other inboxes and domains its scope names, its saved expectations, or the keys, shares and webhooks that use it. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+        "description": "One rule that covers one of your own mailboxes, read-only, with its current version; or one that no longer does but decided on mail at your own mailbox (covers_now false), shown as the version that last decided on your mail, without its current name. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). You do not see the other inboxes and domains its scope names, its saved expectations, or the keys, shares and webhooks that use it. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
         "tags": [
           "Email Rule Oversight"
         ],
@@ -40083,7 +40083,216 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "404": {
-            "description": "not_found: no rule with this id covers your mailboxes.",
+            "description": "not_found: no rule with this id covers your mailboxes or decided on your mail.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              },
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-429"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-429"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-429"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-primitive-permission": [
+          "mail:read"
+        ]
+      }
+    },
+    "/email-rules/covering-me/{id}/decisions": {
+      "get": {
+        "operationId": "listEmailRuleDecisionsOnMyMail",
+        "summary": "List what a rule decided about your mail",
+        "description": "What a rule that covers your mailboxes, or decided on your mail, decided about mail at your own mailboxes, newest first: never about anyone else's mail. Each decision is in the words of the version that made it, which can be earlier than the current one: the questions it asked about that email (question_answers) and the columns its conditions read (parts). Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+        "tags": [
+          "Email Rule Oversight"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The rule id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Decisions per page, from 1 to 100; defaults to 50.",
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "meta.cursor from the preceding page. Omit for the first page.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "matched",
+            "in": "query",
+            "required": false,
+            "description": "true for matches only, false for the rest.",
+            "schema": {
+              "description": "Only decisions that matched (true) or did not (false).",
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List what a rule decided about your mail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data",
+                        "meta"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ListEmailRuleDecisionsOnMyMailResult"
+                        },
+                        "meta": {
+                          "$ref": "#/components/schemas/CursorPageMeta"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy"
+              }
+            }
+          },
+          "400": {
+            "description": "validation_error: a cursor not returned in meta.cursor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-unauthenticated"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-unauthenticated"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset-unauthenticated"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-unauthenticated"
+              }
+            }
+          },
+          "403": {
+            "description": "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what emails say.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: no rule with this id covers your mailboxes or decided on your mail.",
             "content": {
               "application/json": {
                 "schema": {
@@ -79584,6 +79793,34 @@ export const openapiDocument: Record<string, unknown> = {
           ]
         }
       },
+      "EmailRuleCoveringAuthor": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "description": "Their name; null when they have none set.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "description": "Sign-in email; null unless you can list member emails or this is you.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "user_id",
+          "name",
+          "email"
+        ]
+      },
       "ListEmailRuleResultsResult": {
         "type": "object",
         "properties": {
@@ -79635,7 +79872,10 @@ export const openapiDocument: Record<string, unknown> = {
                   "format": "uuid"
                 },
                 "name": {
-                  "type": "string"
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "state": {
                   "type": "string",
@@ -79789,6 +80029,15 @@ export const openapiDocument: Record<string, unknown> = {
                   "description": "On a do-not-share rule whose author is no longer a member of the organization: it blocks nothing now, whatever it decided. Absent otherwise.",
                   "type": "boolean",
                   "const": true
+                },
+                "read_only": {
+                  "description": "Another member's rule that decided on your own mail; dashboard and CLI only. name is null once it no longer covers you.",
+                  "type": "boolean",
+                  "const": true
+                },
+                "author": {
+                  "description": "With read_only: who wrote it.",
+                  "$ref": "#/components/schemas/EmailRuleCoveringAuthor"
                 }
               },
               "required": [
@@ -79799,12 +80048,17 @@ export const openapiDocument: Record<string, unknown> = {
                 "not_run_reason"
               ]
             },
-            "description": "Every rule the caller can see: those that matched this email, then those that did not, then those that have not run on it; newest rule first within each."
+            "description": "Rules you can see, and read_only ones: matched first, then not matched, then not run; newest first within each."
           },
           "hidden": {
             "type": "integer",
             "minimum": 0,
-            "description": "How many more rules the caller can see that are not listed."
+            "description": "Rules that decided on this email that you cannot see."
+          },
+          "not_listed": {
+            "description": "Rules you can see past the 50 listed.",
+            "type": "integer",
+            "minimum": 0
           },
           "classification": {
             "type": [
@@ -81597,34 +81851,6 @@ export const openapiDocument: Record<string, unknown> = {
           "created_at"
         ]
       },
-      "EmailRuleCoveringAuthor": {
-        "type": "object",
-        "properties": {
-          "user_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "description": "Their name; null when they have none set.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "email": {
-            "description": "Sign-in email; null unless you can list member emails or this is you.",
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "user_id",
-          "name",
-          "email"
-        ]
-      },
       "EmailRuleCoverage": {
         "type": "object",
         "properties": {
@@ -81664,7 +81890,11 @@ export const openapiDocument: Record<string, unknown> = {
             "format": "uuid"
           },
           "name": {
-            "type": "string"
+            "description": "Null when covers_now is false: its name now may describe something else.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "state": {
             "type": "string",
@@ -81692,21 +81922,34 @@ export const openapiDocument: Record<string, unknown> = {
             "description": "Whether you wrote it."
           },
           "covers": {
-            "$ref": "#/components/schemas/EmailRuleCoverage"
+            "description": "Null when it no longer covers your mailboxes and you see it because it decided on your mail.",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmailRuleCoverage"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "current_version": {
             "type": [
               "integer",
               "null"
             ],
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "description": "Null when covers_now is false."
           },
           "created_at": {
             "type": "string",
             "format": "date-time"
           },
+          "covers_now": {
+            "type": "boolean",
+            "description": "Whether it covers one of your own mailboxes now. False for a rule you see only because it decided on mail at your own mailbox before."
+          },
           "current": {
-            "description": "Its current version: what it asks of each email.",
+            "description": "Its current version: what it asks of each email. When covers_now is false, the newest version that decided on your mail instead.",
             "anyOf": [
               {
                 "$ref": "#/components/schemas/EmailRuleCoveringMeVersion"
@@ -81715,6 +81958,10 @@ export const openapiDocument: Record<string, unknown> = {
                 "type": "null"
               }
             ]
+          },
+          "note": {
+            "description": "Present when covers_now is false: what is withheld, and why.",
+            "type": "string"
           }
         },
         "required": [
@@ -81727,6 +81974,7 @@ export const openapiDocument: Record<string, unknown> = {
           "covers",
           "current_version",
           "created_at",
+          "covers_now",
           "current"
         ]
       },
@@ -81778,6 +82026,94 @@ export const openapiDocument: Record<string, unknown> = {
       },
       "GetEmailRuleCoveringMeResult": {
         "$ref": "#/components/schemas/EmailRuleCoveringMeRead"
+      },
+      "EmailRuleDecisionOnMyMail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rule_version": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "classification_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "matched": {
+            "type": "boolean"
+          },
+          "near_miss": {
+            "type": "boolean",
+            "description": "Not matched, but nearly. False when detail_withheld is true."
+          },
+          "parts": {
+            "type": "array",
+            "items": {},
+            "description": "How each top-level part of the rule decided."
+          },
+          "question_answers": {
+            "type": "array",
+            "items": {},
+            "description": "The answers to the rule's own questions, when they were asked."
+          },
+          "detail_withheld": {
+            "description": "Present, as true, when the email's content cannot be read: matched still says what the rule decided, and parts and question_answers are empty.",
+            "type": "boolean",
+            "const": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "from_address": {
+            "description": "The email's sender address, as GET /v1/emails/{id} shows it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "subject": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "received_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the email arrived. Null, with the other two, when you are not shown the email (it awaits sender authentication)."
+          }
+        },
+        "required": [
+          "id",
+          "email_id",
+          "rule_version",
+          "classification_id",
+          "matched",
+          "near_miss",
+          "parts",
+          "question_answers",
+          "created_at",
+          "from_address",
+          "subject",
+          "received_at"
+        ]
+      },
+      "ListEmailRuleDecisionsOnMyMailResult": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/EmailRuleDecisionOnMyMail"
+        }
       },
       "GetDomainAgentAuthorizationResult": {
         "type": "object",

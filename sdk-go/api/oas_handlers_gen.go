@@ -19465,13 +19465,15 @@ func (s *Server) handleGetEmailRuleRequest(args [1]string, argsEscaped bool, w h
 
 // handleGetEmailRuleCoveringMeRequest handles getEmailRuleCoveringMe operation.
 //
-// One rule that covers one of your own mailboxes, read-only, with its current version. You see its
-// name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches.
-// Its wording and tree are shown as written, so they can name other addresses (a condition on who an
-// email is from or to). You do not see the other inboxes and domains its scope names, its saved
-// expectations, or the keys, shares and webhooks that use it. Needs mail:read, a member's own
-// credential with their full access (not an API key, agent key or narrowed token), and the email
-// rules feature. Only on your own dashboard session or the Primitive CLI.
+// One rule that covers one of your own mailboxes, read-only, with its current version; or one that
+// no longer does but decided on mail at your own mailbox (covers_now false), shown as the version
+// that last decided on your mail, without its current name. You see its name, wording, current tree,
+// state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown
+// as written, so they can name other addresses (a condition on who an email is from or to). You do
+// not see the other inboxes and domains its scope names, its saved expectations, or the keys, shares
+// and webhooks that use it. Needs mail:read, a member's own credential with their full access (not
+// an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard
+// session or the Primitive CLI.
 //
 // GET /email-rules/covering-me/{id}
 func (s *Server) handleGetEmailRuleCoveringMeRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -32853,6 +32855,210 @@ func (s *Server) handleListEmailRuleDecisionsRequest(args [1]string, argsEscaped
 	}
 }
 
+// handleListEmailRuleDecisionsOnMyMailRequest handles listEmailRuleDecisionsOnMyMail operation.
+//
+// What a rule that covers your mailboxes, or decided on your mail, decided about mail at your own
+// mailboxes, newest first: never about anyone else's mail. Each decision is in the words of the
+// version that made it, which can be earlier than the current one: the questions it asked about that
+// email (question_answers) and the columns its conditions read (parts). Needs mail:read, a member's
+// own credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature. Only on your own dashboard session or the Primitive CLI.
+//
+// GET /email-rules/covering-me/{id}/decisions
+func (s *Server) handleListEmailRuleDecisionsOnMyMailRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listEmailRuleDecisionsOnMyMail"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/email-rules/covering-me/{id}/decisions"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), ListEmailRuleDecisionsOnMyMailOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: ListEmailRuleDecisionsOnMyMailOperation,
+			ID:   "listEmailRuleDecisionsOnMyMail",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, ListEmailRuleDecisionsOnMyMailOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeListEmailRuleDecisionsOnMyMailParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response ListEmailRuleDecisionsOnMyMailRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    ListEmailRuleDecisionsOnMyMailOperation,
+			OperationSummary: "List what a rule decided about your mail",
+			OperationID:      "listEmailRuleDecisionsOnMyMail",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+				{
+					Name: "limit",
+					In:   "query",
+				}: params.Limit,
+				{
+					Name: "cursor",
+					In:   "query",
+				}: params.Cursor,
+				{
+					Name: "matched",
+					In:   "query",
+				}: params.Matched,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = ListEmailRuleDecisionsOnMyMailParams
+			Response = ListEmailRuleDecisionsOnMyMailRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackListEmailRuleDecisionsOnMyMailParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.ListEmailRuleDecisionsOnMyMail(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.ListEmailRuleDecisionsOnMyMail(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeListEmailRuleDecisionsOnMyMailResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleListEmailRuleRequestsRequest handles listEmailRuleRequests operation.
 //
 // Rule requests, newest first: those made to you (box incoming, the default), those you made
@@ -33061,14 +33267,14 @@ func (s *Server) handleListEmailRuleRequestsRequest(args [0]string, argsEscaped 
 
 // handleListEmailRuleResultsRequest handles listEmailRuleResults operation.
 //
-// Every rule you can see and what it decided about this email (matched, not matched, or not run,
-// with what is known), in the words of the version that decided. A matched do_not_share rule keeps
-// rules from sharing the email while it is active; what was shared before then stays shared. Only a
-// caller who can read the email gets an answer. classification is what the classifier read from the
-// email, every fact as rule conditions read it, so you can see why a rule did or did not match. At
-// most 50 rules are listed, those with a result first; hidden counts the rest. Needs mail:read, a
-// member's own credential with their full access (not an API key, agent key or narrowed token), and
-// the email rules feature.
+// What each rule you can see decided about this email (matched, not matched, or not run), in the
+// words of the deciding version. A do_not_share rule that matched it blocks sharing while active;
+// earlier shares stay. Only a caller who can read the email gets an answer. classification is every
+// fact the classifier read, as rule conditions read it. At most 50 rules are listed, results first;
+// not_listed counts the rest. Another member's rule that decided on your own mail is listed
+// read_only (dashboard and CLI only); hidden counts deciding rules you cannot see. Needs mail:read,
+// a member's own credential with their full access (not an API key, agent key or narrowed token),
+// and the email rules feature.
 //
 // GET /emails/{id}/rule-results
 func (s *Server) handleListEmailRuleResultsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {

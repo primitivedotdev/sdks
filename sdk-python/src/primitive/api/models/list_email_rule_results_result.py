@@ -27,11 +27,12 @@ T = TypeVar("T", bound="ListEmailRuleResultsResult")
 class ListEmailRuleResultsResult:
     """ 
         Attributes:
-            rules (list[ListEmailRuleResultsResultRulesItem]): Every rule the caller can see: those that matched this email,
-                then those that did not, then those that have not run on it; newest rule first within each.
-            hidden (int): How many more rules the caller can see that are not listed.
+            rules (list[ListEmailRuleResultsResultRulesItem]): Rules you can see, and read_only ones: matched first, then
+                not matched, then not run; newest first within each.
+            hidden (int): Rules that decided on this email that you cannot see.
             email (ListEmailRuleResultsResultEmail | Unset): The email these results are about, so a saved answer says which
                 one it was.
+            not_listed (int | Unset): Rules you can see past the 50 listed.
             classification (ListEmailRuleResultsResultClassificationType0 | None | Unset): What the classifier read from
                 this email (one classification per vocabulary); null when it has none (not classified, or never will be), or
                 while the email's content is withheld, discarded or failed to parse.
@@ -40,6 +41,7 @@ class ListEmailRuleResultsResult:
     rules: list[ListEmailRuleResultsResultRulesItem]
     hidden: int
     email: ListEmailRuleResultsResultEmail | Unset = UNSET
+    not_listed: int | Unset = UNSET
     classification: ListEmailRuleResultsResultClassificationType0 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -64,6 +66,8 @@ class ListEmailRuleResultsResult:
         if not isinstance(self.email, Unset):
             email = self.email.to_dict()
 
+        not_listed = self.not_listed
+
         classification: dict[str, Any] | None | Unset
         if isinstance(self.classification, Unset):
             classification = UNSET
@@ -81,6 +85,8 @@ class ListEmailRuleResultsResult:
         })
         if email is not UNSET:
             field_dict["email"] = email
+        if not_listed is not UNSET:
+            field_dict["not_listed"] = not_listed
         if classification is not UNSET:
             field_dict["classification"] = classification
 
@@ -116,6 +122,8 @@ class ListEmailRuleResultsResult:
 
 
 
+        not_listed = d.pop("not_listed", UNSET)
+
         def _parse_classification(data: object) -> ListEmailRuleResultsResultClassificationType0 | None | Unset:
             if data is None:
                 return data
@@ -140,6 +148,7 @@ class ListEmailRuleResultsResult:
             rules=rules,
             hidden=hidden,
             email=email,
+            not_listed=not_listed,
             classification=classification,
         )
 
