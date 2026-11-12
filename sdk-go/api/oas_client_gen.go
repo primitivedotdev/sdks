@@ -1310,6 +1310,18 @@ type Invoker interface {
 	//
 	// GET /email-rules/{id}
 	GetEmailRule(ctx context.Context, params GetEmailRuleParams) (GetEmailRuleRes, error)
+	// GetEmailRuleCoveringMe invokes getEmailRuleCoveringMe operation.
+	//
+	// One rule that covers one of your own mailboxes, read-only, with its current version. You see its
+	// name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches.
+	// Its wording and tree are shown as written, so they can name other addresses (a condition on who an
+	// email is from or to). You do not see the other inboxes and domains its scope names, its saved
+	// expectations, or the keys, shares and webhooks that use it. Needs mail:read, a member's own
+	// credential with their full access (not an API key, agent key or narrowed token), and the email
+	// rules feature. Only on your own dashboard session or the Primitive CLI.
+	//
+	// GET /email-rules/covering-me/{id}
+	GetEmailRuleCoveringMe(ctx context.Context, params GetEmailRuleCoveringMeParams) (GetEmailRuleCoveringMeRes, error)
 	// GetEmailRuleRequest invokes getEmailRuleRequest operation.
 	//
 	// A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a
@@ -2155,6 +2167,24 @@ type Invoker interface {
 	//
 	// GET /email-rules
 	ListEmailRules(ctx context.Context, params ListEmailRulesParams) (ListEmailRulesRes, error)
+	// ListEmailRulesCoveringMe invokes listEmailRulesCoveringMe operation.
+	//
+	// Every email rule that covers one of your own mailboxes now, yours included, newest first, in any
+	// state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your
+	// member mailbox, or a personal agent's address): one whose author reads all your mail (author scope,
+	//  for an author who reads the organization's mail or holds an access entry for your mailbox), or
+	// one that names your mailbox or its domain (selected). Another member's own_mailboxes rule never
+	// covers you. You see its name, wording, current tree, state, kind and author, and which of your own
+	// mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses
+	// (a condition on who an email is from or to). You do not see the other inboxes and domains its
+	// scope names, its saved expectations, or the keys, shares and webhooks that use it. A page can hold
+	// fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of
+	// rules): keep reading until meta.cursor is null. Needs mail:read, a member's own credential with
+	// their full access (not an API key, agent key or narrowed token), and the email rules feature. Only
+	// on your own dashboard session or the Primitive CLI.
+	//
+	// GET /email-rules/covering-me
+	ListEmailRulesCoveringMe(ctx context.Context, params ListEmailRulesCoveringMeParams) (ListEmailRulesCoveringMeRes, error)
 	// ListEmails invokes listEmails operation.
 	//
 	// Returns a paginated list of INBOUND emails received at your
@@ -17810,6 +17840,137 @@ func (c *Client) sendGetEmailRule(ctx context.Context, params GetEmailRuleParams
 	return result, nil
 }
 
+// GetEmailRuleCoveringMe invokes getEmailRuleCoveringMe operation.
+//
+// One rule that covers one of your own mailboxes, read-only, with its current version. You see its
+// name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches.
+// Its wording and tree are shown as written, so they can name other addresses (a condition on who an
+// email is from or to). You do not see the other inboxes and domains its scope names, its saved
+// expectations, or the keys, shares and webhooks that use it. Needs mail:read, a member's own
+// credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature. Only on your own dashboard session or the Primitive CLI.
+//
+// GET /email-rules/covering-me/{id}
+func (c *Client) GetEmailRuleCoveringMe(ctx context.Context, params GetEmailRuleCoveringMeParams) (GetEmailRuleCoveringMeRes, error) {
+	res, err := c.sendGetEmailRuleCoveringMe(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetEmailRuleCoveringMe(ctx context.Context, params GetEmailRuleCoveringMeParams) (res GetEmailRuleCoveringMeRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getEmailRuleCoveringMe"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/email-rules/covering-me/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetEmailRuleCoveringMeOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/email-rules/covering-me/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetEmailRuleCoveringMeOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetEmailRuleCoveringMeResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetEmailRuleRequest invokes getEmailRuleRequest operation.
 //
 // A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a
@@ -28645,6 +28806,165 @@ func (c *Client) sendListEmailRules(ctx context.Context, params ListEmailRulesPa
 
 	stage = "DecodeResponse"
 	result, err := decodeListEmailRulesResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListEmailRulesCoveringMe invokes listEmailRulesCoveringMe operation.
+//
+// Every email rule that covers one of your own mailboxes now, yours included, newest first, in any
+// state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your
+// member mailbox, or a personal agent's address): one whose author reads all your mail (author scope,
+//
+//	for an author who reads the organization's mail or holds an access entry for your mailbox), or
+//
+// one that names your mailbox or its domain (selected). Another member's own_mailboxes rule never
+// covers you. You see its name, wording, current tree, state, kind and author, and which of your own
+// mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses
+// (a condition on who an email is from or to). You do not see the other inboxes and domains its
+// scope names, its saved expectations, or the keys, shares and webhooks that use it. A page can hold
+// fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of
+// rules): keep reading until meta.cursor is null. Needs mail:read, a member's own credential with
+// their full access (not an API key, agent key or narrowed token), and the email rules feature. Only
+// on your own dashboard session or the Primitive CLI.
+//
+// GET /email-rules/covering-me
+func (c *Client) ListEmailRulesCoveringMe(ctx context.Context, params ListEmailRulesCoveringMeParams) (ListEmailRulesCoveringMeRes, error) {
+	res, err := c.sendListEmailRulesCoveringMe(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListEmailRulesCoveringMe(ctx context.Context, params ListEmailRulesCoveringMeParams) (res ListEmailRulesCoveringMeRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listEmailRulesCoveringMe"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/email-rules/covering-me"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListEmailRulesCoveringMeOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/email-rules/covering-me"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "limit" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Limit.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "cursor" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Cursor.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListEmailRulesCoveringMeOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListEmailRulesCoveringMeResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

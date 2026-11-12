@@ -200,6 +200,11 @@ export const openapiDocument: Record<string, unknown> = {
       "x-openapi-spec": "https://api.primitive.dev/v1/openapi/tags/email-rules"
     },
     {
+      "name": "Email Rule Oversight",
+      "description": "The email rules that reach your own mailboxes, whoever wrote them, read-only. The organization needs the email rules feature, and the caller must be a member with mail:read on their own dashboard session or the Primitive CLI, not narrowed.",
+      "x-openapi-spec": "https://api.primitive.dev/v1/openapi/tags/email-rule-oversight"
+    },
+    {
       "name": "Changes",
       "description": "One replayable long-poll of what changed (ids and kinds) across mail, sent mail, read state, the agent directory and access, so a client can keep its snapshots current without polling every list.",
       "x-openapi-spec": "https://api.primitive.dev/v1/openapi/tags/changes"
@@ -36015,7 +36020,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "403": {
-            "description": "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead.",
+            "description": "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox; details.covering_view is where (getEmailRuleCoveringMe).",
             "content": {
               "application/json": {
                 "schema": {
@@ -39786,6 +39791,340 @@ export const openapiDocument: Record<string, unknown> = {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-primitive-permission": [
+          "mail:read"
+        ]
+      }
+    },
+    "/email-rules/covering-me": {
+      "get": {
+        "operationId": "listEmailRulesCoveringMe",
+        "summary": "List the rules over your mail",
+        "description": "Every email rule that covers one of your own mailboxes now, yours included, newest first, in any state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your member mailbox, or a personal agent's address): one whose author reads all your mail (author scope, for an author who reads the organization's mail or holds an access entry for your mailbox), or one that names your mailbox or its domain (selected). Another member's own_mailboxes rule never covers you. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). You do not see the other inboxes and domains its scope names, its saved expectations, or the keys, shares and webhooks that use it. A page can hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+        "tags": [
+          "Email Rule Oversight"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Rules per page, from 1 to 100; defaults to 50.",
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "meta.cursor from the preceding page. Omit for the first page.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List the rules over your mail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data",
+                        "meta"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ListEmailRulesCoveringMeResult"
+                        },
+                        "meta": {
+                          "$ref": "#/components/schemas/CursorPageMeta"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy"
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_cursor: a cursor this list did not give you (each is sealed to you and your organization); pass meta.cursor unchanged.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-unauthenticated"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-unauthenticated"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset-unauthenticated"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-unauthenticated"
+              }
+            }
+          },
+          "403": {
+            "description": "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              },
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-429"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-429"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-429"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-primitive-permission": [
+          "mail:read"
+        ]
+      }
+    },
+    "/email-rules/covering-me/{id}": {
+      "get": {
+        "operationId": "getEmailRuleCoveringMe",
+        "summary": "Get a rule over your mail",
+        "description": "One rule that covers one of your own mailboxes, read-only, with its current version. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). You do not see the other inboxes and domains its scope names, its saved expectations, or the keys, shares and webhooks that use it. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+        "tags": [
+          "Email Rule Oversight"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The rule id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Get a rule over your mail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/GetEmailRuleCoveringMeResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy"
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-unauthenticated"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-unauthenticated"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset-unauthenticated"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-unauthenticated"
+              }
+            }
+          },
+          "403": {
+            "description": "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: no rule with this id covers your mailboxes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              },
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-429"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-429"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-429"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
                 }
               }
             }
@@ -72108,7 +72447,8 @@ export const openapiDocument: Record<string, unknown> = {
             "format": "uuid"
           },
           "endpoint_url": {
-            "type": "string"
+            "type": "string",
+            "description": "Where it was sent: a webhook's scheme and host, followed by \"/... (path and query hidden)\" when its URL has more (GET /endpoints/{id} has the whole URL), function://<id> for a Function, or pull: for a pull subscription."
           },
           "status": {
             "type": "string",
@@ -72204,7 +72544,7 @@ export const openapiDocument: Record<string, unknown> = {
               "string",
               "null"
             ],
-            "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent."
+            "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden wherever it repeats them."
           },
           "latest_attempt": {
             "type": "boolean",
@@ -77712,7 +78052,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "to": {
-            "description": "The mailbox they arrive in; by default the rule author's (a request's target's) sign-in address when you may see it, else yours.",
+            "description": "The mailbox they arrive in; by default the first address (alphabetically) a selected scope names that a made-up email can be sent to, preferring one the author still reads; else the rule author's (a request's target's) sign-in address when you may see it, else yours.",
             "type": "string",
             "maxLength": 254,
             "format": "email",
@@ -81195,6 +81535,250 @@ export const openapiDocument: Record<string, unknown> = {
         ],
         "additionalProperties": {}
       },
+      "EmailRuleCoveringMe": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "observe",
+              "active"
+            ],
+            "description": "draft: it decides nothing. observe: it decides and records, and shares nothing. active: it decides and, for a grant rule, shares what it matches."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "grant",
+              "do_not_share"
+            ],
+            "description": "grant: what it matches can be shared. do_not_share: it blocks sharing what it matches."
+          },
+          "author": {
+            "description": "Who wrote it.",
+            "$ref": "#/components/schemas/EmailRuleCoveringAuthor"
+          },
+          "is_author": {
+            "type": "boolean",
+            "description": "Whether you wrote it."
+          },
+          "covers": {
+            "$ref": "#/components/schemas/EmailRuleCoverage"
+          },
+          "current_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "state",
+          "kind",
+          "author",
+          "is_author",
+          "covers",
+          "current_version",
+          "created_at"
+        ]
+      },
+      "EmailRuleCoveringAuthor": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "description": "Their name; null when they have none set.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "description": "Sign-in email; null unless you can list member emails or this is you.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "user_id",
+          "name",
+          "email"
+        ]
+      },
+      "EmailRuleCoverage": {
+        "type": "object",
+        "properties": {
+          "addresses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Your own mailboxes (your member mailbox and your personal agents' addresses) it reaches now, lowercase."
+          },
+          "via": {
+            "type": "string",
+            "enum": [
+              "author_reach",
+              "selected",
+              "own_mailboxes"
+            ],
+            "description": "author_reach: it runs over everything its author can read, which includes these. selected: it names these mailboxes or their domain. own_mailboxes: it is your own rule over your own mail."
+          }
+        },
+        "required": [
+          "addresses",
+          "via"
+        ]
+      },
+      "ListEmailRulesCoveringMeResult": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/EmailRuleCoveringMe"
+        }
+      },
+      "EmailRuleCoveringMeRead": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "observe",
+              "active"
+            ],
+            "description": "draft: it decides nothing. observe: it decides and records, and shares nothing. active: it decides and, for a grant rule, shares what it matches."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "grant",
+              "do_not_share"
+            ],
+            "description": "grant: what it matches can be shared. do_not_share: it blocks sharing what it matches."
+          },
+          "author": {
+            "description": "Who wrote it.",
+            "$ref": "#/components/schemas/EmailRuleCoveringAuthor"
+          },
+          "is_author": {
+            "type": "boolean",
+            "description": "Whether you wrote it."
+          },
+          "covers": {
+            "$ref": "#/components/schemas/EmailRuleCoverage"
+          },
+          "current_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "current": {
+            "description": "Its current version: what it asks of each email.",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmailRuleCoveringMeVersion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "state",
+          "kind",
+          "author",
+          "is_author",
+          "covers",
+          "current_version",
+          "created_at",
+          "current"
+        ]
+      },
+      "EmailRuleCoveringMeVersion": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "english": {
+            "type": "string",
+            "description": "What its author asked for, in their words."
+          },
+          "tree": {
+            "$ref": "#/components/schemas/EmailRuleTree"
+          },
+          "explanation": {
+            "type": "string",
+            "description": "What the rule matches, as compiled."
+          },
+          "assumptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "compiled_by": {
+            "type": "string"
+          },
+          "vocabulary": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "version",
+          "english",
+          "tree",
+          "explanation",
+          "assumptions",
+          "compiled_by",
+          "vocabulary",
+          "created_at"
+        ]
+      },
+      "GetEmailRuleCoveringMeResult": {
+        "$ref": "#/components/schemas/EmailRuleCoveringMeRead"
+      },
       "GetDomainAgentAuthorizationResult": {
         "type": "object",
         "properties": {
@@ -83985,7 +84569,8 @@ export const openapiDocument: Record<string, unknown> = {
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
           "endpoint_url": {
-            "type": "string"
+            "type": "string",
+            "description": "Where it was sent: a webhook's scheme and host, followed by \"/... (path and query hidden)\" when its URL has more (GET /endpoints/{id} has the whole URL), function://<id> for a Function, or pull: for a pull subscription."
           },
           "status": {
             "type": "string"
@@ -84019,7 +84604,7 @@ export const openapiDocument: Record<string, unknown> = {
             "description": "The HTTP status the endpoint answered this attempt with: a webhook's own answer, or for a Function what its runtime answered, which is the platform's own error when the Function could not be run. Null when no answer came back (a network error, a timeout, an attempt refused or not sent) and on attempts recorded before this field."
           },
           "response_body": {
-            "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.",
+            "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden wherever it repeats them.",
             "type": [
               "string",
               "null"
@@ -84124,7 +84709,7 @@ export const openapiDocument: Record<string, unknown> = {
                   "description": "The HTTP status the endpoint answered this attempt with: a webhook's own answer, or for a Function what its runtime answered, which is the platform's own error when the Function could not be run. Null when no answer came back (a network error, a timeout, an attempt refused or not sent) and on attempts recorded before this field."
                 },
                 "response_body": {
-                  "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.",
+                  "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden wherever it repeats them.",
                   "type": [
                     "string",
                     "null"

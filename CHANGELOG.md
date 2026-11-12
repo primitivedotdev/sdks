@@ -579,6 +579,15 @@ date-time is kept as null and sorts last. A sync stops with an error after
   `getEmailRuleRequest`, `acceptEmailRuleRequest`, `declineEmailRuleRequest`,
   `withdrawEmailRuleRequest`, `deleteEmailRuleRequest`,
   `checkEmailRuleRequestTarget`.
+- Email rule oversight: `listEmailRulesCoveringMe` and `getEmailRuleCoveringMe`
+  (`GET /email-rules/covering-me` and `/email-rules/covering-me/{id}`), the
+  rules that reach your own mailboxes, whoever wrote them, read-only
+  (`EmailRuleCoveringMe`, `EmailRuleCoveringMeRead`: `name`, `state`,
+  `kind`, `author`, `is_author`, `covers` as `EmailRuleCoverage` with the
+  `addresses` it reaches and `via`, and the current version). They need
+  `mail:read` on a member's own session or the CLI, not narrowed. In the
+  CLI: `email-rule-oversight list-email-rules-covering-me` and
+  `get-email-rule-covering-me`.
 - Email rule shares: `listEmailRuleShares`, `listGivenEmailRuleShares`,
   `getEmailRuleShare`, `listEmailRuleShareEmails`, `endEmailRuleShare`
   (whose answer carries a `note` saying the rule itself is left unchanged,

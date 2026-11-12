@@ -26155,10 +26155,13 @@ type DeliverySummary struct {
 	ID string `json:"id"`
 	// The received email the delivery is about. Null for deliveries that are not about a received email,
 	// such as outbound sent_email.* events.
-	EmailID     NilUUID   `json:"email_id"`
-	OrgID       uuid.UUID `json:"org_id"`
-	EndpointID  uuid.UUID `json:"endpoint_id"`
-	EndpointURL string    `json:"endpoint_url"`
+	EmailID    NilUUID   `json:"email_id"`
+	OrgID      uuid.UUID `json:"org_id"`
+	EndpointID uuid.UUID `json:"endpoint_id"`
+	// Where it was sent: a webhook's scheme and host, followed by "/... (path and query hidden)" when
+	// its URL has more (GET /endpoints/{id} has the whole URL), function://<id> for a Function, or pull:
+	// for a pull subscription.
+	EndpointURL string `json:"endpoint_url"`
 	// Delivery status. skipped_by_rules: the endpoint's rules filtered the event out. held: kept back,
 	// unsent, until an owner or admin decides on the route that matched it. discarded: a held delivery
 	// that decision dropped.
@@ -26184,7 +26187,8 @@ type DeliverySummary struct {
 	// and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was
 	// sent. Null when no answer came back, and cleared when the message's content is discarded or the
 	// sent email is deleted. Withheld from a caller who cannot read message content, since an answer can
-	// echo what was sent.
+	// echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the
+	// webhook URL's path and query are hidden wherever it repeats them.
 	ResponseBody NilString `json:"response_body"`
 	// Whether this is the latest attempt of its delivery: the one recorded last, where a record of no
 	// attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A
@@ -32311,6 +32315,631 @@ func (s *EmailRuleBreadth) SetChecked(val int) {
 // SetMatched sets the value of Matched.
 func (s *EmailRuleBreadth) SetMatched(val int) {
 	s.Matched = val
+}
+
+// Ref: #/components/schemas/EmailRuleCoverage
+type EmailRuleCoverage struct {
+	// Your own mailboxes (your member mailbox and your personal agents' addresses) it reaches now,
+	// lowercase.
+	Addresses []string `json:"addresses"`
+	// Author_reach: it runs over everything its author can read, which includes these. selected: it
+	// names these mailboxes or their domain. own_mailboxes: it is your own rule over your own mail.
+	Via EmailRuleCoverageVia `json:"via"`
+}
+
+// GetAddresses returns the value of Addresses.
+func (s *EmailRuleCoverage) GetAddresses() []string {
+	return s.Addresses
+}
+
+// GetVia returns the value of Via.
+func (s *EmailRuleCoverage) GetVia() EmailRuleCoverageVia {
+	return s.Via
+}
+
+// SetAddresses sets the value of Addresses.
+func (s *EmailRuleCoverage) SetAddresses(val []string) {
+	s.Addresses = val
+}
+
+// SetVia sets the value of Via.
+func (s *EmailRuleCoverage) SetVia(val EmailRuleCoverageVia) {
+	s.Via = val
+}
+
+// Author_reach: it runs over everything its author can read, which includes these. selected: it
+// names these mailboxes or their domain. own_mailboxes: it is your own rule over your own mail.
+type EmailRuleCoverageVia string
+
+const (
+	EmailRuleCoverageViaAuthorReach  EmailRuleCoverageVia = "author_reach"
+	EmailRuleCoverageViaSelected     EmailRuleCoverageVia = "selected"
+	EmailRuleCoverageViaOwnMailboxes EmailRuleCoverageVia = "own_mailboxes"
+)
+
+// AllValues returns all EmailRuleCoverageVia values.
+func (EmailRuleCoverageVia) AllValues() []EmailRuleCoverageVia {
+	return []EmailRuleCoverageVia{
+		EmailRuleCoverageViaAuthorReach,
+		EmailRuleCoverageViaSelected,
+		EmailRuleCoverageViaOwnMailboxes,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailRuleCoverageVia) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailRuleCoverageViaAuthorReach:
+		return []byte(s), nil
+	case EmailRuleCoverageViaSelected:
+		return []byte(s), nil
+	case EmailRuleCoverageViaOwnMailboxes:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailRuleCoverageVia) UnmarshalText(data []byte) error {
+	switch EmailRuleCoverageVia(data) {
+	case EmailRuleCoverageViaAuthorReach:
+		*s = EmailRuleCoverageViaAuthorReach
+		return nil
+	case EmailRuleCoverageViaSelected:
+		*s = EmailRuleCoverageViaSelected
+		return nil
+	case EmailRuleCoverageViaOwnMailboxes:
+		*s = EmailRuleCoverageViaOwnMailboxes
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/EmailRuleCoveringAuthor
+type EmailRuleCoveringAuthor struct {
+	UserID uuid.UUID `json:"user_id"`
+	// Their name; null when they have none set.
+	Name NilString `json:"name"`
+	// Sign-in email; null unless you can list member emails or this is you.
+	Email NilString `json:"email"`
+}
+
+// GetUserID returns the value of UserID.
+func (s *EmailRuleCoveringAuthor) GetUserID() uuid.UUID {
+	return s.UserID
+}
+
+// GetName returns the value of Name.
+func (s *EmailRuleCoveringAuthor) GetName() NilString {
+	return s.Name
+}
+
+// GetEmail returns the value of Email.
+func (s *EmailRuleCoveringAuthor) GetEmail() NilString {
+	return s.Email
+}
+
+// SetUserID sets the value of UserID.
+func (s *EmailRuleCoveringAuthor) SetUserID(val uuid.UUID) {
+	s.UserID = val
+}
+
+// SetName sets the value of Name.
+func (s *EmailRuleCoveringAuthor) SetName(val NilString) {
+	s.Name = val
+}
+
+// SetEmail sets the value of Email.
+func (s *EmailRuleCoveringAuthor) SetEmail(val NilString) {
+	s.Email = val
+}
+
+// Ref: #/components/schemas/EmailRuleCoveringMe
+type EmailRuleCoveringMe struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+	// Draft: it decides nothing. observe: it decides and records, and shares nothing. active: it decides
+	// and, for a grant rule, shares what it matches.
+	State EmailRuleCoveringMeState `json:"state"`
+	// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
+	Kind EmailRuleCoveringMeKind `json:"kind"`
+	// Who wrote it.
+	Author EmailRuleCoveringAuthor `json:"author"`
+	// Whether you wrote it.
+	IsAuthor       bool              `json:"is_author"`
+	Covers         EmailRuleCoverage `json:"covers"`
+	CurrentVersion NilInt            `json:"current_version"`
+	CreatedAt      time.Time         `json:"created_at"`
+}
+
+// GetID returns the value of ID.
+func (s *EmailRuleCoveringMe) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *EmailRuleCoveringMe) GetName() string {
+	return s.Name
+}
+
+// GetState returns the value of State.
+func (s *EmailRuleCoveringMe) GetState() EmailRuleCoveringMeState {
+	return s.State
+}
+
+// GetKind returns the value of Kind.
+func (s *EmailRuleCoveringMe) GetKind() EmailRuleCoveringMeKind {
+	return s.Kind
+}
+
+// GetAuthor returns the value of Author.
+func (s *EmailRuleCoveringMe) GetAuthor() EmailRuleCoveringAuthor {
+	return s.Author
+}
+
+// GetIsAuthor returns the value of IsAuthor.
+func (s *EmailRuleCoveringMe) GetIsAuthor() bool {
+	return s.IsAuthor
+}
+
+// GetCovers returns the value of Covers.
+func (s *EmailRuleCoveringMe) GetCovers() EmailRuleCoverage {
+	return s.Covers
+}
+
+// GetCurrentVersion returns the value of CurrentVersion.
+func (s *EmailRuleCoveringMe) GetCurrentVersion() NilInt {
+	return s.CurrentVersion
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *EmailRuleCoveringMe) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// SetID sets the value of ID.
+func (s *EmailRuleCoveringMe) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *EmailRuleCoveringMe) SetName(val string) {
+	s.Name = val
+}
+
+// SetState sets the value of State.
+func (s *EmailRuleCoveringMe) SetState(val EmailRuleCoveringMeState) {
+	s.State = val
+}
+
+// SetKind sets the value of Kind.
+func (s *EmailRuleCoveringMe) SetKind(val EmailRuleCoveringMeKind) {
+	s.Kind = val
+}
+
+// SetAuthor sets the value of Author.
+func (s *EmailRuleCoveringMe) SetAuthor(val EmailRuleCoveringAuthor) {
+	s.Author = val
+}
+
+// SetIsAuthor sets the value of IsAuthor.
+func (s *EmailRuleCoveringMe) SetIsAuthor(val bool) {
+	s.IsAuthor = val
+}
+
+// SetCovers sets the value of Covers.
+func (s *EmailRuleCoveringMe) SetCovers(val EmailRuleCoverage) {
+	s.Covers = val
+}
+
+// SetCurrentVersion sets the value of CurrentVersion.
+func (s *EmailRuleCoveringMe) SetCurrentVersion(val NilInt) {
+	s.CurrentVersion = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *EmailRuleCoveringMe) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
+type EmailRuleCoveringMeKind string
+
+const (
+	EmailRuleCoveringMeKindGrant      EmailRuleCoveringMeKind = "grant"
+	EmailRuleCoveringMeKindDoNotShare EmailRuleCoveringMeKind = "do_not_share"
+)
+
+// AllValues returns all EmailRuleCoveringMeKind values.
+func (EmailRuleCoveringMeKind) AllValues() []EmailRuleCoveringMeKind {
+	return []EmailRuleCoveringMeKind{
+		EmailRuleCoveringMeKindGrant,
+		EmailRuleCoveringMeKindDoNotShare,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailRuleCoveringMeKind) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailRuleCoveringMeKindGrant:
+		return []byte(s), nil
+	case EmailRuleCoveringMeKindDoNotShare:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailRuleCoveringMeKind) UnmarshalText(data []byte) error {
+	switch EmailRuleCoveringMeKind(data) {
+	case EmailRuleCoveringMeKindGrant:
+		*s = EmailRuleCoveringMeKindGrant
+		return nil
+	case EmailRuleCoveringMeKindDoNotShare:
+		*s = EmailRuleCoveringMeKindDoNotShare
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/EmailRuleCoveringMeRead
+type EmailRuleCoveringMeRead struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+	// Draft: it decides nothing. observe: it decides and records, and shares nothing. active: it decides
+	// and, for a grant rule, shares what it matches.
+	State EmailRuleCoveringMeReadState `json:"state"`
+	// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
+	Kind EmailRuleCoveringMeReadKind `json:"kind"`
+	// Who wrote it.
+	Author EmailRuleCoveringAuthor `json:"author"`
+	// Whether you wrote it.
+	IsAuthor       bool              `json:"is_author"`
+	Covers         EmailRuleCoverage `json:"covers"`
+	CurrentVersion NilInt            `json:"current_version"`
+	CreatedAt      time.Time         `json:"created_at"`
+	// Its current version: what it asks of each email.
+	Current NilEmailRuleCoveringMeVersion `json:"current"`
+}
+
+// GetID returns the value of ID.
+func (s *EmailRuleCoveringMeRead) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *EmailRuleCoveringMeRead) GetName() string {
+	return s.Name
+}
+
+// GetState returns the value of State.
+func (s *EmailRuleCoveringMeRead) GetState() EmailRuleCoveringMeReadState {
+	return s.State
+}
+
+// GetKind returns the value of Kind.
+func (s *EmailRuleCoveringMeRead) GetKind() EmailRuleCoveringMeReadKind {
+	return s.Kind
+}
+
+// GetAuthor returns the value of Author.
+func (s *EmailRuleCoveringMeRead) GetAuthor() EmailRuleCoveringAuthor {
+	return s.Author
+}
+
+// GetIsAuthor returns the value of IsAuthor.
+func (s *EmailRuleCoveringMeRead) GetIsAuthor() bool {
+	return s.IsAuthor
+}
+
+// GetCovers returns the value of Covers.
+func (s *EmailRuleCoveringMeRead) GetCovers() EmailRuleCoverage {
+	return s.Covers
+}
+
+// GetCurrentVersion returns the value of CurrentVersion.
+func (s *EmailRuleCoveringMeRead) GetCurrentVersion() NilInt {
+	return s.CurrentVersion
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *EmailRuleCoveringMeRead) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetCurrent returns the value of Current.
+func (s *EmailRuleCoveringMeRead) GetCurrent() NilEmailRuleCoveringMeVersion {
+	return s.Current
+}
+
+// SetID sets the value of ID.
+func (s *EmailRuleCoveringMeRead) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *EmailRuleCoveringMeRead) SetName(val string) {
+	s.Name = val
+}
+
+// SetState sets the value of State.
+func (s *EmailRuleCoveringMeRead) SetState(val EmailRuleCoveringMeReadState) {
+	s.State = val
+}
+
+// SetKind sets the value of Kind.
+func (s *EmailRuleCoveringMeRead) SetKind(val EmailRuleCoveringMeReadKind) {
+	s.Kind = val
+}
+
+// SetAuthor sets the value of Author.
+func (s *EmailRuleCoveringMeRead) SetAuthor(val EmailRuleCoveringAuthor) {
+	s.Author = val
+}
+
+// SetIsAuthor sets the value of IsAuthor.
+func (s *EmailRuleCoveringMeRead) SetIsAuthor(val bool) {
+	s.IsAuthor = val
+}
+
+// SetCovers sets the value of Covers.
+func (s *EmailRuleCoveringMeRead) SetCovers(val EmailRuleCoverage) {
+	s.Covers = val
+}
+
+// SetCurrentVersion sets the value of CurrentVersion.
+func (s *EmailRuleCoveringMeRead) SetCurrentVersion(val NilInt) {
+	s.CurrentVersion = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *EmailRuleCoveringMeRead) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetCurrent sets the value of Current.
+func (s *EmailRuleCoveringMeRead) SetCurrent(val NilEmailRuleCoveringMeVersion) {
+	s.Current = val
+}
+
+// Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
+type EmailRuleCoveringMeReadKind string
+
+const (
+	EmailRuleCoveringMeReadKindGrant      EmailRuleCoveringMeReadKind = "grant"
+	EmailRuleCoveringMeReadKindDoNotShare EmailRuleCoveringMeReadKind = "do_not_share"
+)
+
+// AllValues returns all EmailRuleCoveringMeReadKind values.
+func (EmailRuleCoveringMeReadKind) AllValues() []EmailRuleCoveringMeReadKind {
+	return []EmailRuleCoveringMeReadKind{
+		EmailRuleCoveringMeReadKindGrant,
+		EmailRuleCoveringMeReadKindDoNotShare,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailRuleCoveringMeReadKind) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailRuleCoveringMeReadKindGrant:
+		return []byte(s), nil
+	case EmailRuleCoveringMeReadKindDoNotShare:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailRuleCoveringMeReadKind) UnmarshalText(data []byte) error {
+	switch EmailRuleCoveringMeReadKind(data) {
+	case EmailRuleCoveringMeReadKindGrant:
+		*s = EmailRuleCoveringMeReadKindGrant
+		return nil
+	case EmailRuleCoveringMeReadKindDoNotShare:
+		*s = EmailRuleCoveringMeReadKindDoNotShare
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Draft: it decides nothing. observe: it decides and records, and shares nothing. active: it decides
+// and, for a grant rule, shares what it matches.
+type EmailRuleCoveringMeReadState string
+
+const (
+	EmailRuleCoveringMeReadStateDraft   EmailRuleCoveringMeReadState = "draft"
+	EmailRuleCoveringMeReadStateObserve EmailRuleCoveringMeReadState = "observe"
+	EmailRuleCoveringMeReadStateActive  EmailRuleCoveringMeReadState = "active"
+)
+
+// AllValues returns all EmailRuleCoveringMeReadState values.
+func (EmailRuleCoveringMeReadState) AllValues() []EmailRuleCoveringMeReadState {
+	return []EmailRuleCoveringMeReadState{
+		EmailRuleCoveringMeReadStateDraft,
+		EmailRuleCoveringMeReadStateObserve,
+		EmailRuleCoveringMeReadStateActive,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailRuleCoveringMeReadState) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailRuleCoveringMeReadStateDraft:
+		return []byte(s), nil
+	case EmailRuleCoveringMeReadStateObserve:
+		return []byte(s), nil
+	case EmailRuleCoveringMeReadStateActive:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailRuleCoveringMeReadState) UnmarshalText(data []byte) error {
+	switch EmailRuleCoveringMeReadState(data) {
+	case EmailRuleCoveringMeReadStateDraft:
+		*s = EmailRuleCoveringMeReadStateDraft
+		return nil
+	case EmailRuleCoveringMeReadStateObserve:
+		*s = EmailRuleCoveringMeReadStateObserve
+		return nil
+	case EmailRuleCoveringMeReadStateActive:
+		*s = EmailRuleCoveringMeReadStateActive
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Draft: it decides nothing. observe: it decides and records, and shares nothing. active: it decides
+// and, for a grant rule, shares what it matches.
+type EmailRuleCoveringMeState string
+
+const (
+	EmailRuleCoveringMeStateDraft   EmailRuleCoveringMeState = "draft"
+	EmailRuleCoveringMeStateObserve EmailRuleCoveringMeState = "observe"
+	EmailRuleCoveringMeStateActive  EmailRuleCoveringMeState = "active"
+)
+
+// AllValues returns all EmailRuleCoveringMeState values.
+func (EmailRuleCoveringMeState) AllValues() []EmailRuleCoveringMeState {
+	return []EmailRuleCoveringMeState{
+		EmailRuleCoveringMeStateDraft,
+		EmailRuleCoveringMeStateObserve,
+		EmailRuleCoveringMeStateActive,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailRuleCoveringMeState) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailRuleCoveringMeStateDraft:
+		return []byte(s), nil
+	case EmailRuleCoveringMeStateObserve:
+		return []byte(s), nil
+	case EmailRuleCoveringMeStateActive:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailRuleCoveringMeState) UnmarshalText(data []byte) error {
+	switch EmailRuleCoveringMeState(data) {
+	case EmailRuleCoveringMeStateDraft:
+		*s = EmailRuleCoveringMeStateDraft
+		return nil
+	case EmailRuleCoveringMeStateObserve:
+		*s = EmailRuleCoveringMeStateObserve
+		return nil
+	case EmailRuleCoveringMeStateActive:
+		*s = EmailRuleCoveringMeStateActive
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/EmailRuleCoveringMeVersion
+type EmailRuleCoveringMeVersion struct {
+	Version int `json:"version"`
+	// What its author asked for, in their words.
+	English string        `json:"english"`
+	Tree    EmailRuleTree `json:"tree"`
+	// What the rule matches, as compiled.
+	Explanation string    `json:"explanation"`
+	Assumptions []string  `json:"assumptions"`
+	CompiledBy  string    `json:"compiled_by"`
+	Vocabulary  string    `json:"vocabulary"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+// GetVersion returns the value of Version.
+func (s *EmailRuleCoveringMeVersion) GetVersion() int {
+	return s.Version
+}
+
+// GetEnglish returns the value of English.
+func (s *EmailRuleCoveringMeVersion) GetEnglish() string {
+	return s.English
+}
+
+// GetTree returns the value of Tree.
+func (s *EmailRuleCoveringMeVersion) GetTree() EmailRuleTree {
+	return s.Tree
+}
+
+// GetExplanation returns the value of Explanation.
+func (s *EmailRuleCoveringMeVersion) GetExplanation() string {
+	return s.Explanation
+}
+
+// GetAssumptions returns the value of Assumptions.
+func (s *EmailRuleCoveringMeVersion) GetAssumptions() []string {
+	return s.Assumptions
+}
+
+// GetCompiledBy returns the value of CompiledBy.
+func (s *EmailRuleCoveringMeVersion) GetCompiledBy() string {
+	return s.CompiledBy
+}
+
+// GetVocabulary returns the value of Vocabulary.
+func (s *EmailRuleCoveringMeVersion) GetVocabulary() string {
+	return s.Vocabulary
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *EmailRuleCoveringMeVersion) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// SetVersion sets the value of Version.
+func (s *EmailRuleCoveringMeVersion) SetVersion(val int) {
+	s.Version = val
+}
+
+// SetEnglish sets the value of English.
+func (s *EmailRuleCoveringMeVersion) SetEnglish(val string) {
+	s.English = val
+}
+
+// SetTree sets the value of Tree.
+func (s *EmailRuleCoveringMeVersion) SetTree(val EmailRuleTree) {
+	s.Tree = val
+}
+
+// SetExplanation sets the value of Explanation.
+func (s *EmailRuleCoveringMeVersion) SetExplanation(val string) {
+	s.Explanation = val
+}
+
+// SetAssumptions sets the value of Assumptions.
+func (s *EmailRuleCoveringMeVersion) SetAssumptions(val []string) {
+	s.Assumptions = val
+}
+
+// SetCompiledBy sets the value of CompiledBy.
+func (s *EmailRuleCoveringMeVersion) SetCompiledBy(val string) {
+	s.CompiledBy = val
+}
+
+// SetVocabulary sets the value of Vocabulary.
+func (s *EmailRuleCoveringMeVersion) SetVocabulary(val string) {
+	s.Vocabulary = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *EmailRuleCoveringMeVersion) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
 }
 
 // Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
@@ -46818,8 +47447,9 @@ type GenerateLookAlikesRequest struct {
 	// Which kinds, taken in turn, all expected no_match; other is a business near miss. Left out, a
 	// default mix.
 	Kinds []GenerateLookAlikesRequestKindsItem `json:"kinds"`
-	// The mailbox they arrive in; by default the rule author's (a request's target's) sign-in address
-	// when you may see it, else yours.
+	// The mailbox they arrive in; by default the first address (alphabetically) a selected scope names
+	// that a made-up email can be sent to, preferring one the author still reads; else the rule author's
+	// (a request's target's) sign-in address when you may see it, else yours.
 	To OptString `json:"to"`
 }
 
@@ -48987,12 +49617,15 @@ func (*GetDeliveryOK) getDeliveryRes() {}
 
 // Ref: #/components/schemas/GetDeliveryResult
 type GetDeliveryResult struct {
-	ID            string    `json:"id"`
-	EmailID       NilUUID   `json:"email_id"`
-	EventType     NilString `json:"event_type"`
-	SentEmailID   NilUUID   `json:"sent_email_id"`
-	OrgID         string    `json:"org_id"`
-	EndpointID    uuid.UUID `json:"endpoint_id"`
+	ID          string    `json:"id"`
+	EmailID     NilUUID   `json:"email_id"`
+	EventType   NilString `json:"event_type"`
+	SentEmailID NilUUID   `json:"sent_email_id"`
+	OrgID       string    `json:"org_id"`
+	EndpointID  uuid.UUID `json:"endpoint_id"`
+	// Where it was sent: a webhook's scheme and host, followed by "/... (path and query hidden)" when
+	// its URL has more (GET /endpoints/{id} has the whole URL), function://<id> for a Function, or pull:
+	// for a pull subscription.
 	EndpointURL   string    `json:"endpoint_url"`
 	Status        string    `json:"status"`
 	AttemptCount  int       `json:"attempt_count"`
@@ -49008,7 +49641,8 @@ type GetDeliveryResult struct {
 	// and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was
 	// sent. Null when no answer came back, and cleared when the message's content is discarded or the
 	// sent email is deleted. Withheld from a caller who cannot read message content, since an answer can
-	// echo what was sent.
+	// echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the
+	// webhook URL's path and query are hidden wherever it repeats them.
 	ResponseBody NilString                 `json:"response_body"`
 	CreatedAt    string                    `json:"created_at"`
 	UpdatedAt    string                    `json:"updated_at"`
@@ -49282,7 +49916,8 @@ type GetDeliveryResultAttemptsItem struct {
 	// and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was
 	// sent. Null when no answer came back, and cleared when the message's content is discarded or the
 	// sent email is deleted. Withheld from a caller who cannot read message content, since an answer can
-	// echo what was sent.
+	// echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the
+	// webhook URL's path and query are hidden wherever it repeats them.
 	ResponseBody NilString `json:"response_body"`
 	// Whether an automatic retry will try this delivery again. A retry is a delivery pass for the email:
 	// it sends again to the endpoint the email's routing resolves then (its recorded route, or the
@@ -49677,6 +50312,50 @@ func (*GetEmailReadableUnauthorized) getEmailReadableRes() {}
 type GetEmailRuleBadRequest ErrorResponse
 
 func (*GetEmailRuleBadRequest) getEmailRuleRes() {}
+
+type GetEmailRuleCoveringMeForbidden ErrorResponse
+
+func (*GetEmailRuleCoveringMeForbidden) getEmailRuleCoveringMeRes() {}
+
+type GetEmailRuleCoveringMeNotFound ErrorResponse
+
+func (*GetEmailRuleCoveringMeNotFound) getEmailRuleCoveringMeRes() {}
+
+// Merged schema.
+type GetEmailRuleCoveringMeOK struct {
+	Success bool                    `json:"success"`
+	Data    EmailRuleCoveringMeRead `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetEmailRuleCoveringMeOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetEmailRuleCoveringMeOK) GetData() EmailRuleCoveringMeRead {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetEmailRuleCoveringMeOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetEmailRuleCoveringMeOK) SetData(val EmailRuleCoveringMeRead) {
+	s.Data = val
+}
+
+func (*GetEmailRuleCoveringMeOK) getEmailRuleCoveringMeRes() {}
+
+type GetEmailRuleCoveringMeTooManyRequests ErrorResponseHeaders
+
+func (*GetEmailRuleCoveringMeTooManyRequests) getEmailRuleCoveringMeRes() {}
+
+type GetEmailRuleCoveringMeUnauthorized ErrorResponseHeaders
+
+func (*GetEmailRuleCoveringMeUnauthorized) getEmailRuleCoveringMeRes() {}
 
 type GetEmailRuleForbidden ErrorResponse
 
@@ -64509,6 +65188,63 @@ type ListEmailRulesBadRequest ErrorResponse
 
 func (*ListEmailRulesBadRequest) listEmailRulesRes() {}
 
+type ListEmailRulesCoveringMeBadRequest ErrorResponse
+
+func (*ListEmailRulesCoveringMeBadRequest) listEmailRulesCoveringMeRes() {}
+
+type ListEmailRulesCoveringMeForbidden ErrorResponse
+
+func (*ListEmailRulesCoveringMeForbidden) listEmailRulesCoveringMeRes() {}
+
+// Merged schema.
+type ListEmailRulesCoveringMeOK struct {
+	Success bool                           `json:"success"`
+	Data    ListEmailRulesCoveringMeResult `json:"data"`
+	Meta    CursorPageMeta                 `json:"meta"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListEmailRulesCoveringMeOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListEmailRulesCoveringMeOK) GetData() ListEmailRulesCoveringMeResult {
+	return s.Data
+}
+
+// GetMeta returns the value of Meta.
+func (s *ListEmailRulesCoveringMeOK) GetMeta() CursorPageMeta {
+	return s.Meta
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListEmailRulesCoveringMeOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListEmailRulesCoveringMeOK) SetData(val ListEmailRulesCoveringMeResult) {
+	s.Data = val
+}
+
+// SetMeta sets the value of Meta.
+func (s *ListEmailRulesCoveringMeOK) SetMeta(val CursorPageMeta) {
+	s.Meta = val
+}
+
+func (*ListEmailRulesCoveringMeOK) listEmailRulesCoveringMeRes() {}
+
+type ListEmailRulesCoveringMeResult []EmailRuleCoveringMe
+
+type ListEmailRulesCoveringMeTooManyRequests ErrorResponseHeaders
+
+func (*ListEmailRulesCoveringMeTooManyRequests) listEmailRulesCoveringMeRes() {}
+
+type ListEmailRulesCoveringMeUnauthorized ErrorResponseHeaders
+
+func (*ListEmailRulesCoveringMeUnauthorized) listEmailRulesCoveringMeRes() {}
+
 type ListEmailRulesForbidden ErrorResponse
 
 func (*ListEmailRulesForbidden) listEmailRulesRes() {}
@@ -73894,6 +74630,51 @@ func (o NilEmailReadableParseStatus) Get() (v EmailReadableParseStatus, ok bool)
 
 // Or returns value if set, or given parameter if does not.
 func (o NilEmailReadableParseStatus) Or(d EmailReadableParseStatus) EmailReadableParseStatus {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilEmailRuleCoveringMeVersion returns new NilEmailRuleCoveringMeVersion with value set to v.
+func NewNilEmailRuleCoveringMeVersion(v EmailRuleCoveringMeVersion) NilEmailRuleCoveringMeVersion {
+	return NilEmailRuleCoveringMeVersion{
+		Value: v,
+	}
+}
+
+// NilEmailRuleCoveringMeVersion is nullable EmailRuleCoveringMeVersion.
+type NilEmailRuleCoveringMeVersion struct {
+	Value EmailRuleCoveringMeVersion
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilEmailRuleCoveringMeVersion) SetTo(v EmailRuleCoveringMeVersion) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilEmailRuleCoveringMeVersion) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilEmailRuleCoveringMeVersion) SetToNull() {
+	o.Null = true
+	var v EmailRuleCoveringMeVersion
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilEmailRuleCoveringMeVersion) Get() (v EmailRuleCoveringMeVersion, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilEmailRuleCoveringMeVersion) Or(d EmailRuleCoveringMeVersion) EmailRuleCoveringMeVersion {
 	if v, ok := o.Get(); ok {
 		return v
 	}

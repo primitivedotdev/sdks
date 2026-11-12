@@ -16399,6 +16399,381 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "get-email-rule-covering-me",
+    "description": "One rule that covers one of your own mailboxes, read-only, with its current version. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). You do not see the other inboxes and domains its scope names, its saved expectations, or the keys, shares and webhooks that use it. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getEmailRuleCoveringMe",
+    "path": "/email-rules/covering-me/{id}",
+    "pathParams": [
+      {
+        "description": "The rule id.",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
+    "access": null,
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "observe",
+            "active"
+          ],
+          "description": "draft: it decides nothing. observe: it decides and records, and shares nothing. active: it decides and, for a grant rule, shares what it matches."
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "grant",
+            "do_not_share"
+          ],
+          "description": "grant: what it matches can be shared. do_not_share: it blocks sharing what it matches."
+        },
+        "author": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "description": "Their name; null when they have none set.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "email": {
+              "description": "Sign-in email; null unless you can list member emails or this is you.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "user_id",
+            "name",
+            "email"
+          ]
+        },
+        "is_author": {
+          "type": "boolean",
+          "description": "Whether you wrote it."
+        },
+        "covers": {
+          "type": "object",
+          "properties": {
+            "addresses": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Your own mailboxes (your member mailbox and your personal agents' addresses) it reaches now, lowercase."
+            },
+            "via": {
+              "type": "string",
+              "enum": [
+                "author_reach",
+                "selected",
+                "own_mailboxes"
+              ],
+              "description": "author_reach: it runs over everything its author can read, which includes these. selected: it names these mailboxes or their domain. own_mailboxes: it is your own rule over your own mail."
+            }
+          },
+          "required": [
+            "addresses",
+            "via"
+          ]
+        },
+        "current_version": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "current": {
+          "description": "Its current version: what it asks of each email.",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "version": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "english": {
+                  "type": "string",
+                  "description": "What its author asked for, in their words."
+                },
+                "tree": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "number",
+                      "const": 1
+                    },
+                    "vocabulary": {
+                      "type": "string",
+                      "description": "Vocabulary version, such as v1."
+                    },
+                    "when": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {},
+                      "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
+                    },
+                    "questions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Yes/no questions asked once the conditions match, over the email's text and attachment names, never attachment contents. A grant rule needs every one yes; a do_not_share rule matches on any yes."
+                    }
+                  },
+                  "required": [
+                    "version",
+                    "vocabulary",
+                    "when",
+                    "questions"
+                  ]
+                },
+                "explanation": {
+                  "type": "string",
+                  "description": "What the rule matches, as compiled."
+                },
+                "assumptions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "compiled_by": {
+                  "type": "string"
+                },
+                "vocabulary": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "version",
+                "english",
+                "tree",
+                "explanation",
+                "assumptions",
+                "compiled_by",
+                "vocabulary",
+                "created_at"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "state",
+        "kind",
+        "author",
+        "is_author",
+        "covers",
+        "current_version",
+        "created_at",
+        "current"
+      ]
+    },
+    "sdkName": "getEmailRuleCoveringMe",
+    "summary": "Get a rule over your mail",
+    "tag": "Email Rule Oversight",
+    "tagCommand": "email-rule-oversight"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-email-rules-covering-me",
+    "description": "Every email rule that covers one of your own mailboxes now, yours included, newest first, in any state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your member mailbox, or a personal agent's address): one whose author reads all your mail (author scope, for an author who reads the organization's mail or holds an access entry for your mailbox), or one that names your mailbox or its domain (selected). Another member's own_mailboxes rule never covers you. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). You do not see the other inboxes and domains its scope names, its saved expectations, or the keys, shares and webhooks that use it. A page can hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listEmailRulesCoveringMe",
+    "path": "/email-rules/covering-me",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "default": 50,
+        "description": "Rules per page, from 1 to 100; defaults to 50.",
+        "enum": null,
+        "maximum": 100,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "meta.cursor from the preceding page. Omit for the first page.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
+    "access": null,
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "observe",
+              "active"
+            ],
+            "description": "draft: it decides nothing. observe: it decides and records, and shares nothing. active: it decides and, for a grant rule, shares what it matches."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "grant",
+              "do_not_share"
+            ],
+            "description": "grant: what it matches can be shared. do_not_share: it blocks sharing what it matches."
+          },
+          "author": {
+            "type": "object",
+            "properties": {
+              "user_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "description": "Their name; null when they have none set.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "email": {
+                "description": "Sign-in email; null unless you can list member emails or this is you.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "user_id",
+              "name",
+              "email"
+            ]
+          },
+          "is_author": {
+            "type": "boolean",
+            "description": "Whether you wrote it."
+          },
+          "covers": {
+            "type": "object",
+            "properties": {
+              "addresses": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Your own mailboxes (your member mailbox and your personal agents' addresses) it reaches now, lowercase."
+              },
+              "via": {
+                "type": "string",
+                "enum": [
+                  "author_reach",
+                  "selected",
+                  "own_mailboxes"
+                ],
+                "description": "author_reach: it runs over everything its author can read, which includes these. selected: it names these mailboxes or their domain. own_mailboxes: it is your own rule over your own mail."
+              }
+            },
+            "required": [
+              "addresses",
+              "via"
+            ]
+          },
+          "current_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "state",
+          "kind",
+          "author",
+          "is_author",
+          "covers",
+          "current_version",
+          "created_at"
+        ]
+      }
+    },
+    "sdkName": "listEmailRulesCoveringMe",
+    "summary": "List the rules over your mail",
+    "tag": "Email Rule Oversight",
+    "tagCommand": "email-rule-oversight"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "accept-email-rule-request",
     "description": "Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from now on with the member who asked: each email in full with its attachments, but never raw. It does not go back through mail already received. Send no body to accept it as asked, or change it first with english and tree together (and an explanation, or the server writes one). Because this gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to POST /v1/email-rules/test. A test on mail already received shows only what has arrived. To see what the rule would do with an email that has not, such as one you would never want shared, pass the request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up, or have look-alikes written for it (POST /v1/email-rules/look-alikes with request_id; primitive email-rules generate-look-alikes). Neither stores anything, and neither needs access beyond testing a rule of your own; the accept keeps any you send as expectation_samples on the rule it writes. Made-up emails sent in expectation_samples are kept on the rule this writes, where GET /v1/email-rules/{id} lists them. Accepting also needs mail:share_own (sharing your own mail through email rules, which only shows it and never sends): a role without it is refused, whether or not it can send. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": true,
@@ -19540,7 +19915,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "to": {
-          "description": "The mailbox they arrive in; by default the rule author's (a request's target's) sign-in address when you may see it, else yours.",
+          "description": "The mailbox they arrive in; by default the first address (alphabetically) a selected scope names that a made-up email can be sent to, preferring one the author still reads; else the rule author's (a request's target's) sign-in address when you may see it, else yours.",
           "type": "string",
           "maxLength": 254,
           "format": "email",
@@ -61347,7 +61722,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
         },
         "endpoint_url": {
-          "type": "string"
+          "type": "string",
+          "description": "Where it was sent: a webhook's scheme and host, followed by \"/... (path and query hidden)\" when its URL has more (GET /endpoints/{id} has the whole URL), function://<id> for a Function, or pull: for a pull subscription."
         },
         "status": {
           "type": "string"
@@ -61381,7 +61757,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "description": "The HTTP status the endpoint answered this attempt with: a webhook's own answer, or for a Function what its runtime answered, which is the platform's own error when the Function could not be run. Null when no answer came back (a network error, a timeout, an attempt refused or not sent) and on attempts recorded before this field."
         },
         "response_body": {
-          "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.",
+          "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden wherever it repeats them.",
           "type": [
             "string",
             "null"
@@ -61486,7 +61862,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "description": "The HTTP status the endpoint answered this attempt with: a webhook's own answer, or for a Function what its runtime answered, which is the platform's own error when the Function could not be run. Null when no answer came back (a network error, a timeout, an attempt refused or not sent) and on attempts recorded before this field."
               },
               "response_body": {
-                "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.",
+                "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden wherever it repeats them.",
                 "type": [
                   "string",
                   "null"
@@ -61655,7 +62031,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "format": "uuid"
           },
           "endpoint_url": {
-            "type": "string"
+            "type": "string",
+            "description": "Where it was sent: a webhook's scheme and host, followed by \"/... (path and query hidden)\" when its URL has more (GET /endpoints/{id} has the whole URL), function://<id> for a Function, or pull: for a pull subscription."
           },
           "status": {
             "type": "string",
@@ -61751,7 +62128,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "string",
               "null"
             ],
-            "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent."
+            "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden wherever it repeats them."
           },
           "latest_attempt": {
             "type": "boolean",

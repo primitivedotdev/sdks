@@ -36,7 +36,9 @@ class GetDeliveryResultAttemptsItem:
             response_body (None | str): The first 2 KB of the body the endpoint answered this attempt with, so a handler
                 that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was
                 sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is
-                deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.
+                deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null
+                for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden
+                wherever it repeats them.
             retry_scheduled (bool | None): Whether an automatic retry will try this delivery again. A retry is a delivery
                 pass for the email: it sends again to the endpoint the email's routing resolves then (its recorded route, or the
                 current endpoint for its domain), unless the email already reached it, deciding it afresh (its rules, its

@@ -4682,6 +4682,9 @@ export type DeliverySummary = {
     email_id: string | null;
     org_id: string;
     endpoint_id: string;
+    /**
+     * Where it was sent: a webhook's scheme and host, followed by "/... (path and query hidden)" when its URL has more (GET /endpoints/{id} has the whole URL), function://<id> for a Function, or pull: for a pull subscription.
+     */
     endpoint_url: string;
     /**
      * Delivery status. skipped_by_rules: the endpoint's rules filtered the event out. held: kept back, unsent, until an owner or admin decides on the route that matched it. discarded: a held delivery that decision dropped.
@@ -4714,7 +4717,7 @@ export type DeliverySummary = {
      */
     response_status: number | null;
     /**
-     * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.
+     * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden wherever it repeats them.
      */
     response_body: string | null;
     /**
@@ -6652,7 +6655,7 @@ export type GenerateLookAlikesRequest = {
      */
     kinds?: Array<'medical' | 'payroll' | 'personal_purchase' | 'bank_tax' | 'other'>;
     /**
-     * The mailbox they arrive in; by default the rule author's (a request's target's) sign-in address when you may see it, else yours.
+     * The mailbox they arrive in; by default the first address (alphabetically) a selected scope names that a made-up email can be sent to, preferring one the author still reads; else the rule author's (a request's target's) sign-in address when you may see it, else yours.
      */
     to?: string;
 };
@@ -7934,6 +7937,96 @@ export type EndEmailRuleShareResult = {
     [key: string]: unknown;
 };
 
+export type EmailRuleCoveringMe = {
+    id: string;
+    name: string;
+    /**
+     * draft: it decides nothing. observe: it decides and records, and shares nothing. active: it decides and, for a grant rule, shares what it matches.
+     */
+    state: 'draft' | 'observe' | 'active';
+    /**
+     * grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
+     */
+    kind: 'grant' | 'do_not_share';
+    author: EmailRuleCoveringAuthor;
+    /**
+     * Whether you wrote it.
+     */
+    is_author: boolean;
+    covers: EmailRuleCoverage;
+    current_version: number | null;
+    created_at: string;
+};
+
+export type EmailRuleCoveringAuthor = {
+    user_id: string;
+    /**
+     * Their name; null when they have none set.
+     */
+    name: string | null;
+    /**
+     * Sign-in email; null unless you can list member emails or this is you.
+     */
+    email: string | null;
+};
+
+export type EmailRuleCoverage = {
+    /**
+     * Your own mailboxes (your member mailbox and your personal agents' addresses) it reaches now, lowercase.
+     */
+    addresses: Array<string>;
+    /**
+     * author_reach: it runs over everything its author can read, which includes these. selected: it names these mailboxes or their domain. own_mailboxes: it is your own rule over your own mail.
+     */
+    via: 'author_reach' | 'selected' | 'own_mailboxes';
+};
+
+export type ListEmailRulesCoveringMeResult = Array<EmailRuleCoveringMe>;
+
+export type EmailRuleCoveringMeRead = {
+    id: string;
+    name: string;
+    /**
+     * draft: it decides nothing. observe: it decides and records, and shares nothing. active: it decides and, for a grant rule, shares what it matches.
+     */
+    state: 'draft' | 'observe' | 'active';
+    /**
+     * grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
+     */
+    kind: 'grant' | 'do_not_share';
+    author: EmailRuleCoveringAuthor;
+    /**
+     * Whether you wrote it.
+     */
+    is_author: boolean;
+    covers: EmailRuleCoverage;
+    current_version: number | null;
+    created_at: string;
+    /**
+     * Its current version: what it asks of each email.
+     */
+    current: EmailRuleCoveringMeVersion | null;
+};
+
+export type EmailRuleCoveringMeVersion = {
+    version: number;
+    /**
+     * What its author asked for, in their words.
+     */
+    english: string;
+    tree: EmailRuleTree;
+    /**
+     * What the rule matches, as compiled.
+     */
+    explanation: string;
+    assumptions: Array<string>;
+    compiled_by: string;
+    vocabulary: string;
+    created_at: string;
+};
+
+export type GetEmailRuleCoveringMeResult = EmailRuleCoveringMeRead;
+
 export type GetDomainAgentAuthorizationResult = {
     domain_id: string;
     domain: string;
@@ -8681,6 +8774,9 @@ export type GetDeliveryResult = {
     sent_email_id: string | null;
     org_id: string;
     endpoint_id: string;
+    /**
+     * Where it was sent: a webhook's scheme and host, followed by "/... (path and query hidden)" when its URL has more (GET /endpoints/{id} has the whole URL), function://<id> for a Function, or pull: for a pull subscription.
+     */
     endpoint_url: string;
     status: string;
     attempt_count: number;
@@ -8692,7 +8788,7 @@ export type GetDeliveryResult = {
      */
     response_status: number | null;
     /**
-     * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.
+     * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden wherever it repeats them.
      */
     response_body: string | null;
     created_at: string;
@@ -8729,7 +8825,7 @@ export type GetDeliveryResult = {
          */
         response_status: number | null;
         /**
-         * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.
+         * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden wherever it repeats them.
          */
         response_body: string | null;
         /**
@@ -20836,7 +20932,7 @@ export type GetEmailRuleErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead.
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox; details.covering_view is where (getEmailRuleCoveringMe).
      */
     403: ErrorResponse;
     /**
@@ -21874,6 +21970,99 @@ export type ListEmailRuleShareEmailsResponses = {
 };
 
 export type ListEmailRuleShareEmailsResponse = ListEmailRuleShareEmailsResponses[keyof ListEmailRuleShareEmailsResponses];
+
+export type ListEmailRulesCoveringMeData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Rules per page, from 1 to 100; defaults to 50.
+         */
+        limit?: number;
+        /**
+         * meta.cursor from the preceding page. Omit for the first page.
+         */
+        cursor?: string;
+    };
+    url: '/email-rules/covering-me';
+};
+
+export type ListEmailRulesCoveringMeErrors = {
+    /**
+     * invalid_cursor: a cursor this list did not give you (each is sealed to you and your organization); pass meta.cursor unchanged.
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI.
+     */
+    403: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type ListEmailRulesCoveringMeError = ListEmailRulesCoveringMeErrors[keyof ListEmailRulesCoveringMeErrors];
+
+export type ListEmailRulesCoveringMeResponses = {
+    /**
+     * List the rules over your mail
+     */
+    200: SuccessEnvelope & {
+        data: ListEmailRulesCoveringMeResult;
+        meta: CursorPageMeta;
+    };
+};
+
+export type ListEmailRulesCoveringMeResponse = ListEmailRulesCoveringMeResponses[keyof ListEmailRulesCoveringMeResponses];
+
+export type GetEmailRuleCoveringMeData = {
+    body?: never;
+    path: {
+        /**
+         * The rule id.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/email-rules/covering-me/{id}';
+};
+
+export type GetEmailRuleCoveringMeErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI.
+     */
+    403: ErrorResponse;
+    /**
+     * not_found: no rule with this id covers your mailboxes.
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type GetEmailRuleCoveringMeError = GetEmailRuleCoveringMeErrors[keyof GetEmailRuleCoveringMeErrors];
+
+export type GetEmailRuleCoveringMeResponses = {
+    /**
+     * Get a rule over your mail
+     */
+    200: SuccessEnvelope & {
+        data: EmailRuleCoveringMeRead;
+    };
+};
+
+export type GetEmailRuleCoveringMeResponse = GetEmailRuleCoveringMeResponses[keyof GetEmailRuleCoveringMeResponses];
 
 export type GetDomainAgentAuthorizationData = {
     body?: never;

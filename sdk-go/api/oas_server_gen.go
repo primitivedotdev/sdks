@@ -1290,6 +1290,18 @@ type Handler interface {
 	//
 	// GET /email-rules/{id}
 	GetEmailRule(ctx context.Context, params GetEmailRuleParams) (GetEmailRuleRes, error)
+	// GetEmailRuleCoveringMe implements getEmailRuleCoveringMe operation.
+	//
+	// One rule that covers one of your own mailboxes, read-only, with its current version. You see its
+	// name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches.
+	// Its wording and tree are shown as written, so they can name other addresses (a condition on who an
+	// email is from or to). You do not see the other inboxes and domains its scope names, its saved
+	// expectations, or the keys, shares and webhooks that use it. Needs mail:read, a member's own
+	// credential with their full access (not an API key, agent key or narrowed token), and the email
+	// rules feature. Only on your own dashboard session or the Primitive CLI.
+	//
+	// GET /email-rules/covering-me/{id}
+	GetEmailRuleCoveringMe(ctx context.Context, params GetEmailRuleCoveringMeParams) (GetEmailRuleCoveringMeRes, error)
 	// GetEmailRuleRequest implements getEmailRuleRequest operation.
 	//
 	// A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a
@@ -2135,6 +2147,24 @@ type Handler interface {
 	//
 	// GET /email-rules
 	ListEmailRules(ctx context.Context, params ListEmailRulesParams) (ListEmailRulesRes, error)
+	// ListEmailRulesCoveringMe implements listEmailRulesCoveringMe operation.
+	//
+	// Every email rule that covers one of your own mailboxes now, yours included, newest first, in any
+	// state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your
+	// member mailbox, or a personal agent's address): one whose author reads all your mail (author scope,
+	//  for an author who reads the organization's mail or holds an access entry for your mailbox), or
+	// one that names your mailbox or its domain (selected). Another member's own_mailboxes rule never
+	// covers you. You see its name, wording, current tree, state, kind and author, and which of your own
+	// mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses
+	// (a condition on who an email is from or to). You do not see the other inboxes and domains its
+	// scope names, its saved expectations, or the keys, shares and webhooks that use it. A page can hold
+	// fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of
+	// rules): keep reading until meta.cursor is null. Needs mail:read, a member's own credential with
+	// their full access (not an API key, agent key or narrowed token), and the email rules feature. Only
+	// on your own dashboard session or the Primitive CLI.
+	//
+	// GET /email-rules/covering-me
+	ListEmailRulesCoveringMe(ctx context.Context, params ListEmailRulesCoveringMeParams) (ListEmailRulesCoveringMeRes, error)
 	// ListEmails implements listEmails operation.
 	//
 	// Returns a paginated list of INBOUND emails received at your
