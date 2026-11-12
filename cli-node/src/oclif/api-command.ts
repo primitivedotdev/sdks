@@ -2334,46 +2334,6 @@ export function createOperationCommand(
 // in the setup chain isn't done?" Keys are the manifest's
 // `sdkName` for the operation. Operations without an entry fall
 // back to no hint (silent empty array, same as before).
-/**
- * An empty rule request or share list, read by the filters the call left at
- * their defaults: each list shows only part of what you can see by default
- * (requests made to you that are pending; live shares made with you), so an
- * empty answer says which flags widen it. Undefined for any other list, or
- * when every filter was given.
- */
-export function emptyRuleListHint(
-  sdkName: string,
-  query: Record<string, unknown>,
-): string | undefined {
-  const unset = (name: string) => query[name] === undefined;
-  const widen = (parts: Array<[boolean, string, string]>) => {
-    const left = parts.filter(([isUnset]) => isUnset);
-    if (left.length === 0) return undefined;
-    return `By default this lists only ${left.map(([, what]) => what).join(" and ")}: add ${left.map(([, , flag]) => `\`${flag}\``).join(" ")} to widen it.`;
-  };
-  if (sdkName === "listEmailRuleRequests") {
-    const next = widen([
-      [unset("box"), "requests made to you", "--box all"],
-      [unset("status"), "pending ones", "--status any"],
-    ]);
-    return next ? `(no results) No requests match. ${next}` : undefined;
-  }
-  if (sdkName === "listEmailRuleShares") {
-    const next = widen([
-      [unset("box"), "shares made with you", "--box all"],
-      [unset("live"), "live ones", "--live any"],
-    ]);
-    return next ? `(no results) No shares match. ${next}` : undefined;
-  }
-  if (sdkName === "listGivenEmailRuleShares") {
-    const next = widen([
-      [unset("live"), "live shares of your mail", "--live any"],
-    ]);
-    return next ? `(no results) No shares match. ${next}` : undefined;
-  }
-  return undefined;
-}
-
 export const EMPTY_RESULT_HINTS: Record<string, string> = {
   listDeliveries:
     "(no results) No webhook deliveries logged yet. If you have an endpoint configured but expected to see test fires here: test deliveries from `primitive endpoints test` are NOT logged in this list, they're synchronous and visible only in the test-endpoint command's response. Real deliveries are logged when an event fans out to your endpoints: an inbound `email.received`, or a `sent_email.*` event for an endpoint that lists it in rules.event_types (they arrive within a few minutes of the result). If you have no endpoints, run `primitive endpoints list` to check.",
@@ -2385,6 +2345,63 @@ export const EMPTY_RESULT_HINTS: Record<string, string> = {
   listFunctions:
     "(no results) No Functions configured yet. Start with `primitive functions templates`, then `primitive functions init --template <template>` and `primitive functions deploy --name <name> --file <bundle>`.",
 };
+
+/**
+ * An empty rule request or share list, read by the filters the call left at
+ * their defaults: each list shows only part of what you can see by default
+ * (pending requests made to you; live shares made with you), so an empty
+ * answer says which flags widen it. Undefined for any other list, when every
+ * filter was given, or on a later page (--cursor), which is empty only past
+ * the end.
+ */
+export function emptyRuleListHint(
+  sdkName: string,
+  query: Record<string, unknown>,
+): string | undefined {
+  if (query.cursor !== undefined) return undefined;
+  const unset = (name: string) => query[name] === undefined;
+  const said = (noun: string, phrase: string | null, flags: string[]) =>
+    phrase === null
+      ? undefined
+      : `(no results) No ${noun} match. By default this lists only ${phrase}: add \`${flags.join(" ")}\` to widen it.`;
+  if (sdkName === "listEmailRuleRequests") {
+    const box = unset("box");
+    const status = unset("status");
+    const phrase =
+      box && status
+        ? "pending requests made to you"
+        : box
+          ? "requests made to you"
+          : status
+            ? "pending requests"
+            : null;
+    return said("requests", phrase, [
+      ...(box ? ["--box all"] : []),
+      ...(status ? ["--status any"] : []),
+    ]);
+  }
+  if (sdkName === "listEmailRuleShares") {
+    const box = unset("box");
+    const live = unset("live");
+    const phrase =
+      box && live
+        ? "live shares made with you"
+        : box
+          ? "shares made with you"
+          : live
+            ? "live shares"
+            : null;
+    return said("shares", phrase, [
+      ...(box ? ["--box all"] : []),
+      ...(live ? ["--live any"] : []),
+    ]);
+  }
+  if (sdkName === "listGivenEmailRuleShares")
+    return said("shares", unset("live") ? "live shares of your mail" : null, [
+      "--live any",
+    ]);
+  return undefined;
+}
 
 function canonicalizeCliReferences(description: string): string {
   return description

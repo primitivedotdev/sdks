@@ -223,8 +223,8 @@ const SAMPLE_KEYS = new Set(["expected", "label", "email", "id", "created_at"]);
 /**
  * The samples a file holds: a JSON array of samples, as --samples-file
  * writes them, or a generate-look-alikes answer saved as the command printed
- * it (with or without --json), whose look-alikes become must-not-match
- * samples numbered as its report numbered them. Only a literal [] holds no
+ * it (with or without --json), whose look-alikes become samples, each
+ * keeping whether it must match, numbered as its report numbered them. Only a literal [] holds no
  * samples; an answer with none is refused, so it never empties a rule's.
  */
 export function samplesFromJson(
@@ -464,9 +464,9 @@ function decidedLine(
       : "The rule did not match it";
   if (status === "undecided")
     return `${decided}, on something it could not decide (its classification failed, a fact or a question's answer is missing, or it reads a spam score, which a look-alike does not carry), so this one is undecided.`;
-  return expected === "match"
-    ? `${decided}, but it should: mail like it would be missed.`
-    : `${decided}.`;
+  if (expected === "no_match") return `${decided}.`;
+  // A must-match one it nearly took reads "nearly matched it, but did not", so the miss is said with "though".
+  return `${decided}, ${outcome === "near_miss" ? "though" : "but"} it should: mail like it would be missed.`;
 }
 
 /**
@@ -608,7 +608,7 @@ export function lookAlikesReport(
     lines.push(
       noneDecided
         ? `${wrote} ${noneDecided}`
-        : `${wrote} ${which} with ${save}; --pick takes any of the numbers.${test}`,
+        : `${wrote} ${which}, with ${save}; --pick takes any of the numbers.${test}`,
     );
   } else if (noneDecided) {
     lines.push(noneDecided);

@@ -2596,7 +2596,25 @@ describe("email-rules update-email-rule: the server's write guards", () => {
     ]);
     expect(result.exitCode).toBe(1);
     expect(stderrLines(result).at(-1)).toBe(
-      `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Some expectations name emails this rule cannot read (deleted, or outside its scope or its author's mail): ${C}. Sending the write again will not decide them: send --expectations-file without them, or a scope that reads them. The command exits 1.`,
+      `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. An expectation names an email this rule cannot read (deleted, or outside its scope or its author's mail): ${C}. Sending the write again will not decide it: send --expectations-file without it, or an evaluation_scope that reads it. The command exits 1.`,
+    );
+    // Several, an id that is not a string, and an empty list are each said plainly.
+    const hintFor = OPERATION_ERROR_HINTS.updateEmailRule;
+    const unreadable = (ids: unknown) => ({
+      code: "expectations_unreadable",
+      details: { unreadable: ids },
+    });
+    expect(
+      hintFor?.("expectations_unreadable", {}, unreadable([C, 7, null]), {
+        id: RULE,
+      }),
+    ).toContain(
+      `Expectations name emails this rule cannot read (deleted, or outside its scope or its author's mail): ${C}, 7. Sending the write again will not decide them:`,
+    );
+    expect(
+      hintFor?.("expectations_unreadable", {}, unreadable([]), { id: RULE }),
+    ).toContain(
+      "Expectations name emails this rule cannot read (deleted, or outside its scope or its author's mail). Sending",
     );
     // Under --json too: never the retry-later 3.
     const json = await run("email-rules:update-email-rule", [
@@ -3302,5 +3320,25 @@ describe("end-email-rule-share", () => {
     expect(OPERATION_EXTENSIONS.endEmailRuleShare?.report).toBe(
       endEmailRuleShareReport,
     );
+  });
+});
+
+describe("an empty rule request or share list", () => {
+  it("says on stderr which default filters hid the rest, nothing under --json, and nothing once they are given", async () => {
+    answer([]);
+    const empty = await run("email-rules:list-email-rule-requests", []);
+    expect(empty.exitCode).toBe(0);
+    expect(stderrLines(empty)).toEqual([
+      "(no results) No requests match. By default this lists only pending requests made to you: add `--box all --status any` to widen it.",
+    ]);
+    const quiet = await run("email-rules:list-email-rule-requests", ["--json"]);
+    expect(quiet.stderr).toBe("");
+    const widened = await run("email-rules:list-email-rule-requests", [
+      "--box",
+      "all",
+      "--status",
+      "any",
+    ]);
+    expect(widened.stderr).toBe("");
   });
 });

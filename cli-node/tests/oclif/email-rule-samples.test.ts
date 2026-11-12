@@ -413,7 +413,7 @@ describe("lookAlikesReport", () => {
       "   The rule matched it, as it should.",
     ]);
     expect(report.lines.at(-1)).toContain(
-      "Keep the one it matched as an email it must not match, and the one it missed as an email it must match with",
+      "Keep the one it matched as an email it must not match, and the one it missed as an email it must match, with",
     );
     expect(report.lines.at(-1)).toContain("--pick 1,2");
     // The file keeps each one's expected, so saving them keeps the right way round.
@@ -422,6 +422,27 @@ describe("lookAlikesReport", () => {
         (s: { expected: string }) => s.expected,
       ),
     ).toEqual(["no_match", "match", "match"]);
+    // A must-match one it nearly took: the miss is said with "though".
+    const near = lookAlikesReport(
+      answer([
+        lookAlike("Escalation", "failed", "near_miss", "other", "match"),
+      ]),
+      { body: { tree: {} }, flags: {} },
+    );
+    expect(near.lines).toContain(
+      "   The rule nearly matched it, but did not, though it should: mail like it would be missed.",
+    );
+    // All decided as expected: each kept as it says, must-match ones included.
+    const allPassed = lookAlikesReport(
+      answer([
+        lookAlike("a", "passed", "no_match"),
+        lookAlike("Referral", "passed", "matched", "other", "match"),
+      ]),
+      { body: { tree: {} }, flags: {} },
+    );
+    expect(allPassed.lines.at(-1)).toMatch(
+      /^Keep them as emails the rule must match or not, as each says: /,
+    );
     // Only a miss: kept as must-match.
     const missedOnly = lookAlikesReport(
       answer([lookAlike("Referral", "failed", "no_match", "other", "match")]),
@@ -465,7 +486,7 @@ describe("lookAlikesReport", () => {
       '2. failed  medical  "second" from billing@clinic.example',
     ]);
     expect(report.lines.at(-1)).toBe(
-      `Wrote the 2 look-alikes to ${path}, numbered as above. Keep the one it matched as an email it must not match with \`primitive email-rules update-email-rule ${RULE} --add-expectation-samples-file ${path} --pick 2\`; --pick takes any of the numbers. Test an edited rule on it with \`primitive email-rules test-email-rule --rule-id ${RULE} --expect-samples-file ${path} --pick 2\`.`,
+      `Wrote the 2 look-alikes to ${path}, numbered as above. Keep the one it matched as an email it must not match, with \`primitive email-rules update-email-rule ${RULE} --add-expectation-samples-file ${path} --pick 2\`; --pick takes any of the numbers. Test an edited rule on it with \`primitive email-rules test-email-rule --rule-id ${RULE} --expect-samples-file ${path} --pick 2\`.`,
     );
     // The file it wrote is what --pick reads, numbered the same.
     expect(
@@ -480,7 +501,7 @@ describe("lookAlikesReport", () => {
       flags: { "samples-file": path },
     });
     expect(report.lines.at(-1)).toBe(
-      `Wrote the 3 look-alikes to ${path}, numbered as above. Keep the ones it matched as emails it must not match with \`primitive email-rules create-email-rule ... --expectation-samples-file '${path}' --pick 1,3\` when you save the rule; --pick takes any of the numbers. Test an edited rule on them with \`primitive email-rules test-email-rule --body-file <body.json> --expect-samples-file '${path}' --pick 1,3\`.`,
+      `Wrote the 3 look-alikes to ${path}, numbered as above. Keep the ones it matched as emails it must not match, with \`primitive email-rules create-email-rule ... --expectation-samples-file '${path}' --pick 1,3\` when you save the rule; --pick takes any of the numbers. Test an edited rule on them with \`primitive email-rules test-email-rule --body-file <body.json> --expect-samples-file '${path}' --pick 1,3\`.`,
     );
   });
 

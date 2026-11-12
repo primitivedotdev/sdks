@@ -866,13 +866,13 @@ describe("keys commands", () => {
     });
   });
 
-  it("create and update print the address warnings, such as an address beside a rule read in full, and --json keeps them", async () => {
+  it("create prints the address warnings, such as an address beside a rule read in full, and --json keeps them", async () => {
     const secret = `prim_${"b".repeat(64)}`;
     const whole = {
-      address: "poile@acme.example",
+      address: "ops@acme.example",
       reason: "whole_mailbox",
       description:
-        "poile@acme.example is listed beside email rules, so this key reads all of its mail, not only what the rules match.",
+        "ops@acme.example is listed beside email rules, so this key reads all of its mail, not only what the rules match.",
     };
     const created = {
       id: KEY_ID,
@@ -884,7 +884,7 @@ describe("keys commands", () => {
         credential_grant_id: "g",
         permissions: ["mail:read"],
         mail_scope: {
-          addresses: ["poile@acme.example"],
+          addresses: ["ops@acme.example"],
           domains: [],
           rules: [RULE_ID],
         },
@@ -906,7 +906,7 @@ describe("keys commands", () => {
       "--rule",
       RULE_ID,
       "--address",
-      "poile@acme.example",
+      "ops@acme.example",
       "--step-up-token",
       "pstep_x",
     ]);
@@ -920,7 +920,7 @@ describe("keys commands", () => {
       "--rule",
       RULE_ID,
       "--address",
-      "poile@acme.example",
+      "ops@acme.example",
       "--step-up-token",
       "pstep_x",
       "--json",

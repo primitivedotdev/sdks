@@ -1306,12 +1306,16 @@ export function updateEmailRuleErrorHint(
     // Emails the rule cannot read (deleted, or outside its scope or its
     // author's mail): no later write decides them, so it exits 1, not 3.
     const unreadable = Array.isArray(details.unreadable)
-      ? details.unreadable.filter(
-          (entry): entry is string => typeof entry === "string",
-        )
+      ? details.unreadable
+          .filter(
+            (entry) => entry !== null && entry !== undefined && entry !== "",
+          )
+          .map(String)
       : [];
+    const one = unreadable.length === 1;
     const named = unreadable.length > 0 ? `: ${unreadable.join(", ")}` : "";
-    return `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Some expectations name emails this rule cannot read (deleted, or outside its scope or its author's mail)${named}. Sending the write again will not decide them: send --expectations-file without them, or a scope that reads them. The command exits ${EXIT_EXPECTATION_FAILED}.`;
+    const them = one ? "it" : "them";
+    return `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. ${one ? "An expectation names an email" : "Expectations name emails"} this rule cannot read (deleted, or outside its scope or its author's mail)${named}. Sending the write again will not decide ${them}: send --expectations-file without ${them}, or an evaluation_scope that reads ${them}. The command exits ${EXIT_EXPECTATION_FAILED}.`;
   }
   if (code === "no_expectations")
     return "Hint: nothing was saved. Give the rule expectations with --expectations-file or made-up emails with --expectation-samples-file or --add-expectation-samples-file (in this write or before it), or send the write without if_expectations_pass (--fail-on-expectations or --if-expectations-pass).";
@@ -1469,7 +1473,7 @@ const FAIL_ON_EXPECTATIONS_HELP =
 
 /** update-email-rule's --fail-on-expectations: the server refuses the write. */
 const UPDATE_FAIL_ON_EXPECTATIONS_HELP =
-  "Refuse the write unless the rule, as this write would leave it, passes its expectations. It sends if_expectations_pass (over any in --body-file or --raw-body), so the server judges a new version, a restored one, a new scope or turning the rule active before saving, on its emails by id and its made-up emails, and saves nothing when one failed (exit 1), one is undecided (exit 3, or 1 when the rule cannot run as its author or a made-up email is undecided for no reason the answer gives) or the rule has none (exit 1). It can take as long as a test of the rule; the command waits for it. Judging needs a credential that reads the mail's content. A write the server does not judge (one changing only expectations, say) is saved, and the exit code then follows the answer's expectations_check, as on create. With --json, a refused write's document holds the API's error alone; a saved write's holds the rule.";
+  "Refuse the write unless the rule, as this write would leave it, passes its expectations. It sends if_expectations_pass (over any in --body-file or --raw-body), so the server judges a new version, a restored one, a new scope or turning the rule active before saving, on its emails by id and its made-up emails, and saves nothing when one failed (exit 1), one names an email the rule cannot read (exit 1, since sending again never decides it), one is undecided (exit 3, or 1 when the rule cannot run as its author or a made-up email is undecided for no reason the answer gives) or the rule has none (exit 1). It can take as long as a test of the rule; the command waits for it. Judging needs a credential that reads the mail's content. A write the server does not judge (one changing only expectations, say) is saved, and the exit code then follows the answer's expectations_check, as on create. With --json, a refused write's document holds the API's error alone; a saved write's holds the rule.";
 
 /** What a samples file flag reads. */
 const SAMPLES_FILE_SHAPE =
@@ -1621,7 +1625,7 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
   acceptEmailRuleRequest: {
     flags: {
       [SAMPLES_FILE_FLAG]: Flags.string({
-        description: `${SAMPLES_FILE_SHAPE} Sets expectation_samples (at most ${SAMPLES_MAX}), over any in --body-file or --raw-body: they are kept on the rule this accept writes, such as the look-alikes of the request it must never match.`,
+        description: `${SAMPLES_FILE_SHAPE} Sets expectation_samples (at most ${SAMPLES_MAX}), over any in --body-file or --raw-body: they are kept on the rule this accept writes, such as the look-alikes of the request, each keeping whether it must match.`,
       }),
       [PICK_FLAG]: Flags.string({
         description: pickFlagHelp([SAMPLES_FILE_FLAG]),

@@ -785,11 +785,18 @@ describe("OPERATION_HINTS", () => {
 describe("emptyRuleListHint", () => {
   it("says which default filters hid rule requests and shares, and nothing once every one is given", () => {
     expect(emptyRuleListHint("listEmailRuleRequests", {})).toBe(
-      "(no results) No requests match. By default this lists only requests made to you and pending ones: add `--box all` `--status any` to widen it.",
+      "(no results) No requests match. By default this lists only pending requests made to you: add `--box all --status any` to widen it.",
     );
     expect(emptyRuleListHint("listEmailRuleRequests", { box: "all" })).toBe(
-      "(no results) No requests match. By default this lists only pending ones: add `--status any` to widen it.",
+      "(no results) No requests match. By default this lists only pending requests: add `--status any` to widen it.",
     );
+    expect(emptyRuleListHint("listEmailRuleShares", {})).toBe(
+      "(no results) No shares match. By default this lists only live shares made with you: add `--box all --live any` to widen it.",
+    );
+    // A later page is empty only past the end: no hint.
+    expect(
+      emptyRuleListHint("listEmailRuleRequests", { cursor: "c" }),
+    ).toBeUndefined();
     expect(
       emptyRuleListHint("listEmailRuleRequests", { box: "all", status: "any" }),
     ).toBeUndefined();
