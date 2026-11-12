@@ -724,8 +724,9 @@ date-time is kept as null and sorts last. A sync stops with an error after
     `email`, `outcome`, `status`, `question_answers`), `counts` and `note`.
     Nothing is stored. It takes `count` (1 to 8, 6 by default), `kinds` and
     `to`. A do-not-share rule is refused with `400` and `details.reason`
-    `do_not_share`; a request you cannot see is `404` (`request_not_found`)
-    and one already decided `409` `email_rule_request_not_pending`; none
+    `do_not_share`; a request you cannot see is `404` `not_found` with
+    `details.reason` `request_not_found`, and one already decided `409`
+    `email_rule_request_not_pending`; none
     written is `422` `email_rule_look_alikes_not_written`, and an
     unavailable writer `503` `email_rule_compiler_unavailable`. It is
     limited to 20 calls an hour per member.
