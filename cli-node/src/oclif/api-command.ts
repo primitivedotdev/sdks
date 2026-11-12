@@ -30,6 +30,7 @@ import {
   expectedAutomatedVerdicts,
   isAutomatedRejectedError,
 } from "./automated-filter.js";
+import { withBooleanFlagValues } from "./boolean-flag-values.js";
 import { requireDefaultLoginProfile } from "./connected-agent-profile.js";
 import {
   EMAIL_RULE_OPERATION_EXTENSIONS,
@@ -67,6 +68,7 @@ import {
   readRoles,
   roleReadsAllMailWarning,
 } from "./member-role-mail.js";
+import { metaExplainsEmptyList, metaNoteLines } from "./meta-notes.js";
 import type {
   OperationExtension,
   OperationReport,
@@ -1086,8 +1088,13 @@ function bodyFieldFlag(
     description: field.description || field.name,
     ...(aliases && aliases.length > 0 ? { aliases } : {}),
   };
+  // withBooleanFlagValues reads `--flag true|false` for it in run().
   if (field.kind === "boolean")
-    return Flags.boolean({ ...common, allowNo: true });
+    return Flags.boolean({
+      ...common,
+      description: `${sentence(common.description)} Takes true or false as its value; given alone, true.`,
+      allowNo: true,
+    });
   if (field.kind === "integer") {
     return Flags.integer({ ...common, ...numericFlagOptions(field) });
   }
@@ -1670,12 +1677,15 @@ export function createOperationCommand(
     }${dashboardOnly ? DASHBOARD_ONLY_SUMMARY : ""}`;
 
     async run(): Promise<void> {
-      const { args, flags } = await this.parse(OperationCommand as never).catch(
-        (error: unknown) => {
-          throw withFlagSuggestion(error, flagNames);
-        },
-      );
-      const parsedFlags = flags as Record<string, unknown>;
+      // `--enabled false` is read as `--no-enabled`, never as an argument.
+      const argv = withBooleanFlagValues(this.argv, flags);
+      const { args, flags: parsed } = await this.parse(
+        OperationCommand as never,
+        argv,
+      ).catch((error: unknown) => {
+        throw withFlagSuggestion(error, flagNames);
+      });
+      const parsedFlags = parsed as Record<string, unknown>;
       if (positionalFlag) {
         const fromArgument = (args as Record<string, unknown>)[positionalFlag];
         const fromFlag = parsedFlags[positionalFlag];
@@ -1754,7 +1764,8 @@ export function createOperationCommand(
           // Fields an extension's flags set, merged like the per-field
           // flags. Named by the flag that set them in the error below.
           const extensionFlagFor = new Map<string, string>();
-          for (const field of extension?.bodyFields?.(parsedFlags) ?? []) {
+          for (const field of extension?.bodyFields?.(parsedFlags, explicit) ??
+            []) {
             overrides[field.property] = field.value;
             extensionFlagFor.set(field.property, field.flag);
           }
@@ -2169,7 +2180,9 @@ export function createOperationCommand(
         if (
           Array.isArray(envelope?.data) &&
           envelope.data.length === 0 &&
-          (!jsonOutput || withEnvelope)
+          (!jsonOutput || withEnvelope) &&
+          // Without --json, a meta note below says why instead.
+          (jsonOutput || !metaExplainsEmptyList(envelope?.meta))
         ) {
           // An empty email list says what was asked and what this
           // credential reads, not that the account has no mail.
@@ -2199,6 +2212,15 @@ export function createOperationCommand(
                 EMPTY_RESULT_HINTS[operation.sdkName]);
           if (hint && jsonOutput) summary.push(hint);
           else if (hint) process.stderr.write(`${hint}\n`);
+        }
+
+        // What the answer's meta says about the data, such as a --recipient
+        // this credential does not read. Under --json the document is left
+        // as it was: with --envelope its meta already carries these.
+        if (!jsonOutput) {
+          for (const line of metaNoteLines(envelope?.meta)) {
+            process.stderr.write(`${line}\n`);
+          }
         }
 
         // A connected address's sent list also carries delivered sends

@@ -3342,3 +3342,271 @@ describe("an empty rule request or share list", () => {
     expect(widened.stderr).toBe("");
   });
 });
+
+describe("--scope-address and --scope-domain", () => {
+  const written = {
+    id: RULE,
+    name: "Support mail",
+    state: "observe",
+    current_version: 1,
+    author_user_id: "00000000-0000-4000-8000-0000000000f1",
+    is_author: true,
+    created_at: "2026-11-01T00:00:00Z",
+    updated_at: "2026-11-10T00:00:00Z",
+    current: null,
+  };
+  const tree = { version: 1, vocabulary: "v1", when: { all: [] } };
+  const SCOPE_COMMANDS = [
+    "email-rules:create-email-rule",
+    "email-rules:update-email-rule",
+    "email-rules:test-email-rule",
+    "email-rules:test-email-rule-on-sample",
+    "email-rules:generate-look-alikes",
+  ];
+
+  it("are on every email-rules command whose request takes evaluation_scope, and take scope_selection out of the --raw-body list", () => {
+    for (const id of SCOPE_COMMANDS) {
+      const command = COMMANDS[id] as unknown as Runnable & {
+        description: string;
+      };
+      for (const flag of ["scope-address", "scope-domain"]) {
+        expect(command.flags[flag], `${id} --${flag}`).toMatchObject({
+          type: "option",
+          multiple: true,
+        });
+        expect(command.flags[flag]?.description, `${id} --${flag}`).toContain(
+          "Goes with --evaluation-scope selected",
+        );
+      }
+      expect(command.flags["evaluation-scope"], id).toBeDefined();
+      expect(command.description, id).not.toMatch(/^ {2,3}scope_selection\b/m);
+    }
+  });
+
+  it("build scope_selection from repeated and comma-listed values, without repeats", async () => {
+    answer(written);
+    const result = await run("email-rules:create-email-rule", [
+      "--raw-body",
+      JSON.stringify({ tree, name: "Support mail", english: "support mail" }),
+      "--evaluation-scope",
+      "selected",
+      "--scope-address",
+      "support@example.com, billing@example.com",
+      "--scope-address",
+      "Support@example.com",
+      "--scope-domain",
+      "example.org",
+    ]);
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(calls.map((call) => [call.method, call.url.pathname])).toEqual([
+      ["POST", "/v1/email-rules"],
+    ]);
+    expect(calls[0]?.body).toEqual({
+      tree,
+      name: "Support mail",
+      english: "support mail",
+      evaluation_scope: "selected",
+      scope_selection: {
+        addresses: ["support@example.com", "billing@example.com"],
+        domains: ["example.org"],
+      },
+    });
+  });
+
+  it("send the list not given as empty, and keep a rule id given after them as the argument", async () => {
+    answer(written);
+    const result = await run("email-rules:update-email-rule", [
+      "--evaluation-scope",
+      "selected",
+      "--scope-domain",
+      "example.org",
+      RULE,
+    ]);
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(calls.map((call) => [call.method, call.url.pathname])).toEqual([
+      ["PATCH", `/v1/email-rules/${RULE}`],
+    ]);
+    expect(calls[0]?.body).toEqual({
+      evaluation_scope: "selected",
+      scope_selection: { addresses: [], domains: ["example.org"] },
+    });
+  });
+
+  it("replace a scope_selection in --raw-body, which may carry evaluation_scope", async () => {
+    answer(testResult());
+    const result = await run("email-rules:test-email-rule", [
+      "--raw-body",
+      JSON.stringify({
+        tree,
+        evaluation_scope: "selected",
+        scope_selection: { addresses: ["old@example.com"] },
+      }),
+      "--scope-address",
+      "new@example.com",
+    ]);
+    expect(calls[0]?.body).toEqual({
+      tree,
+      evaluation_scope: "selected",
+      scope_selection: { addresses: ["new@example.com"], domains: [] },
+    });
+    expect(result.stderr).not.toContain("--evaluation-scope selected");
+  });
+
+  it("set scope_selection on test-email-rule-on-sample and generate-look-alikes", async () => {
+    for (const id of [
+      "email-rules:test-email-rule-on-sample",
+      "email-rules:generate-look-alikes",
+    ]) {
+      calls = [];
+      answer({});
+      await run(id, [
+        "--raw-body",
+        JSON.stringify({ tree }),
+        "--evaluation-scope",
+        "selected",
+        "--scope-address",
+        "support@example.com",
+      ]);
+      expect(calls[0]?.body, id).toEqual({
+        tree,
+        evaluation_scope: "selected",
+        scope_selection: { addresses: ["support@example.com"], domains: [] },
+      });
+    }
+  });
+
+  it("are refused beside another --evaluation-scope, or with no evaluation_scope anywhere", async () => {
+    const other = await run("email-rules:update-email-rule", [
+      RULE,
+      "--evaluation-scope",
+      "author",
+      "--scope-address",
+      "support@example.com",
+    ]);
+    expect(other.exitCode).toBe(2);
+    expect(other.stderr).toContain(
+      "--scope-address names what a selected scope covers, so it goes with --evaluation-scope selected, not author. Pass --evaluation-scope selected, or leave it out.",
+    );
+    const missing = await run("email-rules:update-email-rule", [
+      RULE,
+      "--scope-address",
+      "support@example.com",
+      "--scope-domain",
+      "example.org",
+    ]);
+    expect(missing.exitCode).toBe(2);
+    expect(missing.stderr).toContain(
+      "--scope-address and --scope-domain name what a selected scope covers, so they go with --evaluation-scope selected. Pass --evaluation-scope selected with them.",
+    );
+    expect(calls).toEqual([]);
+  });
+
+  it("read evaluation_scope from --raw-body or --body-file when --evaluation-scope is not given, and let the flag win", async () => {
+    for (const [argv, scope] of [
+      [["--raw-body", JSON.stringify({ tree, name: "n" })], undefined],
+      [
+        [
+          "--raw-body",
+          JSON.stringify({ tree, name: "n", evaluation_scope: "author" }),
+        ],
+        "author",
+      ],
+      [
+        [
+          "--body-file",
+          tempFile(
+            "own.json",
+            JSON.stringify({ tree, evaluation_scope: "own_mailboxes" }),
+          ),
+        ],
+        "own_mailboxes",
+      ],
+    ] as const) {
+      const result = await run("email-rules:create-email-rule", [
+        ...argv,
+        "--scope-address",
+        "support@example.com",
+      ]);
+      expect(result.exitCode, argv.join(" ")).toBe(2);
+      expect(result.stderr).toContain(
+        scope === undefined
+          ? "--scope-address names what a selected scope covers, so it goes with --evaluation-scope selected. Pass --evaluation-scope selected with it."
+          : `so it goes with --evaluation-scope selected, not ${scope}.`,
+      );
+    }
+    // A body that is not an object is refused for what it is.
+    const array = await run("email-rules:create-email-rule", [
+      "--raw-body",
+      "[]",
+      "--scope-address",
+      "support@example.com",
+    ]);
+    expect(array.exitCode).toBe(2);
+    expect(array.stderr).toContain(
+      "--raw-body must be a JSON object when also passing per-field flags (got array)",
+    );
+    expect(calls).toEqual([]);
+
+    answer(written);
+    const file = tempFile(
+      "selected.json",
+      JSON.stringify({ tree, name: "n", evaluation_scope: "selected" }),
+    );
+    const fromFile = await run("email-rules:create-email-rule", [
+      "--body-file",
+      file,
+      "--scope-domain",
+      "example.org",
+    ]);
+    expect(fromFile.exitCode, fromFile.stderr).toBe(0);
+    expect(calls[0]?.body).toEqual({
+      tree,
+      name: "n",
+      evaluation_scope: "selected",
+      scope_selection: { addresses: [], domains: ["example.org"] },
+    });
+
+    calls = [];
+    const overridden = await run("email-rules:create-email-rule", [
+      "--raw-body",
+      JSON.stringify({ tree, name: "n", evaluation_scope: "author" }),
+      "--evaluation-scope",
+      "selected",
+      "--scope-domain",
+      "example.org",
+    ]);
+    expect(overridden.exitCode, overridden.stderr).toBe(0);
+    expect(calls[0]?.body).toMatchObject({
+      evaluation_scope: "selected",
+      scope_selection: { addresses: [], domains: ["example.org"] },
+    });
+  });
+
+  it("refuse a domain given as an inbox, an inbox given as a domain, and an empty value", async () => {
+    for (const [argv, message] of [
+      [
+        ["--scope-address", "example.org"],
+        '--scope-address takes inboxes such as support@example.com; "example.org" is a domain, so give it with --scope-domain.',
+      ],
+      [
+        ["--scope-domain", "support@example.com"],
+        '--scope-domain takes domains such as example.com; "support@example.com" is an inbox, so give it with --scope-address.',
+      ],
+      [
+        ["--scope-domain", "localhost"],
+        '--scope-domain takes domains such as example.com; "localhost" is not one.',
+      ],
+      [["--scope-address", " , "], "--scope-address needs a value."],
+    ] as const) {
+      const result = await run("email-rules:update-email-rule", [
+        RULE,
+        "--evaluation-scope",
+        "selected",
+        ...argv,
+      ]);
+      expect(result.exitCode, argv.join(" ")).toBe(2);
+      expect(result.stderr).toContain(message);
+    }
+    expect(calls).toEqual([]);
+  });
+});

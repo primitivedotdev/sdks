@@ -43,6 +43,10 @@ import {
   samplesBodyFields,
   sentSampleNumber,
 } from "./email-rule-samples.js";
+import {
+  scopeSelectionBodyFields,
+  scopeSelectionFlags,
+} from "./email-rule-scope-flags.js";
 import type {
   ExtensionBodyField,
   OperationExtension,
@@ -1541,9 +1545,13 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
       [PICK_FLAG]: Flags.string({
         description: pickFlagHelp([EXPECT_SAMPLES_FILE_FLAG]),
       }),
+      ...scopeSelectionFlags(),
     },
-    bodyFields: expectBodyFields,
-    bodyProperties: ["expect"],
+    bodyFields: (flags, base) => [
+      ...expectBodyFields(flags),
+      ...scopeSelectionBodyFields(flags, base),
+    ],
+    bodyProperties: ["expect", "scope_selection"],
     // Fail closed: expectations that are there and not passed exit 1.
     fallbackExitCode: (data) => {
       const expectations = (
@@ -1570,12 +1578,14 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
       [FAIL_ON_EXPECTATIONS_FLAG]: Flags.boolean({
         description: FAIL_ON_EXPECTATIONS_HELP,
       }),
+      ...scopeSelectionFlags(),
     },
-    bodyFields: (flags) => [
+    bodyFields: (flags, base) => [
       ...expectationsBodyFields(false)(flags),
       ...samplesBodyFields(false)(flags),
+      ...scopeSelectionBodyFields(flags, base),
     ],
-    bodyProperties: ["expectations", "expectation_samples"],
+    bodyProperties: ["expectations", "expectation_samples", "scope_selection"],
     fallbackExitCode: writtenFallbackExitCode,
     report: writtenEmailRuleReport,
   },
@@ -1599,16 +1609,19 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
       [FAIL_ON_EXPECTATIONS_FLAG]: Flags.boolean({
         description: UPDATE_FAIL_ON_EXPECTATIONS_HELP,
       }),
+      ...scopeSelectionFlags(),
     },
-    bodyFields: (flags) => [
+    bodyFields: (flags, base) => [
       ...expectationsBodyFields(true)(flags),
       ...samplesBodyFields(true)(flags),
       ...expectationsGuardBodyFields(flags),
+      ...scopeSelectionBodyFields(flags, base),
     ],
     bodyProperties: [
       "expectations",
       "expectation_samples",
       "add_expectation_samples",
+      "scope_selection",
     ],
     errorExitCode: updateEmailRuleErrorExitCode,
     fallbackExitCode: writtenFallbackExitCode,
@@ -1619,8 +1632,16 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
       [LOOK_ALIKES_SAMPLES_FILE_FLAG]: Flags.string({
         description: `Also write the look-alikes to this JSON file as made-up emails the rule must match or not (each keeps its expected: most must not match, and a near case it should take must match), a JSON array numbered from 1 in the order the report prints them. Save the ones you choose with create-email-rule --${SAMPLES_FILE_FLAG}, update-email-rule --${ADD_SAMPLES_FILE_FLAG} or, for a request, accept-email-rule-request --${SAMPLES_FILE_FLAG}, with --pick; test an edited rule on them with test-email-rule --${EXPECT_SAMPLES_FILE_FLAG}. Replaces the file if it exists, once the call succeeds; when no look-alikes came back it leaves the file as it was and exits 1. The numbered report is printed on stderr, and only without --json, which prints exactly one JSON document and nothing on stderr; the answer's look_alikes and this file hold the same emails in the same order, so with --json the file still gives the numbered set to --pick from.`,
       }),
+      ...scopeSelectionFlags(),
     },
+    bodyFields: scopeSelectionBodyFields,
+    bodyProperties: ["scope_selection"],
     report: lookAlikesReport,
+  },
+  testEmailRuleOnSample: {
+    flags: scopeSelectionFlags(),
+    bodyFields: scopeSelectionBodyFields,
+    bodyProperties: ["scope_selection"],
   },
   acceptEmailRuleRequest: {
     flags: {

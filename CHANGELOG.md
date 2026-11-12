@@ -1155,6 +1155,33 @@ parsers.
 
 #### CLI
 
+- `email-rules create-email-rule`, `update-email-rule`, `test-email-rule`,
+  `test-email-rule-on-sample` and `generate-look-alikes` take
+  `--scope-address` and `--scope-domain`, so a selected scope no longer
+  needs `--raw-body`: `--evaluation-scope selected --scope-address
+  support@example.com --scope-domain example.org` sends `scope_selection`
+  with both lists, and a list not given is sent empty. Repeat a flag or give
+  a comma list. They set `scope_selection` over any in `--raw-body` or
+  `--body-file`, and are refused (exit 2) unless the request sends
+  `evaluation_scope` `selected`, from `--evaluation-scope` or else from
+  `--raw-body` or `--body-file`.
+- A generated command's boolean flag that has a `--no-` form also takes
+  `true` or `false`, so `endpoints update <id> --enabled false` sends
+  `enabled: false`. Before, the `false` was read as an argument, which the
+  command refused or took for the endpoint id, and `--enabled=false` was
+  read as `--enabled` followed by a `false` argument. The bare flag still
+  means true, and `--no-enabled` still works. Another yes or no word after
+  the flag (`yes`, `no`, `y`, `n`, `on`, `off`, `1`, `0`), and any value
+  after `--no-enabled`, is refused with exit 2 rather than read as the id.
+- Without `--json`, a generated command prints a note on stderr for each
+  flag its answer's `meta` sets that changes how the data reads: `emails
+  list --recipient` when the credential does not read that mailbox
+  (`meta.recipient_outside_access`, so the list is empty; the note replaces
+  the general empty-list hint) or reads it only through email rules
+  (`meta.recipient_rules_only`), `emails search` when the page stopped at
+  the search time limit (`meta.partial`), and `sending permissions` when the
+  credential can only reply (`meta.replies_only`) or the address rules were
+  cut short (`meta.truncated`). `--json` output is unchanged.
 - Without `--json`, `email-rules compile-email-rule` prints each of the
   compile answer's warnings (such as a sender judged by the classifier
   alone, or a grant worded as a prohibition) before its breadth, and

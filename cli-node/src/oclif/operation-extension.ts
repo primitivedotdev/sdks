@@ -49,9 +49,14 @@ export type OperationExtension = {
   /**
    * The body fields the added flags set. They are merged over --raw-body or
    * --body-file like the generated per-field flags, and win on conflict.
-   * Throws a CLIError for a value it refuses.
+   * `base` is the body --raw-body or --body-file gave, before any flag is
+   * merged over it (undefined when neither was given). Throws a CLIError for
+   * a value it refuses.
    */
-  bodyFields?: (flags: Record<string, unknown>) => ExtensionBodyField[];
+  bodyFields?: (
+    flags: Record<string, unknown>,
+    base: unknown,
+  ) => ExtensionBodyField[];
   /**
    * The body properties bodyFields can set, left out of the --help list of
    * fields that only --raw-body can carry.
