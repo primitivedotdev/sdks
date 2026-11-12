@@ -17,6 +17,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.email_rule_author import EmailRuleAuthor
+  from ..models.email_rule_expectation_sample import EmailRuleExpectationSample
   from ..models.email_rule_scope_names import EmailRuleScopeNames
   from ..models.email_rule_version import EmailRuleVersion
   from ..models.get_email_rule_result_expectations import GetEmailRuleResultExpectations
@@ -46,12 +47,15 @@ class GetEmailRuleResult:
                 warnings) and who compiled it. current_version is its number. GET /email-rules lists rules without it.
             kind (GetEmailRuleResultKind | Unset): grant: what it matches can be shared. do_not_share: it blocks sharing
                 what it matches. Optional only for an older core-api: every answer carries it.
+            protection_note (str | Unset): On a do_not_share rule only: it protects nothing yet (not active), or a
+                classifier fact narrows it.
             evaluation_scope (GetEmailRuleResultEvaluationScope | Unset): Whose mail it runs over, as stored (GET /email-
                 rules/{id}/scope: what that is now).
             scope_selection (EmailRuleScopeNames | None | Unset): What a selected rule names; null for any other scope.
             revision (int | Unset): Moves on by one with every update. Send it as if_revision.
             author (EmailRuleAuthor | Unset):
             expectations (GetEmailRuleResultExpectations | Unset): Its saved expectations, each list by email id.
+            expectation_samples (list[EmailRuleExpectationSample] | Unset): Its saved made-up emails, oldest first.
      """
 
     id: UUID
@@ -64,11 +68,13 @@ class GetEmailRuleResult:
     updated_at: datetime.datetime
     current: EmailRuleVersion | None
     kind: GetEmailRuleResultKind | Unset = UNSET
+    protection_note: str | Unset = UNSET
     evaluation_scope: GetEmailRuleResultEvaluationScope | Unset = UNSET
     scope_selection: EmailRuleScopeNames | None | Unset = UNSET
     revision: int | Unset = UNSET
     author: EmailRuleAuthor | Unset = UNSET
     expectations: GetEmailRuleResultExpectations | Unset = UNSET
+    expectation_samples: list[EmailRuleExpectationSample] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -77,6 +83,7 @@ class GetEmailRuleResult:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_rule_author import EmailRuleAuthor # noqa: PLC0415
+        from ..models.email_rule_expectation_sample import EmailRuleExpectationSample # noqa: PLC0415
         from ..models.email_rule_scope_names import EmailRuleScopeNames # noqa: PLC0415
         from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
         from ..models.get_email_rule_result_expectations import GetEmailRuleResultExpectations # noqa: PLC0415
@@ -108,6 +115,8 @@ class GetEmailRuleResult:
             kind = self.kind.value
 
 
+        protection_note = self.protection_note
+
         evaluation_scope: str | Unset = UNSET
         if not isinstance(self.evaluation_scope, Unset):
             evaluation_scope = self.evaluation_scope.value
@@ -131,6 +140,15 @@ class GetEmailRuleResult:
         if not isinstance(self.expectations, Unset):
             expectations = self.expectations.to_dict()
 
+        expectation_samples: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.expectation_samples, Unset):
+            expectation_samples = []
+            for expectation_samples_item_data in self.expectation_samples:
+                expectation_samples_item = expectation_samples_item_data.to_dict()
+                expectation_samples.append(expectation_samples_item)
+
+
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -147,6 +165,8 @@ class GetEmailRuleResult:
         })
         if kind is not UNSET:
             field_dict["kind"] = kind
+        if protection_note is not UNSET:
+            field_dict["protection_note"] = protection_note
         if evaluation_scope is not UNSET:
             field_dict["evaluation_scope"] = evaluation_scope
         if scope_selection is not UNSET:
@@ -157,6 +177,8 @@ class GetEmailRuleResult:
             field_dict["author"] = author
         if expectations is not UNSET:
             field_dict["expectations"] = expectations
+        if expectation_samples is not UNSET:
+            field_dict["expectation_samples"] = expectation_samples
 
         return field_dict
 
@@ -165,6 +187,7 @@ class GetEmailRuleResult:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_rule_author import EmailRuleAuthor # noqa: PLC0415
+        from ..models.email_rule_expectation_sample import EmailRuleExpectationSample # noqa: PLC0415
         from ..models.email_rule_scope_names import EmailRuleScopeNames # noqa: PLC0415
         from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
         from ..models.get_email_rule_result_expectations import GetEmailRuleResultExpectations # noqa: PLC0415
@@ -234,6 +257,8 @@ class GetEmailRuleResult:
 
 
 
+        protection_note = d.pop("protection_note", UNSET)
+
         _evaluation_scope = d.pop("evaluation_scope", UNSET)
         evaluation_scope: GetEmailRuleResultEvaluationScope | Unset
         if isinstance(_evaluation_scope,  Unset):
@@ -286,6 +311,18 @@ class GetEmailRuleResult:
 
 
 
+        _expectation_samples = d.pop("expectation_samples", UNSET)
+        expectation_samples: list[EmailRuleExpectationSample] | Unset = UNSET
+        if _expectation_samples is not UNSET:
+            expectation_samples = []
+            for expectation_samples_item_data in _expectation_samples:
+                expectation_samples_item = EmailRuleExpectationSample.from_dict(expectation_samples_item_data)
+
+
+
+                expectation_samples.append(expectation_samples_item)
+
+
         get_email_rule_result = cls(
             id=id,
             name=name,
@@ -297,11 +334,13 @@ class GetEmailRuleResult:
             updated_at=updated_at,
             current=current,
             kind=kind,
+            protection_note=protection_note,
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,
             revision=revision,
             author=author,
             expectations=expectations,
+            expectation_samples=expectation_samples,
         )
 
 

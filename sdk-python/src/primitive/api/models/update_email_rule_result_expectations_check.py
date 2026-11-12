@@ -22,12 +22,13 @@ T = TypeVar("T", bound="UpdateEmailRuleResultExpectationsCheck")
 
 @_attrs_define
 class UpdateEmailRuleResultExpectationsCheck:
-    """ After a write that saved a version or changed its expectations, if it has some: them, judged on that version from
-    stored classifications without asking its questions. Undecided: one that needs answers not yet kept for that
-    version, is unclassified, skipped or not reached, or that its author does not read. Absent when it could not be
-    judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish
-    in time, or the check failed). Test by rule_id for the rest. With if_expectations_pass, the judgment made before the
-    save, which passed.
+    """ After a write that saved a version or changed its expectations or made-up emails, if it has some: the emails by id
+    judged on that version from stored classifications without asking its questions, and any made-up emails listed as
+    undecided. Undecided: one that needs answers not yet kept for that version, is unclassified, skipped or not reached,
+    or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be
+    resolved, your access shows headers only, it could not finish in time, or the check failed), and after a write that
+    changed only made-up emails on a rule with emails by id. Test by rule_id for the rest. With if_expectations_pass,
+    the judgment made before the save, which passed.
 
         Attributes:
             version (int | None):
@@ -35,10 +36,14 @@ class UpdateEmailRuleResultExpectationsCheck:
                 undecided (not a failure).
             failed (list[UUID]):
             undecided (list[UUID]):
-            decided (bool | Unset): Whether every expectation was judged (undecided is empty). Absent from a server that
-                predates it.
-            note (str | Unset): On an update that saved a version that did not pass: that it was saved anyway, is current,
-                and whether it is live.
+            decided (bool | Unset): Whether every expectation was judged (undecided and undecided_samples are empty). Absent
+                from a server that predates it.
+            failed_samples (list[int] | Unset): Made-up emails that failed, by index in the set judged (saved oldest first,
+                then added; or as sent).
+            undecided_samples (list[int] | Unset): Made-up emails not decided, by index. Only a write sent with
+                if_expectations_pass that saves a version or activates the rule judges them.
+            note (str | Unset): On an update that saved a version that did not pass, or a do_not_share rule created active:
+                that it was saved anyway, is current, and whether it is live.
      """
 
     version: int | None
@@ -46,6 +51,8 @@ class UpdateEmailRuleResultExpectationsCheck:
     failed: list[UUID]
     undecided: list[UUID]
     decided: bool | Unset = UNSET
+    failed_samples: list[int] | Unset = UNSET
+    undecided_samples: list[int] | Unset = UNSET
     note: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -76,6 +83,18 @@ class UpdateEmailRuleResultExpectationsCheck:
 
         decided = self.decided
 
+        failed_samples: list[int] | Unset = UNSET
+        if not isinstance(self.failed_samples, Unset):
+            failed_samples = self.failed_samples
+
+
+
+        undecided_samples: list[int] | Unset = UNSET
+        if not isinstance(self.undecided_samples, Unset):
+            undecided_samples = self.undecided_samples
+
+
+
         note = self.note
 
 
@@ -89,6 +108,10 @@ class UpdateEmailRuleResultExpectationsCheck:
         })
         if decided is not UNSET:
             field_dict["decided"] = decided
+        if failed_samples is not UNSET:
+            field_dict["failed_samples"] = failed_samples
+        if undecided_samples is not UNSET:
+            field_dict["undecided_samples"] = undecided_samples
         if note is not UNSET:
             field_dict["note"] = note
 
@@ -137,6 +160,12 @@ class UpdateEmailRuleResultExpectationsCheck:
 
         decided = d.pop("decided", UNSET)
 
+        failed_samples = cast(list[int], d.pop("failed_samples", UNSET))
+
+
+        undecided_samples = cast(list[int], d.pop("undecided_samples", UNSET))
+
+
         note = d.pop("note", UNSET)
 
         update_email_rule_result_expectations_check = cls(
@@ -145,6 +174,8 @@ class UpdateEmailRuleResultExpectationsCheck:
             failed=failed,
             undecided=undecided,
             decided=decided,
+            failed_samples=failed_samples,
+            undecided_samples=undecided_samples,
             note=note,
         )
 

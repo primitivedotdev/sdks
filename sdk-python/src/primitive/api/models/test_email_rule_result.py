@@ -44,7 +44,7 @@ class TestEmailRuleResult:
             scope_warnings (list[EmailRuleScopeWarning] | Unset): Names in scope_selection that match nothing this
                 organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.
             expectations (TestEmailRuleResultExpectations | Unset): Present when expect was given, or for a saved rule with
-                saved expectations.
+                saved expectations or made-up emails.
      """
 
     rule: TestEmailRuleResultRule

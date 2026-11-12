@@ -14,6 +14,7 @@ from typing import cast
 
 if TYPE_CHECKING:
   from ..models.email_rule_breadth import EmailRuleBreadth
+  from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput
   from ..models.email_rule_scope_selection import EmailRuleScopeSelection
   from ..models.email_rule_tree_input import EmailRuleTreeInput
   from ..models.update_email_rule_request_expectations_type_0 import UpdateEmailRuleRequestExpectationsType0
@@ -57,6 +58,10 @@ class UpdateEmailRuleRequest:
                 email_rule_conflict, version_moved). It guards versions only; if_revision guards every update.
             expectations (None | Unset | UpdateEmailRuleRequestExpectationsType0): Replaces its saved expectations (author
                 only); null removes them.
+            expectation_samples (list[EmailRuleExpectationSampleInput] | None | Unset): Replaces its saved made-up emails
+                (author only); null or [] removes them.
+            add_expectation_samples (list[EmailRuleExpectationSampleInput] | Unset): Adds made-up emails to those saved
+                (author only), up to 20 in all.
             if_revision (int | Unset): The revision you read: if the rule was updated since, nothing is saved (409
                 email_rule_conflict, revision_moved).
             if_expectations_pass (bool | Unset): true: judge the rule as this write leaves it (new tree, restored version,
@@ -84,6 +89,8 @@ class UpdateEmailRuleRequest:
     scope_selection: EmailRuleScopeSelection | Unset = UNSET
     if_version: int | Unset = UNSET
     expectations: None | Unset | UpdateEmailRuleRequestExpectationsType0 = UNSET
+    expectation_samples: list[EmailRuleExpectationSampleInput] | None | Unset = UNSET
+    add_expectation_samples: list[EmailRuleExpectationSampleInput] | Unset = UNSET
     if_revision: int | Unset = UNSET
     if_expectations_pass: bool | Unset = UNSET
     restore_version: int | Unset = UNSET
@@ -94,6 +101,7 @@ class UpdateEmailRuleRequest:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
+        from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput # noqa: PLC0415
         from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         from ..models.update_email_rule_request_expectations_type_0 import UpdateEmailRuleRequestExpectationsType0 # noqa: PLC0415
@@ -153,6 +161,28 @@ class UpdateEmailRuleRequest:
         else:
             expectations = self.expectations
 
+        expectation_samples: list[dict[str, Any]] | None | Unset
+        if isinstance(self.expectation_samples, Unset):
+            expectation_samples = UNSET
+        elif isinstance(self.expectation_samples, list):
+            expectation_samples = []
+            for expectation_samples_type_0_item_data in self.expectation_samples:
+                expectation_samples_type_0_item = expectation_samples_type_0_item_data.to_dict()
+                expectation_samples.append(expectation_samples_type_0_item)
+
+
+        else:
+            expectation_samples = self.expectation_samples
+
+        add_expectation_samples: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.add_expectation_samples, Unset):
+            add_expectation_samples = []
+            for add_expectation_samples_item_data in self.add_expectation_samples:
+                add_expectation_samples_item = add_expectation_samples_item_data.to_dict()
+                add_expectation_samples.append(add_expectation_samples_item)
+
+
+
         if_revision = self.if_revision
 
         if_expectations_pass = self.if_expectations_pass
@@ -190,6 +220,10 @@ class UpdateEmailRuleRequest:
             field_dict["if_version"] = if_version
         if expectations is not UNSET:
             field_dict["expectations"] = expectations
+        if expectation_samples is not UNSET:
+            field_dict["expectation_samples"] = expectation_samples
+        if add_expectation_samples is not UNSET:
+            field_dict["add_expectation_samples"] = add_expectation_samples
         if if_revision is not UNSET:
             field_dict["if_revision"] = if_revision
         if if_expectations_pass is not UNSET:
@@ -204,6 +238,7 @@ class UpdateEmailRuleRequest:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
+        from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput # noqa: PLC0415
         from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         from ..models.update_email_rule_request_expectations_type_0 import UpdateEmailRuleRequestExpectationsType0 # noqa: PLC0415
@@ -304,6 +339,43 @@ class UpdateEmailRuleRequest:
         expectations = _parse_expectations(d.pop("expectations", UNSET))
 
 
+        def _parse_expectation_samples(data: object) -> list[EmailRuleExpectationSampleInput] | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                expectation_samples_type_0 = []
+                _expectation_samples_type_0 = data
+                for expectation_samples_type_0_item_data in (_expectation_samples_type_0):
+                    expectation_samples_type_0_item = EmailRuleExpectationSampleInput.from_dict(expectation_samples_type_0_item_data)
+
+
+
+                    expectation_samples_type_0.append(expectation_samples_type_0_item)
+
+                return expectation_samples_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[EmailRuleExpectationSampleInput] | None | Unset, data)
+
+        expectation_samples = _parse_expectation_samples(d.pop("expectation_samples", UNSET))
+
+
+        _add_expectation_samples = d.pop("add_expectation_samples", UNSET)
+        add_expectation_samples: list[EmailRuleExpectationSampleInput] | Unset = UNSET
+        if _add_expectation_samples is not UNSET:
+            add_expectation_samples = []
+            for add_expectation_samples_item_data in _add_expectation_samples:
+                add_expectation_samples_item = EmailRuleExpectationSampleInput.from_dict(add_expectation_samples_item_data)
+
+
+
+                add_expectation_samples.append(add_expectation_samples_item)
+
+
         if_revision = d.pop("if_revision", UNSET)
 
         if_expectations_pass = d.pop("if_expectations_pass", UNSET)
@@ -324,6 +396,8 @@ class UpdateEmailRuleRequest:
             scope_selection=scope_selection,
             if_version=if_version,
             expectations=expectations,
+            expectation_samples=expectation_samples,
+            add_expectation_samples=add_expectation_samples,
             if_revision=if_revision,
             if_expectations_pass=if_expectations_pass,
             restore_version=restore_version,

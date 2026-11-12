@@ -142,8 +142,9 @@ def sync_detailed(
 ) -> Response[DecideSuspensionResponse200 | ErrorResponse]:
     """ Decide a suspension
 
-     Keep, narrow or revoke one suspended or flagged item. Keeping it, and revoking an API key, needs the
-    decider to cover it (revoking an uncovered key is refused with `grant_forbidden`,
+     Keep, narrow or revoke one suspended or flagged item. Keeping it needs the decider to cover it, and
+    so does revoking an API key unless the decider holds it and decides as themself rather than through
+    another app (revoking an uncovered key someone else holds is refused with `grant_forbidden`,
     `target_not_covered`). Keeping an API key rotated (`rotate: true`, other than the shared Function
     key) also revokes its older secrets still in a rotation overlap, and needs keys:manage on both the
     credential and the person: without it, or if the decider lost members:manage meanwhile, it is
@@ -201,8 +202,9 @@ def sync(
 ) -> DecideSuspensionResponse200 | ErrorResponse | None:
     """ Decide a suspension
 
-     Keep, narrow or revoke one suspended or flagged item. Keeping it, and revoking an API key, needs the
-    decider to cover it (revoking an uncovered key is refused with `grant_forbidden`,
+     Keep, narrow or revoke one suspended or flagged item. Keeping it needs the decider to cover it, and
+    so does revoking an API key unless the decider holds it and decides as themself rather than through
+    another app (revoking an uncovered key someone else holds is refused with `grant_forbidden`,
     `target_not_covered`). Keeping an API key rotated (`rotate: true`, other than the shared Function
     key) also revokes its older secrets still in a rotation overlap, and needs keys:manage on both the
     credential and the person: without it, or if the decider lost members:manage meanwhile, it is
@@ -255,8 +257,9 @@ async def asyncio_detailed(
 ) -> Response[DecideSuspensionResponse200 | ErrorResponse]:
     """ Decide a suspension
 
-     Keep, narrow or revoke one suspended or flagged item. Keeping it, and revoking an API key, needs the
-    decider to cover it (revoking an uncovered key is refused with `grant_forbidden`,
+     Keep, narrow or revoke one suspended or flagged item. Keeping it needs the decider to cover it, and
+    so does revoking an API key unless the decider holds it and decides as themself rather than through
+    another app (revoking an uncovered key someone else holds is refused with `grant_forbidden`,
     `target_not_covered`). Keeping an API key rotated (`rotate: true`, other than the shared Function
     key) also revokes its older secrets still in a rotation overlap, and needs keys:manage on both the
     credential and the person: without it, or if the decider lost members:manage meanwhile, it is
@@ -314,8 +317,9 @@ async def asyncio(
 ) -> DecideSuspensionResponse200 | ErrorResponse | None:
     """ Decide a suspension
 
-     Keep, narrow or revoke one suspended or flagged item. Keeping it, and revoking an API key, needs the
-    decider to cover it (revoking an uncovered key is refused with `grant_forbidden`,
+     Keep, narrow or revoke one suspended or flagged item. Keeping it needs the decider to cover it, and
+    so does revoking an API key unless the decider holds it and decides as themself rather than through
+    another app (revoking an uncovered key someone else holds is refused with `grant_forbidden`,
     `target_not_covered`). Keeping an API key rotated (`rotate: true`, other than the shared Function
     key) also revokes its older secrets still in a rotation overlap, and needs keys:manage on both the
     credential and the person: without it, or if the decider lost members:manage meanwhile, it is

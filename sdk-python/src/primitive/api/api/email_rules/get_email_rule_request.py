@@ -101,9 +101,12 @@ def sync_detailed(
     received. A test on mail already received shows only what has arrived. To see what the rule would do
     with an email that has not, such as one you would never want shared, pass the request's tree to POST
     /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules
-    test-email-rule-on-sample --body-file sample.json) with an email you make up. Nothing is stored, and
-    it needs no access beyond testing a rule of your own. Needs mail:read, a member's own credential
-    with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+    test-email-rule-on-sample --body-file sample.json) with an email you make up, or have look-alikes
+    written for it (POST /v1/email-rules/look-alikes with request_id; primitive email-rules generate-
+    look-alikes). Neither stores anything, and neither needs access beyond testing a rule of your own;
+    the accept keeps any you send as expectation_samples on the rule it writes. Needs mail:read, a
+    member's own credential with their full access (not an API key, agent key or narrowed token), and
+    the email rules feature.
 
     Args:
         id (UUID):
@@ -143,9 +146,12 @@ def sync(
     received. A test on mail already received shows only what has arrived. To see what the rule would do
     with an email that has not, such as one you would never want shared, pass the request's tree to POST
     /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules
-    test-email-rule-on-sample --body-file sample.json) with an email you make up. Nothing is stored, and
-    it needs no access beyond testing a rule of your own. Needs mail:read, a member's own credential
-    with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+    test-email-rule-on-sample --body-file sample.json) with an email you make up, or have look-alikes
+    written for it (POST /v1/email-rules/look-alikes with request_id; primitive email-rules generate-
+    look-alikes). Neither stores anything, and neither needs access beyond testing a rule of your own;
+    the accept keeps any you send as expectation_samples on the rule it writes. Needs mail:read, a
+    member's own credential with their full access (not an API key, agent key or narrowed token), and
+    the email rules feature.
 
     Args:
         id (UUID):
@@ -180,9 +186,12 @@ async def asyncio_detailed(
     received. A test on mail already received shows only what has arrived. To see what the rule would do
     with an email that has not, such as one you would never want shared, pass the request's tree to POST
     /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules
-    test-email-rule-on-sample --body-file sample.json) with an email you make up. Nothing is stored, and
-    it needs no access beyond testing a rule of your own. Needs mail:read, a member's own credential
-    with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+    test-email-rule-on-sample --body-file sample.json) with an email you make up, or have look-alikes
+    written for it (POST /v1/email-rules/look-alikes with request_id; primitive email-rules generate-
+    look-alikes). Neither stores anything, and neither needs access beyond testing a rule of your own;
+    the accept keeps any you send as expectation_samples on the rule it writes. Needs mail:read, a
+    member's own credential with their full access (not an API key, agent key or narrowed token), and
+    the email rules feature.
 
     Args:
         id (UUID):
@@ -222,9 +231,12 @@ async def asyncio(
     received. A test on mail already received shows only what has arrived. To see what the rule would do
     with an email that has not, such as one you would never want shared, pass the request's tree to POST
     /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules
-    test-email-rule-on-sample --body-file sample.json) with an email you make up. Nothing is stored, and
-    it needs no access beyond testing a rule of your own. Needs mail:read, a member's own credential
-    with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+    test-email-rule-on-sample --body-file sample.json) with an email you make up, or have look-alikes
+    written for it (POST /v1/email-rules/look-alikes with request_id; primitive email-rules generate-
+    look-alikes). Neither stores anything, and neither needs access beyond testing a rule of your own;
+    the accept keeps any you send as expectation_samples on the rule it writes. Needs mail:read, a
+    member's own credential with their full access (not an API key, agent key or narrowed token), and
+    the email rules feature.
 
     Args:
         id (UUID):

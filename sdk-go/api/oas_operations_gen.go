@@ -86,6 +86,7 @@ const (
 	DownloadSentAttachmentsOperation              OperationName = "DownloadSentAttachments"
 	EndBreakGlassOperation                        OperationName = "EndBreakGlass"
 	EndEmailRuleShareOperation                    OperationName = "EndEmailRuleShare"
+	GenerateLookAlikesOperation                   OperationName = "GenerateLookAlikes"
 	GetAccessModeOperation                        OperationName = "GetAccessMode"
 	GetAccountOperation                           OperationName = "GetAccount"
 	GetAddressNoteOperation                       OperationName = "GetAddressNote"

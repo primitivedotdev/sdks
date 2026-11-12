@@ -44,9 +44,8 @@ class TestEmailRuleRequest:
             classify_missing (bool | Unset): Classify emails in the set that have not been classified yet and arrived more
                 than 2 hours ago, and save their classification. Defaults to true. Newer ones are left to the normal
                 classification and reported pending. The rule is never evaluated on them for real.
-            expect (TestEmailRuleRequestExpect | Unset): Emails the rule must match and must not, at most 100 in all, always
-                tested whatever their age: added to email_ids, or to the recent window, which gives up a place for each. The
-                answer's expectations judge each.
+            expect (TestEmailRuleRequestExpect | Unset): Emails the rule must match and must not (at most 100), always
+                tested whatever their age, and made-up emails (samples, at most 20). Given, it replaces a saved rule's own.
      """
 
     tree: EmailRuleTreeInput | Unset = UNSET

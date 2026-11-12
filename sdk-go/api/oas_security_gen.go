@@ -122,6 +122,7 @@ var operationRolesBearerAuth = map[string][]string{
 	DownloadSentAttachmentsOperation:              []string{},
 	EndBreakGlassOperation:                        []string{},
 	EndEmailRuleShareOperation:                    []string{},
+	GenerateLookAlikesOperation:                   []string{},
 	GetAccessModeOperation:                        []string{},
 	GetAccountOperation:                           []string{},
 	GetAddressNoteOperation:                       []string{},

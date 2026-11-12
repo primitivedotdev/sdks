@@ -58,6 +58,10 @@ class CreateEmailRuleRequestResult:
             message (None | str | Unset): What the member asking wrote about why; null when they wrote nothing.
             decline_reason (None | str | Unset): Why the member asked declined it; null unless they gave a reason when
                 declining.
+            edited_on_accept (bool | None | Unset): Once accepted: whether the rule was changed first, as on the share. Null
+                until then, or when unreadable.
+            notice (None | str | Unset): For the member asked, while pending: what accepting would share. For the member who
+                asked, once accepted with changes: that the request is not what is shared. Else null.
             target_can_accept (bool | None | Unset): Whether the member asked can accept it now under their role. Null
                 unless you can list members and their roles (members:read), or when it could not be read.
             target_warning (None | str | Unset): Why the member asked cannot accept it yet, naming the permission their role
@@ -86,6 +90,8 @@ class CreateEmailRuleRequestResult:
     share_id: None | UUID
     message: None | str | Unset = UNSET
     decline_reason: None | str | Unset = UNSET
+    edited_on_accept: bool | None | Unset = UNSET
+    notice: None | str | Unset = UNSET
     target_can_accept: bool | None | Unset = UNSET
     target_warning: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -167,6 +173,18 @@ class CreateEmailRuleRequestResult:
         else:
             decline_reason = self.decline_reason
 
+        edited_on_accept: bool | None | Unset
+        if isinstance(self.edited_on_accept, Unset):
+            edited_on_accept = UNSET
+        else:
+            edited_on_accept = self.edited_on_accept
+
+        notice: None | str | Unset
+        if isinstance(self.notice, Unset):
+            notice = UNSET
+        else:
+            notice = self.notice
+
         target_can_accept: bool | None | Unset
         if isinstance(self.target_can_accept, Unset):
             target_can_accept = UNSET
@@ -208,6 +226,10 @@ class CreateEmailRuleRequestResult:
             field_dict["message"] = message
         if decline_reason is not UNSET:
             field_dict["decline_reason"] = decline_reason
+        if edited_on_accept is not UNSET:
+            field_dict["edited_on_accept"] = edited_on_accept
+        if notice is not UNSET:
+            field_dict["notice"] = notice
         if target_can_accept is not UNSET:
             field_dict["target_can_accept"] = target_can_accept
         if target_warning is not UNSET:
@@ -360,6 +382,26 @@ class CreateEmailRuleRequestResult:
         decline_reason = _parse_decline_reason(d.pop("decline_reason", UNSET))
 
 
+        def _parse_edited_on_accept(data: object) -> bool | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(bool | None | Unset, data)
+
+        edited_on_accept = _parse_edited_on_accept(d.pop("edited_on_accept", UNSET))
+
+
+        def _parse_notice(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        notice = _parse_notice(d.pop("notice", UNSET))
+
+
         def _parse_target_can_accept(data: object) -> bool | None | Unset:
             if data is None:
                 return data
@@ -403,6 +445,8 @@ class CreateEmailRuleRequestResult:
             share_id=share_id,
             message=message,
             decline_reason=decline_reason,
+            edited_on_accept=edited_on_accept,
+            notice=notice,
             target_can_accept=target_can_accept,
             target_warning=target_warning,
         )

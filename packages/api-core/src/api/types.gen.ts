@@ -106,7 +106,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'ownership_proof_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'access_mode_unavailable' | 'agent_account_managed_domain_only' | 'agent_changed' | 'agent_limit' | 'agent_misconfigured' | 'agent_work_agreement_replay_conflict' | 'agent_work_deadline_not_future' | 'agent_work_inactive' | 'agent_work_not_found' | 'agent_work_replay_conflict' | 'agent_work_version_conflict' | 'already_claimed' | 'already_member' | 'archive_busy' | 'archive_invalid' | 'archive_limit_exceeded' | 'archive_unsafe_path' | 'archive_unsupported' | 'attachment_name_ambiguous' | 'attachment_not_archive' | 'authorization_unavailable' | 'bad_request' | 'body_not_supported' | 'build_failed' | 'builder_unavailable' | 'builtin_role' | 'chunk_too_large' | 'chunks_missing' | 'claim_failed' | 'claim_not_pending' | 'cleanup_incomplete' | 'cli_access_refused' | 'code_expired' | 'confirmation_required' | 'connection_already_claimed' | 'connection_cleanup_pending' | 'connection_create_request_conflict' | 'connection_owner_address_required' | 'connection_removed' | 'connection_revoked' | 'contact_request_invalid' | 'contact_request_not_ready' | 'contact_request_unauthenticated' | 'contact_request_unavailable' | 'cursor_expired' | 'delete_failed' | 'delivery_held' | 'delivery_unavailable' | 'deploy_failed' | 'deploy_outcome_unknown' | 'direct_delivery_failed' | 'direct_delivery_unavailable' | 'directory_limit' | 'dns_publication_failed' | 'dns_publication_pending' | 'dns_verification_failed' | 'download_token_expired' | 'download_token_invalid' | 'email_admission_unavailable' | 'email_in_use' | 'email_rule_author_only' | 'email_rule_author_unresolvable' | 'email_rule_compiler_unavailable' | 'email_rule_conflict' | 'email_rule_not_compiled' | 'email_rule_request_limit' | 'email_rule_request_not_pending' | 'email_rule_request_not_withdrawn' | 'email_rule_request_party_left' | 'email_rule_request_proposer_only' | 'email_rule_request_target_only' | 'email_rule_scope_locked' | 'email_rule_scope_not_readable' | 'email_rule_share_ended' | 'email_rule_share_limit' | 'embedding_provider_unavailable' | 'entitlement' | 'expectations_failed' | 'expectations_undecided' | 'expired' | 'feature_not_enabled' | 'fresh_send_not_authorized' | 'function_cannot_receive_mail' | 'function_delivery_refused' | 'function_effect_email_mismatch' | 'function_effect_mismatch' | 'function_forked' | 'function_github_linked' | 'function_key_missing' | 'function_key_runtime_only' | 'function_not_deployed' | 'function_scope_forbidden' | 'function_signing_secret_missing' | 'function_suspended' | 'github_binding_owner_changed' | 'github_binding_paused' | 'grant_forbidden' | 'grant_not_available' | 'hash_mismatch' | 'hipaa_mode' | 'hipaa_mode_check_unavailable' | 'hipaa_mode_external_send_blocked' | 'host_key_limit' | 'idempotency_conflict' | 'idempotency_key_invalid' | 'invalid_code' | 'invalid_cursor' | 'invalid_email' | 'invalid_payload_reference' | 'invalid_request' | 'invalid_signature' | 'invalid_step' | 'invalid_token' | 'invalid_topic_sources' | 'invitation_accepted' | 'invitation_accepting' | 'invitation_address_not_allowed' | 'invitation_changed' | 'invitation_pending' | 'invitation_sending' | 'invitation_unconfirmed' | 'invitations_pending' | 'ip_not_allowed' | 'keep_refused' | 'key_change_superseded' | 'key_recently_created' | 'last_owner' | 'latest_message_mismatch' | 'latest_message_thread_unresolved' | 'load_test_recipient_not_allowed' | 'mail_relay_unavailable' | 'mail_routing_conflict' | 'mail_topic_edit_conflict' | 'mail_topic_generation_conflict' | 'mailbox_not_claimable' | 'mailbox_not_found' | 'mailbox_shared_with_others' | 'managed_build_failed' | 'managed_domain' | 'member_address_domain_unavailable' | 'member_address_history_confirmation_required' | 'member_address_immutable' | 'member_address_reserved' | 'member_address_unavailable' | 'member_changed' | 'message_not_found' | 'name_taken' | 'network_member_excluded' | 'network_member_not_found' | 'network_peer_not_found' | 'network_view_denied' | 'no_code' | 'no_endpoint' | 'no_expectations' | 'no_mail_read' | 'not_a_template_install' | 'not_available' | 'not_claimable' | 'not_held' | 'not_pending' | 'object_suspended' | 'onboarding_key_in_use' | 'outbound_edge_rejected' | 'outbound_email_limit_exceeded' | 'outbound_relay_timeout' | 'outbound_relay_unavailable' | 'outside_key_scope' | 'path_invalid' | 'payload_too_large' | 'pending_owner_confirmation' | 'plan_required' | 'policy_forbidden' | 'presence_admission_busy' | 'presence_idempotency_conflict' | 'presence_probe_stale' | 'pro_plan_required' | 'project_changed' | 'pull_subscription_requires_agent_connection' | 'query_invalid' | 'recipient_changed' | 'recipient_suppressed' | 'redeploy_failed' | 'removal_failed' | 'removal_timeout' | 'request_expired' | 'resend_limit_exceeded' | 'resend_too_soon' | 'role_assigned' | 'role_assignment_unavailable' | 'role_key_taken' | 'rotate_instead' | 'rotation_in_progress' | 'rotation_incomplete' | 'rotation_refused' | 'rotation_unconfirmed' | 'runtime_grant_unavailable' | 'schedule_allowlist_not_provided' | 'schedule_sender_collision' | 'schedule_wake_disabled' | 'scheduled_at_required' | 'scheduled_payload_invalid' | 'search_unavailable' | 'semantic_search_not_enabled' | 'send_failed' | 'sender_not_authorized' | 'sent_email_tail_unavailable' | 'sent_mail_search_unavailable' | 'shopping_binding_conflict' | 'shopping_decision_conflict' | 'shopping_identity_conflict' | 'shopping_not_found' | 'shopping_owner_mail_required' | 'shopping_package_not_found' | 'shopping_proposal_expired' | 'shopping_replay_conflict' | 'shopping_source_unavailable' | 'shopping_too_many_shipments' | 'shopping_tracking_invalid' | 'shopping_version_conflict' | 'shopping_wake_unavailable' | 'shredded' | 'sign_in_email_change_required' | 'signal_not_allowed' | 'signal_parent_not_ready' | 'signal_sender_unauthenticated' | 'signing_secret_unavailable' | 'signup_failed' | 'standing_owner_revoked' | 'step_up_invalid' | 'step_up_not_accepted' | 'step_up_refused' | 'step_up_required' | 'stop_changed' | 'storage_error' | 'storage_limit_exceeded' | 'suspension_undecided' | 'template_role' | 'template_unavailable' | 'template_update_failed' | 'terms_not_accepted' | 'thread_busy' | 'too_many_attempts' | 'too_many_concurrent_builds' | 'too_many_resends' | 'topic_edit_too_large' | 'topic_generation_too_large' | 'unavailable' | 'unknown_chunk' | 'update_needs_input' | 'upstream_unavailable' | 'usage_limit_exceeded';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'ownership_proof_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'access_mode_unavailable' | 'agent_account_managed_domain_only' | 'agent_changed' | 'agent_limit' | 'agent_misconfigured' | 'agent_work_agreement_replay_conflict' | 'agent_work_deadline_not_future' | 'agent_work_inactive' | 'agent_work_not_found' | 'agent_work_replay_conflict' | 'agent_work_version_conflict' | 'already_claimed' | 'already_member' | 'archive_busy' | 'archive_invalid' | 'archive_limit_exceeded' | 'archive_unsafe_path' | 'archive_unsupported' | 'attachment_name_ambiguous' | 'attachment_not_archive' | 'authorization_unavailable' | 'bad_request' | 'body_not_supported' | 'build_failed' | 'builder_unavailable' | 'builtin_role' | 'chunk_too_large' | 'chunks_missing' | 'claim_failed' | 'claim_not_pending' | 'cleanup_incomplete' | 'cli_access_refused' | 'code_expired' | 'confirmation_required' | 'connection_already_claimed' | 'connection_cleanup_pending' | 'connection_create_request_conflict' | 'connection_owner_address_required' | 'connection_removed' | 'connection_revoked' | 'contact_request_invalid' | 'contact_request_not_ready' | 'contact_request_unauthenticated' | 'contact_request_unavailable' | 'cursor_expired' | 'delete_failed' | 'delivery_held' | 'delivery_unavailable' | 'deploy_failed' | 'deploy_outcome_unknown' | 'direct_delivery_failed' | 'direct_delivery_unavailable' | 'directory_limit' | 'dns_publication_failed' | 'dns_publication_pending' | 'dns_verification_failed' | 'download_token_expired' | 'download_token_invalid' | 'email_admission_unavailable' | 'email_in_use' | 'email_rule_author_only' | 'email_rule_author_unresolvable' | 'email_rule_compiler_unavailable' | 'email_rule_conflict' | 'email_rule_look_alikes_not_written' | 'email_rule_not_compiled' | 'email_rule_request_limit' | 'email_rule_request_not_pending' | 'email_rule_request_not_withdrawn' | 'email_rule_request_party_left' | 'email_rule_request_proposer_only' | 'email_rule_request_target_only' | 'email_rule_scope_locked' | 'email_rule_scope_not_readable' | 'email_rule_share_ended' | 'email_rule_share_limit' | 'embedding_provider_unavailable' | 'entitlement' | 'expectations_failed' | 'expectations_undecided' | 'expired' | 'feature_not_enabled' | 'fresh_send_not_authorized' | 'function_cannot_receive_mail' | 'function_delivery_refused' | 'function_effect_email_mismatch' | 'function_effect_mismatch' | 'function_forked' | 'function_github_linked' | 'function_key_missing' | 'function_key_runtime_only' | 'function_not_deployed' | 'function_scope_forbidden' | 'function_signing_secret_missing' | 'function_suspended' | 'github_binding_owner_changed' | 'github_binding_paused' | 'grant_forbidden' | 'grant_not_available' | 'hash_mismatch' | 'hipaa_mode' | 'hipaa_mode_check_unavailable' | 'hipaa_mode_external_send_blocked' | 'host_key_limit' | 'idempotency_conflict' | 'idempotency_key_invalid' | 'invalid_code' | 'invalid_cursor' | 'invalid_email' | 'invalid_payload_reference' | 'invalid_request' | 'invalid_signature' | 'invalid_step' | 'invalid_token' | 'invalid_topic_sources' | 'invitation_accepted' | 'invitation_accepting' | 'invitation_address_not_allowed' | 'invitation_changed' | 'invitation_pending' | 'invitation_sending' | 'invitation_unconfirmed' | 'invitations_pending' | 'ip_not_allowed' | 'keep_refused' | 'key_change_superseded' | 'key_recently_created' | 'last_owner' | 'latest_message_mismatch' | 'latest_message_thread_unresolved' | 'load_test_recipient_not_allowed' | 'mail_relay_unavailable' | 'mail_routing_conflict' | 'mail_topic_edit_conflict' | 'mail_topic_generation_conflict' | 'mailbox_not_claimable' | 'mailbox_not_found' | 'mailbox_shared_with_others' | 'managed_build_failed' | 'managed_domain' | 'member_address_domain_unavailable' | 'member_address_history_confirmation_required' | 'member_address_immutable' | 'member_address_reserved' | 'member_address_unavailable' | 'member_changed' | 'message_not_found' | 'name_taken' | 'network_member_excluded' | 'network_member_not_found' | 'network_peer_not_found' | 'network_view_denied' | 'no_code' | 'no_endpoint' | 'no_expectations' | 'no_mail_read' | 'not_a_template_install' | 'not_available' | 'not_claimable' | 'not_held' | 'not_pending' | 'object_suspended' | 'onboarding_key_in_use' | 'outbound_edge_rejected' | 'outbound_email_limit_exceeded' | 'outbound_relay_timeout' | 'outbound_relay_unavailable' | 'outside_key_scope' | 'path_invalid' | 'payload_too_large' | 'pending_owner_confirmation' | 'plan_required' | 'policy_forbidden' | 'presence_admission_busy' | 'presence_idempotency_conflict' | 'presence_probe_stale' | 'pro_plan_required' | 'project_changed' | 'pull_subscription_requires_agent_connection' | 'query_invalid' | 'recipient_changed' | 'recipient_suppressed' | 'redeploy_failed' | 'removal_failed' | 'removal_timeout' | 'request_expired' | 'resend_limit_exceeded' | 'resend_too_soon' | 'role_assigned' | 'role_assignment_unavailable' | 'role_key_taken' | 'rotate_instead' | 'rotation_in_progress' | 'rotation_incomplete' | 'rotation_refused' | 'rotation_unconfirmed' | 'runtime_grant_unavailable' | 'schedule_allowlist_not_provided' | 'schedule_sender_collision' | 'schedule_wake_disabled' | 'scheduled_at_required' | 'scheduled_payload_invalid' | 'search_unavailable' | 'semantic_search_not_enabled' | 'send_failed' | 'sender_not_authorized' | 'sending_ip_warmup_cap' | 'sent_email_tail_unavailable' | 'sent_mail_search_unavailable' | 'shopping_binding_conflict' | 'shopping_decision_conflict' | 'shopping_identity_conflict' | 'shopping_not_found' | 'shopping_owner_mail_required' | 'shopping_package_not_found' | 'shopping_proposal_expired' | 'shopping_replay_conflict' | 'shopping_source_unavailable' | 'shopping_too_many_shipments' | 'shopping_tracking_invalid' | 'shopping_version_conflict' | 'shopping_wake_unavailable' | 'shredded' | 'sign_in_email_change_required' | 'signal_not_allowed' | 'signal_parent_not_ready' | 'signal_sender_unauthenticated' | 'signing_secret_unavailable' | 'signup_failed' | 'standing_owner_revoked' | 'step_up_invalid' | 'step_up_not_accepted' | 'step_up_refused' | 'step_up_required' | 'stop_changed' | 'storage_error' | 'storage_limit_exceeded' | 'suspension_undecided' | 'template_role' | 'template_unavailable' | 'template_update_failed' | 'terms_not_accepted' | 'thread_busy' | 'too_many_attempts' | 'too_many_concurrent_builds' | 'too_many_resends' | 'topic_edit_too_large' | 'topic_generation_too_large' | 'unavailable' | 'unknown_chunk' | 'update_needs_input' | 'upstream_unavailable' | 'usage_limit_exceeded';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -6265,7 +6265,7 @@ export type CompileEmailRuleResult = {
      */
     assumptions: Array<string>;
     /**
-     * Parts of the description the column contract cannot express, and how the rule handles them. When the rule reads automated or from_mailing_list, it also has a note on what that column reads and what it misses. When the rule has no questions and its conditions hold for all of the caller's recent classified mail (what a test of it covers by default), or for at least 90% of at least 20 emails, the first warning says so. That count is not made for a caller whose access shows headers only, or who could not run a test of the rule, and may also be skipped when the compile ran long or the count fails.
+     * Parts of the description the column contract cannot express, and how the rule handles them. It also has notes on reading automated, from_mailing_list or sender_relationship, a sender address the description does not give, and a grant worded as a prohibition. When the rule has no questions and its conditions hold for all of the caller's recent classified mail (what a test of it covers by default), or for at least 90% of at least 20 emails, the first warning says so. That count is not made for a caller whose access shows headers only, or who could not run a test of the rule, and may also be skipped when the compile ran long or the count fails.
      */
     warnings: Array<string>;
     /**
@@ -6301,6 +6301,21 @@ export type EmailRuleScopeWarning = {
     message: string;
 };
 
+export type EmailRuleSampleJudgment = {
+    index: number;
+    sample_id: string | null;
+    label: string | null;
+    expected: 'match' | 'no_match';
+    outcome: 'matched' | 'near_miss' | 'no_match' | 'not_decided';
+    status: 'passed' | 'failed' | 'undecided';
+    question_answers: Array<{
+        question: string;
+        answer: boolean | null;
+        probability: number | null;
+        error_class?: string;
+    }>;
+};
+
 export type EmailRuleTreeInput = {
     version: 1;
     /**
@@ -6327,6 +6342,35 @@ export type EmailRuleScopeSelection = {
     domains?: Array<string>;
 };
 
+export type EmailRuleExpectationSampleInput = {
+    expected: 'match' | 'no_match';
+    /**
+     * What the email stands for, such as a personal medical bill.
+     */
+    label?: string | null;
+    email: EmailRuleSavedSampleEmail;
+    id?: string;
+    created_at?: string;
+};
+
+/**
+ * A made-up email, as POST /email-rules/test-sample takes it.
+ */
+export type EmailRuleSavedSampleEmail = {
+    from: {
+        address: string;
+        name?: string;
+    };
+    to: Array<string>;
+    cc?: Array<string>;
+    subject?: string;
+    text: string;
+    attachment_types?: Array<string>;
+    automated?: boolean;
+    from_mailing_list?: boolean;
+    spam_score?: number;
+};
+
 export type TestEmailRuleRequest = {
     tree?: EmailRuleTreeInput;
     /**
@@ -6351,11 +6395,12 @@ export type TestEmailRuleRequest = {
      */
     classify_missing?: boolean;
     /**
-     * Emails the rule must match and must not, at most 100 in all, always tested whatever their age: added to email_ids, or to the recent window, which gives up a place for each. The answer's expectations judge each.
+     * Emails the rule must match and must not (at most 100), always tested whatever their age, and made-up emails (samples, at most 20). Given, it replaces a saved rule's own.
      */
     expect?: {
         match?: Array<string>;
         no_match?: Array<string>;
+        samples?: Array<EmailRuleExpectationSampleInput>;
     };
 };
 
@@ -6508,7 +6553,7 @@ export type TestEmailRuleResult = {
      */
     scope_warnings?: Array<EmailRuleScopeWarning>;
     /**
-     * Present when expect was given, or for a saved rule with saved expectations.
+     * Present when expect was given, or for a saved rule with saved expectations or made-up emails.
      */
     expectations?: {
         /**
@@ -6529,7 +6574,105 @@ export type TestEmailRuleResult = {
             outcome: 'matched' | 'near_miss' | 'no_match' | 'unclassified' | 'skipped' | 'not_found';
             status: 'passed' | 'failed' | 'undecided';
         }>;
+        /**
+         * Made-up emails judged (expect.samples, or a saved rule's), in order; counts include them.
+         */
+        samples?: Array<EmailRuleSampleJudgment>;
     };
+};
+
+export type EmailRuleLookAlike = {
+    kind: 'medical' | 'payroll' | 'personal_purchase' | 'bank_tax' | 'other';
+    /**
+     * Why the rule should not match it.
+     */
+    why: string;
+    /**
+     * A made-up email, as test-sample takes it.
+     */
+    email: {
+        from: {
+            address: string;
+            name?: string;
+        };
+        to: Array<string>;
+        cc: Array<string>;
+        subject: string;
+        text: string;
+        attachment_types: Array<string>;
+        automated: boolean;
+        from_mailing_list: boolean;
+    };
+    outcome: 'matched' | 'near_miss' | 'no_match' | 'not_decided';
+    /**
+     * failed: the rule matched it, so it would be shared. undecided: the rule reads a spam score, which it cannot carry, whatever it decided; or not matched on something it could not decide (not classified, a fact or answer missing, or not reached in time).
+     */
+    status: 'passed' | 'failed' | 'undecided';
+    question_answers: Array<{
+        question: string;
+        answer: boolean | null;
+        probability: number | null;
+        error_class?: string;
+    }>;
+};
+
+export type GenerateLookAlikesRequest = {
+    tree?: EmailRuleTreeInput;
+    /**
+     * What the tree is meant to match; without it, the tree is described in words.
+     */
+    english?: string;
+    /**
+     * own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
+     */
+    evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
+    scope_selection?: EmailRuleScopeSelection;
+    /**
+     * A saved rule you can see: its current version and words.
+     */
+    rule_id?: string;
+    /**
+     * A rule request you can see: its rule as asked.
+     */
+    request_id?: string;
+    /**
+     * For an unsaved tree: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. A saved rule uses its own.
+     */
+    kind?: 'grant' | 'do_not_share';
+    /**
+     * How many, 1 to 8; 6 by default.
+     */
+    count?: number;
+    /**
+     * Which kinds, taken in turn; all by default, the private ones first.
+     */
+    kinds?: Array<'medical' | 'payroll' | 'personal_purchase' | 'bank_tax' | 'other'>;
+    /**
+     * The mailbox they arrive in; by default the rule author's (a request's target's) sign-in address when you may see it, else yours.
+     */
+    to?: string;
+};
+
+export type GenerateLookAlikesResult = {
+    rule: {
+        id: string | null;
+        version: number | null;
+        vocabulary: string;
+    };
+    look_alikes: Array<EmailRuleLookAlike>;
+    counts: {
+        passed: number;
+        failed: number;
+        undecided: number;
+        /**
+         * Asked for but not returned: not written, outside the sample bounds, or of a kind not asked for.
+         */
+        dropped: number;
+    };
+    /**
+     * That the emails are made up and were never sent or stored.
+     */
+    note: string;
 };
 
 export type TestEmailRuleOnSampleRequest = {
@@ -6662,6 +6805,10 @@ export type EmailRuleWritten = {
      */
     kind?: 'grant' | 'do_not_share';
     /**
+     * On a do_not_share rule only: it protects nothing yet (not active), or a classifier fact narrows it.
+     */
+    protection_note?: string;
+    /**
      * Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
@@ -6691,7 +6838,11 @@ export type EmailRuleWritten = {
      */
     scope_warnings?: Array<EmailRuleScopeWarning>;
     /**
-     * After a write that saved a version or changed its expectations, if it has some: them, judged on that version from stored classifications without asking its questions. Undecided: one that needs answers not yet kept for that version, is unclassified, skipped or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed). Test by rule_id for the rest. With if_expectations_pass, the judgment made before the save, which passed.
+     * Its saved made-up emails, when this write set or added some.
+     */
+    expectation_samples?: Array<EmailRuleExpectationSample>;
+    /**
+     * After a write that saved a version or changed its expectations or made-up emails, if it has some: the emails by id judged on that version from stored classifications without asking its questions, and any made-up emails listed as undecided. Undecided: one that needs answers not yet kept for that version, is unclassified, skipped or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed), and after a write that changed only made-up emails on a rule with emails by id. Test by rule_id for the rest. With if_expectations_pass, the judgment made before the save, which passed.
      */
     expectations_check?: {
         version: number | null;
@@ -6700,13 +6851,21 @@ export type EmailRuleWritten = {
          */
         passed: boolean | null;
         /**
-         * Whether every expectation was judged (undecided is empty). Absent from a server that predates it.
+         * Whether every expectation was judged (undecided and undecided_samples are empty). Absent from a server that predates it.
          */
         decided?: boolean;
         failed: Array<string>;
         undecided: Array<string>;
         /**
-         * On an update that saved a version that did not pass: that it was saved anyway, is current, and whether it is live.
+         * Made-up emails that failed, by index in the set judged (saved oldest first, then added; or as sent).
+         */
+        failed_samples?: Array<number>;
+        /**
+         * Made-up emails not decided, by index. Only a write sent with if_expectations_pass that saves a version or activates the rule judges them.
+         */
+        undecided_samples?: Array<number>;
+        /**
+         * On an update that saved a version that did not pass, or a do_not_share rule created active: that it was saved anyway, is current, and whether it is live.
          */
         note?: string;
     };
@@ -6772,6 +6931,14 @@ export type EmailRuleVersion = {
     };
 };
 
+export type EmailRuleExpectationSample = {
+    id: string;
+    expected: 'match' | 'no_match';
+    label: string | null;
+    email: EmailRuleSavedSampleEmail;
+    created_at: string;
+};
+
 export type CreateEmailRuleRequest = {
     /**
      * A short name for the rule.
@@ -6782,9 +6949,9 @@ export type CreateEmailRuleRequest = {
      */
     kind?: 'grant' | 'do_not_share';
     /**
-     * observe (the default) records what the rule would match and grants or blocks nothing; draft is not evaluated.
+     * observe (the default) records what the rule would match and grants or blocks nothing; draft is not evaluated; active only for a do_not_share rule.
      */
-    state?: 'draft' | 'observe';
+    state?: 'draft' | 'observe' | 'active';
     /**
      * own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
      */
@@ -6797,6 +6964,10 @@ export type CreateEmailRuleRequest = {
         match?: Array<string>;
         no_match?: Array<string>;
     };
+    /**
+     * Made-up emails it must match or not (at most 20).
+     */
+    expectation_samples?: Array<EmailRuleExpectationSampleInput>;
     /**
      * The plain-English description the rule was compiled from.
      */
@@ -6834,6 +7005,10 @@ export type EmailRule = {
      * grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional only for an older core-api: every answer carries it.
      */
     kind?: 'grant' | 'do_not_share';
+    /**
+     * On a do_not_share rule only: it protects nothing yet (not active), or a classifier fact narrows it.
+     */
+    protection_note?: string;
     /**
      * Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
      */
@@ -6882,6 +7057,10 @@ export type EmailRuleRead = {
      */
     kind?: 'grant' | 'do_not_share';
     /**
+     * On a do_not_share rule only: it protects nothing yet (not active), or a classifier fact narrows it.
+     */
+    protection_note?: string;
+    /**
      * Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
@@ -6913,6 +7092,10 @@ export type EmailRuleRead = {
         match: Array<string>;
         no_match: Array<string>;
     };
+    /**
+     * Its saved made-up emails, oldest first.
+     */
+    expectation_samples?: Array<EmailRuleExpectationSample>;
 };
 
 export type GetEmailRuleResult = EmailRuleRead;
@@ -6967,6 +7150,14 @@ export type UpdateEmailRuleRequest = {
         match?: Array<string>;
         no_match?: Array<string>;
     } | null;
+    /**
+     * Replaces its saved made-up emails (author only); null or [] removes them.
+     */
+    expectation_samples?: Array<EmailRuleExpectationSampleInput> | null;
+    /**
+     * Adds made-up emails to those saved (author only), up to 20 in all.
+     */
+    add_expectation_samples?: Array<EmailRuleExpectationSampleInput>;
     /**
      * The revision you read: if the rule was updated since, nothing is saved (409 email_rule_conflict, revision_moved).
      */
@@ -7355,6 +7546,14 @@ export type CreateEmailRuleRequestResult = {
      */
     decline_reason?: string | null;
     /**
+     * Once accepted: whether the rule was changed first, as on the share. Null until then, or when unreadable.
+     */
+    edited_on_accept?: boolean | null;
+    /**
+     * For the member asked, while pending: what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
+     */
+    notice?: string | null;
+    /**
      * Whether the member asked can accept it now under their role. Null unless you can list members and their roles (members:read), or when it could not be read.
      */
     target_can_accept?: boolean | null;
@@ -7436,6 +7635,14 @@ export type EmailRuleRequest = {
      * Why the member asked declined it; null unless they gave a reason when declining.
      */
     decline_reason?: string | null;
+    /**
+     * Once accepted: whether the rule was changed first, as on the share. Null until then, or when unreadable.
+     */
+    edited_on_accept?: boolean | null;
+    /**
+     * For the member asked, while pending: what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
+     */
+    notice?: string | null;
 };
 
 export type ListEmailRuleRequestsResult = Array<EmailRuleRequest>;
@@ -7465,6 +7672,10 @@ export type EmailRuleWithVersion = {
      * grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional only for an older core-api: every answer carries it.
      */
     kind?: 'grant' | 'do_not_share';
+    /**
+     * On a do_not_share rule only: it protects nothing yet (not active), or a classifier fact narrows it.
+     */
+    protection_note?: string;
     /**
      * Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
      */
@@ -7600,12 +7811,20 @@ export type AcceptEmailRuleRequestRequest = {
      * Ignored (the compile answer's breadth).
      */
     breadth?: EmailRuleBreadth | null;
+    /**
+     * Made-up emails the rule must match or not, such as look-alikes it must never match, kept on the rule this accept writes.
+     */
+    expectation_samples?: Array<EmailRuleExpectationSampleInput>;
 };
 
 export type AcceptEmailRuleRequestResult = {
     request: EmailRuleRequest;
     rule: EmailRuleWithVersion;
     share: EmailRuleShare;
+    /**
+     * What is now shared, in words.
+     */
+    notice?: string;
 };
 
 export type ListEmailRuleSharesResult = Array<EmailRuleShare>;
@@ -8970,7 +9189,7 @@ export type CredentialsRevokeCredentialResult = {
         id: string;
     }>;
     /**
-     * true when the API key was already revoked, so nothing changed and revoked is 0. Absent otherwise. GET /v1/keys/{id} says when and by whom, to a caller who may read the key.
+     * true when the API key was already revoked. revoked then counts only the keys it replaced that were revoked now. Absent otherwise. GET /v1/keys/{id} says when and by whom, to a caller who may read the key.
      */
     already_revoked?: boolean;
     /**
@@ -8997,8 +9216,36 @@ export type CredentialsRevokeCredentialResult = {
          * true: the organization owns it, and it keeps working. false: the credential owns it itself, as with everything a third-party app or agent delegate made, a webhook made with a narrowed API key, or a wake schedule made with a key that does not cover super_admin. It keeps working only while someone can still act for it, such as a key of the same rotation that still works, or whoever it was given to or kept it. Revoking a third-party app or agent delegate turns these off, except that a block filter it made keeps blocking, within the reach the app had, unless the person revoking chose to stop it.
          */
         org_owned: boolean;
+        /**
+         * For an API key: whether anything still acts for it after this revoke (the organization, a key of the same rotation that still works, or whoever took it over). Null when that could not be read.
+         */
+        still_acting?: boolean | null;
+        /**
+         * For an API key: the key that still acts for it, shown to a caller who may read the organization's API keys. Null otherwise, and when no key does.
+         */
+        acting_key_id?: string | null;
+        /**
+         * For an API key's webhook: whether it is still sent received mail, as GET /v1/endpoints/{id} delivery.delivering says. Null when that could not be read.
+         */
+        delivering?: boolean | null;
         [key: string]: unknown;
     }>;
+    /**
+     * For an API key: how many keys it replaced in its rotation, still in their overlap, were revoked with it. Keys that replaced it never are.
+     */
+    predecessors_revoked_count?: number;
+    /**
+     * For an API key: how many such keys were left working because you may not revoke them. They work until their overlap ends.
+     */
+    predecessors_left?: number;
+    /**
+     * The ids of the keys counted in predecessors_revoked_count, to a caller who may read the organization's API keys.
+     */
+    predecessors_revoked?: Array<string>;
+    /**
+     * The ids of the keys counted in predecessors_left, to a caller who may read the organization's API keys.
+     */
+    predecessors_not_revoked?: Array<string>;
     [key: string]: unknown;
 };
 
@@ -12905,7 +13152,7 @@ export type PullWebhookEventErrors = {
      */
     429: ErrorResponse;
     /**
-     * Local receiving is unavailable
+     * Local receiving is unavailable (pull_unavailable), or the subscription was too busy to claim from in time (service_unavailable): nothing was claimed, so retry the pull after Retry-After
      */
     503: ErrorResponse;
 };
@@ -20257,7 +20504,7 @@ export type TestEmailRuleData = {
 
 export type TestEmailRuleErrors = {
     /**
-     * validation_error: give exactly one of tree and rule_id, at most 200 email_ids (with the expected emails), 1 to 100 expected emails none in both lists, and a tree that is valid for the column contract. evaluation_scope, scope_selection and kind go only with tree. A saved rule whose current version no longer renders answers details.reason version_not_renderable; email_ids that with its saved expectations name over 200 emails, too_many_emails.
+     * validation_error: give exactly one of tree and rule_id, at most 200 email_ids (with the expected emails), 1 to 100 expected emails none in both lists (or only expect.samples, up to 20), and a tree that is valid for the column contract. evaluation_scope, scope_selection and kind go only with tree. A saved rule whose current version no longer renders answers details.reason version_not_renderable; email_ids that with its saved expectations name over 200 emails, too_many_emails.
      */
     400: ErrorResponse;
     /**
@@ -20294,6 +20541,67 @@ export type TestEmailRuleResponses = {
 };
 
 export type TestEmailRuleResponse = TestEmailRuleResponses[keyof TestEmailRuleResponses];
+
+export type GenerateLookAlikesData = {
+    body: GenerateLookAlikesRequest;
+    headers?: {
+        /**
+         * Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.
+         */
+        'Idempotency-Key'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/email-rules/look-alikes';
+};
+
+export type GenerateLookAlikesErrors = {
+    /**
+     * validation_error: give exactly one of tree, rule_id and request_id, and a tree valid for the column contract; details.reason do_not_share for a do-not-share rule, no_address when no sign-in address was found and no to given, version_not_renderable for a saved version or a request's rule that no longer fits.
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. email_rule_scope_not_readable: scope_selection names something you cannot read.
+     */
+    403: ErrorResponse;
+    /**
+     * not_found: rule_id names no rule you can see (details.reason rule_not_found), or request_id no rule request you can see (request_not_found).
+     */
+    404: ErrorResponse;
+    /**
+     * email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree or a request, you). email_rule_request_not_pending: request_id names a request already decided.
+     */
+    409: ErrorResponse;
+    /**
+     * email_rule_look_alikes_not_written: the model declined, ran out of room or time, or wrote none that fit (details.reason refused, truncated, deadline or invalid).
+     */
+    422: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+    /**
+     * email_rule_compiler_unavailable: the model, or the classifier that decides each, is not available or could not be reached.
+     */
+    503: ErrorResponse;
+};
+
+export type GenerateLookAlikesError = GenerateLookAlikesErrors[keyof GenerateLookAlikesErrors];
+
+export type GenerateLookAlikesResponses = {
+    /**
+     * Write look-alike emails a rule should not match
+     */
+    200: SuccessEnvelope & {
+        data: GenerateLookAlikesResult;
+    };
+};
+
+export type GenerateLookAlikesResponse = GenerateLookAlikesResponses[keyof GenerateLookAlikesResponses];
 
 export type TestEmailRuleOnSampleData = {
     body: TestEmailRuleOnSampleRequest;
@@ -20561,7 +20869,7 @@ export type UpdateEmailRuleData = {
 
 export type UpdateEmailRuleErrors = {
     /**
-     * validation_error: invalid body or tree (details.errors), too large (too_large), a version that no longer renders (version_not_renderable), or restore_version names the current version (already_current). no_expectations: if_expectations_pass with no expectations to judge; nothing was saved.
+     * validation_error: invalid body or tree (details.errors), too large (too_large), a version that no longer renders (version_not_renderable), restore_version names the current version (already_current), or over 20 made-up emails (too_many_expectation_samples). no_expectations: if_expectations_pass with no expectations to judge; nothing was saved.
      */
     400: ErrorResponse;
     /**
@@ -20569,7 +20877,7 @@ export type UpdateEmailRuleErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. email_rule_author_only: only the rule's author may make this change. forbidden (rule_shared): the rule is shared, so only its author or a member manager can turn it off. email_rule_scope_not_readable: scope_selection names something you cannot read. grant_forbidden (mail_depth): if_expectations_pass needs content access to mail.
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. email_rule_author_only: only the rule's author may make this change. forbidden (rule_shared): the rule is shared, so only its author or a member manager can turn it off. email_rule_scope_not_readable: scope_selection names something you cannot read. grant_forbidden (mail_depth): if_expectations_pass needs content access to mail when it judges emails by id.
      */
     403: ErrorResponse;
     /**
@@ -21250,7 +21558,7 @@ export type AcceptEmailRuleRequestData = {
 
 export type AcceptEmailRuleRequestErrors = {
     /**
-     * validation_error: a changed rule needs english and tree together, and a tree that is valid for the column contract. The rule as asked is checked the same way, and must be changed first if it no longer passes.
+     * validation_error: a changed rule needs english and tree together, and a tree that is valid for the column contract. The rule as asked is checked the same way, and must be changed first if it no longer passes. Made-up emails in expectation_samples are checked as on a rule write (at most 20, each within the sample bounds). Nothing is accepted.
      */
     400: ErrorResponse;
     /**

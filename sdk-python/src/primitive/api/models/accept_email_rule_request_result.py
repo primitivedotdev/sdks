@@ -30,11 +30,13 @@ class AcceptEmailRuleRequestResult:
             request (EmailRuleRequest):
             rule (EmailRuleWithVersion):
             share (EmailRuleShare):
+            notice (str | Unset): What is now shared, in words.
      """
 
     request: EmailRuleRequest
     rule: EmailRuleWithVersion
     share: EmailRuleShare
+    notice: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -51,6 +53,8 @@ class AcceptEmailRuleRequestResult:
 
         share = self.share.to_dict()
 
+        notice = self.notice
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -59,6 +63,8 @@ class AcceptEmailRuleRequestResult:
             "rule": rule,
             "share": share,
         })
+        if notice is not UNSET:
+            field_dict["notice"] = notice
 
         return field_dict
 
@@ -85,10 +91,13 @@ class AcceptEmailRuleRequestResult:
 
 
 
+        notice = d.pop("notice", UNSET)
+
         accept_email_rule_request_result = cls(
             request=request,
             rule=rule,
             share=share,
+            notice=notice,
         )
 
 

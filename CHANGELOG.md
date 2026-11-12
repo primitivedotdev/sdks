@@ -543,7 +543,7 @@ date-time is kept as null and sorts last. A sync stops with an error after
   `listEmailRules`, `createEmailRule`, `getEmailRule`, `updateEmailRule`,
   `deleteEmailRule`, `listEmailRuleDecisions`, `listEmailRuleVersions`,
   `getEmailRuleScope`, `listEmailRuleScopeOptions`, `listEmailRuleResults`,
-  `getEmailRuleVocabulary`.
+  `getEmailRuleVocabulary`, `generateLookAlikes`.
   A rule's `evaluation_scope` chooses whose mail it runs over (`author`,
   `own_mailboxes`, or `selected` with `scope_selection` naming addresses and
   domains), never more than its author can read. A rule's `kind` is `grant`
@@ -695,6 +695,54 @@ date-time is kept as null and sorts last. A sync stops with an error after
     `expectations_check.note` when the saved version did not pass.
   - An `email_rule_conflict` can also have `details.reason`
     `expectations_moved` or `rule_changed`.
+  - A rule can keep made-up emails as expectations, at most 20:
+    `createEmailRule` takes `expectation_samples`
+    (`EmailRuleExpectationSampleInput`: `expected` `match` or `no_match`,
+    an optional `label`, and an `email` as `EmailRuleSavedSampleEmail`).
+    `updateEmailRule` takes `expectation_samples`, which replaces them (null
+    or `[]` removes them), or `add_expectation_samples`, which adds to them,
+    not both; more than 20 is refused with `400` and
+    `too_many_expectation_samples`. `getEmailRule`, and a write that set or
+    added some, carry `expectation_samples` (`EmailRuleExpectationSample`,
+    with `id` and `created_at`).
+  - `testEmailRule`'s `expect` takes `samples`, up to 20 made-up emails, with
+    emails by id or alone. Its `expectations` carry `samples`
+    (`EmailRuleSampleJudgment`: `index` from 0, `sample_id`, `label`,
+    `expected`, `outcome`, `status` and `question_answers`) for those sent,
+    or for a saved rule's own, and its counts include them.
+  - A write's `expectations_check` carries `failed_samples` and
+    `undecided_samples`, the made-up emails by index from 0. A saved write
+    lists its rule's made-up emails as undecided without judging them;
+    `updateEmailRule` with `if_expectations_pass` judges them before saving,
+    along with its emails by id.
+  - `generateLookAlikes` (`POST /email-rules/look-alikes`) writes made-up
+    emails that come close to what a grant rule (an unsaved `tree`, with
+    its `english`, `evaluation_scope`, `scope_selection` and `kind`, a
+    saved `rule_id`, or a pending rule request's `request_id`) describes
+    but that it should not match, and answers what the rule decides for
+    each: `rule`, `look_alikes` (`EmailRuleLookAlike`: `kind`, `why`,
+    `email`, `outcome`, `status`, `question_answers`), `counts` and `note`.
+    Nothing is stored. It takes `count` (1 to 8, 6 by default), `kinds` and
+    `to`. A do-not-share rule is refused with `400` and `details.reason`
+    `do_not_share`; a request you cannot see is `404` (`request_not_found`)
+    and one already decided `409` `email_rule_request_not_pending`; none
+    written is `422` `email_rule_look_alikes_not_written`, and an
+    unavailable writer `503` `email_rule_compiler_unavailable`. It is
+    limited to 20 calls an hour per member.
+  - `createEmailRule` takes `state` `active` for a `do_not_share` rule,
+    whose `expectations_check` then carries a `note`. A do-not-share rule's
+    answers carry `protection_note`: that it protects nothing yet, or that a
+    classifier fact narrows it.
+  - `compileEmailRule`'s `warnings` also note a rule reading
+    `sender_relationship`, a sender address the description does not give,
+    and a grant worded as a prohibition.
+  - A rule may ask up to five yes/no questions, no longer three.
+  - A rule request (`EmailRuleRequest`, and the `createEmailRuleRequest`
+    answer) carries `notice`, what accepting would share or that the
+    request is not what is shared, and `edited_on_accept`.
+    `acceptEmailRuleRequest` answers with `notice`, what is now shared,
+    and takes `expectation_samples`, made-up emails kept on the rule it
+    writes.
   - `testEmailRule` takes `expect` and answers with `expectations`,
     `scope_warnings` and `summary`. Its results carry `values` and
     `question_answers_source`, and `testEmailRuleOnSample` answers with
@@ -764,8 +812,9 @@ date-time is kept as null and sorts last. A sync stops with an error after
     key with `resources` drops them only on purpose, with a custom grant and
     `grant.resources: {}`; one that leaves them out is refused with `409` and
     `details.reason` `key_has_resource_limits`.
-  - `revokeCredential` answers `already_revoked: true`, with `revoked` 0,
-    for an API key that was already revoked.
+  - `revokeCredential` answers `already_revoked: true` for an API key that
+    was already revoked; `revoked` then counts only the keys it replaced
+    that this call revoked.
   - `listKeys` items and `getKey` carry `rotated_from` and `rotated_to`: the
     key this one was rotated from, and the newest key rotated from it, among
     those the caller may read.
@@ -776,6 +825,20 @@ date-time is kept as null and sorts last. A sync stops with an error after
     someone can still act for it, such as a key of the same rotation that
     still works. It also declares `keep_failed`, the items chosen to keep that
     could not be taken over.
+  - For an API key, each of `revokeCredential`'s `standing_objects`
+    carries `still_acting` (whether anything still acts for it) and, for a
+    webhook, `delivering`, each null when it could not be read, and
+    `acting_key_id`, the key that still acts for it, to a caller who may
+    read the organization's API keys. Revoking an API key also revokes the
+    keys it replaced in its rotation that are still in their overlap and
+    that you may revoke, and revoking a key already revoked does the same:
+    the answer carries `predecessors_revoked_count` and
+    `predecessors_revoked`, and `predecessors_left` and
+    `predecessors_not_revoked` for the ones left working until their overlap
+    ends.
+  - The person who holds an API key may suspend it with `updateKey`, and
+    revoke it with `revokeCredential` or in `decideSuspension`, whatever it
+    reaches, as themself rather than through another app.
 - `getDelivery` carries `attempts`; it and `listDeliveries` carry
   `latest_attempt`, `next_attempt_at`, `response_status` and
   `response_body`.
@@ -784,6 +847,10 @@ date-time is kept as null and sorts last. A sync stops with an error after
   carries.
 - `decideSuspension` declares `502` and `503`; in Go they are typed
   responses.
+- New error code: `sending_ip_warmup_cap`.
+- `pullWebhookEvent`'s `503` is also `service_unavailable` when the
+  subscription was too busy to claim from in time: nothing was claimed, so
+  retry after `Retry-After`.
 - Email rules:
   - `testEmailRule` can answer an email `skipped`, with `skipped_reason`
     (`unparsed`, `rejected` or `content_discarded`), and its `counts`

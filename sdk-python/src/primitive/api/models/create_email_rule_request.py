@@ -16,6 +16,7 @@ from typing import cast
 if TYPE_CHECKING:
   from ..models.create_email_rule_request_expectations import CreateEmailRuleRequestExpectations
   from ..models.email_rule_breadth import EmailRuleBreadth
+  from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput
   from ..models.email_rule_scope_selection import EmailRuleScopeSelection
   from ..models.email_rule_tree_input import EmailRuleTreeInput
 
@@ -38,7 +39,7 @@ class CreateEmailRuleRequest:
                 do_not_share: the rule runs before every other rule, and while it is active no rule shares an email it matches;
                 an email it cannot decide counts as matched. Set when the rule is created; it never changes.
             state (CreateEmailRuleRequestState | Unset): observe (the default) records what the rule would match and grants
-                or blocks nothing; draft is not evaluated.
+                or blocks nothing; draft is not evaluated; active only for a do_not_share rule.
             evaluation_scope (CreateEmailRuleRequestEvaluationScope | Unset): own_mailboxes (the default): mail to your own
                 addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read,
                 inboxes added later included. selected: what scope_selection names.
@@ -46,6 +47,8 @@ class CreateEmailRuleRequest:
                 them the author reads); each one you can read.
             expectations (CreateEmailRuleRequestExpectations | Unset): Emails it must match and must not (at most 100): a
                 test by rule_id judges them unless expect is given, and each version it saves is checked against them.
+            expectation_samples (list[EmailRuleExpectationSampleInput] | Unset): Made-up emails it must match or not (at
+                most 20).
             explanation (str | Unset): What the rule matches, in plain English. Left out, the server writes one from the
                 tree.
             assumptions (list[str] | Unset): Readings chosen where the description was open to more than one, as the compile
@@ -66,6 +69,7 @@ class CreateEmailRuleRequest:
     evaluation_scope: CreateEmailRuleRequestEvaluationScope | Unset = UNSET
     scope_selection: EmailRuleScopeSelection | Unset = UNSET
     expectations: CreateEmailRuleRequestExpectations | Unset = UNSET
+    expectation_samples: list[EmailRuleExpectationSampleInput] | Unset = UNSET
     explanation: str | Unset = UNSET
     assumptions: list[str] | Unset = UNSET
     warnings: list[str] | Unset = UNSET
@@ -79,6 +83,7 @@ class CreateEmailRuleRequest:
     def to_dict(self) -> dict[str, Any]:
         from ..models.create_email_rule_request_expectations import CreateEmailRuleRequestExpectations # noqa: PLC0415
         from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
+        from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput # noqa: PLC0415
         from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         name = self.name
@@ -109,6 +114,15 @@ class CreateEmailRuleRequest:
         expectations: dict[str, Any] | Unset = UNSET
         if not isinstance(self.expectations, Unset):
             expectations = self.expectations.to_dict()
+
+        expectation_samples: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.expectation_samples, Unset):
+            expectation_samples = []
+            for expectation_samples_item_data in self.expectation_samples:
+                expectation_samples_item = expectation_samples_item_data.to_dict()
+                expectation_samples.append(expectation_samples_item)
+
+
 
         explanation = self.explanation
 
@@ -152,6 +166,8 @@ class CreateEmailRuleRequest:
             field_dict["scope_selection"] = scope_selection
         if expectations is not UNSET:
             field_dict["expectations"] = expectations
+        if expectation_samples is not UNSET:
+            field_dict["expectation_samples"] = expectation_samples
         if explanation is not UNSET:
             field_dict["explanation"] = explanation
         if assumptions is not UNSET:
@@ -171,6 +187,7 @@ class CreateEmailRuleRequest:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.create_email_rule_request_expectations import CreateEmailRuleRequestExpectations # noqa: PLC0415
         from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
+        from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput # noqa: PLC0415
         from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         d = dict(src_dict)
@@ -233,6 +250,18 @@ class CreateEmailRuleRequest:
 
 
 
+        _expectation_samples = d.pop("expectation_samples", UNSET)
+        expectation_samples: list[EmailRuleExpectationSampleInput] | Unset = UNSET
+        if _expectation_samples is not UNSET:
+            expectation_samples = []
+            for expectation_samples_item_data in _expectation_samples:
+                expectation_samples_item = EmailRuleExpectationSampleInput.from_dict(expectation_samples_item_data)
+
+
+
+                expectation_samples.append(expectation_samples_item)
+
+
         explanation = d.pop("explanation", UNSET)
 
         assumptions = cast(list[str], d.pop("assumptions", UNSET))
@@ -272,6 +301,7 @@ class CreateEmailRuleRequest:
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,
             expectations=expectations,
+            expectation_samples=expectation_samples,
             explanation=explanation,
             assumptions=assumptions,
             warnings=warnings,
