@@ -450,7 +450,7 @@ export function lookAlikesReport(
   const save = ruleId
     ? `\`primitive email-rules update-email-rule ${ruleId} --${ADD_SAMPLES_FILE_FLAG} ${target}${pick}\``
     : requestId
-      ? `\`primitive email-rules accept-email-rule-request ${requestId} --${SAMPLES_FILE_FLAG} ${target}${pick}\` when the member asked accepts it`
+      ? `\`primitive email-rules accept-email-rule-request ${requestId} --${SAMPLES_FILE_FLAG} ${target}${pick}\` when the member the request asks accepts it`
       : `\`primitive email-rules create-email-rule ... --${SAMPLES_FILE_FLAG} ${target}${pick}\` when you save the rule`;
   const one = (count: number, single: string, many: string) =>
     count === 1 ? single : many;

@@ -394,8 +394,14 @@ describe("lookAlikesReport", () => {
       flags: {},
     });
     expect(report.lines.at(-1)).toBe(
-      `Keep the ones it matched as emails it must not match: save the JSON printed above to a file and give it to \`primitive email-rules accept-email-rule-request ${REQUEST} --expectation-samples-file <file> --pick 1,3\` when the member asked accepts it; --pick takes any of the numbers above. Test an edited rule on them with \`primitive email-rules test-email-rule --body-file <body.json> --expect-samples-file <file> --pick 1,3\`.`,
+      `Keep the ones it matched as emails it must not match: save the JSON printed above to a file and give it to \`primitive email-rules accept-email-rule-request ${REQUEST} --expectation-samples-file <file> --pick 1,3\` when the member the request asks accepts it; --pick takes any of the numbers above. Test an edited rule on them with \`primitive email-rules test-email-rule --body-file <body.json> --expect-samples-file <file> --pick 1,3\`.`,
     );
+    // None came back: nothing to keep, so no sentence about it.
+    const none = lookAlikesReport(answer([], 6), {
+      body: { request_id: REQUEST },
+      flags: {},
+    });
+    expect(none.lines.join(" ")).not.toContain("accepts request");
   });
 
   it("suggests keeping them all when every one passed", () => {

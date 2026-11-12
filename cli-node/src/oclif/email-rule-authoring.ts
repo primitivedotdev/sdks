@@ -1284,10 +1284,16 @@ export function updateEmailRuleErrorHint(
     const reason = String(details.reason);
     // A reason the answer gives says what to do; with none, a made-up email
     // may stay undecided.
-    const samplesMayStay =
-      undecidedSamples.length > 0 &&
-      (reason === "none" || !Object.hasOwn(UNDECIDED_NEXT_STEP, reason));
-    const byReason = UNDECIDED_NEXT_STEP[reason] ?? UNDECIDED_NEXT_STEP.none;
+    // The same reading as updateEmailRuleErrorExitCode's, so the hint and
+    // the exit code never disagree.
+    const samplesMayStay = undecidedSamplesMayStay(
+      undecidedSamples.length,
+      reason,
+    );
+    const byReason =
+      reason !== "none" && Object.hasOwn(UNDECIDED_NEXT_STEP, reason)
+        ? (UNDECIDED_NEXT_STEP[reason] as string)
+        : UNDECIDED_NEXT_STEP.none;
     const next =
       code === "expectations_failed"
         ? ""
@@ -1327,11 +1333,10 @@ function refusedSampleTest(body: unknown, ruleId: string): string {
   if (isRecord(body) && isRecord(body.tree))
     return `To see why, test the tree this write sent on each with ${onSample}.`;
   if (isRecord(body) && typeof body.restore_version === "number")
-    return `To see why, test version ${body.restore_version}'s tree (\`primitive email-rules list-email-rule-versions ${ruleId}\`) on each with ${onSample}.`;
-  const sent =
-    isRecord(body) &&
-    (Array.isArray(body.expectation_samples) ||
-      Array.isArray(body.add_expectation_samples));
+    return `To see why, test version ${body.restore_version}'s tree (\`primitive email-rules list-email-rule-versions ${ruleId} --versions ${body.restore_version}\`) on each with ${onSample}.`;
+  // Only samples sent in place of the rule's leave none of its saved ones
+  // to look up.
+  const sent = isRecord(body) && Array.isArray(body.expectation_samples);
   return `To see why, test rule ${ruleId} on each with ${onSample}${sent ? "" : ` (\`primitive email-rules get-email-rule ${ruleId}\` lists its saved ones)`}.`;
 }
 
@@ -1362,10 +1367,25 @@ export function updateEmailRuleErrorExitCode(
   const check = isRecord(details.expectations_check)
     ? details.expectations_check
     : {};
-  return indexList(check.undecided_samples).length > 0 &&
-    !RETRYABLE_REASONS.has(String(details.reason))
+  return undecidedSamplesMayStay(
+    indexList(check.undecided_samples).length,
+    String(details.reason),
+  )
     ? EXIT_EXPECTATION_FAILED
     : EXIT_EXPECTATION_UNDECIDED;
+}
+
+/**
+ * Whether a guard's undecided made-up emails may stay undecided: some are,
+ * and the answer gives no reason that sending the write again can change
+ * (author_unresolvable has its own advice and exit code).
+ */
+function undecidedSamplesMayStay(count: number, reason: string): boolean {
+  return (
+    count > 0 &&
+    !RETRYABLE_REASONS.has(reason) &&
+    reason !== "author_unresolvable"
+  );
 }
 
 // compile-email-rule
