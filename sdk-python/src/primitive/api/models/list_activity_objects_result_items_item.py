@@ -29,24 +29,25 @@ class ListActivityObjectsResultItemsItem:
         Attributes:
             kind (str): One of: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule,
                 wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request,
-                email_rule_objection.
+                email_rule_objection, email_rule_coverage.
             id (str):
             name (None | str): The name the object is known by: an endpoint's display name, a route's or filter's pattern, a
                 Function's name, a send's From address, a wake schedule's command and the address it wakes, an API key's name,
-                an agent's address, a rule's or rule request's name, and for an objection the name its rule had when the
-                objection was made. Never a webhook URL and never mail content.
+                an agent's address, a rule's or rule request's name, and for an objection or a coverage notice the name its rule
+                had then. Never a webhook URL and never mail content.
             state (str): Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or
                 disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating
                 sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed,
                 connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn
-                (rule requests and objections).
+                (rule requests and objections), and for a coverage notice what it told: started (a rule began covering your
+                mailbox), new_version, or baseline (it already covered you when notices began).
             created_at (datetime.datetime):
             ended_at (datetime.datetime | None): When it was deleted, replaced or revoked, when an API key expired, when a
                 repeating send stopped, or when a rule request or objection was decided (accepted, declined or withdrawn); null
                 otherwise.
             owned_now (ListActivityObjectsResultItemsItemOwnedNow): you: it is still yours: never transferred, or
                 transferred back to you. someone_else: it was transferred and another person holds it now, or, with
-                relation=asked, another member made it.
+                relation=asked or concerning, another member made it.
             created_through (ListActivityObjectsResultItemsItemCreatedThrough):
      """
 

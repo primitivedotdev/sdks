@@ -509,6 +509,16 @@ from .email_rule_read_evaluation_scope import EmailRuleReadEvaluationScope
 from .email_rule_read_expectations import EmailRuleReadExpectations
 from .email_rule_read_kind import EmailRuleReadKind
 from .email_rule_read_state import EmailRuleReadState
+from .email_rule_receivers import EmailRuleReceivers
+from .email_rule_receivers_keys_item import EmailRuleReceiversKeysItem
+from .email_rule_receivers_keys_item_owner import EmailRuleReceiversKeysItemOwner
+from .email_rule_receivers_keys_item_owner_kind import EmailRuleReceiversKeysItemOwnerKind
+from .email_rule_receivers_shares_item import EmailRuleReceiversSharesItem
+from .email_rule_receivers_shares_item_beneficiary import EmailRuleReceiversSharesItemBeneficiary
+from .email_rule_receivers_shares_item_beneficiary_kind import EmailRuleReceiversSharesItemBeneficiaryKind
+from .email_rule_receivers_webhooks_item import EmailRuleReceiversWebhooksItem
+from .email_rule_receivers_webhooks_item_owner import EmailRuleReceiversWebhooksItemOwner
+from .email_rule_receivers_webhooks_item_owner_kind import EmailRuleReceiversWebhooksItemOwnerKind
 from .email_rule_request import EmailRuleRequest
 from .email_rule_request_proposed_via import EmailRuleRequestProposedVia
 from .email_rule_request_proposer import EmailRuleRequestProposer
@@ -2329,6 +2339,16 @@ __all__ = (
     "EmailRuleReadExpectations",
     "EmailRuleReadKind",
     "EmailRuleReadState",
+    "EmailRuleReceivers",
+    "EmailRuleReceiversKeysItem",
+    "EmailRuleReceiversKeysItemOwner",
+    "EmailRuleReceiversKeysItemOwnerKind",
+    "EmailRuleReceiversSharesItem",
+    "EmailRuleReceiversSharesItemBeneficiary",
+    "EmailRuleReceiversSharesItemBeneficiaryKind",
+    "EmailRuleReceiversWebhooksItem",
+    "EmailRuleReceiversWebhooksItemOwner",
+    "EmailRuleReceiversWebhooksItemOwnerKind",
     "EmailRuleRequest",
     "EmailRuleRequestProposedVia",
     "EmailRuleRequestProposer",

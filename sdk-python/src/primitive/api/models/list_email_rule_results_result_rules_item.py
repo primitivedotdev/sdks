@@ -18,6 +18,7 @@ from uuid import UUID
 
 if TYPE_CHECKING:
   from ..models.email_rule_covering_author import EmailRuleCoveringAuthor
+  from ..models.email_rule_receivers import EmailRuleReceivers
   from ..models.list_email_rule_results_result_rules_item_decision_type_0 import ListEmailRuleResultsResultRulesItemDecisionType0
 
 
@@ -50,6 +51,8 @@ class ListEmailRuleResultsResultRulesItem:
             read_only (bool | Unset): Another member's rule that decided on your own mail; dashboard and CLI only. name is
                 null unless known to cover you.
             author (EmailRuleCoveringAuthor | Unset):
+            receivers (EmailRuleReceivers | None | Unset): With read_only: who receives what it shares; null unless it
+                covers you now.
      """
 
     id: UUID
@@ -61,6 +64,7 @@ class ListEmailRuleResultsResultRulesItem:
     author_left: bool | Unset = UNSET
     read_only: bool | Unset = UNSET
     author: EmailRuleCoveringAuthor | Unset = UNSET
+    receivers: EmailRuleReceivers | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -69,6 +73,7 @@ class ListEmailRuleResultsResultRulesItem:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_rule_covering_author import EmailRuleCoveringAuthor # noqa: PLC0415
+        from ..models.email_rule_receivers import EmailRuleReceivers # noqa: PLC0415
         from ..models.list_email_rule_results_result_rules_item_decision_type_0 import ListEmailRuleResultsResultRulesItemDecisionType0 # noqa: PLC0415
         id = str(self.id)
 
@@ -106,6 +111,14 @@ class ListEmailRuleResultsResultRulesItem:
         if not isinstance(self.author, Unset):
             author = self.author.to_dict()
 
+        receivers: dict[str, Any] | None | Unset
+        if isinstance(self.receivers, Unset):
+            receivers = UNSET
+        elif isinstance(self.receivers, EmailRuleReceivers):
+            receivers = self.receivers.to_dict()
+        else:
+            receivers = self.receivers
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -124,6 +137,8 @@ class ListEmailRuleResultsResultRulesItem:
             field_dict["read_only"] = read_only
         if author is not UNSET:
             field_dict["author"] = author
+        if receivers is not UNSET:
+            field_dict["receivers"] = receivers
 
         return field_dict
 
@@ -132,6 +147,7 @@ class ListEmailRuleResultsResultRulesItem:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_rule_covering_author import EmailRuleCoveringAuthor # noqa: PLC0415
+        from ..models.email_rule_receivers import EmailRuleReceivers # noqa: PLC0415
         from ..models.list_email_rule_results_result_rules_item_decision_type_0 import ListEmailRuleResultsResultRulesItemDecisionType0 # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
@@ -232,6 +248,26 @@ class ListEmailRuleResultsResultRulesItem:
 
 
 
+        def _parse_receivers(data: object) -> EmailRuleReceivers | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                receivers_type_1 = EmailRuleReceivers.from_dict(data)
+
+
+
+                return receivers_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailRuleReceivers | None | Unset, data)
+
+        receivers = _parse_receivers(d.pop("receivers", UNSET))
+
+
         list_email_rule_results_result_rules_item = cls(
             id=id,
             name=name,
@@ -242,6 +278,7 @@ class ListEmailRuleResultsResultRulesItem:
             author_left=author_left,
             read_only=read_only,
             author=author,
+            receivers=receivers,
         )
 
 

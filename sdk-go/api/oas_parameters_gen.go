@@ -15528,13 +15528,15 @@ func decodeLeaveOrganizationParams(args [0]string, argsEscaped bool, r *http.Req
 
 // ListActivityObjectsParams is parameters of listActivityObjects operation.
 type ListActivityObjectsParams struct {
-	// Created (the default) or asked.
+	// Created (the default), asked or concerning.
 	Relation OptListActivityObjectsRelation `json:",omitempty,omitzero"`
 	// Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription,
 	// recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key,
-	// agent_connection, email_rule, email_rule_request, email_rule_objection. Defaults to every kind the
-	// caller can have created (a person's own kinds only for a person). With relation=asked, only
-	// email_rule_request and email_rule_objection, which are also the default.
+	// agent_connection, email_rule, email_rule_request, email_rule_objection, email_rule_coverage.
+	// Defaults to every kind the caller can have created (a person's own kinds only for a person). With
+	// relation=asked, only email_rule_request and email_rule_objection, which are also the default; with
+	// relation=concerning, only email_rule_coverage, the default. email_rule_coverage is listed only
+	// with relation=concerning.
 	Kind OptString `json:",omitempty,omitzero"`
 	// All (the default), live (still there, enabled or not) or ended (deleted, replaced or finished).
 	State OptListActivityObjectsState `json:",omitempty,omitzero"`

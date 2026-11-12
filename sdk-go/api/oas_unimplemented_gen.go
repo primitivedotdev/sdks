@@ -1641,11 +1641,13 @@ func (UnimplementedHandler) GetEmailRule(ctx context.Context, params GetEmailRul
 // no longer does but decided on mail at your own mailbox (covers_now false), shown as the version
 // that last decided on your mail, without its current name. You see its name, wording, current tree,
 // state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown
-// as written, so they can name other addresses (a condition on who an email is from or to). You do
-// not see the other inboxes and domains its scope names, its saved expectations, or the keys, shares
-// and webhooks that use it. Needs mail:read, a member's own credential with their full access (not
-// an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard
-// session or the Primitive CLI.
+// as written, so they can name other addresses (a condition on who an email is from or to). While it
+// covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and
+// shares, and the member each belongs to, or the organization. You do not see which keys, webhooks
+// or shares they are (no ids, names, prefixes or URLs), the other inboxes and domains its scope
+// names, or its saved expectations. Needs mail:read, a member's own credential with their full
+// access (not an API key, agent key or narrowed token), and the email rules feature. Only on your
+// own dashboard session or the Primitive CLI.
 //
 // GET /email-rules/covering-me/{id}
 func (UnimplementedHandler) GetEmailRuleCoveringMe(ctx context.Context, params GetEmailRuleCoveringMeParams) (r GetEmailRuleCoveringMeRes, _ error) {
@@ -2369,7 +2371,12 @@ func (UnimplementedHandler) LeaveOrganization(ctx context.Context, params LeaveO
 // relation=asked it lists instead what other members asked of the person, open or answered: the rule
 // requests made to them, and the objections to rules they wrote, under their current membership,
 // each naming the member who asked or objected in created_through. A key, an app or an agent has
-// none, and gets both kinds in withheld.
+// none, and gets both kinds in withheld. With relation=concerning it lists instead what other
+// members did that concerns the person's own mail: each time a rule started covering one of their
+// mailboxes or saved a new version while covering it, named as the rule was then, naming its author
+// in created_through, under their current membership; only on the dashboard or the Primitive CLI. A
+// key, an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads
+// as ended.
 //
 // GET /activity/objects
 func (UnimplementedHandler) ListActivityObjects(ctx context.Context, params ListActivityObjectsParams) (r ListActivityObjectsRes, _ error) {
@@ -2704,9 +2711,9 @@ func (UnimplementedHandler) ListEmailRuleRequests(ctx context.Context, params Li
 // earlier shares stay. Only a caller who can read the email gets an answer. classification is every
 // fact the classifier read, as rule conditions read it. At most 50 rules are listed, results first;
 // not_listed counts the rest. Another member's rule that decided on your own mail is listed
-// read_only (dashboard and CLI only); hidden counts deciding rules you cannot see. Needs mail:read,
-// a member's own credential with their full access (not an API key, agent key or narrowed token),
-// and the email rules feature.
+// read_only (dashboard and CLI only), with who receives what it shares (receivers) while it covers
+// you; hidden counts deciding rules you cannot see. Needs mail:read, a member's own credential with
+// their full access (not an API key, agent key or narrowed token), and the email rules feature.
 //
 // GET /emails/{id}/rule-results
 func (UnimplementedHandler) ListEmailRuleResults(ctx context.Context, params ListEmailRuleResultsParams) (r ListEmailRuleResultsRes, _ error) {
@@ -2795,10 +2802,12 @@ func (UnimplementedHandler) ListEmailRules(ctx context.Context, params ListEmail
 // one that names your mailbox or its domain (selected). Another member's own_mailboxes rule never
 // covers you. You see its name, wording, current tree, state, kind and author, and which of your own
 // mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses
-// (a condition on who an email is from or to). You do not see the other inboxes and domains its
-// scope names, its saved expectations, or the keys, shares and webhooks that use it. A page can hold
-// fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of
-// rules): keep reading until meta.cursor is null. Needs mail:read, a member's own credential with
+// (a condition on who an email is from or to). While it covers you, you also see who receives what
+// it matches (receivers): how many API keys, webhooks and shares, and the member each belongs to, or
+// the organization. You do not see which keys, webhooks or shares they are (no ids, names, prefixes
+// or URLs), the other inboxes and domains its scope names, or its saved expectations. A page can
+// hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number
+// of rules): keep reading until meta.cursor is null. Needs mail:read, a member's own credential with
 // their full access (not an API key, agent key or narrowed token), and the email rules feature. Only
 // on your own dashboard session or the Primitive CLI.
 //

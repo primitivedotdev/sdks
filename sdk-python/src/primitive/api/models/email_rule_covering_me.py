@@ -17,6 +17,7 @@ import datetime
 if TYPE_CHECKING:
   from ..models.email_rule_coverage import EmailRuleCoverage
   from ..models.email_rule_covering_author import EmailRuleCoveringAuthor
+  from ..models.email_rule_receivers import EmailRuleReceivers
 
 
 
@@ -40,6 +41,7 @@ class EmailRuleCoveringMe:
             is_author (bool): Whether you wrote it.
             covers (EmailRuleCoverage):
             current_version (int | None):
+            receivers (EmailRuleReceivers | None): Null when it could not be read in time; try again.
             created_at (datetime.datetime):
      """
 
@@ -51,6 +53,7 @@ class EmailRuleCoveringMe:
     is_author: bool
     covers: EmailRuleCoverage
     current_version: int | None
+    receivers: EmailRuleReceivers | None
     created_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -61,6 +64,7 @@ class EmailRuleCoveringMe:
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_rule_coverage import EmailRuleCoverage # noqa: PLC0415
         from ..models.email_rule_covering_author import EmailRuleCoveringAuthor # noqa: PLC0415
+        from ..models.email_rule_receivers import EmailRuleReceivers # noqa: PLC0415
         id = str(self.id)
 
         name = self.name
@@ -78,6 +82,12 @@ class EmailRuleCoveringMe:
         current_version: int | None
         current_version = self.current_version
 
+        receivers: dict[str, Any] | None
+        if isinstance(self.receivers, EmailRuleReceivers):
+            receivers = self.receivers.to_dict()
+        else:
+            receivers = self.receivers
+
         created_at = self.created_at.isoformat()
 
 
@@ -92,6 +102,7 @@ class EmailRuleCoveringMe:
             "is_author": is_author,
             "covers": covers,
             "current_version": current_version,
+            "receivers": receivers,
             "created_at": created_at,
         })
 
@@ -103,6 +114,7 @@ class EmailRuleCoveringMe:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_rule_coverage import EmailRuleCoverage # noqa: PLC0415
         from ..models.email_rule_covering_author import EmailRuleCoveringAuthor # noqa: PLC0415
+        from ..models.email_rule_receivers import EmailRuleReceivers # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -141,6 +153,24 @@ class EmailRuleCoveringMe:
         current_version = _parse_current_version(d.pop("current_version"))
 
 
+        def _parse_receivers(data: object) -> EmailRuleReceivers | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                receivers_type_1 = EmailRuleReceivers.from_dict(data)
+
+
+
+                return receivers_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailRuleReceivers | None, data)
+
+        receivers = _parse_receivers(d.pop("receivers"))
+
+
         created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
 
 
@@ -155,6 +185,7 @@ class EmailRuleCoveringMe:
             is_author=is_author,
             covers=covers,
             current_version=current_version,
+            receivers=receivers,
             created_at=created_at,
         )
 

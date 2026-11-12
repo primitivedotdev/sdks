@@ -99,9 +99,9 @@ def sync_detailed(
     shares stay. Only a caller who can read the email gets an answer. classification is every fact the
     classifier read, as rule conditions read it. At most 50 rules are listed, results first; not_listed
     counts the rest. Another member's rule that decided on your own mail is listed read_only (dashboard
-    and CLI only); hidden counts deciding rules you cannot see. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature.
+    and CLI only), with who receives what it shares (receivers) while it covers you; hidden counts
+    deciding rules you cannot see. Needs mail:read, a member's own credential with their full access
+    (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -139,9 +139,9 @@ def sync(
     shares stay. Only a caller who can read the email gets an answer. classification is every fact the
     classifier read, as rule conditions read it. At most 50 rules are listed, results first; not_listed
     counts the rest. Another member's rule that decided on your own mail is listed read_only (dashboard
-    and CLI only); hidden counts deciding rules you cannot see. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature.
+    and CLI only), with who receives what it shares (receivers) while it covers you; hidden counts
+    deciding rules you cannot see. Needs mail:read, a member's own credential with their full access
+    (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -174,9 +174,9 @@ async def asyncio_detailed(
     shares stay. Only a caller who can read the email gets an answer. classification is every fact the
     classifier read, as rule conditions read it. At most 50 rules are listed, results first; not_listed
     counts the rest. Another member's rule that decided on your own mail is listed read_only (dashboard
-    and CLI only); hidden counts deciding rules you cannot see. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature.
+    and CLI only), with who receives what it shares (receivers) while it covers you; hidden counts
+    deciding rules you cannot see. Needs mail:read, a member's own credential with their full access
+    (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):
@@ -214,9 +214,9 @@ async def asyncio(
     shares stay. Only a caller who can read the email gets an answer. classification is every fact the
     classifier read, as rule conditions read it. At most 50 rules are listed, results first; not_listed
     counts the rest. Another member's rule that decided on your own mail is listed read_only (dashboard
-    and CLI only); hidden counts deciding rules you cannot see. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature.
+    and CLI only), with who receives what it shares (receivers) while it covers you; hidden counts
+    deciding rules you cannot see. Needs mail:read, a member's own credential with their full access
+    (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         id (UUID):

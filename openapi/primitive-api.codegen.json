@@ -34317,7 +34317,7 @@
       "get": {
         "operationId": "listActivityObjects",
         "summary": "List what you created, or what you were asked",
-        "description": "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules, rule requests and objections to rules over their mail (objections only on the dashboard or the Primitive CLI). Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked it lists instead what other members asked of the person, open or answered: the rule requests made to them, and the objections to rules they wrote, under their current membership, each naming the member who asked or objected in created_through. A key, an app or an agent has none, and gets both kinds in withheld.",
+        "description": "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules, rule requests and objections to rules over their mail (objections only on the dashboard or the Primitive CLI). Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked it lists instead what other members asked of the person, open or answered: the rule requests made to them, and the objections to rules they wrote, under their current membership, each naming the member who asked or objected in created_through. A key, an app or an agent has none, and gets both kinds in withheld. With relation=concerning it lists instead what other members did that concerns the person's own mail: each time a rule started covering one of their mailboxes or saved a new version while covering it, named as the rule was then, naming its author in created_through, under their current membership; only on the dashboard or the Primitive CLI. A key, an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads as ended.",
         "tags": [
           "Activity"
         ],
@@ -34326,14 +34326,15 @@
             "name": "relation",
             "in": "query",
             "required": false,
-            "description": "created (the default) or asked.",
+            "description": "created (the default), asked or concerning.",
             "schema": {
               "default": "created",
-              "description": "created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you, and objections to rules you wrote. asked is for a person's own view only, and kind may then name only email_rule_request and email_rule_objection.",
+              "description": "created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you, and objections to rules you wrote; kind may then name only email_rule_request and email_rule_objection. concerning: what other members did that concerns your own mail: a rule that started covering one of your mailboxes, or saved a new version while covering it (email_rule_coverage, the only kind it takes). asked and concerning are for a person's own view only.",
               "type": "string",
               "enum": [
                 "created",
-                "asked"
+                "asked",
+                "concerning"
               ]
             }
           },
@@ -34341,7 +34342,7 @@
             "name": "kind",
             "in": "query",
             "required": false,
-            "description": "Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request, email_rule_objection. Defaults to every kind the caller can have created (a person's own kinds only for a person). With relation=asked, only email_rule_request and email_rule_objection, which are also the default.",
+            "description": "Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request, email_rule_objection, email_rule_coverage. Defaults to every kind the caller can have created (a person's own kinds only for a person). With relation=asked, only email_rule_request and email_rule_objection, which are also the default; with relation=concerning, only email_rule_coverage, the default. email_rule_coverage is listed only with relation=concerning.",
             "schema": {
               "type": "string",
               "minLength": 1,
@@ -36531,7 +36532,7 @@
       "get": {
         "operationId": "listEmailRuleResults",
         "summary": "List every rule's result on an email",
-        "description": "What each rule you can see decided about this email (matched, not matched, or not run), in the words of the deciding version. A do_not_share rule that matched it blocks sharing while active; earlier shares stay. Only a caller who can read the email gets an answer. classification is every fact the classifier read, as rule conditions read it. At most 50 rules are listed, results first; not_listed counts the rest. Another member's rule that decided on your own mail is listed read_only (dashboard and CLI only); hidden counts deciding rules you cannot see. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+        "description": "What each rule you can see decided about this email (matched, not matched, or not run), in the words of the deciding version. A do_not_share rule that matched it blocks sharing while active; earlier shares stay. Only a caller who can read the email gets an answer. classification is every fact the classifier read, as rule conditions read it. At most 50 rules are listed, results first; not_listed counts the rest. Another member's rule that decided on your own mail is listed read_only (dashboard and CLI only), with who receives what it shares (receivers) while it covers you; hidden counts deciding rules you cannot see. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
         "tags": [
           "Email Rules"
         ],
@@ -39578,7 +39579,7 @@
       "get": {
         "operationId": "listEmailRulesCoveringMe",
         "summary": "List the rules over your mail",
-        "description": "Every email rule that covers one of your own mailboxes now, yours included, newest first, in any state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your member mailbox, or a personal agent's address): one whose author reads all your mail (author scope, for an author who reads the organization's mail or holds an access entry for your mailbox), or one that names your mailbox or its domain (selected). Another member's own_mailboxes rule never covers you. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). You do not see the other inboxes and domains its scope names, its saved expectations, or the keys, shares and webhooks that use it. A page can hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+        "description": "Every email rule that covers one of your own mailboxes now, yours included, newest first, in any state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your member mailbox, or a personal agent's address): one whose author reads all your mail (author scope, for an author who reads the organization's mail or holds an access entry for your mailbox), or one that names your mailbox or its domain (selected). Another member's own_mailboxes rule never covers you. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, and the member each belongs to, or the organization. You do not see which keys, webhooks or shares they are (no ids, names, prefixes or URLs), the other inboxes and domains its scope names, or its saved expectations. A page can hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
         "tags": [
           "Email Rule Oversight"
         ],
@@ -39746,7 +39747,7 @@
       "get": {
         "operationId": "getEmailRuleCoveringMe",
         "summary": "Get a rule over your mail",
-        "description": "One rule that covers one of your own mailboxes, read-only, with its current version; or one that no longer does but decided on mail at your own mailbox (covers_now false), shown as the version that last decided on your mail, without its current name. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). You do not see the other inboxes and domains its scope names, its saved expectations, or the keys, shares and webhooks that use it. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+        "description": "One rule that covers one of your own mailboxes, read-only, with its current version; or one that no longer does but decided on mail at your own mailbox (covers_now false), shown as the version that last decided on your mail, without its current name. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, and the member each belongs to, or the organization. You do not see which keys, webhooks or shares they are (no ids, names, prefixes or URLs), the other inboxes and domains its scope names, or its saved expectations. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
         "tags": [
           "Email Rule Oversight"
         ],
@@ -71178,8 +71179,9 @@
             "description": "HTTP status code returned by the endpoint"
           },
           "body": {
+            "description": "The receiver response text, only with organization-wide mail.raw:read. Null without that access because a receiver can echo a raw download link.",
             "type": "string",
-            "description": "Response body (truncated to 1000 characters)"
+            "nullable": true
           },
           "signature": {
             "type": "string",
@@ -75811,19 +75813,19 @@
               "properties": {
                 "kind": {
                   "type": "string",
-                  "description": "One of: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request, email_rule_objection."
+                  "description": "One of: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request, email_rule_objection, email_rule_coverage."
                 },
                 "id": {
                   "type": "string"
                 },
                 "name": {
-                  "description": "The name the object is known by: an endpoint's display name, a route's or filter's pattern, a Function's name, a send's From address, a wake schedule's command and the address it wakes, an API key's name, an agent's address, a rule's or rule request's name, and for an objection the name its rule had when the objection was made. Never a webhook URL and never mail content.",
+                  "description": "The name the object is known by: an endpoint's display name, a route's or filter's pattern, a Function's name, a send's From address, a wake schedule's command and the address it wakes, an API key's name, an agent's address, a rule's or rule request's name, and for an objection or a coverage notice the name its rule had then. Never a webhook URL and never mail content.",
                   "type": "string",
                   "nullable": true
                 },
                 "state": {
                   "type": "string",
-                  "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections)."
+                  "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice what it told: started (a rule began covering your mailbox), new_version, or baseline (it already covered you when notices began)."
                 },
                 "created_at": {
                   "type": "string",
@@ -75841,22 +75843,22 @@
                     "you",
                     "someone_else"
                   ],
-                  "description": "you: it is still yours: never transferred, or transferred back to you. someone_else: it was transferred and another person holds it now, or, with relation=asked, another member made it."
+                  "description": "you: it is still yours: never transferred, or transferred back to you. someone_else: it was transferred and another person holds it now, or, with relation=asked or concerning, another member made it."
                 },
                 "created_through": {
                   "type": "object",
                   "properties": {
                     "kind": {
                       "type": "string",
-                      "description": "The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves). With relation=asked, member: the member who asked or objected."
+                      "description": "The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves). With relation=asked, member: the member who asked or objected; with relation=concerning, member: the rule's author."
                     },
                     "id": {
-                      "description": "In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself. With relation=asked, the user id of the member who asked or objected.",
+                      "description": "In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself. With relation=asked, the user id of the member who asked or objected; with relation=concerning, of the rule's author.",
                       "type": "string",
                       "nullable": true
                     },
                     "name": {
-                      "description": "In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves. With relation=asked, the name of the member who asked or objected.",
+                      "description": "In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves. With relation=asked, the name of the member who asked or objected; with relation=concerning, of the rule's author.",
                       "type": "string",
                       "nullable": true
                     }
@@ -78221,7 +78223,7 @@
             }
           },
           "warnings": {
-            "description": "The compile response's warnings. Stored as sent.",
+            "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).",
             "maxItems": 10,
             "type": "array",
             "items": {
@@ -78554,7 +78556,7 @@
             }
           },
           "warnings": {
-            "description": "The compile response's warnings. Stored as sent.",
+            "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).",
             "maxItems": 10,
             "type": "array",
             "items": {
@@ -78847,6 +78849,147 @@
           "email"
         ]
       },
+      "EmailRuleReceivers": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "owner": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "member",
+                        "organization"
+                      ]
+                    },
+                    "user_id": {
+                      "type": "string",
+                      "description": "The member's user id.",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "description": "Their name; null when they have none set.",
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                },
+                "count": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "owner",
+                "count"
+              ]
+            },
+            "description": "API keys that work now (not revoked, expired or suspended) whose access lists the rule, or its live share: they read what it matches. Owner: the member who holds each, or the organization."
+          },
+          "webhooks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "owner": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "member",
+                        "organization"
+                      ]
+                    },
+                    "user_id": {
+                      "type": "string",
+                      "description": "The member's user id.",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "description": "Their name; null when they have none set.",
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                },
+                "count": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "owner",
+                "count"
+              ]
+            },
+            "description": "Webhooks that are sent what it matches: those whose key, as delivery acts as it, lists the rule or its live share (owner: the member who holds that key, or the organization), and the webhooks of the member the rule is shared with (owner: that member)."
+          },
+          "shares": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "beneficiary": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "member"
+                      ]
+                    },
+                    "user_id": {
+                      "type": "string",
+                      "description": "The member's user id.",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "description": "Their name; null when they have none set.",
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "user_id",
+                    "name"
+                  ]
+                },
+                "count": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "beneficiary",
+                "count"
+              ]
+            },
+            "description": "The rule's live share, if it has one (a rule is shared at most once): the member it gives what it matches to."
+          }
+        },
+        "required": [
+          "keys",
+          "webhooks",
+          "shares"
+        ],
+        "description": "Who receives what the rule shares now, by person and count; empty unless it is an active grant rule."
+      },
       "ListEmailRuleResultsResult": {
         "type": "object",
         "properties": {
@@ -79049,6 +79192,15 @@
                 "author": {
                   "description": "With read_only: who wrote it.",
                   "$ref": "#/components/schemas/EmailRuleCoveringAuthor"
+                },
+                "receivers": {
+                  "description": "With read_only: who receives what it shares; null unless it covers you now.",
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/EmailRuleReceivers"
+                    }
+                  ],
+                  "nullable": true
                 }
               },
               "required": [
@@ -79395,7 +79547,7 @@
             }
           },
           "warnings": {
-            "description": "The compile response's warnings. Stored as sent.",
+            "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).",
             "maxItems": 10,
             "type": "array",
             "items": {
@@ -79466,7 +79618,14 @@
             "items": {
               "type": "string"
             },
-            "description": "As the member who asked sent them, normally from their compile. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them."
+            "description": "As the member who asked sent them, normally from their compile, then every compiler note on the rule's tree and words they lack. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them."
+          },
+          "server_notes": {
+            "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "compiled_by": {
             "type": "string"
@@ -79677,7 +79836,14 @@
             "items": {
               "type": "string"
             },
-            "description": "As the member who asked sent them, normally from their compile. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them."
+            "description": "As the member who asked sent them, normally from their compile, then every compiler note on the rule's tree and words they lack. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them."
+          },
+          "server_notes": {
+            "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "compiled_by": {
             "type": "string"
@@ -80138,7 +80304,7 @@
             }
           },
           "warnings": {
-            "description": "The compile response's warnings. Stored as sent.",
+            "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).",
             "maxItems": 10,
             "type": "array",
             "items": {
@@ -80686,6 +80852,15 @@
             "minimum": 0,
             "nullable": true
           },
+          "receivers": {
+            "description": "Null when it could not be read in time; try again.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EmailRuleReceivers"
+              }
+            ],
+            "nullable": true
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -80700,6 +80875,7 @@
           "is_author",
           "covers",
           "current_version",
+          "receivers",
           "created_at"
         ]
       },
@@ -80787,6 +80963,15 @@
             "minimum": 0,
             "nullable": true
           },
+          "receivers": {
+            "description": "Null when covers_now is false (who receives it now is not about your mail), or when it could not be read in time.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EmailRuleReceivers"
+              }
+            ],
+            "nullable": true
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -80818,6 +81003,7 @@
           "is_author",
           "covers",
           "current_version",
+          "receivers",
           "created_at",
           "covers_now",
           "current"

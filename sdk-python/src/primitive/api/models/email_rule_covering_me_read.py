@@ -18,6 +18,7 @@ if TYPE_CHECKING:
   from ..models.email_rule_coverage import EmailRuleCoverage
   from ..models.email_rule_covering_author import EmailRuleCoveringAuthor
   from ..models.email_rule_covering_me_version import EmailRuleCoveringMeVersion
+  from ..models.email_rule_receivers import EmailRuleReceivers
 
 
 
@@ -42,6 +43,8 @@ class EmailRuleCoveringMeRead:
             covers (EmailRuleCoverage | None): Null when it no longer covers your mailboxes and you see it because it
                 decided on your mail.
             current_version (int | None): Null when covers_now is false.
+            receivers (EmailRuleReceivers | None): Null when covers_now is false (who receives it now is not about your
+                mail), or when it could not be read in time.
             created_at (datetime.datetime):
             covers_now (bool): Whether it covers one of your own mailboxes now. False for a rule you see only because it
                 decided on mail at your own mailbox before.
@@ -58,6 +61,7 @@ class EmailRuleCoveringMeRead:
     is_author: bool
     covers: EmailRuleCoverage | None
     current_version: int | None
+    receivers: EmailRuleReceivers | None
     created_at: datetime.datetime
     covers_now: bool
     current: EmailRuleCoveringMeVersion | None
@@ -72,6 +76,7 @@ class EmailRuleCoveringMeRead:
         from ..models.email_rule_coverage import EmailRuleCoverage # noqa: PLC0415
         from ..models.email_rule_covering_author import EmailRuleCoveringAuthor # noqa: PLC0415
         from ..models.email_rule_covering_me_version import EmailRuleCoveringMeVersion # noqa: PLC0415
+        from ..models.email_rule_receivers import EmailRuleReceivers # noqa: PLC0415
         id = str(self.id)
 
         name: None | str
@@ -93,6 +98,12 @@ class EmailRuleCoveringMeRead:
 
         current_version: int | None
         current_version = self.current_version
+
+        receivers: dict[str, Any] | None
+        if isinstance(self.receivers, EmailRuleReceivers):
+            receivers = self.receivers.to_dict()
+        else:
+            receivers = self.receivers
 
         created_at = self.created_at.isoformat()
 
@@ -118,6 +129,7 @@ class EmailRuleCoveringMeRead:
             "is_author": is_author,
             "covers": covers,
             "current_version": current_version,
+            "receivers": receivers,
             "created_at": created_at,
             "covers_now": covers_now,
             "current": current,
@@ -134,6 +146,7 @@ class EmailRuleCoveringMeRead:
         from ..models.email_rule_coverage import EmailRuleCoverage # noqa: PLC0415
         from ..models.email_rule_covering_author import EmailRuleCoveringAuthor # noqa: PLC0415
         from ..models.email_rule_covering_me_version import EmailRuleCoveringMeVersion # noqa: PLC0415
+        from ..models.email_rule_receivers import EmailRuleReceivers # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -191,6 +204,24 @@ class EmailRuleCoveringMeRead:
         current_version = _parse_current_version(d.pop("current_version"))
 
 
+        def _parse_receivers(data: object) -> EmailRuleReceivers | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                receivers_type_1 = EmailRuleReceivers.from_dict(data)
+
+
+
+                return receivers_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailRuleReceivers | None, data)
+
+        receivers = _parse_receivers(d.pop("receivers"))
+
+
         created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
 
 
@@ -227,6 +258,7 @@ class EmailRuleCoveringMeRead:
             is_author=is_author,
             covers=covers,
             current_version=current_version,
+            receivers=receivers,
             created_at=created_at,
             covers_now=covers_now,
             current=current,

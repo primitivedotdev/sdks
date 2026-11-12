@@ -2,6 +2,7 @@ from enum import StrEnum
 
 class ListActivityObjectsRelation(StrEnum):
     ASKED = "asked"
+    CONCERNING = "concerning"
     CREATED = "created"
 
     def __str__(self) -> str:
