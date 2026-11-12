@@ -462,7 +462,18 @@ from .email_rule import EmailRule
 from .email_rule_author import EmailRuleAuthor
 from .email_rule_breadth import EmailRuleBreadth
 from .email_rule_evaluation_scope import EmailRuleEvaluationScope
+from .email_rule_expectation_sample import EmailRuleExpectationSample
+from .email_rule_expectation_sample_expected import EmailRuleExpectationSampleExpected
+from .email_rule_expectation_sample_input import EmailRuleExpectationSampleInput
+from .email_rule_expectation_sample_input_expected import EmailRuleExpectationSampleInputExpected
 from .email_rule_kind import EmailRuleKind
+from .email_rule_look_alike import EmailRuleLookAlike
+from .email_rule_look_alike_email import EmailRuleLookAlikeEmail
+from .email_rule_look_alike_email_from import EmailRuleLookAlikeEmailFrom
+from .email_rule_look_alike_kind import EmailRuleLookAlikeKind
+from .email_rule_look_alike_outcome import EmailRuleLookAlikeOutcome
+from .email_rule_look_alike_question_answers_item import EmailRuleLookAlikeQuestionAnswersItem
+from .email_rule_look_alike_status import EmailRuleLookAlikeStatus
 from .email_rule_read import EmailRuleRead
 from .email_rule_read_evaluation_scope import EmailRuleReadEvaluationScope
 from .email_rule_read_expectations import EmailRuleReadExpectations
@@ -473,6 +484,13 @@ from .email_rule_request_proposed_via import EmailRuleRequestProposedVia
 from .email_rule_request_proposer import EmailRuleRequestProposer
 from .email_rule_request_status import EmailRuleRequestStatus
 from .email_rule_request_target import EmailRuleRequestTarget
+from .email_rule_sample_judgment import EmailRuleSampleJudgment
+from .email_rule_sample_judgment_expected import EmailRuleSampleJudgmentExpected
+from .email_rule_sample_judgment_outcome import EmailRuleSampleJudgmentOutcome
+from .email_rule_sample_judgment_question_answers_item import EmailRuleSampleJudgmentQuestionAnswersItem
+from .email_rule_sample_judgment_status import EmailRuleSampleJudgmentStatus
+from .email_rule_saved_sample_email import EmailRuleSavedSampleEmail
+from .email_rule_saved_sample_email_from import EmailRuleSavedSampleEmailFrom
 from .email_rule_scope_names import EmailRuleScopeNames
 from .email_rule_scope_selection import EmailRuleScopeSelection
 from .email_rule_scope_warning import EmailRuleScopeWarning
@@ -608,6 +626,14 @@ from .gate_denial_name import GateDenialName
 from .gate_denial_reason import GateDenialReason
 from .gate_fix import GateFix
 from .gate_fix_action import GateFixAction
+from .generate_look_alikes_request import GenerateLookAlikesRequest
+from .generate_look_alikes_request_evaluation_scope import GenerateLookAlikesRequestEvaluationScope
+from .generate_look_alikes_request_kind import GenerateLookAlikesRequestKind
+from .generate_look_alikes_request_kinds_item import GenerateLookAlikesRequestKindsItem
+from .generate_look_alikes_response_200 import GenerateLookAlikesResponse200
+from .generate_look_alikes_result import GenerateLookAlikesResult
+from .generate_look_alikes_result_counts import GenerateLookAlikesResultCounts
+from .generate_look_alikes_result_rule import GenerateLookAlikesResultRule
 from .get_access_mode_response_200 import GetAccessModeResponse200
 from .get_access_mode_result import GetAccessModeResult
 from .get_access_mode_result_decisions import GetAccessModeResultDecisions
@@ -2208,7 +2234,18 @@ __all__ = (
     "EmailRuleAuthor",
     "EmailRuleBreadth",
     "EmailRuleEvaluationScope",
+    "EmailRuleExpectationSample",
+    "EmailRuleExpectationSampleExpected",
+    "EmailRuleExpectationSampleInput",
+    "EmailRuleExpectationSampleInputExpected",
     "EmailRuleKind",
+    "EmailRuleLookAlike",
+    "EmailRuleLookAlikeEmail",
+    "EmailRuleLookAlikeEmailFrom",
+    "EmailRuleLookAlikeKind",
+    "EmailRuleLookAlikeOutcome",
+    "EmailRuleLookAlikeQuestionAnswersItem",
+    "EmailRuleLookAlikeStatus",
     "EmailRuleRead",
     "EmailRuleReadEvaluationScope",
     "EmailRuleReadExpectations",
@@ -2219,6 +2256,13 @@ __all__ = (
     "EmailRuleRequestProposer",
     "EmailRuleRequestStatus",
     "EmailRuleRequestTarget",
+    "EmailRuleSampleJudgment",
+    "EmailRuleSampleJudgmentExpected",
+    "EmailRuleSampleJudgmentOutcome",
+    "EmailRuleSampleJudgmentQuestionAnswersItem",
+    "EmailRuleSampleJudgmentStatus",
+    "EmailRuleSavedSampleEmail",
+    "EmailRuleSavedSampleEmailFrom",
     "EmailRuleScopeNames",
     "EmailRuleScopeSelection",
     "EmailRuleScopeWarning",
@@ -2354,6 +2398,14 @@ __all__ = (
     "GateDenialReason",
     "GateFix",
     "GateFixAction",
+    "GenerateLookAlikesRequest",
+    "GenerateLookAlikesRequestEvaluationScope",
+    "GenerateLookAlikesRequestKind",
+    "GenerateLookAlikesRequestKindsItem",
+    "GenerateLookAlikesResponse200",
+    "GenerateLookAlikesResult",
+    "GenerateLookAlikesResultCounts",
+    "GenerateLookAlikesResultRule",
     "GetAccessModeResponse200",
     "GetAccessModeResult",
     "GetAccessModeResultDecisions",

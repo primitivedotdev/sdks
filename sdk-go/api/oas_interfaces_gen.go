@@ -317,6 +317,10 @@ type EndEmailRuleShareRes interface {
 	endEmailRuleShareRes()
 }
 
+type GenerateLookAlikesRes interface {
+	generateLookAlikesRes()
+}
+
 type GetAccessModeRes interface {
 	getAccessModeRes()
 }

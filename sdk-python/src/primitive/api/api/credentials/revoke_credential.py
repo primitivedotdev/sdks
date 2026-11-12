@@ -126,22 +126,28 @@ def sync_detailed(
     """ Revoke a credential
 
      Revoke one credential by kind and id. A Function key is rotated, never revoked (409 rotate_instead).
-    An API key is revoked only by a person whose own access covers the key's access (an owner covers
-    every key); otherwise 403 grant_forbidden, details.reason target_not_covered. What the credential
-    set up or owns is listed in standing_objects for review, and for an API key also what it carries on
-    for the keys it was rotated from. An organization-owned object (org_owned true) keeps working; any
-    other keeps working only while someone can still act for it, such as a key of the same rotation that
-    still works, or whoever it was given to, except that a block filter an app made keeps blocking,
-    within the reach the app had, unless the person revoking chose to stop it. An API key (kind org_key
-    or connected_key) that is already revoked, and whose record is kept, answers 200 with
-    already_revoked true and revoked 0, to a caller who could have revoked it; anyone else gets the
-    answer they would get for a key that does not exist. The person's own Primitive CLI login revokes an
-    API key (kind org_key) as the person, with no step-up unless the organization's credential policy
-    sets cli_writes_require_approval (then it takes a keys.create step-up); every other kind (a
-    connected key named as org_key included, 403 grant_forbidden target_not_covered), and every other
-    app even with a step-up, is refused outside the dashboard (403). Needs the organization's credential
-    features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature
-    naming the feature. Contact Primitive to turn them on.
+    An API key is revoked by the person who holds it, whatever it reaches, or by a person whose own
+    access covers the key's access (an owner covers every key); otherwise 403 grant_forbidden,
+    details.reason target_not_covered. Revoking an API key also revokes the keys it replaced in its
+    rotation that are still in their overlap and that you may revoke (predecessors_revoked_count;
+    predecessors_left counts the rest), so its webhooks stop at once; the keys that replaced it carry
+    its work on. Revoking a key already revoked does the same for those keys. What the credential set up
+    or owns is listed in standing_objects for review, and for an API key also what it carries on for the
+    keys it was rotated from, each saying whether anything still acts for it (still_acting, with the key
+    in acting_key_id) and, for a webhook, whether it is still delivering. An organization-owned object
+    (org_owned true) keeps working; any other keeps working only while someone can still act for it,
+    such as a key of the same rotation that still works, or whoever it was given to, except that a block
+    filter an app made keeps blocking, within the reach the app had, unless the person revoking chose to
+    stop it. An API key (kind org_key or connected_key) that is already revoked, and whose record is
+    kept, answers 200 with already_revoked true, to a caller who could have revoked it, and revoked
+    counts only the keys it replaced that were revoked now; anyone else gets the answer they would get
+    for a key that does not exist. The person's own Primitive CLI login revokes an API key (kind
+    org_key) as the person, with no step-up unless the organization's credential policy sets
+    cli_writes_require_approval (then it takes a keys.create step-up); every other kind (a connected key
+    named as org_key included, 403 grant_forbidden target_not_covered), and every other app even with a
+    step-up, is refused outside the dashboard (403). Needs the organization's credential features to be
+    enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the
+    feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:manage. API keys, agent connection keys and agents are refused.
@@ -184,22 +190,28 @@ def sync(
     """ Revoke a credential
 
      Revoke one credential by kind and id. A Function key is rotated, never revoked (409 rotate_instead).
-    An API key is revoked only by a person whose own access covers the key's access (an owner covers
-    every key); otherwise 403 grant_forbidden, details.reason target_not_covered. What the credential
-    set up or owns is listed in standing_objects for review, and for an API key also what it carries on
-    for the keys it was rotated from. An organization-owned object (org_owned true) keeps working; any
-    other keeps working only while someone can still act for it, such as a key of the same rotation that
-    still works, or whoever it was given to, except that a block filter an app made keeps blocking,
-    within the reach the app had, unless the person revoking chose to stop it. An API key (kind org_key
-    or connected_key) that is already revoked, and whose record is kept, answers 200 with
-    already_revoked true and revoked 0, to a caller who could have revoked it; anyone else gets the
-    answer they would get for a key that does not exist. The person's own Primitive CLI login revokes an
-    API key (kind org_key) as the person, with no step-up unless the organization's credential policy
-    sets cli_writes_require_approval (then it takes a keys.create step-up); every other kind (a
-    connected key named as org_key included, 403 grant_forbidden target_not_covered), and every other
-    app even with a step-up, is refused outside the dashboard (403). Needs the organization's credential
-    features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature
-    naming the feature. Contact Primitive to turn them on.
+    An API key is revoked by the person who holds it, whatever it reaches, or by a person whose own
+    access covers the key's access (an owner covers every key); otherwise 403 grant_forbidden,
+    details.reason target_not_covered. Revoking an API key also revokes the keys it replaced in its
+    rotation that are still in their overlap and that you may revoke (predecessors_revoked_count;
+    predecessors_left counts the rest), so its webhooks stop at once; the keys that replaced it carry
+    its work on. Revoking a key already revoked does the same for those keys. What the credential set up
+    or owns is listed in standing_objects for review, and for an API key also what it carries on for the
+    keys it was rotated from, each saying whether anything still acts for it (still_acting, with the key
+    in acting_key_id) and, for a webhook, whether it is still delivering. An organization-owned object
+    (org_owned true) keeps working; any other keeps working only while someone can still act for it,
+    such as a key of the same rotation that still works, or whoever it was given to, except that a block
+    filter an app made keeps blocking, within the reach the app had, unless the person revoking chose to
+    stop it. An API key (kind org_key or connected_key) that is already revoked, and whose record is
+    kept, answers 200 with already_revoked true, to a caller who could have revoked it, and revoked
+    counts only the keys it replaced that were revoked now; anyone else gets the answer they would get
+    for a key that does not exist. The person's own Primitive CLI login revokes an API key (kind
+    org_key) as the person, with no step-up unless the organization's credential policy sets
+    cli_writes_require_approval (then it takes a keys.create step-up); every other kind (a connected key
+    named as org_key included, 403 grant_forbidden target_not_covered), and every other app even with a
+    step-up, is refused outside the dashboard (403). Needs the organization's credential features to be
+    enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the
+    feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:manage. API keys, agent connection keys and agents are refused.
@@ -237,22 +249,28 @@ async def asyncio_detailed(
     """ Revoke a credential
 
      Revoke one credential by kind and id. A Function key is rotated, never revoked (409 rotate_instead).
-    An API key is revoked only by a person whose own access covers the key's access (an owner covers
-    every key); otherwise 403 grant_forbidden, details.reason target_not_covered. What the credential
-    set up or owns is listed in standing_objects for review, and for an API key also what it carries on
-    for the keys it was rotated from. An organization-owned object (org_owned true) keeps working; any
-    other keeps working only while someone can still act for it, such as a key of the same rotation that
-    still works, or whoever it was given to, except that a block filter an app made keeps blocking,
-    within the reach the app had, unless the person revoking chose to stop it. An API key (kind org_key
-    or connected_key) that is already revoked, and whose record is kept, answers 200 with
-    already_revoked true and revoked 0, to a caller who could have revoked it; anyone else gets the
-    answer they would get for a key that does not exist. The person's own Primitive CLI login revokes an
-    API key (kind org_key) as the person, with no step-up unless the organization's credential policy
-    sets cli_writes_require_approval (then it takes a keys.create step-up); every other kind (a
-    connected key named as org_key included, 403 grant_forbidden target_not_covered), and every other
-    app even with a step-up, is refused outside the dashboard (403). Needs the organization's credential
-    features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature
-    naming the feature. Contact Primitive to turn them on.
+    An API key is revoked by the person who holds it, whatever it reaches, or by a person whose own
+    access covers the key's access (an owner covers every key); otherwise 403 grant_forbidden,
+    details.reason target_not_covered. Revoking an API key also revokes the keys it replaced in its
+    rotation that are still in their overlap and that you may revoke (predecessors_revoked_count;
+    predecessors_left counts the rest), so its webhooks stop at once; the keys that replaced it carry
+    its work on. Revoking a key already revoked does the same for those keys. What the credential set up
+    or owns is listed in standing_objects for review, and for an API key also what it carries on for the
+    keys it was rotated from, each saying whether anything still acts for it (still_acting, with the key
+    in acting_key_id) and, for a webhook, whether it is still delivering. An organization-owned object
+    (org_owned true) keeps working; any other keeps working only while someone can still act for it,
+    such as a key of the same rotation that still works, or whoever it was given to, except that a block
+    filter an app made keeps blocking, within the reach the app had, unless the person revoking chose to
+    stop it. An API key (kind org_key or connected_key) that is already revoked, and whose record is
+    kept, answers 200 with already_revoked true, to a caller who could have revoked it, and revoked
+    counts only the keys it replaced that were revoked now; anyone else gets the answer they would get
+    for a key that does not exist. The person's own Primitive CLI login revokes an API key (kind
+    org_key) as the person, with no step-up unless the organization's credential policy sets
+    cli_writes_require_approval (then it takes a keys.create step-up); every other kind (a connected key
+    named as org_key included, 403 grant_forbidden target_not_covered), and every other app even with a
+    step-up, is refused outside the dashboard (403). Needs the organization's credential features to be
+    enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the
+    feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:manage. API keys, agent connection keys and agents are refused.
@@ -295,22 +313,28 @@ async def asyncio(
     """ Revoke a credential
 
      Revoke one credential by kind and id. A Function key is rotated, never revoked (409 rotate_instead).
-    An API key is revoked only by a person whose own access covers the key's access (an owner covers
-    every key); otherwise 403 grant_forbidden, details.reason target_not_covered. What the credential
-    set up or owns is listed in standing_objects for review, and for an API key also what it carries on
-    for the keys it was rotated from. An organization-owned object (org_owned true) keeps working; any
-    other keeps working only while someone can still act for it, such as a key of the same rotation that
-    still works, or whoever it was given to, except that a block filter an app made keeps blocking,
-    within the reach the app had, unless the person revoking chose to stop it. An API key (kind org_key
-    or connected_key) that is already revoked, and whose record is kept, answers 200 with
-    already_revoked true and revoked 0, to a caller who could have revoked it; anyone else gets the
-    answer they would get for a key that does not exist. The person's own Primitive CLI login revokes an
-    API key (kind org_key) as the person, with no step-up unless the organization's credential policy
-    sets cli_writes_require_approval (then it takes a keys.create step-up); every other kind (a
-    connected key named as org_key included, 403 grant_forbidden target_not_covered), and every other
-    app even with a step-up, is refused outside the dashboard (403). Needs the organization's credential
-    features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature
-    naming the feature. Contact Primitive to turn them on.
+    An API key is revoked by the person who holds it, whatever it reaches, or by a person whose own
+    access covers the key's access (an owner covers every key); otherwise 403 grant_forbidden,
+    details.reason target_not_covered. Revoking an API key also revokes the keys it replaced in its
+    rotation that are still in their overlap and that you may revoke (predecessors_revoked_count;
+    predecessors_left counts the rest), so its webhooks stop at once; the keys that replaced it carry
+    its work on. Revoking a key already revoked does the same for those keys. What the credential set up
+    or owns is listed in standing_objects for review, and for an API key also what it carries on for the
+    keys it was rotated from, each saying whether anything still acts for it (still_acting, with the key
+    in acting_key_id) and, for a webhook, whether it is still delivering. An organization-owned object
+    (org_owned true) keeps working; any other keeps working only while someone can still act for it,
+    such as a key of the same rotation that still works, or whoever it was given to, except that a block
+    filter an app made keeps blocking, within the reach the app had, unless the person revoking chose to
+    stop it. An API key (kind org_key or connected_key) that is already revoked, and whose record is
+    kept, answers 200 with already_revoked true, to a caller who could have revoked it, and revoked
+    counts only the keys it replaced that were revoked now; anyone else gets the answer they would get
+    for a key that does not exist. The person's own Primitive CLI login revokes an API key (kind
+    org_key) as the person, with no step-up unless the organization's credential policy sets
+    cli_writes_require_approval (then it takes a keys.create step-up); every other kind (a connected key
+    named as org_key included, 403 grant_forbidden target_not_covered), and every other app even with a
+    step-up, is refused outside the dashboard (403). Needs the organization's credential features to be
+    enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the
+    feature. Contact Primitive to turn them on.
 
     Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
     person's role must hold keys:manage. API keys, agent connection keys and agents are refused.

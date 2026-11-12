@@ -13638,7 +13638,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "revoke-credential",
-    "description": "Revoke one credential by kind and id. A Function key is rotated, never revoked (409 rotate_instead). An API key is revoked only by a person whose own access covers the key's access (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered. What the credential set up or owns is listed in standing_objects for review, and for an API key also what it carries on for the keys it was rotated from. An organization-owned object (org_owned true) keeps working; any other keeps working only while someone can still act for it, such as a key of the same rotation that still works, or whoever it was given to, except that a block filter an app made keeps blocking, within the reach the app had, unless the person revoking chose to stop it. An API key (kind org_key or connected_key) that is already revoked, and whose record is kept, answers 200 with already_revoked true and revoked 0, to a caller who could have revoked it; anyone else gets the answer they would get for a key that does not exist. The person's own Primitive CLI login revokes an API key (kind org_key) as the person, with no step-up unless the organization's credential policy sets cli_writes_require_approval (then it takes a keys.create step-up); every other kind (a connected key named as org_key included, 403 grant_forbidden target_not_covered), and every other app even with a step-up, is refused outside the dashboard (403). Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:manage. API keys, agent connection keys and agents are refused.",
+    "description": "Revoke one credential by kind and id. A Function key is rotated, never revoked (409 rotate_instead). An API key is revoked by the person who holds it, whatever it reaches, or by a person whose own access covers the key's access (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered. Revoking an API key also revokes the keys it replaced in its rotation that are still in their overlap and that you may revoke (predecessors_revoked_count; predecessors_left counts the rest), so its webhooks stop at once; the keys that replaced it carry its work on. Revoking a key already revoked does the same for those keys. What the credential set up or owns is listed in standing_objects for review, and for an API key also what it carries on for the keys it was rotated from, each saying whether anything still acts for it (still_acting, with the key in acting_key_id) and, for a webhook, whether it is still delivering. An organization-owned object (org_owned true) keeps working; any other keeps working only while someone can still act for it, such as a key of the same rotation that still works, or whoever it was given to, except that a block filter an app made keeps blocking, within the reach the app had, unless the person revoking chose to stop it. An API key (kind org_key or connected_key) that is already revoked, and whose record is kept, answers 200 with already_revoked true, to a caller who could have revoked it, and revoked counts only the keys it replaced that were revoked now; anyone else gets the answer they would get for a key that does not exist. The person's own Primitive CLI login revokes an API key (kind org_key) as the person, with no step-up unless the organization's credential policy sets cli_writes_require_approval (then it takes a keys.create step-up); every other kind (a connected key named as org_key included, 403 grant_forbidden target_not_covered), and every other app even with a step-up, is refused outside the dashboard (403). Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:manage. API keys, agent connection keys and agents are refused.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "revokeCredential",
@@ -13773,7 +13773,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "already_revoked": {
-          "description": "true when the API key was already revoked, so nothing changed and revoked is 0. Absent otherwise. GET /v1/keys/{id} says when and by whom, to a caller who may read the key.",
+          "description": "true when the API key was already revoked. revoked then counts only the keys it replaced that were revoked now. Absent otherwise. GET /v1/keys/{id} says when and by whom, to a caller who may read the key.",
           "type": "boolean"
         },
         "keep_failed": {
@@ -13815,6 +13815,27 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "org_owned": {
                 "type": "boolean",
                 "description": "true: the organization owns it, and it keeps working. false: the credential owns it itself, as with everything a third-party app or agent delegate made, a webhook made with a narrowed API key, or a wake schedule made with a key that does not cover super_admin. It keeps working only while someone can still act for it, such as a key of the same rotation that still works, or whoever it was given to or kept it. Revoking a third-party app or agent delegate turns these off, except that a block filter it made keeps blocking, within the reach the app had, unless the person revoking chose to stop it."
+              },
+              "still_acting": {
+                "description": "For an API key: whether anything still acts for it after this revoke (the organization, a key of the same rotation that still works, or whoever took it over). Null when that could not be read.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "acting_key_id": {
+                "description": "For an API key: the key that still acts for it, shown to a caller who may read the organization's API keys. Null otherwise, and when no key does.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "delivering": {
+                "description": "For an API key's webhook: whether it is still sent received mail, as GET /v1/endpoints/{id} delivery.delivering says. Null when that could not be read.",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               }
             },
             "required": [
@@ -13824,6 +13845,32 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "org_owned"
             ],
             "additionalProperties": {}
+          }
+        },
+        "predecessors_revoked_count": {
+          "description": "For an API key: how many keys it replaced in its rotation, still in their overlap, were revoked with it. Keys that replaced it never are.",
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "predecessors_left": {
+          "description": "For an API key: how many such keys were left working because you may not revoke them. They work until their overlap ends.",
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "predecessors_revoked": {
+          "description": "The ids of the keys counted in predecessors_revoked_count, to a caller who may read the organization's API keys.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "predecessors_not_revoked": {
+          "description": "The ids of the keys counted in predecessors_left, to a caller who may read the organization's API keys.",
+          "type": "array",
+          "items": {
+            "type": "string"
           }
         }
       },
@@ -13843,7 +13890,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "rotate-key",
-    "description": "Mint a successor with a new id and the same name, grant, expiry and conditions, and return its secret once. The old key keeps working for overlap_seconds, then stops: 24 hours when overlap_seconds is omitted, at most 7 days, never past its own expires_at, and at once with 0 (which is how to rotate a key whose secret leaked). previous_key_expires_at says when the old key stops. Rotating does not extend a key: the successor keeps the old expiry unless expires_at gives it a new one. That needs keys:manage (403 forbidden otherwise), is held to the credential policy (400 when past its maximum lifetime, with the latest expiry it allows now in the message), and someone limited to their own keys can only keep or bring it forward (403 grant_forbidden, details.reason own_key_tighten_only); the old key then never outlives the new one. The person rotating must cover the key's access (403 grant_forbidden, details.reason target_not_covered), and a key an owner holds is rotated by an owner only (403 forbidden, details.reason owner_key_rotation), since rotating hands over the new secret. The person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless the organization's credential policy sets cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.",
+    "description": "Mint a successor with a new id and the same name, grant, expiry and conditions, and return its secret once. The old key keeps working for overlap_seconds, then stops: 24 hours when overlap_seconds is omitted, at most 7 days, never past its own expires_at, and at once with 0 (which is how to rotate a key whose secret leaked). previous_key_expires_at says when the old key stops. Revoking the successor during the overlap also revokes the old key when you may revoke that one too; the revoke's predecessors_left counts any left working. Rotating does not extend a key: the successor keeps the old expiry unless expires_at gives it a new one. That needs keys:manage (403 forbidden otherwise), is held to the credential policy (400 when past its maximum lifetime, with the latest expiry it allows now in the message), and someone limited to their own keys can only keep or bring it forward (403 grant_forbidden, details.reason own_key_tighten_only); the old key then never outlives the new one. The person rotating must cover the key's access (403 grant_forbidden, details.reason target_not_covered), and a key an owner holds is rotated by an owner only (403 forbidden, details.reason owner_key_rotation), since rotating hands over the new secret. The person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless the organization's credential policy sets cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "rotateKey",
@@ -14080,7 +14127,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "update-key",
-    "description": "Rename a key, change its expiry, its grant or its conditions, or suspend it. A later expires_at extends the key, which is how to keep a key working past its expiry (rotating keeps it, unless the rotation gives the new key an expires_at): it is held to the credential policy (400 when past its maximum lifetime, with the latest expiry it allows now in the message), and like any loosening needs the person to be allowed to create a key with the key's access. An expired key's expiry cannot be changed (409 conflict, details.reason key_expired); make a new key instead. Any change needs the person's own access to cover the key's access now (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key and is held to the same rules as creating one (a custom grant that does not say which mail it reaches is refused with details.reason mail_scope_required), so it takes the same step-up. It replaces the whole grant: send expected_grant_ref (grant.ref from GET /v1/keys/{id}) to have it refused (409 conflict, details.reason grant_changed) if the grant changed since that read; a grant change sent without it answers grant_unguarded: true. On a key limited to selected resources (grant.resources), a grant change must drop the limits on purpose with a custom grant and grant.resources {}; one that leaves them out is refused (409 conflict, details.reason key_has_resource_limits) and nothing changes. The person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless the organization's credential policy sets cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.",
+    "description": "Rename a key, change its expiry, its grant or its conditions, or suspend it. A later expires_at extends the key, which is how to keep a key working past its expiry (rotating keeps it, unless the rotation gives the new key an expires_at): it is held to the credential policy (400 when past its maximum lifetime, with the latest expiry it allows now in the message), and like any loosening needs the person to be allowed to create a key with the key's access. An expired key's expiry cannot be changed (409 conflict, details.reason key_expired); make a new key instead. Any change needs the person's own access to cover the key's access now (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered. The one exception is suspending a key (suspended true with no other change; expected_grant_ref may accompany it), which the person who holds it may do whatever the key reaches, calling as themself rather than through another app; lifting a suspension is a change like any other. A grant change is a new version of the key and is held to the same rules as creating one (a custom grant that does not say which mail it reaches is refused with details.reason mail_scope_required), so it takes the same step-up. It replaces the whole grant: send expected_grant_ref (grant.ref from GET /v1/keys/{id}) to have it refused (409 conflict, details.reason grant_changed) if the grant changed since that read; a grant change sent without it answers grant_unguarded: true. On a key limited to selected resources (grant.resources), a grant change must drop the limits on purpose with a custom grant and grant.resources {}; one that leaves them out is refused (409 conflict, details.reason key_has_resource_limits) and nothing changes. The person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless the organization's credential policy sets cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.",
     "hasJsonBody": true,
     "method": "PATCH",
     "operationId": "updateKey",
@@ -16353,7 +16400,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "accept-email-rule-request",
-    "description": "Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from now on with the member who asked. Send no body to accept it as asked, or change it first with english and tree together (and an explanation, or the server writes one). Because this gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to POST /v1/email-rules/test. A test on mail already received shows only what has arrived. To see what the rule would do with an email that has not, such as one you would never want shared, pass the request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up. Nothing is stored, and it needs no access beyond testing a rule of your own. Accepting also needs mail:share_own (sharing your own mail through email rules, which only shows it and never sends): a role without it is refused, whether or not it can send. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from now on with the member who asked: each email in full with its attachments, but never raw. It does not go back through mail already received. Send no body to accept it as asked, or change it first with english and tree together (and an explanation, or the server writes one). Because this gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to POST /v1/email-rules/test. A test on mail already received shows only what has arrived. To see what the rule would do with an email that has not, such as one you would never want shared, pass the request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up, or have look-alikes written for it (POST /v1/email-rules/look-alikes with request_id; primitive email-rules generate-look-alikes). Neither stores anything, and neither needs access beyond testing a rule of your own; the accept keeps any you send as expectation_samples on the rule it writes. Made-up emails sent in expectation_samples are kept on the rule this writes, where GET /v1/email-rules/{id} lists them. Accepting also needs mail:share_own (sharing your own mail through email rules, which only shows it and never sends): a role without it is refused, whether or not it can send. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "acceptEmailRuleRequest",
@@ -16489,6 +16536,129 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "type": "null"
             }
           ]
+        },
+        "expectation_samples": {
+          "description": "Made-up emails the rule must match or not, such as look-alikes it must never match, kept on the rule this accept writes.",
+          "minItems": 1,
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "expected": {
+                "type": "string",
+                "enum": [
+                  "match",
+                  "no_match"
+                ]
+              },
+              "label": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 200,
+                "pattern": "^[^\\u0000]*$",
+                "description": "What the email stands for, such as a personal medical bill."
+              },
+              "email": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "object",
+                    "properties": {
+                      "address": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "format": "email",
+                        "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                      },
+                      "name": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "pattern": "^[^\\u0000]*$"
+                      }
+                    },
+                    "required": [
+                      "address"
+                    ]
+                  },
+                  "to": {
+                    "minItems": 1,
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 254,
+                      "format": "email",
+                      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    }
+                  },
+                  "cc": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 254,
+                      "format": "email",
+                      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    }
+                  },
+                  "subject": {
+                    "type": "string",
+                    "maxLength": 998,
+                    "pattern": "^[^\\u0000]*$"
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000,
+                    "pattern": "^[^\\u0000]*$"
+                  },
+                  "attachment_types": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "pattern": "^[^\\u0000]*$"
+                    }
+                  },
+                  "automated": {
+                    "type": "boolean"
+                  },
+                  "from_mailing_list": {
+                    "type": "boolean"
+                  },
+                  "spam_score": {
+                    "type": "number",
+                    "minimum": -1000,
+                    "maximum": 1000
+                  }
+                },
+                "required": [
+                  "from",
+                  "to",
+                  "text"
+                ],
+                "description": "A made-up email, as POST /email-rules/test-sample takes it."
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "created_at": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "expected",
+              "email"
+            ],
+            "additionalProperties": false
+          }
         }
       },
       "additionalProperties": false
@@ -16703,6 +16873,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "string",
                 "null"
               ]
+            },
+            "edited_on_accept": {
+              "description": "Once accepted: whether the rule was changed first, as on the share. Null until then, or when unreadable.",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "notice": {
+              "description": "For the member asked, while pending: what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "required": [
@@ -16753,6 +16937,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "grant",
                 "do_not_share"
               ]
+            },
+            "protection_note": {
+              "description": "On a do_not_share rule only: it protects nothing yet (not active), or a classifier fact narrows it.",
+              "type": "string"
             },
             "evaluation_scope": {
               "description": "Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).",
@@ -17175,6 +17363,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "rule",
             "rule_id"
           ]
+        },
+        "notice": {
+          "description": "What is now shared, in words.",
+          "type": "string"
         }
       },
       "required": [
@@ -17295,7 +17487,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "compile-email-rule",
-    "description": "Turns a plain-English description of which received emails to match into a rule tree over the published column contract, with a plain-English explanation of what it matches, the assumptions made, and warnings for anything the columns cannot express. Where the columns fall short the rule may carry up to three yes/no questions, asked about an email only after its conditions match. Nothing is saved. A rule with no questions has its conditions counted, read only, over the caller's recent classified mail (what a test of it covers by default): breadth is that count, and a warning says when it matches nearly all of it. The SQL the rule renders to is returned only when include_sql is true. kind do_not_share compiles a do-not-share rule for recall: conditions only as narrow as the description says, the judgement of what it describes put into questions, and with nothing a column decides for certain, conditions that hold for every email. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Turns a plain-English description of which received emails to match into a rule tree over the published column contract, with a plain-English explanation of what it matches, the assumptions made, and warnings for anything the columns cannot express. Where the columns fall short the rule may carry up to five yes/no questions, asked about an email only after its conditions match. Nothing is saved. A rule with no questions has its conditions counted, read only, over the caller's recent classified mail (what a test of it covers by default): breadth is that count, and a warning says when it matches nearly all of it. The SQL the rule renders to is returned only when include_sql is true. kind do_not_share compiles a do-not-share rule for recall: conditions only as narrow as the description says, the judgement of what it describes put into questions, and with nothing a column decides for certain, conditions that hold for every email. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "compileEmailRule",
@@ -17395,7 +17587,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "items": {
             "type": "string"
           },
-          "description": "Parts of the description the column contract cannot express, and how the rule handles them. When the rule reads automated or from_mailing_list, it also has a note on what that column reads and what it misses. When the rule has no questions and its conditions hold for all of the caller's recent classified mail (what a test of it covers by default), or for at least 90% of at least 20 emails, the first warning says so. That count is not made for a caller whose access shows headers only, or who could not run a test of the rule, and may also be skipped when the compile ran long or the count fails."
+          "description": "Parts of the description the column contract cannot express, and how the rule handles them. It also has notes on reading automated, from_mailing_list or sender_relationship, a sender address the description does not give, and a grant worded as a prohibition. When the rule has no questions and its conditions hold for all of the caller's recent classified mail (what a test of it covers by default), or for at least 90% of at least 20 emails, the first warning says so. That count is not made for a caller whose access shows headers only, or who could not run a test of the rule, and may also be skipped when the compile ran long or the count fails."
         },
         "compiled_by": {
           "type": "string",
@@ -17465,7 +17657,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-email-rule",
-    "description": "Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column contract; without an explanation the server writes one. It starts in observe (what it matches is recorded, nothing granted or blocked) unless state is draft (not evaluated). You are its author, and it never reaches mail you cannot read. evaluation_scope is own_mailboxes (your own mail) unless you name author (all you can read) or selected; scope_selection may name only what you can read. The answer carries the scope as stored. expectations saves emails it must match and must not; the answer judges them (expectations_check). kind do_not_share blocks sharing: it runs before every other rule, and while active no rule shares an email it matches or cannot decide; a key cannot list it (details.reason rule_blocks_sharing). Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column contract; without an explanation the server writes one. It starts in observe (what it matches is recorded, nothing granted or blocked) unless state is draft (not evaluated), or active for a do_not_share rule. You are its author, and it never reaches mail you cannot read. evaluation_scope is own_mailboxes (your own mail) unless you name author (all you can read) or selected; scope_selection may name only what you can read. The answer carries the scope as stored. expectations saves emails it must match and must not; the answer judges them (expectations_check). kind do_not_share blocks sharing: it runs before every other rule, and while active no rule shares an email it matches or cannot decide; a key cannot list it (details.reason rule_blocks_sharing). Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "createEmailRule",
@@ -17503,11 +17695,12 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "state": {
-          "description": "observe (the default) records what the rule would match and grants or blocks nothing; draft is not evaluated.",
+          "description": "observe (the default) records what the rule would match and grants or blocks nothing; draft is not evaluated; active only for a do_not_share rule.",
           "type": "string",
           "enum": [
             "draft",
-            "observe"
+            "observe",
+            "active"
           ]
         },
         "evaluation_scope": {
@@ -17568,6 +17761,129 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "additionalProperties": false,
           "description": "Emails it must match and must not (at most 100): a test by rule_id judges them unless expect is given, and each version it saves is checked against them."
+        },
+        "expectation_samples": {
+          "description": "Made-up emails it must match or not (at most 20).",
+          "minItems": 1,
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "expected": {
+                "type": "string",
+                "enum": [
+                  "match",
+                  "no_match"
+                ]
+              },
+              "label": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 200,
+                "pattern": "^[^\\u0000]*$",
+                "description": "What the email stands for, such as a personal medical bill."
+              },
+              "email": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "object",
+                    "properties": {
+                      "address": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "format": "email",
+                        "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                      },
+                      "name": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "pattern": "^[^\\u0000]*$"
+                      }
+                    },
+                    "required": [
+                      "address"
+                    ]
+                  },
+                  "to": {
+                    "minItems": 1,
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 254,
+                      "format": "email",
+                      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    }
+                  },
+                  "cc": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 254,
+                      "format": "email",
+                      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    }
+                  },
+                  "subject": {
+                    "type": "string",
+                    "maxLength": 998,
+                    "pattern": "^[^\\u0000]*$"
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000,
+                    "pattern": "^[^\\u0000]*$"
+                  },
+                  "attachment_types": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "pattern": "^[^\\u0000]*$"
+                    }
+                  },
+                  "automated": {
+                    "type": "boolean"
+                  },
+                  "from_mailing_list": {
+                    "type": "boolean"
+                  },
+                  "spam_score": {
+                    "type": "number",
+                    "minimum": -1000,
+                    "maximum": 1000
+                  }
+                },
+                "required": [
+                  "from",
+                  "to",
+                  "text"
+                ],
+                "description": "A made-up email, as POST /email-rules/test-sample takes it."
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "created_at": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "expected",
+              "email"
+            ],
+            "additionalProperties": false
+          }
         },
         "english": {
           "type": "string",
@@ -17701,6 +18017,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "grant",
             "do_not_share"
           ]
+        },
+        "protection_note": {
+          "description": "On a do_not_share rule only: it protects nothing yet (not active), or a classifier fact narrows it.",
+          "type": "string"
         },
         "evaluation_scope": {
           "description": "Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).",
@@ -17943,8 +18263,128 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ]
           }
         },
+        "expectation_samples": {
+          "description": "Its saved made-up emails, when this write set or added some.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "expected": {
+                "type": "string",
+                "enum": [
+                  "match",
+                  "no_match"
+                ]
+              },
+              "label": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "email": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "object",
+                    "properties": {
+                      "address": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "format": "email",
+                        "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                      },
+                      "name": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "pattern": "^[^\\u0000]*$"
+                      }
+                    },
+                    "required": [
+                      "address"
+                    ]
+                  },
+                  "to": {
+                    "minItems": 1,
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 254,
+                      "format": "email",
+                      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    }
+                  },
+                  "cc": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 254,
+                      "format": "email",
+                      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    }
+                  },
+                  "subject": {
+                    "type": "string",
+                    "maxLength": 998,
+                    "pattern": "^[^\\u0000]*$"
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000,
+                    "pattern": "^[^\\u0000]*$"
+                  },
+                  "attachment_types": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "pattern": "^[^\\u0000]*$"
+                    }
+                  },
+                  "automated": {
+                    "type": "boolean"
+                  },
+                  "from_mailing_list": {
+                    "type": "boolean"
+                  },
+                  "spam_score": {
+                    "type": "number",
+                    "minimum": -1000,
+                    "maximum": 1000
+                  }
+                },
+                "required": [
+                  "from",
+                  "to",
+                  "text"
+                ],
+                "description": "A made-up email, as POST /email-rules/test-sample takes it."
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "expected",
+              "label",
+              "email",
+              "created_at"
+            ]
+          }
+        },
         "expectations_check": {
-          "description": "After a write that saved a version or changed its expectations, if it has some: them, judged on that version from stored classifications without asking its questions. Undecided: one that needs answers not yet kept for that version, is unclassified, skipped or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed). Test by rule_id for the rest. With if_expectations_pass, the judgment made before the save, which passed.",
+          "description": "After a write that saved a version or changed its expectations or made-up emails, if it has some: the emails by id judged on that version from stored classifications without asking its questions, and any made-up emails listed as undecided. Undecided: one that needs answers not yet kept for that version, is unclassified, skipped or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed), and after a write that changed only made-up emails on a rule with emails by id. Test by rule_id for the rest. With if_expectations_pass, the judgment made before the save, which passed.",
           "type": "object",
           "properties": {
             "version": {
@@ -17962,7 +18402,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "decided": {
-              "description": "Whether every expectation was judged (undecided is empty). Absent from a server that predates it.",
+              "description": "Whether every expectation was judged (undecided and undecided_samples are empty). Absent from a server that predates it.",
               "type": "boolean"
             },
             "failed": {
@@ -17979,8 +18419,24 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "format": "uuid"
               }
             },
+            "failed_samples": {
+              "description": "Made-up emails that failed, by index in the set judged (saved oldest first, then added; or as sent).",
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "undecided_samples": {
+              "description": "Made-up emails not decided, by index. Only a write sent with if_expectations_pass that saves a version or activates the rule judges them.",
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
             "note": {
-              "description": "On an update that saved a version that did not pass: that it was saved anyway, is current, and whether it is live.",
+              "description": "On an update that saved a version that did not pass, or a do_not_share rule created active: that it was saved anyway, is current, and whether it is live.",
               "type": "string"
             }
           },
@@ -18418,6 +18874,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "null"
           ]
         },
+        "edited_on_accept": {
+          "description": "Once accepted: whether the rule was changed first, as on the share. Null until then, or when unreadable.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "notice": {
+          "description": "For the member asked, while pending: what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "target_can_accept": {
           "description": "Whether the member asked can accept it now under their role. Null unless you can list members and their roles (members:read), or when it could not be read.",
           "type": [
@@ -18715,6 +19185,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "string",
             "null"
           ]
+        },
+        "edited_on_accept": {
+          "description": "Once accepted: whether the rule was changed first, as on the share. Null until then, or when unreadable.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "notice": {
+          "description": "For the member asked, while pending: what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
@@ -18907,6 +19391,373 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "generate-look-alikes",
+    "description": "Writes made-up emails that come close to what a grant rule describes but are private (a personal medical bill, pay for named people, a personal purchase, personal banking or tax, or another near case), and reports what the rule decides for each, as test-sample would. failed means the rule matched it, so it would be shared. Nothing is stored and no mail is read. Keep the ones it must never match with add_expectation_samples, or for a request with the accept's expectation_samples. Limited to 20 an hour per member. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "generateLookAlikes",
+    "path": "/email-rules/look-alikes",
+    "pathParams": [],
+    "queryParams": [],
+    "headerParams": [
+      {
+        "description": "Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.",
+        "enum": null,
+        "name": "Idempotency-Key",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "permissions": [
+      "mail:read"
+    ],
+    "access": null,
+    "requestSchema": {
+      "type": "object",
+      "properties": {
+        "tree": {
+          "type": "object",
+          "properties": {
+            "version": {
+              "type": "number",
+              "const": 1
+            },
+            "vocabulary": {
+              "type": "string",
+              "description": "Vocabulary version, such as v1."
+            },
+            "when": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {},
+              "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
+            },
+            "questions": {
+              "description": "Yes/no questions asked once the conditions match; all must be yes. Left out, none.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "version",
+            "vocabulary",
+            "when"
+          ],
+          "additionalProperties": false
+        },
+        "english": {
+          "description": "What the tree is meant to match; without it, the tree is described in words.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "evaluation_scope": {
+          "type": "string",
+          "enum": [
+            "author",
+            "own_mailboxes",
+            "selected"
+          ],
+          "description": "own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
+        },
+        "scope_selection": {
+          "type": "object",
+          "properties": {
+            "addresses": {
+              "maxItems": 100,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 320,
+                "pattern": "^[^\\s@]+@[^\\s@]+$"
+              }
+            },
+            "domains": {
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253,
+                "pattern": "^[^\\s@]+\\.[^\\s@]+$"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "description": "For a selected rule: inboxes, and domains (each address at them the author reads); each one you can read."
+        },
+        "rule_id": {
+          "description": "A saved rule you can see: its current version and words.",
+          "type": "string",
+          "format": "uuid"
+        },
+        "request_id": {
+          "description": "A rule request you can see: its rule as asked.",
+          "type": "string",
+          "format": "uuid"
+        },
+        "kind": {
+          "description": "For an unsaved tree: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. A saved rule uses its own.",
+          "type": "string",
+          "enum": [
+            "grant",
+            "do_not_share"
+          ]
+        },
+        "count": {
+          "description": "How many, 1 to 8; 6 by default.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8
+        },
+        "kinds": {
+          "description": "Which kinds, taken in turn; all by default, the private ones first.",
+          "minItems": 1,
+          "maxItems": 5,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "medical",
+              "payroll",
+              "personal_purchase",
+              "bank_tax",
+              "other"
+            ]
+          }
+        },
+        "to": {
+          "description": "The mailbox they arrive in; by default the rule author's (a request's target's) sign-in address when you may see it, else yours.",
+          "type": "string",
+          "maxLength": 254,
+          "format": "email",
+          "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "rule": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "version": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "exclusiveMinimum": 0
+            },
+            "vocabulary": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "version",
+            "vocabulary"
+          ]
+        },
+        "look_alikes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "medical",
+                  "payroll",
+                  "personal_purchase",
+                  "bank_tax",
+                  "other"
+                ]
+              },
+              "why": {
+                "type": "string",
+                "description": "Why the rule should not match it."
+              },
+              "email": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "object",
+                    "properties": {
+                      "address": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "address"
+                    ]
+                  },
+                  "to": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "cc": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "subject": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "attachment_types": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "automated": {
+                    "type": "boolean"
+                  },
+                  "from_mailing_list": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "from",
+                  "to",
+                  "cc",
+                  "subject",
+                  "text",
+                  "attachment_types",
+                  "automated",
+                  "from_mailing_list"
+                ],
+                "description": "A made-up email, as test-sample takes it."
+              },
+              "outcome": {
+                "type": "string",
+                "enum": [
+                  "matched",
+                  "near_miss",
+                  "no_match",
+                  "not_decided"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "passed",
+                  "failed",
+                  "undecided"
+                ],
+                "description": "failed: the rule matched it, so it would be shared. undecided: the rule reads a spam score, which it cannot carry, whatever it decided; or not matched on something it could not decide (not classified, a fact or answer missing, or not reached in time)."
+              },
+              "question_answers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "question": {
+                      "type": "string"
+                    },
+                    "answer": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "probability": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "error_class": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "question",
+                    "answer",
+                    "probability"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "kind",
+              "why",
+              "email",
+              "outcome",
+              "status",
+              "question_answers"
+            ]
+          }
+        },
+        "counts": {
+          "type": "object",
+          "properties": {
+            "passed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "failed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "undecided": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "dropped": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Asked for but not returned: not written, outside the sample bounds, or of a kind not asked for."
+            }
+          },
+          "required": [
+            "passed",
+            "failed",
+            "undecided",
+            "dropped"
+          ]
+        },
+        "note": {
+          "type": "string",
+          "description": "That the emails are made up and were never sent or stored."
+        }
+      },
+      "required": [
+        "rule",
+        "look_alikes",
+        "counts",
+        "note"
+      ]
+    },
+    "sdkName": "generateLookAlikes",
+    "summary": "Write look-alike emails a rule should not match",
+    "tag": "Email Rules",
+    "tagCommand": "email-rules"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email-rule",
     "description": "A rule, its scope (evaluation_scope, and scope_selection for a selected rule), its current version and its saved expectations. The current version's text (english, tree, explanation, assumptions, warnings) is under current, and current_version is its number. What the scope comes to for its author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when include_sql is true. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
@@ -18966,6 +19817,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "grant",
             "do_not_share"
           ]
+        },
+        "protection_note": {
+          "description": "On a do_not_share rule only: it protects nothing yet (not active), or a classifier fact narrows it.",
+          "type": "string"
         },
         "evaluation_scope": {
           "description": "Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).",
@@ -19194,6 +20049,126 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "match",
             "no_match"
           ]
+        },
+        "expectation_samples": {
+          "description": "Its saved made-up emails, oldest first.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "expected": {
+                "type": "string",
+                "enum": [
+                  "match",
+                  "no_match"
+                ]
+              },
+              "label": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "email": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "object",
+                    "properties": {
+                      "address": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "format": "email",
+                        "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                      },
+                      "name": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "pattern": "^[^\\u0000]*$"
+                      }
+                    },
+                    "required": [
+                      "address"
+                    ]
+                  },
+                  "to": {
+                    "minItems": 1,
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 254,
+                      "format": "email",
+                      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    }
+                  },
+                  "cc": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 254,
+                      "format": "email",
+                      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    }
+                  },
+                  "subject": {
+                    "type": "string",
+                    "maxLength": 998,
+                    "pattern": "^[^\\u0000]*$"
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000,
+                    "pattern": "^[^\\u0000]*$"
+                  },
+                  "attachment_types": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "pattern": "^[^\\u0000]*$"
+                    }
+                  },
+                  "automated": {
+                    "type": "boolean"
+                  },
+                  "from_mailing_list": {
+                    "type": "boolean"
+                  },
+                  "spam_score": {
+                    "type": "number",
+                    "minimum": -1000,
+                    "maximum": 1000
+                  }
+                },
+                "required": [
+                  "from",
+                  "to",
+                  "text"
+                ],
+                "description": "A made-up email, as POST /email-rules/test-sample takes it."
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "expected",
+              "label",
+              "email",
+              "created_at"
+            ]
+          }
         }
       },
       "required": [
@@ -19217,7 +20192,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email-rule-request",
-    "description": "A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a member. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. If you are the member asked, you can try the rule as proposed before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have received. A test on mail already received shows only what has arrived. To see what the rule would do with an email that has not, such as one you would never want shared, pass the request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up. Nothing is stored, and it needs no access beyond testing a rule of your own. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a member. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. If you are the member asked, you can try the rule as proposed before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have received. A test on mail already received shows only what has arrived. To see what the rule would do with an email that has not, such as one you would never want shared, pass the request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up, or have look-alikes written for it (POST /v1/email-rules/look-alikes with request_id; primitive email-rules generate-look-alikes). Neither stores anything, and neither needs access beyond testing a rule of your own; the accept keeps any you send as expectation_samples on the rule it writes. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEmailRuleRequest",
@@ -19441,6 +20416,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "decline_reason": {
           "description": "Why the member asked declined it; null unless they gave a reason when declining.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "edited_on_accept": {
+          "description": "Once accepted: whether the rule was changed first, as on the share. Null until then, or when unreadable.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "notice": {
+          "description": "For the member asked, while pending: what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
           "type": [
             "string",
             "null"
@@ -20513,6 +21502,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "decline_reason": {
             "description": "Why the member asked declined it; null unless they gave a reason when declining.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "edited_on_accept": {
+            "description": "Once accepted: whether the rule was changed first, as on the share. Null until then, or when unreadable.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "notice": {
+            "description": "For the member asked, while pending: what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
             "type": [
               "string",
               "null"
@@ -22039,6 +23042,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "do_not_share"
             ]
           },
+          "protection_note": {
+            "description": "On a do_not_share rule only: it protects nothing yet (not active), or a classifier fact narrows it.",
+            "type": "string"
+          },
           "evaluation_scope": {
             "description": "Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).",
             "type": "string",
@@ -22551,10 +23558,131 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "string",
                 "format": "uuid"
               }
+            },
+            "samples": {
+              "maxItems": 20,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "expected": {
+                    "type": "string",
+                    "enum": [
+                      "match",
+                      "no_match"
+                    ]
+                  },
+                  "label": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "pattern": "^[^\\u0000]*$",
+                    "description": "What the email stands for, such as a personal medical bill."
+                  },
+                  "email": {
+                    "type": "object",
+                    "properties": {
+                      "from": {
+                        "type": "object",
+                        "properties": {
+                          "address": {
+                            "type": "string",
+                            "maxLength": 254,
+                            "format": "email",
+                            "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                          },
+                          "name": {
+                            "type": "string",
+                            "maxLength": 200,
+                            "pattern": "^[^\\u0000]*$"
+                          }
+                        },
+                        "required": [
+                          "address"
+                        ]
+                      },
+                      "to": {
+                        "minItems": 1,
+                        "maxItems": 10,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "maxLength": 254,
+                          "format": "email",
+                          "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                        }
+                      },
+                      "cc": {
+                        "maxItems": 10,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "maxLength": 254,
+                          "format": "email",
+                          "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                        }
+                      },
+                      "subject": {
+                        "type": "string",
+                        "maxLength": 998,
+                        "pattern": "^[^\\u0000]*$"
+                      },
+                      "text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4000,
+                        "pattern": "^[^\\u0000]*$"
+                      },
+                      "attachment_types": {
+                        "maxItems": 10,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 255,
+                          "pattern": "^[^\\u0000]*$"
+                        }
+                      },
+                      "automated": {
+                        "type": "boolean"
+                      },
+                      "from_mailing_list": {
+                        "type": "boolean"
+                      },
+                      "spam_score": {
+                        "type": "number",
+                        "minimum": -1000,
+                        "maximum": 1000
+                      }
+                    },
+                    "required": [
+                      "from",
+                      "to",
+                      "text"
+                    ],
+                    "description": "A made-up email, as POST /email-rules/test-sample takes it."
+                  },
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "created_at": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "expected",
+                  "email"
+                ],
+                "additionalProperties": false
+              }
             }
           },
           "additionalProperties": false,
-          "description": "Emails the rule must match and must not, at most 100 in all, always tested whatever their age: added to email_ids, or to the recent window, which gives up a place for each. The answer's expectations judge each."
+          "description": "Emails the rule must match and must not (at most 100), always tested whatever their age, and made-up emails (samples, at most 20). Given, it replaces a saved rule's own."
         }
       },
       "additionalProperties": false
@@ -23025,7 +24153,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "expectations": {
-          "description": "Present when expect was given, or for a saved rule with saved expectations.",
+          "description": "Present when expect was given, or for a saved rule with saved expectations or made-up emails.",
           "type": "object",
           "properties": {
             "passed": {
@@ -23098,6 +24226,96 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ]
               },
               "description": "match first, then no_match, each in the order given (saved expectations by email id)."
+            },
+            "samples": {
+              "description": "Made-up emails judged (expect.samples, or a saved rule's), in order; counts include them.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "index": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "sample_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "label": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "expected": {
+                    "type": "string",
+                    "enum": [
+                      "match",
+                      "no_match"
+                    ]
+                  },
+                  "outcome": {
+                    "type": "string",
+                    "enum": [
+                      "matched",
+                      "near_miss",
+                      "no_match",
+                      "not_decided"
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "passed",
+                      "failed",
+                      "undecided"
+                    ]
+                  },
+                  "question_answers": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "question": {
+                          "type": "string"
+                        },
+                        "answer": {
+                          "type": [
+                            "boolean",
+                            "null"
+                          ]
+                        },
+                        "probability": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "error_class": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "question",
+                        "answer",
+                        "probability"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "index",
+                  "sample_id",
+                  "label",
+                  "expected",
+                  "outcome",
+                  "status",
+                  "question_answers"
+                ]
+              }
             }
           },
           "required": [
@@ -23757,6 +24975,254 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "additionalProperties": false,
           "description": "Replaces its saved expectations (author only); null removes them."
         },
+        "expectation_samples": {
+          "maxItems": 20,
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "object",
+            "properties": {
+              "expected": {
+                "type": "string",
+                "enum": [
+                  "match",
+                  "no_match"
+                ]
+              },
+              "label": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 200,
+                "pattern": "^[^\\u0000]*$",
+                "description": "What the email stands for, such as a personal medical bill."
+              },
+              "email": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "object",
+                    "properties": {
+                      "address": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "format": "email",
+                        "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                      },
+                      "name": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "pattern": "^[^\\u0000]*$"
+                      }
+                    },
+                    "required": [
+                      "address"
+                    ]
+                  },
+                  "to": {
+                    "minItems": 1,
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 254,
+                      "format": "email",
+                      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    }
+                  },
+                  "cc": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 254,
+                      "format": "email",
+                      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    }
+                  },
+                  "subject": {
+                    "type": "string",
+                    "maxLength": 998,
+                    "pattern": "^[^\\u0000]*$"
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000,
+                    "pattern": "^[^\\u0000]*$"
+                  },
+                  "attachment_types": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "pattern": "^[^\\u0000]*$"
+                    }
+                  },
+                  "automated": {
+                    "type": "boolean"
+                  },
+                  "from_mailing_list": {
+                    "type": "boolean"
+                  },
+                  "spam_score": {
+                    "type": "number",
+                    "minimum": -1000,
+                    "maximum": 1000
+                  }
+                },
+                "required": [
+                  "from",
+                  "to",
+                  "text"
+                ],
+                "description": "A made-up email, as POST /email-rules/test-sample takes it."
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "created_at": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "expected",
+              "email"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Replaces its saved made-up emails (author only); null or [] removes them."
+        },
+        "add_expectation_samples": {
+          "description": "Adds made-up emails to those saved (author only), up to 20 in all.",
+          "minItems": 1,
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "expected": {
+                "type": "string",
+                "enum": [
+                  "match",
+                  "no_match"
+                ]
+              },
+              "label": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 200,
+                "pattern": "^[^\\u0000]*$",
+                "description": "What the email stands for, such as a personal medical bill."
+              },
+              "email": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "object",
+                    "properties": {
+                      "address": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "format": "email",
+                        "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                      },
+                      "name": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "pattern": "^[^\\u0000]*$"
+                      }
+                    },
+                    "required": [
+                      "address"
+                    ]
+                  },
+                  "to": {
+                    "minItems": 1,
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 254,
+                      "format": "email",
+                      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    }
+                  },
+                  "cc": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 254,
+                      "format": "email",
+                      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    }
+                  },
+                  "subject": {
+                    "type": "string",
+                    "maxLength": 998,
+                    "pattern": "^[^\\u0000]*$"
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000,
+                    "pattern": "^[^\\u0000]*$"
+                  },
+                  "attachment_types": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "pattern": "^[^\\u0000]*$"
+                    }
+                  },
+                  "automated": {
+                    "type": "boolean"
+                  },
+                  "from_mailing_list": {
+                    "type": "boolean"
+                  },
+                  "spam_score": {
+                    "type": "number",
+                    "minimum": -1000,
+                    "maximum": 1000
+                  }
+                },
+                "required": [
+                  "from",
+                  "to",
+                  "text"
+                ],
+                "description": "A made-up email, as POST /email-rules/test-sample takes it."
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "created_at": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "expected",
+              "email"
+            ],
+            "additionalProperties": false
+          }
+        },
         "if_revision": {
           "description": "The revision you read: if the rule was updated since, nothing is saved (409 email_rule_conflict, revision_moved).",
           "type": "integer",
@@ -23801,6 +25267,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "grant",
             "do_not_share"
           ]
+        },
+        "protection_note": {
+          "description": "On a do_not_share rule only: it protects nothing yet (not active), or a classifier fact narrows it.",
+          "type": "string"
         },
         "evaluation_scope": {
           "description": "Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).",
@@ -24043,8 +25513,128 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ]
           }
         },
+        "expectation_samples": {
+          "description": "Its saved made-up emails, when this write set or added some.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "expected": {
+                "type": "string",
+                "enum": [
+                  "match",
+                  "no_match"
+                ]
+              },
+              "label": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "email": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "object",
+                    "properties": {
+                      "address": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "format": "email",
+                        "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                      },
+                      "name": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "pattern": "^[^\\u0000]*$"
+                      }
+                    },
+                    "required": [
+                      "address"
+                    ]
+                  },
+                  "to": {
+                    "minItems": 1,
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 254,
+                      "format": "email",
+                      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    }
+                  },
+                  "cc": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 254,
+                      "format": "email",
+                      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    }
+                  },
+                  "subject": {
+                    "type": "string",
+                    "maxLength": 998,
+                    "pattern": "^[^\\u0000]*$"
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000,
+                    "pattern": "^[^\\u0000]*$"
+                  },
+                  "attachment_types": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "pattern": "^[^\\u0000]*$"
+                    }
+                  },
+                  "automated": {
+                    "type": "boolean"
+                  },
+                  "from_mailing_list": {
+                    "type": "boolean"
+                  },
+                  "spam_score": {
+                    "type": "number",
+                    "minimum": -1000,
+                    "maximum": 1000
+                  }
+                },
+                "required": [
+                  "from",
+                  "to",
+                  "text"
+                ],
+                "description": "A made-up email, as POST /email-rules/test-sample takes it."
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "expected",
+              "label",
+              "email",
+              "created_at"
+            ]
+          }
+        },
         "expectations_check": {
-          "description": "After a write that saved a version or changed its expectations, if it has some: them, judged on that version from stored classifications without asking its questions. Undecided: one that needs answers not yet kept for that version, is unclassified, skipped or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed). Test by rule_id for the rest. With if_expectations_pass, the judgment made before the save, which passed.",
+          "description": "After a write that saved a version or changed its expectations or made-up emails, if it has some: the emails by id judged on that version from stored classifications without asking its questions, and any made-up emails listed as undecided. Undecided: one that needs answers not yet kept for that version, is unclassified, skipped or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed), and after a write that changed only made-up emails on a rule with emails by id. Test by rule_id for the rest. With if_expectations_pass, the judgment made before the save, which passed.",
           "type": "object",
           "properties": {
             "version": {
@@ -24062,7 +25652,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "decided": {
-              "description": "Whether every expectation was judged (undecided is empty). Absent from a server that predates it.",
+              "description": "Whether every expectation was judged (undecided and undecided_samples are empty). Absent from a server that predates it.",
               "type": "boolean"
             },
             "failed": {
@@ -24079,8 +25669,24 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "format": "uuid"
               }
             },
+            "failed_samples": {
+              "description": "Made-up emails that failed, by index in the set judged (saved oldest first, then added; or as sent).",
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "undecided_samples": {
+              "description": "Made-up emails not decided, by index. Only a write sent with if_expectations_pass that saves a version or activates the rule judges them.",
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
             "note": {
-              "description": "On an update that saved a version that did not pass: that it was saved anyway, is current, and whether it is live.",
+              "description": "On an update that saved a version that did not pass, or a do_not_share rule created active: that it was saved anyway, is current, and whether it is live.",
               "type": "string"
             }
           },
@@ -24385,6 +25991,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "decline_reason": {
           "description": "Why the member asked declined it; null unless they gave a reason when declining.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "edited_on_accept": {
+          "description": "Once accepted: whether the rule was changed first, as on the share. Null until then, or when unreadable.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "notice": {
+          "description": "For the member asked, while pending: what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
           "type": [
             "string",
             "null"
@@ -45232,7 +46852,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "decide-suspension",
-    "description": "Keep, narrow or revoke one suspended or flagged item. Keeping it, and revoking an API key, needs the decider to cover it (revoking an uncovered key is refused with `grant_forbidden`, `target_not_covered`). Keeping an API key rotated (`rotate: true`, other than the shared Function key) also revokes its older secrets still in a rotation overlap, and needs keys:manage on both the credential and the person: without it, or if the decider lost members:manage meanwhile, it is refused with `grant_forbidden` (`keys_manage_required` or `actor_access_changed`) and nothing is rotated. A rule share paused by a role change (`email_rule_share`) takes keep, which leaves it paused, or revoke, which ends the share and needs confirm: true (the person it was shared with loses the emails already shared; without it, 409 `confirmation_required`, as for revoking a filter). Neither of the share's two people may keep it (`grant_forbidden`, `share_decision_forbidden`). Access a person gave on their own mailbox (`mailbox_access`) takes keep or revoke, and both need delegations:manage; revoke removes only what that person gave on that mailbox. Nobody the access reaches, nor the person who gave it, may keep it (`grant_forbidden`, `mailbox_access_decision_forbidden`). Person only: a dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose `suspensions.decide` (the person confirms at the step_up_url a 403 step_up_required answer carries, which names this client, then send the token in the Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs members:manage. API keys are refused.",
+    "description": "Keep, narrow or revoke one suspended or flagged item. Keeping it needs the decider to cover it, and so does revoking an API key unless the decider holds it and decides as themself rather than through another app (revoking an uncovered key someone else holds is refused with `grant_forbidden`, `target_not_covered`). Keeping an API key rotated (`rotate: true`, other than the shared Function key) also revokes its older secrets still in a rotation overlap, and needs keys:manage on both the credential and the person: without it, or if the decider lost members:manage meanwhile, it is refused with `grant_forbidden` (`keys_manage_required` or `actor_access_changed`) and nothing is rotated. A rule share paused by a role change (`email_rule_share`) takes keep, which leaves it paused, or revoke, which ends the share and needs confirm: true (the person it was shared with loses the emails already shared; without it, 409 `confirmation_required`, as for revoking a filter). Neither of the share's two people may keep it (`grant_forbidden`, `share_decision_forbidden`). Access a person gave on their own mailbox (`mailbox_access`) takes keep or revoke, and both need delegations:manage; revoke removes only what that person gave on that mailbox. Nobody the access reaches, nor the person who gave it, may keep it (`grant_forbidden`, `mailbox_access_decision_forbidden`). Person only: a dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose `suspensions.decide` (the person confirms at the step_up_url a 403 step_up_required answer carries, which names this client, then send the token in the Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs members:manage. API keys are refused.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "decideSuspension",

@@ -31,18 +31,23 @@ type Invoker interface {
 	// AcceptEmailRuleRequest invokes acceptEmailRuleRequest operation.
 	//
 	// Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches
-	// from now on with the member who asked. Send no body to accept it as asked, or change it first with
-	// english and tree together (and an explanation, or the server writes one). Because this gives your
-	// mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and
-	// agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to POST
-	// /v1/email-rules/test. A test on mail already received shows only what has arrived. To see what the
-	// rule would do with an email that has not, such as one you would never want shared, pass the
-	// request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI,
-	// primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up.
-	//  Nothing is stored, and it needs no access beyond testing a rule of your own. Accepting also needs
-	// mail:share_own (sharing your own mail through email rules, which only shows it and never sends): a
-	// role without it is refused, whether or not it can send. Needs mail:read, a member's own credential
-	// with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+	// from now on with the member who asked: each email in full with its attachments, but never raw. It
+	// does not go back through mail already received. Send no body to accept it as asked, or change it
+	// first with english and tree together (and an explanation, or the server writes one). Because this
+	// gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth
+	// apps and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree
+	// to POST /v1/email-rules/test. A test on mail already received shows only what has arrived. To see
+	// what the rule would do with an email that has not, such as one you would never want shared, pass
+	// the request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive
+	// CLI, primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you
+	// make up, or have look-alikes written for it (POST /v1/email-rules/look-alikes with request_id;
+	// primitive email-rules generate-look-alikes). Neither stores anything, and neither needs access
+	// beyond testing a rule of your own; the accept keeps any you send as expectation_samples on the
+	// rule it writes. Made-up emails sent in expectation_samples are kept on the rule this writes, where
+	// GET /v1/email-rules/{id} lists them. Accepting also needs mail:share_own (sharing your own mail
+	// through email rules, which only shows it and never sends): a role without it is refused, whether
+	// or not it can send. Needs mail:read, a member's own credential with their full access (not an API
+	// key, agent key or narrowed token), and the email rules feature.
 	//
 	// POST /email-rule-requests/{id}/accept
 	AcceptEmailRuleRequest(ctx context.Context, request OptAcceptEmailRuleRequestRequest, params AcceptEmailRuleRequestParams) (AcceptEmailRuleRequestRes, error)
@@ -300,7 +305,7 @@ type Invoker interface {
 	// Turns a plain-English description of which received emails to match into a rule tree over the
 	// published column contract, with a plain-English explanation of what it matches, the assumptions
 	// made, and warnings for anything the columns cannot express. Where the columns fall short the rule
-	// may carry up to three yes/no questions, asked about an email only after its conditions match.
+	// may carry up to five yes/no questions, asked about an email only after its conditions match.
 	// Nothing is saved. A rule with no questions has its conditions counted, read only, over the
 	// caller's recent classified mail (what a test of it covers by default): breadth is that count, and
 	// a warning says when it matches nearly all of it. The SQL the rule renders to is returned only when
@@ -371,14 +376,15 @@ type Invoker interface {
 	//
 	// Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column
 	// contract; without an explanation the server writes one. It starts in observe (what it matches is
-	// recorded, nothing granted or blocked) unless state is draft (not evaluated). You are its author,
-	// and it never reaches mail you cannot read. evaluation_scope is own_mailboxes (your own mail)
-	// unless you name author (all you can read) or selected; scope_selection may name only what you can
-	// read. The answer carries the scope as stored. expectations saves emails it must match and must not;
-	//  the answer judges them (expectations_check). kind do_not_share blocks sharing: it runs before
-	// every other rule, and while active no rule shares an email it matches or cannot decide; a key
-	// cannot list it (details.reason rule_blocks_sharing). Needs mail:read, a member's own credential
-	// with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+	// recorded, nothing granted or blocked) unless state is draft (not evaluated), or active for a
+	// do_not_share rule. You are its author, and it never reaches mail you cannot read. evaluation_scope
+	// is own_mailboxes (your own mail) unless you name author (all you can read) or selected;
+	// scope_selection may name only what you can read. The answer carries the scope as stored.
+	// expectations saves emails it must match and must not; the answer judges them (expectations_check).
+	// kind do_not_share blocks sharing: it runs before every other rule, and while active no rule shares
+	// an email it matches or cannot decide; a key cannot list it (details.reason rule_blocks_sharing).
+	// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+	// narrowed token), and the email rules feature.
 	//
 	// POST /email-rules
 	CreateEmailRule(ctx context.Context, request *CreateEmailRuleRequest, params CreateEmailRuleParams) (CreateEmailRuleRes, error)
@@ -632,24 +638,25 @@ type Invoker interface {
 	DecideAccessMode(ctx context.Context, request *DecideAccessModeRequest, params DecideAccessModeParams) (DecideAccessModeRes, error)
 	// DecideSuspension invokes decideSuspension operation.
 	//
-	// Keep, narrow or revoke one suspended or flagged item. Keeping it, and revoking an API key, needs
-	// the decider to cover it (revoking an uncovered key is refused with `grant_forbidden`,
-	// `target_not_covered`). Keeping an API key rotated (`rotate: true`, other than the shared Function
-	// key) also revokes its older secrets still in a rotation overlap, and needs keys:manage on both the
-	// credential and the person: without it, or if the decider lost members:manage meanwhile, it is
-	// refused with `grant_forbidden` (`keys_manage_required` or `actor_access_changed`) and nothing is
-	// rotated. A rule share paused by a role change (`email_rule_share`) takes keep, which leaves it
-	// paused, or revoke, which ends the share and needs confirm: true (the person it was shared with
-	// loses the emails already shared; without it, 409 `confirmation_required`, as for revoking a
-	// filter). Neither of the share's two people may keep it (`grant_forbidden`,
-	// `share_decision_forbidden`). Access a person gave on their own mailbox (`mailbox_access`) takes
-	// keep or revoke, and both need delegations:manage; revoke removes only what that person gave on
-	// that mailbox. Nobody the access reaches, nor the person who gave it, may keep it
-	// (`grant_forbidden`, `mailbox_access_decision_forbidden`). Person only: a dashboard session, or the
-	// person's own OAuth or CLI token with a session step-up of purpose `suspensions.decide` (the person
-	// confirms at the step_up_url a 403 step_up_required answer carries, which names this client, then
-	// send the token in the Primitive-Step-Up header; the token works only with the client it was
-	// confirmed for). Needs members:manage. API keys are refused.
+	// Keep, narrow or revoke one suspended or flagged item. Keeping it needs the decider to cover it,
+	// and so does revoking an API key unless the decider holds it and decides as themself rather than
+	// through another app (revoking an uncovered key someone else holds is refused with
+	// `grant_forbidden`, `target_not_covered`). Keeping an API key rotated (`rotate: true`, other than
+	// the shared Function key) also revokes its older secrets still in a rotation overlap, and needs
+	// keys:manage on both the credential and the person: without it, or if the decider lost
+	// members:manage meanwhile, it is refused with `grant_forbidden` (`keys_manage_required` or
+	// `actor_access_changed`) and nothing is rotated. A rule share paused by a role change
+	// (`email_rule_share`) takes keep, which leaves it paused, or revoke, which ends the share and needs
+	// confirm: true (the person it was shared with loses the emails already shared; without it, 409
+	// `confirmation_required`, as for revoking a filter). Neither of the share's two people may keep it
+	// (`grant_forbidden`, `share_decision_forbidden`). Access a person gave on their own mailbox
+	// (`mailbox_access`) takes keep or revoke, and both need delegations:manage; revoke removes only
+	// what that person gave on that mailbox. Nobody the access reaches, nor the person who gave it, may
+	// keep it (`grant_forbidden`, `mailbox_access_decision_forbidden`). Person only: a dashboard session,
+	//  or the person's own OAuth or CLI token with a session step-up of purpose `suspensions.decide`
+	// (the person confirms at the step_up_url a 403 step_up_required answer carries, which names this
+	// client, then send the token in the Primitive-Step-Up header; the token works only with the client
+	// it was confirmed for). Needs members:manage. API keys are refused.
 	//
 	// POST /access-suspensions/{id}/decision
 	DecideSuspension(ctx context.Context, request *DecideSuspensionRequest, params DecideSuspensionParams) (DecideSuspensionRes, error)
@@ -1012,6 +1019,18 @@ type Invoker interface {
 	//
 	// DELETE /email-rule-shares/{id}
 	EndEmailRuleShare(ctx context.Context, params EndEmailRuleShareParams) (EndEmailRuleShareRes, error)
+	// GenerateLookAlikes invokes generateLookAlikes operation.
+	//
+	// Writes made-up emails that come close to what a grant rule describes but are private (a personal
+	// medical bill, pay for named people, a personal purchase, personal banking or tax, or another near
+	// case), and reports what the rule decides for each, as test-sample would. failed means the rule
+	// matched it, so it would be shared. Nothing is stored and no mail is read. Keep the ones it must
+	// never match with add_expectation_samples, or for a request with the accept's expectation_samples.
+	// Limited to 20 an hour per member. Needs mail:read, a member's own credential with their full
+	// access (not an API key, agent key or narrowed token), and the email rules feature.
+	//
+	// POST /email-rules/look-alikes
+	GenerateLookAlikes(ctx context.Context, request *GenerateLookAlikesRequest, params GenerateLookAlikesParams) (GenerateLookAlikesRes, error)
 	// GetAccessMode invokes getAccessMode operation.
 	//
 	// Whole-org or delegated mailbox access. Holders of roles:assign also get the preview of a switch
@@ -1295,10 +1314,12 @@ type Invoker interface {
 	// received. A test on mail already received shows only what has arrived. To see what the rule would
 	// do with an email that has not, such as one you would never want shared, pass the request's tree to
 	// POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive
-	// email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up. Nothing
-	// is stored, and it needs no access beyond testing a rule of your own. Needs mail:read, a member's
-	// own credential with their full access (not an API key, agent key or narrowed token), and the email
-	// rules feature.
+	// email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up, or have
+	// look-alikes written for it (POST /v1/email-rules/look-alikes with request_id; primitive
+	// email-rules generate-look-alikes). Neither stores anything, and neither needs access beyond
+	// testing a rule of your own; the accept keeps any you send as expectation_samples on the rule it
+	// writes. Needs mail:read, a member's own credential with their full access (not an API key, agent
+	// key or narrowed token), and the email rules feature.
 	//
 	// GET /email-rule-requests/{id}
 	GetEmailRuleRequest(ctx context.Context, params GetEmailRuleRequestParams) (GetEmailRuleRequestRes, error)
@@ -2943,22 +2964,29 @@ type Invoker interface {
 	// RevokeCredential invokes revokeCredential operation.
 	//
 	// Revoke one credential by kind and id. A Function key is rotated, never revoked (409
-	// rotate_instead). An API key is revoked only by a person whose own access covers the key's access
-	// (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered.
-	// What the credential set up or owns is listed in standing_objects for review, and for an API key
-	// also what it carries on for the keys it was rotated from. An organization-owned object (org_owned
-	// true) keeps working; any other keeps working only while someone can still act for it, such as a
-	// key of the same rotation that still works, or whoever it was given to, except that a block filter
-	// an app made keeps blocking, within the reach the app had, unless the person revoking chose to stop
-	// it. An API key (kind org_key or connected_key) that is already revoked, and whose record is kept,
-	// answers 200 with already_revoked true and revoked 0, to a caller who could have revoked it; anyone
-	// else gets the answer they would get for a key that does not exist. The person's own Primitive CLI
-	// login revokes an API key (kind org_key) as the person, with no step-up unless the organization's
-	// credential policy sets cli_writes_require_approval (then it takes a keys.create step-up); every
-	// other kind (a connected key named as org_key included, 403 grant_forbidden target_not_covered),
-	// and every other app even with a step-up, is refused outside the dashboard (403). Needs the
-	// organization's credential features to be enabled; while they are not, this answers 404
-	// feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
+	// rotate_instead). An API key is revoked by the person who holds it, whatever it reaches, or by a
+	// person whose own access covers the key's access (an owner covers every key); otherwise 403
+	// grant_forbidden, details.reason target_not_covered. Revoking an API key also revokes the keys it
+	// replaced in its rotation that are still in their overlap and that you may revoke
+	// (predecessors_revoked_count; predecessors_left counts the rest), so its webhooks stop at once; the
+	// keys that replaced it carry its work on. Revoking a key already revoked does the same for those
+	// keys. What the credential set up or owns is listed in standing_objects for review, and for an API
+	// key also what it carries on for the keys it was rotated from, each saying whether anything still
+	// acts for it (still_acting, with the key in acting_key_id) and, for a webhook, whether it is still
+	// delivering. An organization-owned object (org_owned true) keeps working; any other keeps working
+	// only while someone can still act for it, such as a key of the same rotation that still works, or
+	// whoever it was given to, except that a block filter an app made keeps blocking, within the reach
+	// the app had, unless the person revoking chose to stop it. An API key (kind org_key or
+	// connected_key) that is already revoked, and whose record is kept, answers 200 with already_revoked
+	// true, to a caller who could have revoked it, and revoked counts only the keys it replaced that
+	// were revoked now; anyone else gets the answer they would get for a key that does not exist. The
+	// person's own Primitive CLI login revokes an API key (kind org_key) as the person, with no step-up
+	// unless the organization's credential policy sets cli_writes_require_approval (then it takes a keys.
+	// create step-up); every other kind (a connected key named as org_key included, 403 grant_forbidden
+	// target_not_covered), and every other app even with a step-up, is refused outside the dashboard
+	// (403). Needs the organization's credential features to be enabled; while they are not, this
+	// answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn
+	// them on.
 	// Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
 	// person's role must hold keys:manage. API keys, agent connection keys and agents are refused.
 	//
@@ -3018,18 +3046,20 @@ type Invoker interface {
 	// secret once. The old key keeps working for overlap_seconds, then stops: 24 hours when
 	// overlap_seconds is omitted, at most 7 days, never past its own expires_at, and at once with 0
 	// (which is how to rotate a key whose secret leaked). previous_key_expires_at says when the old key
-	// stops. Rotating does not extend a key: the successor keeps the old expiry unless expires_at gives
-	// it a new one. That needs keys:manage (403 forbidden otherwise), is held to the credential policy
-	// (400 when past its maximum lifetime, with the latest expiry it allows now in the message), and
-	// someone limited to their own keys can only keep or bring it forward (403 grant_forbidden, details.
-	// reason own_key_tighten_only); the old key then never outlives the new one. The person rotating
-	// must cover the key's access (403 grant_forbidden, details.reason target_not_covered), and a key an
-	// owner holds is rotated by an owner only (403 forbidden, details.reason owner_key_rotation), since
-	// rotating hands over the new secret. The person's own Primitive CLI login needs no step-up (it acts
-	// as the person, held to the same rules) unless the organization's credential policy sets
-	// cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the
-	// organization's credential features to be enabled; while they are not, this answers 404
-	// feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
+	// stops. Revoking the successor during the overlap also revokes the old key when you may revoke that
+	// one too; the revoke's predecessors_left counts any left working. Rotating does not extend a key:
+	// the successor keeps the old expiry unless expires_at gives it a new one. That needs keys:manage
+	// (403 forbidden otherwise), is held to the credential policy (400 when past its maximum lifetime,
+	// with the latest expiry it allows now in the message), and someone limited to their own keys can
+	// only keep or bring it forward (403 grant_forbidden, details.reason own_key_tighten_only); the old
+	// key then never outlives the new one. The person rotating must cover the key's access (403
+	// grant_forbidden, details.reason target_not_covered), and a key an owner holds is rotated by an
+	// owner only (403 forbidden, details.reason owner_key_rotation), since rotating hands over the new
+	// secret. The person's own Primitive CLI login needs no step-up (it acts as the person, held to the
+	// same rules) unless the organization's credential policy sets cli_writes_require_approval; the
+	// Primitive app's token is refused, even with one. Needs the organization's credential features to
+	// be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the
+	// feature. Contact Primitive to turn them on.
 	// Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
 	// organization's credential policy sets cli_writes_require_approval), or the person's own OAuth
 	// token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one
@@ -3631,19 +3661,22 @@ type Invoker interface {
 	// needs the person to be allowed to create a key with the key's access. An expired key's expiry
 	// cannot be changed (409 conflict, details.reason key_expired); make a new key instead. Any change
 	// needs the person's own access to cover the key's access now (an owner covers every key); otherwise
-	// 403 grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key
-	// and is held to the same rules as creating one (a custom grant that does not say which mail it
-	// reaches is refused with details.reason mail_scope_required), so it takes the same step-up. It
-	// replaces the whole grant: send expected_grant_ref (grant.ref from GET /v1/keys/{id}) to have it
-	// refused (409 conflict, details.reason grant_changed) if the grant changed since that read; a grant
-	// change sent without it answers grant_unguarded: true. On a key limited to selected resources
-	// (grant.resources), a grant change must drop the limits on purpose with a custom grant and grant.
-	// resources {}; one that leaves them out is refused (409 conflict, details.reason
-	// key_has_resource_limits) and nothing changes. The person's own Primitive CLI login needs no
-	// step-up (it acts as the person, held to the same rules) unless the organization's credential
-	// policy sets cli_writes_require_approval; the Primitive app's token is refused, even with one.
-	// Needs the organization's credential features to be enabled; while they are not, this answers 404
-	// feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
+	// 403 grant_forbidden, details.reason target_not_covered. The one exception is suspending a key
+	// (suspended true with no other change; expected_grant_ref may accompany it), which the person who
+	// holds it may do whatever the key reaches, calling as themself rather than through another app;
+	// lifting a suspension is a change like any other. A grant change is a new version of the key and is
+	// held to the same rules as creating one (a custom grant that does not say which mail it reaches is
+	// refused with details.reason mail_scope_required), so it takes the same step-up. It replaces the
+	// whole grant: send expected_grant_ref (grant.ref from GET /v1/keys/{id}) to have it refused (409
+	// conflict, details.reason grant_changed) if the grant changed since that read; a grant change sent
+	// without it answers grant_unguarded: true. On a key limited to selected resources (grant.resources),
+	//  a grant change must drop the limits on purpose with a custom grant and grant.resources {}; one
+	// that leaves them out is refused (409 conflict, details.reason key_has_resource_limits) and nothing
+	// changes. The person's own Primitive CLI login needs no step-up (it acts as the person, held to the
+	// same rules) unless the organization's credential policy sets cli_writes_require_approval; the
+	// Primitive app's token is refused, even with one. Needs the organization's credential features to
+	// be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the
+	// feature. Contact Primitive to turn them on.
 	// Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
 	// organization's credential policy sets cli_writes_require_approval), or the person's own OAuth
 	// token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one
@@ -3894,20 +3927,23 @@ func (c *Client) requestURL(ctx context.Context) *url.URL {
 // AcceptEmailRuleRequest invokes acceptEmailRuleRequest operation.
 //
 // Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches
-// from now on with the member who asked. Send no body to accept it as asked, or change it first with
-// english and tree together (and an explanation, or the server writes one). Because this gives your
-// mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and
-// agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to POST
-// /v1/email-rules/test. A test on mail already received shows only what has arrived. To see what the
-// rule would do with an email that has not, such as one you would never want shared, pass the
-// request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI,
-// primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up.
-//
-//	Nothing is stored, and it needs no access beyond testing a rule of your own. Accepting also needs
-//
-// mail:share_own (sharing your own mail through email rules, which only shows it and never sends): a
-// role without it is refused, whether or not it can send. Needs mail:read, a member's own credential
-// with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+// from now on with the member who asked: each email in full with its attachments, but never raw. It
+// does not go back through mail already received. Send no body to accept it as asked, or change it
+// first with english and tree together (and an explanation, or the server writes one). Because this
+// gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth
+// apps and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree
+// to POST /v1/email-rules/test. A test on mail already received shows only what has arrived. To see
+// what the rule would do with an email that has not, such as one you would never want shared, pass
+// the request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive
+// CLI, primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you
+// make up, or have look-alikes written for it (POST /v1/email-rules/look-alikes with request_id;
+// primitive email-rules generate-look-alikes). Neither stores anything, and neither needs access
+// beyond testing a rule of your own; the accept keeps any you send as expectation_samples on the
+// rule it writes. Made-up emails sent in expectation_samples are kept on the rule this writes, where
+// GET /v1/email-rules/{id} lists them. Accepting also needs mail:share_own (sharing your own mail
+// through email rules, which only shows it and never sends): a role without it is refused, whether
+// or not it can send. Needs mail:read, a member's own credential with their full access (not an API
+// key, agent key or narrowed token), and the email rules feature.
 //
 // POST /email-rule-requests/{id}/accept
 func (c *Client) AcceptEmailRuleRequest(ctx context.Context, request OptAcceptEmailRuleRequestRequest, params AcceptEmailRuleRequestParams) (AcceptEmailRuleRequestRes, error) {
@@ -7195,7 +7231,7 @@ func (c *Client) sendCliLogout(ctx context.Context, request OptCliLogoutInput, p
 // Turns a plain-English description of which received emails to match into a rule tree over the
 // published column contract, with a plain-English explanation of what it matches, the assumptions
 // made, and warnings for anything the columns cannot express. Where the columns fall short the rule
-// may carry up to three yes/no questions, asked about an email only after its conditions match.
+// may carry up to five yes/no questions, asked about an email only after its conditions match.
 // Nothing is saved. A rule with no questions has its conditions counted, read only, over the
 // caller's recent classified mail (what a test of it covers by default): breadth is that count, and
 // a warning says when it matches nearly all of it. The SQL the rule renders to is returned only when
@@ -7871,16 +7907,15 @@ func (c *Client) sendCreateAgentConnection(ctx context.Context, request *CreateA
 //
 // Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column
 // contract; without an explanation the server writes one. It starts in observe (what it matches is
-// recorded, nothing granted or blocked) unless state is draft (not evaluated). You are its author,
-// and it never reaches mail you cannot read. evaluation_scope is own_mailboxes (your own mail)
-// unless you name author (all you can read) or selected; scope_selection may name only what you can
-// read. The answer carries the scope as stored. expectations saves emails it must match and must not;
-//
-//	the answer judges them (expectations_check). kind do_not_share blocks sharing: it runs before
-//
-// every other rule, and while active no rule shares an email it matches or cannot decide; a key
-// cannot list it (details.reason rule_blocks_sharing). Needs mail:read, a member's own credential
-// with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+// recorded, nothing granted or blocked) unless state is draft (not evaluated), or active for a
+// do_not_share rule. You are its author, and it never reaches mail you cannot read. evaluation_scope
+// is own_mailboxes (your own mail) unless you name author (all you can read) or selected;
+// scope_selection may name only what you can read. The answer carries the scope as stored.
+// expectations saves emails it must match and must not; the answer judges them (expectations_check).
+// kind do_not_share blocks sharing: it runs before every other rule, and while active no rule shares
+// an email it matches or cannot decide; a key cannot list it (details.reason rule_blocks_sharing).
+// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+// narrowed token), and the email rules feature.
 //
 // POST /email-rules
 func (c *Client) CreateEmailRule(ctx context.Context, request *CreateEmailRuleRequest, params CreateEmailRuleParams) (CreateEmailRuleRes, error) {
@@ -10054,24 +10089,27 @@ func (c *Client) sendDecideAccessMode(ctx context.Context, request *DecideAccess
 
 // DecideSuspension invokes decideSuspension operation.
 //
-// Keep, narrow or revoke one suspended or flagged item. Keeping it, and revoking an API key, needs
-// the decider to cover it (revoking an uncovered key is refused with `grant_forbidden`,
-// `target_not_covered`). Keeping an API key rotated (`rotate: true`, other than the shared Function
-// key) also revokes its older secrets still in a rotation overlap, and needs keys:manage on both the
-// credential and the person: without it, or if the decider lost members:manage meanwhile, it is
-// refused with `grant_forbidden` (`keys_manage_required` or `actor_access_changed`) and nothing is
-// rotated. A rule share paused by a role change (`email_rule_share`) takes keep, which leaves it
-// paused, or revoke, which ends the share and needs confirm: true (the person it was shared with
-// loses the emails already shared; without it, 409 `confirmation_required`, as for revoking a
-// filter). Neither of the share's two people may keep it (`grant_forbidden`,
-// `share_decision_forbidden`). Access a person gave on their own mailbox (`mailbox_access`) takes
-// keep or revoke, and both need delegations:manage; revoke removes only what that person gave on
-// that mailbox. Nobody the access reaches, nor the person who gave it, may keep it
-// (`grant_forbidden`, `mailbox_access_decision_forbidden`). Person only: a dashboard session, or the
-// person's own OAuth or CLI token with a session step-up of purpose `suspensions.decide` (the person
-// confirms at the step_up_url a 403 step_up_required answer carries, which names this client, then
-// send the token in the Primitive-Step-Up header; the token works only with the client it was
-// confirmed for). Needs members:manage. API keys are refused.
+// Keep, narrow or revoke one suspended or flagged item. Keeping it needs the decider to cover it,
+// and so does revoking an API key unless the decider holds it and decides as themself rather than
+// through another app (revoking an uncovered key someone else holds is refused with
+// `grant_forbidden`, `target_not_covered`). Keeping an API key rotated (`rotate: true`, other than
+// the shared Function key) also revokes its older secrets still in a rotation overlap, and needs
+// keys:manage on both the credential and the person: without it, or if the decider lost
+// members:manage meanwhile, it is refused with `grant_forbidden` (`keys_manage_required` or
+// `actor_access_changed`) and nothing is rotated. A rule share paused by a role change
+// (`email_rule_share`) takes keep, which leaves it paused, or revoke, which ends the share and needs
+// confirm: true (the person it was shared with loses the emails already shared; without it, 409
+// `confirmation_required`, as for revoking a filter). Neither of the share's two people may keep it
+// (`grant_forbidden`, `share_decision_forbidden`). Access a person gave on their own mailbox
+// (`mailbox_access`) takes keep or revoke, and both need delegations:manage; revoke removes only
+// what that person gave on that mailbox. Nobody the access reaches, nor the person who gave it, may
+// keep it (`grant_forbidden`, `mailbox_access_decision_forbidden`). Person only: a dashboard session,
+//
+//	or the person's own OAuth or CLI token with a session step-up of purpose `suspensions.decide`
+//
+// (the person confirms at the step_up_url a 403 step_up_required answer carries, which names this
+// client, then send the token in the Primitive-Step-Up header; the token works only with the client
+// it was confirmed for). Needs members:manage. API keys are refused.
 //
 // POST /access-suspensions/{id}/decision
 func (c *Client) DecideSuspension(ctx context.Context, request *DecideSuspensionRequest, params DecideSuspensionParams) (DecideSuspensionRes, error) {
@@ -15342,6 +15380,139 @@ func (c *Client) sendEndEmailRuleShare(ctx context.Context, params EndEmailRuleS
 	return result, nil
 }
 
+// GenerateLookAlikes invokes generateLookAlikes operation.
+//
+// Writes made-up emails that come close to what a grant rule describes but are private (a personal
+// medical bill, pay for named people, a personal purchase, personal banking or tax, or another near
+// case), and reports what the rule decides for each, as test-sample would. failed means the rule
+// matched it, so it would be shared. Nothing is stored and no mail is read. Keep the ones it must
+// never match with add_expectation_samples, or for a request with the accept's expectation_samples.
+// Limited to 20 an hour per member. Needs mail:read, a member's own credential with their full
+// access (not an API key, agent key or narrowed token), and the email rules feature.
+//
+// POST /email-rules/look-alikes
+func (c *Client) GenerateLookAlikes(ctx context.Context, request *GenerateLookAlikesRequest, params GenerateLookAlikesParams) (GenerateLookAlikesRes, error) {
+	res, err := c.sendGenerateLookAlikes(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendGenerateLookAlikes(ctx context.Context, request *GenerateLookAlikesRequest, params GenerateLookAlikesParams) (res GenerateLookAlikesRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("generateLookAlikes"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/email-rules/look-alikes"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GenerateLookAlikesOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/email-rules/look-alikes"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeGenerateLookAlikesRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IdempotencyKey.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GenerateLookAlikesOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGenerateLookAlikesResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetAccessMode invokes getAccessMode operation.
 //
 // Whole-org or delegated mailbox access. Holders of roles:assign also get the preview of a switch
@@ -17633,10 +17804,12 @@ func (c *Client) sendGetEmailRule(ctx context.Context, params GetEmailRuleParams
 // received. A test on mail already received shows only what has arrived. To see what the rule would
 // do with an email that has not, such as one you would never want shared, pass the request's tree to
 // POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive
-// email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up. Nothing
-// is stored, and it needs no access beyond testing a rule of your own. Needs mail:read, a member's
-// own credential with their full access (not an API key, agent key or narrowed token), and the email
-// rules feature.
+// email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up, or have
+// look-alikes written for it (POST /v1/email-rules/look-alikes with request_id; primitive
+// email-rules generate-look-alikes). Neither stores anything, and neither needs access beyond
+// testing a rule of your own; the accept keeps any you send as expectation_samples on the rule it
+// writes. Needs mail:read, a member's own credential with their full access (not an API key, agent
+// key or narrowed token), and the email rules feature.
 //
 // GET /email-rule-requests/{id}
 func (c *Client) GetEmailRuleRequest(ctx context.Context, params GetEmailRuleRequestParams) (GetEmailRuleRequestRes, error) {
@@ -39283,22 +39456,29 @@ func (c *Client) sendRevokeAllCredentials(ctx context.Context, request *Credenti
 // RevokeCredential invokes revokeCredential operation.
 //
 // Revoke one credential by kind and id. A Function key is rotated, never revoked (409
-// rotate_instead). An API key is revoked only by a person whose own access covers the key's access
-// (an owner covers every key); otherwise 403 grant_forbidden, details.reason target_not_covered.
-// What the credential set up or owns is listed in standing_objects for review, and for an API key
-// also what it carries on for the keys it was rotated from. An organization-owned object (org_owned
-// true) keeps working; any other keeps working only while someone can still act for it, such as a
-// key of the same rotation that still works, or whoever it was given to, except that a block filter
-// an app made keeps blocking, within the reach the app had, unless the person revoking chose to stop
-// it. An API key (kind org_key or connected_key) that is already revoked, and whose record is kept,
-// answers 200 with already_revoked true and revoked 0, to a caller who could have revoked it; anyone
-// else gets the answer they would get for a key that does not exist. The person's own Primitive CLI
-// login revokes an API key (kind org_key) as the person, with no step-up unless the organization's
-// credential policy sets cli_writes_require_approval (then it takes a keys.create step-up); every
-// other kind (a connected key named as org_key included, 403 grant_forbidden target_not_covered),
-// and every other app even with a step-up, is refused outside the dashboard (403). Needs the
-// organization's credential features to be enabled; while they are not, this answers 404
-// feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
+// rotate_instead). An API key is revoked by the person who holds it, whatever it reaches, or by a
+// person whose own access covers the key's access (an owner covers every key); otherwise 403
+// grant_forbidden, details.reason target_not_covered. Revoking an API key also revokes the keys it
+// replaced in its rotation that are still in their overlap and that you may revoke
+// (predecessors_revoked_count; predecessors_left counts the rest), so its webhooks stop at once; the
+// keys that replaced it carry its work on. Revoking a key already revoked does the same for those
+// keys. What the credential set up or owns is listed in standing_objects for review, and for an API
+// key also what it carries on for the keys it was rotated from, each saying whether anything still
+// acts for it (still_acting, with the key in acting_key_id) and, for a webhook, whether it is still
+// delivering. An organization-owned object (org_owned true) keeps working; any other keeps working
+// only while someone can still act for it, such as a key of the same rotation that still works, or
+// whoever it was given to, except that a block filter an app made keeps blocking, within the reach
+// the app had, unless the person revoking chose to stop it. An API key (kind org_key or
+// connected_key) that is already revoked, and whose record is kept, answers 200 with already_revoked
+// true, to a caller who could have revoked it, and revoked counts only the keys it replaced that
+// were revoked now; anyone else gets the answer they would get for a key that does not exist. The
+// person's own Primitive CLI login revokes an API key (kind org_key) as the person, with no step-up
+// unless the organization's credential policy sets cli_writes_require_approval (then it takes a keys.
+// create step-up); every other kind (a connected key named as org_key included, 403 grant_forbidden
+// target_not_covered), and every other app even with a step-up, is refused outside the dashboard
+// (403). Needs the organization's credential features to be enabled; while they are not, this
+// answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn
+// them on.
 // Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
 // person's role must hold keys:manage. API keys, agent connection keys and agents are refused.
 //
@@ -40164,18 +40344,20 @@ func (c *Client) sendRotateEndpointSigningSecret(ctx context.Context, params Rot
 // secret once. The old key keeps working for overlap_seconds, then stops: 24 hours when
 // overlap_seconds is omitted, at most 7 days, never past its own expires_at, and at once with 0
 // (which is how to rotate a key whose secret leaked). previous_key_expires_at says when the old key
-// stops. Rotating does not extend a key: the successor keeps the old expiry unless expires_at gives
-// it a new one. That needs keys:manage (403 forbidden otherwise), is held to the credential policy
-// (400 when past its maximum lifetime, with the latest expiry it allows now in the message), and
-// someone limited to their own keys can only keep or bring it forward (403 grant_forbidden, details.
-// reason own_key_tighten_only); the old key then never outlives the new one. The person rotating
-// must cover the key's access (403 grant_forbidden, details.reason target_not_covered), and a key an
-// owner holds is rotated by an owner only (403 forbidden, details.reason owner_key_rotation), since
-// rotating hands over the new secret. The person's own Primitive CLI login needs no step-up (it acts
-// as the person, held to the same rules) unless the organization's credential policy sets
-// cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the
-// organization's credential features to be enabled; while they are not, this answers 404
-// feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
+// stops. Revoking the successor during the overlap also revokes the old key when you may revoke that
+// one too; the revoke's predecessors_left counts any left working. Rotating does not extend a key:
+// the successor keeps the old expiry unless expires_at gives it a new one. That needs keys:manage
+// (403 forbidden otherwise), is held to the credential policy (400 when past its maximum lifetime,
+// with the latest expiry it allows now in the message), and someone limited to their own keys can
+// only keep or bring it forward (403 grant_forbidden, details.reason own_key_tighten_only); the old
+// key then never outlives the new one. The person rotating must cover the key's access (403
+// grant_forbidden, details.reason target_not_covered), and a key an owner holds is rotated by an
+// owner only (403 forbidden, details.reason owner_key_rotation), since rotating hands over the new
+// secret. The person's own Primitive CLI login needs no step-up (it acts as the person, held to the
+// same rules) unless the organization's credential policy sets cli_writes_require_approval; the
+// Primitive app's token is refused, even with one. Needs the organization's credential features to
+// be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the
+// feature. Contact Primitive to turn them on.
 // Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
 // organization's credential policy sets cli_writes_require_approval), or the person's own OAuth
 // token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one
@@ -47628,19 +47810,24 @@ func (c *Client) sendUpdateGroup(ctx context.Context, request *UpdateGroupReques
 // needs the person to be allowed to create a key with the key's access. An expired key's expiry
 // cannot be changed (409 conflict, details.reason key_expired); make a new key instead. Any change
 // needs the person's own access to cover the key's access now (an owner covers every key); otherwise
-// 403 grant_forbidden, details.reason target_not_covered. A grant change is a new version of the key
-// and is held to the same rules as creating one (a custom grant that does not say which mail it
-// reaches is refused with details.reason mail_scope_required), so it takes the same step-up. It
-// replaces the whole grant: send expected_grant_ref (grant.ref from GET /v1/keys/{id}) to have it
-// refused (409 conflict, details.reason grant_changed) if the grant changed since that read; a grant
-// change sent without it answers grant_unguarded: true. On a key limited to selected resources
-// (grant.resources), a grant change must drop the limits on purpose with a custom grant and grant.
-// resources {}; one that leaves them out is refused (409 conflict, details.reason
-// key_has_resource_limits) and nothing changes. The person's own Primitive CLI login needs no
-// step-up (it acts as the person, held to the same rules) unless the organization's credential
-// policy sets cli_writes_require_approval; the Primitive app's token is refused, even with one.
-// Needs the organization's credential features to be enabled; while they are not, this answers 404
-// feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
+// 403 grant_forbidden, details.reason target_not_covered. The one exception is suspending a key
+// (suspended true with no other change; expected_grant_ref may accompany it), which the person who
+// holds it may do whatever the key reaches, calling as themself rather than through another app;
+// lifting a suspension is a change like any other. A grant change is a new version of the key and is
+// held to the same rules as creating one (a custom grant that does not say which mail it reaches is
+// refused with details.reason mail_scope_required), so it takes the same step-up. It replaces the
+// whole grant: send expected_grant_ref (grant.ref from GET /v1/keys/{id}) to have it refused (409
+// conflict, details.reason grant_changed) if the grant changed since that read; a grant change sent
+// without it answers grant_unguarded: true. On a key limited to selected resources (grant.resources),
+//
+//	a grant change must drop the limits on purpose with a custom grant and grant.resources {}; one
+//
+// that leaves them out is refused (409 conflict, details.reason key_has_resource_limits) and nothing
+// changes. The person's own Primitive CLI login needs no step-up (it acts as the person, held to the
+// same rules) unless the organization's credential policy sets cli_writes_require_approval; the
+// Primitive app's token is refused, even with one. Needs the organization's credential features to
+// be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the
+// feature. Contact Primitive to turn them on.
 // Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
 // organization's credential policy sets cli_writes_require_approval), or the person's own OAuth
 // token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one

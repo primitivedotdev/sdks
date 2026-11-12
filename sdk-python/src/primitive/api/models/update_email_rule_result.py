@@ -17,6 +17,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.email_rule_author import EmailRuleAuthor
+  from ..models.email_rule_expectation_sample import EmailRuleExpectationSample
   from ..models.email_rule_scope_names import EmailRuleScopeNames
   from ..models.email_rule_scope_warning import EmailRuleScopeWarning
   from ..models.email_rule_version import EmailRuleVersion
@@ -49,6 +50,8 @@ class UpdateEmailRuleResult:
                 warnings) and who compiled it. current_version is its number. GET /email-rules lists rules without it.
             kind (UpdateEmailRuleResultKind | Unset): grant: what it matches can be shared. do_not_share: it blocks sharing
                 what it matches. Optional only for an older core-api: every answer carries it.
+            protection_note (str | Unset): On a do_not_share rule only: it protects nothing yet (not active), or a
+                classifier fact narrows it.
             evaluation_scope (UpdateEmailRuleResultEvaluationScope | Unset): Whose mail it runs over, as stored (GET /email-
                 rules/{id}/scope: what that is now).
             scope_selection (EmailRuleScopeNames | None | Unset): What a selected rule names; null for any other scope.
@@ -56,13 +59,16 @@ class UpdateEmailRuleResult:
             author (EmailRuleAuthor | Unset):
             scope_warnings (list[EmailRuleScopeWarning] | Unset): Names in scope_selection that match nothing this
                 organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.
+            expectation_samples (list[EmailRuleExpectationSample] | Unset): Its saved made-up emails, when this write set or
+                added some.
             expectations_check (UpdateEmailRuleResultExpectationsCheck | Unset): After a write that saved a version or
-                changed its expectations, if it has some: them, judged on that version from stored classifications without
-                asking its questions. Undecided: one that needs answers not yet kept for that version, is unclassified, skipped
-                or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again,
-                its author cannot be resolved, your access shows headers only, it could not finish in time, or the check
-                failed). Test by rule_id for the rest. With if_expectations_pass, the judgment made before the save, which
-                passed.
+                changed its expectations or made-up emails, if it has some: the emails by id judged on that version from stored
+                classifications without asking its questions, and any made-up emails listed as undecided. Undecided: one that
+                needs answers not yet kept for that version, is unclassified, skipped or not reached, or that its author does
+                not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access
+                shows headers only, it could not finish in time, or the check failed), and after a write that changed only made-
+                up emails on a rule with emails by id. Test by rule_id for the rest. With if_expectations_pass, the judgment
+                made before the save, which passed.
             restored_from (UpdateEmailRuleResultRestoredFrom | Unset): When this write saved an earlier version again
                 (restore_version): which, and that the scope is not part of a version.
             affects (UpdateEmailRuleResultAffects | Unset): After an update that saved a version: API keys listing the rule,
@@ -79,11 +85,13 @@ class UpdateEmailRuleResult:
     updated_at: datetime.datetime
     current: EmailRuleVersion | None
     kind: UpdateEmailRuleResultKind | Unset = UNSET
+    protection_note: str | Unset = UNSET
     evaluation_scope: UpdateEmailRuleResultEvaluationScope | Unset = UNSET
     scope_selection: EmailRuleScopeNames | None | Unset = UNSET
     revision: int | Unset = UNSET
     author: EmailRuleAuthor | Unset = UNSET
     scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
+    expectation_samples: list[EmailRuleExpectationSample] | Unset = UNSET
     expectations_check: UpdateEmailRuleResultExpectationsCheck | Unset = UNSET
     restored_from: UpdateEmailRuleResultRestoredFrom | Unset = UNSET
     affects: UpdateEmailRuleResultAffects | Unset = UNSET
@@ -95,6 +103,7 @@ class UpdateEmailRuleResult:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_rule_author import EmailRuleAuthor # noqa: PLC0415
+        from ..models.email_rule_expectation_sample import EmailRuleExpectationSample # noqa: PLC0415
         from ..models.email_rule_scope_names import EmailRuleScopeNames # noqa: PLC0415
         from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
@@ -129,6 +138,8 @@ class UpdateEmailRuleResult:
             kind = self.kind.value
 
 
+        protection_note = self.protection_note
+
         evaluation_scope: str | Unset = UNSET
         if not isinstance(self.evaluation_scope, Unset):
             evaluation_scope = self.evaluation_scope.value
@@ -154,6 +165,15 @@ class UpdateEmailRuleResult:
             for scope_warnings_item_data in self.scope_warnings:
                 scope_warnings_item = scope_warnings_item_data.to_dict()
                 scope_warnings.append(scope_warnings_item)
+
+
+
+        expectation_samples: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.expectation_samples, Unset):
+            expectation_samples = []
+            for expectation_samples_item_data in self.expectation_samples:
+                expectation_samples_item = expectation_samples_item_data.to_dict()
+                expectation_samples.append(expectation_samples_item)
 
 
 
@@ -185,6 +205,8 @@ class UpdateEmailRuleResult:
         })
         if kind is not UNSET:
             field_dict["kind"] = kind
+        if protection_note is not UNSET:
+            field_dict["protection_note"] = protection_note
         if evaluation_scope is not UNSET:
             field_dict["evaluation_scope"] = evaluation_scope
         if scope_selection is not UNSET:
@@ -195,6 +217,8 @@ class UpdateEmailRuleResult:
             field_dict["author"] = author
         if scope_warnings is not UNSET:
             field_dict["scope_warnings"] = scope_warnings
+        if expectation_samples is not UNSET:
+            field_dict["expectation_samples"] = expectation_samples
         if expectations_check is not UNSET:
             field_dict["expectations_check"] = expectations_check
         if restored_from is not UNSET:
@@ -209,6 +233,7 @@ class UpdateEmailRuleResult:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_rule_author import EmailRuleAuthor # noqa: PLC0415
+        from ..models.email_rule_expectation_sample import EmailRuleExpectationSample # noqa: PLC0415
         from ..models.email_rule_scope_names import EmailRuleScopeNames # noqa: PLC0415
         from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
@@ -281,6 +306,8 @@ class UpdateEmailRuleResult:
 
 
 
+        protection_note = d.pop("protection_note", UNSET)
+
         _evaluation_scope = d.pop("evaluation_scope", UNSET)
         evaluation_scope: UpdateEmailRuleResultEvaluationScope | Unset
         if isinstance(_evaluation_scope,  Unset):
@@ -335,6 +362,18 @@ class UpdateEmailRuleResult:
                 scope_warnings.append(scope_warnings_item)
 
 
+        _expectation_samples = d.pop("expectation_samples", UNSET)
+        expectation_samples: list[EmailRuleExpectationSample] | Unset = UNSET
+        if _expectation_samples is not UNSET:
+            expectation_samples = []
+            for expectation_samples_item_data in _expectation_samples:
+                expectation_samples_item = EmailRuleExpectationSample.from_dict(expectation_samples_item_data)
+
+
+
+                expectation_samples.append(expectation_samples_item)
+
+
         _expectations_check = d.pop("expectations_check", UNSET)
         expectations_check: UpdateEmailRuleResultExpectationsCheck | Unset
         if isinstance(_expectations_check,  Unset):
@@ -376,11 +415,13 @@ class UpdateEmailRuleResult:
             updated_at=updated_at,
             current=current,
             kind=kind,
+            protection_note=protection_note,
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,
             revision=revision,
             author=author,
             scope_warnings=scope_warnings,
+            expectation_samples=expectation_samples,
             expectations_check=expectations_check,
             restored_from=restored_from,
             affects=affects,

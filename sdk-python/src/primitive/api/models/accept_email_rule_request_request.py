@@ -12,6 +12,7 @@ from typing import cast
 
 if TYPE_CHECKING:
   from ..models.email_rule_breadth import EmailRuleBreadth
+  from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput
   from ..models.email_rule_tree_input import EmailRuleTreeInput
 
 
@@ -39,6 +40,8 @@ class AcceptEmailRuleRequestRequest:
             compiled_by (str | Unset): Who produced the tree (not verified): the compile response's compiled_by, or member
                 (the default) for a tree you wrote or edited.
             breadth (EmailRuleBreadth | None | Unset): Ignored (the compile answer's breadth).
+            expectation_samples (list[EmailRuleExpectationSampleInput] | Unset): Made-up emails the rule must match or not,
+                such as look-alikes it must never match, kept on the rule this accept writes.
      """
 
     name: str | Unset = UNSET
@@ -49,6 +52,7 @@ class AcceptEmailRuleRequestRequest:
     warnings: list[str] | Unset = UNSET
     compiled_by: str | Unset = UNSET
     breadth: EmailRuleBreadth | None | Unset = UNSET
+    expectation_samples: list[EmailRuleExpectationSampleInput] | Unset = UNSET
 
 
 
@@ -56,6 +60,7 @@ class AcceptEmailRuleRequestRequest:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
+        from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         name = self.name
 
@@ -89,6 +94,15 @@ class AcceptEmailRuleRequestRequest:
         else:
             breadth = self.breadth
 
+        expectation_samples: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.expectation_samples, Unset):
+            expectation_samples = []
+            for expectation_samples_item_data in self.expectation_samples:
+                expectation_samples_item = expectation_samples_item_data.to_dict()
+                expectation_samples.append(expectation_samples_item)
+
+
+
 
         field_dict: dict[str, Any] = {}
 
@@ -110,6 +124,8 @@ class AcceptEmailRuleRequestRequest:
             field_dict["compiled_by"] = compiled_by
         if breadth is not UNSET:
             field_dict["breadth"] = breadth
+        if expectation_samples is not UNSET:
+            field_dict["expectation_samples"] = expectation_samples
 
         return field_dict
 
@@ -118,6 +134,7 @@ class AcceptEmailRuleRequestRequest:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
+        from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         d = dict(src_dict)
         name = d.pop("name", UNSET)
@@ -164,6 +181,18 @@ class AcceptEmailRuleRequestRequest:
         breadth = _parse_breadth(d.pop("breadth", UNSET))
 
 
+        _expectation_samples = d.pop("expectation_samples", UNSET)
+        expectation_samples: list[EmailRuleExpectationSampleInput] | Unset = UNSET
+        if _expectation_samples is not UNSET:
+            expectation_samples = []
+            for expectation_samples_item_data in _expectation_samples:
+                expectation_samples_item = EmailRuleExpectationSampleInput.from_dict(expectation_samples_item_data)
+
+
+
+                expectation_samples.append(expectation_samples_item)
+
+
         accept_email_rule_request_request = cls(
             name=name,
             english=english,
@@ -173,6 +202,7 @@ class AcceptEmailRuleRequestRequest:
             warnings=warnings,
             compiled_by=compiled_by,
             breadth=breadth,
+            expectation_samples=expectation_samples,
         )
 
         return accept_email_rule_request_request

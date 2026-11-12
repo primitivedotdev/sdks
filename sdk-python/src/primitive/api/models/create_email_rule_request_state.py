@@ -1,6 +1,7 @@
 from enum import StrEnum
 
 class CreateEmailRuleRequestState(StrEnum):
+    ACTIVE = "active"
     DRAFT = "draft"
     OBSERVE = "observe"
 

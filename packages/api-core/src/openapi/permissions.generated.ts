@@ -329,6 +329,9 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   "endBreakGlass": [
     "access_mode:manage"
   ],
+  "generateLookAlikes": [
+    "mail:read"
+  ],
   "getAccessMode": [
     "members:read"
   ],

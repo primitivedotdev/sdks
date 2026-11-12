@@ -11,6 +11,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
+  from ..models.email_rule_sample_judgment import EmailRuleSampleJudgment
   from ..models.test_email_rule_result_expectations_counts import TestEmailRuleResultExpectationsCounts
   from ..models.test_email_rule_result_expectations_results_item import TestEmailRuleResultExpectationsResultsItem
 
@@ -24,7 +25,7 @@ T = TypeVar("T", bound="TestEmailRuleResultExpectations")
 
 @_attrs_define
 class TestEmailRuleResultExpectations:
-    """ Present when expect was given, or for a saved rule with saved expectations.
+    """ Present when expect was given, or for a saved rule with saved expectations or made-up emails.
 
         Attributes:
             passed (bool): Every expectation passed. One undecided is no pass: unclassified or a question unanswered (test
@@ -32,11 +33,14 @@ class TestEmailRuleResultExpectations:
             counts (TestEmailRuleResultExpectationsCounts):
             results (list[TestEmailRuleResultExpectationsResultsItem]): match first, then no_match, each in the order given
                 (saved expectations by email id).
+            samples (list[EmailRuleSampleJudgment] | Unset): Made-up emails judged (expect.samples, or a saved rule's), in
+                order; counts include them.
      """
 
     passed: bool
     counts: TestEmailRuleResultExpectationsCounts
     results: list[TestEmailRuleResultExpectationsResultsItem]
+    samples: list[EmailRuleSampleJudgment] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -44,6 +48,7 @@ class TestEmailRuleResultExpectations:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_rule_sample_judgment import EmailRuleSampleJudgment # noqa: PLC0415
         from ..models.test_email_rule_result_expectations_counts import TestEmailRuleResultExpectationsCounts # noqa: PLC0415
         from ..models.test_email_rule_result_expectations_results_item import TestEmailRuleResultExpectationsResultsItem # noqa: PLC0415
         passed = self.passed
@@ -57,6 +62,15 @@ class TestEmailRuleResultExpectations:
 
 
 
+        samples: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.samples, Unset):
+            samples = []
+            for samples_item_data in self.samples:
+                samples_item = samples_item_data.to_dict()
+                samples.append(samples_item)
+
+
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -65,6 +79,8 @@ class TestEmailRuleResultExpectations:
             "counts": counts,
             "results": results,
         })
+        if samples is not UNSET:
+            field_dict["samples"] = samples
 
         return field_dict
 
@@ -72,6 +88,7 @@ class TestEmailRuleResultExpectations:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_rule_sample_judgment import EmailRuleSampleJudgment # noqa: PLC0415
         from ..models.test_email_rule_result_expectations_counts import TestEmailRuleResultExpectationsCounts # noqa: PLC0415
         from ..models.test_email_rule_result_expectations_results_item import TestEmailRuleResultExpectationsResultsItem # noqa: PLC0415
         d = dict(src_dict)
@@ -92,10 +109,23 @@ class TestEmailRuleResultExpectations:
             results.append(results_item)
 
 
+        _samples = d.pop("samples", UNSET)
+        samples: list[EmailRuleSampleJudgment] | Unset = UNSET
+        if _samples is not UNSET:
+            samples = []
+            for samples_item_data in _samples:
+                samples_item = EmailRuleSampleJudgment.from_dict(samples_item_data)
+
+
+
+                samples.append(samples_item)
+
+
         test_email_rule_result_expectations = cls(
             passed=passed,
             counts=counts,
             results=results,
+            samples=samples,
         )
 
 

@@ -45,6 +45,8 @@ class EmailRuleWithVersion:
                 warnings) and who compiled it. current_version is its number. GET /email-rules lists rules without it.
             kind (EmailRuleWithVersionKind | Unset): grant: what it matches can be shared. do_not_share: it blocks sharing
                 what it matches. Optional only for an older core-api: every answer carries it.
+            protection_note (str | Unset): On a do_not_share rule only: it protects nothing yet (not active), or a
+                classifier fact narrows it.
             evaluation_scope (EmailRuleWithVersionEvaluationScope | Unset): Whose mail it runs over, as stored (GET /email-
                 rules/{id}/scope: what that is now).
             scope_selection (EmailRuleScopeNames | None | Unset): What a selected rule names; null for any other scope.
@@ -62,6 +64,7 @@ class EmailRuleWithVersion:
     updated_at: datetime.datetime
     current: EmailRuleVersion | None
     kind: EmailRuleWithVersionKind | Unset = UNSET
+    protection_note: str | Unset = UNSET
     evaluation_scope: EmailRuleWithVersionEvaluationScope | Unset = UNSET
     scope_selection: EmailRuleScopeNames | None | Unset = UNSET
     revision: int | Unset = UNSET
@@ -104,6 +107,8 @@ class EmailRuleWithVersion:
             kind = self.kind.value
 
 
+        protection_note = self.protection_note
+
         evaluation_scope: str | Unset = UNSET
         if not isinstance(self.evaluation_scope, Unset):
             evaluation_scope = self.evaluation_scope.value
@@ -139,6 +144,8 @@ class EmailRuleWithVersion:
         })
         if kind is not UNSET:
             field_dict["kind"] = kind
+        if protection_note is not UNSET:
+            field_dict["protection_note"] = protection_note
         if evaluation_scope is not UNSET:
             field_dict["evaluation_scope"] = evaluation_scope
         if scope_selection is not UNSET:
@@ -223,6 +230,8 @@ class EmailRuleWithVersion:
 
 
 
+        protection_note = d.pop("protection_note", UNSET)
+
         _evaluation_scope = d.pop("evaluation_scope", UNSET)
         evaluation_scope: EmailRuleWithVersionEvaluationScope | Unset
         if isinstance(_evaluation_scope,  Unset):
@@ -276,6 +285,7 @@ class EmailRuleWithVersion:
             updated_at=updated_at,
             current=current,
             kind=kind,
+            protection_note=protection_note,
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,
             revision=revision,

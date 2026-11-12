@@ -32,14 +32,23 @@ class CredentialsRevokeCredentialResult:
             kind (CredentialsRevokeCredentialResultKind):
             id (str):
             kept (list[CredentialsRevokeCredentialResultKeptItem] | Unset):
-            already_revoked (bool | Unset): true when the API key was already revoked, so nothing changed and revoked is 0.
-                Absent otherwise. GET /v1/keys/{id} says when and by whom, to a caller who may read the key.
+            already_revoked (bool | Unset): true when the API key was already revoked. revoked then counts only the keys it
+                replaced that were revoked now. Absent otherwise. GET /v1/keys/{id} says when and by whom, to a caller who may
+                read the key.
             keep_failed (list[CredentialsRevokeCredentialResultKeepFailedItem] | Unset): Items you chose to keep that could
                 not be taken over after the revocation. Each stopped with it, unless someone else had taken it over in the
                 meantime.
             standing_objects (list[CredentialsRevokeCredentialResultStandingObjectsItem] | Unset): What the credential set
                 up or owns, listed for review, and for an API key also what it carries on for the keys it was rotated from.
                 Revoking deletes none of it.
+            predecessors_revoked_count (int | Unset): For an API key: how many keys it replaced in its rotation, still in
+                their overlap, were revoked with it. Keys that replaced it never are.
+            predecessors_left (int | Unset): For an API key: how many such keys were left working because you may not revoke
+                them. They work until their overlap ends.
+            predecessors_revoked (list[str] | Unset): The ids of the keys counted in predecessors_revoked_count, to a caller
+                who may read the organization's API keys.
+            predecessors_not_revoked (list[str] | Unset): The ids of the keys counted in predecessors_left, to a caller who
+                may read the organization's API keys.
      """
 
     revoked: float
@@ -49,6 +58,10 @@ class CredentialsRevokeCredentialResult:
     already_revoked: bool | Unset = UNSET
     keep_failed: list[CredentialsRevokeCredentialResultKeepFailedItem] | Unset = UNSET
     standing_objects: list[CredentialsRevokeCredentialResultStandingObjectsItem] | Unset = UNSET
+    predecessors_revoked_count: int | Unset = UNSET
+    predecessors_left: int | Unset = UNSET
+    predecessors_revoked: list[str] | Unset = UNSET
+    predecessors_not_revoked: list[str] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -94,6 +107,22 @@ class CredentialsRevokeCredentialResult:
 
 
 
+        predecessors_revoked_count = self.predecessors_revoked_count
+
+        predecessors_left = self.predecessors_left
+
+        predecessors_revoked: list[str] | Unset = UNSET
+        if not isinstance(self.predecessors_revoked, Unset):
+            predecessors_revoked = self.predecessors_revoked
+
+
+
+        predecessors_not_revoked: list[str] | Unset = UNSET
+        if not isinstance(self.predecessors_not_revoked, Unset):
+            predecessors_not_revoked = self.predecessors_not_revoked
+
+
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -110,6 +139,14 @@ class CredentialsRevokeCredentialResult:
             field_dict["keep_failed"] = keep_failed
         if standing_objects is not UNSET:
             field_dict["standing_objects"] = standing_objects
+        if predecessors_revoked_count is not UNSET:
+            field_dict["predecessors_revoked_count"] = predecessors_revoked_count
+        if predecessors_left is not UNSET:
+            field_dict["predecessors_left"] = predecessors_left
+        if predecessors_revoked is not UNSET:
+            field_dict["predecessors_revoked"] = predecessors_revoked
+        if predecessors_not_revoked is not UNSET:
+            field_dict["predecessors_not_revoked"] = predecessors_not_revoked
 
         return field_dict
 
@@ -168,6 +205,16 @@ class CredentialsRevokeCredentialResult:
                 standing_objects.append(standing_objects_item)
 
 
+        predecessors_revoked_count = d.pop("predecessors_revoked_count", UNSET)
+
+        predecessors_left = d.pop("predecessors_left", UNSET)
+
+        predecessors_revoked = cast(list[str], d.pop("predecessors_revoked", UNSET))
+
+
+        predecessors_not_revoked = cast(list[str], d.pop("predecessors_not_revoked", UNSET))
+
+
         credentials_revoke_credential_result = cls(
             revoked=revoked,
             kind=kind,
@@ -176,6 +223,10 @@ class CredentialsRevokeCredentialResult:
             already_revoked=already_revoked,
             keep_failed=keep_failed,
             standing_objects=standing_objects,
+            predecessors_revoked_count=predecessors_revoked_count,
+            predecessors_left=predecessors_left,
+            predecessors_revoked=predecessors_revoked,
+            predecessors_not_revoked=predecessors_not_revoked,
         )
 
 

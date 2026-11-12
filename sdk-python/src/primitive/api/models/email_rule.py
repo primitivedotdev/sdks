@@ -42,6 +42,8 @@ class EmailRule:
             updated_at (datetime.datetime):
             kind (EmailRuleKind | Unset): grant: what it matches can be shared. do_not_share: it blocks sharing what it
                 matches. Optional only for an older core-api: every answer carries it.
+            protection_note (str | Unset): On a do_not_share rule only: it protects nothing yet (not active), or a
+                classifier fact narrows it.
             evaluation_scope (EmailRuleEvaluationScope | Unset): Whose mail it runs over, as stored (GET /email-
                 rules/{id}/scope: what that is now).
             scope_selection (EmailRuleScopeNames | None | Unset): What a selected rule names; null for any other scope.
@@ -58,6 +60,7 @@ class EmailRule:
     created_at: datetime.datetime
     updated_at: datetime.datetime
     kind: EmailRuleKind | Unset = UNSET
+    protection_note: str | Unset = UNSET
     evaluation_scope: EmailRuleEvaluationScope | Unset = UNSET
     scope_selection: EmailRuleScopeNames | None | Unset = UNSET
     revision: int | Unset = UNSET
@@ -93,6 +96,8 @@ class EmailRule:
             kind = self.kind.value
 
 
+        protection_note = self.protection_note
+
         evaluation_scope: str | Unset = UNSET
         if not isinstance(self.evaluation_scope, Unset):
             evaluation_scope = self.evaluation_scope.value
@@ -127,6 +132,8 @@ class EmailRule:
         })
         if kind is not UNSET:
             field_dict["kind"] = kind
+        if protection_note is not UNSET:
+            field_dict["protection_note"] = protection_note
         if evaluation_scope is not UNSET:
             field_dict["evaluation_scope"] = evaluation_scope
         if scope_selection is not UNSET:
@@ -192,6 +199,8 @@ class EmailRule:
 
 
 
+        protection_note = d.pop("protection_note", UNSET)
+
         _evaluation_scope = d.pop("evaluation_scope", UNSET)
         evaluation_scope: EmailRuleEvaluationScope | Unset
         if isinstance(_evaluation_scope,  Unset):
@@ -244,6 +253,7 @@ class EmailRule:
             created_at=created_at,
             updated_at=updated_at,
             kind=kind,
+            protection_note=protection_note,
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,
             revision=revision,

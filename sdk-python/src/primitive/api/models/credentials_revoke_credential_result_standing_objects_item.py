@@ -8,6 +8,7 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from typing import cast
 
 
 
@@ -33,12 +34,22 @@ class CredentialsRevokeCredentialResultStandingObjectsItem:
                 it, such as a key of the same rotation that still works, or whoever it was given to or kept it. Revoking a
                 third-party app or agent delegate turns these off, except that a block filter it made keeps blocking, within the
                 reach the app had, unless the person revoking chose to stop it.
+            still_acting (bool | None | Unset): For an API key: whether anything still acts for it after this revoke (the
+                organization, a key of the same rotation that still works, or whoever took it over). Null when that could not be
+                read.
+            acting_key_id (None | str | Unset): For an API key: the key that still acts for it, shown to a caller who may
+                read the organization's API keys. Null otherwise, and when no key does.
+            delivering (bool | None | Unset): For an API key's webhook: whether it is still sent received mail, as GET
+                /v1/endpoints/{id} delivery.delivering says. Null when that could not be read.
      """
 
     kind: str
     id: str
     label: str
     org_owned: bool
+    still_acting: bool | None | Unset = UNSET
+    acting_key_id: None | str | Unset = UNSET
+    delivering: bool | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -54,6 +65,24 @@ class CredentialsRevokeCredentialResultStandingObjectsItem:
 
         org_owned = self.org_owned
 
+        still_acting: bool | None | Unset
+        if isinstance(self.still_acting, Unset):
+            still_acting = UNSET
+        else:
+            still_acting = self.still_acting
+
+        acting_key_id: None | str | Unset
+        if isinstance(self.acting_key_id, Unset):
+            acting_key_id = UNSET
+        else:
+            acting_key_id = self.acting_key_id
+
+        delivering: bool | None | Unset
+        if isinstance(self.delivering, Unset):
+            delivering = UNSET
+        else:
+            delivering = self.delivering
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -63,6 +92,12 @@ class CredentialsRevokeCredentialResultStandingObjectsItem:
             "label": label,
             "org_owned": org_owned,
         })
+        if still_acting is not UNSET:
+            field_dict["still_acting"] = still_acting
+        if acting_key_id is not UNSET:
+            field_dict["acting_key_id"] = acting_key_id
+        if delivering is not UNSET:
+            field_dict["delivering"] = delivering
 
         return field_dict
 
@@ -79,11 +114,44 @@ class CredentialsRevokeCredentialResultStandingObjectsItem:
 
         org_owned = d.pop("org_owned")
 
+        def _parse_still_acting(data: object) -> bool | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(bool | None | Unset, data)
+
+        still_acting = _parse_still_acting(d.pop("still_acting", UNSET))
+
+
+        def _parse_acting_key_id(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        acting_key_id = _parse_acting_key_id(d.pop("acting_key_id", UNSET))
+
+
+        def _parse_delivering(data: object) -> bool | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(bool | None | Unset, data)
+
+        delivering = _parse_delivering(d.pop("delivering", UNSET))
+
+
         credentials_revoke_credential_result_standing_objects_item = cls(
             kind=kind,
             id=id,
             label=label,
             org_owned=org_owned,
+            still_acting=still_acting,
+            acting_key_id=acting_key_id,
+            delivering=delivering,
         )
 
 
