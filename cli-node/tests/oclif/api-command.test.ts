@@ -848,13 +848,23 @@ describe("emptyRuleListHint", () => {
 });
 
 describe("emptyDeliveriesHint", () => {
-  it("says --endpoint-id hid the rest, and nothing without it", () => {
+  it("names the filters given and keeps the test-fire note, and says nothing without --endpoint-id", () => {
     expect(
       emptyDeliveriesHint("listDeliveries", {
         endpoint_id: "0b0f6a43-3c1c-4d4e-9b1a-1f2d3c4b5a69",
+        limit: 10,
       }),
     ).toBe(
-      "(no results) No deliveries to this endpoint match. Leave out --endpoint-id to list deliveries to every endpoint you can see.",
+      "(no results) No deliveries match --endpoint-id. Test fires from `primitive endpoints test` are not logged here; real deliveries are, when an event fans out to the endpoint. Leave out --endpoint-id to list more.",
+    );
+    expect(
+      emptyDeliveriesHint("listDeliveries", {
+        endpoint_id: "0b0f6a43-3c1c-4d4e-9b1a-1f2d3c4b5a69",
+        status: "failed",
+        event_type: "sent_email.delivered",
+      }),
+    ).toBe(
+      "(no results) No deliveries match --endpoint-id, --status and --event-type. Test fires from `primitive endpoints test` are not logged here; real deliveries are, when an event fans out to the endpoint. Leave out a filter to list more.",
     );
     expect(
       emptyDeliveriesHint("listDeliveries", {

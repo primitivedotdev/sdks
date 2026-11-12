@@ -479,6 +479,8 @@ The full catalog of header values is exported as the `WEBHOOK_EVENT_TYPES` tuple
 
 - `email.received`, `email.bounced`, `email.tls_report`, `email.dmarc_report`, `email.dmarc_failure`
 - `sent_email.accepted`, `sent_email.delivered`, `sent_email.failed`, `sent_email.completed` (opt-in)
+- `email_rule_request.created`, `email_rule_request.accepted`, `email_rule_request.declined`, `email_rule_request.withdrawn` (opt-in)
+- `email_rule_objection.created`, `email_rule_objection.accepted`, `email_rule_objection.declined`, `email_rule_objection.withdrawn` (opt-in)
 - `interaction.ack.received`, `interaction.ack.requested`, `interaction.ack.acked`, `interaction.ack.canceled`, `interaction.ack.expired`
 
 Signature verification runs on the raw body and is independent of the event type, so it works identically for `sent_email.*` and `interaction.*` bodies. Each delivery is signed once; the same `t=...,v1=...` value is sent on the primary `Primitive-Signature` header plus `X-Primitive-Signature` and `X-Webhook-Signature` for non-SDK consumers. The SDK verifies `Primitive-Signature`, and still accepts the retired `MyMX-Signature` header name when verifying older captured deliveries. `handle_webhook(...)` remains hard-typed to `email.received` for backward compatibility; reach for `handle_webhook_event(...)` when you need the full event union.

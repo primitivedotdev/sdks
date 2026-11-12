@@ -168,9 +168,10 @@ export function formatAskedRows(
 /**
  * One line per coverage notice: what it told (started, new_version, or
  * baseline for a rule that already covered you when notices began), when, the
- * rule's name then, and its author. `complete` says the listing is the whole
- * of it (from the first page to the last, nothing withheld), the only time an
- * empty one means no other member's rule has covered your mail.
+ * rule's name then, and its author. No id: a notice's id is not a rule's, and
+ * no command takes it. `complete` says the listing is the whole of it (from
+ * the first page to the last, nothing withheld), the only time an empty one
+ * means no notice has been written for you.
  */
 export function formatConcerningRows(
   items: readonly ActivityItem[],
@@ -178,16 +179,15 @@ export function formatConcerningRows(
 ): string {
   if (items.length === 0)
     return complete
-      ? "No other member's rule has covered your mail."
+      ? "No other member's rule has started covering your mail, or changed while covering it, since these notices began."
       : "Nothing to show.";
   const rows = items.map((item) => [
     item.state,
     minute(item.created_at),
-    item.name ?? item.id,
+    item.name ?? "",
     item.created_through.name ?? item.created_through.id ?? "",
-    item.id,
   ]);
-  const header = ["NOTICE", "WHEN (UTC)", "RULE", "AUTHOR", "ID"];
+  const header = ["NOTICE", "WHEN (UTC)", "RULE", "AUTHOR"];
   const widths = header.map((h, i) =>
     Math.max(h.length, ...rows.map((row) => (row[i] ?? "").length)),
   );
@@ -424,7 +424,7 @@ export class ActivityConcerningCommand extends Command {
   static description =
     `List what other members did that concerns your own mail, newest first: each time another member's rule started covering one of your mailboxes (started), or saved a new version while covering it (new_version), named as the rule was then, with its author. A rule that already covered you when these notices began is listed once as baseline.
 
-  Signed in with \`primitive login\`, you see the notices about your own mail under your current membership. A key, an app or an agent has none. See the rules that cover you now with \`primitive email-rule-oversight list-email-rules-covering-me\`, and ask a rule's author to turn it off with \`primitive email-rule-oversight create-email-rule-objection --rule-id <id>\`.`;
+  Signed in with \`primitive login\`, you see the notices about your own mail under your current membership. A key, an app or an agent has none. The rules that cover you now, with their ids, are listed by \`primitive email-rule-oversight list-email-rules-covering-me\`; ask a rule's author to turn it off with \`primitive email-rule-oversight create-email-rule-objection --rule-id <rule id>\`. With --json each item's id is the notice's, not the rule's.`;
 
   static summary = "List rules that started covering your mail or changed";
 

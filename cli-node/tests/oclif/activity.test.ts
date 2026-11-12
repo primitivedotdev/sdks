@@ -459,16 +459,18 @@ describe("activity concerning command", () => {
       limit: "50",
     });
     const out = lines.join("\n");
-    expect(out).toMatch(/^NOTICE\s+WHEN \(UTC\)\s+RULE\s+AUTHOR\s+ID$/m);
-    expect(out).toMatch(/^new_version\s+.*Vendor invoices\s+Sam Rivera\s/m);
-    expect(out).toMatch(/^started\s+.*Vendor invoices\s+u-3\s/m);
+    expect(out).toMatch(/^NOTICE\s+WHEN \(UTC\)\s+RULE\s+AUTHOR$/m);
+    expect(out).toMatch(/^new_version\s+.*Vendor invoices\s+Sam Rivera$/m);
+    expect(out).toMatch(/^started\s+.*Vendor invoices\s+u-3$/m);
+    // A notice's id is not a rule's, so the table leaves it out.
+    expect(out).not.toContain("6e2d3c4b-5a69-4b1a-9c8d-7e6f5a4b3c2d");
     expect(out).toMatch(/More: \S+ activity concerning --cursor next-page$/m);
   });
 
-  it("says no rule has covered your mail only when the listing is the whole of it", async () => {
-    expect(formatConcerningRows([], true)).toBe(
-      "No other member's rule has covered your mail.",
-    );
+  it("says no rule has started covering your mail only when the listing is the whole of it", async () => {
+    const none =
+      "No other member's rule has started covering your mail, or changed while covering it, since these notices began.";
+    expect(formatConcerningRows([], true)).toBe(none);
     expect(formatConcerningRows([])).toBe("Nothing to show.");
     useApi([page([], null)]);
     const lines: string[] = [];
@@ -478,8 +480,6 @@ describe("activity concerning command", () => {
       },
     );
     await ActivityConcerningCommand.run([], { root });
-    expect(lines.join("\n")).toContain(
-      "No other member's rule has covered your mail.",
-    );
+    expect(lines.join("\n")).toContain(none);
   });
 });

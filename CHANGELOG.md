@@ -615,9 +615,9 @@ date-time is kept as null and sorts last. A sync stops with an error after
   `EmailRuleDecisionOnMyMail`, with `matched`, `limit` and `cursor`), what
   such a rule decided about mail at your own mailboxes, never anyone else's.
   A rule you can read only because it decided on your mail before has
-  `covers_now` false, a `note` saying what is withheld, `name`, `covers`
-  and `current_version` null, and as `current` the newest version that
-  decided on your mail. Each covering rule carries `receivers`
+  `covers_now` false, a `note` saying what is withheld, `name`, `covers`,
+  `current_version` and `receivers` null, and as `current` the newest
+  version that decided on your mail. Each covering rule carries `receivers`
   (`EmailRuleReceivers`): the working API keys and webhooks that receive
   what it shares, each by its owner and a count, and its live share by the
   member it gives to; null when they could not be read in time. They need
@@ -674,7 +674,9 @@ date-time is kept as null and sorts last. A sync stops with an error after
   `created_through` names the rule's author.
 - A rule request, in every answer that returns one, and
   `createEmailRuleRequest`'s answer can carry `server_notes`: the API's own
-  notes on the rule as asked, never written by the member who asked.
+  notes on the rule as asked, never written by the member who asked. A rule
+  request's `warnings` are those the member who asked sent, then every
+  compiler note on the rule's tree and words they lack.
 - A rule listed `read_only` in `listEmailRuleResults` carries `receivers`
   (`EmailRuleReceivers`) while it covers you, and null otherwise.
 - `listDeliveries` takes `endpoint_id`: only deliveries to that endpoint.
@@ -1123,7 +1125,7 @@ downgrading, or sign in again afterwards.
   and `keys list` show them with their reason, and `--add-rule` or `--rule`
   refuse to put one back.
 
-#### Rule request webhook events
+#### Rule request and objection webhook events
 
 - The catalogs list `email_rule_request.created`, `accepted`, `declined` and
   `withdrawn` (`EMAIL_RULE_REQUEST_EVENT_TYPES` in Node and Python,
@@ -1260,8 +1262,8 @@ parsers.
   `list-given-email-rule-shares`, or `email-rule-oversight
   list-email-rule-objections`, says which default filter hid the rest
   (`--box all`, `--status any`, `--live any`). An empty `webhook-deliveries
-  list-deliveries --endpoint-id` says the filter hid the rest instead of
-  saying no deliveries were logged.
+  list-deliveries --endpoint-id` names the filters given, and that test
+  fires are not logged, instead of saying no deliveries were logged.
 - `keys create` and `keys update` print the answer's `address_warnings`
   without `--json`, such as an address or domain listed beside `--rule`,
   which the key reads in full.

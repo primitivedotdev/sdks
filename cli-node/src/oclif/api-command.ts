@@ -2444,9 +2444,10 @@ export function emptyRuleListHint(
 }
 
 /**
- * An empty delivery list filtered by --endpoint-id says the filter hid the
- * rest, in place of the general hint, which reads as if nothing was ever
- * delivered. Undefined for any other list, or when no endpoint was named.
+ * An empty delivery list filtered by --endpoint-id names the filters given, in
+ * place of the general hint, which reads as if nothing was ever delivered,
+ * and keeps its point that test fires are not logged. Undefined for any other
+ * list, or when no endpoint was named.
  */
 export function emptyDeliveriesHint(
   sdkName: string,
@@ -2454,9 +2455,19 @@ export function emptyDeliveriesHint(
 ): string | undefined {
   if (sdkName !== "listDeliveries" || query.endpoint_id === undefined)
     return undefined;
-  return query.cursor !== undefined
-    ? "(no results) No more deliveries to this endpoint."
-    : "(no results) No deliveries to this endpoint match. Leave out --endpoint-id to list deliveries to every endpoint you can see.";
+  if (query.cursor !== undefined)
+    return "(no results) No more deliveries to this endpoint.";
+  const flags = [
+    "--endpoint-id",
+    ...listFilters(query)
+      .filter((name) => name !== "endpoint_id")
+      .map((name) => `--${parameterFlagName(sdkName, name)}`),
+  ];
+  const named =
+    flags.length === 1
+      ? flags[0]
+      : `${flags.slice(0, -1).join(", ")} and ${flags[flags.length - 1]}`;
+  return `(no results) No deliveries match ${named}. Test fires from \`primitive endpoints test\` are not logged here; real deliveries are, when an event fans out to the endpoint. Leave out ${flags.length === 1 ? "--endpoint-id" : "a filter"} to list more.`;
 }
 
 function canonicalizeCliReferences(description: string): string {

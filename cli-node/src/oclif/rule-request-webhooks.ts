@@ -28,7 +28,7 @@ export const RULE_REQUEST_WEBHOOK_CHANGE_HINT =
 export const RULE_REQUEST_WEBHOOK_DEFAULT_HINT =
   "Hint: a webhook for rule request or objection events is always a route target. Leave out --no-is-route-target, --takeover and --no-takeover (is_route_target: false and takeover in a raw body).";
 
-/** The event families the API keeps to a webhook its person made for them, matched by prefix as the API matches them. */
+/** The event families, of those this CLI lists, that the API keeps to a webhook its person made for them, matched by prefix as the API matches them. */
 const MEMBER_EVENT_PREFIXES = ["email_rule_request.", "email_rule_objection."];
 
 function record(value: unknown): Record<string, unknown> | undefined {

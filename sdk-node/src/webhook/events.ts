@@ -206,8 +206,9 @@ export function isEmailRuleRequestEvent(
 /**
  * The body of an `email_rule_objection.*` webhook. It names the objection and
  * its rule, says where it stands, and carries a decline's reason, null when
- * there is none. It never carries the objector's message (withdrawing clears
- * it), the rule itself or anything read from mail: read the objection with
+ * there is none. It never carries the objector's message
+ * (`getEmailRuleObjection` returns it, null once withdrawn), the rule itself
+ * or anything read from mail: read the objection with
  * `getEmailRuleObjection` for the rest. Pass the `X-Webhook-Event` header to
  * the parser, since the body has `type` and no `event`.
  */
