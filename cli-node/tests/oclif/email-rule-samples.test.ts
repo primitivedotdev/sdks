@@ -145,29 +145,54 @@ describe("samplesFromJson", () => {
       "--f a.json must hold a JSON array of samples",
     );
     expect(() =>
-      samplesFromJson([{ expected: "maybe", email: {} }], "--f a.json"),
+      samplesFromJson([{ expected: "maybe", email: email("x") }], "--f a.json"),
     ).toThrow('--f a.json, sample 1: expected must be "match" or "no_match".');
     expect(() =>
       samplesFromJson(
-        [{ expected: "match", email: {} }, { expected: "match" }],
+        [{ expected: "match", email: email("x") }, { expected: "match" }],
         "--f a.json",
       ),
     ).toThrow("--f a.json, sample 2: email must be an object");
     expect(() =>
-      samplesFromJson([{ expected: "match", email: {}, label: 3 }], "f"),
+      samplesFromJson(
+        [{ expected: "match", email: email("x"), label: 3 }],
+        "f",
+      ),
     ).toThrow("label must be a string");
     expect(() =>
-      samplesFromJson([{ expected: "match", email: {}, label: "  " }], "f"),
+      samplesFromJson(
+        [{ expected: "match", email: email("x"), label: "  " }],
+        "f",
+      ),
     ).toThrow("f, sample 1: label is blank");
     expect(() =>
       samplesFromJson(
-        [{ expected: "match", email: {}, label: "x".repeat(201) }],
+        [{ expected: "match", email: email("x"), label: "x".repeat(201) }],
         "f",
       ),
     ).toThrow("label is longer than 200 characters");
     expect(() =>
-      samplesFromJson([{ expected: "match", email: {}, lable: "x" }], "f"),
+      samplesFromJson(
+        [{ expected: "match", email: email("x"), lable: "x" }],
+        "f",
+      ),
     ).toThrow('f, sample 1: "lable" is not a sample field');
+    // The email itself, checked against what the API keeps.
+    const refused = (email: Record<string, unknown>) => () =>
+      samplesFromJson([{ expected: "no_match", email }], "f");
+    expect(refused({ to: ["a@b.example"], text: "t" })).toThrow(
+      "f, sample 1: email needs from.address.",
+    );
+    expect(refused({ ...email("x"), text: "t".repeat(4_001) })).toThrow(
+      "email text must be 1 to 4000 characters",
+    );
+    expect(refused({ ...email("x"), to: [] })).toThrow(
+      "email to must be a list of 1 to 10 strings",
+    );
+    expect(refused({ ...email("x"), bcc: [] })).toThrow('email takes no "bcc"');
+    expect(refused({ ...email("x"), automated: "no" })).toThrow(
+      "email automated must be true or false",
+    );
     // An empty answer is refused, so it never empties a rule's samples;
     // only a literal [] does.
     expect(() => samplesFromJson(answer([]), "--x a.json")).toThrow(
