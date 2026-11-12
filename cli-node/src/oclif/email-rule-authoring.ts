@@ -735,6 +735,19 @@ function writtenExpectationsOutcome(
 const SAVED_UNJUDGED =
   "The write was saved: the server judges a write before saving only when it saves a version or turns the rule active, so not this one. ";
 
+/** What a written do_not_share rule's report says first. */
+const BLOCKS_SHARING =
+  "This rule blocks sharing (kind do_not_share): while it is active, no rule shares an email it matches.";
+
+/** A do_not_share rule's protection_note, as a line, or undefined. */
+export function protectionLine(rule: unknown): string | undefined {
+  if (!isRecord(rule)) return undefined;
+  const note = rule.protection_note;
+  return typeof note === "string" && note.trim()
+    ? `Protection: ${note.trim()}`
+    : undefined;
+}
+
 /** What a restore_version write saved, as its answer says. */
 function restoredLine(
   restored: unknown,
@@ -800,10 +813,18 @@ export function writtenEmailRuleReport(
   const ruleId = typeof rule.id === "string" ? rule.id : "<rule-id>";
   const lines = scopeWarningLines(rule.scope_warnings);
   // A rule that blocks sharing reads like any other in the JSON; say so.
-  if ((rule as { kind?: unknown }).kind === "do_not_share")
+  if ((rule as { kind?: unknown }).kind === "do_not_share") {
+    // The server's note says what it protects now; an older server sends
+    // none, so say the one thing that was known.
+    const note = protectionLine(rule);
     lines.unshift(
-      `This rule blocks sharing (kind do_not_share): while it is active, no rule shares an email it matches.${typeof rule.state === "string" && rule.state !== "active" ? " It blocks nothing until it is active." : ""}`,
+      ...(note
+        ? [BLOCKS_SHARING, note]
+        : [
+            `${BLOCKS_SHARING}${typeof rule.state === "string" && rule.state !== "active" ? " It blocks nothing until it is active." : ""}`,
+          ]),
     );
+  }
   const restored = restoredLine(rule.restored_from, rule.current_version);
   if (restored) lines.push(restored);
   const reach = affectsLine(rule.affects);
@@ -1065,18 +1086,22 @@ export function updateEmailRuleErrorExitCode(
 /** The stderr report of compile-email-rule: how many recent emails it holds for. */
 export function compileEmailRuleReport(data: unknown): OperationReport {
   if (!isRecord(data)) return { lines: [] };
+  const lines = (Array.isArray(data.warnings) ? data.warnings : [])
+    .filter(
+      (warning): warning is string =>
+        typeof warning === "string" && warning.trim() !== "",
+    )
+    .map((warning) => `Warning: ${warning.trim()}`);
   const breadth = data.breadth;
   if (
-    !isRecord(breadth) ||
-    typeof breadth.checked !== "number" ||
-    typeof breadth.matched !== "number"
+    isRecord(breadth) &&
+    typeof breadth.checked === "number" &&
+    typeof breadth.matched === "number"
   )
-    return { lines: [] };
-  return {
-    lines: [
+    lines.push(
       `Breadth: its conditions hold for ${breadth.matched} of ${plural(breadth.checked, "recent email", "recent emails")} checked in your own mailboxes, whatever scope you save it with.`,
-    ],
-  };
+    );
+  return { lines };
 }
 
 // get-email-rule
@@ -1087,10 +1112,32 @@ export function getEmailRuleReport(data: unknown): OperationReport {
   const lines: string[] = [];
   const author = authorLine(data.author);
   if (author) lines.push(author);
+  const protection = protectionLine(data);
+  if (protection) lines.push(protection);
   if (typeof data.revision === "number")
     lines.push(
       `Revision ${data.revision}: pass --if-revision ${data.revision} to update-email-rule so a change made since is never replaced unseen.`,
     );
+  return { lines };
+}
+
+// list-email-rules
+
+/** The stderr report of list-email-rules: the protective rules that protect nothing yet, or less than they seem. */
+export function listEmailRulesReport(data: unknown): OperationReport {
+  const rules = Array.isArray(data) ? data : [];
+  const lines: string[] = [];
+  for (const rule of rules) {
+    if (!isRecord(rule)) continue;
+    const note =
+      typeof rule.protection_note === "string"
+        ? rule.protection_note.trim()
+        : "";
+    if (!note) continue;
+    const id = typeof rule.id === "string" ? rule.id : "<rule-id>";
+    const name = typeof rule.name === "string" ? rule.name : "no name";
+    lines.push(`Protection of ${id} (${name}): ${note}`);
+  }
   return { lines };
 }
 
@@ -1204,6 +1251,10 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
   getEmailRule: {
     flags: {},
     report: getEmailRuleReport,
+  },
+  listEmailRules: {
+    flags: {},
+    report: listEmailRulesReport,
   },
   getEmailRuleScope: {
     flags: {},
