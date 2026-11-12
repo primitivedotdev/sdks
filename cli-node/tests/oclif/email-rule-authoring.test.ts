@@ -2205,7 +2205,7 @@ describe("email-rules made-up emails in test and write reports", () => {
       "To see why, test the tree this write sent on each with `primitive email-rules test-email-rule-on-sample`.",
     );
     expect(await hintFor(["--restore-version", "2"])).toContain(
-      `To see why, test version 2's tree (\`primitive email-rules list-email-rule-versions ${RULE}\`) on each with \`primitive email-rules test-email-rule-on-sample\`.`,
+      `To see why, test version 2's tree (\`primitive email-rules list-email-rule-versions ${RULE} --versions 2\`) on each with \`primitive email-rules test-email-rule-on-sample\`.`,
     );
     expect(
       await hintFor([
@@ -2213,7 +2213,7 @@ describe("email-rules made-up emails in test and write reports", () => {
         tempFile("samples.json", JSON.stringify(samples)),
       ]),
     ).toContain(
-      `To see why, test rule ${RULE} on each with \`primitive email-rules test-email-rule-on-sample\`.`,
+      `To see why, test rule ${RULE} on each with \`primitive email-rules test-email-rule-on-sample\` (\`primitive email-rules get-email-rule ${RULE}\` lists its saved ones).`,
     );
   });
 

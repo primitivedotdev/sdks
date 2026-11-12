@@ -468,9 +468,10 @@ export function lookAlikesReport(
       : "";
   // A request's rule keeps them once accepted: its accept takes them as
   // expectation_samples.
-  const requestKeep = requestId
-    ? `${which}: when the member asked accepts request ${requestId}, the accept keeps those its body sends as expectation_samples on the rule it writes${chosen.length > 0 ? ` (${one(chosen.length, "number", "numbers")} ${chosen.join(", ")} above)` : ""}.`
-    : "";
+  const requestKeep =
+    requestId && entries.length > 0
+      ? `${which}: when the member the request asks accepts request ${requestId}, the accept keeps those its body sends as expectation_samples on the rule it writes${chosen.length > 0 ? ` (${one(chosen.length, "number", "numbers")} ${chosen.join(", ")} above)` : ""}.`
+      : "";
   if (typeof file === "string") {
     const samples = entries.map((entry) => entry.sample);
     // Nothing to write: leave the file as it is, since an empty list would
