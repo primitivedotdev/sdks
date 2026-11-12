@@ -4215,7 +4215,7 @@ export type CreateEndpointInput = {
 
 export type UpdateEndpointInput = {
     /**
-     * New webhook URL (triggers endpoint rotation)
+     * New URL, for a webhook (kind=http) only. The endpoint keeps its id, routes, stats, signing secret and owed deliveries, and its consecutive failure count starts again; a webhook turned off because its owner changed is turned back on (the change is refused when it could not be turned on, for example at the plan's webhook limit), unless the same request sets enabled to false. A URL another endpoint on the same domain already uses (enabled or not; endpoints with no domain count as one domain) is refused. A caller limited to its own endpoints (an API key or a person limited to some mailboxes) cannot change the URL of an API key's webhook that signs with the organization's secret: give it a signing secret of its own first. Owners, admins and other callers with the whole organization's mail can change it.
      */
     url?: string;
     enabled?: boolean;
@@ -4692,6 +4692,9 @@ export type DeliverySummary = {
     status: 'pending' | 'delivered' | 'header_confirmed' | 'failed' | 'skipped_by_rules' | 'held' | 'discarded';
     attempt_count: number;
     duration_ms?: number | null;
+    /**
+     * Why the last attempt failed, or null. A webhook's answer is quoted after its status (HTTP 404: ...) only for a caller who can read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook); anyone else gets the status and a note. Text the platform writes (a redirect not followed, a network error) is shown to everyone.
+     */
     last_error?: string | null;
     created_at: string;
     updated_at: string;
@@ -4709,7 +4712,7 @@ export type DeliverySummary = {
      */
     sent_email_id: string | null;
     /**
-     * Machine-readable code for the last failure, or null.
+     * Machine-readable code for the last failure, or null. A code the webhook chose in its answer is shown only to a caller who can read the webhook; anyone else gets handler_4xx or handler_5xx.
      */
     last_error_code: string | null;
     /**
@@ -4717,7 +4720,7 @@ export type DeliverySummary = {
      */
     response_status: number | null;
     /**
-     * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden wherever it repeats them.
+     * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise, in answers recorded since November 2026, the webhook URL's query string, its parameters, values long enough to be a credential and any userinfo are hidden wherever it repeats them, and the rest is as the endpoint wrote it. Null for a caller who cannot read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook), since a receiver's answer can restate its URL's credential.
      */
     response_body: string | null;
     /**
@@ -6118,21 +6121,21 @@ export type ListActivityObjectsResult = {
     covers: string;
     items: Array<{
         /**
-         * One of: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request.
+         * One of: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request, email_rule_objection.
          */
         kind: string;
         id: string;
         /**
-         * The name the object is known by: an endpoint's display name, a route's or filter's pattern, a Function's name, a send's From address, a wake schedule's command and the address it wakes, an API key's name, an agent's address, a rule's or rule request's name. Never a webhook URL and never mail content.
+         * The name the object is known by: an endpoint's display name, a route's or filter's pattern, a Function's name, a send's From address, a wake schedule's command and the address it wakes, an API key's name, an agent's address, a rule's or rule request's name, and for an objection the name its rule had when the objection was made. Never a webhook URL and never mail content.
          */
         name: string | null;
         /**
-         * Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests).
+         * Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections).
          */
         state: string;
         created_at: string;
         /**
-         * When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request was decided (accepted, declined or withdrawn); null otherwise.
+         * When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request or objection was decided (accepted, declined or withdrawn); null otherwise.
          */
         ended_at: string | null;
         /**
@@ -6141,15 +6144,15 @@ export type ListActivityObjectsResult = {
         owned_now: 'you' | 'someone_else';
         created_through: {
             /**
-             * The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves). With relation=asked, member: the member who asked.
+             * The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves). With relation=asked, member: the member who asked or objected.
              */
             kind: string;
             /**
-             * In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself. With relation=asked, the user id of the member who asked.
+             * In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself. With relation=asked, the user id of the member who asked or objected.
              */
             id: string | null;
             /**
-             * In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves. With relation=asked, the name of the member who asked.
+             * In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves. With relation=asked, the name of the member who asked or objected.
              */
             name: string | null;
         };
@@ -6160,7 +6163,7 @@ export type ListActivityObjectsResult = {
     withheld: Array<{
         kind: string;
         /**
-         * permission_missing: the caller lacks the permission the kind's own list needs (named in permission). mail_scope: listed only to a caller that reads every mailbox. not_for_this_credential: this kind of credential never lists them (a person's own kinds asked for by a key, an app or an agent).
+         * permission_missing: the caller lacks the permission the kind's own list needs (named in permission). mail_scope: listed only to a caller that reads every mailbox. not_for_this_credential: this kind of credential never lists them (a person's own kinds asked for by a key, an app or an agent), or the kind's own list refuses it (email rules, rule requests and objections for a token narrowed below the person; objections anywhere but the dashboard and the Primitive CLI).
          */
         reason: 'permission_missing' | 'mail_scope' | 'not_for_this_credential';
         permission: string | null;
@@ -6808,7 +6811,7 @@ export type EmailRuleWritten = {
     name: string;
     state: 'draft' | 'observe' | 'active';
     /**
-     * grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional only for an older core-api: every answer carries it.
+     * grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
      */
     kind?: 'grant' | 'do_not_share';
     /**
@@ -6831,7 +6834,7 @@ export type EmailRuleWritten = {
     author_user_id: string;
     author?: EmailRuleAuthor;
     /**
-     * Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members).
+     * Whether you are its author, in your current membership. Only its author edits it.
      */
     is_author: boolean;
     created_at: string;
@@ -6985,11 +6988,11 @@ export type CreateEmailRuleRequest = {
      */
     explanation?: string;
     /**
-     * Readings chosen where the description was open to more than one, as the compile response returned them (including its lines naming any condition, question or confidence bar the description did not ask for). Stored as sent.
+     * The compile response's assumptions. Stored as sent.
      */
     assumptions?: Array<string>;
     /**
-     * Parts of the description the rule does not express, as the compile response returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
+     * The compile response's warnings. Stored as sent.
      */
     warnings?: Array<string>;
     /**
@@ -7009,7 +7012,7 @@ export type EmailRule = {
     name: string;
     state: 'draft' | 'observe' | 'active';
     /**
-     * grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional only for an older core-api: every answer carries it.
+     * grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
      */
     kind?: 'grant' | 'do_not_share';
     /**
@@ -7032,7 +7035,7 @@ export type EmailRule = {
     author_user_id: string;
     author?: EmailRuleAuthor;
     /**
-     * Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members).
+     * Whether you are its author, in your current membership. Only its author edits it.
      */
     is_author: boolean;
     created_at: string;
@@ -7060,7 +7063,7 @@ export type EmailRuleRead = {
     name: string;
     state: 'draft' | 'observe' | 'active';
     /**
-     * grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional only for an older core-api: every answer carries it.
+     * grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
      */
     kind?: 'grant' | 'do_not_share';
     /**
@@ -7083,7 +7086,7 @@ export type EmailRuleRead = {
     author_user_id: string;
     author?: EmailRuleAuthor;
     /**
-     * Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members).
+     * Whether you are its author, in your current membership. Only its author edits it.
      */
     is_author: boolean;
     created_at: string;
@@ -7126,11 +7129,11 @@ export type UpdateEmailRuleRequest = {
      */
     explanation?: string;
     /**
-     * Readings chosen where the description was open to more than one, as the compile response returned them (including its lines naming any condition, question or confidence bar the description did not ask for). Stored as sent.
+     * The compile response's assumptions. Stored as sent.
      */
     assumptions?: Array<string>;
     /**
-     * Parts of the description the rule does not express, as the compile response returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
+     * The compile response's warnings. Stored as sent.
      */
     warnings?: Array<string>;
     /**
@@ -7352,7 +7355,7 @@ export type ListEmailRuleResultsResult = {
          */
         author_left?: boolean;
         /**
-         * Another member's rule that decided on your own mail; dashboard and CLI only. name is null once it no longer covers you.
+         * Another member's rule that decided on your own mail; dashboard and CLI only. name is null unless known to cover you.
          */
         read_only?: boolean;
         author?: EmailRuleCoveringAuthor;
@@ -7515,11 +7518,11 @@ export type CreateEmailRuleRequestRequest = {
      */
     explanation?: string;
     /**
-     * Readings chosen where the description was open to more than one, as the compile response returned them (including its lines naming any condition, question or confidence bar the description did not ask for). Stored as sent.
+     * The compile response's assumptions. Stored as sent.
      */
     assumptions?: Array<string>;
     /**
-     * Parts of the description the rule does not express, as the compile response returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
+     * The compile response's warnings. Stored as sent.
      */
     warnings?: Array<string>;
     /**
@@ -7697,7 +7700,7 @@ export type EmailRuleWithVersion = {
     name: string;
     state: 'draft' | 'observe' | 'active';
     /**
-     * grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional only for an older core-api: every answer carries it.
+     * grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
      */
     kind?: 'grant' | 'do_not_share';
     /**
@@ -7720,7 +7723,7 @@ export type EmailRuleWithVersion = {
     author_user_id: string;
     author?: EmailRuleAuthor;
     /**
-     * Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members).
+     * Whether you are its author, in your current membership. Only its author edits it.
      */
     is_author: boolean;
     created_at: string;
@@ -7824,11 +7827,11 @@ export type AcceptEmailRuleRequestRequest = {
      */
     explanation?: string;
     /**
-     * Readings chosen where the description was open to more than one, as the compile response returned them (including its lines naming any condition, question or confidence bar the description did not ask for). Stored as sent.
+     * The compile response's assumptions. Stored as sent.
      */
     assumptions?: Array<string>;
     /**
-     * Parts of the description the rule does not express, as the compile response returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.
+     * The compile response's warnings. Stored as sent.
      */
     warnings?: Array<string>;
     /**
@@ -8088,6 +8091,75 @@ export type EmailRuleDecisionOnMyMail = {
 };
 
 export type ListEmailRuleDecisionsOnMyMailResult = Array<EmailRuleDecisionOnMyMail>;
+
+export type EmailRuleObjection = {
+    id: string;
+    /**
+     * pending until the rule's author accepts it (turning the rule off) or declines it, or the member who made it withdraws it; never changes after.
+     */
+    status: 'pending' | 'accepted' | 'declined' | 'withdrawn';
+    rule: {
+        /**
+         * Null once the rule was deleted outright.
+         */
+        id: string | null;
+        /**
+         * Its name when the objection was made.
+         */
+        name: string;
+    };
+    objector: EmailRuleObjectionPerson;
+    author: EmailRuleObjectionPerson;
+    is_objector: boolean;
+    is_author: boolean;
+    /**
+     * Why the objector objects; null when none was given, or once withdrawn.
+     */
+    message: string | null;
+    decline_reason: string | null;
+    created_at: string;
+    decided_at: string | null;
+    decided_by_user_id: string | null;
+};
+
+export type EmailRuleObjectionPerson = {
+    user_id: string;
+    name: string | null;
+    /**
+     * Sign-in email; null unless you can list member emails or this is you.
+     */
+    email: string | null;
+};
+
+export type CreateEmailRuleObjectionRequest = {
+    /**
+     * A rule that covers one of your own mailboxes now (GET /email-rules/covering-me), written by another member.
+     */
+    rule_id: string;
+    /**
+     * Why you object, up to 500 characters; null or absent for none. The rule's author and the organization's owners and admins see it while it stands; withdrawing clears it.
+     */
+    message?: string | null;
+};
+
+export type CreateEmailRuleObjectionResult = EmailRuleObjection;
+
+export type ListEmailRuleObjectionsResult = Array<EmailRuleObjection>;
+
+export type GetEmailRuleObjectionResult = EmailRuleObjection;
+
+export type WithdrawEmailRuleObjectionResult = EmailRuleObjection;
+
+export type DeclineEmailRuleObjectionRequest = {
+    /**
+     * Why you are declining, up to 500 characters; null or absent for none. The member who objected sees it.
+     */
+    reason?: string | null;
+};
+
+export type DeclineEmailRuleObjectionResult = EmailRuleObjection;
+
+export type AcceptEmailRuleObjectionResult = EmailRuleObjection;
 
 export type GetDomainAgentAuthorizationResult = {
     domain_id: string;
@@ -8843,14 +8915,20 @@ export type GetDeliveryResult = {
     status: string;
     attempt_count: number;
     duration_ms: number | null;
+    /**
+     * Why the last attempt failed, or null. A webhook's answer is quoted after its status (HTTP 404: ...) only for a caller who can read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook); anyone else gets the status and a note. Text the platform writes (a redirect not followed, a network error) is shown to everyone.
+     */
     last_error: string | null;
+    /**
+     * Machine-readable code for the last failure, or null. A code the webhook chose in its answer is shown only to a caller who can read the webhook; anyone else gets handler_4xx or handler_5xx.
+     */
     last_error_code: string | null;
     /**
      * The HTTP status the endpoint answered this attempt with: a webhook's own answer, or for a Function what its runtime answered, which is the platform's own error when the Function could not be run. Null when no answer came back (a network error, a timeout, an attempt refused or not sent) and on attempts recorded before this field.
      */
     response_status: number | null;
     /**
-     * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden wherever it repeats them.
+     * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise, in answers recorded since November 2026, the webhook URL's query string, its parameters, values long enough to be a credential and any userinfo are hidden wherever it repeats them, and the rest is as the endpoint wrote it. Null for a caller who cannot read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook), since a receiver's answer can restate its URL's credential.
      */
     response_body: string | null;
     created_at: string;
@@ -8879,6 +8957,9 @@ export type GetDeliveryResult = {
         id: string;
         attempt_count: number;
         status: string;
+        /**
+         * Machine-readable code for the last failure, or null. A code the webhook chose in its answer is shown only to a caller who can read the webhook; anyone else gets handler_4xx or handler_5xx.
+         */
         last_error_code: string | null;
         duration_ms: number | null;
         created_at: string;
@@ -8887,7 +8968,7 @@ export type GetDeliveryResult = {
          */
         response_status: number | null;
         /**
-         * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden wherever it repeats them.
+         * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise, in answers recorded since November 2026, the webhook URL's query string, its parameters, values long enough to be a credential and any userinfo are hidden wherever it repeats them, and the rest is as the endpoint wrote it. Null for a caller who cannot read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook), since a receiver's answer can restate its URL's credential.
          */
         response_body: string | null;
         /**
@@ -14357,6 +14438,10 @@ export type ListDeliveriesData = {
          * Only deliveries of outbound events about this sent email.
          */
         sent_email_id?: string;
+        /**
+         * Only deliveries to this endpoint (an id from listEndpoints). A caller limited to some mailboxes still sees only deliveries of mail it reads.
+         */
+        endpoint_id?: string;
     };
     url: '/webhooks/deliveries';
 };
@@ -20511,11 +20596,11 @@ export type ListActivityObjectsData = {
     path?: never;
     query?: {
         /**
-         * created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you. asked is for a person's own view only, and kind may then name only email_rule_request.
+         * created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you, and objections to rules you wrote. asked is for a person's own view only, and kind may then name only email_rule_request and email_rule_objection.
          */
         relation?: 'created' | 'asked';
         /**
-         * Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request. Defaults to every kind the caller can have created (a person's own kinds only for a person). With relation=asked, only email_rule_request, which is also the default.
+         * Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request, email_rule_objection. Defaults to every kind the caller can have created (a person's own kinds only for a person). With relation=asked, only email_rule_request and email_rule_objection, which are also the default.
          */
         kind?: string;
         /**
@@ -22187,6 +22272,330 @@ export type ListEmailRuleDecisionsOnMyMailResponses = {
 };
 
 export type ListEmailRuleDecisionsOnMyMailResponse = ListEmailRuleDecisionsOnMyMailResponses[keyof ListEmailRuleDecisionsOnMyMailResponses];
+
+export type ListEmailRuleObjectionsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * outgoing: objections you made; incoming: objections to rules you wrote; all: every objection you can see (owners and admins see the organization's).
+         */
+        box?: 'outgoing' | 'incoming' | 'all';
+        /**
+         * pending (the default), decided, or any.
+         */
+        status?: 'pending' | 'decided' | 'any';
+        /**
+         * Objections per page, from 1 to 100; defaults to 25.
+         */
+        limit?: number;
+        /**
+         * meta.cursor from the preceding page. Omit for the first page.
+         */
+        cursor?: string;
+    };
+    url: '/email-rule-objections';
+};
+
+export type ListEmailRuleObjectionsErrors = {
+    /**
+     * validation_error: a cursor not returned in meta.cursor.
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI.
+     */
+    403: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type ListEmailRuleObjectionsError = ListEmailRuleObjectionsErrors[keyof ListEmailRuleObjectionsErrors];
+
+export type ListEmailRuleObjectionsResponses = {
+    /**
+     * List objections
+     */
+    200: SuccessEnvelope & {
+        data: ListEmailRuleObjectionsResult;
+        meta: CursorPageMeta;
+    };
+};
+
+export type ListEmailRuleObjectionsResponse = ListEmailRuleObjectionsResponses[keyof ListEmailRuleObjectionsResponses];
+
+export type CreateEmailRuleObjectionData = {
+    body: CreateEmailRuleObjectionRequest;
+    headers?: {
+        /**
+         * Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.
+         */
+        'Idempotency-Key'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/email-rule-objections';
+};
+
+export type CreateEmailRuleObjectionErrors = {
+    /**
+     * validation_error; details.reason own_rule: it is your own rule, which you can turn off yourself.
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI.
+     */
+    403: ErrorResponse;
+    /**
+     * not_found: no rule with this id covers your mailboxes now.
+     */
+    404: ErrorResponse;
+    /**
+     * conflict: details.reason objection_pending, you already have a pending objection to this rule (details.objection_id); objection_limit, you have 50 pending objections.
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+    /**
+     * service_unavailable: checking which rules cover you, or the hourly limit, could not be done; nothing was written (Retry-After).
+     */
+    503: ErrorResponse;
+};
+
+export type CreateEmailRuleObjectionError = CreateEmailRuleObjectionErrors[keyof CreateEmailRuleObjectionErrors];
+
+export type CreateEmailRuleObjectionResponses = {
+    /**
+     * Object to a rule over your mail
+     */
+    200: SuccessEnvelope & {
+        data: EmailRuleObjection;
+    };
+};
+
+export type CreateEmailRuleObjectionResponse = CreateEmailRuleObjectionResponses[keyof CreateEmailRuleObjectionResponses];
+
+export type GetEmailRuleObjectionData = {
+    body?: never;
+    path: {
+        /**
+         * The objection id.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/email-rule-objections/{id}';
+};
+
+export type GetEmailRuleObjectionErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI.
+     */
+    403: ErrorResponse;
+    /**
+     * not_found: no objection with this id that you can see.
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type GetEmailRuleObjectionError = GetEmailRuleObjectionErrors[keyof GetEmailRuleObjectionErrors];
+
+export type GetEmailRuleObjectionResponses = {
+    /**
+     * Get an objection
+     */
+    200: SuccessEnvelope & {
+        data: EmailRuleObjection;
+    };
+};
+
+export type GetEmailRuleObjectionResponse = GetEmailRuleObjectionResponses[keyof GetEmailRuleObjectionResponses];
+
+export type WithdrawEmailRuleObjectionData = {
+    body?: never;
+    headers?: {
+        /**
+         * Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.
+         */
+        'Idempotency-Key'?: string;
+    };
+    path: {
+        /**
+         * The objection id.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/email-rule-objections/{id}/withdraw';
+};
+
+export type WithdrawEmailRuleObjectionErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason objector_only: only the member who made it can withdraw it.
+     */
+    403: ErrorResponse;
+    /**
+     * not_found: no objection with this id that you can see.
+     */
+    404: ErrorResponse;
+    /**
+     * not_pending: it was already decided or withdrawn (details.status).
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type WithdrawEmailRuleObjectionError = WithdrawEmailRuleObjectionErrors[keyof WithdrawEmailRuleObjectionErrors];
+
+export type WithdrawEmailRuleObjectionResponses = {
+    /**
+     * Withdraw an objection
+     */
+    200: SuccessEnvelope & {
+        data: EmailRuleObjection;
+    };
+};
+
+export type WithdrawEmailRuleObjectionResponse = WithdrawEmailRuleObjectionResponses[keyof WithdrawEmailRuleObjectionResponses];
+
+export type DeclineEmailRuleObjectionData = {
+    body?: DeclineEmailRuleObjectionRequest;
+    headers?: {
+        /**
+         * Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.
+         */
+        'Idempotency-Key'?: string;
+    };
+    path: {
+        /**
+         * The objection id.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/email-rule-objections/{id}/decline';
+};
+
+export type DeclineEmailRuleObjectionErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason author_only: only the rule's author can decline it.
+     */
+    403: ErrorResponse;
+    /**
+     * not_found: no objection with this id that you can see.
+     */
+    404: ErrorResponse;
+    /**
+     * not_pending: it was already decided or withdrawn (details.status).
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type DeclineEmailRuleObjectionError = DeclineEmailRuleObjectionErrors[keyof DeclineEmailRuleObjectionErrors];
+
+export type DeclineEmailRuleObjectionResponses = {
+    /**
+     * Decline an objection to your rule
+     */
+    200: SuccessEnvelope & {
+        data: EmailRuleObjection;
+    };
+};
+
+export type DeclineEmailRuleObjectionResponse = DeclineEmailRuleObjectionResponses[keyof DeclineEmailRuleObjectionResponses];
+
+export type AcceptEmailRuleObjectionData = {
+    body?: never;
+    headers?: {
+        /**
+         * Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.
+         */
+        'Idempotency-Key'?: string;
+    };
+    path: {
+        /**
+         * The objection id.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/email-rule-objections/{id}/accept';
+};
+
+export type AcceptEmailRuleObjectionErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason author_only: only the rule's author can accept it.
+     */
+    403: ErrorResponse;
+    /**
+     * not_found: no objection with this id that you can see.
+     */
+    404: ErrorResponse;
+    /**
+     * not_pending: it was already decided or withdrawn (details.status). conflict with details.reason rule_deleted: the rule was deleted; decline it instead.
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type AcceptEmailRuleObjectionError = AcceptEmailRuleObjectionErrors[keyof AcceptEmailRuleObjectionErrors];
+
+export type AcceptEmailRuleObjectionResponses = {
+    /**
+     * Accept an objection to your rule
+     */
+    200: SuccessEnvelope & {
+        data: EmailRuleObjection;
+    };
+};
+
+export type AcceptEmailRuleObjectionResponse = AcceptEmailRuleObjectionResponses[keyof AcceptEmailRuleObjectionResponses];
 
 export type GetDomainAgentAuthorizationData = {
     body?: never;

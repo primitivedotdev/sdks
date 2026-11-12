@@ -28,6 +28,7 @@ def _get_kwargs(
     date_to: datetime.datetime | Unset = UNSET,
     event_type: str | Unset = UNSET,
     sent_email_id: UUID | Unset = UNSET,
+    endpoint_id: UUID | Unset = UNSET,
 
 ) -> dict[str, Any]:
     
@@ -67,6 +68,11 @@ def _get_kwargs(
     if not isinstance(sent_email_id, Unset):
         json_sent_email_id = str(sent_email_id)
     params["sent_email_id"] = json_sent_email_id
+
+    json_endpoint_id: str | Unset = UNSET
+    if not isinstance(endpoint_id, Unset):
+        json_endpoint_id = str(endpoint_id)
+    params["endpoint_id"] = json_endpoint_id
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -131,6 +137,7 @@ def sync_detailed(
     date_to: datetime.datetime | Unset = UNSET,
     event_type: str | Unset = UNSET,
     sent_email_id: UUID | Unset = UNSET,
+    endpoint_id: UUID | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListDeliveriesResponse200]:
     """ List webhook deliveries
@@ -147,6 +154,7 @@ def sync_detailed(
         date_to (datetime.datetime | Unset):
         event_type (str | Unset):
         sent_email_id (UUID | Unset):
+        endpoint_id (UUID | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -166,6 +174,7 @@ date_from=date_from,
 date_to=date_to,
 event_type=event_type,
 sent_email_id=sent_email_id,
+endpoint_id=endpoint_id,
 
     )
 
@@ -186,6 +195,7 @@ def sync(
     date_to: datetime.datetime | Unset = UNSET,
     event_type: str | Unset = UNSET,
     sent_email_id: UUID | Unset = UNSET,
+    endpoint_id: UUID | Unset = UNSET,
 
 ) -> ErrorResponse | ListDeliveriesResponse200 | None:
     """ List webhook deliveries
@@ -202,6 +212,7 @@ def sync(
         date_to (datetime.datetime | Unset):
         event_type (str | Unset):
         sent_email_id (UUID | Unset):
+        endpoint_id (UUID | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -222,6 +233,7 @@ date_from=date_from,
 date_to=date_to,
 event_type=event_type,
 sent_email_id=sent_email_id,
+endpoint_id=endpoint_id,
 
     ).parsed
 
@@ -236,6 +248,7 @@ async def asyncio_detailed(
     date_to: datetime.datetime | Unset = UNSET,
     event_type: str | Unset = UNSET,
     sent_email_id: UUID | Unset = UNSET,
+    endpoint_id: UUID | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListDeliveriesResponse200]:
     """ List webhook deliveries
@@ -252,6 +265,7 @@ async def asyncio_detailed(
         date_to (datetime.datetime | Unset):
         event_type (str | Unset):
         sent_email_id (UUID | Unset):
+        endpoint_id (UUID | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -271,6 +285,7 @@ date_from=date_from,
 date_to=date_to,
 event_type=event_type,
 sent_email_id=sent_email_id,
+endpoint_id=endpoint_id,
 
     )
 
@@ -291,6 +306,7 @@ async def asyncio(
     date_to: datetime.datetime | Unset = UNSET,
     event_type: str | Unset = UNSET,
     sent_email_id: UUID | Unset = UNSET,
+    endpoint_id: UUID | Unset = UNSET,
 
 ) -> ErrorResponse | ListDeliveriesResponse200 | None:
     """ List webhook deliveries
@@ -307,6 +323,7 @@ async def asyncio(
         date_to (datetime.datetime | Unset):
         event_type (str | Unset):
         sent_email_id (UUID | Unset):
+        endpoint_id (UUID | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -327,5 +344,6 @@ date_from=date_from,
 date_to=date_to,
 event_type=event_type,
 sent_email_id=sent_email_id,
+endpoint_id=endpoint_id,
 
     )).parsed

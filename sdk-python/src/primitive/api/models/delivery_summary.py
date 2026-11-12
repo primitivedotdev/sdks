@@ -44,7 +44,8 @@ class DeliverySummary:
             updated_at (datetime.datetime):
             event_type (None | str): The event type delivered, or null for a delivery recorded before event types existed.
             sent_email_id (None | UUID): The sent email an outbound sent_email.* delivery is about, otherwise null.
-            last_error_code (None | str): Machine-readable code for the last failure, or null.
+            last_error_code (None | str): Machine-readable code for the last failure, or null. A code the webhook chose in
+                its answer is shown only to a caller who can read the webhook; anyone else gets handler_4xx or handler_5xx.
             response_status (int | None): The HTTP status the endpoint answered this attempt with: a webhook's own answer,
                 or for a Function what its runtime answered, which is the platform's own error when the Function could not be
                 run. Null when no answer came back (a network error, a timeout, an attempt refused or not sent) and on attempts
@@ -53,8 +54,11 @@ class DeliverySummary:
                 that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was
                 sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is
                 deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null
-                for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden
-                wherever it repeats them.
+                for a redirect (3xx), whose body repeats its Location; otherwise, in answers recorded since November 2026, the
+                webhook URL's query string, its parameters, values long enough to be a credential and any userinfo are hidden
+                wherever it repeats them, and the rest is as the endpoint wrote it. Null for a caller who cannot read the
+                webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook), since a receiver's
+                answer can restate its URL's credential.
             latest_attempt (bool): Whether this is the latest attempt of its delivery: the one recorded last, where a record
                 of no attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A retry is
                 recorded as a new attempt with its own id and attempt_count (not always higher than the one before), so an
@@ -84,7 +88,10 @@ class DeliverySummary:
                 delivery that is not rule-granted, whose retries are passes for the email with no time reported (whether one is
                 coming is retry_scheduled).
             duration_ms (int | None | Unset):
-            last_error (None | str | Unset):
+            last_error (None | str | Unset): Why the last attempt failed, or null. A webhook's answer is quoted after its
+                status (HTTP 404: ...) only for a caller who can read the webhook (GET /endpoints/{id}; a deleted webhook only
+                for a caller who reads every webhook); anyone else gets the status and a note. Text the platform writes (a
+                redirect not followed, a network error) is shown to everyone.
             email (DeliverySummaryEmailType0 | None | Unset):
      """
 

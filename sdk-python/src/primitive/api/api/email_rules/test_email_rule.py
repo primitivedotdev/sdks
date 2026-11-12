@@ -121,18 +121,13 @@ def sync_detailed(
     """ Test a rule against received mail
 
      Runs a rule over received mail and reports what it would decide for each email (matched, near_miss,
-    no_match, unclassified, skipped or not_found), with a summary: how each top-level condition and
-    question decided and, when nothing matched, what stopped it. Test an unsaved tree from a compile
-    response, or a saved rule by rule_id (its current version, run with its author's access). The rule
-    reads only mail its author can read and its scope covers; an unsaved tree covers only your own mail
-    unless evaluation_scope names more. Without email_ids, the newest emails it can read are tested, at
-    most 200 and none older than 30 days; expected emails (expect, or a saved rule's saved expectations)
-    are tested whatever their age. Unclassified emails more than 2 hours old are classified first and
-    their classification saved, unless classify_missing is false; newer ones are reported unclassified,
-    pending. The rule itself records and grants nothing. Classification and the rule's questions stop at
-    about 90 seconds; a rerun continues the classification where it stopped. Needs mail:read, a member's
-    own credential with their full access (not an API key, agent key or narrowed token), and the email
-    rules feature.
+    no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and
+    question decided. Test an unsaved tree, or a saved rule by rule_id (its current version, as its
+    author). It reads only mail its author can read and its scope covers. Without email_ids it tests the
+    newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails
+    over 2 hours old are classified first unless classify_missing is false. It records no decision and
+    grants nothing, and stops at about 90 seconds. Needs mail:read, a member's own credential with their
+    full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -169,18 +164,13 @@ def sync(
     """ Test a rule against received mail
 
      Runs a rule over received mail and reports what it would decide for each email (matched, near_miss,
-    no_match, unclassified, skipped or not_found), with a summary: how each top-level condition and
-    question decided and, when nothing matched, what stopped it. Test an unsaved tree from a compile
-    response, or a saved rule by rule_id (its current version, run with its author's access). The rule
-    reads only mail its author can read and its scope covers; an unsaved tree covers only your own mail
-    unless evaluation_scope names more. Without email_ids, the newest emails it can read are tested, at
-    most 200 and none older than 30 days; expected emails (expect, or a saved rule's saved expectations)
-    are tested whatever their age. Unclassified emails more than 2 hours old are classified first and
-    their classification saved, unless classify_missing is false; newer ones are reported unclassified,
-    pending. The rule itself records and grants nothing. Classification and the rule's questions stop at
-    about 90 seconds; a rerun continues the classification where it stopped. Needs mail:read, a member's
-    own credential with their full access (not an API key, agent key or narrowed token), and the email
-    rules feature.
+    no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and
+    question decided. Test an unsaved tree, or a saved rule by rule_id (its current version, as its
+    author). It reads only mail its author can read and its scope covers. Without email_ids it tests the
+    newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails
+    over 2 hours old are classified first unless classify_missing is false. It records no decision and
+    grants nothing, and stops at about 90 seconds. Needs mail:read, a member's own credential with their
+    full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -212,18 +202,13 @@ async def asyncio_detailed(
     """ Test a rule against received mail
 
      Runs a rule over received mail and reports what it would decide for each email (matched, near_miss,
-    no_match, unclassified, skipped or not_found), with a summary: how each top-level condition and
-    question decided and, when nothing matched, what stopped it. Test an unsaved tree from a compile
-    response, or a saved rule by rule_id (its current version, run with its author's access). The rule
-    reads only mail its author can read and its scope covers; an unsaved tree covers only your own mail
-    unless evaluation_scope names more. Without email_ids, the newest emails it can read are tested, at
-    most 200 and none older than 30 days; expected emails (expect, or a saved rule's saved expectations)
-    are tested whatever their age. Unclassified emails more than 2 hours old are classified first and
-    their classification saved, unless classify_missing is false; newer ones are reported unclassified,
-    pending. The rule itself records and grants nothing. Classification and the rule's questions stop at
-    about 90 seconds; a rerun continues the classification where it stopped. Needs mail:read, a member's
-    own credential with their full access (not an API key, agent key or narrowed token), and the email
-    rules feature.
+    no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and
+    question decided. Test an unsaved tree, or a saved rule by rule_id (its current version, as its
+    author). It reads only mail its author can read and its scope covers. Without email_ids it tests the
+    newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails
+    over 2 hours old are classified first unless classify_missing is false. It records no decision and
+    grants nothing, and stops at about 90 seconds. Needs mail:read, a member's own credential with their
+    full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -260,18 +245,13 @@ async def asyncio(
     """ Test a rule against received mail
 
      Runs a rule over received mail and reports what it would decide for each email (matched, near_miss,
-    no_match, unclassified, skipped or not_found), with a summary: how each top-level condition and
-    question decided and, when nothing matched, what stopped it. Test an unsaved tree from a compile
-    response, or a saved rule by rule_id (its current version, run with its author's access). The rule
-    reads only mail its author can read and its scope covers; an unsaved tree covers only your own mail
-    unless evaluation_scope names more. Without email_ids, the newest emails it can read are tested, at
-    most 200 and none older than 30 days; expected emails (expect, or a saved rule's saved expectations)
-    are tested whatever their age. Unclassified emails more than 2 hours old are classified first and
-    their classification saved, unless classify_missing is false; newer ones are reported unclassified,
-    pending. The rule itself records and grants nothing. Classification and the rule's questions stop at
-    about 90 seconds; a rerun continues the classification where it stopped. Needs mail:read, a member's
-    own credential with their full access (not an API key, agent key or narrowed token), and the email
-    rules feature.
+    no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and
+    question decided. Test an unsaved tree, or a saved rule by rule_id (its current version, as its
+    author). It reads only mail its author can read and its scope covers. Without email_ids it tests the
+    newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails
+    over 2 hours old are classified first unless classify_missing is false. It records no decision and
+    grants nothing, and stops at about 90 seconds. Needs mail:read, a member's own credential with their
+    full access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):

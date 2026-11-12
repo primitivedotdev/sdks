@@ -121,11 +121,9 @@ def sync_detailed(
     """ Test a rule against a made-up email
 
      Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text,
-    attachment types; optionally whether it is automated or from a mailing list, and its spam score),
-    received now: it is classified, and the conditions and questions decided, as received mail would be.
-    By default it is not automated or from a list; a rule reading a spam score you gave none for decides
-    on none (spam_score is then in unset_columns). Nothing is stored. Test an unsaved tree (covering
-    only your own mail unless evaluation_scope names more) or a saved rule by rule_id. The answer
+    attachment types; optionally automated, from a mailing list, and a spam score), classified and
+    decided as received mail would be. A rule reading a spam score you gave none for decides on none
+    (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The answer
     includes what the classifier read. Needs mail:read, a member's own credential with their full access
     (not an API key, agent key or narrowed token), and the email rules feature.
 
@@ -164,11 +162,9 @@ def sync(
     """ Test a rule against a made-up email
 
      Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text,
-    attachment types; optionally whether it is automated or from a mailing list, and its spam score),
-    received now: it is classified, and the conditions and questions decided, as received mail would be.
-    By default it is not automated or from a list; a rule reading a spam score you gave none for decides
-    on none (spam_score is then in unset_columns). Nothing is stored. Test an unsaved tree (covering
-    only your own mail unless evaluation_scope names more) or a saved rule by rule_id. The answer
+    attachment types; optionally automated, from a mailing list, and a spam score), classified and
+    decided as received mail would be. A rule reading a spam score you gave none for decides on none
+    (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The answer
     includes what the classifier read. Needs mail:read, a member's own credential with their full access
     (not an API key, agent key or narrowed token), and the email rules feature.
 
@@ -202,11 +198,9 @@ async def asyncio_detailed(
     """ Test a rule against a made-up email
 
      Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text,
-    attachment types; optionally whether it is automated or from a mailing list, and its spam score),
-    received now: it is classified, and the conditions and questions decided, as received mail would be.
-    By default it is not automated or from a list; a rule reading a spam score you gave none for decides
-    on none (spam_score is then in unset_columns). Nothing is stored. Test an unsaved tree (covering
-    only your own mail unless evaluation_scope names more) or a saved rule by rule_id. The answer
+    attachment types; optionally automated, from a mailing list, and a spam score), classified and
+    decided as received mail would be. A rule reading a spam score you gave none for decides on none
+    (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The answer
     includes what the classifier read. Needs mail:read, a member's own credential with their full access
     (not an API key, agent key or narrowed token), and the email rules feature.
 
@@ -245,11 +239,9 @@ async def asyncio(
     """ Test a rule against a made-up email
 
      Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text,
-    attachment types; optionally whether it is automated or from a mailing list, and its spam score),
-    received now: it is classified, and the conditions and questions decided, as received mail would be.
-    By default it is not automated or from a list; a rule reading a spam score you gave none for decides
-    on none (spam_score is then in unset_columns). Nothing is stored. Test an unsaved tree (covering
-    only your own mail unless evaluation_scope names more) or a saved rule by rule_id. The answer
+    attachment types; optionally automated, from a mailing list, and a spam score), classified and
+    decided as received mail would be. A rule reading a spam score you gave none for decides on none
+    (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The answer
     includes what the classifier read. Needs mail:read, a member's own credential with their full access
     (not an API key, agent key or narrowed token), and the email rules feature.
 

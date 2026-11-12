@@ -2347,12 +2347,12 @@ export const EMPTY_RESULT_HINTS: Record<string, string> = {
 };
 
 /**
- * An empty rule request or share list, read by the filters the call left at
- * their defaults: each list shows only part of what you can see by default
- * (pending requests made to you; live shares made with you), so an empty
- * answer says which flags widen it. Undefined for any other list, when every
- * filter was given, or on a later page (--cursor), which is empty only past
- * the end.
+ * An empty rule request, share or objection list, read by the filters the
+ * call left at their defaults: each list shows only part of what you can see
+ * by default (pending requests made to you; live shares made with you;
+ * pending objections you made), so an empty answer says which flags widen
+ * it. Undefined for any other list, when every filter was given, or on a
+ * later page (--cursor), which is empty only past the end.
  */
 export function emptyRuleListHint(
   sdkName: string,
@@ -2400,6 +2400,22 @@ export function emptyRuleListHint(
     return said("shares", unset("live") ? "live shares of your mail" : null, [
       "--live any",
     ]);
+  if (sdkName === "listEmailRuleObjections") {
+    const box = unset("box");
+    const status = unset("status");
+    const phrase =
+      box && status
+        ? "pending objections you made"
+        : box
+          ? "objections you made"
+          : status
+            ? "pending objections"
+            : null;
+    return said("objections", phrase, [
+      ...(box ? ["--box all"] : []),
+      ...(status ? ["--status any"] : []),
+    ]);
+  }
   return undefined;
 }
 

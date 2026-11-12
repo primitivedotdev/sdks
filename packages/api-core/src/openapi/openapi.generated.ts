@@ -201,7 +201,7 @@ export const openapiDocument: Record<string, unknown> = {
     },
     {
       "name": "Email Rule Oversight",
-      "description": "The email rules that reach your own mailboxes, whoever wrote them, read-only. The organization needs the email rules feature, and the caller must be a member with mail:read on their own dashboard session or the Primitive CLI, not narrowed.",
+      "description": "The email rules that reach your own mailboxes, whoever wrote them, read-only, and your objections to them: asking a rule's author to turn it off. The organization needs the email rules feature, and the caller must be a member with mail:read on their own dashboard session or the Primitive CLI, not narrowed.",
       "x-openapi-spec": "https://api.primitive.dev/v1/openapi/tags/email-rule-oversight"
     },
     {
@@ -11829,6 +11829,16 @@ export const openapiDocument: Record<string, unknown> = {
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "endpoint_id",
+            "in": "query",
+            "required": false,
+            "description": "Only deliveries to this endpoint (an id from listEndpoints). A caller limited to some mailboxes still sees only deliveries of mail it reads.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -13584,7 +13594,7 @@ export const openapiDocument: Record<string, unknown> = {
         "tags": [
           "Sending"
         ],
-        "description": "Permanently deletes eligible sender mailbox history and its owned attachment archive and transient payload. Allows delivered, bounced, agent_failed, gate_denied, canceled, deferred and wait_timeout; other states return 409 (cancel scheduled sends first). Preserves recipient copies, received replies and independent interaction/delivery audit. This does not recall or cancel delivery already admitted. A minimal non-content record preserves occupied idempotency keys and delivered-reply deduplication. Keys already released by cancellation, gate denial or a never-attempted failure remain reusable; deleting those records does not revoke their existing retry permission. Repeating a completed deletion returns success; unknown or foreign IDs return 404. Organization API keys, sessions and OAuth are supported; Function and connected-agent credentials are denied.",
+        "description": "Permanently deletes eligible sender mailbox history and its owned attachment archive and transient payload. Allows delivered, bounced, agent_failed, gate_denied, canceled, deferred and wait_timeout; other states return 409 (cancel scheduled sends first). Preserves recipient copies, received replies and independent interaction/delivery audit. This does not recall or cancel delivery already admitted. A minimal non-content record preserves occupied idempotency keys and delivered-reply deduplication. Keys already released by cancellation, gate denial or a never-attempted failure remain reusable; deleting those records does not revoke their existing retry permission. Unknown IDs return 404. Needs sent:manage, and follows mail access rather than role: a caller with the whole organization's mail (an owner, admin or member whose access covers every mailbox, or an organization-wide key) can delete any send in the organization; a caller limited to some mailboxes, an owner or admin included, can delete only sends from addresses its access covers, made since that access starts (a member limited to their own mail: their own), and any other send returns 404. Repeating a completed deletion returns success; for a caller limited to some mailboxes, only when the send was from an address its access names one by one, otherwise 404. Organization API keys, sessions and OAuth are supported; Function and connected-agent credentials are denied.",
         "security": [
           {
             "BearerAuth": []
@@ -34383,7 +34393,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "listActivityObjects",
         "summary": "List what you created, or what you were asked",
-        "description": "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules and rule requests. Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked it lists instead what other members asked of the person, open or answered: the rule requests made to them, under their current membership, each naming the member who asked in created_through. A key, an app or an agent has none, and gets email_rule_request in withheld.",
+        "description": "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules, rule requests and objections to rules over their mail (objections only on the dashboard or the Primitive CLI). Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked it lists instead what other members asked of the person, open or answered: the rule requests made to them, and the objections to rules they wrote, under their current membership, each naming the member who asked or objected in created_through. A key, an app or an agent has none, and gets both kinds in withheld.",
         "tags": [
           "Activity"
         ],
@@ -34400,7 +34410,7 @@ export const openapiDocument: Record<string, unknown> = {
             "description": "created (the default) or asked.",
             "schema": {
               "default": "created",
-              "description": "created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you. asked is for a person's own view only, and kind may then name only email_rule_request.",
+              "description": "created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you, and objections to rules you wrote. asked is for a person's own view only, and kind may then name only email_rule_request and email_rule_objection.",
               "type": "string",
               "enum": [
                 "created",
@@ -34412,7 +34422,7 @@ export const openapiDocument: Record<string, unknown> = {
             "name": "kind",
             "in": "query",
             "required": false,
-            "description": "Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request. Defaults to every kind the caller can have created (a person's own kinds only for a person). With relation=asked, only email_rule_request, which is also the default.",
+            "description": "Only these kinds, comma-separated: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request, email_rule_objection. Defaults to every kind the caller can have created (a person's own kinds only for a person). With relation=asked, only email_rule_request and email_rule_objection, which are also the default.",
             "schema": {
               "type": "string",
               "minLength": 1,
@@ -34746,7 +34756,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "compileEmailRule",
         "summary": "Compile a rule description",
-        "description": "Turns a plain-English description of which received emails to match into a rule tree over the published column contract, with a plain-English explanation of what it matches, the assumptions made, and warnings for anything the columns cannot express. Where the columns fall short the rule may carry up to five yes/no questions, asked about an email only after its conditions match; they read its subject, its new text and its attachments' file names, never what is inside an attachment, and warnings say when a question mentions attachments. Nothing is saved. A rule with no questions has its conditions counted, read only, over the caller's recent classified mail (what a test of it covers by default): breadth is that count, and a warning says when it matches nearly all of it. The SQL the rule renders to is returned only when include_sql is true. kind do_not_share compiles a do-not-share rule for recall: conditions only as narrow as the description says, the judgement of what it describes put into questions, and with nothing a column decides for certain, conditions that hold for every email. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+        "description": "Turns a plain-English description of which received emails to match into a rule tree over the column contract, with an explanation of what it matches, the assumptions made, and warnings for what the columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only after the conditions match; they read the subject, the new text and attachment file names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how much of your recent classified mail its conditions match. include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
         "tags": [
           "Email Rules"
         ],
@@ -34943,7 +34953,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "testEmailRule",
         "summary": "Test a rule against received mail",
-        "description": "Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified, skipped or not_found), with a summary: how each top-level condition and question decided and, when nothing matched, what stopped it. Test an unsaved tree from a compile response, or a saved rule by rule_id (its current version, run with its author's access). The rule reads only mail its author can read and its scope covers; an unsaved tree covers only your own mail unless evaluation_scope names more. Without email_ids, the newest emails it can read are tested, at most 200 and none older than 30 days; expected emails (expect, or a saved rule's saved expectations) are tested whatever their age. Unclassified emails more than 2 hours old are classified first and their classification saved, unless classify_missing is false; newer ones are reported unclassified, pending. The rule itself records and grants nothing. Classification and the rule's questions stop at about 90 seconds; a rerun continues the classification where it stopped. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+        "description": "Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and question decided. Test an unsaved tree, or a saved rule by rule_id (its current version, as its author). It reads only mail its author can read and its scope covers. Without email_ids it tests the newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
         "tags": [
           "Email Rules"
         ],
@@ -35343,7 +35353,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "testEmailRuleOnSample",
         "summary": "Test a rule against a made-up email",
-        "description": "Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text, attachment types; optionally whether it is automated or from a mailing list, and its spam score), received now: it is classified, and the conditions and questions decided, as received mail would be. By default it is not automated or from a list; a rule reading a spam score you gave none for decides on none (spam_score is then in unset_columns). Nothing is stored. Test an unsaved tree (covering only your own mail unless evaluation_scope names more) or a saved rule by rule_id. The answer includes what the classifier read. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+        "description": "Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text, attachment types; optionally automated, from a mailing list, and a spam score), classified and decided as received mail would be. A rule reading a spam score you gave none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The answer includes what the classifier read. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
         "tags": [
           "Email Rules"
         ],
@@ -35533,7 +35543,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "createEmailRule",
         "summary": "Create a rule",
-        "description": "Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column contract; without an explanation the server writes one. It starts in observe (what it matches is recorded, nothing granted or blocked) unless state is draft (not evaluated), or active for a do_not_share rule. You are its author, and it never reaches mail you cannot read. evaluation_scope is own_mailboxes (your own mail) unless you name author (all you can read) or selected; scope_selection may name only what you can read. The answer carries the scope as stored. expectations saves emails it must match and must not; the answer judges them (expectations_check). kind do_not_share blocks sharing: it runs before every other rule, and while active no rule shares an email it matches or cannot decide; a key cannot list it (details.reason rule_blocks_sharing). Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+        "description": "Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column contract. It starts in observe (recorded, nothing granted or blocked) unless state is draft, or active for a do_not_share rule. You are its author, and it never reaches mail you cannot read. evaluation_scope is own_mailboxes unless you name author or selected (scope_selection names only what you can read). expectations are judged in expectations_check. kind do_not_share blocks sharing what it matches; a key cannot list it (details.reason rule_blocks_sharing). Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
         "tags": [
           "Email Rules"
         ],
@@ -36091,7 +36101,7 @@ export const openapiDocument: Record<string, unknown> = {
       "patch": {
         "operationId": "updateEmailRule",
         "summary": "Change a rule",
-        "description": "Renames the rule, saves a new version (english and tree together, with an explanation or one the server writes; earlier versions stay) or an earlier one again (restore_version), changes its state (draft is off; observe; active), whose mail it runs over (evaluation_scope, with scope_selection when selected) or its saved expectations (each saved version and new set is judged in expectations_check). Anyone but its author who sees it may only disable it (state draft), and while it is shared only if they manage members from the dashboard. Without evaluation_scope the scope stays; a scope change saves a new version with the same conditions, and what was granted stays. A shared rule keeps its scope; a kind never changes. A saved version takes effect at once (an active rule stays active); affects counts what it reaches. Send if_version, the current_version you read, so a write never replaces a version saved since, or if_revision to refuse it after any update. Without if_expectations_pass a version is saved even when its expectations_check fails. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+        "description": "Renames the rule, saves a new version (english and tree together; earlier versions stay) or restores one (restore_version), changes its state (draft is off; observe; active), its scope (evaluation_scope, with scope_selection when selected) or its saved expectations (judged in expectations_check). Anyone but its author who sees it may only set state draft, and while it is shared only if they manage members from the dashboard. A scope change saves a new version; a shared rule keeps its scope, and a kind never changes. A saved version takes effect at once. if_version refuses a write once a version was saved since you read it; if_revision, once anything changed. Without if_expectations_pass a version is saved even when its expectations fail. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
         "tags": [
           "Email Rules"
         ],
@@ -36278,7 +36288,7 @@ export const openapiDocument: Record<string, unknown> = {
       "delete": {
         "operationId": "deleteEmailRule",
         "summary": "Delete a rule",
-        "description": "Deletes a rule with its versions, its decisions and the access it granted. A rule that was ever shared with another member keeps the record of its share: the share ends with end_reason rule_deleted, and the member who shared can still list what it handed over, while the rule is no longer shown and reads nothing. The answer lists the shares the delete ended (ended_shares) and the keys, not revoked, that still list the rule, which now read nothing through it: those you may read as key metadata by id, name and prefix (keys), and how many others (other_keys). keys and other_keys are left out when the keys could not be read. The author, or a caller who reads the whole organization's mail, may delete it; while it is shared with another member, only the author or someone who manages members from the dashboard. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+        "description": "Deletes a rule with its versions, its decisions and the access it granted. A share of it ends (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which now read nothing through it (keys, other_keys; left out when they could not be read). The author or a reader of all the organization's mail may delete it; while it is shared, only the author or someone who manages members from the dashboard. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
         "tags": [
           "Email Rules"
         ],
@@ -37381,7 +37391,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "createEmailRuleRequest",
         "summary": "Ask a member for a rule",
-        "description": "Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated and nothing is shared until they accept, and they may change the rule first; they see the request and can preview what it matches in their own mail. A message (up to 500 characters) tells them why you are asking; they see it with the request, and it cannot be changed later. You may have at most 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer also says whether they can accept it under their role (target_can_accept), and if not, why (target_warning); the request is sent either way. To find out before asking, use POST /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+        "description": "Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated or shared until they accept, and they may change the rule first. A message (up to 500 characters, fixed once sent) tells them why you ask. At most 5 pending requests to one member and 50 in all. With members:read the answer says whether they can accept it under their role (target_can_accept, target_warning); POST /v1/email-rule-requests/target-check checks first. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
         "tags": [
           "Email Rules"
         ],
@@ -37969,7 +37979,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "getEmailRuleRequest",
         "summary": "Read a rule request",
-        "description": "A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a member. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. If you are the member asked, you can try the rule as proposed before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have received. A test on mail already received shows only what has arrived. To see what the rule would do with an email that has not, such as one you would never want shared, pass the request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up, or have look-alikes written for it (POST /v1/email-rules/look-alikes with request_id; primitive email-rules generate-look-alikes). Neither stores anything, and neither needs access beyond testing a rule of your own; the accept keeps any you send as expectation_samples on the rule it writes. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+        "description": "A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a member. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. If you are the member asked, you can try the rule as proposed before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have received. To try it on an email that has not arrived, pass the request's tree to POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-rules/look-alikes with request_id); neither stores anything. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
         "tags": [
           "Email Rules"
         ],
@@ -38675,7 +38685,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "acceptEmailRuleRequest",
         "summary": "Accept a rule request",
-        "description": "Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from now on with the member who asked: each email in full with its attachments, but never raw. It does not go back through mail already received. Send no body to accept it as asked, or change it first with english and tree together (and an explanation, or the server writes one). Because this gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to POST /v1/email-rules/test. A test on mail already received shows only what has arrived. To see what the rule would do with an email that has not, such as one you would never want shared, pass the request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up, or have look-alikes written for it (POST /v1/email-rules/look-alikes with request_id; primitive email-rules generate-look-alikes). Neither stores anything, and neither needs access beyond testing a rule of your own; the accept keeps any you send as expectation_samples on the rule it writes. Made-up emails sent in expectation_samples are kept on the rule this writes, where GET /v1/email-rules/{id} lists them. Accepting also needs mail:share_own (sharing your own mail through email rules, which only shows it and never sends): a role without it is refused, whether or not it can send. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+        "description": "Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from now on with the member who asked: each email in full with its attachments, but never raw. It does not go back through mail already received. Send no body to accept it as asked, or change it first with english and tree together (and an explanation, or the server writes one). Because this gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree to POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-rules/look-alikes with request_id); neither stores anything. expectation_samples are kept on the rule it writes. Accepting also needs mail:share_own. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
         "tags": [
           "Email Rules"
         ],
@@ -40293,6 +40303,1136 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "404": {
             "description": "not_found: no rule with this id covers your mailboxes or decided on your mail.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              },
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-429"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-429"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-429"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-primitive-permission": [
+          "mail:read"
+        ]
+      }
+    },
+    "/email-rule-objections": {
+      "post": {
+        "operationId": "createEmailRuleObjection",
+        "summary": "Object to a rule over your mail",
+        "description": "Asks the author of a rule that covers one of your own mailboxes now to turn it off. Only a rule that covers you now: one you see only because it once decided on your mail cannot be objected to. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. You may have one pending objection per rule and 50 in all, and object to the same rule again only 10 minutes after you last did, whatever became of it. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+        "tags": [
+          "Email Rule Oversight"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEmailRuleObjectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Object to a rule over your mail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/CreateEmailRuleObjectionResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy"
+              }
+            }
+          },
+          "400": {
+            "description": "validation_error; details.reason own_rule: it is your own rule, which you can turn off yourself.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-unauthenticated"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-unauthenticated"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset-unauthenticated"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-unauthenticated"
+              }
+            }
+          },
+          "403": {
+            "description": "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: no rule with this id covers your mailboxes now.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict: details.reason objection_pending, you already have a pending objection to this rule (details.objection_id); objection_limit, you have 50 pending objections.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              },
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-429"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-429"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-429"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "service_unavailable: checking which rules cover you, or the hourly limit, could not be done; nothing was written (Retry-After).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-primitive-permission": [
+          "mail:read"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ]
+      },
+      "get": {
+        "operationId": "listEmailRuleObjections",
+        "summary": "List objections",
+        "description": "Objections you made, objections to rules you wrote, or every objection you can see, newest first. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+        "tags": [
+          "Email Rule Oversight"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "box",
+            "in": "query",
+            "required": false,
+            "description": "outgoing (the default): objections you made. incoming: objections to rules you wrote. all: every objection you can see.",
+            "schema": {
+              "default": "outgoing",
+              "description": "outgoing: objections you made; incoming: objections to rules you wrote; all: every objection you can see (owners and admins see the organization's).",
+              "type": "string",
+              "enum": [
+                "outgoing",
+                "incoming",
+                "all"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "pending (the default), decided, or any.",
+            "schema": {
+              "default": "pending",
+              "type": "string",
+              "enum": [
+                "pending",
+                "decided",
+                "any"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Objections per page, from 1 to 100; defaults to 25.",
+            "schema": {
+              "default": 25,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "meta.cursor from the preceding page. Omit for the first page.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List objections",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data",
+                        "meta"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ListEmailRuleObjectionsResult"
+                        },
+                        "meta": {
+                          "$ref": "#/components/schemas/CursorPageMeta"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy"
+              }
+            }
+          },
+          "400": {
+            "description": "validation_error: a cursor not returned in meta.cursor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-unauthenticated"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-unauthenticated"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset-unauthenticated"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-unauthenticated"
+              }
+            }
+          },
+          "403": {
+            "description": "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              },
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-429"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-429"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-429"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-primitive-permission": [
+          "mail:read"
+        ]
+      }
+    },
+    "/email-rule-objections/{id}": {
+      "get": {
+        "operationId": "getEmailRuleObjection",
+        "summary": "Get an objection",
+        "description": "One objection you can see. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+        "tags": [
+          "Email Rule Oversight"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The objection id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Get an objection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/GetEmailRuleObjectionResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy"
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-unauthenticated"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-unauthenticated"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset-unauthenticated"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-unauthenticated"
+              }
+            }
+          },
+          "403": {
+            "description": "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: no objection with this id that you can see.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              },
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-429"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-429"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-429"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-primitive-permission": [
+          "mail:read"
+        ]
+      }
+    },
+    "/email-rule-objections/{id}/withdraw": {
+      "post": {
+        "operationId": "withdrawEmailRuleObjection",
+        "summary": "Withdraw an objection",
+        "description": "Withdraws a pending objection you made, and clears its message. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+        "tags": [
+          "Email Rule Oversight"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The objection id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Withdraw an objection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/WithdrawEmailRuleObjectionResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy"
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-unauthenticated"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-unauthenticated"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset-unauthenticated"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-unauthenticated"
+              }
+            }
+          },
+          "403": {
+            "description": "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason objector_only: only the member who made it can withdraw it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: no objection with this id that you can see.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "not_pending: it was already decided or withdrawn (details.status).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              },
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-429"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-429"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-429"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-primitive-permission": [
+          "mail:read"
+        ]
+      }
+    },
+    "/email-rule-objections/{id}/decline": {
+      "post": {
+        "operationId": "declineEmailRuleObjection",
+        "summary": "Decline an objection to your rule",
+        "description": "Declines a pending objection to a rule you wrote, optionally saying why; the rule stays as it is. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+        "tags": [
+          "Email Rule Oversight"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The objection id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeclineEmailRuleObjectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Decline an objection to your rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/DeclineEmailRuleObjectionResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy"
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-unauthenticated"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-unauthenticated"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset-unauthenticated"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-unauthenticated"
+              }
+            }
+          },
+          "403": {
+            "description": "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason author_only: only the rule's author can decline it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: no objection with this id that you can see.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "not_pending: it was already decided or withdrawn (details.status).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              },
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-429"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-429"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-429"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-primitive-permission": [
+          "mail:read"
+        ]
+      }
+    },
+    "/email-rule-objections/{id}/accept": {
+      "post": {
+        "operationId": "acceptEmailRuleObjection",
+        "summary": "Accept an objection to your rule",
+        "description": "Accepts a pending objection to a rule you wrote: turns the rule off (state draft), as updating it would, and records the objection accepted, together. You can turn the rule on again later. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+        "tags": [
+          "Email Rule Oversight"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The objection id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Accept an objection to your rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AcceptEmailRuleObjectionResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy"
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-unauthenticated"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-unauthenticated"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset-unauthenticated"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-unauthenticated"
+              }
+            }
+          },
+          "403": {
+            "description": "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason author_only: only the rule's author can accept it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: no objection with this id that you can see.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "not_pending: it was already decided or withdrawn (details.status). conflict with details.reason rule_deleted: the rule was deleted; decline it instead.",
             "content": {
               "application/json": {
                 "schema": {
@@ -46315,7 +47455,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "listFunctionInvocations",
         "summary": "List a function's invocations",
-        "description": "Each run of the function, newest first, with its outcome, timings, response status and exception. Lists runs only: a webhook delivery that never reached the function (for example one refused before it ran) is not an invocation; find those with listDeliveries.",
+        "description": "Each run of the function, newest first, with its outcome, timings, response status and exception. Lists runs only: a webhook delivery that never reached the function (for example one refused before it ran) is not an invocation; find those with listDeliveries and its endpoint_id filter.",
         "tags": [
           "Functions"
         ],
@@ -71543,7 +72683,7 @@ export const openapiDocument: Record<string, unknown> = {
           "url": {
             "type": "string",
             "minLength": 1,
-            "description": "New webhook URL (triggers endpoint rotation)"
+            "description": "New URL, for a webhook (kind=http) only. The endpoint keeps its id, routes, stats, signing secret and owed deliveries, and its consecutive failure count starts again; a webhook turned off because its owner changed is turned back on (the change is refused when it could not be turned on, for example at the plan's webhook limit), unless the same request sets enabled to false. A URL another endpoint on the same domain already uses (enabled or not; endpoints with no domain count as one domain) is refused. A caller limited to its own endpoints (an API key or a person limited to some mailboxes) cannot change the URL of an API key's webhook that signs with the organization's secret: give it a signing secret of its own first. Owners, admins and other callers with the whole organization's mail can change it."
           },
           "enabled": {
             "type": "boolean"
@@ -72685,7 +73825,8 @@ export const openapiDocument: Record<string, unknown> = {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Why the last attempt failed, or null. A webhook's answer is quoted after its status (HTTP 404: ...) only for a caller who can read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook); anyone else gets the status and a note. Text the platform writes (a redirect not followed, a network error) is shown to everyone."
           },
           "created_at": {
             "type": "string",
@@ -72739,7 +73880,7 @@ export const openapiDocument: Record<string, unknown> = {
               "string",
               "null"
             ],
-            "description": "Machine-readable code for the last failure, or null."
+            "description": "Machine-readable code for the last failure, or null. A code the webhook chose in its answer is shown only to a caller who can read the webhook; anyone else gets handler_4xx or handler_5xx."
           },
           "response_status": {
             "type": [
@@ -72753,7 +73894,7 @@ export const openapiDocument: Record<string, unknown> = {
               "string",
               "null"
             ],
-            "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden wherever it repeats them."
+            "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise, in answers recorded since November 2026, the webhook URL's query string, its parameters, values long enough to be a credential and any userinfo are hidden wherever it repeats them, and the rest is as the endpoint wrote it. Null for a caller who cannot read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook), since a receiver's answer can restate its URL's credential."
           },
           "latest_attempt": {
             "type": "boolean",
@@ -76698,13 +77839,13 @@ export const openapiDocument: Record<string, unknown> = {
               "properties": {
                 "kind": {
                   "type": "string",
-                  "description": "One of: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request."
+                  "description": "One of: function, endpoint, function_trigger, pull_subscription, recipient_route, filter_rule, wake_schedule, repeating_send, scheduled_send, api_key, agent_connection, email_rule, email_rule_request, email_rule_objection."
                 },
                 "id": {
                   "type": "string"
                 },
                 "name": {
-                  "description": "The name the object is known by: an endpoint's display name, a route's or filter's pattern, a Function's name, a send's From address, a wake schedule's command and the address it wakes, an API key's name, an agent's address, a rule's or rule request's name. Never a webhook URL and never mail content.",
+                  "description": "The name the object is known by: an endpoint's display name, a route's or filter's pattern, a Function's name, a send's From address, a wake schedule's command and the address it wakes, an API key's name, an agent's address, a rule's or rule request's name, and for an objection the name its rule had when the objection was made. Never a webhook URL and never mail content.",
                   "type": [
                     "string",
                     "null"
@@ -76712,7 +77853,7 @@ export const openapiDocument: Record<string, unknown> = {
                 },
                 "state": {
                   "type": "string",
-                  "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests)."
+                  "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections)."
                 },
                 "created_at": {
                   "type": "string",
@@ -76724,7 +77865,7 @@ export const openapiDocument: Record<string, unknown> = {
                     "null"
                   ],
                   "format": "date-time",
-                  "description": "When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request was decided (accepted, declined or withdrawn); null otherwise."
+                  "description": "When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request or objection was decided (accepted, declined or withdrawn); null otherwise."
                 },
                 "owned_now": {
                   "type": "string",
@@ -76739,17 +77880,17 @@ export const openapiDocument: Record<string, unknown> = {
                   "properties": {
                     "kind": {
                       "type": "string",
-                      "description": "The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves). With relation=asked, member: the member who asked."
+                      "description": "The kind of credential it was created through: org_key, function_key, connected_key, oauth, agent_delegate or member (the person themselves). With relation=asked, member: the member who asked or objected."
                     },
                     "id": {
-                      "description": "In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself. With relation=asked, the user id of the member who asked.",
+                      "description": "In a person's view, the person's own user id for member, and an API key's id where they may read their keys (for a person limited to their own keys, only a key they still hold). Null otherwise, and always null in one credential's view, where it is the calling credential itself. With relation=asked, the user id of the member who asked or objected.",
                       "type": [
                         "string",
                         "null"
                       ]
                     },
                     "name": {
-                      "description": "In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves. With relation=asked, the name of the member who asked.",
+                      "description": "In a person's view, what that credential of theirs is called: an app login by its app, an API key by its name, an agent's key by its address. Null otherwise, and for the person themselves. With relation=asked, the name of the member who asked or objected.",
                       "type": [
                         "string",
                         "null"
@@ -76790,7 +77931,7 @@ export const openapiDocument: Record<string, unknown> = {
                     "mail_scope",
                     "not_for_this_credential"
                   ],
-                  "description": "permission_missing: the caller lacks the permission the kind's own list needs (named in permission). mail_scope: listed only to a caller that reads every mailbox. not_for_this_credential: this kind of credential never lists them (a person's own kinds asked for by a key, an app or an agent)."
+                  "description": "permission_missing: the caller lacks the permission the kind's own list needs (named in permission). mail_scope: listed only to a caller that reads every mailbox. not_for_this_credential: this kind of credential never lists them (a person's own kinds asked for by a key, an app or an agent), or the kind's own list refuses it (email rules, rule requests and objections for a token narrowed below the person; objections anywhere but the dashboard and the Primitive CLI)."
                 },
                 "permission": {
                   "type": [
@@ -78710,7 +79851,7 @@ export const openapiDocument: Record<string, unknown> = {
             ]
           },
           "kind": {
-            "description": "grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional only for an older core-api: every answer carries it.",
+            "description": "grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.",
             "type": "string",
             "enum": [
               "grant",
@@ -78763,7 +79904,7 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "is_author": {
             "type": "boolean",
-            "description": "Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members)."
+            "description": "Whether you are its author, in your current membership. Only its author edits it."
           },
           "created_at": {
             "type": "string",
@@ -79158,7 +80299,7 @@ export const openapiDocument: Record<string, unknown> = {
             "maxLength": 1000
           },
           "assumptions": {
-            "description": "Readings chosen where the description was open to more than one, as the compile response returned them (including its lines naming any condition, question or confidence bar the description did not ask for). Stored as sent.",
+            "description": "The compile response's assumptions. Stored as sent.",
             "maxItems": 10,
             "type": "array",
             "items": {
@@ -79168,7 +80309,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "warnings": {
-            "description": "Parts of the description the rule does not express, as the compile response returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.",
+            "description": "The compile response's warnings. Stored as sent.",
             "maxItems": 10,
             "type": "array",
             "items": {
@@ -79224,7 +80365,7 @@ export const openapiDocument: Record<string, unknown> = {
             ]
           },
           "kind": {
-            "description": "grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional only for an older core-api: every answer carries it.",
+            "description": "grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.",
             "type": "string",
             "enum": [
               "grant",
@@ -79277,7 +80418,7 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "is_author": {
             "type": "boolean",
-            "description": "Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members)."
+            "description": "Whether you are its author, in your current membership. Only its author edits it."
           },
           "created_at": {
             "type": "string",
@@ -79345,7 +80486,7 @@ export const openapiDocument: Record<string, unknown> = {
             ]
           },
           "kind": {
-            "description": "grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional only for an older core-api: every answer carries it.",
+            "description": "grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.",
             "type": "string",
             "enum": [
               "grant",
@@ -79398,7 +80539,7 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "is_author": {
             "type": "boolean",
-            "description": "Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members)."
+            "description": "Whether you are its author, in your current membership. Only its author edits it."
           },
           "created_at": {
             "type": "string",
@@ -79501,7 +80642,7 @@ export const openapiDocument: Record<string, unknown> = {
             "maxLength": 1000
           },
           "assumptions": {
-            "description": "Readings chosen where the description was open to more than one, as the compile response returned them (including its lines naming any condition, question or confidence bar the description did not ask for). Stored as sent.",
+            "description": "The compile response's assumptions. Stored as sent.",
             "maxItems": 10,
             "type": "array",
             "items": {
@@ -79511,7 +80652,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "warnings": {
-            "description": "Parts of the description the rule does not express, as the compile response returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.",
+            "description": "The compile response's warnings. Stored as sent.",
             "maxItems": 10,
             "type": "array",
             "items": {
@@ -80031,7 +81172,7 @@ export const openapiDocument: Record<string, unknown> = {
                   "const": true
                 },
                 "read_only": {
-                  "description": "Another member's rule that decided on your own mail; dashboard and CLI only. name is null once it no longer covers you.",
+                  "description": "Another member's rule that decided on your own mail; dashboard and CLI only. name is null unless known to cover you.",
                   "type": "boolean",
                   "const": true
                 },
@@ -80396,7 +81537,7 @@ export const openapiDocument: Record<string, unknown> = {
             "maxLength": 1000
           },
           "assumptions": {
-            "description": "Readings chosen where the description was open to more than one, as the compile response returned them (including its lines naming any condition, question or confidence bar the description did not ask for). Stored as sent.",
+            "description": "The compile response's assumptions. Stored as sent.",
             "maxItems": 10,
             "type": "array",
             "items": {
@@ -80406,7 +81547,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "warnings": {
-            "description": "Parts of the description the rule does not express, as the compile response returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.",
+            "description": "The compile response's warnings. Stored as sent.",
             "maxItems": 10,
             "type": "array",
             "items": {
@@ -80891,7 +82032,7 @@ export const openapiDocument: Record<string, unknown> = {
             ]
           },
           "kind": {
-            "description": "grant: what it matches can be shared. do_not_share: it blocks sharing what it matches. Optional only for an older core-api: every answer carries it.",
+            "description": "grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.",
             "type": "string",
             "enum": [
               "grant",
@@ -80944,7 +82085,7 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "is_author": {
             "type": "boolean",
-            "description": "Whether you are its author, in your current membership. Only its author edits it; others who see it may only disable or delete it (while shared, only if they manage members)."
+            "description": "Whether you are its author, in your current membership. Only its author edits it."
           },
           "created_at": {
             "type": "string",
@@ -81215,7 +82356,7 @@ export const openapiDocument: Record<string, unknown> = {
             "maxLength": 1000
           },
           "assumptions": {
-            "description": "Readings chosen where the description was open to more than one, as the compile response returned them (including its lines naming any condition, question or confidence bar the description did not ask for). Stored as sent.",
+            "description": "The compile response's assumptions. Stored as sent.",
             "maxItems": 10,
             "type": "array",
             "items": {
@@ -81225,7 +82366,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "warnings": {
-            "description": "Parts of the description the rule does not express, as the compile response returned them (including its notes on what the automated and from_mailing_list columns read). Stored as sent.",
+            "description": "The compile response's warnings. Stored as sent.",
             "maxItems": 10,
             "type": "array",
             "items": {
@@ -82114,6 +83255,191 @@ export const openapiDocument: Record<string, unknown> = {
         "items": {
           "$ref": "#/components/schemas/EmailRuleDecisionOnMyMail"
         }
+      },
+      "EmailRuleObjection": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "declined",
+              "withdrawn"
+            ],
+            "description": "pending until the rule's author accepts it (turning the rule off) or declines it, or the member who made it withdraws it; never changes after."
+          },
+          "rule": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Null once the rule was deleted outright."
+              },
+              "name": {
+                "type": "string",
+                "description": "Its name when the objection was made."
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "objector": {
+            "description": "Who objected.",
+            "$ref": "#/components/schemas/EmailRuleObjectionPerson"
+          },
+          "author": {
+            "description": "Who wrote the rule.",
+            "$ref": "#/components/schemas/EmailRuleObjectionPerson"
+          },
+          "is_objector": {
+            "type": "boolean"
+          },
+          "is_author": {
+            "type": "boolean"
+          },
+          "message": {
+            "description": "Why the objector objects; null when none was given, or once withdrawn.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "decline_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decided_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "decided_by_user_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "rule",
+          "objector",
+          "author",
+          "is_objector",
+          "is_author",
+          "message",
+          "decline_reason",
+          "created_at",
+          "decided_at",
+          "decided_by_user_id"
+        ]
+      },
+      "EmailRuleObjectionPerson": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "description": "Sign-in email; null unless you can list member emails or this is you.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "user_id",
+          "name",
+          "email"
+        ]
+      },
+      "CreateEmailRuleObjectionRequest": {
+        "type": "object",
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "description": "A rule that covers one of your own mailboxes now (GET /email-rules/covering-me), written by another member.",
+            "format": "uuid"
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Why you object, up to 500 characters; null or absent for none. The rule's author and the organization's owners and admins see it while it stands; withdrawing clears it."
+          }
+        },
+        "required": [
+          "rule_id"
+        ],
+        "additionalProperties": false
+      },
+      "CreateEmailRuleObjectionResult": {
+        "$ref": "#/components/schemas/EmailRuleObjection"
+      },
+      "ListEmailRuleObjectionsResult": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/EmailRuleObjection"
+        }
+      },
+      "GetEmailRuleObjectionResult": {
+        "$ref": "#/components/schemas/EmailRuleObjection"
+      },
+      "WithdrawEmailRuleObjectionResult": {
+        "$ref": "#/components/schemas/EmailRuleObjection"
+      },
+      "DeclineEmailRuleObjectionRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Why you are declining, up to 500 characters; null or absent for none. The member who objected sees it."
+          }
+        },
+        "additionalProperties": false
+      },
+      "DeclineEmailRuleObjectionResult": {
+        "$ref": "#/components/schemas/EmailRuleObjection"
+      },
+      "AcceptEmailRuleObjectionResult": {
+        "$ref": "#/components/schemas/EmailRuleObjection"
       },
       "GetDomainAgentAuthorizationResult": {
         "type": "object",
@@ -84921,12 +86247,14 @@ export const openapiDocument: Record<string, unknown> = {
             ]
           },
           "last_error": {
+            "description": "Why the last attempt failed, or null. A webhook's answer is quoted after its status (HTTP 404: ...) only for a caller who can read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook); anyone else gets the status and a note. Text the platform writes (a redirect not followed, a network error) is shown to everyone.",
             "type": [
               "string",
               "null"
             ]
           },
           "last_error_code": {
+            "description": "Machine-readable code for the last failure, or null. A code the webhook chose in its answer is shown only to a caller who can read the webhook; anyone else gets handler_4xx or handler_5xx.",
             "type": [
               "string",
               "null"
@@ -84940,7 +86268,7 @@ export const openapiDocument: Record<string, unknown> = {
             "description": "The HTTP status the endpoint answered this attempt with: a webhook's own answer, or for a Function what its runtime answered, which is the platform's own error when the Function could not be run. Null when no answer came back (a network error, a timeout, an attempt refused or not sent) and on attempts recorded before this field."
           },
           "response_body": {
-            "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden wherever it repeats them.",
+            "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise, in answers recorded since November 2026, the webhook URL's query string, its parameters, values long enough to be a credential and any userinfo are hidden wherever it repeats them, and the rest is as the endpoint wrote it. Null for a caller who cannot read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook), since a receiver's answer can restate its URL's credential.",
             "type": [
               "string",
               "null"
@@ -85023,6 +86351,7 @@ export const openapiDocument: Record<string, unknown> = {
                   "type": "string"
                 },
                 "last_error_code": {
+                  "description": "Machine-readable code for the last failure, or null. A code the webhook chose in its answer is shown only to a caller who can read the webhook; anyone else gets handler_4xx or handler_5xx.",
                   "type": [
                     "string",
                     "null"
@@ -85045,7 +86374,7 @@ export const openapiDocument: Record<string, unknown> = {
                   "description": "The HTTP status the endpoint answered this attempt with: a webhook's own answer, or for a Function what its runtime answered, which is the platform's own error when the Function could not be run. Null when no answer came back (a network error, a timeout, an attempt refused or not sent) and on attempts recorded before this field."
                 },
                 "response_body": {
-                  "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden wherever it repeats them.",
+                  "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise, in answers recorded since November 2026, the webhook URL's query string, its parameters, values long enough to be a credential and any userinfo are hidden wherever it repeats them, and the rest is as the endpoint wrote it. Null for a caller who cannot read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook), since a receiver's answer can restate its URL's credential.",
                   "type": [
                     "string",
                     "null"

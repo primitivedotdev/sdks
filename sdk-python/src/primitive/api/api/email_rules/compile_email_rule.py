@@ -120,19 +120,14 @@ def sync_detailed(
 ) -> Response[CompileEmailRuleResponse200 | ErrorResponse]:
     """ Compile a rule description
 
-     Turns a plain-English description of which received emails to match into a rule tree over the
-    published column contract, with a plain-English explanation of what it matches, the assumptions
-    made, and warnings for anything the columns cannot express. Where the columns fall short the rule
-    may carry up to five yes/no questions, asked about an email only after its conditions match; they
-    read its subject, its new text and its attachments' file names, never what is inside an attachment,
-    and warnings say when a question mentions attachments. Nothing is saved. A rule with no questions
-    has its conditions counted, read only, over the caller's recent classified mail (what a test of it
-    covers by default): breadth is that count, and a warning says when it matches nearly all of it. The
-    SQL the rule renders to is returned only when include_sql is true. kind do_not_share compiles a do-
-    not-share rule for recall: conditions only as narrow as the description says, the judgement of what
-    it describes put into questions, and with nothing a column decides for certain, conditions that hold
-    for every email. Needs mail:read, a member's own credential with their full access (not an API key,
-    agent key or narrowed token), and the email rules feature.
+     Turns a plain-English description of which received emails to match into a rule tree over the column
+    contract, with an explanation of what it matches, the assumptions made, and warnings for what the
+    columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only
+    after the conditions match; they read the subject, the new text and attachment file names, never
+    attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how
+    much of your recent classified mail its conditions match. include_sql returns the SQL it renders to.
+    kind do_not_share compiles for recall. Needs mail:read, a member's own credential with their full
+    access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -168,19 +163,14 @@ def sync(
 ) -> CompileEmailRuleResponse200 | ErrorResponse | None:
     """ Compile a rule description
 
-     Turns a plain-English description of which received emails to match into a rule tree over the
-    published column contract, with a plain-English explanation of what it matches, the assumptions
-    made, and warnings for anything the columns cannot express. Where the columns fall short the rule
-    may carry up to five yes/no questions, asked about an email only after its conditions match; they
-    read its subject, its new text and its attachments' file names, never what is inside an attachment,
-    and warnings say when a question mentions attachments. Nothing is saved. A rule with no questions
-    has its conditions counted, read only, over the caller's recent classified mail (what a test of it
-    covers by default): breadth is that count, and a warning says when it matches nearly all of it. The
-    SQL the rule renders to is returned only when include_sql is true. kind do_not_share compiles a do-
-    not-share rule for recall: conditions only as narrow as the description says, the judgement of what
-    it describes put into questions, and with nothing a column decides for certain, conditions that hold
-    for every email. Needs mail:read, a member's own credential with their full access (not an API key,
-    agent key or narrowed token), and the email rules feature.
+     Turns a plain-English description of which received emails to match into a rule tree over the column
+    contract, with an explanation of what it matches, the assumptions made, and warnings for what the
+    columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only
+    after the conditions match; they read the subject, the new text and attachment file names, never
+    attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how
+    much of your recent classified mail its conditions match. include_sql returns the SQL it renders to.
+    kind do_not_share compiles for recall. Needs mail:read, a member's own credential with their full
+    access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -211,19 +201,14 @@ async def asyncio_detailed(
 ) -> Response[CompileEmailRuleResponse200 | ErrorResponse]:
     """ Compile a rule description
 
-     Turns a plain-English description of which received emails to match into a rule tree over the
-    published column contract, with a plain-English explanation of what it matches, the assumptions
-    made, and warnings for anything the columns cannot express. Where the columns fall short the rule
-    may carry up to five yes/no questions, asked about an email only after its conditions match; they
-    read its subject, its new text and its attachments' file names, never what is inside an attachment,
-    and warnings say when a question mentions attachments. Nothing is saved. A rule with no questions
-    has its conditions counted, read only, over the caller's recent classified mail (what a test of it
-    covers by default): breadth is that count, and a warning says when it matches nearly all of it. The
-    SQL the rule renders to is returned only when include_sql is true. kind do_not_share compiles a do-
-    not-share rule for recall: conditions only as narrow as the description says, the judgement of what
-    it describes put into questions, and with nothing a column decides for certain, conditions that hold
-    for every email. Needs mail:read, a member's own credential with their full access (not an API key,
-    agent key or narrowed token), and the email rules feature.
+     Turns a plain-English description of which received emails to match into a rule tree over the column
+    contract, with an explanation of what it matches, the assumptions made, and warnings for what the
+    columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only
+    after the conditions match; they read the subject, the new text and attachment file names, never
+    attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how
+    much of your recent classified mail its conditions match. include_sql returns the SQL it renders to.
+    kind do_not_share compiles for recall. Needs mail:read, a member's own credential with their full
+    access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):
@@ -259,19 +244,14 @@ async def asyncio(
 ) -> CompileEmailRuleResponse200 | ErrorResponse | None:
     """ Compile a rule description
 
-     Turns a plain-English description of which received emails to match into a rule tree over the
-    published column contract, with a plain-English explanation of what it matches, the assumptions
-    made, and warnings for anything the columns cannot express. Where the columns fall short the rule
-    may carry up to five yes/no questions, asked about an email only after its conditions match; they
-    read its subject, its new text and its attachments' file names, never what is inside an attachment,
-    and warnings say when a question mentions attachments. Nothing is saved. A rule with no questions
-    has its conditions counted, read only, over the caller's recent classified mail (what a test of it
-    covers by default): breadth is that count, and a warning says when it matches nearly all of it. The
-    SQL the rule renders to is returned only when include_sql is true. kind do_not_share compiles a do-
-    not-share rule for recall: conditions only as narrow as the description says, the judgement of what
-    it describes put into questions, and with nothing a column decides for certain, conditions that hold
-    for every email. Needs mail:read, a member's own credential with their full access (not an API key,
-    agent key or narrowed token), and the email rules feature.
+     Turns a plain-English description of which received emails to match into a rule tree over the column
+    contract, with an explanation of what it matches, the assumptions made, and warnings for what the
+    columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only
+    after the conditions match; they read the subject, the new text and attachment file names, never
+    attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how
+    much of your recent classified mail its conditions match. include_sql returns the SQL it renders to.
+    kind do_not_share compiles for recall. Needs mail:read, a member's own credential with their full
+    access (not an API key, agent key or narrowed token), and the email rules feature.
 
     Args:
         idempotency_key (str | Unset):

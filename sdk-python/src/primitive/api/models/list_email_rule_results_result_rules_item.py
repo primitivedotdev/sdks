@@ -48,7 +48,7 @@ class ListEmailRuleResultsResultRulesItem:
             author_left (bool | Unset): On a do-not-share rule whose author is no longer a member of the organization: it
                 blocks nothing now, whatever it decided. Absent otherwise.
             read_only (bool | Unset): Another member's rule that decided on your own mail; dashboard and CLI only. name is
-                null once it no longer covers you.
+                null unless known to cover you.
             author (EmailRuleCoveringAuthor | Unset):
      """
 

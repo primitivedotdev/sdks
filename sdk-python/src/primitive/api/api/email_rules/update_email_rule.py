@@ -117,19 +117,16 @@ def sync_detailed(
 ) -> Response[ErrorResponse | UpdateEmailRuleResponse200]:
     """ Change a rule
 
-     Renames the rule, saves a new version (english and tree together, with an explanation or one the
-    server writes; earlier versions stay) or an earlier one again (restore_version), changes its state
-    (draft is off; observe; active), whose mail it runs over (evaluation_scope, with scope_selection
-    when selected) or its saved expectations (each saved version and new set is judged in
-    expectations_check). Anyone but its author who sees it may only disable it (state draft), and while
-    it is shared only if they manage members from the dashboard. Without evaluation_scope the scope
-    stays; a scope change saves a new version with the same conditions, and what was granted stays. A
-    shared rule keeps its scope; a kind never changes. A saved version takes effect at once (an active
-    rule stays active); affects counts what it reaches. Send if_version, the current_version you read,
-    so a write never replaces a version saved since, or if_revision to refuse it after any update.
-    Without if_expectations_pass a version is saved even when its expectations_check fails. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+     Renames the rule, saves a new version (english and tree together; earlier versions stay) or restores
+    one (restore_version), changes its state (draft is off; observe; active), its scope
+    (evaluation_scope, with scope_selection when selected) or its saved expectations (judged in
+    expectations_check). Anyone but its author who sees it may only set state draft, and while it is
+    shared only if they manage members from the dashboard. A scope change saves a new version; a shared
+    rule keeps its scope, and a kind never changes. A saved version takes effect at once. if_version
+    refuses a write once a version was saved since you read it; if_revision, once anything changed.
+    Without if_expectations_pass a version is saved even when its expectations fail. Needs mail:read, a
+    member's own credential with their full access (not an API key, agent key or narrowed token), and
+    the email rules feature.
 
     Args:
         id (UUID):
@@ -165,19 +162,16 @@ def sync(
 ) -> ErrorResponse | UpdateEmailRuleResponse200 | None:
     """ Change a rule
 
-     Renames the rule, saves a new version (english and tree together, with an explanation or one the
-    server writes; earlier versions stay) or an earlier one again (restore_version), changes its state
-    (draft is off; observe; active), whose mail it runs over (evaluation_scope, with scope_selection
-    when selected) or its saved expectations (each saved version and new set is judged in
-    expectations_check). Anyone but its author who sees it may only disable it (state draft), and while
-    it is shared only if they manage members from the dashboard. Without evaluation_scope the scope
-    stays; a scope change saves a new version with the same conditions, and what was granted stays. A
-    shared rule keeps its scope; a kind never changes. A saved version takes effect at once (an active
-    rule stays active); affects counts what it reaches. Send if_version, the current_version you read,
-    so a write never replaces a version saved since, or if_revision to refuse it after any update.
-    Without if_expectations_pass a version is saved even when its expectations_check fails. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+     Renames the rule, saves a new version (english and tree together; earlier versions stay) or restores
+    one (restore_version), changes its state (draft is off; observe; active), its scope
+    (evaluation_scope, with scope_selection when selected) or its saved expectations (judged in
+    expectations_check). Anyone but its author who sees it may only set state draft, and while it is
+    shared only if they manage members from the dashboard. A scope change saves a new version; a shared
+    rule keeps its scope, and a kind never changes. A saved version takes effect at once. if_version
+    refuses a write once a version was saved since you read it; if_revision, once anything changed.
+    Without if_expectations_pass a version is saved even when its expectations fail. Needs mail:read, a
+    member's own credential with their full access (not an API key, agent key or narrowed token), and
+    the email rules feature.
 
     Args:
         id (UUID):
@@ -208,19 +202,16 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | UpdateEmailRuleResponse200]:
     """ Change a rule
 
-     Renames the rule, saves a new version (english and tree together, with an explanation or one the
-    server writes; earlier versions stay) or an earlier one again (restore_version), changes its state
-    (draft is off; observe; active), whose mail it runs over (evaluation_scope, with scope_selection
-    when selected) or its saved expectations (each saved version and new set is judged in
-    expectations_check). Anyone but its author who sees it may only disable it (state draft), and while
-    it is shared only if they manage members from the dashboard. Without evaluation_scope the scope
-    stays; a scope change saves a new version with the same conditions, and what was granted stays. A
-    shared rule keeps its scope; a kind never changes. A saved version takes effect at once (an active
-    rule stays active); affects counts what it reaches. Send if_version, the current_version you read,
-    so a write never replaces a version saved since, or if_revision to refuse it after any update.
-    Without if_expectations_pass a version is saved even when its expectations_check fails. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+     Renames the rule, saves a new version (english and tree together; earlier versions stay) or restores
+    one (restore_version), changes its state (draft is off; observe; active), its scope
+    (evaluation_scope, with scope_selection when selected) or its saved expectations (judged in
+    expectations_check). Anyone but its author who sees it may only set state draft, and while it is
+    shared only if they manage members from the dashboard. A scope change saves a new version; a shared
+    rule keeps its scope, and a kind never changes. A saved version takes effect at once. if_version
+    refuses a write once a version was saved since you read it; if_revision, once anything changed.
+    Without if_expectations_pass a version is saved even when its expectations fail. Needs mail:read, a
+    member's own credential with their full access (not an API key, agent key or narrowed token), and
+    the email rules feature.
 
     Args:
         id (UUID):
@@ -256,19 +247,16 @@ async def asyncio(
 ) -> ErrorResponse | UpdateEmailRuleResponse200 | None:
     """ Change a rule
 
-     Renames the rule, saves a new version (english and tree together, with an explanation or one the
-    server writes; earlier versions stay) or an earlier one again (restore_version), changes its state
-    (draft is off; observe; active), whose mail it runs over (evaluation_scope, with scope_selection
-    when selected) or its saved expectations (each saved version and new set is judged in
-    expectations_check). Anyone but its author who sees it may only disable it (state draft), and while
-    it is shared only if they manage members from the dashboard. Without evaluation_scope the scope
-    stays; a scope change saves a new version with the same conditions, and what was granted stays. A
-    shared rule keeps its scope; a kind never changes. A saved version takes effect at once (an active
-    rule stays active); affects counts what it reaches. Send if_version, the current_version you read,
-    so a write never replaces a version saved since, or if_revision to refuse it after any update.
-    Without if_expectations_pass a version is saved even when its expectations_check fails. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+     Renames the rule, saves a new version (english and tree together; earlier versions stay) or restores
+    one (restore_version), changes its state (draft is off; observe; active), its scope
+    (evaluation_scope, with scope_selection when selected) or its saved expectations (judged in
+    expectations_check). Anyone but its author who sees it may only set state draft, and while it is
+    shared only if they manage members from the dashboard. A scope change saves a new version; a shared
+    rule keeps its scope, and a kind never changes. A saved version takes effect at once. if_version
+    refuses a write once a version was saved since you read it; if_revision, once anything changed.
+    Without if_expectations_pass a version is saved even when its expectations fail. Needs mail:read, a
+    member's own credential with their full access (not an API key, agent key or narrowed token), and
+    the email rules feature.
 
     Args:
         id (UUID):

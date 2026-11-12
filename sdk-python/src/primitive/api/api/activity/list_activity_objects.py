@@ -134,17 +134,20 @@ def sync_detailed(
     An API key, an app or an agent sees what it created itself; a webhook given to an API key lists
     under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what
     they created through any credential of theirs, each item naming it, and also their API keys,
-    personal agents, email rules and rule requests. Each kind is listed only if the caller could list it
-    through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names
-    and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked
-    it lists instead what other members asked of the person, open or answered: the rule requests made to
-    them, under their current membership, each naming the member who asked in created_through. A key, an
-    app or an agent has none, and gets email_rule_request in withheld.
+    personal agents, email rules, rule requests and objections to rules over their mail (objections only
+    on the dashboard or the Primitive CLI). Each kind is listed only if the caller could list it through
+    that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and
+    states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked it
+    lists instead what other members asked of the person, open or answered: the rule requests made to
+    them, and the objections to rules they wrote, under their current membership, each naming the member
+    who asked or objected in created_through. A key, an app or an agent has none, and gets both kinds in
+    withheld.
 
     Args:
         relation (ListActivityObjectsRelation | Unset): created (the default): what you created.
-            asked: what other members asked of you, open or answered: rule requests made to you. asked
-            is for a person's own view only, and kind may then name only email_rule_request. Default:
+            asked: what other members asked of you, open or answered: rule requests made to you, and
+            objections to rules you wrote. asked is for a person's own view only, and kind may then
+            name only email_rule_request and email_rule_objection. Default:
             ListActivityObjectsRelation.CREATED.
         kind (str | Unset):
         state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.
@@ -193,17 +196,20 @@ def sync(
     An API key, an app or an agent sees what it created itself; a webhook given to an API key lists
     under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what
     they created through any credential of theirs, each item naming it, and also their API keys,
-    personal agents, email rules and rule requests. Each kind is listed only if the caller could list it
-    through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names
-    and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked
-    it lists instead what other members asked of the person, open or answered: the rule requests made to
-    them, under their current membership, each naming the member who asked in created_through. A key, an
-    app or an agent has none, and gets email_rule_request in withheld.
+    personal agents, email rules, rule requests and objections to rules over their mail (objections only
+    on the dashboard or the Primitive CLI). Each kind is listed only if the caller could list it through
+    that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and
+    states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked it
+    lists instead what other members asked of the person, open or answered: the rule requests made to
+    them, and the objections to rules they wrote, under their current membership, each naming the member
+    who asked or objected in created_through. A key, an app or an agent has none, and gets both kinds in
+    withheld.
 
     Args:
         relation (ListActivityObjectsRelation | Unset): created (the default): what you created.
-            asked: what other members asked of you, open or answered: rule requests made to you. asked
-            is for a person's own view only, and kind may then name only email_rule_request. Default:
+            asked: what other members asked of you, open or answered: rule requests made to you, and
+            objections to rules you wrote. asked is for a person's own view only, and kind may then
+            name only email_rule_request and email_rule_objection. Default:
             ListActivityObjectsRelation.CREATED.
         kind (str | Unset):
         state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.
@@ -247,17 +253,20 @@ async def asyncio_detailed(
     An API key, an app or an agent sees what it created itself; a webhook given to an API key lists
     under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what
     they created through any credential of theirs, each item naming it, and also their API keys,
-    personal agents, email rules and rule requests. Each kind is listed only if the caller could list it
-    through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names
-    and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked
-    it lists instead what other members asked of the person, open or answered: the rule requests made to
-    them, under their current membership, each naming the member who asked in created_through. A key, an
-    app or an agent has none, and gets email_rule_request in withheld.
+    personal agents, email rules, rule requests and objections to rules over their mail (objections only
+    on the dashboard or the Primitive CLI). Each kind is listed only if the caller could list it through
+    that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and
+    states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked it
+    lists instead what other members asked of the person, open or answered: the rule requests made to
+    them, and the objections to rules they wrote, under their current membership, each naming the member
+    who asked or objected in created_through. A key, an app or an agent has none, and gets both kinds in
+    withheld.
 
     Args:
         relation (ListActivityObjectsRelation | Unset): created (the default): what you created.
-            asked: what other members asked of you, open or answered: rule requests made to you. asked
-            is for a person's own view only, and kind may then name only email_rule_request. Default:
+            asked: what other members asked of you, open or answered: rule requests made to you, and
+            objections to rules you wrote. asked is for a person's own view only, and kind may then
+            name only email_rule_request and email_rule_objection. Default:
             ListActivityObjectsRelation.CREATED.
         kind (str | Unset):
         state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.
@@ -306,17 +315,20 @@ async def asyncio(
     An API key, an app or an agent sees what it created itself; a webhook given to an API key lists
     under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what
     they created through any credential of theirs, each item naming it, and also their API keys,
-    personal agents, email rules and rule requests. Each kind is listed only if the caller could list it
-    through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names
-    and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked
-    it lists instead what other members asked of the person, open or answered: the rule requests made to
-    them, under their current membership, each naming the member who asked in created_through. A key, an
-    app or an agent has none, and gets email_rule_request in withheld.
+    personal agents, email rules, rule requests and objections to rules over their mail (objections only
+    on the dashboard or the Primitive CLI). Each kind is listed only if the caller could list it through
+    that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and
+    states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked it
+    lists instead what other members asked of the person, open or answered: the rule requests made to
+    them, and the objections to rules they wrote, under their current membership, each naming the member
+    who asked or objected in created_through. A key, an app or an agent has none, and gets both kinds in
+    withheld.
 
     Args:
         relation (ListActivityObjectsRelation | Unset): created (the default): what you created.
-            asked: what other members asked of you, open or answered: rule requests made to you. asked
-            is for a person's own view only, and kind may then name only email_rule_request. Default:
+            asked: what other members asked of you, open or answered: rule requests made to you, and
+            objections to rules you wrote. asked is for a person's own view only, and kind may then
+            name only email_rule_request and email_rule_objection. Default:
             ListActivityObjectsRelation.CREATED.
         kind (str | Unset):
         state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.

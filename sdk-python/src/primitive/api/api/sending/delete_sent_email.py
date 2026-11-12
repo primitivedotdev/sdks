@@ -128,8 +128,14 @@ def sync_detailed(
     and independent interaction/delivery audit. This does not recall or cancel delivery already
     admitted. A minimal non-content record preserves occupied idempotency keys and delivered-reply
     deduplication. Keys already released by cancellation, gate denial or a never-attempted failure
-    remain reusable; deleting those records does not revoke their existing retry permission. Repeating a
-    completed deletion returns success; unknown or foreign IDs return 404. Organization API keys,
+    remain reusable; deleting those records does not revoke their existing retry permission. Unknown IDs
+    return 404. Needs sent:manage, and follows mail access rather than role: a caller with the whole
+    organization's mail (an owner, admin or member whose access covers every mailbox, or an
+    organization-wide key) can delete any send in the organization; a caller limited to some mailboxes,
+    an owner or admin included, can delete only sends from addresses its access covers, made since that
+    access starts (a member limited to their own mail: their own), and any other send returns 404.
+    Repeating a completed deletion returns success; for a caller limited to some mailboxes, only when
+    the send was from an address its access names one by one, otherwise 404. Organization API keys,
     sessions and OAuth are supported; Function and connected-agent credentials are denied.
 
     Args:
@@ -169,8 +175,14 @@ def sync(
     and independent interaction/delivery audit. This does not recall or cancel delivery already
     admitted. A minimal non-content record preserves occupied idempotency keys and delivered-reply
     deduplication. Keys already released by cancellation, gate denial or a never-attempted failure
-    remain reusable; deleting those records does not revoke their existing retry permission. Repeating a
-    completed deletion returns success; unknown or foreign IDs return 404. Organization API keys,
+    remain reusable; deleting those records does not revoke their existing retry permission. Unknown IDs
+    return 404. Needs sent:manage, and follows mail access rather than role: a caller with the whole
+    organization's mail (an owner, admin or member whose access covers every mailbox, or an
+    organization-wide key) can delete any send in the organization; a caller limited to some mailboxes,
+    an owner or admin included, can delete only sends from addresses its access covers, made since that
+    access starts (a member limited to their own mail: their own), and any other send returns 404.
+    Repeating a completed deletion returns success; for a caller limited to some mailboxes, only when
+    the send was from an address its access names one by one, otherwise 404. Organization API keys,
     sessions and OAuth are supported; Function and connected-agent credentials are denied.
 
     Args:
@@ -205,8 +217,14 @@ async def asyncio_detailed(
     and independent interaction/delivery audit. This does not recall or cancel delivery already
     admitted. A minimal non-content record preserves occupied idempotency keys and delivered-reply
     deduplication. Keys already released by cancellation, gate denial or a never-attempted failure
-    remain reusable; deleting those records does not revoke their existing retry permission. Repeating a
-    completed deletion returns success; unknown or foreign IDs return 404. Organization API keys,
+    remain reusable; deleting those records does not revoke their existing retry permission. Unknown IDs
+    return 404. Needs sent:manage, and follows mail access rather than role: a caller with the whole
+    organization's mail (an owner, admin or member whose access covers every mailbox, or an
+    organization-wide key) can delete any send in the organization; a caller limited to some mailboxes,
+    an owner or admin included, can delete only sends from addresses its access covers, made since that
+    access starts (a member limited to their own mail: their own), and any other send returns 404.
+    Repeating a completed deletion returns success; for a caller limited to some mailboxes, only when
+    the send was from an address its access names one by one, otherwise 404. Organization API keys,
     sessions and OAuth are supported; Function and connected-agent credentials are denied.
 
     Args:
@@ -246,8 +264,14 @@ async def asyncio(
     and independent interaction/delivery audit. This does not recall or cancel delivery already
     admitted. A minimal non-content record preserves occupied idempotency keys and delivered-reply
     deduplication. Keys already released by cancellation, gate denial or a never-attempted failure
-    remain reusable; deleting those records does not revoke their existing retry permission. Repeating a
-    completed deletion returns success; unknown or foreign IDs return 404. Organization API keys,
+    remain reusable; deleting those records does not revoke their existing retry permission. Unknown IDs
+    return 404. Needs sent:manage, and follows mail access rather than role: a caller with the whole
+    organization's mail (an owner, admin or member whose access covers every mailbox, or an
+    organization-wide key) can delete any send in the organization; a caller limited to some mailboxes,
+    an owner or admin included, can delete only sends from addresses its access covers, made since that
+    access starts (a member limited to their own mail: their own), and any other send returns 404.
+    Repeating a completed deletion returns success; for a caller limited to some mailboxes, only when
+    the send was from an address its access names one by one, otherwise 404. Organization API keys,
     sessions and OAuth are supported; Function and connected-agent credentials are denied.
 
     Args:

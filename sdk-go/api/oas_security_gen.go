@@ -46,6 +46,7 @@ func findAuthorization(h http.Header, prefix string) (string, bool) {
 
 // operationRolesBearerAuth is a private map storing roles per operation.
 var operationRolesBearerAuth = map[string][]string{
+	AcceptEmailRuleObjectionOperation:             []string{},
 	AcceptEmailRuleRequestOperation:               []string{},
 	AddDefaultNetworkMemberOperation:              []string{},
 	AddDomainOperation:                            []string{},
@@ -72,6 +73,7 @@ var operationRolesBearerAuth = map[string][]string{
 	CreateAgentClaimLinkOperation:                 []string{},
 	CreateAgentConnectionOperation:                []string{},
 	CreateEmailRuleOperation:                      []string{},
+	CreateEmailRuleObjectionOperation:             []string{},
 	CreateEmailRuleRequestOperation:               []string{},
 	CreateEndpointOperation:                       []string{},
 	CreateFilterOperation:                         []string{},
@@ -87,6 +89,7 @@ var operationRolesBearerAuth = map[string][]string{
 	CreateWakeScheduleOperation:                   []string{},
 	DecideAccessModeOperation:                     []string{},
 	DecideSuspensionOperation:                     []string{},
+	DeclineEmailRuleObjectionOperation:            []string{},
 	DeclineEmailRuleRequestOperation:              []string{},
 	DeleteAddressNoteOperation:                    []string{},
 	DeleteAgentContactOperation:                   []string{},
@@ -140,6 +143,7 @@ var operationRolesBearerAuth = map[string][]string{
 	GetEmailReadableOperation:                     []string{},
 	GetEmailRuleOperation:                         []string{},
 	GetEmailRuleCoveringMeOperation:               []string{},
+	GetEmailRuleObjectionOperation:                []string{},
 	GetEmailRuleRequestOperation:                  []string{},
 	GetEmailRuleScopeOperation:                    []string{},
 	GetEmailRuleShareOperation:                    []string{},
@@ -208,6 +212,7 @@ var operationRolesBearerAuth = map[string][]string{
 	ListEmailAttachmentArchiveMembersOperation:    []string{},
 	ListEmailRuleDecisionsOperation:               []string{},
 	ListEmailRuleDecisionsOnMyMailOperation:       []string{},
+	ListEmailRuleObjectionsOperation:              []string{},
 	ListEmailRuleRequestsOperation:                []string{},
 	ListEmailRuleResultsOperation:                 []string{},
 	ListEmailRuleScopeOptionsOperation:            []string{},
@@ -352,6 +357,7 @@ var operationRolesBearerAuth = map[string][]string{
 	VerifyAgentClaimOperation:                     []string{},
 	VerifyDomainOperation:                         []string{},
 	WhoamiOperation:                               []string{},
+	WithdrawEmailRuleObjectionOperation:           []string{},
 	WithdrawEmailRuleRequestOperation:             []string{},
 }
 

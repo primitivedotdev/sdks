@@ -130,7 +130,7 @@ def sync_detailed(
 
      Each run of the function, newest first, with its outcome, timings, response status and exception.
     Lists runs only: a webhook delivery that never reached the function (for example one refused before
-    it ran) is not an invocation; find those with listDeliveries.
+    it ran) is not an invocation; find those with listDeliveries and its endpoint_id filter.
 
     Args:
         id (UUID):
@@ -177,7 +177,7 @@ def sync(
 
      Each run of the function, newest first, with its outcome, timings, response status and exception.
     Lists runs only: a webhook delivery that never reached the function (for example one refused before
-    it ran) is not an invocation; find those with listDeliveries.
+    it ran) is not an invocation; find those with listDeliveries and its endpoint_id filter.
 
     Args:
         id (UUID):
@@ -219,7 +219,7 @@ async def asyncio_detailed(
 
      Each run of the function, newest first, with its outcome, timings, response status and exception.
     Lists runs only: a webhook delivery that never reached the function (for example one refused before
-    it ran) is not an invocation; find those with listDeliveries.
+    it ran) is not an invocation; find those with listDeliveries and its endpoint_id filter.
 
     Args:
         id (UUID):
@@ -266,7 +266,7 @@ async def asyncio(
 
      Each run of the function, newest first, with its outcome, timings, response status and exception.
     Lists runs only: a webhook delivery that never reached the function (for example one refused before
-    it ran) is not an invocation; find those with listDeliveries.
+    it ran) is not an invocation; find those with listDeliveries and its endpoint_id filter.
 
     Args:
         id (UUID):

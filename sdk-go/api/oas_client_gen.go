@@ -28,6 +28,15 @@ func trimTrailingSlashes(u *url.URL) {
 
 // Invoker invokes operations described by OpenAPI v3 specification.
 type Invoker interface {
+	// AcceptEmailRuleObjection invokes acceptEmailRuleObjection operation.
+	//
+	// Accepts a pending objection to a rule you wrote: turns the rule off (state draft), as updating it
+	// would, and records the objection accepted, together. You can turn the rule on again later. Needs
+	// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+	// token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.
+	//
+	// POST /email-rule-objections/{id}/accept
+	AcceptEmailRuleObjection(ctx context.Context, params AcceptEmailRuleObjectionParams) (AcceptEmailRuleObjectionRes, error)
 	// AcceptEmailRuleRequest invokes acceptEmailRuleRequest operation.
 	//
 	// Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches
@@ -36,18 +45,12 @@ type Invoker interface {
 	// first with english and tree together (and an explanation, or the server writes one). Because this
 	// gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth
 	// apps and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree
-	// to POST /v1/email-rules/test. A test on mail already received shows only what has arrived. To see
-	// what the rule would do with an email that has not, such as one you would never want shared, pass
-	// the request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive
-	// CLI, primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you
-	// make up, or have look-alikes written for it (POST /v1/email-rules/look-alikes with request_id;
-	// primitive email-rules generate-look-alikes). Neither stores anything, and neither needs access
-	// beyond testing a rule of your own; the accept keeps any you send as expectation_samples on the
-	// rule it writes. Made-up emails sent in expectation_samples are kept on the rule this writes, where
-	// GET /v1/email-rules/{id} lists them. Accepting also needs mail:share_own (sharing your own mail
-	// through email rules, which only shows it and never sends): a role without it is refused, whether
-	// or not it can send. Needs mail:read, a member's own credential with their full access (not an API
-	// key, agent key or narrowed token), and the email rules feature.
+	// to POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree
+	// to POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST
+	// /v1/email-rules/look-alikes with request_id); neither stores anything. expectation_samples are
+	// kept on the rule it writes. Accepting also needs mail:share_own. Needs mail:read, a member's own
+	// credential with their full access (not an API key, agent key or narrowed token), and the email
+	// rules feature.
 	//
 	// POST /email-rule-requests/{id}/accept
 	AcceptEmailRuleRequest(ctx context.Context, request OptAcceptEmailRuleRequestRequest, params AcceptEmailRuleRequestParams) (AcceptEmailRuleRequestRes, error)
@@ -303,18 +306,14 @@ type Invoker interface {
 	// CompileEmailRule invokes compileEmailRule operation.
 	//
 	// Turns a plain-English description of which received emails to match into a rule tree over the
-	// published column contract, with a plain-English explanation of what it matches, the assumptions
-	// made, and warnings for anything the columns cannot express. Where the columns fall short the rule
-	// may carry up to five yes/no questions, asked about an email only after its conditions match; they
-	// read its subject, its new text and its attachments' file names, never what is inside an attachment,
-	//  and warnings say when a question mentions attachments. Nothing is saved. A rule with no questions
-	// has its conditions counted, read only, over the caller's recent classified mail (what a test of it
-	// covers by default): breadth is that count, and a warning says when it matches nearly all of it.
-	// The SQL the rule renders to is returned only when include_sql is true. kind do_not_share compiles
-	// a do-not-share rule for recall: conditions only as narrow as the description says, the judgement
-	// of what it describes put into questions, and with nothing a column decides for certain, conditions
-	// that hold for every email. Needs mail:read, a member's own credential with their full access (not
-	// an API key, agent key or narrowed token), and the email rules feature.
+	// column contract, with an explanation of what it matches, the assumptions made, and warnings for
+	// what the columns cannot express. Where the columns fall short it adds up to five yes/no questions,
+	// asked only after the conditions match; they read the subject, the new text and attachment file
+	// names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts,
+	// read only, how much of your recent classified mail its conditions match. include_sql returns the
+	// SQL it renders to. kind do_not_share compiles for recall. Needs mail:read, a member's own
+	// credential with their full access (not an API key, agent key or narrowed token), and the email
+	// rules feature.
 	//
 	// POST /email-rules/compile
 	CompileEmailRule(ctx context.Context, request *CompileEmailRuleRequest, params CompileEmailRuleParams) (CompileEmailRuleRes, error)
@@ -376,32 +375,41 @@ type Invoker interface {
 	// CreateEmailRule invokes createEmailRule operation.
 	//
 	// Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column
-	// contract; without an explanation the server writes one. It starts in observe (what it matches is
-	// recorded, nothing granted or blocked) unless state is draft (not evaluated), or active for a
-	// do_not_share rule. You are its author, and it never reaches mail you cannot read. evaluation_scope
-	// is own_mailboxes (your own mail) unless you name author (all you can read) or selected;
-	// scope_selection may name only what you can read. The answer carries the scope as stored.
-	// expectations saves emails it must match and must not; the answer judges them (expectations_check).
-	// kind do_not_share blocks sharing: it runs before every other rule, and while active no rule shares
-	// an email it matches or cannot decide; a key cannot list it (details.reason rule_blocks_sharing).
-	// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-	// narrowed token), and the email rules feature.
+	// contract. It starts in observe (recorded, nothing granted or blocked) unless state is draft, or
+	// active for a do_not_share rule. You are its author, and it never reaches mail you cannot read.
+	// evaluation_scope is own_mailboxes unless you name author or selected (scope_selection names only
+	// what you can read). expectations are judged in expectations_check. kind do_not_share blocks
+	// sharing what it matches; a key cannot list it (details.reason rule_blocks_sharing). Needs
+	// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+	// token), and the email rules feature.
 	//
 	// POST /email-rules
 	CreateEmailRule(ctx context.Context, request *CreateEmailRuleRequest, params CreateEmailRuleParams) (CreateEmailRuleRes, error)
+	// CreateEmailRuleObjection invokes createEmailRuleObjection operation.
+	//
+	// Asks the author of a rule that covers one of your own mailboxes now to turn it off. Only a rule
+	// that covers you now: one you see only because it once decided on your mail cannot be objected to.
+	// An objection is seen by the member who made it, the rule's author and the organization's owners
+	// and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines
+	// it, or the member who made it withdraws it, which clears its message. It never changes after that.
+	// You may have one pending objection per rule and 50 in all, and object to the same rule again only
+	// 10 minutes after you last did, whatever became of it. Needs mail:read, a member's own credential
+	// with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+	// Only on your own dashboard session or the Primitive CLI.
+	//
+	// POST /email-rule-objections
+	CreateEmailRuleObjection(ctx context.Context, request *CreateEmailRuleObjectionRequest, params CreateEmailRuleObjectionParams) (CreateEmailRuleObjectionRes, error)
 	// CreateEmailRuleRequest invokes createEmailRuleRequest operation.
 	//
 	// Asks another member of the organization for a rule over their own mail, from a compile response or
 	// a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified
 	// work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated
-	// and nothing is shared until they accept, and they may change the rule first; they see the request
-	// and can preview what it matches in their own mail. A message (up to 500 characters) tells them why
-	// you are asking; they see it with the request, and it cannot be changed later. You may have at most
-	// 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer
-	// also says whether they can accept it under their role (target_can_accept), and if not, why
-	// (target_warning); the request is sent either way. To find out before asking, use POST
-	// /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full
-	// access (not an API key, agent key or narrowed token), and the email rules feature.
+	// or shared until they accept, and they may change the rule first. A message (up to 500 characters,
+	// fixed once sent) tells them why you ask. At most 5 pending requests to one member and 50 in all.
+	// With members:read the answer says whether they can accept it under their role (target_can_accept,
+	// target_warning); POST /v1/email-rule-requests/target-check checks first. Needs mail:read, a
+	// member's own credential with their full access (not an API key, agent key or narrowed token), and
+	// the email rules feature.
 	//
 	// POST /email-rule-requests
 	CreateEmailRuleRequest(ctx context.Context, request *CreateEmailRuleRequestRequest, params CreateEmailRuleRequestParams) (CreateEmailRuleRequestRes, error)
@@ -661,6 +669,15 @@ type Invoker interface {
 	//
 	// POST /access-suspensions/{id}/decision
 	DecideSuspension(ctx context.Context, request *DecideSuspensionRequest, params DecideSuspensionParams) (DecideSuspensionRes, error)
+	// DeclineEmailRuleObjection invokes declineEmailRuleObjection operation.
+	//
+	// Declines a pending objection to a rule you wrote, optionally saying why; the rule stays as it is.
+	// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+	// narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive
+	// CLI.
+	//
+	// POST /email-rule-objections/{id}/decline
+	DeclineEmailRuleObjection(ctx context.Context, request OptDeclineEmailRuleObjectionRequest, params DeclineEmailRuleObjectionParams) (DeclineEmailRuleObjectionRes, error)
 	// DeclineEmailRuleRequest invokes declineEmailRuleRequest operation.
 	//
 	// Declines a pending request made to you. Nothing is written but the decision and, if you give one,
@@ -739,15 +756,12 @@ type Invoker interface {
 	DeleteEmail(ctx context.Context, params DeleteEmailParams) (DeleteEmailRes, error)
 	// DeleteEmailRule invokes deleteEmailRule operation.
 	//
-	// Deletes a rule with its versions, its decisions and the access it granted. A rule that was ever
-	// shared with another member keeps the record of its share: the share ends with end_reason
-	// rule_deleted, and the member who shared can still list what it handed over, while the rule is no
-	// longer shown and reads nothing. The answer lists the shares the delete ended (ended_shares) and
-	// the keys, not revoked, that still list the rule, which now read nothing through it: those you may
-	// read as key metadata by id, name and prefix (keys), and how many others (other_keys). keys and
-	// other_keys are left out when the keys could not be read. The author, or a caller who reads the
-	// whole organization's mail, may delete it; while it is shared with another member, only the author
-	// or someone who manages members from the dashboard. Needs mail:read, a member's own credential with
+	// Deletes a rule with its versions, its decisions and the access it granted. A share of it ends
+	// (end_reason rule_deleted), and the member who shared can still list what it handed over. The
+	// answer lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which
+	// now read nothing through it (keys, other_keys; left out when they could not be read). The author
+	// or a reader of all the organization's mail may delete it; while it is shared, only the author or
+	// someone who manages members from the dashboard. Needs mail:read, a member's own credential with
 	// their full access (not an API key, agent key or narrowed token), and the email rules feature.
 	//
 	// DELETE /email-rules/{id}
@@ -850,7 +864,13 @@ type Invoker interface {
 	// already admitted. A minimal non-content record preserves occupied idempotency keys and
 	// delivered-reply deduplication. Keys already released by cancellation, gate denial or a
 	// never-attempted failure remain reusable; deleting those records does not revoke their existing
-	// retry permission. Repeating a completed deletion returns success; unknown or foreign IDs return
+	// retry permission. Unknown IDs return 404. Needs sent:manage, and follows mail access rather than
+	// role: a caller with the whole organization's mail (an owner, admin or member whose access covers
+	// every mailbox, or an organization-wide key) can delete any send in the organization; a caller
+	// limited to some mailboxes, an owner or admin included, can delete only sends from addresses its
+	// access covers, made since that access starts (a member limited to their own mail: their own), and
+	// any other send returns 404. Repeating a completed deletion returns success; for a caller limited
+	// to some mailboxes, only when the send was from an address its access names one by one, otherwise
 	// 404. Organization API keys, sessions and OAuth are supported; Function and connected-agent
 	// credentials are denied.
 	//
@@ -1324,21 +1344,28 @@ type Invoker interface {
 	//
 	// GET /email-rules/covering-me/{id}
 	GetEmailRuleCoveringMe(ctx context.Context, params GetEmailRuleCoveringMeParams) (GetEmailRuleCoveringMeRes, error)
+	// GetEmailRuleObjection invokes getEmailRuleObjection operation.
+	//
+	// One objection you can see. An objection is seen by the member who made it, the rule's author and
+	// the organization's owners and admins. It stays pending until the rule's author accepts it, turning
+	// the rule off, or declines it, or the member who made it withdraws it, which clears its message. It
+	// never changes after that. Needs mail:read, a member's own credential with their full access (not
+	// an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard
+	// session or the Primitive CLI.
+	//
+	// GET /email-rule-objections/{id}
+	GetEmailRuleObjection(ctx context.Context, params GetEmailRuleObjectionParams) (GetEmailRuleObjectionRes, error)
 	// GetEmailRuleRequest invokes getEmailRuleRequest operation.
 	//
 	// A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a
 	// member. A request is visible to the member who made it, the member it was made to, and the
 	// organization's owners and admins. If you are the member asked, you can try the rule as proposed
 	// before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have
-	// received. A test on mail already received shows only what has arrived. To see what the rule would
-	// do with an email that has not, such as one you would never want shared, pass the request's tree to
-	// POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive
-	// email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up, or have
-	// look-alikes written for it (POST /v1/email-rules/look-alikes with request_id; primitive
-	// email-rules generate-look-alikes). Neither stores anything, and neither needs access beyond
-	// testing a rule of your own; the accept keeps any you send as expectation_samples on the rule it
-	// writes. Needs mail:read, a member's own credential with their full access (not an API key, agent
-	// key or narrowed token), and the email rules feature.
+	// received. To try it on an email that has not arrived, pass the request's tree to POST
+	// /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST
+	// /v1/email-rules/look-alikes with request_id); neither stores anything. Needs mail:read, a member's
+	// own credential with their full access (not an API key, agent key or narrowed token), and the email
+	// rules feature.
 	//
 	// GET /email-rule-requests/{id}
 	GetEmailRuleRequest(ctx context.Context, params GetEmailRuleRequestParams) (GetEmailRuleRequestRes, error)
@@ -1863,12 +1890,14 @@ type Invoker interface {
 	// sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key
 	// lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees
 	// what they created through any credential of theirs, each item naming it, and also their API keys,
-	// personal agents, email rules and rule requests. Each kind is listed only if the caller could list
-	// it through that kind's own route; a kind it could not is named in withheld, with no count. Ids,
-	// names and states only: never a webhook URL or mail content. Needs activity:read_self. With
+	// personal agents, email rules, rule requests and objections to rules over their mail (objections
+	// only on the dashboard or the Primitive CLI). Each kind is listed only if the caller could list it
+	// through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names
+	// and states only: never a webhook URL or mail content. Needs activity:read_self. With
 	// relation=asked it lists instead what other members asked of the person, open or answered: the rule
-	// requests made to them, under their current membership, each naming the member who asked in
-	// created_through. A key, an app or an agent has none, and gets email_rule_request in withheld.
+	// requests made to them, and the objections to rules they wrote, under their current membership,
+	// each naming the member who asked or objected in created_through. A key, an app or an agent has
+	// none, and gets both kinds in withheld.
 	//
 	// GET /activity/objects
 	ListActivityObjects(ctx context.Context, params ListActivityObjectsParams) (ListActivityObjectsRes, error)
@@ -2102,6 +2131,18 @@ type Invoker interface {
 	//
 	// GET /email-rules/covering-me/{id}/decisions
 	ListEmailRuleDecisionsOnMyMail(ctx context.Context, params ListEmailRuleDecisionsOnMyMailParams) (ListEmailRuleDecisionsOnMyMailRes, error)
+	// ListEmailRuleObjections invokes listEmailRuleObjections operation.
+	//
+	// Objections you made, objections to rules you wrote, or every objection you can see, newest first.
+	// An objection is seen by the member who made it, the rule's author and the organization's owners
+	// and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines
+	// it, or the member who made it withdraws it, which clears its message. It never changes after that.
+	// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+	// narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive
+	// CLI.
+	//
+	// GET /email-rule-objections
+	ListEmailRuleObjections(ctx context.Context, params ListEmailRuleObjectionsParams) (ListEmailRuleObjectionsRes, error)
 	// ListEmailRuleRequests invokes listEmailRuleRequests operation.
 	//
 	// Rule requests, newest first: those made to you (box incoming, the default), those you made
@@ -2247,7 +2288,7 @@ type Invoker interface {
 	//
 	// Each run of the function, newest first, with its outcome, timings, response status and exception.
 	// Lists runs only: a webhook delivery that never reached the function (for example one refused
-	// before it ran) is not an invocation; find those with listDeliveries.
+	// before it ran) is not an invocation; find those with listDeliveries and its endpoint_id filter.
 	//
 	// GET /functions/{id}/invocations
 	ListFunctionInvocations(ctx context.Context, params ListFunctionInvocationsParams) (ListFunctionInvocationsRes, error)
@@ -3456,29 +3497,23 @@ type Invoker interface {
 	// TestEmailRule invokes testEmailRule operation.
 	//
 	// Runs a rule over received mail and reports what it would decide for each email (matched, near_miss,
-	//  no_match, unclassified, skipped or not_found), with a summary: how each top-level condition and
-	// question decided and, when nothing matched, what stopped it. Test an unsaved tree from a compile
-	// response, or a saved rule by rule_id (its current version, run with its author's access). The rule
-	// reads only mail its author can read and its scope covers; an unsaved tree covers only your own
-	// mail unless evaluation_scope names more. Without email_ids, the newest emails it can read are
-	// tested, at most 200 and none older than 30 days; expected emails (expect, or a saved rule's saved
-	// expectations) are tested whatever their age. Unclassified emails more than 2 hours old are
-	// classified first and their classification saved, unless classify_missing is false; newer ones are
-	// reported unclassified, pending. The rule itself records and grants nothing. Classification and the
-	// rule's questions stop at about 90 seconds; a rerun continues the classification where it stopped.
-	// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-	// narrowed token), and the email rules feature.
+	//  no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and
+	// question decided. Test an unsaved tree, or a saved rule by rule_id (its current version, as its
+	// author). It reads only mail its author can read and its scope covers. Without email_ids it tests
+	// the newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified
+	// emails over 2 hours old are classified first unless classify_missing is false. It records no
+	// decision and grants nothing, and stops at about 90 seconds. Needs mail:read, a member's own
+	// credential with their full access (not an API key, agent key or narrowed token), and the email
+	// rules feature.
 	//
 	// POST /email-rules/test
 	TestEmailRule(ctx context.Context, request *TestEmailRuleRequest, params TestEmailRuleParams) (TestEmailRuleRes, error)
 	// TestEmailRuleOnSample invokes testEmailRuleOnSample operation.
 	//
 	// Reports what a rule would decide for an email you describe (sender, recipients, subject, plain
-	// text, attachment types; optionally whether it is automated or from a mailing list, and its spam
-	// score), received now: it is classified, and the conditions and questions decided, as received mail
-	// would be. By default it is not automated or from a list; a rule reading a spam score you gave none
-	// for decides on none (spam_score is then in unset_columns). Nothing is stored. Test an unsaved tree
-	// (covering only your own mail unless evaluation_scope names more) or a saved rule by rule_id. The
+	// text, attachment types; optionally automated, from a mailing list, and a spam score), classified
+	// and decided as received mail would be. A rule reading a spam score you gave none for decides on
+	// none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The
 	// answer includes what the classifier read. Needs mail:read, a member's own credential with their
 	// full access (not an API key, agent key or narrowed token), and the email rules feature.
 	//
@@ -3621,19 +3656,16 @@ type Invoker interface {
 	UpdateDomain(ctx context.Context, request *UpdateDomainInput, params UpdateDomainParams) (UpdateDomainRes, error)
 	// UpdateEmailRule invokes updateEmailRule operation.
 	//
-	// Renames the rule, saves a new version (english and tree together, with an explanation or one the
-	// server writes; earlier versions stay) or an earlier one again (restore_version), changes its state
-	// (draft is off; observe; active), whose mail it runs over (evaluation_scope, with scope_selection
-	// when selected) or its saved expectations (each saved version and new set is judged in
-	// expectations_check). Anyone but its author who sees it may only disable it (state draft), and
-	// while it is shared only if they manage members from the dashboard. Without evaluation_scope the
-	// scope stays; a scope change saves a new version with the same conditions, and what was granted
-	// stays. A shared rule keeps its scope; a kind never changes. A saved version takes effect at once
-	// (an active rule stays active); affects counts what it reaches. Send if_version, the
-	// current_version you read, so a write never replaces a version saved since, or if_revision to
-	// refuse it after any update. Without if_expectations_pass a version is saved even when its
-	// expectations_check fails. Needs mail:read, a member's own credential with their full access (not
-	// an API key, agent key or narrowed token), and the email rules feature.
+	// Renames the rule, saves a new version (english and tree together; earlier versions stay) or
+	// restores one (restore_version), changes its state (draft is off; observe; active), its scope
+	// (evaluation_scope, with scope_selection when selected) or its saved expectations (judged in
+	// expectations_check). Anyone but its author who sees it may only set state draft, and while it is
+	// shared only if they manage members from the dashboard. A scope change saves a new version; a
+	// shared rule keeps its scope, and a kind never changes. A saved version takes effect at once.
+	// if_version refuses a write once a version was saved since you read it; if_revision, once anything
+	// changed. Without if_expectations_pass a version is saved even when its expectations fail. Needs
+	// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+	// token), and the email rules feature.
 	//
 	// PATCH /email-rules/{id}
 	UpdateEmailRule(ctx context.Context, request *UpdateEmailRuleRequest, params UpdateEmailRuleParams) (UpdateEmailRuleRes, error)
@@ -3924,6 +3956,14 @@ type Invoker interface {
 	//
 	// GET /whoami
 	Whoami(ctx context.Context, params WhoamiParams) (WhoamiRes, error)
+	// WithdrawEmailRuleObjection invokes withdrawEmailRuleObjection operation.
+	//
+	// Withdraws a pending objection you made, and clears its message. Needs mail:read, a member's own
+	// credential with their full access (not an API key, agent key or narrowed token), and the email
+	// rules feature. Only on your own dashboard session or the Primitive CLI.
+	//
+	// POST /email-rule-objections/{id}/withdraw
+	WithdrawEmailRuleObjection(ctx context.Context, params WithdrawEmailRuleObjectionParams) (WithdrawEmailRuleObjectionRes, error)
 	// WithdrawEmailRuleRequest invokes withdrawEmailRuleRequest operation.
 	//
 	// Withdraws a pending request you made. Needs mail:read, a member's own credential with their full
@@ -3974,6 +4014,152 @@ func (c *Client) requestURL(ctx context.Context) *url.URL {
 	return u
 }
 
+// AcceptEmailRuleObjection invokes acceptEmailRuleObjection operation.
+//
+// Accepts a pending objection to a rule you wrote: turns the rule off (state draft), as updating it
+// would, and records the objection accepted, together. You can turn the rule on again later. Needs
+// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+// token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.
+//
+// POST /email-rule-objections/{id}/accept
+func (c *Client) AcceptEmailRuleObjection(ctx context.Context, params AcceptEmailRuleObjectionParams) (AcceptEmailRuleObjectionRes, error) {
+	res, err := c.sendAcceptEmailRuleObjection(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendAcceptEmailRuleObjection(ctx context.Context, params AcceptEmailRuleObjectionParams) (res AcceptEmailRuleObjectionRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("acceptEmailRuleObjection"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/email-rule-objections/{id}/accept"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, AcceptEmailRuleObjectionOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/email-rule-objections/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/accept"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IdempotencyKey.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, AcceptEmailRuleObjectionOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeAcceptEmailRuleObjectionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // AcceptEmailRuleRequest invokes acceptEmailRuleRequest operation.
 //
 // Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches
@@ -3982,18 +4168,12 @@ func (c *Client) requestURL(ctx context.Context) *url.URL {
 // first with english and tree together (and an explanation, or the server writes one). Because this
 // gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth
 // apps and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree
-// to POST /v1/email-rules/test. A test on mail already received shows only what has arrived. To see
-// what the rule would do with an email that has not, such as one you would never want shared, pass
-// the request's tree to POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive
-// CLI, primitive email-rules test-email-rule-on-sample --body-file sample.json) with an email you
-// make up, or have look-alikes written for it (POST /v1/email-rules/look-alikes with request_id;
-// primitive email-rules generate-look-alikes). Neither stores anything, and neither needs access
-// beyond testing a rule of your own; the accept keeps any you send as expectation_samples on the
-// rule it writes. Made-up emails sent in expectation_samples are kept on the rule this writes, where
-// GET /v1/email-rules/{id} lists them. Accepting also needs mail:share_own (sharing your own mail
-// through email rules, which only shows it and never sends): a role without it is refused, whether
-// or not it can send. Needs mail:read, a member's own credential with their full access (not an API
-// key, agent key or narrowed token), and the email rules feature.
+// to POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree
+// to POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST
+// /v1/email-rules/look-alikes with request_id); neither stores anything. expectation_samples are
+// kept on the rule it writes. Accepting also needs mail:share_own. Needs mail:read, a member's own
+// credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature.
 //
 // POST /email-rule-requests/{id}/accept
 func (c *Client) AcceptEmailRuleRequest(ctx context.Context, request OptAcceptEmailRuleRequestRequest, params AcceptEmailRuleRequestParams) (AcceptEmailRuleRequestRes, error) {
@@ -7279,20 +7459,14 @@ func (c *Client) sendCliLogout(ctx context.Context, request OptCliLogoutInput, p
 // CompileEmailRule invokes compileEmailRule operation.
 //
 // Turns a plain-English description of which received emails to match into a rule tree over the
-// published column contract, with a plain-English explanation of what it matches, the assumptions
-// made, and warnings for anything the columns cannot express. Where the columns fall short the rule
-// may carry up to five yes/no questions, asked about an email only after its conditions match; they
-// read its subject, its new text and its attachments' file names, never what is inside an attachment,
-//
-//	and warnings say when a question mentions attachments. Nothing is saved. A rule with no questions
-//
-// has its conditions counted, read only, over the caller's recent classified mail (what a test of it
-// covers by default): breadth is that count, and a warning says when it matches nearly all of it.
-// The SQL the rule renders to is returned only when include_sql is true. kind do_not_share compiles
-// a do-not-share rule for recall: conditions only as narrow as the description says, the judgement
-// of what it describes put into questions, and with nothing a column decides for certain, conditions
-// that hold for every email. Needs mail:read, a member's own credential with their full access (not
-// an API key, agent key or narrowed token), and the email rules feature.
+// column contract, with an explanation of what it matches, the assumptions made, and warnings for
+// what the columns cannot express. Where the columns fall short it adds up to five yes/no questions,
+// asked only after the conditions match; they read the subject, the new text and attachment file
+// names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts,
+// read only, how much of your recent classified mail its conditions match. include_sql returns the
+// SQL it renders to. kind do_not_share compiles for recall. Needs mail:read, a member's own
+// credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature.
 //
 // POST /email-rules/compile
 func (c *Client) CompileEmailRule(ctx context.Context, request *CompileEmailRuleRequest, params CompileEmailRuleParams) (CompileEmailRuleRes, error) {
@@ -7959,16 +8133,13 @@ func (c *Client) sendCreateAgentConnection(ctx context.Context, request *CreateA
 // CreateEmailRule invokes createEmailRule operation.
 //
 // Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column
-// contract; without an explanation the server writes one. It starts in observe (what it matches is
-// recorded, nothing granted or blocked) unless state is draft (not evaluated), or active for a
-// do_not_share rule. You are its author, and it never reaches mail you cannot read. evaluation_scope
-// is own_mailboxes (your own mail) unless you name author (all you can read) or selected;
-// scope_selection may name only what you can read. The answer carries the scope as stored.
-// expectations saves emails it must match and must not; the answer judges them (expectations_check).
-// kind do_not_share blocks sharing: it runs before every other rule, and while active no rule shares
-// an email it matches or cannot decide; a key cannot list it (details.reason rule_blocks_sharing).
-// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-// narrowed token), and the email rules feature.
+// contract. It starts in observe (recorded, nothing granted or blocked) unless state is draft, or
+// active for a do_not_share rule. You are its author, and it never reaches mail you cannot read.
+// evaluation_scope is own_mailboxes unless you name author or selected (scope_selection names only
+// what you can read). expectations are judged in expectations_check. kind do_not_share blocks
+// sharing what it matches; a key cannot list it (details.reason rule_blocks_sharing). Needs
+// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+// token), and the email rules feature.
 //
 // POST /email-rules
 func (c *Client) CreateEmailRule(ctx context.Context, request *CreateEmailRuleRequest, params CreateEmailRuleParams) (CreateEmailRuleRes, error) {
@@ -8093,19 +8264,152 @@ func (c *Client) sendCreateEmailRule(ctx context.Context, request *CreateEmailRu
 	return result, nil
 }
 
+// CreateEmailRuleObjection invokes createEmailRuleObjection operation.
+//
+// Asks the author of a rule that covers one of your own mailboxes now to turn it off. Only a rule
+// that covers you now: one you see only because it once decided on your mail cannot be objected to.
+// An objection is seen by the member who made it, the rule's author and the organization's owners
+// and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines
+// it, or the member who made it withdraws it, which clears its message. It never changes after that.
+// You may have one pending objection per rule and 50 in all, and object to the same rule again only
+// 10 minutes after you last did, whatever became of it. Needs mail:read, a member's own credential
+// with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+// Only on your own dashboard session or the Primitive CLI.
+//
+// POST /email-rule-objections
+func (c *Client) CreateEmailRuleObjection(ctx context.Context, request *CreateEmailRuleObjectionRequest, params CreateEmailRuleObjectionParams) (CreateEmailRuleObjectionRes, error) {
+	res, err := c.sendCreateEmailRuleObjection(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendCreateEmailRuleObjection(ctx context.Context, request *CreateEmailRuleObjectionRequest, params CreateEmailRuleObjectionParams) (res CreateEmailRuleObjectionRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createEmailRuleObjection"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/email-rule-objections"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateEmailRuleObjectionOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/email-rule-objections"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCreateEmailRuleObjectionRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IdempotencyKey.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CreateEmailRuleObjectionOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCreateEmailRuleObjectionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // CreateEmailRuleRequest invokes createEmailRuleRequest operation.
 //
 // Asks another member of the organization for a rule over their own mail, from a compile response or
 // a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified
 // work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated
-// and nothing is shared until they accept, and they may change the rule first; they see the request
-// and can preview what it matches in their own mail. A message (up to 500 characters) tells them why
-// you are asking; they see it with the request, and it cannot be changed later. You may have at most
-// 5 pending requests to one member and 50 in all. If you can list members (members:read), the answer
-// also says whether they can accept it under their role (target_can_accept), and if not, why
-// (target_warning); the request is sent either way. To find out before asking, use POST
-// /v1/email-rule-requests/target-check. Needs mail:read, a member's own credential with their full
-// access (not an API key, agent key or narrowed token), and the email rules feature.
+// or shared until they accept, and they may change the rule first. A message (up to 500 characters,
+// fixed once sent) tells them why you ask. At most 5 pending requests to one member and 50 in all.
+// With members:read the answer says whether they can accept it under their role (target_can_accept,
+// target_warning); POST /v1/email-rule-requests/target-check checks first. Needs mail:read, a
+// member's own credential with their full access (not an API key, agent key or narrowed token), and
+// the email rules feature.
 //
 // POST /email-rule-requests
 func (c *Client) CreateEmailRuleRequest(ctx context.Context, request *CreateEmailRuleRequestRequest, params CreateEmailRuleRequestParams) (CreateEmailRuleRequestRes, error) {
@@ -10320,6 +10624,155 @@ func (c *Client) sendDecideSuspension(ctx context.Context, request *DecideSuspen
 	return result, nil
 }
 
+// DeclineEmailRuleObjection invokes declineEmailRuleObjection operation.
+//
+// Declines a pending objection to a rule you wrote, optionally saying why; the rule stays as it is.
+// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+// narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive
+// CLI.
+//
+// POST /email-rule-objections/{id}/decline
+func (c *Client) DeclineEmailRuleObjection(ctx context.Context, request OptDeclineEmailRuleObjectionRequest, params DeclineEmailRuleObjectionParams) (DeclineEmailRuleObjectionRes, error) {
+	res, err := c.sendDeclineEmailRuleObjection(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendDeclineEmailRuleObjection(ctx context.Context, request OptDeclineEmailRuleObjectionRequest, params DeclineEmailRuleObjectionParams) (res DeclineEmailRuleObjectionRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("declineEmailRuleObjection"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/email-rule-objections/{id}/decline"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DeclineEmailRuleObjectionOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/email-rule-objections/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/decline"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeDeclineEmailRuleObjectionRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IdempotencyKey.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, DeclineEmailRuleObjectionOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDeclineEmailRuleObjectionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // DeclineEmailRuleRequest invokes declineEmailRuleRequest operation.
 //
 // Declines a pending request made to you. Nothing is written but the decision and, if you give one,
@@ -11230,15 +11683,12 @@ func (c *Client) sendDeleteEmail(ctx context.Context, params DeleteEmailParams) 
 
 // DeleteEmailRule invokes deleteEmailRule operation.
 //
-// Deletes a rule with its versions, its decisions and the access it granted. A rule that was ever
-// shared with another member keeps the record of its share: the share ends with end_reason
-// rule_deleted, and the member who shared can still list what it handed over, while the rule is no
-// longer shown and reads nothing. The answer lists the shares the delete ended (ended_shares) and
-// the keys, not revoked, that still list the rule, which now read nothing through it: those you may
-// read as key metadata by id, name and prefix (keys), and how many others (other_keys). keys and
-// other_keys are left out when the keys could not be read. The author, or a caller who reads the
-// whole organization's mail, may delete it; while it is shared with another member, only the author
-// or someone who manages members from the dashboard. Needs mail:read, a member's own credential with
+// Deletes a rule with its versions, its decisions and the access it granted. A share of it ends
+// (end_reason rule_deleted), and the member who shared can still list what it handed over. The
+// answer lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which
+// now read nothing through it (keys, other_keys; left out when they could not be read). The author
+// or a reader of all the organization's mail may delete it; while it is shared, only the author or
+// someone who manages members from the dashboard. Needs mail:read, a member's own credential with
 // their full access (not an API key, agent key or narrowed token), and the email rules feature.
 //
 // DELETE /email-rules/{id}
@@ -13032,7 +13482,13 @@ func (c *Client) sendDeleteRoute(ctx context.Context, params DeleteRouteParams) 
 // already admitted. A minimal non-content record preserves occupied idempotency keys and
 // delivered-reply deduplication. Keys already released by cancellation, gate denial or a
 // never-attempted failure remain reusable; deleting those records does not revoke their existing
-// retry permission. Repeating a completed deletion returns success; unknown or foreign IDs return
+// retry permission. Unknown IDs return 404. Needs sent:manage, and follows mail access rather than
+// role: a caller with the whole organization's mail (an owner, admin or member whose access covers
+// every mailbox, or an organization-wide key) can delete any send in the organization; a caller
+// limited to some mailboxes, an owner or admin included, can delete only sends from addresses its
+// access covers, made since that access starts (a member limited to their own mail: their own), and
+// any other send returns 404. Repeating a completed deletion returns success; for a caller limited
+// to some mailboxes, only when the send was from an address its access names one by one, otherwise
 // 404. Organization API keys, sessions and OAuth are supported; Function and connected-agent
 // credentials are denied.
 //
@@ -17986,21 +18442,147 @@ func (c *Client) sendGetEmailRuleCoveringMe(ctx context.Context, params GetEmail
 	return result, nil
 }
 
+// GetEmailRuleObjection invokes getEmailRuleObjection operation.
+//
+// One objection you can see. An objection is seen by the member who made it, the rule's author and
+// the organization's owners and admins. It stays pending until the rule's author accepts it, turning
+// the rule off, or declines it, or the member who made it withdraws it, which clears its message. It
+// never changes after that. Needs mail:read, a member's own credential with their full access (not
+// an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard
+// session or the Primitive CLI.
+//
+// GET /email-rule-objections/{id}
+func (c *Client) GetEmailRuleObjection(ctx context.Context, params GetEmailRuleObjectionParams) (GetEmailRuleObjectionRes, error) {
+	res, err := c.sendGetEmailRuleObjection(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetEmailRuleObjection(ctx context.Context, params GetEmailRuleObjectionParams) (res GetEmailRuleObjectionRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getEmailRuleObjection"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/email-rule-objections/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetEmailRuleObjectionOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/email-rule-objections/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetEmailRuleObjectionOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetEmailRuleObjectionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetEmailRuleRequest invokes getEmailRuleRequest operation.
 //
 // A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a
 // member. A request is visible to the member who made it, the member it was made to, and the
 // organization's owners and admins. If you are the member asked, you can try the rule as proposed
 // before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have
-// received. A test on mail already received shows only what has arrived. To see what the rule would
-// do with an email that has not, such as one you would never want shared, pass the request's tree to
-// POST /v1/email-rules/test-sample (testEmailRuleOnSample; in the Primitive CLI, primitive
-// email-rules test-email-rule-on-sample --body-file sample.json) with an email you make up, or have
-// look-alikes written for it (POST /v1/email-rules/look-alikes with request_id; primitive
-// email-rules generate-look-alikes). Neither stores anything, and neither needs access beyond
-// testing a rule of your own; the accept keeps any you send as expectation_samples on the rule it
-// writes. Needs mail:read, a member's own credential with their full access (not an API key, agent
-// key or narrowed token), and the email rules feature.
+// received. To try it on an email that has not arrived, pass the request's tree to POST
+// /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST
+// /v1/email-rules/look-alikes with request_id); neither stores anything. Needs mail:read, a member's
+// own credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature.
 //
 // GET /email-rule-requests/{id}
 func (c *Client) GetEmailRuleRequest(ctx context.Context, params GetEmailRuleRequestParams) (GetEmailRuleRequestRes, error) {
@@ -24575,12 +25157,14 @@ func (c *Client) sendLeaveOrganization(ctx context.Context, params LeaveOrganiza
 // sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key
 // lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees
 // what they created through any credential of theirs, each item naming it, and also their API keys,
-// personal agents, email rules and rule requests. Each kind is listed only if the caller could list
-// it through that kind's own route; a kind it could not is named in withheld, with no count. Ids,
-// names and states only: never a webhook URL or mail content. Needs activity:read_self. With
+// personal agents, email rules, rule requests and objections to rules over their mail (objections
+// only on the dashboard or the Primitive CLI). Each kind is listed only if the caller could list it
+// through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names
+// and states only: never a webhook URL or mail content. Needs activity:read_self. With
 // relation=asked it lists instead what other members asked of the person, open or answered: the rule
-// requests made to them, under their current membership, each naming the member who asked in
-// created_through. A key, an app or an agent has none, and gets email_rule_request in withheld.
+// requests made to them, and the objections to rules they wrote, under their current membership,
+// each naming the member who asked or objected in created_through. A key, an app or an agent has
+// none, and gets both kinds in withheld.
 //
 // GET /activity/objects
 func (c *Client) ListActivityObjects(ctx context.Context, params ListActivityObjectsParams) (ListActivityObjectsRes, error) {
@@ -27166,6 +27750,23 @@ func (c *Client) sendListDeliveries(ctx context.Context, params ListDeliveriesPa
 			return res, errors.Wrap(err, "encode query")
 		}
 	}
+	{
+		// Encode "endpoint_id" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "endpoint_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.EndpointID.Get(); ok {
+				return e.EncodeValue(conv.UUIDToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
 	u.RawQuery = q.Values().Encode()
 
 	stage = "EncodeRequest"
@@ -27848,6 +28449,191 @@ func (c *Client) sendListEmailRuleDecisionsOnMyMail(ctx context.Context, params 
 
 	stage = "DecodeResponse"
 	result, err := decodeListEmailRuleDecisionsOnMyMailResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListEmailRuleObjections invokes listEmailRuleObjections operation.
+//
+// Objections you made, objections to rules you wrote, or every objection you can see, newest first.
+// An objection is seen by the member who made it, the rule's author and the organization's owners
+// and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines
+// it, or the member who made it withdraws it, which clears its message. It never changes after that.
+// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
+// narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive
+// CLI.
+//
+// GET /email-rule-objections
+func (c *Client) ListEmailRuleObjections(ctx context.Context, params ListEmailRuleObjectionsParams) (ListEmailRuleObjectionsRes, error) {
+	res, err := c.sendListEmailRuleObjections(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListEmailRuleObjections(ctx context.Context, params ListEmailRuleObjectionsParams) (res ListEmailRuleObjectionsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listEmailRuleObjections"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/email-rule-objections"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListEmailRuleObjectionsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/email-rule-objections"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "box" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "box",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Box.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "status" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "status",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Status.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "limit" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Limit.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "cursor" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Cursor.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListEmailRuleObjectionsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListEmailRuleObjectionsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -30287,7 +31073,7 @@ func (c *Client) sendListFunctionDeployments(ctx context.Context, params ListFun
 //
 // Each run of the function, newest first, with its outcome, timings, response status and exception.
 // Lists runs only: a webhook delivery that never reached the function (for example one refused
-// before it ran) is not an invocation; find those with listDeliveries.
+// before it ran) is not an invocation; find those with listDeliveries and its endpoint_id filter.
 //
 // GET /functions/{id}/invocations
 func (c *Client) ListFunctionInvocations(ctx context.Context, params ListFunctionInvocationsParams) (ListFunctionInvocationsRes, error) {
@@ -45558,19 +46344,15 @@ func (c *Client) sendSuspendFunctionRuntimeKey(ctx context.Context, request *Sus
 //
 // Runs a rule over received mail and reports what it would decide for each email (matched, near_miss,
 //
-//	no_match, unclassified, skipped or not_found), with a summary: how each top-level condition and
+//	no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and
 //
-// question decided and, when nothing matched, what stopped it. Test an unsaved tree from a compile
-// response, or a saved rule by rule_id (its current version, run with its author's access). The rule
-// reads only mail its author can read and its scope covers; an unsaved tree covers only your own
-// mail unless evaluation_scope names more. Without email_ids, the newest emails it can read are
-// tested, at most 200 and none older than 30 days; expected emails (expect, or a saved rule's saved
-// expectations) are tested whatever their age. Unclassified emails more than 2 hours old are
-// classified first and their classification saved, unless classify_missing is false; newer ones are
-// reported unclassified, pending. The rule itself records and grants nothing. Classification and the
-// rule's questions stop at about 90 seconds; a rerun continues the classification where it stopped.
-// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-// narrowed token), and the email rules feature.
+// question decided. Test an unsaved tree, or a saved rule by rule_id (its current version, as its
+// author). It reads only mail its author can read and its scope covers. Without email_ids it tests
+// the newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified
+// emails over 2 hours old are classified first unless classify_missing is false. It records no
+// decision and grants nothing, and stops at about 90 seconds. Needs mail:read, a member's own
+// credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature.
 //
 // POST /email-rules/test
 func (c *Client) TestEmailRule(ctx context.Context, request *TestEmailRuleRequest, params TestEmailRuleParams) (TestEmailRuleRes, error) {
@@ -45698,11 +46480,9 @@ func (c *Client) sendTestEmailRule(ctx context.Context, request *TestEmailRuleRe
 // TestEmailRuleOnSample invokes testEmailRuleOnSample operation.
 //
 // Reports what a rule would decide for an email you describe (sender, recipients, subject, plain
-// text, attachment types; optionally whether it is automated or from a mailing list, and its spam
-// score), received now: it is classified, and the conditions and questions decided, as received mail
-// would be. By default it is not automated or from a list; a rule reading a spam score you gave none
-// for decides on none (spam_score is then in unset_columns). Nothing is stored. Test an unsaved tree
-// (covering only your own mail unless evaluation_scope names more) or a saved rule by rule_id. The
+// text, attachment types; optionally automated, from a mailing list, and a spam score), classified
+// and decided as received mail would be. A rule reading a spam score you gave none for decides on
+// none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The
 // answer includes what the classifier read. Needs mail:read, a member's own credential with their
 // full access (not an API key, agent key or narrowed token), and the email rules feature.
 //
@@ -47354,19 +48134,16 @@ func (c *Client) sendUpdateDomain(ctx context.Context, request *UpdateDomainInpu
 
 // UpdateEmailRule invokes updateEmailRule operation.
 //
-// Renames the rule, saves a new version (english and tree together, with an explanation or one the
-// server writes; earlier versions stay) or an earlier one again (restore_version), changes its state
-// (draft is off; observe; active), whose mail it runs over (evaluation_scope, with scope_selection
-// when selected) or its saved expectations (each saved version and new set is judged in
-// expectations_check). Anyone but its author who sees it may only disable it (state draft), and
-// while it is shared only if they manage members from the dashboard. Without evaluation_scope the
-// scope stays; a scope change saves a new version with the same conditions, and what was granted
-// stays. A shared rule keeps its scope; a kind never changes. A saved version takes effect at once
-// (an active rule stays active); affects counts what it reaches. Send if_version, the
-// current_version you read, so a write never replaces a version saved since, or if_revision to
-// refuse it after any update. Without if_expectations_pass a version is saved even when its
-// expectations_check fails. Needs mail:read, a member's own credential with their full access (not
-// an API key, agent key or narrowed token), and the email rules feature.
+// Renames the rule, saves a new version (english and tree together; earlier versions stay) or
+// restores one (restore_version), changes its state (draft is off; observe; active), its scope
+// (evaluation_scope, with scope_selection when selected) or its saved expectations (judged in
+// expectations_check). Anyone but its author who sees it may only set state draft, and while it is
+// shared only if they manage members from the dashboard. A scope change saves a new version; a
+// shared rule keeps its scope, and a kind never changes. A saved version takes effect at once.
+// if_version refuses a write once a version was saved since you read it; if_revision, once anything
+// changed. Without if_expectations_pass a version is saved even when its expectations fail. Needs
+// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
+// token), and the email rules feature.
 //
 // PATCH /email-rules/{id}
 func (c *Client) UpdateEmailRule(ctx context.Context, request *UpdateEmailRuleRequest, params UpdateEmailRuleParams) (UpdateEmailRuleRes, error) {
@@ -50711,6 +51488,151 @@ func (c *Client) sendWhoami(ctx context.Context, params WhoamiParams) (res Whoam
 
 	stage = "DecodeResponse"
 	result, err := decodeWhoamiResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// WithdrawEmailRuleObjection invokes withdrawEmailRuleObjection operation.
+//
+// Withdraws a pending objection you made, and clears its message. Needs mail:read, a member's own
+// credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature. Only on your own dashboard session or the Primitive CLI.
+//
+// POST /email-rule-objections/{id}/withdraw
+func (c *Client) WithdrawEmailRuleObjection(ctx context.Context, params WithdrawEmailRuleObjectionParams) (WithdrawEmailRuleObjectionRes, error) {
+	res, err := c.sendWithdrawEmailRuleObjection(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendWithdrawEmailRuleObjection(ctx context.Context, params WithdrawEmailRuleObjectionParams) (res WithdrawEmailRuleObjectionRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("withdrawEmailRuleObjection"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/email-rule-objections/{id}/withdraw"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, WithdrawEmailRuleObjectionOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/email-rule-objections/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/withdraw"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IdempotencyKey.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, WithdrawEmailRuleObjectionOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeWithdrawEmailRuleObjectionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
