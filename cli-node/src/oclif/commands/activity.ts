@@ -131,10 +131,11 @@ export function formatActivityRows(
 }
 
 /**
- * One line per thing asked of you (a rule request, or an objection to a rule
- * you wrote): its kind, its state, when it was asked, its name, and who asked. `complete` says the listing is the whole of it (every state,
- * from the first page to the last, nothing withheld), the only time an empty one means
- * nobody has asked.
+ * One line per thing asked of you (a rule request made to you, or an
+ * objection to a rule you wrote): its kind, its state, when it was asked, its
+ * name, and who asked. `complete` says the listing is the whole of it (every
+ * state, from the first page to the last, nothing withheld), the only time an
+ * empty one means nobody has asked.
  */
 export function formatAskedRows(
   items: readonly ActivityItem[],
@@ -293,7 +294,7 @@ export class ActivityCreatedCommand extends Command {
   static description =
     `List what you created, newest first, with where each object stands now: Functions, endpoints, pull subscriptions, routes, filters, wake schedules, repeating and scheduled sends, including ones since disabled, deleted or revoked.
 
-  Signed in with \`primitive login\`, you see what you created through any credential of yours (yourself, this CLI, apps you connected, your API keys while they were yours, your agents), with each item naming the credential, plus your API keys, agents, email rules and rule requests. With an API key or an agent's key, you see what that key created.
+  Signed in with \`primitive login\`, you see what you created through any credential of yours (yourself, this CLI, apps you connected, your API keys while they were yours, your agents), with each item naming the credential, plus your API keys, agents, email rules, rule requests and objections to rules over your mail. With an API key or an agent's key, you see what that key created.
 
   Only ids, names and states are shown, never a webhook URL or mail content. Kinds your access does not let you list are named at the end.`;
 

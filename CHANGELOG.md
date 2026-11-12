@@ -629,7 +629,9 @@ date-time is kept as null and sorts last. A sync stops with an error after
   by the rule's author. A decided or withdrawn objection answers `409`
   `not_pending`; a second pending objection to the same rule, or one more
   while you have 50 pending, answers `409` `conflict` with `details.reason`
-  `objection_pending` or `objection_limit`. They need the same credential
+  `objection_pending` or `objection_limit`; accepting an objection to a
+  rule since deleted answers `409` `conflict` with `details.reason`
+  `rule_deleted` (decline it instead). They need the same credential
   as the reads above. In the CLI: `email-rule-oversight
   create-email-rule-objection`, `list-email-rule-objections`,
   `get-email-rule-objection`, `withdraw-email-rule-objection`,
@@ -655,15 +657,16 @@ date-time is kept as null and sorts last. A sync stops with an error after
 - `listActivityObjects` takes `relation`: `created` (the default) or `asked`,
   what other members asked of you: rule requests made to you, and
   objections to rules you wrote. Its `kind` can be `email_rule_objection`:
-  with `created`, a person's own objections (on the dashboard or in the
-  CLI only); with `asked`, the objections to rules they wrote.
+  with `created`, your own objections (on the dashboard or in the CLI
+  only); with `asked`, the objections to rules you wrote.
 - `listDeliveries` takes `endpoint_id`: only deliveries to that endpoint.
-- A delivery's `response_body` is null, and its `last_error_code` is
-  `handler_4xx` or `handler_5xx` in place of a code the webhook chose, for
-  a caller who cannot read the webhook. In answers recorded since November
-  2026, `response_body` hides the webhook URL's query string, its
-  parameters, values long enough to be a credential and any userinfo, and
-  keeps the rest as the endpoint wrote it.
+- For a caller who cannot read the webhook, a delivery's `response_body`
+  is null, its `last_error` gives the status and a note without quoting
+  the webhook's answer, and its `last_error_code` is `handler_4xx` or
+  `handler_5xx` in place of a code the webhook chose. In answers recorded
+  since November 2026, `response_body` hides the webhook URL's query
+  string, its parameters, values long enough to be a credential and any
+  userinfo, and keeps the rest as the endpoint wrote it.
 - `deleteEmailRule` answers `ended_shares`, `keys` and `other_keys` beside
   `deleted` (`DeleteEmailRuleResult`): the shares the delete ended, the keys
   that are not revoked and still list the rule that you may read, by id, name
@@ -812,7 +815,7 @@ date-time is kept as null and sorts last. A sync stops with an error after
     and `not_listed` the rules you can see past the 50 listed. A rule
     listed `read_only` (on the dashboard and in the CLI only) is another
     member's rule that decided on your own mail, with its `author`; its
-    `name` is null once it no longer covers you.
+    `name` is null unless it is known to cover you.
   - `listEmailRuleDecisions` carries each email's `from_address`, `subject`
     and `received_at`.
   - `listEmailRuleVersions` lists versions newest first with `limit` and
@@ -1250,14 +1253,15 @@ parsers.
   (and there every Member reads all of its mail), so from the CLI invite
   with `--role none` and give a role once they have joined.
 - `primitive activity asked` lists what other members asked of you, newest
-  first, open or answered: the rule requests made to you and the objections
-  to rules you wrote, each with its kind, state, who asked and its id. It takes `--state`, `--limit`, `--cursor`,
+  first, open or answered: the rule requests made to you and the
+  objections to rules you wrote, each with its kind, state, who asked or
+  objected, and its id. It takes `--state`, `--limit`, `--cursor`,
   `--all` and `--json`.
 - `primitive activity created` lists what you created, newest first, with
   where each object stands now. Signed in with `primitive login`, it covers
   what you created through any credential of yours, names the credential on
-  each row, and includes your API keys, agents, email rules and rule
-  requests; with an API key or an agent's key, it lists what that key
+  each row, and includes your API keys, agents, email rules, rule requests
+  and objections; with an API key or an agent's key, it lists what that key
   created. Kinds your access does not let you list are named at the end, with
   the permission that would show them. It takes `--kind`, `--state`,
   `--limit`, `--cursor`, `--all` and `--json`.
