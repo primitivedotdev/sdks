@@ -27,7 +27,7 @@ go get github.com/primitivedotdev/sdks/sdk-go/v3@latest
 To try the 3.0.0 preview, pin it:
 
 ```bash
-go get github.com/primitivedotdev/sdks/sdk-go/v3@v3.0.0-preview.10
+go get github.com/primitivedotdev/sdks/sdk-go/v3@v3.0.0-preview.11
 ```
 
 ## Upgrading to v3

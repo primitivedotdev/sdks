@@ -924,7 +924,7 @@ wheels = [
 
 [[package]]
 name = "primitivedotdev"
-version = "3.0.0rc10"
+version = "3.0.0rc11"
 source = { editable = "." }
 dependencies = [
     { name = "attrs" },
