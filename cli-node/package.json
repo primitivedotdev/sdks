@@ -191,6 +191,9 @@
       "email-rules": {
         "description": "Rules written in plain English that pick out received mail"
       },
+      "email-rule-oversight": {
+        "description": "The email rules that reach your own mailboxes, whoever wrote them, read-only"
+      },
       "routes": {
         "description": "Manage recipient routes. Bind an address pattern to an endpoint or function: `primitive routes add alice@d --function <id>`, `primitive routes list`, `primitive routes test <recipient>`, `primitive routes remove <id>`."
       },
