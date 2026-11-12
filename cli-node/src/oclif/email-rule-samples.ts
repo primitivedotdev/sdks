@@ -85,9 +85,21 @@ function cutLabel(text: string, max: number): string {
 }
 
 /**
- * A look-alike as a must-not-match sample: the email as written, labelled
- * with its kind and why the rule should not match it ("medical: ..."), or
- * the why alone when both do not fit a label.
+ * Whether a look-alike is one the rule should match: its `expected` as the
+ * API gives it. An answer without one (an older server) is must-not-match,
+ * as every look-alike was.
+ */
+function lookAlikeExpected(
+  lookAlike: Record<string, unknown>,
+): "match" | "no_match" {
+  return lookAlike.expected === "match" ? "match" : "no_match";
+}
+
+/**
+ * A look-alike as a sample, keeping its `expected` (most must not match; a
+ * near case the rule should take must match): the email as written,
+ * labelled with its kind and why ("medical: ..."), or the why alone when
+ * both do not fit a label.
  */
 export function lookAlikeSample(lookAlike: unknown): ExpectationSample | null {
   if (!isRecord(lookAlike) || !isRecord(lookAlike.email)) return null;
@@ -101,7 +113,7 @@ export function lookAlikeSample(lookAlike: unknown): ExpectationSample | null {
         ? why
         : `${cutLabel(why, SAMPLE_LABEL_MAX - 3)}...`;
   return {
-    expected: "no_match",
+    expected: lookAlikeExpected(lookAlike),
     ...(label ? { label } : {}),
     email: lookAlike.email,
   };
@@ -211,8 +223,8 @@ const SAMPLE_KEYS = new Set(["expected", "label", "email", "id", "created_at"]);
 /**
  * The samples a file holds: a JSON array of samples, as --samples-file
  * writes them, or a generate-look-alikes answer saved as the command printed
- * it (with or without --json), whose look-alikes become must-not-match
- * samples numbered as its report numbered them. Only a literal [] holds no
+ * it (with or without --json), whose look-alikes become samples, each
+ * keeping whether it must match, numbered as its report numbered them. Only a literal [] holds no
  * samples; an answer with none is refused, so it never empties a rule's.
  */
 export function samplesFromJson(
@@ -429,29 +441,41 @@ export function pickFlagHelp(flags: readonly string[]): string {
 
 // generate-look-alikes
 
-/** What the rule decided for a look-alike, and what its status makes of it. */
-function decidedLine(outcome: unknown, status: unknown): string {
+/**
+ * What the rule decided for a look-alike, and what its status makes of it,
+ * against what it should do: leave it (`no_match`), or take it (`match`).
+ */
+function decidedLine(
+  outcome: unknown,
+  status: unknown,
+  expected: "match" | "no_match",
+): string {
   if (outcome === "not_decided")
     return "The rule did not decide it: it was not reached in time, or deciding it failed.";
   if (outcome === "matched")
     return status === "undecided"
       ? "The rule matched it, but it reads a spam score, which a look-alike does not carry, so this one is undecided."
-      : "The rule matched it, so mail like it would be shared.";
+      : expected === "match"
+        ? "The rule matched it, as it should."
+        : "The rule matched it, so mail like it would be shared.";
   const decided =
     outcome === "near_miss"
       ? "The rule nearly matched it, but did not"
       : "The rule did not match it";
-  return status === "undecided"
-    ? `${decided}, on something it could not decide (its classification failed, a fact or a question's answer is missing, or it reads a spam score, which a look-alike does not carry), so this one is undecided.`
-    : `${decided}.`;
+  if (status === "undecided")
+    return `${decided}, on something it could not decide (its classification failed, a fact or a question's answer is missing, or it reads a spam score, which a look-alike does not carry), so this one is undecided.`;
+  if (expected === "no_match") return `${decided}.`;
+  // A must-match one it nearly took reads "nearly matched it, but did not", so the miss is said with "though".
+  return `${decided}, ${outcome === "near_miss" ? "though" : "but"} it should: mail like it would be missed.`;
 }
 
 /**
  * The stderr report of generate-look-alikes: each look-alike numbered as the
  * samples file numbers it, with its status, kind, subject, sender, why the
- * rule should not match it and what the rule decided; the counts; the
- * answer's note; and how to save the ones you choose. With --samples-file it
- * writes every look-alike there as a must-not-match sample, in that order.
+ * rule should (or should not) match it and what the rule decided; the
+ * counts; the answer's note; and how to save the ones you choose. With
+ * --samples-file it writes every look-alike there as a sample keeping its
+ * expected, in that order.
  */
 export function lookAlikesReport(
   data: unknown,
@@ -484,10 +508,13 @@ export function lookAlikesReport(
     const kind = typeof lookAlike.kind === "string" ? lookAlike.kind : "other";
     const outcome =
       typeof lookAlike.outcome === "string" ? lookAlike.outcome : "not_decided";
+    const expected = lookAlikeExpected(lookAlike);
     lines.push(`${index + 1}. ${status}  ${kind}  ${subject} from ${from}`);
     if (typeof lookAlike.why === "string" && lookAlike.why.trim())
-      lines.push(`   Why it should not match: ${lookAlike.why.trim()}`);
-    lines.push(`   ${decidedLine(outcome, status)}`);
+      lines.push(
+        `   Why it should ${expected === "match" ? "" : "not "}match: ${lookAlike.why.trim()}`,
+      );
+    lines.push(`   ${decidedLine(outcome, status, expected)}`);
   });
   const counts = isRecord(data.counts) ? data.counts : {};
   const count = (key: string) =>
@@ -499,22 +526,22 @@ export function lookAlikesReport(
   if (typeof data.note === "string" && data.note.trim())
     lines.push(data.note.trim());
 
-  // Which to keep: those it matched, which it must not; else, when some
-  // are undecided (and would stay so as samples), those it did not match.
+  // Which to keep: those it decided the wrong way (it matched one it must
+  // not, or missed one it must match); else, when some are undecided (and
+  // would stay so as samples), those it decided as each should be.
   const numbered = (status: string) =>
     entries
       .map(({ lookAlike }, index) =>
         lookAlike.status === status ? index + 1 : 0,
       )
       .filter((n) => n > 0);
-  const matched = numbered("failed");
+  const wanted = (n: number) => entries[n - 1]?.sample.expected === "match";
+  const failed = numbered("failed");
+  const missed = failed.filter(wanted);
+  const matched = failed.filter((n) => !wanted(n));
   const undecided = numbered("undecided");
   const chosen =
-    matched.length > 0
-      ? matched
-      : undecided.length > 0
-        ? numbered("passed")
-        : [];
+    failed.length > 0 ? failed : undecided.length > 0 ? numbered("passed") : [];
   const pick = chosen.length > 0 ? ` --pick ${chosen.join(",")}` : "";
   const body = isRecord(request.body) ? request.body : {};
   const ruleId = typeof body.rule_id === "string" ? body.rule_id : null;
@@ -535,15 +562,21 @@ export function lookAlikesReport(
     entries.length > 0 && undecided.length === entries.length
       ? `None of them was decided (each says why above), so saved as they are they may stay undecided; if the rule reads a spam score, give each email a spam_score${typeof file === "string" ? " in the file" : ""} first.`
       : "";
+  const keepMatched = `${one(matched.length, "the one it matched as an email", "the ones it matched as emails")} it must not match`;
+  const keepMissed = `${one(missed.length, "the one it missed as an email", "the ones it missed as emails")} it must match`;
   const which =
-    matched.length > 0
-      ? `Keep ${one(matched.length, "the one it matched as an email", "the ones it matched as emails")} it must not match`
+    failed.length > 0
+      ? `Keep ${matched.length > 0 && missed.length > 0 ? `${keepMatched}, and ${keepMissed}` : matched.length > 0 ? keepMatched : keepMissed}`
       : chosen.length > 0
-        ? `Keep ${one(chosen.length, "the one it did not match as an email", "the ones it did not match as emails")} it must not match (an undecided one may stay undecided as a sample)`
-        : `Keep ${one(entries.length, "it as an email", "them as emails")} the rule must not match`;
+        ? chosen.some(wanted)
+          ? `Keep ${one(chosen.length, "the one", "the ones")} it decided as expected (each keeps whether it must match; an undecided one may stay undecided as a sample)`
+          : `Keep ${one(chosen.length, "the one it did not match as an email", "the ones it did not match as emails")} it must not match (an undecided one may stay undecided as a sample)`
+        : entries.some((_, index) => wanted(index + 1))
+          ? `Keep ${one(entries.length, "it as an email", "them as emails")} the rule must match or not, as each says`
+          : `Keep ${one(entries.length, "it as an email", "them as emails")} the rule must not match`;
   const test =
-    matched.length > 0
-      ? ` Test an edited rule on ${one(matched.length, "it", "them")} with \`primitive email-rules test-email-rule ${ruleId ? `--rule-id ${ruleId}` : "--body-file <body.json>"} --${EXPECT_SAMPLES_FILE_FLAG} ${target}${pick}\`.`
+    failed.length > 0
+      ? ` Test an edited rule on ${one(failed.length, "it", "them")} with \`primitive email-rules test-email-rule ${ruleId ? `--rule-id ${ruleId}` : "--body-file <body.json>"} --${EXPECT_SAMPLES_FILE_FLAG} ${target}${pick}\`.`
       : "";
   if (typeof file === "string") {
     const samples = entries.map((entry) => entry.sample);
@@ -575,7 +608,7 @@ export function lookAlikesReport(
     lines.push(
       noneDecided
         ? `${wrote} ${noneDecided}`
-        : `${wrote} ${which} with ${save}; --pick takes any of the numbers.${test}`,
+        : `${wrote} ${which}, with ${save}; --pick takes any of the numbers.${test}`,
     );
   } else if (noneDecided) {
     lines.push(noneDecided);

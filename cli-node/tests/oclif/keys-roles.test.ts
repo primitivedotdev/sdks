@@ -866,6 +866,104 @@ describe("keys commands", () => {
     });
   });
 
+  it("create prints the address warnings, such as an address beside a rule read in full, and --json keeps them", async () => {
+    const secret = `prim_${"b".repeat(64)}`;
+    const whole = {
+      address: "ops@acme.example",
+      reason: "whole_mailbox",
+      description:
+        "ops@acme.example is listed beside email rules, so this key reads all of its mail, not only what the rules match.",
+    };
+    const created = {
+      id: KEY_ID,
+      name: "orders",
+      key: secret,
+      key_prefix: "prim_bbbbbbbb...",
+      grant: {
+        template: null,
+        credential_grant_id: "g",
+        permissions: ["mail:read"],
+        mail_scope: {
+          addresses: ["ops@acme.example"],
+          domains: [],
+          rules: [RULE_ID],
+        },
+        resources: null,
+      },
+      expires_at: null,
+      conditions: null,
+      warnings: [],
+      address_warnings: [whole],
+    };
+    useServer(() =>
+      Response.json({ success: true, data: created }, { status: 201 }),
+    );
+    const result = await run(KeysCreateCommand, [
+      "--name",
+      "orders",
+      "--permission",
+      "mail:read",
+      "--rule",
+      RULE_ID,
+      "--address",
+      "ops@acme.example",
+      "--step-up-token",
+      "pstep_x",
+    ]);
+    expect(result.exitCode).toBeUndefined();
+    expect(result.stderr).toContain(`Note: ${whole.description}`);
+    const json = await run(KeysCreateCommand, [
+      "--name",
+      "orders",
+      "--permission",
+      "mail:read",
+      "--rule",
+      RULE_ID,
+      "--address",
+      "ops@acme.example",
+      "--step-up-token",
+      "pstep_x",
+      "--json",
+    ]);
+    expect(json.stderr).not.toContain("Note:");
+    expect(JSON.parse(json.stdout)).toMatchObject({
+      address_warnings: [whole],
+    });
+  });
+
+  it("update prints the address warnings the change answers with", async () => {
+    const description =
+      "acme.example is listed beside email rules, so this key reads all of its mail, not only what the rules match.";
+    let reads = 0;
+    useServer((request) => {
+      if (request.method === "GET") {
+        reads += 1;
+        return Response.json({ success: true, data: READER });
+      }
+      return Response.json({
+        success: true,
+        data: {
+          id: KEY_ID,
+          changed: ["grant"],
+          warnings: [],
+          address_warnings: [
+            { address: "acme.example", reason: "whole_mailbox", description },
+          ],
+        },
+      });
+    });
+    const result = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--add",
+      "mail:send",
+      "--step-up-token",
+      "pstep_z",
+    ]);
+    expect(result.exitCode).toBeUndefined();
+    expect(reads).toBeGreaterThan(0);
+    expect(result.stderr).toContain(`Note: ${description}`);
+  });
+
   it("update adds permissions to a read-only key, guarded by the grant it read, and says what happens to held requests", async () => {
     const reader = READER;
     const upgraded = {

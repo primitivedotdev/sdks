@@ -1099,12 +1099,16 @@ parsers.
   already active; a grant rule is still refused.
 - Without `--json`, `email-rules generate-look-alikes` prints each
   look-alike email it wrote, numbered from 1: its status, kind, subject and
-  sender, why the rule should not match it and what the rule decided, then
-  the counts, the answer's note and which to save, with the command that
-  saves them. With `--samples-file <file>`, with or without `--json`, it
-  writes them to that file as a JSON array of must-not-match samples in the
-  same order. It exits 1 (`samples_file_not_written`) when it cannot, and
-  when no look-alikes came back, leaving an existing file as it was.
+  sender, why the rule should (or, for most, should not) match it and what
+  the rule decided, saying when it missed one it should take, then the
+  counts, the answer's note and which to save (those it decided the wrong
+  way), with the command that saves them. With `--samples-file <file>`, with
+  or without `--json`, it writes them to that file as a JSON array of
+  samples in the same order, each keeping its `expected`, so a near case the
+  rule should take is saved as must-match. The numbered report is on stderr
+  and only without `--json`. It exits 1 (`samples_file_not_written`) when
+  it cannot, and when no look-alikes came back, leaving an existing file as
+  it was.
 - `email-rules create-email-rule --expectation-samples-file` and
   `update-email-rule --expectation-samples-file` (replace; a file holding
   `[]` removes them) or `--add-expectation-samples-file` (add), not both,
@@ -1120,18 +1124,28 @@ parsers.
   reason given exits 1, since sending the write again may not decide it.
 - `email-rules accept-email-rule-request --expectation-samples-file` (with
   `--pick`) keeps made-up emails from such a file on the rule the accept
-  writes, such as a request's look-alikes it must never match;
+  writes, such as a request's look-alikes, each keeping whether it must match;
   `generate-look-alikes --request-id` says so in its save hint.
 - Without `--json`, `test-email-rule` names each made-up email that did not
   pass: by its number in the samples file, or as `saved sample N` for the
   rule's own. With or without `--json`, its exit code counts them: 1 when
   one failed or may stay undecided, 3 when a later test can decide it.
+- `email-rules end-email-rule-share` prints the answer's note, that ending
+  a share leaves the rule itself as it was. An empty `email-rules
+  list-email-rule-requests`, `list-email-rule-shares` or
+  `list-given-email-rule-shares` says which default filter hid the rest
+  (`--box all`, `--status any`, `--live any`).
+- `keys create` and `keys update` print the answer's `address_warnings`
+  without `--json`, such as an address or domain listed beside `--rule`,
+  which the key reads in full.
 - `email-rules update-email-rule --fail-on-expectations` sends
   `if_expectations_pass`: the server judges the rule as the write would
   leave it before saving, and saves nothing when an expectation failed (exit
-  1), one is undecided (exit 3, or 1 when the rule cannot run as its author)
-  or the rule has none (exit 1), with a hint naming them and what to do. It
-  can take as long as a test of the rule. A write the server does not judge
+  1), one names an email the rule cannot read (`expectations_unreadable`,
+  exit 1, since sending the write again never decides it), one is undecided
+  (exit 3, or 1 when the rule cannot run as its author) or the rule has none
+  (exit 1), with a hint naming them and what to do. It can take as long as
+  a test of the rule. A write the server does not judge
   (one changing only expectations, say) is saved, and its exit code follows
   the check made after saving, which now says so. `create-email-rule
   --fail-on-expectations` still sets the exit code from the check made after
