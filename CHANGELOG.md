@@ -16,34 +16,57 @@ the same OpenAPI spec. See `RELEASE.md`.
 OpenAPI document the API serves, and every client is regenerated from it. Most
 of the changes below follow from that document.
 
-Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.8` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.8`), and `3.0.0rc8` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.7` (`3.0.0rc7`), which had the server refuse a failing rule update and added rule revisions, reach and breadth, `3.0.0-preview.6` (`3.0.0rc6`), which added key expiry and rule changes to `keys update` and the email rule request webhook events, `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
+Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.9` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.9`), and `3.0.0rc9` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.8` (`3.0.0rc8`), which added look-alikes, made-up emails kept as a rule's expectations and do-not-share rules created active, `3.0.0-preview.7` (`3.0.0rc7`), which had the server refuse a failing rule update and added rule revisions, reach and breadth, `3.0.0-preview.6` (`3.0.0rc6`), which added key expiry and rule changes to `keys update` and the email rule request webhook events, `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
 
-What `3.0.0-preview.8` (`3.0.0rc8`) changes from `3.0.0-preview.7`:
+What `3.0.0-preview.9` (`3.0.0rc9`) changes from `3.0.0-preview.8`:
 
-- The spec follows the API's current release. `generateLookAlikes` writes
-  made-up emails close to what a rule describes that it should not match,
-  for an unsaved tree, a saved rule or a rule request, with what the rule
-  decides for each. A rule keeps made-up emails as expectations
-  (`expectation_samples` on create, update, reads and a request's accept;
-  `add_expectation_samples` on update), judged by a test (`expect.samples`)
-  and by a guarded update (`failed_samples`, `undecided_samples`). A
-  do-not-share rule can be created active and carries `protection_note`; a
-  rule may ask five questions; rule requests carry `notice` and
-  `edited_on_accept`; and a revoke reports what still acts for and delivers
-  from what the key set up, and which keys it replaced were revoked with it.
-- `email-rules generate-look-alikes` prints each look-alike numbered, and
-  `--samples-file` writes them in the same order as must-not-match samples.
-  `create-email-rule`, `update-email-rule` and `accept-email-rule-request`
-  save chosen ones with `--expectation-samples-file` or
-  `--add-expectation-samples-file` and `--pick`, and `test-email-rule
-  --expect-samples-file` tests a rule on them. Test and write reports name
-  each made-up email that did not pass by its number in the file.
-- `compile-email-rule` prints its warnings, and rule reports print a
-  do-not-share rule's `protection_note`; `create-email-rule --state active`
-  creates a do-not-share rule already active.
-- `keys revoke` says what still acts for and delivers from what the key set
-  up or carried on, and which keys it replaced were revoked with it or left
-  working.
+- The spec follows the API's current release. Email rule oversight
+  (`listEmailRulesCoveringMe`, `getEmailRuleCoveringMe` and
+  `listEmailRuleDecisionsOnMyMail`) reads the rules that reach your own
+  mailboxes, whoever wrote them, and what they decided about mail at your
+  own mailboxes. They are read-only and answer only a member's own session
+  or the CLI; other credentials get `403` with `details.reason`
+  `first_party_required`. `getEmailRule` answers `403` with
+  `details.reason` `covering_view_only` for a rule you can read only that
+  way.
+- A look-alike carries `expected`: most are expected not to match, and
+  without `kinds` a third are near cases the rule should match. A
+  look-alike's default `to` is the first address a selected scope names.
+  `updateEmailRule` with `if_expectations_pass` can refuse with `409`
+  `expectations_unreadable` when an expectation names an email the rule
+  cannot read (`details.unreadable` lists them). Ending a share answers
+  with a `note` and, to the member who shared, the rule's `rule_id`. A
+  do-not-share rule's several questions are alternatives, any one answered
+  yes blocks, and `protection_note` can say so. `compileEmailRule` warns
+  when a question mentions attachments.
+- `listEmailRuleResults` changes what `hidden` means: it now counts the
+  rules that decided on the email that you cannot see. The rules you can
+  see past the 50 listed, which `hidden` counted before, are now
+  `not_listed`. A rule listed `read_only` (on the dashboard and in the CLI
+  only) is another member's rule that decided on your own mail, with its
+  `author`. A listed rule's `name` can now be null, once it no longer
+  covers you (in Go a `NilString`).
+- A delivery's `endpoint_url` and the `label` of a revoke's
+  `standing_objects` show only a webhook's scheme and host, with the path
+  and query hidden. An attempt's `response_body` is null for a redirect
+  and otherwise hides the webhook URL's path and query.
+- A held scheduled send's `hold` `reason` can be `sending_ip_warmup_cap`.
+  `listRoles` and `getAccessMode` say they need `members:read`.
+- The CLI adds the `email-rule-oversight` topic:
+  `list-email-rules-covering-me`, `get-email-rule-covering-me` and
+  `list-email-rule-decisions-on-my-mail`.
+- `email-rules generate-look-alikes` says when the rule missed a near case
+  it should take, and `--samples-file` keeps each look-alike's `expected`,
+  so such a case is saved as must-match.
+- `email-rules update-email-rule --fail-on-expectations` refused with
+  `expectations_unreadable` exits 1, with a hint naming the emails the rule
+  cannot read.
+- `email-rules end-email-rule-share` prints the answer's note. An empty
+  `list-email-rule-requests`, `list-email-rule-shares` or
+  `list-given-email-rule-shares` says which default filter hid the rest.
+- `keys create` and `keys update` print the answer's `address_warnings`.
+- In Go, an optional field with a fixed value is encoded only when it is
+  set, so re-encoding a decoded response no longer adds it.
 
 ### Breaking changes
 
@@ -53,7 +76,7 @@ What `3.0.0-preview.8` (`3.0.0rc8`) changes from `3.0.0-preview.7`:
   CLI moves from 1.75.0.
 - The Go module path is `github.com/primitivedotdev/sdks/sdk-go/v3`. Update
   imports from `.../sdk-go/v2` and `.../sdk-go/v2/api`.
-- `primitive functions init` scaffolds projects on `^3.0.0-preview.8` of both
+- `primitive functions init` scaffolds projects on `^3.0.0-preview.9` of both
   `@primitivedotdev/sdk` and `primitive`.
 
 #### Removed code
