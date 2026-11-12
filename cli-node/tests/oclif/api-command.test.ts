@@ -1041,9 +1041,13 @@ describe("createOperationCommand description", () => {
     };
     const flag = Cmd.flags.enabled as {
       allowNo?: boolean;
+      description?: string;
     };
 
     expect(flag.allowNo).toBe(true);
+    expect(flag.description).toBe(
+      "Enable or disable the filter. Takes true or false as its value; given alone, true.",
+    );
   });
 
   it("adds --envelope to non-binary generated commands", () => {
