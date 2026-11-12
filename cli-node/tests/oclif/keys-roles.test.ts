@@ -33,6 +33,7 @@ import {
   KeysRotateCommand,
   KeysUpdateCommand,
   nextRules,
+  revokeCascadeLines,
   STORE_SECRET_NOTICE,
   standingSummary,
   stepUpUrlOf,
@@ -2023,6 +2024,163 @@ describe("keys commands", () => {
       id: KEY_ID,
     });
     expect(revoked.stdout).toContain(`Revoked key ${KEY_ID}.`);
+  });
+
+  it("revoke says what still acts and delivers for each item, and the keys it replaced", async () => {
+    useServer(() =>
+      Response.json({
+        success: true,
+        data: {
+          revoked: 2,
+          kind: "org_key",
+          id: KEY_ID,
+          predecessors_revoked_count: 1,
+          predecessors_left: 1,
+          predecessors_revoked: ["prev-1"],
+          predecessors_not_revoked: ["prev-2"],
+          standing_objects: [
+            {
+              kind: "endpoint",
+              id: "a",
+              label: "https://org.example/hook",
+              org_owned: true,
+              still_acting: true,
+              acting_key_id: null,
+              delivering: false,
+            },
+            {
+              kind: "endpoint",
+              id: "b",
+              label: "https://own.example/hook?token=secret",
+              org_owned: false,
+              still_acting: true,
+              acting_key_id: "next-1",
+              delivering: true,
+            },
+            {
+              kind: "recipient_route",
+              id: "c",
+              label: "support@acme.example",
+              org_owned: false,
+              still_acting: false,
+              acting_key_id: null,
+            },
+            {
+              kind: "endpoint",
+              id: "d",
+              label: "https://unknown.example/hook",
+              org_owned: false,
+              still_acting: null,
+              delivering: null,
+            },
+            {
+              kind: "function_trigger",
+              id: "fn-1",
+              label: "function",
+              org_owned: false,
+              still_acting: true,
+              acting_key_id: "prev-2",
+            },
+            {
+              kind: "filter_rule",
+              id: "f",
+              label: "*@spam.example",
+              org_owned: false,
+              still_acting: true,
+              acting_key_id: null,
+            },
+            {
+              kind: "wake_schedule",
+              id: "w",
+              label: "check to a@b.example",
+              org_owned: false,
+            },
+          ],
+        },
+      }),
+    );
+    const revoked = await run(KeysRevokeCommand, [KEY_ID, "--yes"]);
+    expect(revoked.stdout.trim().split("\n")).toEqual([
+      `Revoked key ${KEY_ID}.`,
+      "Also revoked 1 key it replaced, still in its rotation overlap: prev-1.",
+      "1 key it replaced is left working until its overlap ends, because you may not revoke it: prev-2; what it acts for keeps working until then.",
+      "What it set up, owns or carried on for the keys it replaced (revoking deletes none of it):",
+      "  webhook https://org.example/hook: the organization owns it, so revoking does not stop it; not delivering received mail.",
+      "  webhook https://own.example/hook?...: owned by the revoked key; key next-1 still acts for it, so it keeps working while that key does; still delivering received mail.",
+      "  route support@acme.example: owned by the revoked key; nothing acts for it, so it does not work.",
+      "  webhook https://unknown.example/hook: owned by the revoked key; whether anything still acts for it could not be read, and it works only while something does; whether it still delivers could not be read.",
+      "  Function trigger fn-1: owned by the revoked key; key prev-2 still acts for it until that key's overlap ends.",
+      "  filter *@spam.example: owned by the revoked key; someone still acts for it, so it keeps working while they do.",
+      "  wake schedule check to a@b.example: owned by the revoked key; it keeps working only while someone can still act for it.",
+    ]);
+    expect(revoked.stdout).not.toContain("secret");
+  });
+
+  it("revoke of a key already revoked says so without 'nothing changed' when it revoked keys it replaced", async () => {
+    useServer(() =>
+      Response.json({
+        success: true,
+        data: {
+          revoked: 1,
+          kind: "org_key",
+          id: KEY_ID,
+          already_revoked: true,
+          predecessors_revoked_count: 1,
+          standing_objects: [],
+        },
+      }),
+    );
+    const again = await run(KeysRevokeCommand, [KEY_ID, "--yes"]);
+    expect(again.stdout.trim().split("\n")).toEqual([
+      `Key ${KEY_ID} was already revoked.`,
+      "Also revoked 1 key it replaced, still in its rotation overlap.",
+    ]);
+  });
+
+  it("revoke lists at most ten items, and counts keys in the plural", () => {
+    const standing = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        kind: "endpoint",
+        id: `e${i}`,
+        label: `https://h${i}.example`,
+        org_owned: false,
+        still_acting: false,
+        delivering: false,
+      }));
+    const lines = revokeCascadeLines({
+      predecessors_revoked_count: 2,
+      predecessors_left: 3,
+      standing_objects: standing(11),
+    });
+    expect(lines[0]).toBe(
+      "Also revoked 2 keys it replaced, still in their rotation overlap.",
+    );
+    expect(lines[1]).toBe(
+      "3 keys it replaced are left working until their overlap ends, because you may not revoke them; what they act for keeps working until then.",
+    );
+    expect(lines).toHaveLength(2 + 1 + 10 + 1);
+    expect(lines.at(-1)).toBe("  1 more; --json lists them all.");
+    expect(lines[3]).toBe(
+      "  webhook https://h0.example: owned by the revoked key; nothing acts for it, so it does not work; not delivering received mail.",
+    );
+    // Exactly ten: no "more" line.
+    const ten = revokeCascadeLines({ standing_objects: standing(10) });
+    expect(ten).toHaveLength(1 + 10);
+    expect(ten.at(-1)).not.toContain("more");
+    // No predecessors and an older server's items: the earlier summary.
+    expect(
+      revokeCascadeLines({
+        predecessors_revoked_count: 0,
+        predecessors_left: 0,
+        standing_objects: [
+          { kind: "endpoint", id: "b", label: "y", org_owned: false },
+        ],
+      }),
+    ).toEqual([
+      "1 item(s) the key owned itself or carried on for the keys it was rotated from, such as its own webhooks, which keep working only while someone can still act for them, such as a key of the same rotation that still works. Review them with --json.",
+    ]);
+    expect(revokeCascadeLines({ standing_objects: [] })).toEqual([]);
+    expect(revokeCascadeLines(null)).toEqual([]);
   });
 
   it("revoke says when the key was already revoked", async () => {

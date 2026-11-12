@@ -940,6 +940,16 @@ downgrading, or sign in again afterwards.
   permissions a key can hold as this CLI version lists them. An update
   refused over a permission the key already holds says to take it off with
   `--remove`. `keys create --help-full` lists the permissions by area.
+- `keys revoke` says how many keys it replaced were revoked with it (those
+  still in their rotation overlap) and how many were left working because
+  you may not revoke them, naming them when you may read the organization's
+  keys. It lists what the key set up, owns or carried on for the keys it
+  replaced, each with whether the organization owns it, whether anything
+  still acts for it (and which key, when you may read the organization's
+  keys), and, for a webhook, whether it still delivers received mail. A
+  webhook's URL is shown without its query. It lists ten and counts the
+  rest; `--json` has them all. Revoking a key already revoked no longer
+  says nothing changed when it revoked keys the key had replaced.
 - `keys list --include-revoked` lists revoked keys too, each marked
   `[revoked]` with when it was revoked (with `--json`, `status`,
   `revoked_at` and `revoked_by`), so a revocation can be confirmed without
