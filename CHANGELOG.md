@@ -1103,14 +1103,19 @@ parsers.
   `update-email-rule --expectation-samples-file` (replace; a file holding
   `[]` removes them) or `--add-expectation-samples-file` (add), not both,
   save made-up emails from such a file, or from a saved
-  `generate-look-alikes` answer. `--pick 2,4` takes only those numbers and
-  refuses one the file does not hold. A rule write's report names the
-  made-up emails its check failed on or did not judge, by their numbers in
-  the file, and an update refused by `--fail-on-expectations` names them
-  too: by their numbers in the file when the write replaced them, and when
-  it added some, each by its place in the set judged, the rule's saved ones
-  first. One undecided for no reason given exits 1, since sending the write
-  again may not decide it.
+  `generate-look-alikes` answer. `test-email-rule --expect-samples-file`
+  sends them in `expect.samples`, beside any emails by id. `--pick 2,4`
+  takes only those numbers and refuses one the file does not hold. A rule
+  write's report names the made-up emails its check failed on or did not
+  judge, by their numbers in the file, and an update refused by
+  `--fail-on-expectations` names them too: by their numbers in the file
+  when the write replaced them, and when it added some, each by its place
+  in the set judged, the rule's saved ones first. One undecided for no
+  reason given exits 1, since sending the write again may not decide it.
+- Without `--json`, `test-email-rule` names each made-up email that did not
+  pass: by its number in the samples file, or as `saved sample N` for the
+  rule's own. With or without `--json`, its exit code counts them: 1 when
+  one failed or may stay undecided, 3 when a later test can decide it.
 - `email-rules update-email-rule --fail-on-expectations` sends
   `if_expectations_pass`: the server judges the rule as the write would
   leave it before saving, and saves nothing when an expectation failed (exit
