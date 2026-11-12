@@ -93,8 +93,9 @@ def sync_detailed(
 ) -> Response[ErrorResponse | UpdateAccountResponse200]:
     """ Update account settings
 
-     Update the mutable account settings (such as display name and notification preferences) for the
-    authenticated organization.
+     Update the organization's spam threshold (spam_threshold) and whether an email's content is
+    discarded once a webhook confirms receipt (discard_content_on_webhook_confirmed), the opt-in POST
+    /emails/{id}/discard-content needs.
 
     Args:
         body (UpdateAccountInput):
@@ -127,8 +128,9 @@ def sync(
 ) -> ErrorResponse | UpdateAccountResponse200 | None:
     """ Update account settings
 
-     Update the mutable account settings (such as display name and notification preferences) for the
-    authenticated organization.
+     Update the organization's spam threshold (spam_threshold) and whether an email's content is
+    discarded once a webhook confirms receipt (discard_content_on_webhook_confirmed), the opt-in POST
+    /emails/{id}/discard-content needs.
 
     Args:
         body (UpdateAccountInput):
@@ -156,8 +158,9 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | UpdateAccountResponse200]:
     """ Update account settings
 
-     Update the mutable account settings (such as display name and notification preferences) for the
-    authenticated organization.
+     Update the organization's spam threshold (spam_threshold) and whether an email's content is
+    discarded once a webhook confirms receipt (discard_content_on_webhook_confirmed), the opt-in POST
+    /emails/{id}/discard-content needs.
 
     Args:
         body (UpdateAccountInput):
@@ -190,8 +193,9 @@ async def asyncio(
 ) -> ErrorResponse | UpdateAccountResponse200 | None:
     """ Update account settings
 
-     Update the mutable account settings (such as display name and notification preferences) for the
-    authenticated organization.
+     Update the organization's spam threshold (spam_threshold) and whether an email's content is
+    discarded once a webhook confirms receipt (discard_content_on_webhook_confirmed), the opt-in POST
+    /emails/{id}/discard-content needs.
 
     Args:
         body (UpdateAccountInput):

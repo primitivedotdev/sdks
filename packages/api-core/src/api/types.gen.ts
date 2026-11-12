@@ -106,7 +106,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'ownership_proof_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'access_mode_unavailable' | 'agent_account_managed_domain_only' | 'agent_changed' | 'agent_limit' | 'agent_misconfigured' | 'agent_work_agreement_replay_conflict' | 'agent_work_deadline_not_future' | 'agent_work_inactive' | 'agent_work_not_found' | 'agent_work_replay_conflict' | 'agent_work_version_conflict' | 'already_claimed' | 'already_member' | 'archive_busy' | 'archive_invalid' | 'archive_limit_exceeded' | 'archive_unsafe_path' | 'archive_unsupported' | 'attachment_name_ambiguous' | 'attachment_not_archive' | 'authorization_unavailable' | 'bad_request' | 'body_not_supported' | 'build_failed' | 'builder_unavailable' | 'builtin_role' | 'chunk_too_large' | 'chunks_missing' | 'claim_failed' | 'claim_not_pending' | 'cleanup_incomplete' | 'cli_access_refused' | 'code_expired' | 'confirmation_required' | 'connection_already_claimed' | 'connection_cleanup_pending' | 'connection_create_request_conflict' | 'connection_owner_address_required' | 'connection_removed' | 'connection_revoked' | 'contact_request_invalid' | 'contact_request_not_ready' | 'contact_request_unauthenticated' | 'contact_request_unavailable' | 'cursor_expired' | 'delete_failed' | 'delivery_held' | 'delivery_unavailable' | 'deploy_failed' | 'deploy_outcome_unknown' | 'direct_delivery_failed' | 'direct_delivery_unavailable' | 'directory_limit' | 'dns_publication_failed' | 'dns_publication_pending' | 'dns_verification_failed' | 'download_token_expired' | 'download_token_invalid' | 'email_admission_unavailable' | 'email_in_use' | 'email_rule_author_only' | 'email_rule_author_unresolvable' | 'email_rule_compiler_unavailable' | 'email_rule_conflict' | 'email_rule_look_alikes_not_written' | 'email_rule_not_compiled' | 'email_rule_request_limit' | 'email_rule_request_not_pending' | 'email_rule_request_not_withdrawn' | 'email_rule_request_party_left' | 'email_rule_request_proposer_only' | 'email_rule_request_target_only' | 'email_rule_scope_locked' | 'email_rule_scope_not_readable' | 'email_rule_share_ended' | 'email_rule_share_limit' | 'embedding_provider_unavailable' | 'entitlement' | 'expectations_failed' | 'expectations_undecided' | 'expired' | 'feature_not_enabled' | 'fresh_send_not_authorized' | 'function_cannot_receive_mail' | 'function_delivery_refused' | 'function_effect_email_mismatch' | 'function_effect_mismatch' | 'function_forked' | 'function_github_linked' | 'function_key_missing' | 'function_key_runtime_only' | 'function_not_deployed' | 'function_scope_forbidden' | 'function_signing_secret_missing' | 'function_suspended' | 'github_binding_owner_changed' | 'github_binding_paused' | 'grant_forbidden' | 'grant_not_available' | 'hash_mismatch' | 'hipaa_mode' | 'hipaa_mode_check_unavailable' | 'hipaa_mode_external_send_blocked' | 'host_key_limit' | 'idempotency_conflict' | 'idempotency_key_invalid' | 'invalid_code' | 'invalid_cursor' | 'invalid_email' | 'invalid_payload_reference' | 'invalid_request' | 'invalid_signature' | 'invalid_step' | 'invalid_token' | 'invalid_topic_sources' | 'invitation_accepted' | 'invitation_accepting' | 'invitation_address_not_allowed' | 'invitation_changed' | 'invitation_pending' | 'invitation_sending' | 'invitation_unconfirmed' | 'invitations_pending' | 'ip_not_allowed' | 'keep_refused' | 'key_change_superseded' | 'key_recently_created' | 'last_owner' | 'latest_message_mismatch' | 'latest_message_thread_unresolved' | 'load_test_recipient_not_allowed' | 'mail_relay_unavailable' | 'mail_routing_conflict' | 'mail_topic_edit_conflict' | 'mail_topic_generation_conflict' | 'mailbox_not_claimable' | 'mailbox_not_found' | 'mailbox_shared_with_others' | 'managed_build_failed' | 'managed_domain' | 'member_address_domain_unavailable' | 'member_address_history_confirmation_required' | 'member_address_immutable' | 'member_address_reserved' | 'member_address_unavailable' | 'member_changed' | 'message_not_found' | 'name_taken' | 'network_member_excluded' | 'network_member_not_found' | 'network_peer_not_found' | 'network_view_denied' | 'no_code' | 'no_endpoint' | 'no_expectations' | 'no_mail_read' | 'not_a_template_install' | 'not_available' | 'not_claimable' | 'not_held' | 'not_pending' | 'object_suspended' | 'onboarding_key_in_use' | 'outbound_edge_rejected' | 'outbound_email_limit_exceeded' | 'outbound_relay_timeout' | 'outbound_relay_unavailable' | 'outside_key_scope' | 'path_invalid' | 'payload_too_large' | 'pending_owner_confirmation' | 'plan_required' | 'policy_forbidden' | 'presence_admission_busy' | 'presence_idempotency_conflict' | 'presence_probe_stale' | 'pro_plan_required' | 'project_changed' | 'pull_subscription_requires_agent_connection' | 'query_invalid' | 'recipient_changed' | 'recipient_suppressed' | 'redeploy_failed' | 'removal_failed' | 'removal_timeout' | 'request_expired' | 'resend_limit_exceeded' | 'resend_too_soon' | 'role_assigned' | 'role_assignment_unavailable' | 'role_key_taken' | 'rotate_instead' | 'rotation_in_progress' | 'rotation_incomplete' | 'rotation_refused' | 'rotation_unconfirmed' | 'runtime_grant_unavailable' | 'schedule_allowlist_not_provided' | 'schedule_sender_collision' | 'schedule_wake_disabled' | 'scheduled_at_required' | 'scheduled_payload_invalid' | 'search_unavailable' | 'semantic_search_not_enabled' | 'send_failed' | 'sender_not_authorized' | 'sending_ip_warmup_cap' | 'sent_email_tail_unavailable' | 'sent_mail_search_unavailable' | 'shopping_binding_conflict' | 'shopping_decision_conflict' | 'shopping_identity_conflict' | 'shopping_not_found' | 'shopping_owner_mail_required' | 'shopping_package_not_found' | 'shopping_proposal_expired' | 'shopping_replay_conflict' | 'shopping_source_unavailable' | 'shopping_too_many_shipments' | 'shopping_tracking_invalid' | 'shopping_version_conflict' | 'shopping_wake_unavailable' | 'shredded' | 'sign_in_email_change_required' | 'signal_not_allowed' | 'signal_parent_not_ready' | 'signal_sender_unauthenticated' | 'signing_secret_unavailable' | 'signup_failed' | 'standing_owner_revoked' | 'step_up_invalid' | 'step_up_not_accepted' | 'step_up_refused' | 'step_up_required' | 'stop_changed' | 'storage_error' | 'storage_limit_exceeded' | 'suspension_undecided' | 'template_role' | 'template_unavailable' | 'template_update_failed' | 'terms_not_accepted' | 'thread_busy' | 'too_many_attempts' | 'too_many_concurrent_builds' | 'too_many_resends' | 'topic_edit_too_large' | 'topic_generation_too_large' | 'unavailable' | 'unknown_chunk' | 'update_needs_input' | 'upstream_unavailable' | 'usage_limit_exceeded';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'ownership_proof_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'access_mode_unavailable' | 'agent_account_managed_domain_only' | 'agent_changed' | 'agent_limit' | 'agent_misconfigured' | 'agent_work_agreement_replay_conflict' | 'agent_work_deadline_not_future' | 'agent_work_inactive' | 'agent_work_not_found' | 'agent_work_replay_conflict' | 'agent_work_version_conflict' | 'already_claimed' | 'already_member' | 'archive_busy' | 'archive_invalid' | 'archive_limit_exceeded' | 'archive_unsafe_path' | 'archive_unsupported' | 'attachment_name_ambiguous' | 'attachment_not_archive' | 'authorization_unavailable' | 'bad_request' | 'body_not_supported' | 'build_failed' | 'builder_unavailable' | 'builtin_role' | 'chunk_too_large' | 'chunks_missing' | 'claim_failed' | 'claim_not_pending' | 'cleanup_incomplete' | 'cli_access_refused' | 'code_expired' | 'confirmation_required' | 'connection_already_claimed' | 'connection_cleanup_pending' | 'connection_create_request_conflict' | 'connection_owner_address_required' | 'connection_removed' | 'connection_revoked' | 'contact_request_invalid' | 'contact_request_not_ready' | 'contact_request_unauthenticated' | 'contact_request_unavailable' | 'cursor_expired' | 'delete_failed' | 'delivery_held' | 'delivery_unavailable' | 'deploy_failed' | 'deploy_outcome_unknown' | 'direct_delivery_failed' | 'direct_delivery_unavailable' | 'directory_limit' | 'dns_publication_failed' | 'dns_publication_pending' | 'dns_verification_failed' | 'download_token_expired' | 'download_token_invalid' | 'email_admission_unavailable' | 'email_in_use' | 'email_rule_author_only' | 'email_rule_author_unresolvable' | 'email_rule_compiler_unavailable' | 'email_rule_conflict' | 'email_rule_look_alikes_not_written' | 'email_rule_not_compiled' | 'email_rule_request_limit' | 'email_rule_request_not_pending' | 'email_rule_request_not_withdrawn' | 'email_rule_request_party_left' | 'email_rule_request_proposer_only' | 'email_rule_request_target_only' | 'email_rule_scope_locked' | 'email_rule_scope_not_readable' | 'email_rule_share_ended' | 'email_rule_share_limit' | 'embedding_provider_unavailable' | 'entitlement' | 'expectations_failed' | 'expectations_undecided' | 'expectations_unreadable' | 'expired' | 'feature_not_enabled' | 'fresh_send_not_authorized' | 'function_cannot_receive_mail' | 'function_delivery_refused' | 'function_effect_email_mismatch' | 'function_effect_mismatch' | 'function_forked' | 'function_github_linked' | 'function_key_missing' | 'function_key_runtime_only' | 'function_not_deployed' | 'function_scope_forbidden' | 'function_signing_secret_missing' | 'function_suspended' | 'github_binding_owner_changed' | 'github_binding_paused' | 'grant_forbidden' | 'grant_not_available' | 'hash_mismatch' | 'hipaa_mode' | 'hipaa_mode_check_unavailable' | 'hipaa_mode_external_send_blocked' | 'host_key_limit' | 'idempotency_conflict' | 'idempotency_key_invalid' | 'invalid_code' | 'invalid_cursor' | 'invalid_email' | 'invalid_payload_reference' | 'invalid_request' | 'invalid_signature' | 'invalid_step' | 'invalid_token' | 'invalid_topic_sources' | 'invitation_accepted' | 'invitation_accepting' | 'invitation_address_not_allowed' | 'invitation_changed' | 'invitation_pending' | 'invitation_sending' | 'invitation_unconfirmed' | 'invitations_pending' | 'ip_not_allowed' | 'keep_refused' | 'key_change_superseded' | 'key_recently_created' | 'last_owner' | 'latest_message_mismatch' | 'latest_message_thread_unresolved' | 'load_test_recipient_not_allowed' | 'mail_relay_unavailable' | 'mail_routing_conflict' | 'mail_topic_edit_conflict' | 'mail_topic_generation_conflict' | 'mailbox_not_claimable' | 'mailbox_not_found' | 'mailbox_shared_with_others' | 'managed_build_failed' | 'managed_domain' | 'member_address_domain_unavailable' | 'member_address_history_confirmation_required' | 'member_address_immutable' | 'member_address_reserved' | 'member_address_unavailable' | 'member_changed' | 'message_not_found' | 'name_taken' | 'network_member_excluded' | 'network_member_not_found' | 'network_peer_not_found' | 'network_view_denied' | 'no_code' | 'no_endpoint' | 'no_expectations' | 'no_mail_read' | 'not_a_template_install' | 'not_available' | 'not_claimable' | 'not_held' | 'not_pending' | 'object_suspended' | 'onboarding_key_in_use' | 'outbound_edge_rejected' | 'outbound_email_limit_exceeded' | 'outbound_relay_timeout' | 'outbound_relay_unavailable' | 'outside_key_scope' | 'path_invalid' | 'payload_too_large' | 'pending_owner_confirmation' | 'plan_required' | 'policy_forbidden' | 'presence_admission_busy' | 'presence_idempotency_conflict' | 'presence_probe_stale' | 'pro_plan_required' | 'project_changed' | 'pull_subscription_requires_agent_connection' | 'query_invalid' | 'recipient_changed' | 'recipient_suppressed' | 'redeploy_failed' | 'removal_failed' | 'removal_timeout' | 'request_expired' | 'resend_limit_exceeded' | 'resend_too_soon' | 'role_assigned' | 'role_assignment_unavailable' | 'role_key_taken' | 'rotate_instead' | 'rotation_in_progress' | 'rotation_incomplete' | 'rotation_refused' | 'rotation_unconfirmed' | 'runtime_grant_unavailable' | 'schedule_allowlist_not_provided' | 'schedule_sender_collision' | 'schedule_wake_disabled' | 'scheduled_at_required' | 'scheduled_payload_invalid' | 'search_unavailable' | 'semantic_search_not_enabled' | 'send_failed' | 'sender_not_authorized' | 'sending_ip_warmup_cap' | 'sent_email_tail_unavailable' | 'sent_mail_search_unavailable' | 'shopping_binding_conflict' | 'shopping_decision_conflict' | 'shopping_identity_conflict' | 'shopping_not_found' | 'shopping_owner_mail_required' | 'shopping_package_not_found' | 'shopping_proposal_expired' | 'shopping_replay_conflict' | 'shopping_source_unavailable' | 'shopping_too_many_shipments' | 'shopping_tracking_invalid' | 'shopping_version_conflict' | 'shopping_wake_unavailable' | 'shredded' | 'sign_in_email_change_required' | 'signal_not_allowed' | 'signal_parent_not_ready' | 'signal_sender_unauthenticated' | 'signing_secret_unavailable' | 'signup_failed' | 'standing_owner_revoked' | 'step_up_invalid' | 'step_up_not_accepted' | 'step_up_refused' | 'step_up_required' | 'stop_changed' | 'storage_error' | 'storage_limit_exceeded' | 'suspension_undecided' | 'template_role' | 'template_unavailable' | 'template_update_failed' | 'terms_not_accepted' | 'thread_busy' | 'too_many_attempts' | 'too_many_concurrent_builds' | 'too_many_resends' | 'topic_edit_too_large' | 'topic_generation_too_large' | 'unavailable' | 'unknown_chunk' | 'update_needs_input' | 'upstream_unavailable' | 'usage_limit_exceeded';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -2473,11 +2473,11 @@ export type ConversationMessage = {
      */
     sent_email_id?: string;
     /**
-     * Only on a held scheduled send: its OAuth grant was revoked after refresh token reuse, so it waits until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. Status stays scheduled.
+     * Only on a scheduled send that is not going out yet; status stays scheduled. credential_reuse_hold: its OAuth grant was revoked after refresh token reuse, so it waits until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your dedicated sending address is at today's warm-up limit or paused, so it goes out on its own within the hour after the limit resets at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds); no release needed. On sent-email reads and conversation messages.
      */
     hold?: {
         /**
-         * Open: credential_reuse_hold.
+         * Open: credential_reuse_hold, sending_ip_warmup_cap.
          */
         reason: string;
         since: string | null;
@@ -3011,11 +3011,11 @@ export type SentEmailSummary = {
      */
     recipient_count?: number | null;
     /**
-     * Only on a held scheduled send: its OAuth grant was revoked after refresh token reuse, so it waits until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. Status stays scheduled.
+     * Only on a scheduled send that is not going out yet; status stays scheduled. credential_reuse_hold: its OAuth grant was revoked after refresh token reuse, so it waits until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your dedicated sending address is at today's warm-up limit or paused, so it goes out on its own within the hour after the limit resets at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds); no release needed. On sent-email reads and conversation messages.
      */
     hold?: {
         /**
-         * Open: credential_reuse_hold.
+         * Open: credential_reuse_hold, sending_ip_warmup_cap.
          */
         reason: string;
         since: string | null;
@@ -3285,11 +3285,11 @@ export type SentEmailDetail = SentEmailSummary & {
         name: string | null;
     } | null;
     /**
-     * Only on a held scheduled send: its OAuth grant was revoked after refresh token reuse, so it waits until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. Status stays scheduled.
+     * Only on a scheduled send that is not going out yet; status stays scheduled. credential_reuse_hold: its OAuth grant was revoked after refresh token reuse, so it waits until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your dedicated sending address is at today's warm-up limit or paused, so it goes out on its own within the hour after the limit resets at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds); no release needed. On sent-email reads and conversation messages.
      */
     hold?: {
         /**
-         * Open: credential_reuse_hold.
+         * Open: credential_reuse_hold, sending_ip_warmup_cap.
          */
         reason: string;
         since: string | null;
@@ -4682,6 +4682,9 @@ export type DeliverySummary = {
     email_id: string | null;
     org_id: string;
     endpoint_id: string;
+    /**
+     * Where it was sent: a webhook's scheme and host, followed by "/... (path and query hidden)" when its URL has more (GET /endpoints/{id} has the whole URL), function://<id> for a Function, or pull: for a pull subscription.
+     */
     endpoint_url: string;
     /**
      * Delivery status. skipped_by_rules: the endpoint's rules filtered the event out. held: kept back, unsent, until an owner or admin decides on the route that matched it. discarded: a held delivery that decision dropped.
@@ -4714,7 +4717,7 @@ export type DeliverySummary = {
      */
     response_status: number | null;
     /**
-     * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.
+     * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden wherever it repeats them.
      */
     response_body: string | null;
     /**
@@ -6223,7 +6226,7 @@ export type EmailRuleTree = {
         [key: string]: unknown;
     };
     /**
-     * Yes/no questions asked once the conditions match; all must be yes.
+     * Yes/no questions asked once the conditions match, over the email's text and attachment names, never attachment contents. A grant rule needs every one yes; a do_not_share rule matches on any yes.
      */
     questions: Array<string>;
 };
@@ -6329,7 +6332,7 @@ export type EmailRuleTreeInput = {
         [key: string]: unknown;
     };
     /**
-     * Yes/no questions asked once the conditions match; all must be yes. Left out, none.
+     * Yes/no questions asked once the conditions match, over the email's text and attachment names, never attachment contents. A grant rule needs every one yes; a do_not_share rule matches on any yes. Left out, none.
      */
     questions?: Array<string>;
 };
@@ -6460,7 +6463,7 @@ export type TestEmailRuleResult = {
     results: Array<{
         email_id: string;
         /**
-         * near_miss: Not matched, but nearly: its questions did not all say yes, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false). skipped: an email you can see that cannot be tested; skipped_reason says why. not_found: no such email, or not one the rule can read (or not settled, or awaiting sender authentication).
+         * near_miss: Not matched, but nearly: its conditions held and its questions did not match it, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false). skipped: an email you can see that cannot be tested; skipped_reason says why. not_found: no such email, or not one the rule can read (or not settled, or awaiting sender authentication).
          */
         outcome: 'matched' | 'near_miss' | 'no_match' | 'unclassified' | 'skipped' | 'not_found';
         received_at?: string;
@@ -6584,7 +6587,11 @@ export type TestEmailRuleResult = {
 export type EmailRuleLookAlike = {
     kind: 'medical' | 'payroll' | 'personal_purchase' | 'bank_tax' | 'other';
     /**
-     * Why the rule should not match it.
+     * match: a near case the rule should match; no_match: one it should not.
+     */
+    expected: 'match' | 'no_match';
+    /**
+     * Why the rule should, or should not, match it.
      */
     why: string;
     /**
@@ -6605,7 +6612,7 @@ export type EmailRuleLookAlike = {
     };
     outcome: 'matched' | 'near_miss' | 'no_match' | 'not_decided';
     /**
-     * failed: the rule matched it, so it would be shared. undecided: the rule reads a spam score, which it cannot carry, whatever it decided; or not matched on something it could not decide (not classified, a fact or answer missing, or not reached in time).
+     * failed: the rule decided it against expected (shared one it should not, or missed one it should match). undecided: the rule reads a spam score, which it cannot carry, whatever it decided; or not matched on something it could not decide (not classified, a fact or answer missing, or not reached in time).
      */
     status: 'passed' | 'failed' | 'undecided';
     question_answers: Array<{
@@ -6644,11 +6651,11 @@ export type GenerateLookAlikesRequest = {
      */
     count?: number;
     /**
-     * Which kinds, taken in turn; all by default, the private ones first.
+     * Which kinds, taken in turn, all expected no_match; other is a business near miss. Left out, a default mix.
      */
     kinds?: Array<'medical' | 'payroll' | 'personal_purchase' | 'bank_tax' | 'other'>;
     /**
-     * The mailbox they arrive in; by default the rule author's (a request's target's) sign-in address when you may see it, else yours.
+     * The mailbox they arrive in; by default the first address (alphabetically) a selected scope names that a made-up email can be sent to, preferring one the author still reads; else the rule author's (a request's target's) sign-in address when you may see it, else yours.
      */
     to?: string;
 };
@@ -6665,7 +6672,7 @@ export type GenerateLookAlikesResult = {
         failed: number;
         undecided: number;
         /**
-         * Asked for but not returned: not written, outside the sample bounds, or of a kind not asked for.
+         * Asked for but not returned: not written, outside the sample bounds, or of a kind and expected not asked for.
          */
         dropped: number;
     };
@@ -6738,7 +6745,7 @@ export type TestEmailRuleOnSampleResult = {
      */
     received_at: string;
     /**
-     * near_miss: Not matched, but nearly: its questions did not all say yes, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false).
+     * near_miss: Not matched, but nearly: its conditions held and its questions did not match it, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false).
      */
     outcome: 'matched' | 'near_miss' | 'no_match';
     /**
@@ -6805,7 +6812,7 @@ export type EmailRuleWritten = {
      */
     kind?: 'grant' | 'do_not_share';
     /**
-     * On a do_not_share rule only: it protects nothing yet (not active), or a classifier fact narrows it.
+     * On a do_not_share rule only: it protects nothing yet (not active), a classifier fact narrows it, or its several questions are alternatives.
      */
     protection_note?: string;
     /**
@@ -7006,7 +7013,7 @@ export type EmailRule = {
      */
     kind?: 'grant' | 'do_not_share';
     /**
-     * On a do_not_share rule only: it protects nothing yet (not active), or a classifier fact narrows it.
+     * On a do_not_share rule only: it protects nothing yet (not active), a classifier fact narrows it, or its several questions are alternatives.
      */
     protection_note?: string;
     /**
@@ -7057,7 +7064,7 @@ export type EmailRuleRead = {
      */
     kind?: 'grant' | 'do_not_share';
     /**
-     * On a do_not_share rule only: it protects nothing yet (not active), or a classifier fact narrows it.
+     * On a do_not_share rule only: it protects nothing yet (not active), a classifier fact narrows it, or its several questions are alternatives.
      */
     protection_note?: string;
     /**
@@ -7163,7 +7170,7 @@ export type UpdateEmailRuleRequest = {
      */
     if_revision?: number;
     /**
-     * true: judge the rule as this write leaves it (new tree, restored version, new scope, or the version it activates) against the expectations it leaves, as POST /email-rules/test would, before saving; it can take as long as a test. Failed: 409 expectations_failed; undecided: 409 expectations_undecided (both with details.expectations_check); none to judge: 400 no_expectations. Refused writes save nothing; a pass saves unless the rule moved meanwhile (409 email_rule_conflict). Only writes that save a version or activate the rule are judged.
+     * true: judge the rule as this write leaves it (new tree, restored version, new scope, or the version it activates) against the expectations it leaves, as POST /email-rules/test would, before saving; it can take as long as a test. Failed: 409 expectations_failed; on emails the rule cannot read: 409 expectations_unreadable; undecided: 409 expectations_undecided (each with details.expectations_check); none to judge: 400 no_expectations. Refused writes save nothing; a pass saves unless the rule moved meanwhile (409 email_rule_conflict). Only writes that save a version or activate the rule are judged.
      */
     if_expectations_pass?: boolean;
     /**
@@ -7210,7 +7217,7 @@ export type ListEmailRuleDecisionsResult = Array<{
     classification_id: string;
     matched: boolean;
     /**
-     * Not matched, but nearly: its questions did not all say yes, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false). Decisions recorded under the earlier definition counted an exclusion too.
+     * Not matched, but nearly: its conditions held and its questions did not match it, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false). Decisions recorded under the earlier definition counted an exclusion too.
      */
     near_miss: boolean;
     /**
@@ -7286,7 +7293,7 @@ export type ListEmailRuleResultsResult = {
             rule_version: number;
             matched: boolean;
             /**
-             * Not matched, but nearly: its questions did not all say yes, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false). False when detail_withheld is true. Decisions recorded under the earlier definition counted an exclusion too.
+             * Not matched, but nearly: its conditions held and its questions did not match it, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false). False when detail_withheld is true. Decisions recorded under the earlier definition counted an exclusion too.
              */
             near_miss?: boolean;
             /**
@@ -7673,7 +7680,7 @@ export type EmailRuleWithVersion = {
      */
     kind?: 'grant' | 'do_not_share';
     /**
-     * On a do_not_share rule only: it protects nothing yet (not active), or a classifier fact narrows it.
+     * On a do_not_share rule only: it protects nothing yet (not active), a classifier fact narrows it, or its several questions are alternatives.
      */
     protection_note?: string;
     /**
@@ -7925,7 +7932,100 @@ export type ListEmailRuleShareEmailsResult = Array<{
 
 export type EndEmailRuleShareResult = {
     ended: boolean;
+    rule_id?: string;
+    note?: string;
+    [key: string]: unknown;
 };
+
+export type EmailRuleCoveringMe = {
+    id: string;
+    name: string;
+    /**
+     * draft: it decides nothing. observe: it decides and records, and shares nothing. active: it decides and, for a grant rule, shares what it matches.
+     */
+    state: 'draft' | 'observe' | 'active';
+    /**
+     * grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
+     */
+    kind: 'grant' | 'do_not_share';
+    author: EmailRuleCoveringAuthor;
+    /**
+     * Whether you wrote it.
+     */
+    is_author: boolean;
+    covers: EmailRuleCoverage;
+    current_version: number | null;
+    created_at: string;
+};
+
+export type EmailRuleCoveringAuthor = {
+    user_id: string;
+    /**
+     * Their name; null when they have none set.
+     */
+    name: string | null;
+    /**
+     * Sign-in email; null unless you can list member emails or this is you.
+     */
+    email: string | null;
+};
+
+export type EmailRuleCoverage = {
+    /**
+     * Your own mailboxes (your member mailbox and your personal agents' addresses) it reaches now, lowercase.
+     */
+    addresses: Array<string>;
+    /**
+     * author_reach: it runs over everything its author can read, which includes these. selected: it names these mailboxes or their domain. own_mailboxes: it is your own rule over your own mail.
+     */
+    via: 'author_reach' | 'selected' | 'own_mailboxes';
+};
+
+export type ListEmailRulesCoveringMeResult = Array<EmailRuleCoveringMe>;
+
+export type EmailRuleCoveringMeRead = {
+    id: string;
+    name: string;
+    /**
+     * draft: it decides nothing. observe: it decides and records, and shares nothing. active: it decides and, for a grant rule, shares what it matches.
+     */
+    state: 'draft' | 'observe' | 'active';
+    /**
+     * grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
+     */
+    kind: 'grant' | 'do_not_share';
+    author: EmailRuleCoveringAuthor;
+    /**
+     * Whether you wrote it.
+     */
+    is_author: boolean;
+    covers: EmailRuleCoverage;
+    current_version: number | null;
+    created_at: string;
+    /**
+     * Its current version: what it asks of each email.
+     */
+    current: EmailRuleCoveringMeVersion | null;
+};
+
+export type EmailRuleCoveringMeVersion = {
+    version: number;
+    /**
+     * What its author asked for, in their words.
+     */
+    english: string;
+    tree: EmailRuleTree;
+    /**
+     * What the rule matches, as compiled.
+     */
+    explanation: string;
+    assumptions: Array<string>;
+    compiled_by: string;
+    vocabulary: string;
+    created_at: string;
+};
+
+export type GetEmailRuleCoveringMeResult = EmailRuleCoveringMeRead;
 
 export type GetDomainAgentAuthorizationResult = {
     domain_id: string;
@@ -8674,6 +8774,9 @@ export type GetDeliveryResult = {
     sent_email_id: string | null;
     org_id: string;
     endpoint_id: string;
+    /**
+     * Where it was sent: a webhook's scheme and host, followed by "/... (path and query hidden)" when its URL has more (GET /endpoints/{id} has the whole URL), function://<id> for a Function, or pull: for a pull subscription.
+     */
     endpoint_url: string;
     status: string;
     attempt_count: number;
@@ -8685,7 +8788,7 @@ export type GetDeliveryResult = {
      */
     response_status: number | null;
     /**
-     * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.
+     * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden wherever it repeats them.
      */
     response_body: string | null;
     created_at: string;
@@ -8722,7 +8825,7 @@ export type GetDeliveryResult = {
          */
         response_status: number | null;
         /**
-         * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.
+         * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden wherever it repeats them.
          */
         response_body: string | null;
         /**
@@ -9209,7 +9312,7 @@ export type CredentialsRevokeCredentialResult = {
         kind: string;
         id: string;
         /**
-         * A webhook's URL, a pull subscription's name (or pull when it has none), a route's or filter's pattern, or a wake schedule's command and the address it wakes (command to address). A Function trigger's label is function: look it up by id.
+         * A webhook's scheme and host, followed by "/... (path and query hidden)" when its URL has more (GET /v1/endpoints/{id} has the whole URL), a pull subscription's name (or pull when it has none), a route's or filter's pattern, or a wake schedule's command and the address it wakes (command to address). A Function trigger's label is function: look it up by id.
          */
         label: string;
         /**
@@ -20594,7 +20697,7 @@ export type GenerateLookAlikesError = GenerateLookAlikesErrors[keyof GenerateLoo
 
 export type GenerateLookAlikesResponses = {
     /**
-     * Write look-alike emails a rule should not match
+     * Write look-alike emails a rule should or should not match
      */
     200: SuccessEnvelope & {
         data: GenerateLookAlikesResult;
@@ -20829,7 +20932,7 @@ export type GetEmailRuleErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead.
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox; details.covering_view is where (getEmailRuleCoveringMe).
      */
     403: ErrorResponse;
     /**
@@ -20885,7 +20988,7 @@ export type UpdateEmailRuleErrors = {
      */
     404: ErrorResponse;
     /**
-     * email_rule_conflict: the rule changed (details.reason version_moved with current_version, revision_moved with current_revision, expectations_moved or rule_changed); read it again and retry. email_rule_scope_locked: the rule is shared. email_rule_author_unresolvable: the rule could not run as you over the chosen scope. expectations_failed or expectations_undecided (if_expectations_pass): nothing was saved; details carries current_version, state and expectations_check.
+     * email_rule_conflict: the rule changed (details.reason version_moved with current_version, revision_moved with current_revision, expectations_moved or rule_changed); read it again and retry. email_rule_scope_locked: the rule is shared. email_rule_author_unresolvable: the rule could not run as you over the chosen scope. expectations_failed, expectations_unreadable (details.unreadable) or expectations_undecided, with if_expectations_pass: nothing was saved; details carries current_version, state and expectations_check.
      */
     409: ErrorResponse;
     /**
@@ -21867,6 +21970,99 @@ export type ListEmailRuleShareEmailsResponses = {
 };
 
 export type ListEmailRuleShareEmailsResponse = ListEmailRuleShareEmailsResponses[keyof ListEmailRuleShareEmailsResponses];
+
+export type ListEmailRulesCoveringMeData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Rules per page, from 1 to 100; defaults to 50.
+         */
+        limit?: number;
+        /**
+         * meta.cursor from the preceding page. Omit for the first page.
+         */
+        cursor?: string;
+    };
+    url: '/email-rules/covering-me';
+};
+
+export type ListEmailRulesCoveringMeErrors = {
+    /**
+     * invalid_cursor: a cursor this list did not give you (each is sealed to you and your organization); pass meta.cursor unchanged.
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI.
+     */
+    403: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type ListEmailRulesCoveringMeError = ListEmailRulesCoveringMeErrors[keyof ListEmailRulesCoveringMeErrors];
+
+export type ListEmailRulesCoveringMeResponses = {
+    /**
+     * List the rules over your mail
+     */
+    200: SuccessEnvelope & {
+        data: ListEmailRulesCoveringMeResult;
+        meta: CursorPageMeta;
+    };
+};
+
+export type ListEmailRulesCoveringMeResponse = ListEmailRulesCoveringMeResponses[keyof ListEmailRulesCoveringMeResponses];
+
+export type GetEmailRuleCoveringMeData = {
+    body?: never;
+    path: {
+        /**
+         * The rule id.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/email-rules/covering-me/{id}';
+};
+
+export type GetEmailRuleCoveringMeErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI.
+     */
+    403: ErrorResponse;
+    /**
+     * not_found: no rule with this id covers your mailboxes.
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type GetEmailRuleCoveringMeError = GetEmailRuleCoveringMeErrors[keyof GetEmailRuleCoveringMeErrors];
+
+export type GetEmailRuleCoveringMeResponses = {
+    /**
+     * Get a rule over your mail
+     */
+    200: SuccessEnvelope & {
+        data: EmailRuleCoveringMeRead;
+    };
+};
+
+export type GetEmailRuleCoveringMeResponse = GetEmailRuleCoveringMeResponses[keyof GetEmailRuleCoveringMeResponses];
 
 export type GetDomainAgentAuthorizationData = {
     body?: never;

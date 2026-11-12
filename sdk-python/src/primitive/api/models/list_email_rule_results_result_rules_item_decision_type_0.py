@@ -39,9 +39,10 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
             tree (EmailRuleTree | None): The conditions and questions of the version that decided, so the result reads in
                 that version's words.
             created_at (datetime.datetime):
-            near_miss (bool | Unset): Not matched, but nearly: its questions did not all say yes, or it needs several parts
-                and exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false).
-                False when detail_withheld is true. Decisions recorded under the earlier definition counted an exclusion too.
+            near_miss (bool | Unset): Not matched, but nearly: its conditions held and its questions did not match it, or it
+                needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level
+                not, or is_false). False when detail_withheld is true. Decisions recorded under the earlier definition counted
+                an exclusion too.
             detail_withheld (bool | Unset): Present, as true, on a result for an email whose content cannot be read
                 (withheld, failed to parse or discarded): matched still says what the rule decided, but how it got there was
                 read from that content, so parts and question_answers are empty and near_miss is false. Absent otherwise.

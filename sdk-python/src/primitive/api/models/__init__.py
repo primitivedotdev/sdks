@@ -461,6 +461,16 @@ from .email_readable_parse_status_type_3_type_1 import EmailReadableParseStatusT
 from .email_rule import EmailRule
 from .email_rule_author import EmailRuleAuthor
 from .email_rule_breadth import EmailRuleBreadth
+from .email_rule_coverage import EmailRuleCoverage
+from .email_rule_coverage_via import EmailRuleCoverageVia
+from .email_rule_covering_author import EmailRuleCoveringAuthor
+from .email_rule_covering_me import EmailRuleCoveringMe
+from .email_rule_covering_me_kind import EmailRuleCoveringMeKind
+from .email_rule_covering_me_read import EmailRuleCoveringMeRead
+from .email_rule_covering_me_read_kind import EmailRuleCoveringMeReadKind
+from .email_rule_covering_me_read_state import EmailRuleCoveringMeReadState
+from .email_rule_covering_me_state import EmailRuleCoveringMeState
+from .email_rule_covering_me_version import EmailRuleCoveringMeVersion
 from .email_rule_evaluation_scope import EmailRuleEvaluationScope
 from .email_rule_expectation_sample import EmailRuleExpectationSample
 from .email_rule_expectation_sample_expected import EmailRuleExpectationSampleExpected
@@ -470,6 +480,7 @@ from .email_rule_kind import EmailRuleKind
 from .email_rule_look_alike import EmailRuleLookAlike
 from .email_rule_look_alike_email import EmailRuleLookAlikeEmail
 from .email_rule_look_alike_email_from import EmailRuleLookAlikeEmailFrom
+from .email_rule_look_alike_expected import EmailRuleLookAlikeExpected
 from .email_rule_look_alike_kind import EmailRuleLookAlikeKind
 from .email_rule_look_alike_outcome import EmailRuleLookAlikeOutcome
 from .email_rule_look_alike_question_answers_item import EmailRuleLookAlikeQuestionAnswersItem
@@ -669,6 +680,10 @@ from .get_domain_agent_authorization_result import GetDomainAgentAuthorizationRe
 from .get_domain_agent_authorization_result_state import GetDomainAgentAuthorizationResultState
 from .get_email_readable_response_200 import GetEmailReadableResponse200
 from .get_email_response_200 import GetEmailResponse200
+from .get_email_rule_covering_me_response_200 import GetEmailRuleCoveringMeResponse200
+from .get_email_rule_covering_me_result import GetEmailRuleCoveringMeResult
+from .get_email_rule_covering_me_result_kind import GetEmailRuleCoveringMeResultKind
+from .get_email_rule_covering_me_result_state import GetEmailRuleCoveringMeResultState
 from .get_email_rule_include_sql import GetEmailRuleIncludeSql
 from .get_email_rule_request_response_200 import GetEmailRuleRequestResponse200
 from .get_email_rule_request_result import GetEmailRuleRequestResult
@@ -934,6 +949,7 @@ from .list_email_rule_shares_box import ListEmailRuleSharesBox
 from .list_email_rule_shares_live import ListEmailRuleSharesLive
 from .list_email_rule_shares_response_200 import ListEmailRuleSharesResponse200
 from .list_email_rule_versions_response_200 import ListEmailRuleVersionsResponse200
+from .list_email_rules_covering_me_response_200 import ListEmailRulesCoveringMeResponse200
 from .list_email_rules_response_200 import ListEmailRulesResponse200
 from .list_emails_automated import ListEmailsAutomated
 from .list_emails_awaiting import ListEmailsAwaiting
@@ -2233,6 +2249,16 @@ __all__ = (
     "EmailRule",
     "EmailRuleAuthor",
     "EmailRuleBreadth",
+    "EmailRuleCoverage",
+    "EmailRuleCoverageVia",
+    "EmailRuleCoveringAuthor",
+    "EmailRuleCoveringMe",
+    "EmailRuleCoveringMeKind",
+    "EmailRuleCoveringMeRead",
+    "EmailRuleCoveringMeReadKind",
+    "EmailRuleCoveringMeReadState",
+    "EmailRuleCoveringMeState",
+    "EmailRuleCoveringMeVersion",
     "EmailRuleEvaluationScope",
     "EmailRuleExpectationSample",
     "EmailRuleExpectationSampleExpected",
@@ -2242,6 +2268,7 @@ __all__ = (
     "EmailRuleLookAlike",
     "EmailRuleLookAlikeEmail",
     "EmailRuleLookAlikeEmailFrom",
+    "EmailRuleLookAlikeExpected",
     "EmailRuleLookAlikeKind",
     "EmailRuleLookAlikeOutcome",
     "EmailRuleLookAlikeQuestionAnswersItem",
@@ -2441,6 +2468,10 @@ __all__ = (
     "GetDomainAgentAuthorizationResultState",
     "GetEmailReadableResponse200",
     "GetEmailResponse200",
+    "GetEmailRuleCoveringMeResponse200",
+    "GetEmailRuleCoveringMeResult",
+    "GetEmailRuleCoveringMeResultKind",
+    "GetEmailRuleCoveringMeResultState",
     "GetEmailRuleIncludeSql",
     "GetEmailRuleRequestResponse200",
     "GetEmailRuleRequestResult",
@@ -2683,6 +2714,7 @@ __all__ = (
     "ListEmailRuleScopeOptionsResponse200",
     "ListEmailRuleScopeOptionsResult",
     "ListEmailRuleScopeOptionsResultReach",
+    "ListEmailRulesCoveringMeResponse200",
     "ListEmailRuleShareEmailsResponse200",
     "ListEmailRuleShareEmailsResultItem",
     "ListEmailRuleShareEmailsResultItemAutomationHeadersType0",

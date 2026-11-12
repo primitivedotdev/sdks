@@ -579,8 +579,19 @@ date-time is kept as null and sorts last. A sync stops with an error after
   `getEmailRuleRequest`, `acceptEmailRuleRequest`, `declineEmailRuleRequest`,
   `withdrawEmailRuleRequest`, `deleteEmailRuleRequest`,
   `checkEmailRuleRequestTarget`.
+- Email rule oversight: `listEmailRulesCoveringMe` and `getEmailRuleCoveringMe`
+  (`GET /email-rules/covering-me` and `/email-rules/covering-me/{id}`), the
+  rules that reach your own mailboxes, whoever wrote them, read-only
+  (`EmailRuleCoveringMe`, `EmailRuleCoveringMeRead`: `name`, `state`,
+  `kind`, `author`, `is_author`, `covers` as `EmailRuleCoverage` with the
+  `addresses` it reaches and `via`, and the current version). They need
+  `mail:read` on a member's own session or the CLI, not narrowed. In the
+  CLI: `email-rule-oversight list-email-rules-covering-me` and
+  `get-email-rule-covering-me`.
 - Email rule shares: `listEmailRuleShares`, `listGivenEmailRuleShares`,
-  `getEmailRuleShare`, `listEmailRuleShareEmails`, `endEmailRuleShare`.
+  `getEmailRuleShare`, `listEmailRuleShareEmails`, `endEmailRuleShare`
+  (whose answer carries a `note` saying the rule itself is left unchanged,
+  and, to the member who shared, the rule's `rule_id`).
 - Relay auto join: `getRelayAutoJoin`, `setRelayAutoJoin`.
 - Sending: `downloadSentAttachments`, `signalEmail`, `checkSendability`,
   `releaseSentEmail`, `sendMailBatch`.
@@ -669,9 +680,11 @@ date-time is kept as null and sorts last. A sync stops with an error after
     `details.current_revision` when the rule was updated since.
   - `updateEmailRule` takes `if_expectations_pass`: it judges the rule as
     the write would leave it against its expectations before saving, and
-    refuses with `409` `expectations_failed` or `expectations_undecided`
-    (with `details.expectations_check`) or `400` `no_expectations`, saving
-    nothing. Only a write that saves a version or turns the rule active is
+    refuses with `409` `expectations_failed`, `expectations_undecided` or
+    `expectations_unreadable` (with `details.expectations_check`; for the
+    last, `details.unreadable` lists the emails the rule cannot read, which
+    sending the write again never decides) or `400` `no_expectations`,
+    saving nothing. Only a write that saves a version or turns the rule active is
     judged.
   - `updateEmailRule` takes `restore_version`, which saves an earlier
     version again as the next one; its answer then carries `restored_from`.
@@ -703,10 +716,13 @@ date-time is kept as null and sorts last. A sync stops with an error after
   - `generateLookAlikes` (`POST /email-rules/look-alikes`) writes made-up
     emails that come close to what a grant rule (an unsaved `tree`, with
     its `english`, `evaluation_scope`, `scope_selection` and `kind`, a
-    saved `rule_id`, or a pending rule request's `request_id`) describes
-    but that it should not match, and answers what the rule decides for
-    each: `rule`, `look_alikes` (`EmailRuleLookAlike`: `kind`, `why`,
-    `email`, `outcome`, `status`, `question_answers`), `counts` and `note`.
+    saved `rule_id`, or a pending rule request's `request_id`) describes,
+    and answers what the rule decides for each: `rule`, `look_alikes`
+    (`EmailRuleLookAlike`: `kind`, `expected`, `why`, `email`, `outcome`,
+    `status`, `question_answers`), `counts` and `note`. Most are expected
+    not to match (`expected` `no_match`); without `kinds`, a third of them
+    are near cases the rule should match (`expected` `match`). `status`
+    `failed` means the rule decided one against its `expected`.
     Nothing is stored. It takes `count` (1 to 8, 6 by default), `kinds` and
     `to`. A do-not-share rule is refused with `400` and `details.reason`
     `do_not_share`; a request you cannot see is `404` `not_found` with
@@ -717,8 +733,9 @@ date-time is kept as null and sorts last. A sync stops with an error after
     limited to 20 calls an hour per member.
   - `createEmailRule` takes `state` `active` for a `do_not_share` rule,
     whose `expectations_check` then carries a `note`. A do-not-share rule's
-    answers carry `protection_note`: that it protects nothing yet, or that a
-    classifier fact narrows it.
+    answers carry `protection_note`: that it protects nothing yet, that a
+    classifier fact narrows it, or that its several questions are
+    alternatives (any one answered yes blocks).
   - `compileEmailRule`'s `warnings` also note a rule reading
     `sender_relationship`, a sender address the description does not give,
     and a grant worded as a prohibition.
@@ -806,7 +823,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
     those the caller may read.
   - `revokeCredential` declares `standing_objects` (`kind`, `id`, `label`,
     `org_owned`): what the credential set up or owns and, for an API key,
-    what it carries on for the keys it was rotated from. What the
+    what it carries on for the keys it was rotated from. A webhook's `label`
+    shows its URL's scheme and host, with the path and query hidden. What the
     organization owns keeps working; anything else keeps working only while
     someone can still act for it, such as a key of the same rotation that
     still works. It also declares `keep_failed`, the items chosen to keep that
@@ -833,7 +851,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
   carries.
 - `decideSuspension` declares `502` and `503`; in Go they are typed
   responses.
-- New error code: `sending_ip_warmup_cap`.
+- New error code: `sending_ip_warmup_cap`. A held scheduled send's `hold`
+  `reason` can also be `sending_ip_warmup_cap`.
 - `pullWebhookEvent`'s `503` is also `service_unavailable` when the
   subscription was too busy to claim from in time: nothing was claimed, so
   retry after `Retry-After`.
@@ -1074,7 +1093,8 @@ parsers.
   alone, or a grant worded as a prohibition) before its breadth, and
   `create-email-rule`, `update-email-rule`, `get-email-rule` and
   `list-email-rules` print a do-not-share rule's `protection_note` (that it
-  protects nothing yet, or that a classifier fact narrows it).
+  protects nothing yet, that a classifier fact narrows it, or that its
+  several questions are alternatives).
   `create-email-rule --state active` can create a do-not-share rule
   already active; a grant rule is still refused.
 - Without `--json`, `email-rules generate-look-alikes` prints each

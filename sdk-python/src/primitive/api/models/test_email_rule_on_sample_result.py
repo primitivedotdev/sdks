@@ -35,9 +35,9 @@ class TestEmailRuleOnSampleResult:
             rule (TestEmailRuleOnSampleResultRule):
             received_at (datetime.datetime): When the made-up email counts as received (now): a rule on received_at is
                 decided on it.
-            outcome (TestEmailRuleOnSampleResultOutcome): near_miss: Not matched, but nearly: its questions did not all say
-                yes, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a
-                top-level not, or is_false).
+            outcome (TestEmailRuleOnSampleResultOutcome): near_miss: Not matched, but nearly: its conditions held and its
+                questions did not match it, or it needs several parts and exactly one failed while at least one part that held
+                is not an exclusion (a top-level not, or is_false).
             parts (list[TestEmailRuleOnSampleResultPartsItem]): How each top-level part of the rule decided.
             question_answers (list[TestEmailRuleOnSampleResultQuestionAnswersItem]):
             classification (TestEmailRuleOnSampleResultClassification): Whether the email was classified; without a

@@ -111,6 +111,7 @@ class ErrorResponseErrorCode(StrEnum):
     EVENT_PREPARATION_FAILED = "event_preparation_failed"
     EXPECTATIONS_FAILED = "expectations_failed"
     EXPECTATIONS_UNDECIDED = "expectations_undecided"
+    EXPECTATIONS_UNREADABLE = "expectations_unreadable"
     EXPIRED = "expired"
     EXPIRED_TOKEN = "expired_token"
     FEATURE_DISABLED = "feature_disabled"

@@ -381,6 +381,10 @@ type GetEmailRes interface {
 	getEmailRes()
 }
 
+type GetEmailRuleCoveringMeRes interface {
+	getEmailRuleCoveringMeRes()
+}
+
 type GetEmailRuleRequestRes interface {
 	getEmailRuleRequestRes()
 }
@@ -683,6 +687,10 @@ type ListEmailRuleSharesRes interface {
 
 type ListEmailRuleVersionsRes interface {
 	listEmailRuleVersionsRes()
+}
+
+type ListEmailRulesCoveringMeRes interface {
+	listEmailRulesCoveringMeRes()
 }
 
 type ListEmailRulesRes interface {

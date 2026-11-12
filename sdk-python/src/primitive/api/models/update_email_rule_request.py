@@ -66,10 +66,10 @@ class UpdateEmailRuleRequest:
                 email_rule_conflict, revision_moved).
             if_expectations_pass (bool | Unset): true: judge the rule as this write leaves it (new tree, restored version,
                 new scope, or the version it activates) against the expectations it leaves, as POST /email-rules/test would,
-                before saving; it can take as long as a test. Failed: 409 expectations_failed; undecided: 409
-                expectations_undecided (both with details.expectations_check); none to judge: 400 no_expectations. Refused
-                writes save nothing; a pass saves unless the rule moved meanwhile (409 email_rule_conflict). Only writes that
-                save a version or activate the rule are judged.
+                before saving; it can take as long as a test. Failed: 409 expectations_failed; on emails the rule cannot read:
+                409 expectations_unreadable; undecided: 409 expectations_undecided (each with details.expectations_check); none
+                to judge: 400 no_expectations. Refused writes save nothing; a pass saves unless the rule moved meanwhile (409
+                email_rule_conflict). Only writes that save a version or activate the rule are judged.
             restore_version (int | Unset): Save version n again as the next version (author only): its english, tree,
                 explanation, assumptions, warnings and compiled_by. A version carries no scope: the rule keeps its own unless
                 evaluation_scope is sent. 404 version_not_found; 400 already_current or version_not_renderable. Not with a

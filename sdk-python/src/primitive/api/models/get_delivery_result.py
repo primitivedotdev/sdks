@@ -33,7 +33,9 @@ class GetDeliveryResult:
             sent_email_id (None | UUID):
             org_id (str):
             endpoint_id (UUID):
-            endpoint_url (str):
+            endpoint_url (str): Where it was sent: a webhook's scheme and host, followed by "/... (path and query hidden)"
+                when its URL has more (GET /endpoints/{id} has the whole URL), function://<id> for a Function, or pull: for a
+                pull subscription.
             status (str):
             attempt_count (int):
             duration_ms (int | None):
@@ -46,7 +48,9 @@ class GetDeliveryResult:
             response_body (None | str): The first 2 KB of the body the endpoint answered this attempt with, so a handler
                 that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was
                 sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is
-                deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent.
+                deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null
+                for a redirect (3xx), whose body repeats its Location; otherwise the webhook URL's path and query are hidden
+                wherever it repeats them.
             created_at (str):
             updated_at (str):
             email (GetDeliveryResultEmailType0 | None):

@@ -377,6 +377,9 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   "getEmailRule": [
     "mail:read"
   ],
+  "getEmailRuleCoveringMe": [
+    "mail:read"
+  ],
   "getEmailRuleRequest": [
     "mail:read"
   ],
@@ -571,6 +574,9 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
     "mail:read"
   ],
   "listEmailRuleScopeOptions": [
+    "mail:read"
+  ],
+  "listEmailRulesCoveringMe": [
     "mail:read"
   ],
   "listEmailRuleShareEmails": [

@@ -30,7 +30,8 @@ class EmailRuleTree:
             vocabulary (str): Vocabulary version, such as v1.
             when (EmailRuleTreeWhen): A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or
                 {all: [...]}, {any: [...]}, {not: ...}.
-            questions (list[str]): Yes/no questions asked once the conditions match; all must be yes.
+            questions (list[str]): Yes/no questions asked once the conditions match, over the email's text and attachment
+                names, never attachment contents. A grant rule needs every one yes; a do_not_share rule matches on any yes.
      """
 
     version: EmailRuleTreeVersion

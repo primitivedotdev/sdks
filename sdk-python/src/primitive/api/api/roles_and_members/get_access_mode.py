@@ -106,7 +106,8 @@ def sync_detailed(
     could not be read). In whole-org mode it also lists narrowed_agents: every live agent connection the
     switch narrows to an own-address key (personal agents of members, and shared agents), informational
     in the same way (narrowed_agents_truncated past 500, narrowed_agents_unavailable when they could not
-    be read). Any person; API keys are refused.
+    be read). Needs members:read (owners, admins, members and roles that grant it); API keys are
+    refused.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -142,7 +143,8 @@ def sync(
     could not be read). In whole-org mode it also lists narrowed_agents: every live agent connection the
     switch narrows to an own-address key (personal agents of members, and shared agents), informational
     in the same way (narrowed_agents_truncated past 500, narrowed_agents_unavailable when they could not
-    be read). Any person; API keys are refused.
+    be read). Needs members:read (owners, admins, members and roles that grant it); API keys are
+    refused.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -173,7 +175,8 @@ async def asyncio_detailed(
     could not be read). In whole-org mode it also lists narrowed_agents: every live agent connection the
     switch narrows to an own-address key (personal agents of members, and shared agents), informational
     in the same way (narrowed_agents_truncated past 500, narrowed_agents_unavailable when they could not
-    be read). Any person; API keys are refused.
+    be read). Needs members:read (owners, admins, members and roles that grant it); API keys are
+    refused.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -209,7 +212,8 @@ async def asyncio(
     could not be read). In whole-org mode it also lists narrowed_agents: every live agent connection the
     switch narrows to an own-address key (personal agents of members, and shared agents), informational
     in the same way (narrowed_agents_truncated past 500, narrowed_agents_unavailable when they could not
-    be read). Any person; API keys are refused.
+    be read). Needs members:read (owners, admins, members and roles that grant it); API keys are
+    refused.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

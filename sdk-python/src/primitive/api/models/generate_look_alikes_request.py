@@ -42,10 +42,11 @@ class GenerateLookAlikesRequest:
             kind (GenerateLookAlikesRequestKind | Unset): For an unsaved tree: do_not_share tests it as a rule that blocks
                 sharing, so an email it cannot decide counts as matched. A saved rule uses its own.
             count (int | Unset): How many, 1 to 8; 6 by default.
-            kinds (list[GenerateLookAlikesRequestKindsItem] | Unset): Which kinds, taken in turn; all by default, the
-                private ones first.
-            to (str | Unset): The mailbox they arrive in; by default the rule author's (a request's target's) sign-in
-                address when you may see it, else yours.
+            kinds (list[GenerateLookAlikesRequestKindsItem] | Unset): Which kinds, taken in turn, all expected no_match;
+                other is a business near miss. Left out, a default mix.
+            to (str | Unset): The mailbox they arrive in; by default the first address (alphabetically) a selected scope
+                names that a made-up email can be sent to, preferring one the author still reads; else the rule author's (a
+                request's target's) sign-in address when you may see it, else yours.
      """
 
     tree: EmailRuleTreeInput | Unset = UNSET

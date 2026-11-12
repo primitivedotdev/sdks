@@ -32,9 +32,9 @@ class ListEmailRuleDecisionsResultItem:
             rule_version (int):
             classification_id (UUID):
             matched (bool):
-            near_miss (bool): Not matched, but nearly: its questions did not all say yes, or it needs several parts and
-                exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false).
-                Decisions recorded under the earlier definition counted an exclusion too.
+            near_miss (bool): Not matched, but nearly: its conditions held and its questions did not match it, or it needs
+                several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or
+                is_false). Decisions recorded under the earlier definition counted an exclusion too.
             parts (list[Any]): How each top-level part of the rule decided.
             question_answers (list[Any]): The answers to the rule's own questions, when they were asked.
             created_at (datetime.datetime):

@@ -4756,15 +4756,18 @@ func (s *Server) handleCliLogoutRequest(args [0]string, argsEscaped bool, w http
 // Turns a plain-English description of which received emails to match into a rule tree over the
 // published column contract, with a plain-English explanation of what it matches, the assumptions
 // made, and warnings for anything the columns cannot express. Where the columns fall short the rule
-// may carry up to five yes/no questions, asked about an email only after its conditions match.
-// Nothing is saved. A rule with no questions has its conditions counted, read only, over the
-// caller's recent classified mail (what a test of it covers by default): breadth is that count, and
-// a warning says when it matches nearly all of it. The SQL the rule renders to is returned only when
-// include_sql is true. kind do_not_share compiles a do-not-share rule for recall: conditions only as
-// narrow as the description says, the judgement of what it describes put into questions, and with
-// nothing a column decides for certain, conditions that hold for every email. Needs mail:read, a
-// member's own credential with their full access (not an API key, agent key or narrowed token), and
-// the email rules feature.
+// may carry up to five yes/no questions, asked about an email only after its conditions match; they
+// read its subject, its new text and its attachments' file names, never what is inside an attachment,
+//
+//	and warnings say when a question mentions attachments. Nothing is saved. A rule with no questions
+//
+// has its conditions counted, read only, over the caller's recent classified mail (what a test of it
+// covers by default): breadth is that count, and a warning says when it matches nearly all of it.
+// The SQL the rule renders to is returned only when include_sql is true. kind do_not_share compiles
+// a do-not-share rule for recall: conditions only as narrow as the description says, the judgement
+// of what it describes put into questions, and with nothing a column decides for certain, conditions
+// that hold for every email. Needs mail:read, a member's own credential with their full access (not
+// an API key, agent key or narrowed token), and the email rules feature.
 //
 // POST /email-rules/compile
 func (s *Server) handleCompileEmailRuleRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -15926,11 +15929,11 @@ func (s *Server) handleEndBreakGlassRequest(args [1]string, argsEscaped bool, w 
 
 // handleEndEmailRuleShareRequest handles endEmailRuleShare operation.
 //
-// Stops sharing. Either person on the share can do this, or an owner or admin who manages members.
-// The share is kept, marked as ended. This needs no mail access and does not depend on the email
-// rules feature. An owner or admin not on the share must use a dashboard session. Otherwise use your
-// own session, or an OAuth or CLI token that acts with your full access: API keys and agent keys are
-// refused.
+// Stops sharing; the rule itself is left unchanged, as the answer's note says. Either person on the
+// share can do this, or an owner or admin who manages members. The share is kept, marked as ended.
+// This needs no mail access and does not depend on the email rules feature. An owner or admin not on
+// the share must use a dashboard session. Otherwise use your own session, or an OAuth or CLI token
+// that acts with your full access: API keys and agent keys are refused.
 //
 // DELETE /email-rule-shares/{id}
 func (s *Server) handleEndEmailRuleShareRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -16117,13 +16120,17 @@ func (s *Server) handleEndEmailRuleShareRequest(args [1]string, argsEscaped bool
 
 // handleGenerateLookAlikesRequest handles generateLookAlikes operation.
 //
-// Writes made-up emails that come close to what a grant rule describes but are private (a personal
-// medical bill, pay for named people, a personal purchase, personal banking or tax, or another near
-// case), and reports what the rule decides for each, as test-sample would. failed means the rule
-// matched it, so it would be shared. Nothing is stored and no mail is read. Keep the ones it must
-// never match with add_expectation_samples, or for a request with the accept's expectation_samples.
-// Limited to 20 an hour per member. Needs mail:read, a member's own credential with their full
-// access (not an API key, agent key or narrowed token), and the email rules feature.
+// Writes made-up emails that come close to what a grant rule describes, and reports what the rule
+// decides for each, as test-sample would. Most should not match (expected no_match): business near
+// misses from its senders and topic (kind other: an all-clear, a reply with nothing new, a related
+// document, another subject) and private mail (a personal medical bill, pay for named people, a
+// personal purchase, personal banking or tax). By default a third, rounded down, are near cases it
+// should match (expected match, kind other). failed means the rule decided one against expected.
+// Nothing is stored and no mail is read. Keep them, with their expected, with
+// add_expectation_samples, or for a request with the accept's expectation_samples. Limited to 20 an
+// hour per member. Needs mail:read, a member's own credential with their full access (not an API key,
+//
+//	agent key or narrowed token), and the email rules feature.
 //
 // POST /email-rules/look-alikes
 func (s *Server) handleGenerateLookAlikesRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -16274,7 +16281,7 @@ func (s *Server) handleGenerateLookAlikesRequest(args [0]string, argsEscaped boo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    GenerateLookAlikesOperation,
-			OperationSummary: "Write look-alike emails a rule should not match",
+			OperationSummary: "Write look-alike emails a rule should or should not match",
 			OperationID:      "generateLookAlikes",
 			Body:             request,
 			RawBody:          rawBody,
@@ -16333,7 +16340,8 @@ func (s *Server) handleGenerateLookAlikesRequest(args [0]string, argsEscaped boo
 // they could not be read). In whole-org mode it also lists narrowed_agents: every live agent
 // connection the switch narrows to an own-address key (personal agents of members, and shared
 // agents), informational in the same way (narrowed_agents_truncated past 500,
-// narrowed_agents_unavailable when they could not be read). Any person; API keys are refused.
+// narrowed_agents_unavailable when they could not be read). Needs members:read (owners, admins,
+// members and roles that grant it); API keys are refused.
 //
 // GET /access-mode
 func (s *Server) handleGetAccessModeRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -19447,6 +19455,199 @@ func (s *Server) handleGetEmailRuleRequest(args [1]string, argsEscaped bool, w h
 	}
 
 	if err := encodeGetEmailRuleResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleGetEmailRuleCoveringMeRequest handles getEmailRuleCoveringMe operation.
+//
+// One rule that covers one of your own mailboxes, read-only, with its current version. You see its
+// name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches.
+// Its wording and tree are shown as written, so they can name other addresses (a condition on who an
+// email is from or to). You do not see the other inboxes and domains its scope names, its saved
+// expectations, or the keys, shares and webhooks that use it. Needs mail:read, a member's own
+// credential with their full access (not an API key, agent key or narrowed token), and the email
+// rules feature. Only on your own dashboard session or the Primitive CLI.
+//
+// GET /email-rules/covering-me/{id}
+func (s *Server) handleGetEmailRuleCoveringMeRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getEmailRuleCoveringMe"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/email-rules/covering-me/{id}"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), GetEmailRuleCoveringMeOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: GetEmailRuleCoveringMeOperation,
+			ID:   "getEmailRuleCoveringMe",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, GetEmailRuleCoveringMeOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeGetEmailRuleCoveringMeParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response GetEmailRuleCoveringMeRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    GetEmailRuleCoveringMeOperation,
+			OperationSummary: "Get a rule over your mail",
+			OperationID:      "getEmailRuleCoveringMe",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = GetEmailRuleCoveringMeParams
+			Response = GetEmailRuleCoveringMeRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackGetEmailRuleCoveringMeParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.GetEmailRuleCoveringMe(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.GetEmailRuleCoveringMe(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeGetEmailRuleCoveringMeResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -34053,6 +34254,211 @@ func (s *Server) handleListEmailRulesRequest(args [0]string, argsEscaped bool, w
 	}
 }
 
+// handleListEmailRulesCoveringMeRequest handles listEmailRulesCoveringMe operation.
+//
+// Every email rule that covers one of your own mailboxes now, yours included, newest first, in any
+// state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your
+// member mailbox, or a personal agent's address): one whose author reads all your mail (author scope,
+//
+//	for an author who reads the organization's mail or holds an access entry for your mailbox), or
+//
+// one that names your mailbox or its domain (selected). Another member's own_mailboxes rule never
+// covers you. You see its name, wording, current tree, state, kind and author, and which of your own
+// mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses
+// (a condition on who an email is from or to). You do not see the other inboxes and domains its
+// scope names, its saved expectations, or the keys, shares and webhooks that use it. A page can hold
+// fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of
+// rules): keep reading until meta.cursor is null. Needs mail:read, a member's own credential with
+// their full access (not an API key, agent key or narrowed token), and the email rules feature. Only
+// on your own dashboard session or the Primitive CLI.
+//
+// GET /email-rules/covering-me
+func (s *Server) handleListEmailRulesCoveringMeRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listEmailRulesCoveringMe"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/email-rules/covering-me"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), ListEmailRulesCoveringMeOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: ListEmailRulesCoveringMeOperation,
+			ID:   "listEmailRulesCoveringMe",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, ListEmailRulesCoveringMeOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeListEmailRulesCoveringMeParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response ListEmailRulesCoveringMeRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    ListEmailRulesCoveringMeOperation,
+			OperationSummary: "List the rules over your mail",
+			OperationID:      "listEmailRulesCoveringMe",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "limit",
+					In:   "query",
+				}: params.Limit,
+				{
+					Name: "cursor",
+					In:   "query",
+				}: params.Cursor,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = ListEmailRulesCoveringMeParams
+			Response = ListEmailRulesCoveringMeRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackListEmailRulesCoveringMeParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.ListEmailRulesCoveringMe(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.ListEmailRulesCoveringMe(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeListEmailRulesCoveringMeResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleListEmailsRequest handles listEmails operation.
 //
 // Returns a paginated list of INBOUND emails received at your
@@ -39682,7 +40088,8 @@ func (s *Server) handleListRepeatingSendsRequest(args [0]string, argsEscaped boo
 // Every role in the organization (built-in, template copies and custom roles), with how many members
 // and groups hold each, the templates not yet copied, and whether roles can be assigned now.
 // `unassigned` describes role restricted on a member with no role_id, which is not a role and is
-// never in `roles`. Any person (a session or OAuth token); API keys are refused.
+// never in `roles`. Needs members:read (owners, admins, members and roles that grant it); API keys
+// are refused.
 //
 // GET /roles
 func (s *Server) handleListRolesRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -57347,8 +57754,9 @@ func (s *Server) handleUnsetFunctionRouteRequest(args [1]string, argsEscaped boo
 
 // handleUpdateAccountRequest handles updateAccount operation.
 //
-// Update the mutable account settings (such as display name and notification preferences) for the
-// authenticated organization.
+// Update the organization's spam threshold (spam_threshold) and whether an email's content is
+// discarded once a webhook confirms receipt (discard_content_on_webhook_confirmed), the opt-in POST
+// /emails/{id}/discard-content needs.
 //
 // PATCH /account
 func (s *Server) handleUpdateAccountRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
