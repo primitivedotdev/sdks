@@ -1534,6 +1534,7 @@ export const OPERATION_ERROR_HINTS: Record<
     body: unknown,
     payload?: unknown,
     path?: Record<string, unknown>,
+    flags?: Record<string, unknown>,
   ) => string | undefined
 > = {
   inviteOrganizationMember: (code, body, payload) =>
@@ -1542,8 +1543,8 @@ export const OPERATION_ERROR_HINTS: Record<
     createEndpointRuleRequestHint(code, body, payload),
   updateEndpoint: (code, body, payload) =>
     updateEndpointRuleRequestHint(code, body, payload),
-  updateEmailRule: (code, body, payload, path) =>
-    updateEmailRuleErrorHint(code, payload, path?.id, body),
+  updateEmailRule: (code, body, payload, path, flags) =>
+    updateEmailRuleErrorHint(code, payload, path?.id, body, flags),
   verifyDomain: (code, _body, payload) =>
     code === "dns_verification_failed"
       ? domainVerificationFailedHint(payload)
@@ -2006,6 +2007,7 @@ export function createOperationCommand(
             body,
             errorPayload,
             collectValues(operation.pathParams, parsedFlags, operation.sdkName),
+            parsedFlags,
           );
           writeErrorWithHints(errorPayload, result.response, {
             codeHint: !(
