@@ -16,11 +16,25 @@ export const KEY_WRITE_OPERATION_IDS: ReadonlySet<string> = new Set([
   "credentials:revoke-credential",
 ]);
 
-/** The operations the CLI generates commands for: the manifest without the key writes. */
+// Operation ids (`tag:command`) the CLI offers no command for because they
+// take a credential in a request header. They are left out of
+// `list-operations`, `describe` and shell completion too. The SDK clients
+// keep these methods.
+export const CREDENTIAL_HEADER_OPERATION_IDS: ReadonlySet<string> = new Set([
+  "emails:import-google-mail-message",
+]);
+
+/** Every operation id the CLI generates no command for. */
+export const CLI_OMITTED_OPERATION_IDS: ReadonlySet<string> = new Set([
+  ...KEY_WRITE_OPERATION_IDS,
+  ...CREDENTIAL_HEADER_OPERATION_IDS,
+]);
+
+/** The operations the CLI generates commands for: the manifest without CLI_OMITTED_OPERATION_IDS. */
 export const cliOperationManifest: PrimitiveOperationManifest[] =
   operationManifest.filter(
     (operation) =>
-      !KEY_WRITE_OPERATION_IDS.has(
+      !CLI_OMITTED_OPERATION_IDS.has(
         `${operation.tagCommand}:${operation.command}`,
       ),
   );

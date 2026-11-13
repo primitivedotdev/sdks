@@ -571,7 +571,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
   only in the `X-Primitive-Google-Access-Token` header; and
   `reconcileGoogleMailImport`, which recovers import attempts that expired.
   Both are for the configured owner only, and importing needs the
-  organization's `email_import` entitlement.
+  organization's `email_import` entitlement. `importGoogleMailMessage`
+  takes a credential header and is not a CLI command.
 - Endpoints: `getEndpoint`, `getEndpointSigningSecret`,
   `rotateEndpointSigningSecret`.
 - Functions: `lookupFunction`, `getOrgFunctionUsage`,
@@ -1679,7 +1680,8 @@ parsers.
   routes' refusal.
 - Generated commands for the new operations, except `createKey`, `rotateKey`,
   `updateKey` and `revokeCredential`, which the `primitive keys` commands
-  cover instead.
+  cover instead, and `importGoogleMailMessage`, which takes a credential
+  header.
 - The generated command for `leaveOrganization` is
   `roles-and-members:leave-organization`, following the operation's tag.
   `account:leave-organization` keeps working as an alias.

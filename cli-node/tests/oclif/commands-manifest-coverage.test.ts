@@ -2,7 +2,12 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { openapiDocument, operationManifest } from "@primitivedotdev/api-core";
 import { describe, expect, it } from "vitest";
-import { KEY_WRITE_OPERATION_IDS } from "../../src/oclif/cli-operations.js";
+import {
+  CLI_OMITTED_OPERATION_IDS,
+  CREDENTIAL_HEADER_OPERATION_IDS,
+  cliOperationManifest,
+  KEY_WRITE_OPERATION_IDS,
+} from "../../src/oclif/cli-operations.js";
 import {
   CANONICAL_OPERATION_ALIASES,
   COMMANDS,
@@ -569,12 +574,36 @@ describe("COMMANDS / manifest coverage", () => {
     expect(COMMANDS["endpoints:pull-webhook-event"]).toBeDefined();
     expect(COMMANDS["endpoints:complete-webhook-event"]).toBeDefined();
   });
-  it("registers a command for every operation in the manifest except the key writes", () => {
+  it("registers a command for every operation in the manifest except the key writes and those taking a credential header", () => {
     const missing = operationManifest
       .map((op) => `${op.tagCommand}:${op.command}`)
       .filter((id) => !(id in COMMANDS));
 
-    expect(missing.sort()).toEqual([...KEY_WRITE_OPERATION_IDS].sort());
+    expect(missing.sort()).toEqual([...CLI_OMITTED_OPERATION_IDS].sort());
+    expect([...CLI_OMITTED_OPERATION_IDS].sort()).toEqual(
+      [...KEY_WRITE_OPERATION_IDS, ...CREDENTIAL_HEADER_OPERATION_IDS].sort(),
+    );
+  });
+
+  it("offers no command for an operation that takes a credential header, and keeps its sibling", () => {
+    expect(COMMANDS["emails:import-google-mail-message"]).toBeUndefined();
+    expect(
+      cliOperationManifest.some(
+        (operation) => operation.operationId === "importGoogleMailMessage",
+      ),
+    ).toBe(false);
+    // Each one left out declares a header the manifest marks required.
+    for (const id of CREDENTIAL_HEADER_OPERATION_IDS) {
+      const operation = operationManifest.find(
+        (op) => `${op.tagCommand}:${op.command}` === id,
+      );
+      expect(operation, id).toBeDefined();
+      expect(
+        operation?.headerParams.some((parameter) => parameter.required),
+        id,
+      ).toBe(true);
+    }
+    expect(COMMANDS["emails:reconcile-google-mail-import"]).toBeDefined();
   });
 
   it("does not declare a pre-built oclif.manifest.json in package files", () => {
