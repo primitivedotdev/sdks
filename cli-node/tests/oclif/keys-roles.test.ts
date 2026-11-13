@@ -451,6 +451,7 @@ describe("keys helpers", () => {
         { add: ["mail:send"], remove: [] },
       ).ok,
     ).toBe(false);
+    // A setting the CLI does not know is named, so the refusal says what it would drop.
     expect(
       buildUpdatedGrant(
         {
@@ -462,8 +463,24 @@ describe("keys helpers", () => {
           },
         },
         { add: ["mail:send"], remove: [] },
-      ).ok,
-    ).toBe(false);
+      ),
+    ).toEqual({
+      ok: false,
+      message:
+        "This key's mail scope has a setting the CLI cannot restate (exclude), and a change here could drop it. Change the key in the dashboard, or create a key with what you need and revoke this one.",
+    });
+    expect(
+      buildUpdatedGrant(
+        {
+          ...ruled,
+          mail_scope: { addresses: "a@example.com", domains: [], rules: [] },
+        },
+        { add: ["mail:send"], remove: [] },
+      ),
+    ).toMatchObject({
+      ok: false,
+      message: expect.stringContaining("could not be read (addresses)"),
+    });
     expect(
       buildUpdatedGrant(
         {
@@ -1650,6 +1667,68 @@ describe("keys commands", () => {
     });
     expect(removed.stderr).not.toContain("Not on this key");
     expect(removed.stdout).toContain(`Rules taken off: ${DELETED}`);
+  });
+
+  it("update restates a key whose read shows rule_versions, for a rule or permission change, never sending them back", async () => {
+    const B = "9c1d2e3f-4a5b-4c6d-8e7f-0a1b2c3d4e5f";
+    // As GET /v1/keys/{id} shows a key that lists a live rule.
+    const withVersions = keyRow({
+      template: null,
+      permissions: ["mail:read"],
+      mail_scope: {
+        addresses: [],
+        domains: [],
+        rules: [RULE_ID],
+        depth: "content",
+        rule_versions: [
+          {
+            id: RULE_ID,
+            current_version: 2,
+            state: "active",
+            version_saved_at: "2026-11-13T10:00:00.000Z",
+          },
+        ],
+      },
+      ref: "grant-11",
+    });
+    for (const [argv, grant] of [
+      [
+        ["--add-rule", B],
+        { preset: "custom", permissions: ["mail:read"], rules: [RULE_ID, B] },
+      ],
+      [
+        ["--rule", B],
+        { preset: "custom", permissions: ["mail:read"], rules: [B] },
+      ],
+      [
+        ["--add", "mail:send"],
+        {
+          preset: "custom",
+          permissions: ["mail:read", "mail:send"],
+          rules: [RULE_ID],
+        },
+      ],
+    ] as const) {
+      const requests = useServer((request) =>
+        request.method === "GET"
+          ? Response.json({ success: true, data: withVersions })
+          : Response.json({
+              success: true,
+              data: { id: KEY_ID, changed: ["grant"], warnings: [] },
+            }),
+      );
+      const result = await run(KeysUpdateCommand, [
+        KEY_ID,
+        ...argv,
+        "--step-up-token",
+        "pstep_v",
+      ]);
+      expect(result.exitCode).toBeUndefined();
+      expect(result.stderr).not.toContain("cannot restate");
+      expect(
+        await (requests.find((r) => r.method === "PATCH") as Request).json(),
+      ).toEqual({ grant, expected_grant_ref: "grant-11" });
+    }
   });
 
   it("update refuses to put back a rule that reads nothing any more, and says when a key reads no mail at all", () => {

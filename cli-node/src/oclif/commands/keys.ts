@@ -426,6 +426,8 @@ export function buildCreateGrant(
  * The mail scope fields a change can restate. `ended_rules` (rules the key
  * lists that read nothing any more: a deleted rule, or a share that ended) is
  * read only: a change never sends it back, so the key is saved without them.
+ * `rule_versions` (where each live rule the key lists stands now) is read only
+ * too, and is never sent back.
  */
 const RESTATABLE_SCOPE_FIELDS = new Set([
   "addresses",
@@ -433,6 +435,7 @@ const RESTATABLE_SCOPE_FIELDS = new Set([
   "rules",
   "depth",
   "ended_rules",
+  "rule_versions",
 ]);
 
 export type GrantChange = {
@@ -609,16 +612,25 @@ export function buildUpdatedGrant(
     };
   }
   const rules = heldRules ? nextRules(heldRules, change) : null;
-  if (
-    !addresses ||
-    !domains ||
-    !rules ||
-    Object.keys(record).some((field) => !RESTATABLE_SCOPE_FIELDS.has(field))
-  ) {
+  const unknown = Object.keys(record).filter(
+    (field) => !RESTATABLE_SCOPE_FIELDS.has(field),
+  );
+  if (unknown.length > 0) {
+    const named = unknown.join(", ");
     return {
       ok: false,
-      message:
-        "This key's mail scope has settings the CLI cannot restate. Change it in the dashboard.",
+      message: `This key's mail scope has ${unknown.length === 1 ? "a setting" : "settings"} the CLI cannot restate (${named}), and a change here could drop ${unknown.length === 1 ? "it" : "them"}. Change the key in the dashboard, or create a key with what you need and revoke this one.`,
+    };
+  }
+  if (!addresses || !domains || !rules) {
+    const unreadable = [
+      ...(addresses ? [] : ["addresses"]),
+      ...(domains ? [] : ["domains"]),
+      ...(rules ? [] : ["rules"]),
+    ];
+    return {
+      ok: false,
+      message: `This key's mail scope could not be read (${unreadable.join(", ")}). Change the key in the dashboard, or create a key with what you need and revoke this one.`,
     };
   }
   if (addresses.length === 0 && domains.length === 0 && rules.length === 0) {
