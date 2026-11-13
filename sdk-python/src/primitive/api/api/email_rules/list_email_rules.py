@@ -118,8 +118,8 @@ def sync_detailed(
     reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
     for a selected rule) and current_version, but not the version's text: read that under current from
     GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -162,8 +162,8 @@ def sync(
     reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
     for a selected rule) and current_version, but not the version's text: read that under current from
     GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -201,8 +201,8 @@ async def asyncio_detailed(
     reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
     for a selected rule) and current_version, but not the version's text: read that under current from
     GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -245,8 +245,8 @@ async def asyncio(
     reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
     for a selected rule) and current_version, but not the version's text: read that under current from
     GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         limit (int | Unset):  Default: 50.

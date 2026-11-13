@@ -18,6 +18,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.email_readable_attachment import EmailReadableAttachment
+  from ..models.email_readable_imported_type_0 import EmailReadableImportedType0
   from ..models.email_readable_link import EmailReadableLink
 
 
@@ -33,6 +34,8 @@ class EmailReadable:
     """ What an inbound email says, as plain text, with the fields that identify it.
 
         Attributes:
+            imported (EmailReadableImportedType0 | None): Historical acquisition; never sender or SMTP delivery proof. Null
+                for live mail. Excluded from live tails and deltas.
             id (UUID): The inbound email id.
             thread_id (None | UUID): Its conversation, once it has been placed in one.
             received_at (datetime.datetime): When it was received.
@@ -66,6 +69,7 @@ class EmailReadable:
             links (list[EmailReadableLink] | Unset): Link targets. Present only when the request carried `links`.
      """
 
+    imported: EmailReadableImportedType0 | None
     id: UUID
     thread_id: None | UUID
     received_at: datetime.datetime
@@ -93,7 +97,14 @@ class EmailReadable:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_readable_attachment import EmailReadableAttachment # noqa: PLC0415
+        from ..models.email_readable_imported_type_0 import EmailReadableImportedType0 # noqa: PLC0415
         from ..models.email_readable_link import EmailReadableLink # noqa: PLC0415
+        imported: dict[str, Any] | None
+        if isinstance(self.imported, EmailReadableImportedType0):
+            imported = self.imported.to_dict()
+        else:
+            imported = self.imported
+
         id = str(self.id)
 
         thread_id: None | str
@@ -164,6 +175,7 @@ class EmailReadable:
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
+            "imported": imported,
             "id": id,
             "thread_id": thread_id,
             "received_at": received_at,
@@ -193,8 +205,27 @@ class EmailReadable:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_readable_attachment import EmailReadableAttachment # noqa: PLC0415
+        from ..models.email_readable_imported_type_0 import EmailReadableImportedType0 # noqa: PLC0415
         from ..models.email_readable_link import EmailReadableLink # noqa: PLC0415
         d = dict(src_dict)
+        def _parse_imported(data: object) -> EmailReadableImportedType0 | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                imported_type_0 = EmailReadableImportedType0.from_dict(data)
+
+
+
+                return imported_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailReadableImportedType0 | None, data)
+
+        imported = _parse_imported(d.pop("imported"))
+
+
         id = UUID(d.pop("id"))
 
 
@@ -337,6 +368,7 @@ class EmailReadable:
 
 
         email_readable = cls(
+            imported=imported,
             id=id,
             thread_id=thread_id,
             received_at=received_at,

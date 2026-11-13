@@ -32,6 +32,7 @@ function fixture(now = Date.now()) {
     from_name: null,
     snippet: null,
     webhook_attempt_count: 0,
+    imported: null,
     replies: [],
     reply_count: 0,
     last_replied_at: null,

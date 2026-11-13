@@ -16,6 +16,7 @@ const SAMPLE: EmailDetail = {
   sender: "alice@example.com",
   recipient: "support@example.com",
   subject: "Hello",
+  imported: null,
   body_text: "Hi there",
   body_html: "<p>Hi there</p>",
   status: "completed",

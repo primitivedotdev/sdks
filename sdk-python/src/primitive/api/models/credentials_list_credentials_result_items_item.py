@@ -14,6 +14,7 @@ from typing import cast
 import datetime
 
 if TYPE_CHECKING:
+  from ..models.credentials_list_credentials_result_items_item_address_warnings_item import CredentialsListCredentialsResultItemsItemAddressWarningsItem
   from ..models.credentials_list_credentials_result_items_item_belongs_to import CredentialsListCredentialsResultItemsItemBelongsTo
   from ..models.credentials_list_credentials_result_items_item_cli import CredentialsListCredentialsResultItemsItemCli
   from ..models.credentials_list_credentials_result_items_item_client_type_0 import CredentialsListCredentialsResultItemsItemClientType0
@@ -49,6 +50,12 @@ class CredentialsListCredentialsResultItemsItem:
             actions (list[CredentialsListCredentialsResultItemsItemActionsItem]):
             cli (CredentialsListCredentialsResultItemsItemCli | Unset):
             belongs_to (CredentialsListCredentialsResultItemsItemBelongsTo | Unset):
+            address_warnings (list[CredentialsListCredentialsResultItemsItemAddressWarningsItem] | Unset): Notes on the
+                key's grant, worked out from it on every read: whole_mailbox, an address or domain listed beside email rules,
+                which the key reads in full; no_send_address, with address empty, a key that can send but lists only email
+                rules. The notes that need the organization's mailboxes and domains (member_address, unowned_domain) are given
+                only when the grant is written. Only rules not deleted and shares not ended count. Empty, or absent, for a key
+                on a template, and empty for a revoked key.
      """
 
     kind: CredentialsListCredentialsResultItemsItemKind
@@ -67,6 +74,7 @@ class CredentialsListCredentialsResultItemsItem:
     actions: list[CredentialsListCredentialsResultItemsItemActionsItem]
     cli: CredentialsListCredentialsResultItemsItemCli | Unset = UNSET
     belongs_to: CredentialsListCredentialsResultItemsItemBelongsTo | Unset = UNSET
+    address_warnings: list[CredentialsListCredentialsResultItemsItemAddressWarningsItem] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -74,6 +82,7 @@ class CredentialsListCredentialsResultItemsItem:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.credentials_list_credentials_result_items_item_address_warnings_item import CredentialsListCredentialsResultItemsItemAddressWarningsItem # noqa: PLC0415
         from ..models.credentials_list_credentials_result_items_item_belongs_to import CredentialsListCredentialsResultItemsItemBelongsTo # noqa: PLC0415
         from ..models.credentials_list_credentials_result_items_item_cli import CredentialsListCredentialsResultItemsItemCli # noqa: PLC0415
         from ..models.credentials_list_credentials_result_items_item_client_type_0 import CredentialsListCredentialsResultItemsItemClientType0 # noqa: PLC0415
@@ -146,6 +155,15 @@ class CredentialsListCredentialsResultItemsItem:
         if not isinstance(self.belongs_to, Unset):
             belongs_to = self.belongs_to.to_dict()
 
+        address_warnings: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.address_warnings, Unset):
+            address_warnings = []
+            for address_warnings_item_data in self.address_warnings:
+                address_warnings_item = address_warnings_item_data.to_dict()
+                address_warnings.append(address_warnings_item)
+
+
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -169,6 +187,8 @@ class CredentialsListCredentialsResultItemsItem:
             field_dict["cli"] = cli
         if belongs_to is not UNSET:
             field_dict["belongs_to"] = belongs_to
+        if address_warnings is not UNSET:
+            field_dict["address_warnings"] = address_warnings
 
         return field_dict
 
@@ -176,6 +196,7 @@ class CredentialsListCredentialsResultItemsItem:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.credentials_list_credentials_result_items_item_address_warnings_item import CredentialsListCredentialsResultItemsItemAddressWarningsItem # noqa: PLC0415
         from ..models.credentials_list_credentials_result_items_item_belongs_to import CredentialsListCredentialsResultItemsItemBelongsTo # noqa: PLC0415
         from ..models.credentials_list_credentials_result_items_item_cli import CredentialsListCredentialsResultItemsItemCli # noqa: PLC0415
         from ..models.credentials_list_credentials_result_items_item_client_type_0 import CredentialsListCredentialsResultItemsItemClientType0 # noqa: PLC0415
@@ -347,6 +368,18 @@ class CredentialsListCredentialsResultItemsItem:
 
 
 
+        _address_warnings = d.pop("address_warnings", UNSET)
+        address_warnings: list[CredentialsListCredentialsResultItemsItemAddressWarningsItem] | Unset = UNSET
+        if _address_warnings is not UNSET:
+            address_warnings = []
+            for address_warnings_item_data in _address_warnings:
+                address_warnings_item = CredentialsListCredentialsResultItemsItemAddressWarningsItem.from_dict(address_warnings_item_data)
+
+
+
+                address_warnings.append(address_warnings_item)
+
+
         credentials_list_credentials_result_items_item = cls(
             kind=kind,
             id=id,
@@ -364,6 +397,7 @@ class CredentialsListCredentialsResultItemsItem:
             actions=actions,
             cli=cli,
             belongs_to=belongs_to,
+            address_warnings=address_warnings,
         )
 
 

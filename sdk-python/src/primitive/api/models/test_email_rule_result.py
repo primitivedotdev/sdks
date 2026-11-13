@@ -12,12 +12,12 @@ from typing import cast
 
 if TYPE_CHECKING:
   from ..models.email_rule_scope_warning import EmailRuleScopeWarning
+  from ..models.email_rule_tested import EmailRuleTested
   from ..models.test_email_rule_result_classification import TestEmailRuleResultClassification
   from ..models.test_email_rule_result_counts import TestEmailRuleResultCounts
   from ..models.test_email_rule_result_expectations import TestEmailRuleResultExpectations
   from ..models.test_email_rule_result_questions import TestEmailRuleResultQuestions
   from ..models.test_email_rule_result_results_item import TestEmailRuleResultResultsItem
-  from ..models.test_email_rule_result_rule import TestEmailRuleResultRule
   from ..models.test_email_rule_result_summary import TestEmailRuleResultSummary
   from ..models.test_email_rule_result_window import TestEmailRuleResultWindow
 
@@ -33,7 +33,7 @@ T = TypeVar("T", bound="TestEmailRuleResult")
 class TestEmailRuleResult:
     """ 
         Attributes:
-            rule (TestEmailRuleResultRule):
+            rule (EmailRuleTested):
             window (TestEmailRuleResultWindow):
             counts (TestEmailRuleResultCounts):
             classification (TestEmailRuleResultClassification):
@@ -47,7 +47,7 @@ class TestEmailRuleResult:
                 saved expectations or made-up emails.
      """
 
-    rule: TestEmailRuleResultRule
+    rule: EmailRuleTested
     window: TestEmailRuleResultWindow
     counts: TestEmailRuleResultCounts
     classification: TestEmailRuleResultClassification
@@ -64,12 +64,12 @@ class TestEmailRuleResult:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
+        from ..models.email_rule_tested import EmailRuleTested # noqa: PLC0415
         from ..models.test_email_rule_result_classification import TestEmailRuleResultClassification # noqa: PLC0415
         from ..models.test_email_rule_result_counts import TestEmailRuleResultCounts # noqa: PLC0415
         from ..models.test_email_rule_result_expectations import TestEmailRuleResultExpectations # noqa: PLC0415
         from ..models.test_email_rule_result_questions import TestEmailRuleResultQuestions # noqa: PLC0415
         from ..models.test_email_rule_result_results_item import TestEmailRuleResultResultsItem # noqa: PLC0415
-        from ..models.test_email_rule_result_rule import TestEmailRuleResultRule # noqa: PLC0415
         from ..models.test_email_rule_result_summary import TestEmailRuleResultSummary # noqa: PLC0415
         from ..models.test_email_rule_result_window import TestEmailRuleResultWindow # noqa: PLC0415
         rule = self.rule.to_dict()
@@ -131,16 +131,16 @@ class TestEmailRuleResult:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
+        from ..models.email_rule_tested import EmailRuleTested # noqa: PLC0415
         from ..models.test_email_rule_result_classification import TestEmailRuleResultClassification # noqa: PLC0415
         from ..models.test_email_rule_result_counts import TestEmailRuleResultCounts # noqa: PLC0415
         from ..models.test_email_rule_result_expectations import TestEmailRuleResultExpectations # noqa: PLC0415
         from ..models.test_email_rule_result_questions import TestEmailRuleResultQuestions # noqa: PLC0415
         from ..models.test_email_rule_result_results_item import TestEmailRuleResultResultsItem # noqa: PLC0415
-        from ..models.test_email_rule_result_rule import TestEmailRuleResultRule # noqa: PLC0415
         from ..models.test_email_rule_result_summary import TestEmailRuleResultSummary # noqa: PLC0415
         from ..models.test_email_rule_result_window import TestEmailRuleResultWindow # noqa: PLC0415
         d = dict(src_dict)
-        rule = TestEmailRuleResultRule.from_dict(d.pop("rule"))
+        rule = EmailRuleTested.from_dict(d.pop("rule"))
 
 
 

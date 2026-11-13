@@ -25,6 +25,7 @@ if TYPE_CHECKING:
   from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
   from ..models.email_detail_collaboration import EmailDetailCollaboration
   from ..models.email_detail_delivery_report_type_0 import EmailDetailDeliveryReportType0
+  from ..models.email_detail_imported_type_0 import EmailDetailImportedType0
   from ..models.email_detail_relay_type_0 import EmailDetailRelayType0
   from ..models.email_detail_repeat_type_0 import EmailDetailRepeatType0
   from ..models.email_detail_reply import EmailDetailReply
@@ -187,6 +188,8 @@ class EmailDetail:
                 decoded in their declared charset and folded lines are joined (e.g. `Dana Rúiz` for `=?UTF-8?Q?Dana_R=C3=BAiz?=
                 <dana@example.com>`). Null when the header carries no display name. For display only: identify the sender by
                 `from_email`, never by this name, which the sender chooses freely.
+            imported (EmailDetailImportedType0 | None): Historical acquisition; never sender or SMTP delivery proof. Null
+                for live mail. Excluded from live tails and deltas.
             snippet (None | str): A plain-text preview of `body_text` (never `body_html`), computed once when the message is
                 stored: quoted replies (an "On ... wrote:" line, an "Original Message" separator, a From/Sent header block, `>`
                 lines) and a `-- ` signature are cut off, whitespace is collapsed to single spaces, and the result is at most
@@ -348,6 +351,7 @@ class EmailDetail:
     from_verified: bool
     from_header_email: None | str
     from_name: None | str
+    imported: EmailDetailImportedType0 | None
     snippet: None | str
     message_id: None | str | Unset = UNSET
     domain_id: None | Unset | UUID = UNSET
@@ -399,6 +403,7 @@ class EmailDetail:
         from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0 # noqa: PLC0415
         from ..models.email_detail_collaboration import EmailDetailCollaboration # noqa: PLC0415
         from ..models.email_detail_delivery_report_type_0 import EmailDetailDeliveryReportType0 # noqa: PLC0415
+        from ..models.email_detail_imported_type_0 import EmailDetailImportedType0 # noqa: PLC0415
         from ..models.email_detail_relay_type_0 import EmailDetailRelayType0 # noqa: PLC0415
         from ..models.email_detail_repeat_type_0 import EmailDetailRepeatType0 # noqa: PLC0415
         from ..models.email_detail_reply import EmailDetailReply # noqa: PLC0415
@@ -467,6 +472,12 @@ class EmailDetail:
 
         from_name: None | str
         from_name = self.from_name
+
+        imported: dict[str, Any] | None
+        if isinstance(self.imported, EmailDetailImportedType0):
+            imported = self.imported.to_dict()
+        else:
+            imported = self.imported
 
         snippet: None | str
         snippet = self.snippet
@@ -755,6 +766,7 @@ class EmailDetail:
             "from_verified": from_verified,
             "from_header_email": from_header_email,
             "from_name": from_name,
+            "imported": imported,
             "snippet": snippet,
         })
         if message_id is not UNSET:
@@ -846,6 +858,7 @@ class EmailDetail:
         from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0 # noqa: PLC0415
         from ..models.email_detail_collaboration import EmailDetailCollaboration # noqa: PLC0415
         from ..models.email_detail_delivery_report_type_0 import EmailDetailDeliveryReportType0 # noqa: PLC0415
+        from ..models.email_detail_imported_type_0 import EmailDetailImportedType0 # noqa: PLC0415
         from ..models.email_detail_relay_type_0 import EmailDetailRelayType0 # noqa: PLC0415
         from ..models.email_detail_repeat_type_0 import EmailDetailRepeatType0 # noqa: PLC0415
         from ..models.email_detail_reply import EmailDetailReply # noqa: PLC0415
@@ -968,6 +981,24 @@ class EmailDetail:
             return cast(None | str, data)
 
         from_name = _parse_from_name(d.pop("from_name"))
+
+
+        def _parse_imported(data: object) -> EmailDetailImportedType0 | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                imported_type_0 = EmailDetailImportedType0.from_dict(data)
+
+
+
+                return imported_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailDetailImportedType0 | None, data)
+
+        imported = _parse_imported(d.pop("imported"))
 
 
         def _parse_snippet(data: object) -> None | str:
@@ -1569,6 +1600,7 @@ class EmailDetail:
             from_verified=from_verified,
             from_header_email=from_header_email,
             from_name=from_name,
+            imported=imported,
             snippet=snippet,
             message_id=message_id,
             domain_id=domain_id,

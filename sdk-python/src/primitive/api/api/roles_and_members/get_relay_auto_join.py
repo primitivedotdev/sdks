@@ -99,9 +99,10 @@ def sync_detailed(
     """ Get the auto-join setting
 
      Whether someone who proves an address on the organization's mail relay domain with Google Workspace
-    joins automatically, and with what access. `option` is null when auto-join is off and an invitation
-    is required; `options` lists the choices. Answers 404 `feature_disabled` unless the organization has
-    mail relay.
+    joins automatically. Auto-joined people have no mail access until an owner or admin assigns a role.
+    `option` is null when auto-join is off and an invitation is required; legacy mail-grant settings
+    read as `no_access`. `options` lists the choices. Answers 404 `feature_disabled` unless the
+    organization has mail relay.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -130,9 +131,10 @@ def sync(
     """ Get the auto-join setting
 
      Whether someone who proves an address on the organization's mail relay domain with Google Workspace
-    joins automatically, and with what access. `option` is null when auto-join is off and an invitation
-    is required; `options` lists the choices. Answers 404 `feature_disabled` unless the organization has
-    mail relay.
+    joins automatically. Auto-joined people have no mail access until an owner or admin assigns a role.
+    `option` is null when auto-join is off and an invitation is required; legacy mail-grant settings
+    read as `no_access`. `options` lists the choices. Answers 404 `feature_disabled` unless the
+    organization has mail relay.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -156,9 +158,10 @@ async def asyncio_detailed(
     """ Get the auto-join setting
 
      Whether someone who proves an address on the organization's mail relay domain with Google Workspace
-    joins automatically, and with what access. `option` is null when auto-join is off and an invitation
-    is required; `options` lists the choices. Answers 404 `feature_disabled` unless the organization has
-    mail relay.
+    joins automatically. Auto-joined people have no mail access until an owner or admin assigns a role.
+    `option` is null when auto-join is off and an invitation is required; legacy mail-grant settings
+    read as `no_access`. `options` lists the choices. Answers 404 `feature_disabled` unless the
+    organization has mail relay.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -187,9 +190,10 @@ async def asyncio(
     """ Get the auto-join setting
 
      Whether someone who proves an address on the organization's mail relay domain with Google Workspace
-    joins automatically, and with what access. `option` is null when auto-join is off and an invitation
-    is required; `options` lists the choices. Answers 404 `feature_disabled` unless the organization has
-    mail relay.
+    joins automatically. Auto-joined people have no mail access until an owner or admin assigns a role.
+    `option` is null when auto-join is off and an invitation is required; legacy mail-grant settings
+    read as `no_access`. `options` lists the choices. Answers 404 `feature_disabled` unless the
+    organization has mail relay.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

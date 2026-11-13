@@ -27,10 +27,15 @@ class EmailRuleReceiversWebhooksItem:
         Attributes:
             owner (EmailRuleReceiversWebhooksItemOwner):
             count (int):
+            hosts (list[str] | Unset): Distinct sites they deliver to (a host's registrable domain, or a tunnel, preview or
+                function service alone), sorted, at most 10; "unknown host" (last) for any that cannot be named.
+            hosts_not_listed (int | Unset): Hosts past those listed.
      """
 
     owner: EmailRuleReceiversWebhooksItemOwner
     count: int
+    hosts: list[str] | Unset = UNSET
+    hosts_not_listed: int | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -43,6 +48,14 @@ class EmailRuleReceiversWebhooksItem:
 
         count = self.count
 
+        hosts: list[str] | Unset = UNSET
+        if not isinstance(self.hosts, Unset):
+            hosts = self.hosts
+
+
+
+        hosts_not_listed = self.hosts_not_listed
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -50,6 +63,10 @@ class EmailRuleReceiversWebhooksItem:
             "owner": owner,
             "count": count,
         })
+        if hosts is not UNSET:
+            field_dict["hosts"] = hosts
+        if hosts_not_listed is not UNSET:
+            field_dict["hosts_not_listed"] = hosts_not_listed
 
         return field_dict
 
@@ -66,9 +83,16 @@ class EmailRuleReceiversWebhooksItem:
 
         count = d.pop("count")
 
+        hosts = cast(list[str], d.pop("hosts", UNSET))
+
+
+        hosts_not_listed = d.pop("hosts_not_listed", UNSET)
+
         email_rule_receivers_webhooks_item = cls(
             owner=owner,
             count=count,
+            hosts=hosts,
+            hosts_not_listed=hosts_not_listed,
         )
 
 

@@ -125,9 +125,8 @@ def sync_detailed(
     """ Decline an objection to your rule
 
      Declines a pending objection to a rule you wrote, optionally saying why; the rule stays as it is.
-    Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-    narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive
-    CLI.
+    Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
+    agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -167,9 +166,8 @@ def sync(
     """ Decline an objection to your rule
 
      Declines a pending objection to a rule you wrote, optionally saying why; the rule stays as it is.
-    Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-    narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive
-    CLI.
+    Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
+    agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -204,9 +202,8 @@ async def asyncio_detailed(
     """ Decline an objection to your rule
 
      Declines a pending objection to a rule you wrote, optionally saying why; the rule stays as it is.
-    Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-    narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive
-    CLI.
+    Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
+    agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -246,9 +243,8 @@ async def asyncio(
     """ Decline an objection to your rule
 
      Declines a pending objection to a rule you wrote, optionally saying why; the rule stays as it is.
-    Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-    narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive
-    CLI.
+    Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
+    agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):

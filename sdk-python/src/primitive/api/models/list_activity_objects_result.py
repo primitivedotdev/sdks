@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from typing import cast
+import datetime
 
 if TYPE_CHECKING:
   from ..models.list_activity_objects_result_items_item import ListActivityObjectsResultItemsItem
@@ -35,12 +36,19 @@ class ListActivityObjectsResult:
                 through their own routes. Nothing is said about how many there are.
             next_cursor (None | str): Pass as cursor to read the next page; null on the last page. A page can hold fewer
                 items than limit, or none, while next_cursor is set.
+            as_of (datetime.datetime | None | Unset): With relation=concerning only: about when the notices last looked at
+                your organization; null if never or unread. Coverage since may have no notice yet.
+            pending_complete (bool | Unset): With relation=concerning, on the first page only: whether the check for rules
+                that started covering you without their start notice (state pending, listed ahead of the notices and beyond
+                limit) was finished. false: some may be missing. Absent where there is nothing to check.
      """
 
     covers: str
     items: list[ListActivityObjectsResultItemsItem]
     withheld: list[ListActivityObjectsResultWithheldItem]
     next_cursor: None | str
+    as_of: datetime.datetime | None | Unset = UNSET
+    pending_complete: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -69,6 +77,16 @@ class ListActivityObjectsResult:
         next_cursor: None | str
         next_cursor = self.next_cursor
 
+        as_of: None | str | Unset
+        if isinstance(self.as_of, Unset):
+            as_of = UNSET
+        elif isinstance(self.as_of, datetime.datetime):
+            as_of = self.as_of.isoformat()
+        else:
+            as_of = self.as_of
+
+        pending_complete = self.pending_complete
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -78,6 +96,10 @@ class ListActivityObjectsResult:
             "withheld": withheld,
             "next_cursor": next_cursor,
         })
+        if as_of is not UNSET:
+            field_dict["as_of"] = as_of
+        if pending_complete is not UNSET:
+            field_dict["pending_complete"] = pending_complete
 
         return field_dict
 
@@ -118,11 +140,35 @@ class ListActivityObjectsResult:
         next_cursor = _parse_next_cursor(d.pop("next_cursor"))
 
 
+        def _parse_as_of(data: object) -> datetime.datetime | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                as_of_type_0 = datetime.datetime.fromisoformat(data)
+
+
+
+                return as_of_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None | Unset, data)
+
+        as_of = _parse_as_of(d.pop("as_of", UNSET))
+
+
+        pending_complete = d.pop("pending_complete", UNSET)
+
         list_activity_objects_result = cls(
             covers=covers,
             items=items,
             withheld=withheld,
             next_cursor=next_cursor,
+            as_of=as_of,
+            pending_complete=pending_complete,
         )
 
 

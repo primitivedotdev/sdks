@@ -13,11 +13,11 @@ from typing import cast
 import datetime
 
 if TYPE_CHECKING:
+  from ..models.email_rule_tested import EmailRuleTested
   from ..models.test_email_rule_on_sample_result_classification import TestEmailRuleOnSampleResultClassification
   from ..models.test_email_rule_on_sample_result_facts import TestEmailRuleOnSampleResultFacts
   from ..models.test_email_rule_on_sample_result_parts_item import TestEmailRuleOnSampleResultPartsItem
   from ..models.test_email_rule_on_sample_result_question_answers_item import TestEmailRuleOnSampleResultQuestionAnswersItem
-  from ..models.test_email_rule_on_sample_result_rule import TestEmailRuleOnSampleResultRule
   from ..models.test_email_rule_on_sample_result_values import TestEmailRuleOnSampleResultValues
 
 
@@ -32,7 +32,7 @@ T = TypeVar("T", bound="TestEmailRuleOnSampleResult")
 class TestEmailRuleOnSampleResult:
     """ 
         Attributes:
-            rule (TestEmailRuleOnSampleResultRule):
+            rule (EmailRuleTested):
             received_at (datetime.datetime): When the made-up email counts as received (now): a rule on received_at is
                 decided on it.
             outcome (TestEmailRuleOnSampleResultOutcome): near_miss: Not matched, but nearly: its conditions held and its
@@ -52,7 +52,7 @@ class TestEmailRuleOnSampleResult:
                 without one), decided as no value.
      """
 
-    rule: TestEmailRuleOnSampleResultRule
+    rule: EmailRuleTested
     received_at: datetime.datetime
     outcome: TestEmailRuleOnSampleResultOutcome
     parts: list[TestEmailRuleOnSampleResultPartsItem]
@@ -69,11 +69,11 @@ class TestEmailRuleOnSampleResult:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_rule_tested import EmailRuleTested # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_classification import TestEmailRuleOnSampleResultClassification # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_facts import TestEmailRuleOnSampleResultFacts # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_parts_item import TestEmailRuleOnSampleResultPartsItem # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_question_answers_item import TestEmailRuleOnSampleResultQuestionAnswersItem # noqa: PLC0415
-        from ..models.test_email_rule_on_sample_result_rule import TestEmailRuleOnSampleResultRule # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_values import TestEmailRuleOnSampleResultValues # noqa: PLC0415
         rule = self.rule.to_dict()
 
@@ -140,14 +140,14 @@ class TestEmailRuleOnSampleResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_rule_tested import EmailRuleTested # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_classification import TestEmailRuleOnSampleResultClassification # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_facts import TestEmailRuleOnSampleResultFacts # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_parts_item import TestEmailRuleOnSampleResultPartsItem # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_question_answers_item import TestEmailRuleOnSampleResultQuestionAnswersItem # noqa: PLC0415
-        from ..models.test_email_rule_on_sample_result_rule import TestEmailRuleOnSampleResultRule # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_values import TestEmailRuleOnSampleResultValues # noqa: PLC0415
         d = dict(src_dict)
-        rule = TestEmailRuleOnSampleResultRule.from_dict(d.pop("rule"))
+        rule = EmailRuleTested.from_dict(d.pop("rule"))
 
 
 

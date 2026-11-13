@@ -140,8 +140,8 @@ def sync_detailed(
     POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree to
     POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-
     rules/look-alikes with request_id); neither stores anything. expectation_samples are kept on the
-    rule it writes. Accepting also needs mail:share_own. Needs mail:read, a member's own credential with
-    their full access (not an API key, agent key or narrowed token), and the email rules feature.
+    rule it writes. Accepting also needs mail:share_own. Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -189,8 +189,8 @@ def sync(
     POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree to
     POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-
     rules/look-alikes with request_id); neither stores anything. expectation_samples are kept on the
-    rule it writes. Accepting also needs mail:share_own. Needs mail:read, a member's own credential with
-    their full access (not an API key, agent key or narrowed token), and the email rules feature.
+    rule it writes. Accepting also needs mail:share_own. Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -233,8 +233,8 @@ async def asyncio_detailed(
     POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree to
     POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-
     rules/look-alikes with request_id); neither stores anything. expectation_samples are kept on the
-    rule it writes. Accepting also needs mail:share_own. Needs mail:read, a member's own credential with
-    their full access (not an API key, agent key or narrowed token), and the email rules feature.
+    rule it writes. Accepting also needs mail:share_own. Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -282,8 +282,8 @@ async def asyncio(
     POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree to
     POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-
     rules/look-alikes with request_id); neither stores anything. expectation_samples are kept on the
-    rule it writes. Accepting also needs mail:share_own. Needs mail:read, a member's own credential with
-    their full access (not an API key, agent key or narrowed token), and the email rules feature.
+    rule it writes. Accepting also needs mail:share_own. Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):

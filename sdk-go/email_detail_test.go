@@ -34,6 +34,7 @@ const emailDetailSampleJSON = `{
   "rejection_reason": null,
   "webhook_status": "fired",
   "webhook_attempt_count": 1,
+  "imported": null,
   "webhook_last_attempt_at": null,
   "webhook_last_status_code": 200,
   "webhook_last_error": null,

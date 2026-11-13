@@ -13,6 +13,7 @@ from ..models.credentials_get_key_result_status import CredentialsGetKeyResultSt
 from typing import cast
 
 if TYPE_CHECKING:
+  from ..models.credentials_get_key_result_address_warnings_item import CredentialsGetKeyResultAddressWarningsItem
   from ..models.credentials_get_key_result_grant import CredentialsGetKeyResultGrant
 
 
@@ -54,6 +55,12 @@ class CredentialsGetKeyResult:
             rotated_to (None | str | Unset): The id of the newest key rotated from this key that the caller may read; null
                 until it is rotated, or when the caller may read no key rotated from it. A revoked one is still named: GET
                 /v1/keys/{id} answers it.
+            address_warnings (list[CredentialsGetKeyResultAddressWarningsItem] | Unset): Notes on the key's grant, worked
+                out from it on every read: whole_mailbox, an address or domain listed beside email rules, which the key reads in
+                full; no_send_address, with address empty, a key that can send but lists only email rules. The notes that need
+                the organization's mailboxes and domains (member_address, unowned_domain) are given only when the grant is
+                written. Only rules not deleted and shares not ended count. Empty, or absent, for a key on a template, and empty
+                for a revoked key.
      """
 
     id: str
@@ -72,6 +79,7 @@ class CredentialsGetKeyResult:
     revoked_by: None | str | Unset = UNSET
     rotated_from: None | str | Unset = UNSET
     rotated_to: None | str | Unset = UNSET
+    address_warnings: list[CredentialsGetKeyResultAddressWarningsItem] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -79,6 +87,7 @@ class CredentialsGetKeyResult:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.credentials_get_key_result_address_warnings_item import CredentialsGetKeyResultAddressWarningsItem # noqa: PLC0415
         from ..models.credentials_get_key_result_grant import CredentialsGetKeyResultGrant # noqa: PLC0415
         id = self.id
 
@@ -137,6 +146,15 @@ class CredentialsGetKeyResult:
         else:
             rotated_to = self.rotated_to
 
+        address_warnings: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.address_warnings, Unset):
+            address_warnings = []
+            for address_warnings_item_data in self.address_warnings:
+                address_warnings_item = address_warnings_item_data.to_dict()
+                address_warnings.append(address_warnings_item)
+
+
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -163,6 +181,8 @@ class CredentialsGetKeyResult:
             field_dict["rotated_from"] = rotated_from
         if rotated_to is not UNSET:
             field_dict["rotated_to"] = rotated_to
+        if address_warnings is not UNSET:
+            field_dict["address_warnings"] = address_warnings
 
         return field_dict
 
@@ -170,6 +190,7 @@ class CredentialsGetKeyResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.credentials_get_key_result_address_warnings_item import CredentialsGetKeyResultAddressWarningsItem # noqa: PLC0415
         from ..models.credentials_get_key_result_grant import CredentialsGetKeyResultGrant # noqa: PLC0415
         d = dict(src_dict)
         id = d.pop("id")
@@ -286,6 +307,18 @@ class CredentialsGetKeyResult:
         rotated_to = _parse_rotated_to(d.pop("rotated_to", UNSET))
 
 
+        _address_warnings = d.pop("address_warnings", UNSET)
+        address_warnings: list[CredentialsGetKeyResultAddressWarningsItem] | Unset = UNSET
+        if _address_warnings is not UNSET:
+            address_warnings = []
+            for address_warnings_item_data in _address_warnings:
+                address_warnings_item = CredentialsGetKeyResultAddressWarningsItem.from_dict(address_warnings_item_data)
+
+
+
+                address_warnings.append(address_warnings_item)
+
+
         credentials_get_key_result = cls(
             id=id,
             kind=kind,
@@ -303,6 +336,7 @@ class CredentialsGetKeyResult:
             revoked_by=revoked_by,
             rotated_from=rotated_from,
             rotated_to=rotated_to,
+            address_warnings=address_warnings,
         )
 
 

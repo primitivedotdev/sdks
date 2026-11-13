@@ -121,11 +121,11 @@ def sync_detailed(
     """ Change the auto-join setting
 
      `option` is a choice's id from the GET, or null to require an invitation (turning it off needs only
-    members:manage). Choosing an option answers 404 `feature_disabled` unless the organization has mail
-    relay, 400 `validation_error` for an id that is not one of the choices, 403 `grant_forbidden` unless
-    the caller is an owner or admin who can assign roles and send invitations and covers the role the
-    option gives, 409 `role_key_taken` when a custom role already holds that role's key, and 409
-    `role_assignment_unavailable` when the organization cannot be given that role yet. Person only: a
+    members:manage). Auto-joined people have no mail access until an owner or admin assigns a role;
+    legacy mail-grant choices cannot be selected. Choosing an option answers 404 `feature_disabled`
+    unless the organization has mail relay, 400 `validation_error` for an id outside the current
+    catalog, 403 `grant_forbidden` without owner or admin assignment authority, and 409
+    `role_assignment_unavailable` when the restricted role cannot be assigned yet. Person only: a
     dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose
     `relay_auto_join.write` (the person confirms at the step_up_url a 403 step_up_required answer
     carries, which names this client, then send the token in the Primitive-Step-Up header; the token
@@ -167,11 +167,11 @@ def sync(
     """ Change the auto-join setting
 
      `option` is a choice's id from the GET, or null to require an invitation (turning it off needs only
-    members:manage). Choosing an option answers 404 `feature_disabled` unless the organization has mail
-    relay, 400 `validation_error` for an id that is not one of the choices, 403 `grant_forbidden` unless
-    the caller is an owner or admin who can assign roles and send invitations and covers the role the
-    option gives, 409 `role_key_taken` when a custom role already holds that role's key, and 409
-    `role_assignment_unavailable` when the organization cannot be given that role yet. Person only: a
+    members:manage). Auto-joined people have no mail access until an owner or admin assigns a role;
+    legacy mail-grant choices cannot be selected. Choosing an option answers 404 `feature_disabled`
+    unless the organization has mail relay, 400 `validation_error` for an id outside the current
+    catalog, 403 `grant_forbidden` without owner or admin assignment authority, and 409
+    `role_assignment_unavailable` when the restricted role cannot be assigned yet. Person only: a
     dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose
     `relay_auto_join.write` (the person confirms at the step_up_url a 403 step_up_required answer
     carries, which names this client, then send the token in the Primitive-Step-Up header; the token
@@ -208,11 +208,11 @@ async def asyncio_detailed(
     """ Change the auto-join setting
 
      `option` is a choice's id from the GET, or null to require an invitation (turning it off needs only
-    members:manage). Choosing an option answers 404 `feature_disabled` unless the organization has mail
-    relay, 400 `validation_error` for an id that is not one of the choices, 403 `grant_forbidden` unless
-    the caller is an owner or admin who can assign roles and send invitations and covers the role the
-    option gives, 409 `role_key_taken` when a custom role already holds that role's key, and 409
-    `role_assignment_unavailable` when the organization cannot be given that role yet. Person only: a
+    members:manage). Auto-joined people have no mail access until an owner or admin assigns a role;
+    legacy mail-grant choices cannot be selected. Choosing an option answers 404 `feature_disabled`
+    unless the organization has mail relay, 400 `validation_error` for an id outside the current
+    catalog, 403 `grant_forbidden` without owner or admin assignment authority, and 409
+    `role_assignment_unavailable` when the restricted role cannot be assigned yet. Person only: a
     dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose
     `relay_auto_join.write` (the person confirms at the step_up_url a 403 step_up_required answer
     carries, which names this client, then send the token in the Primitive-Step-Up header; the token
@@ -254,11 +254,11 @@ async def asyncio(
     """ Change the auto-join setting
 
      `option` is a choice's id from the GET, or null to require an invitation (turning it off needs only
-    members:manage). Choosing an option answers 404 `feature_disabled` unless the organization has mail
-    relay, 400 `validation_error` for an id that is not one of the choices, 403 `grant_forbidden` unless
-    the caller is an owner or admin who can assign roles and send invitations and covers the role the
-    option gives, 409 `role_key_taken` when a custom role already holds that role's key, and 409
-    `role_assignment_unavailable` when the organization cannot be given that role yet. Person only: a
+    members:manage). Auto-joined people have no mail access until an owner or admin assigns a role;
+    legacy mail-grant choices cannot be selected. Choosing an option answers 404 `feature_disabled`
+    unless the organization has mail relay, 400 `validation_error` for an id outside the current
+    catalog, 403 `grant_forbidden` without owner or admin assignment authority, and 409
+    `role_assignment_unavailable` when the restricted role cannot be assigned yet. Person only: a
     dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose
     `relay_auto_join.write` (the person confirms at the step_up_url a 403 step_up_required answer
     carries, which names this client, then send the token in the Primitive-Step-Up header; the token

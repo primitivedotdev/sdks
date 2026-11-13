@@ -132,6 +132,7 @@ function currentDetail(): EmailDetail {
     from_name: null,
     snippet: null,
     webhook_attempt_count: 0,
+    imported: null,
     spam_score: 0,
     domain: recipient.slice(recipient.lastIndexOf("@") + 1),
     replies: [],

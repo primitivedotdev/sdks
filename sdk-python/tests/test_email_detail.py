@@ -35,6 +35,7 @@ SAMPLE = {
     "rejection_reason": None,
     "webhook_status": "fired",
     "webhook_attempt_count": 1,
+    "imported": None,
     "webhook_last_attempt_at": None,
     "webhook_last_status_code": 200,
     "webhook_last_error": None,

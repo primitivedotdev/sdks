@@ -36,7 +36,8 @@ class TestEmailRuleRequest:
                 inboxes added later included. selected: what scope_selection names.
             scope_selection (EmailRuleScopeSelection | Unset): For a selected rule: inboxes, and domains (each address at
                 them the author reads); each one you can read.
-            rule_id (UUID | Unset): A saved rule you can see. Its current version is tested, with its author's access.
+            rule_id (UUID | Unset): A saved rule you can see. Its current version is tested, with its author's access; one
+                you see only because it covers your mailboxes, with yours, over only those (dashboard or Primitive CLI only).
             kind (TestEmailRuleRequestKind | Unset): For an unsaved tree: do_not_share tests it as a rule that blocks
                 sharing, so an email it cannot decide counts as matched. A saved rule uses its own.
             email_ids (list[UUID] | Unset): Test exactly these emails, and any expected ones. Without it, the newest emails

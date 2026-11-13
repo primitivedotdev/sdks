@@ -128,9 +128,9 @@ def sync_detailed(
      What a rule that covers your mailboxes, or decided on your mail, decided about mail at your own
     mailboxes, newest first: never about anyone else's mail. Each decision is in the words of the
     version that made it, which can be earlier than the current one: the questions it asked about that
-    email (question_answers) and the columns its conditions read (parts). Needs mail:read, a member's
-    own credential with their full access (not an API key, agent key or narrowed token), and the email
-    rules feature. Only on your own dashboard session or the Primitive CLI.
+    email (question_answers) and the columns its conditions read (parts). Needs mail:read, the email
+    rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+    Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -176,9 +176,9 @@ def sync(
      What a rule that covers your mailboxes, or decided on your mail, decided about mail at your own
     mailboxes, newest first: never about anyone else's mail. Each decision is in the words of the
     version that made it, which can be earlier than the current one: the questions it asked about that
-    email (question_answers) and the columns its conditions read (parts). Needs mail:read, a member's
-    own credential with their full access (not an API key, agent key or narrowed token), and the email
-    rules feature. Only on your own dashboard session or the Primitive CLI.
+    email (question_answers) and the columns its conditions read (parts). Needs mail:read, the email
+    rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+    Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -219,9 +219,9 @@ async def asyncio_detailed(
      What a rule that covers your mailboxes, or decided on your mail, decided about mail at your own
     mailboxes, newest first: never about anyone else's mail. Each decision is in the words of the
     version that made it, which can be earlier than the current one: the questions it asked about that
-    email (question_answers) and the columns its conditions read (parts). Needs mail:read, a member's
-    own credential with their full access (not an API key, agent key or narrowed token), and the email
-    rules feature. Only on your own dashboard session or the Primitive CLI.
+    email (question_answers) and the columns its conditions read (parts). Needs mail:read, the email
+    rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+    Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -267,9 +267,9 @@ async def asyncio(
      What a rule that covers your mailboxes, or decided on your mail, decided about mail at your own
     mailboxes, newest first: never about anyone else's mail. Each decision is in the words of the
     version that made it, which can be earlier than the current one: the questions it asked about that
-    email (question_answers) and the columns its conditions read (parts). Needs mail:read, a member's
-    own credential with their full access (not an API key, agent key or narrowed token), and the email
-    rules feature. Only on your own dashboard session or the Primitive CLI.
+    email (question_answers) and the columns its conditions read (parts). Needs mail:read, the email
+    rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+    Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):

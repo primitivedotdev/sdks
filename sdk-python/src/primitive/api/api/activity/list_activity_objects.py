@@ -145,7 +145,10 @@ def sync_detailed(
     person's own mail: each time a rule started covering one of their mailboxes or saved a new version
     while covering it, named as the rule was then, naming its author in created_through, under their
     current membership; only on the dashboard or the Primitive CLI. A key, an app or an agent has none,
-    and gets email_rule_coverage in withheld. A notice never reads as ended.
+    and gets email_rule_coverage in withheld. A notice never reads as ended. Notices are written by a
+    periodic job and can lag: until the notices record a rule starting to cover you, the first page
+    lists that rule as pending (pending_complete says whether that check finished), and as_of says about
+    when the notices last looked. For what covers you now, read GET /email-rules/covering-me.
 
     Args:
         relation (ListActivityObjectsRelation | Unset): created (the default): what you created.
@@ -213,7 +216,10 @@ def sync(
     person's own mail: each time a rule started covering one of their mailboxes or saved a new version
     while covering it, named as the rule was then, naming its author in created_through, under their
     current membership; only on the dashboard or the Primitive CLI. A key, an app or an agent has none,
-    and gets email_rule_coverage in withheld. A notice never reads as ended.
+    and gets email_rule_coverage in withheld. A notice never reads as ended. Notices are written by a
+    periodic job and can lag: until the notices record a rule starting to cover you, the first page
+    lists that rule as pending (pending_complete says whether that check finished), and as_of says about
+    when the notices last looked. For what covers you now, read GET /email-rules/covering-me.
 
     Args:
         relation (ListActivityObjectsRelation | Unset): created (the default): what you created.
@@ -276,7 +282,10 @@ async def asyncio_detailed(
     person's own mail: each time a rule started covering one of their mailboxes or saved a new version
     while covering it, named as the rule was then, naming its author in created_through, under their
     current membership; only on the dashboard or the Primitive CLI. A key, an app or an agent has none,
-    and gets email_rule_coverage in withheld. A notice never reads as ended.
+    and gets email_rule_coverage in withheld. A notice never reads as ended. Notices are written by a
+    periodic job and can lag: until the notices record a rule starting to cover you, the first page
+    lists that rule as pending (pending_complete says whether that check finished), and as_of says about
+    when the notices last looked. For what covers you now, read GET /email-rules/covering-me.
 
     Args:
         relation (ListActivityObjectsRelation | Unset): created (the default): what you created.
@@ -344,7 +353,10 @@ async def asyncio(
     person's own mail: each time a rule started covering one of their mailboxes or saved a new version
     while covering it, named as the rule was then, naming its author in created_through, under their
     current membership; only on the dashboard or the Primitive CLI. A key, an app or an agent has none,
-    and gets email_rule_coverage in withheld. A notice never reads as ended.
+    and gets email_rule_coverage in withheld. A notice never reads as ended. Notices are written by a
+    periodic job and can lag: until the notices record a rule starting to cover you, the first page
+    lists that rule as pending (pending_complete says whether that check finished), and as_of says about
+    when the notices last looked. For what covers you now, read GET /email-rules/covering-me.
 
     Args:
         relation (ListActivityObjectsRelation | Unset): created (the default): what you created.

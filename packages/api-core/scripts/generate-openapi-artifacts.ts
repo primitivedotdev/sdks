@@ -560,6 +560,15 @@ function normalizeForCodegen(value: unknown): unknown {
     delete next.default;
   }
 
+  // Nor a null default on a nullable object, which it also reads as an object
+  // default and stops on. Leaving the field out means null anyway.
+  if (
+    next.default === null &&
+    (next.type === "object" || isSchemaNode(next.properties))
+  ) {
+    delete next.default;
+  }
+
   // An `allOf` whose inline members both define a property is the same
   // property twice to the Python generator, which then drops the schema. Keep
   // the last definition, the most specific one.

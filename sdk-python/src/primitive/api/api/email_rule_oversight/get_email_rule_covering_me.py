@@ -100,11 +100,11 @@ def sync_detailed(
     kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as
     written, so they can name other addresses (a condition on who an email is from or to). While it
     covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and
-    shares, and the member each belongs to, or the organization. You do not see which keys, webhooks or
-    shares they are (no ids, names, prefixes or URLs), the other inboxes and domains its scope names, or
-    its saved expectations. Needs mail:read, a member's own credential with their full access (not an
-    API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard
-    session or the Primitive CLI.
+    shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You
+    do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the
+    site), the other inboxes and domains its scope names, or its saved expectations. Needs mail:read,
+    the email rules feature, and a member's own full-access credential (no API key, agent key or
+    narrowed token). Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -143,11 +143,11 @@ def sync(
     kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as
     written, so they can name other addresses (a condition on who an email is from or to). While it
     covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and
-    shares, and the member each belongs to, or the organization. You do not see which keys, webhooks or
-    shares they are (no ids, names, prefixes or URLs), the other inboxes and domains its scope names, or
-    its saved expectations. Needs mail:read, a member's own credential with their full access (not an
-    API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard
-    session or the Primitive CLI.
+    shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You
+    do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the
+    site), the other inboxes and domains its scope names, or its saved expectations. Needs mail:read,
+    the email rules feature, and a member's own full-access credential (no API key, agent key or
+    narrowed token). Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -181,11 +181,11 @@ async def asyncio_detailed(
     kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as
     written, so they can name other addresses (a condition on who an email is from or to). While it
     covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and
-    shares, and the member each belongs to, or the organization. You do not see which keys, webhooks or
-    shares they are (no ids, names, prefixes or URLs), the other inboxes and domains its scope names, or
-    its saved expectations. Needs mail:read, a member's own credential with their full access (not an
-    API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard
-    session or the Primitive CLI.
+    shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You
+    do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the
+    site), the other inboxes and domains its scope names, or its saved expectations. Needs mail:read,
+    the email rules feature, and a member's own full-access credential (no API key, agent key or
+    narrowed token). Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -224,11 +224,11 @@ async def asyncio(
     kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as
     written, so they can name other addresses (a condition on who an email is from or to). While it
     covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and
-    shares, and the member each belongs to, or the organization. You do not see which keys, webhooks or
-    shares they are (no ids, names, prefixes or URLs), the other inboxes and domains its scope names, or
-    its saved expectations. Needs mail:read, a member's own credential with their full access (not an
-    API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard
-    session or the Primitive CLI.
+    shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You
+    do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the
+    site), the other inboxes and domains its scope names, or its saved expectations. Needs mail:read,
+    the email rules feature, and a member's own full-access credential (no API key, agent key or
+    narrowed token). Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):

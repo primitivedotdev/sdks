@@ -126,8 +126,8 @@ def sync_detailed(
 
      Declines a pending request made to you. Nothing is written but the decision and, if you give one,
     its reason (reason, up to 500 characters), which the member who asked sees with the request. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         id (UUID):
@@ -168,8 +168,8 @@ def sync(
 
      Declines a pending request made to you. Nothing is written but the decision and, if you give one,
     its reason (reason, up to 500 characters), which the member who asked sees with the request. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         id (UUID):
@@ -205,8 +205,8 @@ async def asyncio_detailed(
 
      Declines a pending request made to you. Nothing is written but the decision and, if you give one,
     its reason (reason, up to 500 characters), which the member who asked sees with the request. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         id (UUID):
@@ -247,8 +247,8 @@ async def asyncio(
 
      Declines a pending request made to you. Nothing is written but the decision and, if you give one,
     its reason (reason, up to 500 characters), which the member who asked sees with the request. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         id (UUID):

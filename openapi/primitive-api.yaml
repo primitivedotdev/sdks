@@ -5363,7 +5363,7 @@ paths:
                   - type: object
                     properties:
                       data:
-                        $ref: "#/components/schemas/Endpoint"
+                        $ref: "#/components/schemas/CreatedEndpoint"
           headers:
             ratelimit-limit:
               $ref: "#/components/headers/ratelimit-limit"
@@ -5383,7 +5383,7 @@ paths:
                   - type: object
                     properties:
                       data:
-                        $ref: "#/components/schemas/Endpoint"
+                        $ref: "#/components/schemas/CreatedEndpoint"
         "400":
           description: Invalid request parameters
           content:
@@ -22966,7 +22966,7 @@ paths:
     get:
       operationId: listActivityObjects
       summary: List what you created, or what you were asked
-      description: "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules, rule requests and objections to rules over their mail (objections only on the dashboard or the Primitive CLI). Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked it lists instead what other members asked of the person, open or answered: the rule requests made to them, and the objections to rules they wrote, under their current membership, each naming the member who asked or objected in created_through. A key, an app or an agent has none, and gets both kinds in withheld. With relation=concerning it lists instead what other members did that concerns the person's own mail: each time a rule started covering one of their mailboxes or saved a new version while covering it, named as the rule was then, naming its author in created_through, under their current membership; only on the dashboard or the Primitive CLI. A key, an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads as ended."
+      description: "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules, rule requests and objections to rules over their mail (objections only on the dashboard or the Primitive CLI). Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked it lists instead what other members asked of the person, open or answered: the rule requests made to them, and the objections to rules they wrote, under their current membership, each naming the member who asked or objected in created_through. A key, an app or an agent has none, and gets both kinds in withheld. With relation=concerning it lists instead what other members did that concerns the person's own mail: each time a rule started covering one of their mailboxes or saved a new version while covering it, named as the rule was then, naming its author in created_through, under their current membership; only on the dashboard or the Primitive CLI. A key, an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads as ended. Notices are written by a periodic job and can lag: until the notices record a rule starting to cover you, the first page lists that rule as pending (pending_complete says whether that check finished), and as_of says about when the notices last looked. For what covers you now, read GET /email-rules/covering-me."
       tags:
         - Activity
       security:
@@ -23006,7 +23006,7 @@ paths:
         - name: limit
           in: query
           required: false
-          description: Objects per page, from 1 to 200; defaults to 50.
+          description: Objects per page, from 1 to 200; defaults to 50. With relation=concerning the first page may also hold pending items beyond it.
           schema:
             default: 50
             type: integer
@@ -23114,7 +23114,7 @@ paths:
     get:
       operationId: getEmailRuleVocabulary
       summary: Read the column catalog
-      description: "What a rule tree you write yourself can say: each column of the current vocabulary with its type, source, meaning, operators and the value each takes, options, and whether it takes min_confidence; and the tree's limits, its stored size included. Built from the checks a saved or tested tree must pass. A tree is {version: tree_version, vocabulary: version, when, questions}. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature."
+      description: "What a rule tree you write yourself can say: each column of the current vocabulary with its type, source, meaning, operators and the value each takes, options, and whether it takes min_confidence; and the tree's limits, its stored size included. Built from the checks a saved or tested tree must pass. A tree is {version: tree_version, vocabulary: version, when, questions}. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token)."
       tags:
         - Email Rules
       security:
@@ -23163,7 +23163,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden."
           content:
             application/json:
               schema:
@@ -23198,7 +23198,7 @@ paths:
     post:
       operationId: compileEmailRule
       summary: Compile a rule description
-      description: Turns a plain-English description of which received emails to match into a rule tree over the column contract, with an explanation of what it matches, the assumptions made, and warnings for what the columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only after the conditions match; they read the subject, the new text and attachment file names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how much of your recent classified mail its conditions match. include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+      description: Turns a plain-English description of which received emails to match into a rule tree over the column contract, with an explanation of what it matches, the assumptions made, and warnings for what the columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only after the conditions match; they read the subject, the new text and attachment file names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how much of your recent classified mail its conditions match; for a grant rule with questions, conditions_breadth counts its conditions alone. include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
       tags:
         - Email Rules
       security:
@@ -23264,7 +23264,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden."
           content:
             application/json:
               schema:
@@ -23320,7 +23320,7 @@ paths:
     post:
       operationId: testEmailRule
       summary: Test a rule against received mail
-      description: Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and question decided. Test an unsaved tree, or a saved rule by rule_id (its current version, as its author). It reads only mail its author can read and its scope covers. Without email_ids it tests the newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+      description: Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and question decided. Test an unsaved tree, or a saved rule by rule_id (its current version, as its author). It reads only mail its author can read and its scope covers. A rule you see only because it covers your own mailboxes runs as you, over only those, from the dashboard or the Primitive CLI. Without email_ids it tests the newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
       tags:
         - Email Rules
       security:
@@ -23381,19 +23381,19 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and a rule decides on what emails say. email_rule_scope_not_readable: scope_selection names something you cannot read."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and a rule decides on what emails say. email_rule_scope_not_readable: scope_selection names something you cannot read."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
-          description: "not_found: rule_id names no rule you can see (details.reason rule_not_found)."
+          description: "not_found: rule_id names no rule you can see or that covers your mailboxes (details.reason rule_not_found)."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: "email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree, the caller). details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_shareable_mailbox or no_selected_mailbox."
+          description: "email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree or a rule covering you, the caller). details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_shareable_mailbox or no_selected_mailbox."
           content:
             application/json:
               schema:
@@ -23437,7 +23437,7 @@ paths:
     post:
       operationId: generateLookAlikes
       summary: Write look-alike emails a rule should or should not match
-      description: "Writes made-up emails that come close to what a grant rule describes, and reports what the rule decides for each, as test-sample would. Most should not match (expected no_match): business near misses from its senders and topic (kind other: an all-clear, a reply with nothing new, a related document, another subject) and private mail (a personal medical bill, pay for named people, a personal purchase, personal banking or tax). By default a third, rounded down, are near cases it should match (expected match, kind other). failed means the rule decided one against expected. Nothing is stored and no mail is read. Keep them, with their expected, with add_expectation_samples, or for a request with the accept's expectation_samples. Limited to 20 an hour per member. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature."
+      description: "Writes made-up emails that come close to what a grant rule describes, and reports what the rule decides for each, as test-sample would. Most should not match (expected no_match): business near misses from its senders and topic (kind other: an all-clear, a reply with nothing new, a related document, another subject) and private mail (a personal medical bill, pay for named people, a personal purchase, personal banking or tax). By default a third, rounded down, are near cases it should match (expected match, kind other). failed means the rule decided one against expected. Nothing is stored and no mail is read. Keep them, with their expected, with add_expectation_samples, or for a request with the accept's expectation_samples. Limited to 20 an hour per member. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token)."
       tags:
         - Email Rules
       security:
@@ -23498,7 +23498,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. email_rule_scope_not_readable: scope_selection names something you cannot read."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read."
           content:
             application/json:
               schema:
@@ -23566,7 +23566,7 @@ paths:
     post:
       operationId: testEmailRuleOnSample
       summary: Test a rule against a made-up email
-      description: Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text, attachment types; optionally automated, from a mailing list, and a spam score), classified and decided as received mail would be. A rule reading a spam score you gave none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The answer includes what the classifier read. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+      description: Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text, attachment types; optionally automated, from a mailing list, and a spam score), classified and decided as received mail would be. A rule reading a spam score you gave none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The answer includes what the classifier read. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
       tags:
         - Email Rules
       security:
@@ -23627,7 +23627,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. email_rule_scope_not_readable: scope_selection names something you cannot read."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read."
           content:
             application/json:
               schema:
@@ -23683,7 +23683,7 @@ paths:
     post:
       operationId: createEmailRule
       summary: Create a rule
-      description: Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column contract. It starts in observe (recorded, nothing granted or blocked) unless state is draft, or active for a do_not_share rule. You are its author, and it never reaches mail you cannot read. evaluation_scope is own_mailboxes unless you name author or selected (scope_selection names only what you can read). expectations are judged in expectations_check. kind do_not_share blocks sharing what it matches; a key cannot list it (details.reason rule_blocks_sharing). Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+      description: Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column contract. It starts in observe (recorded, nothing granted or blocked) unless state is draft, or active for a do_not_share rule. You are its author, and it never reaches mail you cannot read. evaluation_scope is own_mailboxes unless you name author or selected (scope_selection names only what you can read). expectations are judged in expectations_check. kind do_not_share blocks sharing what it matches; a key cannot list it (details.reason rule_blocks_sharing). Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
       tags:
         - Email Rules
       security:
@@ -23740,7 +23740,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. email_rule_scope_not_readable: scope_selection names something you cannot read (details.addresses, details.domains)."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read (details.addresses, details.domains)."
           content:
             application/json:
               schema:
@@ -23789,7 +23789,7 @@ paths:
     get:
       operationId: listEmailRules
       summary: List rules
-      description: "The rules the caller can see, newest first: their own, or every member's rules for a caller who reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection for a selected rule) and current_version, but not the version's text: read that under current from GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature."
+      description: "The rules the caller can see, newest first: their own, or every member's rules for a caller who reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection for a selected rule) and current_version, but not the version's text: read that under current from GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token)."
       tags:
         - Email Rules
       security:
@@ -23877,7 +23877,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. grant_forbidden with details.reason mail_depth: matched_email_id with access to mail that shows headers only, since which rules matched an email is read from what it says."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: matched_email_id with access to mail that shows headers only, since which rules matched an email is read from what it says."
           content:
             application/json:
               schema:
@@ -23912,7 +23912,7 @@ paths:
     get:
       operationId: getEmailRule
       summary: Read a rule
-      description: A rule, its scope (evaluation_scope, and scope_selection for a selected rule), its current version and its saved expectations. The current version's text (english, tree, explanation, assumptions, warnings) is under current, and current_version is its number. What the scope comes to for its author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when include_sql is true. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+      description: A rule, its scope (evaluation_scope, and scope_selection for a selected rule), its current version and its saved expectations. The current version's text (english, tree, explanation, assumptions, warnings) is under current, and current_version is its number. What the scope comes to for its author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when include_sql is true. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
       tags:
         - Email Rules
       security:
@@ -23989,7 +23989,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox; details.covering_view is where (getEmailRuleCoveringMe)."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox; details.covering_view is where (getEmailRuleCoveringMe)."
           content:
             application/json:
               schema:
@@ -24034,7 +24034,7 @@ paths:
     patch:
       operationId: updateEmailRule
       summary: Change a rule
-      description: Renames the rule, saves a new version (english and tree together; earlier versions stay) or restores one (restore_version), changes its state (draft is off; observe; active), its scope (evaluation_scope, with scope_selection when selected) or its saved expectations (judged in expectations_check). Anyone but its author who sees it may only set state draft, and while it is shared only if they manage members from the dashboard. A scope change saves a new version; a shared rule keeps its scope, and a kind never changes. A saved version takes effect at once. if_version refuses a write once a version was saved since you read it; if_revision, once anything changed. Without if_expectations_pass a version is saved even when its expectations fail. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+      description: "Renames the rule, saves a new version (english and tree together; earlier versions stay) or restores one (restore_version), changes its state (draft is off; observe; active), its scope (evaluation_scope, with scope_selection when selected) or its saved expectations (judged in expectations_check). Anyone but its author who sees it may only set state draft, and while it is shared only if they manage members from the dashboard. A scope change saves a new version; a shared rule keeps its scope, and a kind never changes. A saved version takes effect at once. if_version refuses a write once a version was saved since you read it; if_revision, once anything changed. Without if_expectations_pass a version is saved even when its expectations fail, except on an active rule keys or webhooks read: that write is checked first unless if_expectations_pass is false. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token)."
       tags:
         - Email Rules
       security:
@@ -24077,7 +24077,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy"
         "400":
-          description: "validation_error: invalid body or tree (details.errors), too large (too_large), a version that no longer renders (version_not_renderable), restore_version names the current version (already_current), or over 20 made-up emails (too_many_expectation_samples). no_expectations: if_expectations_pass with no expectations to judge; nothing was saved."
+          description: "validation_error: invalid body or tree (details.errors), too large (too_large), a version that no longer renders (version_not_renderable), restore_version names the current version (already_current), over 20 made-up emails (too_many_expectation_samples), or a kind other than the rule's own (kind_mismatch). no_expectations: if_expectations_pass with no expectations to judge, or a write that removes them from an active rule keys or webhooks read; nothing was saved."
           content:
             application/json:
               schema:
@@ -24103,7 +24103,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. email_rule_author_only: only the rule's author may make this change. forbidden (rule_shared): the rule is shared, so only its author or a member manager can turn it off. email_rule_scope_not_readable: scope_selection names something you cannot read. grant_forbidden (mail_depth): if_expectations_pass needs content access to mail when it judges emails by id."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_author_only: only the rule's author may make this change. forbidden (rule_shared): the rule is shared, so only its author or a member manager can turn it off. email_rule_scope_not_readable: scope_selection names something you cannot read. grant_forbidden (mail_depth): judging a write (if_expectations_pass, or by default) needs content access to mail when it judges emails by id."
           content:
             application/json:
               schema:
@@ -24115,7 +24115,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: "email_rule_conflict: the rule changed (details.reason version_moved with current_version, revision_moved with current_revision, expectations_moved or rule_changed); read it again and retry. email_rule_scope_locked: the rule is shared. email_rule_author_unresolvable: the rule could not run as you over the chosen scope. expectations_failed, expectations_unreadable (details.unreadable) or expectations_undecided, with if_expectations_pass: nothing was saved; details carries current_version, state and expectations_check."
+          description: "email_rule_conflict: the rule changed (details.reason version_moved with current_version, revision_moved with current_revision, expectations_moved, rule_changed or readers_changed); read it again and retry. email_rule_scope_locked: the rule is shared. email_rule_author_unresolvable: the rule could not run as you over the chosen scope. expectations_failed, expectations_unreadable (details.unreadable) or expectations_undecided, with if_expectations_pass or by default on an active rule keys or webhooks read (details.read_by): nothing was saved; details carries current_version, state and expectations_check."
           content:
             application/json:
               schema:
@@ -24144,12 +24144,18 @@ paths:
                 error:
                   code: rate_limit_exceeded
                   message: Rate limit exceeded
+        "503":
+          description: "service_unavailable (rule_keys_unread or rule_readers_unread): the keys or readers of an active rule could not be read in time; nothing was saved."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
       x-primitive-permission:
         - mail:read
     delete:
       operationId: deleteEmailRule
       summary: Delete a rule
-      description: Deletes a rule with its versions, its decisions and the access it granted. A share of it ends (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which now read nothing through it (keys, other_keys; left out when they could not be read). The author or a reader of all the organization's mail may delete it; while it is shared, only the author or someone who manages members from the dashboard. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+      description: Deletes a rule with its versions, its decisions and the access it granted. A share of it ends (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which now read nothing through it (keys, other_keys; left out when they could not be read). The author or a reader of all the organization's mail may delete it; while it is shared, only the author or someone who manages members from the dashboard. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
       tags:
         - Email Rules
       security:
@@ -24206,7 +24212,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. forbidden with details.reason rule_shared: the rule is shared with another member."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason rule_shared: the rule is shared with another member."
           content:
             application/json:
               schema:
@@ -24252,7 +24258,7 @@ paths:
     get:
       operationId: listEmailRuleDecisions
       summary: List a rule's decisions
-      description: "What the rule decided for each email it was evaluated against, newest first: whether it matched, whether it nearly did, how each part decided and the answers to its questions, with which email it was (from_address, subject, received_at). Only decisions on emails the caller can read are listed. With matched, only matches (true) or only the rest (false). Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature."
+      description: "What the rule decided for each email it was evaluated against, newest first: whether it matched, whether it nearly did, how each part decided and the answers to its questions, with which email it was (from_address, subject, received_at). Only decisions on emails the caller can read are listed. With matched, only matches (true) or only the rest (false). Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token)."
       tags:
         - Email Rules
       security:
@@ -24349,7 +24355,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what emails say."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what emails say."
           content:
             application/json:
               schema:
@@ -24395,7 +24401,7 @@ paths:
     get:
       operationId: listEmailRuleResults
       summary: List every rule's result on an email
-      description: What each rule you can see decided about this email (matched, not matched, or not run), in the words of the deciding version. A do_not_share rule that matched it blocks sharing while active; earlier shares stay. Only a caller who can read the email gets an answer. classification is every fact the classifier read, as rule conditions read it. At most 50 rules are listed, results first; not_listed counts the rest. Another member's rule that decided on your own mail is listed read_only (dashboard and CLI only), with who receives what it shares (receivers) while it covers you; hidden counts deciding rules you cannot see. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+      description: What each rule you can see decided about this email (matched, not matched, or not run), in the words of the deciding version. A do_not_share rule that matched it blocks sharing while active; earlier shares stay. Only a caller who can read the email gets an answer. classification is every fact the classifier read, as rule conditions read it. At most 50 rules are listed, results first; not_listed counts the rest. Another member's rule that decided on your own mail is listed read_only (dashboard and CLI only), with who receives what it shares (receivers) while it covers you; hidden counts deciding rules you cannot see. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
       tags:
         - Email Rules
       security:
@@ -24452,7 +24458,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what the email says."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what the email says."
           content:
             application/json:
               schema:
@@ -24493,7 +24499,7 @@ paths:
     get:
       operationId: listEmailRuleVersions
       summary: Read versions of a rule
-      description: "A rule's versions as they were written: what each one's conditions and questions were, so a decision can be read against the version that made it. Without versions, every version newest first, a page at a time (meta.cursor). With versions, only those named, oldest first; numbers that are not versions of the rule are left out. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature."
+      description: "A rule's versions as they were written: what each one's conditions and questions were, so a decision can be read against the version that made it. Without versions, every version newest first, a page at a time (meta.cursor). With versions, only those named, oldest first; numbers that are not versions of the rule are left out. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token)."
       tags:
         - Email Rules
       security:
@@ -24587,7 +24593,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden."
           content:
             application/json:
               schema:
@@ -24633,7 +24639,7 @@ paths:
     get:
       operationId: getEmailRuleScope
       summary: Read what a rule covers
-      description: "Whose mail the rule runs over, and what that comes to now: a rule never reaches further than what its author can read when it runs, so what a selected rule names and its author can no longer read stops matching. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature."
+      description: "Whose mail the rule runs over, and what that comes to now: a rule never reaches further than what its author can read when it runs, so what a selected rule names and its author can no longer read stops matching. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token)."
       tags:
         - Email Rules
       security:
@@ -24690,7 +24696,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden."
           content:
             application/json:
               schema:
@@ -24731,7 +24737,7 @@ paths:
     get:
       operationId: listEmailRuleScopeOptions
       summary: List what a rule can cover
-      description: "How much the caller can read, and the inboxes and domains the caller can read, which is what they may name when a rule runs over selected inboxes and domains. For a caller who reads the whole organization, addresses lists the inboxes known as someone's (member addresses, members' verified work emails at the organization's domains, agents' addresses and inboxes with shared access), not every address that receives mail: may_name_unlisted says when an address that is not listed, such as an inbox nobody has claimed, may be named too. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature."
+      description: "How much the caller can read, and the inboxes and domains the caller can read, which is what they may name when a rule runs over selected inboxes and domains. For a caller who reads the whole organization, addresses lists the inboxes known as someone's (member addresses, members' verified work emails at the organization's domains, agents' addresses and inboxes with shared access), not every address that receives mail: may_name_unlisted says when an address that is not listed, such as an inbox nobody has claimed, may be named too. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token)."
       tags:
         - Email Rules
       security:
@@ -24800,7 +24806,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden."
           content:
             application/json:
               schema:
@@ -24841,7 +24847,7 @@ paths:
     post:
       operationId: createEmailRuleRequest
       summary: Ask a member for a rule
-      description: Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated or shared until they accept, and they may change the rule first. A message (up to 500 characters, fixed once sent) tells them why you ask. At most 5 pending requests to one member and 50 in all. With members:read the answer says whether they can accept it under their role (target_can_accept, target_warning); POST /v1/email-rule-requests/target-check checks first. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+      description: Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated or shared until they accept, and they may change the rule first. A message (up to 500 characters, fixed once sent) tells them why you ask. At most 5 pending requests to one member and 50 in all. With members:read the answer says whether they can accept it under their role (target_can_accept, target_warning); POST /v1/email-rule-requests/target-check checks first. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
       tags:
         - Email Rules
       security:
@@ -24893,7 +24899,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden."
           content:
             application/json:
               schema:
@@ -24954,7 +24960,7 @@ paths:
     get:
       operationId: listEmailRuleRequests
       summary: List rule requests
-      description: "Rule requests, newest first: those made to you (box incoming, the default), those you made (outgoing), or every one you can see (all). Pending ones by default; status decided lists accepted, declined and withdrawn ones, and any lists both. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature."
+      description: "Rule requests, newest first: those made to you (box incoming, the default), those you made (outgoing), or every one you can see (all). Pending ones by default; status decided lists accepted, declined and withdrawn ones, and any lists both. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token)."
       tags:
         - Email Rules
       security:
@@ -25057,7 +25063,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden."
           content:
             application/json:
               schema:
@@ -25092,7 +25098,7 @@ paths:
     post:
       operationId: checkEmailRuleRequestTarget
       summary: Check whether a member can accept a rule request
-      description: "Says, before you ask, whether a member could accept a rule request now under their role, and if not, which permission their role lacks. Nothing is sent and nothing is recorded. Needs members:read, as listing members and their roles does. At most 60 checks an hour. Name them by user id, or by their member mailbox address or verified work email (counted with asking: at most 30 lookups by address an hour). Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature."
+      description: "Says, before you ask, whether a member could accept a rule request now under their role, and if not, which permission their role lacks. Nothing is sent and nothing is recorded. Needs members:read, as listing members and their roles does. At most 60 checks an hour. Name them by user id, or by their member mailbox address or verified work email (counted with asking: at most 30 lookups by address an hour). Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token)."
       tags:
         - Email Rules
       security:
@@ -25153,7 +25159,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. grant_forbidden with details.permission members:read: you cannot list members and their roles."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.permission members:read: you cannot list members and their roles."
           content:
             application/json:
               schema:
@@ -25210,7 +25216,7 @@ paths:
     get:
       operationId: getEmailRuleRequest
       summary: Read a rule request
-      description: "A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a member. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. If you are the member asked, you can try the rule as proposed before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have received. To try it on an email that has not arrived, pass the request's tree to POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-rules/look-alikes with request_id); neither stores anything. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature."
+      description: "A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a member. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. If you are the member asked, you can try the rule as proposed before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have received. To try it on an email that has not arrived, pass the request's tree to POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-rules/look-alikes with request_id); neither stores anything. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token)."
       tags:
         - Email Rules
       security:
@@ -25267,7 +25273,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden."
           content:
             application/json:
               schema:
@@ -25307,7 +25313,7 @@ paths:
     delete:
       operationId: deleteEmailRuleRequest
       summary: Delete a withdrawn rule request
-      description: Deletes a request you withdrew, for everyone who could see it. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+      description: Deletes a request you withdrew, for everyone who could see it. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
       tags:
         - Email Rules
       security:
@@ -25364,7 +25370,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. email_rule_request_proposer_only: only the member who made the request may delete it."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_request_proposer_only: only the member who made the request may delete it."
           content:
             application/json:
               schema:
@@ -25411,7 +25417,7 @@ paths:
     post:
       operationId: declineEmailRuleRequest
       summary: Decline a rule request
-      description: Declines a pending request made to you. Nothing is written but the decision and, if you give one, its reason (reason, up to 500 characters), which the member who asked sees with the request. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+      description: Declines a pending request made to you. Nothing is written but the decision and, if you give one, its reason (reason, up to 500 characters), which the member who asked sees with the request. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
       tags:
         - Email Rules
       security:
@@ -25488,7 +25494,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. email_rule_request_target_only: only the member the request was made to may decline it."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_request_target_only: only the member the request was made to may decline it."
           content:
             application/json:
               schema:
@@ -25535,7 +25541,7 @@ paths:
     post:
       operationId: withdrawEmailRuleRequest
       summary: Withdraw a rule request
-      description: Withdraws a pending request you made. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+      description: Withdraws a pending request you made. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
       tags:
         - Email Rules
       security:
@@ -25600,7 +25606,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. email_rule_request_proposer_only: only the member who made the request may withdraw it."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_request_proposer_only: only the member who made the request may withdraw it."
           content:
             application/json:
               schema:
@@ -25647,7 +25653,7 @@ paths:
     post:
       operationId: acceptEmailRuleRequest
       summary: Accept a rule request
-      description: "Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from now on with the member who asked: each email in full with its attachments, but never raw. It does not go back through mail already received. Send no body to accept it as asked, or change it first with english and tree together (and an explanation, or the server writes one). Because this gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree to POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-rules/look-alikes with request_id); neither stores anything. expectation_samples are kept on the rule it writes. Accepting also needs mail:share_own. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature."
+      description: "Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from now on with the member who asked: each email in full with its attachments, but never raw. It does not go back through mail already received. Send no body to accept it as asked, or change it first with english and tree together (and an explanation, or the server writes one). Because this gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree to POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-rules/look-alikes with request_id); neither stores anything. expectation_samples are kept on the rule it writes. Accepting also needs mail:share_own. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token)."
       tags:
         - Email Rules
       security:
@@ -25715,7 +25721,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead. email_rule_request_target_only: only the member the request was made to may accept it. forbidden with details.reason first_party_required: accepted from another OAuth app or with an agent token. grant_forbidden with details.permission mail:share_own: the caller's role does not let them share their own mail through email rules."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_request_target_only: only the member the request was made to may accept it. forbidden with details.reason first_party_required: accepted from another OAuth app or with an agent token. grant_forbidden with details.permission mail:share_own: the caller's role does not let them share their own mail through email rules."
           content:
             application/json:
               schema:
@@ -25769,7 +25775,7 @@ paths:
     get:
       operationId: listEmailRuleShares
       summary: List rule shares
-      description: Lists rules shared with you, rules you share, or every share you can see. A share is visible to its two people and the organization's owners and admins. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+      description: Lists rules shared with you, rules you share, or every share you can see. A share is visible to its two people and the organization's owners and admins. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
       tags:
         - Email Rules
       security:
@@ -25868,7 +25874,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden."
           content:
             application/json:
               schema:
@@ -26023,7 +26029,7 @@ paths:
     get:
       operationId: getEmailRuleShare
       summary: Get a rule share
-      description: One share. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.
+      description: One share. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
       tags:
         - Email Rules
       security:
@@ -26080,7 +26086,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden."
           content:
             application/json:
               schema:
@@ -26357,7 +26363,7 @@ paths:
     get:
       operationId: listEmailRulesCoveringMe
       summary: List the rules over your mail
-      description: "Every email rule that covers one of your own mailboxes now, yours included, newest first, in any state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your member mailbox, or a personal agent's address): one whose author reads all your mail (author scope, for an author who reads the organization's mail or holds an access entry for your mailbox), or one that names your mailbox or its domain (selected). Another member's own_mailboxes rule never covers you. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, and the member each belongs to, or the organization. You do not see which keys, webhooks or shares they are (no ids, names, prefixes or URLs), the other inboxes and domains its scope names, or its saved expectations. A page can hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI."
+      description: "Every email rule that covers one of your own mailboxes now, yours included, newest first, in any state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your member mailbox, or a personal agent's address): one whose author reads all your mail (author scope, for an author who reads the organization's mail or holds an access entry for your mailbox), or one that names your mailbox or its domain (selected). Another member's own_mailboxes rule never covers you. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope names, or its saved expectations. A page can hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI."
       tags:
         - Email Rule Oversight
       security:
@@ -26432,7 +26438,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI."
           content:
             application/json:
               schema:
@@ -26467,7 +26473,7 @@ paths:
     get:
       operationId: getEmailRuleCoveringMe
       summary: Get a rule over your mail
-      description: "One rule that covers one of your own mailboxes, read-only, with its current version; or one that no longer does but decided on mail at your own mailbox (covers_now false), shown as the version that last decided on your mail, without its current name. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, and the member each belongs to, or the organization. You do not see which keys, webhooks or shares they are (no ids, names, prefixes or URLs), the other inboxes and domains its scope names, or its saved expectations. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI."
+      description: "One rule that covers one of your own mailboxes, read-only, with its current version; or one that no longer does but decided on mail at your own mailbox (covers_now false), shown as the version that last decided on your mail, without its current name. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope names, or its saved expectations. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI."
       tags:
         - Email Rule Oversight
       security:
@@ -26524,7 +26530,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI."
           content:
             application/json:
               schema:
@@ -26565,7 +26571,7 @@ paths:
     get:
       operationId: listEmailRuleDecisionsOnMyMail
       summary: List what a rule decided about your mail
-      description: "What a rule that covers your mailboxes, or decided on your mail, decided about mail at your own mailboxes, newest first: never about anyone else's mail. Each decision is in the words of the version that made it, which can be earlier than the current one: the questions it asked about that email (question_answers) and the columns its conditions read (parts). Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI."
+      description: "What a rule that covers your mailboxes, or decided on your mail, decided about mail at your own mailboxes, newest first: never about anyone else's mail. Each decision is in the words of the version that made it, which can be earlier than the current one: the questions it asked about that email (question_answers) and the columns its conditions read (parts). Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI."
       tags:
         - Email Rule Oversight
       security:
@@ -26657,7 +26663,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what emails say."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what emails say."
           content:
             application/json:
               schema:
@@ -26698,7 +26704,7 @@ paths:
     post:
       operationId: createEmailRuleObjection
       summary: Object to a rule over your mail
-      description: "Asks the author of a rule that covers one of your own mailboxes now to turn it off. Only a rule that covers you now: one you see only because it once decided on your mail cannot be objected to. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. You may have one pending objection per rule and 50 in all, and object to the same rule again only 10 minutes after you last did, whatever became of it. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI."
+      description: "Asks the author of a rule that covers one of your own mailboxes now to turn it off. Only a rule that covers you now: one you see only because it once decided on your mail cannot be objected to. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. You may have one pending objection per rule and 50 in all, and object to the same rule again only 10 minutes after you last did, whatever became of it. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI."
       tags:
         - Email Rule Oversight
       security:
@@ -26759,7 +26765,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI."
           content:
             application/json:
               schema:
@@ -26820,7 +26826,7 @@ paths:
     get:
       operationId: listEmailRuleObjections
       summary: List objections
-      description: Objections you made, objections to rules you wrote, or every objection you can see, newest first. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.
+      description: Objections you made, objections to rules you wrote, or every objection you can see, newest first. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
       tags:
         - Email Rule Oversight
       security:
@@ -26918,7 +26924,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI."
           content:
             application/json:
               schema:
@@ -26953,7 +26959,7 @@ paths:
     get:
       operationId: getEmailRuleObjection
       summary: Get an objection
-      description: One objection you can see. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.
+      description: One objection you can see. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
       tags:
         - Email Rule Oversight
       security:
@@ -27010,7 +27016,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI."
           content:
             application/json:
               schema:
@@ -27051,7 +27057,7 @@ paths:
     post:
       operationId: withdrawEmailRuleObjection
       summary: Withdraw an objection
-      description: Withdraws a pending objection you made, and clears its message. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.
+      description: Withdraws a pending objection you made, and clears its message. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
       tags:
         - Email Rule Oversight
       security:
@@ -27116,7 +27122,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason objector_only: only the member who made it can withdraw it."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason objector_only: only the member who made it can withdraw it."
           content:
             application/json:
               schema:
@@ -27163,7 +27169,7 @@ paths:
     post:
       operationId: declineEmailRuleObjection
       summary: Decline an objection to your rule
-      description: Declines a pending objection to a rule you wrote, optionally saying why; the rule stays as it is. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.
+      description: Declines a pending objection to a rule you wrote, optionally saying why; the rule stays as it is. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
       tags:
         - Email Rule Oversight
       security:
@@ -27245,7 +27251,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason author_only: only the rule's author can decline it."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason author_only: only the rule's author can decline it."
           content:
             application/json:
               schema:
@@ -27292,7 +27298,7 @@ paths:
     post:
       operationId: acceptEmailRuleObjection
       summary: Accept an objection to your rule
-      description: "Accepts a pending objection to a rule you wrote: turns the rule off (state draft), as updating it would, and records the objection accepted, together. You can turn the rule on again later. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI."
+      description: "Accepts a pending objection to a rule you wrote: turns the rule off (state draft), as updating it would, and records the objection accepted, together. You can turn the rule on again later. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI."
       tags:
         - Email Rule Oversight
       security:
@@ -27357,7 +27363,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: the email rules feature is not enabled for this organization yet. Permission refusals answer forbidden or grant_forbidden instead; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason author_only: only the rule's author can accept it."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason author_only: only the rule's author can accept it."
           content:
             application/json:
               schema:
@@ -36106,7 +36112,7 @@ paths:
       security:
         - BearerAuth: []
       description: |-
-        Key metadata, never a secret: name, prefix, grant, creator, last use, expiry, suspension and whether each key works now (status). Revoked keys are left out unless include_revoked is true, which lists them too with status revoked, revoked_at and revoked_by, under the same access rules as keys that work. A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain, otherwise content. A rule the key lists that reads nothing any more (a deleted rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its id and reason (rule_deleted or share_ended), and not under rules. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
+        Key metadata, never a secret: name, prefix, grant, creator, last use, expiry, suspension and whether each key works now (status). Revoked keys are left out unless include_revoked is true, which lists them too with status revoked, revoked_at and revoked_by, under the same access rules as keys that work. A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain, otherwise content. A rule the key lists that reads nothing any more (a deleted rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its id and reason (rule_deleted or share_ended), and not under rules. grant.mail_scope.rule_versions gives each rule it lists directly its current_version, state and version_saved_at. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
         Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.
       x-primitive-person-only:
@@ -36552,7 +36558,7 @@ paths:
       security:
         - BearerAuth: []
       description: |-
-        One key's metadata, never its secret, with whether it works now (status). A revoked key whose record is kept is answered too, with status revoked, revoked_at and revoked_by, under the same access rules as a key that works: one the caller may not read is 404, revoked or not. Its grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain, otherwise content. A rule the key lists that reads nothing any more (a deleted rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its id and reason (rule_deleted or share_ended), and not under rules. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
+        One key's metadata, never its secret, with whether it works now (status). A revoked key whose record is kept is answered too, with status revoked, revoked_at and revoked_by, under the same access rules as a key that works: one the caller may not read is 404, revoked or not. Its grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain, otherwise content. A rule the key lists that reads nothing any more (a deleted rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its id and reason (rule_deleted or share_ended), and not under rules. grant.mail_scope.rule_versions gives each rule it lists directly its current_version, state and version_saved_at. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
         Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.
       x-primitive-person-only:
@@ -39457,7 +39463,7 @@ paths:
     get:
       operationId: getRelayAutoJoin
       summary: Get the auto-join setting
-      description: Whether someone who proves an address on the organization's mail relay domain with Google Workspace joins automatically, and with what access. `option` is null when auto-join is off and an invitation is required; `options` lists the choices. Answers 404 `feature_disabled` unless the organization has mail relay.
+      description: Whether someone who proves an address on the organization's mail relay domain with Google Workspace joins automatically. Auto-joined people have no mail access until an owner or admin assigns a role. `option` is null when auto-join is off and an invitation is required; legacy mail-grant settings read as `no_access`. `options` lists the choices. Answers 404 `feature_disabled` unless the organization has mail relay.
       tags:
         - Roles and members
       security:
@@ -39557,7 +39563,7 @@ paths:
     put:
       operationId: setRelayAutoJoin
       summary: Change the auto-join setting
-      description: "`option` is a choice's id from the GET, or null to require an invitation (turning it off needs only members:manage). Choosing an option answers 404 `feature_disabled` unless the organization has mail relay, 400 `validation_error` for an id that is not one of the choices, 403 `grant_forbidden` unless the caller is an owner or admin who can assign roles and send invitations and covers the role the option gives, 409 `role_key_taken` when a custom role already holds that role's key, and 409 `role_assignment_unavailable` when the organization cannot be given that role yet. Person only: a dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose `relay_auto_join.write` (the person confirms at the step_up_url a 403 step_up_required answer carries, which names this client, then send the token in the Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs members:manage, and roles:assign to turn it on. API keys are refused."
+      description: "`option` is a choice's id from the GET, or null to require an invitation (turning it off needs only members:manage). Auto-joined people have no mail access until an owner or admin assigns a role; legacy mail-grant choices cannot be selected. Choosing an option answers 404 `feature_disabled` unless the organization has mail relay, 400 `validation_error` for an id outside the current catalog, 403 `grant_forbidden` without owner or admin assignment authority, and 409 `role_assignment_unavailable` when the restricted role cannot be assigned yet. Person only: a dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose `relay_auto_join.write` (the person confirms at the step_up_url a 403 step_up_required answer carries, which names this client, then send the token in the Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs members:manage, and roles:assign to turn it on. API keys are refused."
       tags:
         - Roles and members
       security:
@@ -42353,6 +42359,7 @@ components:
                 - build_failed
                 - builder_unavailable
                 - builtin_role
+                - chunk_size_mismatch
                 - chunk_too_large
                 - chunks_missing
                 - claim_failed
@@ -42437,6 +42444,7 @@ components:
                 - invalid_code
                 - invalid_cursor
                 - invalid_email
+                - invalid_manifest
                 - invalid_payload_reference
                 - invalid_request
                 - invalid_signature
@@ -44631,6 +44639,33 @@ components:
           type: string
           format: uuid
           description: "With `group=message`: the send of this message, when you can read it (under a connected agent key, only its own sends)."
+        imported:
+          type:
+            - object
+            - "null"
+          description: Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.
+          required:
+            - from
+            - method
+            - verification
+            - at
+          properties:
+            from:
+              type: string
+              enum:
+                - google_workspace
+            method:
+              type: string
+              enum:
+                - primitive_direct
+            verification:
+              type: string
+              enum:
+                - provider_fetched
+            at:
+              type: string
+              format: date-time
+              description: When Primitive acquired this historical message.
         snippet:
           type:
             - string
@@ -44653,6 +44688,7 @@ components:
         - automated_reasons
         - from_verified
         - from_header_email
+        - imported
         - snippet
     EmailSearchHighlights:
       type: object
@@ -45439,6 +45475,33 @@ components:
                   type: string
                   format: date-time
                   description: When the signal arrived.
+        imported:
+          type:
+            - object
+            - "null"
+          description: Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.
+          required:
+            - from
+            - method
+            - verification
+            - at
+          properties:
+            from:
+              type: string
+              enum:
+                - google_workspace
+            method:
+              type: string
+              enum:
+                - primitive_direct
+            verification:
+              type: string
+              enum:
+                - provider_fetched
+            at:
+              type: string
+              format: date-time
+              description: When Primitive acquired this historical message.
         snippet:
           type:
             - string
@@ -45468,6 +45531,7 @@ components:
         - from_verified
         - from_header_email
         - from_name
+        - imported
         - snippet
     EmailDetailReply:
       type: object
@@ -46089,6 +46153,33 @@ components:
           items:
             $ref: "#/components/schemas/EmailAttachment"
           description: "Attachment metadata for this message, each item as its own detail read reports it: `parsed.attachments` on `/emails/{id}` for inbound, `attachments` on `/sent-emails/{id}` for outbound, in the same order. Empty when there are none or an inbound message has no parsed content. No bytes or download URLs; download a part with `/emails/{id}/attachments/{part_index}` or `/sent-emails/{id}/attachments/{part_index}`."
+        imported:
+          type:
+            - object
+            - "null"
+          description: Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.
+          required:
+            - from
+            - method
+            - verification
+            - at
+          properties:
+            from:
+              type: string
+              enum:
+                - google_workspace
+            method:
+              type: string
+              enum:
+                - primitive_direct
+            verification:
+              type: string
+              enum:
+                - provider_fetched
+            at:
+              type: string
+              format: date-time
+              description: When Primitive acquired this historical message.
         copies:
           type: array
           items:
@@ -52760,7 +52851,7 @@ components:
                   - "null"
               state:
                 type: string
-                description: "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice what it told: started (a rule began covering your mailbox), new_version, or baseline (it already covered you when notices began)."
+                description: "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice what it told: started (a rule began covering your mailbox), new_version, or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice is recorded without a new one); its id is then the rule's, and created_at when the rule last changed."
               created_at:
                 type: string
                 format: date-time
@@ -52833,6 +52924,15 @@ components:
           type:
             - string
             - "null"
+        as_of:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: "With relation=concerning only: about when the notices last looked at your organization; null if never or unread. Coverage since may have no notice yet."
+        pending_complete:
+          description: "With relation=concerning, on the first page only: whether the check for rules that started covering you without their start notice (state pending, listed ahead of the notices and beyond limit) was finished. false: some may be missing. Absent where there is nothing to check."
+          type: boolean
       required:
         - covers
         - items
@@ -53045,12 +53145,23 @@ components:
           type: array
           items:
             type: string
-          description: Parts of the description the column contract cannot express, and how the rule handles them. It also has notes on reading automated, from_mailing_list or sender_relationship, a sender address the description does not give, and a grant worded as a prohibition. When the rule has no questions and its conditions hold for all of the caller's recent classified mail (what a test of it covers by default), or for at least 90% of at least 20 emails, the first warning says so. That count is not made for a caller whose access shows headers only, or who could not run a test of the rule, and may also be skipped when the compile ran long or the count fails.
+          description: Parts of the description the column contract cannot express, how the rule handles them, and the compiler's own notes on the rule (the Email Rules docs list them). When the rule has no questions and its conditions hold for nearly all of your recent mail (see breadth), or it is a grant rule whose conditions alone hold for over 20% of at least 20 emails (see conditions_breadth), the first warning says so.
         compiled_by:
           type: string
           description: An opaque name for the version of the rule compiler that produced the rule, such as rule-compiler-v1. Send it back as compiled_by when you save the rule.
+        kind:
+          description: The kind it was compiled for. Send it with the tree to a test.
+          type: string
+          enum:
+            - grant
+            - do_not_share
         breadth:
           description: "How many of your recent emails its conditions hold for, counted over your own mailboxes whatever scope you save it with, warning or not. Null when not counted in full: a rule with questions, headers-only access, no test of it possible as you, or a count that failed or ran out of time. Writes ignore it, so a compile answer (without include_sql) can be sent back unchanged."
+          anyOf:
+            - $ref: "#/components/schemas/EmailRuleBreadth"
+            - type: "null"
+        conditions_breadth:
+          description: "For a grant rule with questions, breadth counted on its conditions alone: the emails its questions are asked about. Null for any other rule, or when not counted in full (as breadth)."
           anyOf:
             - $ref: "#/components/schemas/EmailRuleBreadth"
             - type: "null"
@@ -53074,6 +53185,34 @@ components:
         - assumptions
         - warnings
         - compiled_by
+    EmailRuleTested:
+      type: object
+      properties:
+        id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        version:
+          type:
+            - integer
+            - "null"
+          exclusiveMinimum: 0
+        vocabulary:
+          type: string
+        kind:
+          description: The kind it was tested as.
+          type: string
+          enum:
+            - grant
+            - do_not_share
+        note:
+          description: Present when a tree was sent without kind, so it was tested as grant.
+          type: string
+      required:
+        - id
+        - version
+        - vocabulary
     EmailRuleScopeWarning:
       type: object
       properties:
@@ -53313,7 +53452,7 @@ components:
         scope_selection:
           $ref: "#/components/schemas/EmailRuleScopeSelection"
         rule_id:
-          description: A saved rule you can see. Its current version is tested, with its author's access.
+          description: A saved rule you can see. Its current version is tested, with its author's access; one you see only because it covers your mailboxes, with yours, over only those (dashboard or Primitive CLI only).
           type: string
           format: uuid
         kind:
@@ -53360,24 +53499,7 @@ components:
       type: object
       properties:
         rule:
-          type: object
-          properties:
-            id:
-              type:
-                - string
-                - "null"
-              format: uuid
-            version:
-              type:
-                - integer
-                - "null"
-              exclusiveMinimum: 0
-            vocabulary:
-              type: string
-          required:
-            - id
-            - version
-            - vocabulary
+          $ref: "#/components/schemas/EmailRuleTested"
         window:
           type: object
           properties:
@@ -53908,24 +54030,7 @@ components:
       type: object
       properties:
         rule:
-          type: object
-          properties:
-            id:
-              type:
-                - string
-                - "null"
-              format: uuid
-            version:
-              type:
-                - integer
-                - "null"
-              exclusiveMinimum: 0
-            vocabulary:
-              type: string
-          required:
-            - id
-            - version
-            - vocabulary
+          $ref: "#/components/schemas/EmailRuleTested"
         look_alikes:
           type: array
           items:
@@ -54059,24 +54164,7 @@ components:
       type: object
       properties:
         rule:
-          type: object
-          properties:
-            id:
-              type:
-                - string
-                - "null"
-              format: uuid
-            version:
-              type:
-                - integer
-                - "null"
-              exclusiveMinimum: 0
-            vocabulary:
-              type: string
-          required:
-            - id
-            - version
-            - vocabulary
+          $ref: "#/components/schemas/EmailRuleTested"
         received_at:
           type: string
           format: date-time
@@ -54354,6 +54442,9 @@ components:
             - keys
             - endpoints
             - shares_ended
+        notice:
+          description: "After a write that saved a version of an active rule keys or webhooks read without checking it first: what it changes, and how to have the next one checked."
+          type: string
       required:
         - id
         - name
@@ -54566,6 +54657,11 @@ components:
           maxLength: 64
         breadth:
           description: Ignored (the compile answer's breadth).
+          anyOf:
+            - $ref: "#/components/schemas/EmailRuleBreadth"
+            - type: "null"
+        conditions_breadth:
+          description: Ignored.
           anyOf:
             - $ref: "#/components/schemas/EmailRuleBreadth"
             - type: "null"
@@ -54815,6 +54911,17 @@ components:
           anyOf:
             - $ref: "#/components/schemas/EmailRuleBreadth"
             - type: "null"
+        conditions_breadth:
+          description: Ignored.
+          anyOf:
+            - $ref: "#/components/schemas/EmailRuleBreadth"
+            - type: "null"
+        kind:
+          description: Must be the rule's own (400 kind_mismatch).
+          type: string
+          enum:
+            - grant
+            - do_not_share
         evaluation_scope:
           type: string
           enum:
@@ -54868,7 +54975,7 @@ components:
           minimum: 1
           maximum: 2147483647
         if_expectations_pass:
-          description: "true: judge the rule as this write leaves it (new tree, restored version, new scope, or the version it activates) against the expectations it leaves, as POST /email-rules/test would, before saving; it can take as long as a test. Failed: 409 expectations_failed; on emails the rule cannot read: 409 expectations_unreadable; undecided: 409 expectations_undecided (each with details.expectations_check); none to judge: 400 no_expectations. Refused writes save nothing; a pass saves unless the rule moved meanwhile (409 email_rule_conflict). Only writes that save a version or activate the rule are judged."
+          description: "true: judge the rule as this write leaves it (new tree, restored version, new scope, or the version it activates) against the expectations it leaves, as POST /email-rules/test would, before saving; it can take as long as a test. Failed: 409 expectations_failed; on emails the rule cannot read: 409 expectations_unreadable; undecided: 409 expectations_undecided (each with details.expectations_check); none to judge: 400 no_expectations. Refused writes save nothing; a pass saves unless the rule moved meanwhile (409 email_rule_conflict). Only writes that save a version or activate the rule are judged. Omitted: judged as with true when the write saves a version or changes the scope of an active rule that API keys or webhooks read and that has expectations. false: never judged first."
           type: boolean
         restore_version:
           description: "Save version n again as the next version (author only): its english, tree, explanation, assumptions, warnings and compiled_by. A version carries no scope: the rule keeps its own unless evaluation_scope is sent. 404 version_not_found; 400 already_current or version_not_renderable. Not with a version's own fields."
@@ -55066,7 +55173,7 @@ components:
             required:
               - owner
               - count
-          description: "API keys that work now (not revoked, expired or suspended) whose access lists the rule, or its live share: they read what it matches. Owner: the member who holds each, or the organization."
+          description: "API keys that work now (not revoked, expired or suspended) and hold mail:read, whose access lists the rule or its live share. Owner: who holds each, or the organization."
         webhooks:
           type: array
           items:
@@ -55103,10 +55210,19 @@ components:
               count:
                 type: integer
                 exclusiveMinimum: 0
+              hosts:
+                description: Distinct sites they deliver to (a host's registrable domain, or a tunnel, preview or function service alone), sorted, at most 10; "unknown host" (last) for any that cannot be named.
+                type: array
+                items:
+                  type: string
+              hosts_not_listed:
+                description: Hosts past those listed.
+                type: integer
+                minimum: 0
             required:
               - owner
               - count
-          description: "Webhooks that are sent what it matches: those whose key, as delivery acts as it, lists the rule or its live share (owner: the member who holds that key, or the organization), and the webhooks of the member the rule is shared with (owner: that member)."
+          description: "Webhooks taking received mail, bounces or reports that are sent what it matches: those of the key delivery acts as, when it lists the rule or its live share (owner: its holder, or the organization), and those of the member it is shared with (owner: that member)."
         shares:
           type: array
           items:
@@ -55137,7 +55253,7 @@ components:
             required:
               - beneficiary
               - count
-          description: "The rule's live share, if it has one (a rule is shared at most once): the member it gives what it matches to."
+          description: The rule's live share (at most one), by its member, if they can read it and it is among their newest 20 shares.
       required:
         - keys
         - webhooks
@@ -55585,6 +55701,15 @@ components:
           anyOf:
             - $ref: "#/components/schemas/EmailRuleBreadth"
             - type: "null"
+        conditions_breadth:
+          description: Ignored.
+          anyOf:
+            - $ref: "#/components/schemas/EmailRuleBreadth"
+            - type: "null"
+        kind:
+          description: Only grant.
+          type: string
+          const: grant
       required:
         - name
         - english
@@ -56205,6 +56330,15 @@ components:
           anyOf:
             - $ref: "#/components/schemas/EmailRuleBreadth"
             - type: "null"
+        conditions_breadth:
+          description: Ignored.
+          anyOf:
+            - $ref: "#/components/schemas/EmailRuleBreadth"
+            - type: "null"
+        kind:
+          description: Only grant.
+          type: string
+          const: grant
         expectation_samples:
           description: Made-up emails the rule must match or not, such as look-alikes it must never match, kept on the rule this accept writes.
           minItems: 1
@@ -56244,6 +56378,29 @@ components:
       items:
         type: object
         properties:
+          imported:
+            type:
+              - object
+              - "null"
+            properties:
+              from:
+                type: string
+                const: google_workspace
+              method:
+                type: string
+                const: primitive_direct
+              verification:
+                type: string
+                const: provider_fetched
+              at:
+                type: string
+                format: date-time
+            required:
+              - from
+              - method
+              - verification
+              - at
+            default: null
           delivery_report:
             type:
               - object
@@ -56547,6 +56704,7 @@ components:
             format: date-time
             description: For the person sharing, when the share handed this email over. For the person it was shared with, when the share's rule first matched it, which is when it was shared or shortly before. Null if that could not be read.
         required:
+          - imported
           - id
           - message_id
           - domain_id
@@ -57272,6 +57430,7 @@ components:
       type: object
       description: What an inbound email says, as plain text, with the fields that identify it.
       required:
+        - imported
         - id
         - thread_id
         - received_at
@@ -57291,6 +57450,33 @@ components:
         - link_count
         - attachments
       properties:
+        imported:
+          type:
+            - object
+            - "null"
+          description: Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.
+          required:
+            - from
+            - method
+            - verification
+            - at
+          properties:
+            from:
+              type: string
+              enum:
+                - google_workspace
+            method:
+              type: string
+              enum:
+                - primitive_direct
+            verification:
+              type: string
+              enum:
+                - provider_fetched
+            at:
+              type: string
+              format: date-time
+              description: When Primitive acquired this historical message.
         id:
           type: string
           format: uuid
@@ -60885,6 +61071,23 @@ components:
                   - function
                   - agent_address
                   - person
+              address_warnings:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    address:
+                      type: string
+                    reason:
+                      type: string
+                    description:
+                      type: string
+                  required:
+                    - address
+                    - reason
+                    - description
+                  additionalProperties: {}
+                description: "Notes on the key's grant, worked out from it on every read: whole_mailbox, an address or domain listed beside email rules, which the key reads in full; no_send_address, with address empty, a key that can send but lists only email rules. The notes that need the organization's mailboxes and domains (member_address, unowned_domain) are given only when the grant is written. Only rules not deleted and shares not ended count. Empty, or absent, for a key on a template, and empty for a revoked key."
             required:
               - kind
               - id
@@ -62227,6 +62430,23 @@ components:
                 type:
                   - string
                   - "null"
+              address_warnings:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    address:
+                      type: string
+                    reason:
+                      type: string
+                    description:
+                      type: string
+                  required:
+                    - address
+                    - reason
+                    - description
+                  additionalProperties: {}
+                description: "Notes on the key's grant, worked out from it on every read: whole_mailbox, an address or domain listed beside email rules, which the key reads in full; no_send_address, with address empty, a key that can send but lists only email rules. The notes that need the organization's mailboxes and domains (member_address, unowned_domain) are given only when the grant is written. Only rules not deleted and shares not ended count. Empty, or absent, for a key on a template, and empty for a revoked key."
             required:
               - id
               - kind
@@ -62349,6 +62569,23 @@ components:
           type:
             - string
             - "null"
+        address_warnings:
+          type: array
+          items:
+            type: object
+            properties:
+              address:
+                type: string
+              reason:
+                type: string
+              description:
+                type: string
+            required:
+              - address
+              - reason
+              - description
+            additionalProperties: {}
+          description: "Notes on the key's grant, worked out from it on every read: whole_mailbox, an address or domain listed beside email rules, which the key reads in full; no_send_address, with address empty, a key that can send but lists only email rules. The notes that need the organization's mailboxes and domains (member_address, unowned_domain) are given only when the grant is written. Only rules not deleted and shares not ended count. Empty, or absent, for a key on a template, and empty for a revoked key."
       required:
         - id
         - kind
@@ -64985,6 +65222,32 @@ components:
         - args
         - senderLocalpart
       description: "A default wake schedule the install creates for the function: the command it sends, a 5-field cron expression and timezone, and the scheduler sender localpart on the installed address's domain. The owner can change or delete it after install."
+    EndpointCreateWarning:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        endpoint_id:
+          description: The other webhook a same_path_as_another_endpoint warning names.
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+      required:
+        - code
+        - message
+      additionalProperties: {}
+    CreatedEndpoint:
+      allOf:
+        - $ref: "#/components/schemas/Endpoint"
+        - type: object
+          properties:
+            warnings:
+              description: "For a webhook (kind http). same_path_as_another_endpoint: another webhook you can see, on and not deleted, sends to the same scheme, host and path with any query string, so each email both receive is delivered twice; endpoint_id names it (at most 5, newest first). The URL is never echoed. Empty when none; absent when it could not be checked (a caller who may not read endpoints, or a failed read). Other codes may be added."
+              type: array
+              items:
+                $ref: "#/components/schemas/EndpointCreateWarning"
     EndpointUpdateWarning:
       type: object
       properties:

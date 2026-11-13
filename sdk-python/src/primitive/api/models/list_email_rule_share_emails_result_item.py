@@ -21,6 +21,7 @@ if TYPE_CHECKING:
   from ..models.list_email_rule_share_emails_result_item_automation_headers_type_0 import ListEmailRuleShareEmailsResultItemAutomationHeadersType0
   from ..models.list_email_rule_share_emails_result_item_delivery_report_type_0 import ListEmailRuleShareEmailsResultItemDeliveryReportType0
   from ..models.list_email_rule_share_emails_result_item_highlights_type_0 import ListEmailRuleShareEmailsResultItemHighlightsType0
+  from ..models.list_email_rule_share_emails_result_item_imported_type_0 import ListEmailRuleShareEmailsResultItemImportedType0
   from ..models.list_email_rule_share_emails_result_item_presence_control_type_0 import ListEmailRuleShareEmailsResultItemPresenceControlType0
   from ..models.list_email_rule_share_emails_result_item_relay_type_0 import ListEmailRuleShareEmailsResultItemRelayType0
   from ..models.list_email_rule_share_emails_result_item_repeat_type_0 import ListEmailRuleShareEmailsResultItemRepeatType0
@@ -38,6 +39,7 @@ T = TypeVar("T", bound="ListEmailRuleShareEmailsResultItem")
 class ListEmailRuleShareEmailsResultItem:
     """ 
         Attributes:
+            imported (ListEmailRuleShareEmailsResultItemImportedType0 | None):
             id (UUID):
             message_id (None | str):
             domain_id (None | UUID):
@@ -91,6 +93,7 @@ class ListEmailRuleShareEmailsResultItem:
             highlights (ListEmailRuleShareEmailsResultItemHighlightsType0 | None | Unset):
      """
 
+    imported: ListEmailRuleShareEmailsResultItemImportedType0 | None
     id: UUID
     message_id: None | str
     domain_id: None | UUID
@@ -148,10 +151,17 @@ class ListEmailRuleShareEmailsResultItem:
         from ..models.list_email_rule_share_emails_result_item_automation_headers_type_0 import ListEmailRuleShareEmailsResultItemAutomationHeadersType0 # noqa: PLC0415
         from ..models.list_email_rule_share_emails_result_item_delivery_report_type_0 import ListEmailRuleShareEmailsResultItemDeliveryReportType0 # noqa: PLC0415
         from ..models.list_email_rule_share_emails_result_item_highlights_type_0 import ListEmailRuleShareEmailsResultItemHighlightsType0 # noqa: PLC0415
+        from ..models.list_email_rule_share_emails_result_item_imported_type_0 import ListEmailRuleShareEmailsResultItemImportedType0 # noqa: PLC0415
         from ..models.list_email_rule_share_emails_result_item_presence_control_type_0 import ListEmailRuleShareEmailsResultItemPresenceControlType0 # noqa: PLC0415
         from ..models.list_email_rule_share_emails_result_item_relay_type_0 import ListEmailRuleShareEmailsResultItemRelayType0 # noqa: PLC0415
         from ..models.list_email_rule_share_emails_result_item_repeat_type_0 import ListEmailRuleShareEmailsResultItemRepeatType0 # noqa: PLC0415
         from ..models.list_email_rule_share_emails_result_item_sender_member_type_0 import ListEmailRuleShareEmailsResultItemSenderMemberType0 # noqa: PLC0415
+        imported: dict[str, Any] | None
+        if isinstance(self.imported, ListEmailRuleShareEmailsResultItemImportedType0):
+            imported = self.imported.to_dict()
+        else:
+            imported = self.imported
+
         id = str(self.id)
 
         message_id: None | str
@@ -355,6 +365,7 @@ class ListEmailRuleShareEmailsResultItem:
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
+            "imported": imported,
             "id": id,
             "message_id": message_id,
             "domain_id": domain_id,
@@ -435,11 +446,30 @@ class ListEmailRuleShareEmailsResultItem:
         from ..models.list_email_rule_share_emails_result_item_automation_headers_type_0 import ListEmailRuleShareEmailsResultItemAutomationHeadersType0 # noqa: PLC0415
         from ..models.list_email_rule_share_emails_result_item_delivery_report_type_0 import ListEmailRuleShareEmailsResultItemDeliveryReportType0 # noqa: PLC0415
         from ..models.list_email_rule_share_emails_result_item_highlights_type_0 import ListEmailRuleShareEmailsResultItemHighlightsType0 # noqa: PLC0415
+        from ..models.list_email_rule_share_emails_result_item_imported_type_0 import ListEmailRuleShareEmailsResultItemImportedType0 # noqa: PLC0415
         from ..models.list_email_rule_share_emails_result_item_presence_control_type_0 import ListEmailRuleShareEmailsResultItemPresenceControlType0 # noqa: PLC0415
         from ..models.list_email_rule_share_emails_result_item_relay_type_0 import ListEmailRuleShareEmailsResultItemRelayType0 # noqa: PLC0415
         from ..models.list_email_rule_share_emails_result_item_repeat_type_0 import ListEmailRuleShareEmailsResultItemRepeatType0 # noqa: PLC0415
         from ..models.list_email_rule_share_emails_result_item_sender_member_type_0 import ListEmailRuleShareEmailsResultItemSenderMemberType0 # noqa: PLC0415
         d = dict(src_dict)
+        def _parse_imported(data: object) -> ListEmailRuleShareEmailsResultItemImportedType0 | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                imported_type_0 = ListEmailRuleShareEmailsResultItemImportedType0.from_dict(data)
+
+
+
+                return imported_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(ListEmailRuleShareEmailsResultItemImportedType0 | None, data)
+
+        imported = _parse_imported(d.pop("imported"))
+
+
         id = UUID(d.pop("id"))
 
 
@@ -866,6 +896,7 @@ class ListEmailRuleShareEmailsResultItem:
 
 
         list_email_rule_share_emails_result_item = cls(
+            imported=imported,
             id=id,
             message_id=message_id,
             domain_id=domain_id,

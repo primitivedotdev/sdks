@@ -1301,6 +1301,7 @@ describe("locally solicited notification replies", () => {
       automated: false,
       automated_reasons: [],
       webhook_attempt_count: 0,
+      imported: null,
     } as EmailDetail;
     await followEmailConversation(
       {

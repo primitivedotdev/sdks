@@ -121,8 +121,8 @@ def sync_detailed(
     and its saved expectations. The current version's text (english, tree, explanation, assumptions,
     warnings) is under current, and current_version is its number. What the scope comes to for its
     author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when
-    include_sql is true. Needs mail:read, a member's own credential with their full access (not an API
-    key, agent key or narrowed token), and the email rules feature.
+    include_sql is true. Needs mail:read, the email rules feature, and a member's own full-access
+    credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -162,8 +162,8 @@ def sync(
     and its saved expectations. The current version's text (english, tree, explanation, assumptions,
     warnings) is under current, and current_version is its number. What the scope comes to for its
     author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when
-    include_sql is true. Needs mail:read, a member's own credential with their full access (not an API
-    key, agent key or narrowed token), and the email rules feature.
+    include_sql is true. Needs mail:read, the email rules feature, and a member's own full-access
+    credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -198,8 +198,8 @@ async def asyncio_detailed(
     and its saved expectations. The current version's text (english, tree, explanation, assumptions,
     warnings) is under current, and current_version is its number. What the scope comes to for its
     author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when
-    include_sql is true. Needs mail:read, a member's own credential with their full access (not an API
-    key, agent key or narrowed token), and the email rules feature.
+    include_sql is true. Needs mail:read, the email rules feature, and a member's own full-access
+    credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -239,8 +239,8 @@ async def asyncio(
     and its saved expectations. The current version's text (english, tree, explanation, assumptions,
     warnings) is under current, and current_version is its number. What the scope comes to for its
     author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when
-    include_sql is true. Needs mail:read, a member's own credential with their full access (not an API
-    key, agent key or narrowed token), and the email rules feature.
+    include_sql is true. Needs mail:read, the email rules feature, and a member's own full-access
+    credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):

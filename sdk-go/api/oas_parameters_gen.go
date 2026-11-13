@@ -15540,7 +15540,8 @@ type ListActivityObjectsParams struct {
 	Kind OptString `json:",omitempty,omitzero"`
 	// All (the default), live (still there, enabled or not) or ended (deleted, replaced or finished).
 	State OptListActivityObjectsState `json:",omitempty,omitzero"`
-	// Objects per page, from 1 to 200; defaults to 50.
+	// Objects per page, from 1 to 200; defaults to 50. With relation=concerning the first page may also
+	// hold pending items beyond it.
 	Limit OptInt `json:",omitempty,omitzero"`
 	// Next_cursor from the preceding page. Omit for the first page.
 	Cursor OptString `json:",omitempty,omitzero"`
