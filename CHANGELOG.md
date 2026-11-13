@@ -16,54 +16,68 @@ the same OpenAPI spec. See `RELEASE.md`.
 OpenAPI document the API serves, and every client is regenerated from it. Most
 of the changes below follow from that document.
 
-Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.12` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.12`), and `3.0.0rc12` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.11` (`3.0.0rc11`), which added server notes on rule requests, rule receivers, `activity concerning` and the rule objection webhook events, `3.0.0-preview.10` (`3.0.0rc10`), which added email rule objections, the email rule scope flags and true or false on boolean flags, `3.0.0-preview.9` (`3.0.0rc9`), which added email rule oversight and look-alikes that carry `expected`, and changed what `hidden` counts on rule results, `3.0.0-preview.8` (`3.0.0rc8`), which added look-alikes, made-up emails kept as a rule's expectations and do-not-share rules created active, `3.0.0-preview.7` (`3.0.0rc7`), which had the server refuse a failing rule update and added rule revisions, reach and breadth, `3.0.0-preview.6` (`3.0.0rc6`), which added key expiry and rule changes to `keys update` and the email rule request webhook events, `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
+Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.13` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.13`), and `3.0.0rc13` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.12` (`3.0.0rc12`), which added imported mail, pending coverage rows, endpoint and key warnings and the default check of writes to rules that keys or webhooks read, `3.0.0-preview.11` (`3.0.0rc11`), which added server notes on rule requests, rule receivers, `activity concerning` and the rule objection webhook events, `3.0.0-preview.10` (`3.0.0rc10`), which added email rule objections, the email rule scope flags and true or false on boolean flags, `3.0.0-preview.9` (`3.0.0rc9`), which added email rule oversight and look-alikes that carry `expected`, and changed what `hidden` counts on rule results, `3.0.0-preview.8` (`3.0.0rc8`), which added look-alikes, made-up emails kept as a rule's expectations and do-not-share rules created active, `3.0.0-preview.7` (`3.0.0rc7`), which had the server refuse a failing rule update and added rule revisions, reach and breadth, `3.0.0-preview.6` (`3.0.0rc6`), which added key expiry and rule changes to `keys update` and the email rule request webhook events, `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
 
-What `3.0.0-preview.12` (`3.0.0rc12`) changes from `3.0.0-preview.11`:
+What `3.0.0-preview.13` (`3.0.0rc13`) changes from `3.0.0-preview.12`:
 
-- The spec follows the API's current release. Emails carry `imported`, null
-  for live mail and, for a historical message Primitive acquired, where it
-  came from and when. It is required on email details, list and search
-  rows, readable emails and a share's emails, so the Python and Go clients
-  expect it.
-- `listActivityObjects` with `relation=concerning` lists first, as
-  `pending`, each rule that covers you now whose notice is not written yet,
-  and carries `as_of` (about when the notices last looked) and
-  `pending_complete`. In `primitive activity concerning`, an empty listing
-  says how far the notices go and where to see what covers you now, rather
-  than saying nothing covers you, a pending row is explained under the
-  table, and `--json` keeps `as_of`.
-- `primitive doctor` has an "Asked of you" row for a person signed in with
-  `primitive login`: open rule requests and objections waiting for you,
-  rules that cover you with no notice written yet, and coverage notices from
-  the last 7 days, with the commands that show them.
-- `createEndpoint` answers with `warnings`, such as
-  `same_path_as_another_endpoint` when another webhook you can see sends to
-  the same scheme, host and path.
-- Keys carry `address_warnings`, notes on their grant, on every read.
-  `keys get` prints them under `Notes:`, and `keys list` marks a key that
-  has some.
-- `compileEmailRule` answers with `kind` and `conditions_breadth`, and the
-  rule in test, test-on-sample and look-alike answers is `EmailRuleTested`.
-  An update with a `kind` other than the rule's own is refused
-  (`kind_mismatch`). `testEmailRule` can test a rule you see only because
-  it covers your own mailboxes, run as you over only those, from the
-  dashboard or the CLI.
-- `updateEmailRule` without `if_expectations_pass` judges a write that
-  saves a version, or changes the scope, of an active rule that API keys or
-  webhooks read and that has expectations (refusing with `409`
-  `expectations_*` and `details.read_by`); `false` skips that. Removing
-  the expectations of such a rule is refused with `400` `no_expectations`.
-  A write saved without that check can carry a `notice`. It can also answer
-  `409` with `readers_changed` and `503` with `rule_keys_unread` or
-  `rule_readers_unread`. A rule's `receivers` webhooks carry `hosts` and
-  `hosts_not_listed`, and its `keys` count only keys that hold `mail:read`.
-- Relay auto join: auto-joined people have no mail access until an owner or
-  admin assigns a role. Legacy mail-grant choices read as `no_access` and
-  cannot be set (`400` for one outside the current catalog), and
-  `setRelayAutoJoin` no longer answers `409` `role_key_taken`.
-- `primitive version` prints what `primitive --version` prints, and with
-  `--json` the `version`, `platform`, `arch` and `node` fields.
-- New error codes: `chunk_size_mismatch` and `invalid_manifest`.
+- The spec follows the API's current release. `getEmail` answers
+  `attachments` at the top level, each attachment's metadata in the order
+  of `parsed.attachments`, kept for a credential that reads headers only.
+  It is required, so the Python and Go clients expect it.
+- Made-up emails take `attachment_names`, paired with `attachment_types` by
+  position, in test-on-sample, saved expectation samples and look-alikes,
+  and the CLI's samples files take them, so a saved look-alikes file is no
+  longer refused.
+- `compileEmailRule` takes `evaluation_scope` and `scope_selection` and
+  counts breadth over that scope, and `email-rules compile-email-rule`
+  takes `--evaluation-scope`, `--scope-address` and `--scope-domain` and
+  names the scope in its breadth line. `testEmailRule`'s summary carries
+  `conditions_held`, and a test of the recent window warns a grant rule
+  whose conditions held for most of it. A grant rule that tests only who an
+  email was sent to gets a server note when it is saved.
+- Rule writes and deletes carry `share_notice` when they ended the rule's
+  share, and a rule's author reads `pending_objections` and
+  `objection_notice` on it. Without `--json` the CLI prints these notices,
+  and `test-email-rule` prints `conditions_held`.
+- `listEmailRuleObjections` takes `box` `mine`, objections you made and
+  those to rules you wrote, now the API's default. The rule request, share,
+  given share and objection lists say which default filter applied on every
+  page read with a default in place, not only an empty one.
+  `email-rule-oversight list-email-rule-objections` asks for `mine` by
+  name, and asks once more for `outgoing` on a server that does not take
+  `mine`, saying so.
+- `update-email-rule`'s hints say when the server checked a write by
+  default because API keys or webhooks read the active rule, and how to
+  save it without the check, and explain `readers_changed`.
+- `updateKey` answers `rules_added`, each added rule with `granted_emails`,
+  how many emails it has already shared.
+- The covering view carries `receivers_once_active`, required and nullable:
+  who would receive what a grant rule in draft or observe matches once it
+  is active. Receiver keys carry `reads_in_full`, and receiver webhook
+  hosts are named by the domain they are registered under, an app's own
+  name on a known app platform, or a function URL service in its region.
+- Coverage notices carry `rule_id`, which `primitive activity concerning`
+  shows as `RULE ID`. Its help says that `started` means a rule turned
+  active over your mailboxes and that notices can lag, naming no interval,
+  as `primitive doctor`'s "Asked of you" row now does too.
+  `--json` keeps `pending_complete`, and the text says when the check for
+  rules covering you with no notice yet did not finish.
+- `sendEmail`, `sendMailBatch` and `replyToEmail` take `unsubscribe`, a
+  one-click unsubscribe URL (and an optional `mailto`) that Primitive
+  writes and DKIM-signs as `List-Unsubscribe` and `List-Unsubscribe-Post`.
+  `createEmailRule` and `updateEmailRule` answer the rule's saved
+  `expectations`.
+- When the API lists nothing a credential can send from, send's error no
+  longer suggests `--from`.
+- `downloadDomainZoneFile` takes `inbound_only`, and `domains zone-file`
+  takes `--inbound-only`.
+- New operations: `listEmailRuleVersionsCoveringMe` (`email-rule-oversight
+  list-email-rule-versions-covering-me`), the versions of a rule over your
+  mail that applied to it, and `importGoogleMailMessage` (not a CLI
+  command: it takes a credential header) and `reconcileGoogleMailImport`,
+  with 16 `mail_import_*` error codes.
+  `testEmailRuleOnSample` and `generateLookAlikes` take the `rule_id` of a
+  rule that covers your mailboxes.
 
 ### Breaking changes
 
@@ -73,7 +87,7 @@ What `3.0.0-preview.12` (`3.0.0rc12`) changes from `3.0.0-preview.11`:
   CLI moves from 1.75.0.
 - The Go module path is `github.com/primitivedotdev/sdks/sdk-go/v3`. Update
   imports from `.../sdk-go/v2` and `.../sdk-go/v2/api`.
-- `primitive functions init` scaffolds projects on `^3.0.0-preview.12` of both
+- `primitive functions init` scaffolds projects on `^3.0.0-preview.13` of both
   `@primitivedotdev/sdk` and `primitive`.
 
 #### Removed code
@@ -758,7 +772,13 @@ date-time is kept as null and sorts last. A sync stops with an error after
   already shared, which the key can now read (counted up to 10,000, with
   `more: true` past that; null when not counted).
 - `testEmailRule`'s `summary` carries `conditions_held`: of the emails
-  decided, how many its conditions alone held for.
+  decided, how many its conditions alone held for. On a test of the recent
+  window, a grant rule whose conditions held for more than 20% of at least
+  20 emails checked (at least 90% if it has no questions), or for every one
+  of fewer, gets a warning saying so.
+- A grant rule whose conditions test only who an email was sent to gets a
+  server note in the `warnings` that `createEmailRule`, `updateEmailRule`
+  and `acceptEmailRuleRequest` keep.
 - `compileEmailRule` takes `evaluation_scope` and `scope_selection`, as a
   test does, and counts `breadth` and `conditions_breadth` over that scope
   (by default your own mailboxes). Nothing is saved. With `selected` it can
@@ -770,7 +790,9 @@ date-time is kept as null and sorts last. A sync stops with an error after
   or observe, who would receive what it matches once it is turned active.
   In a rule's `receivers`, each `keys` entry over your mail carries
   `reads_in_full`, how many of those keys also list one of your own
-  mailboxes or its domain.
+  mailboxes or its domain, and each webhook site in `hosts` is the domain a
+  host is registered under, an app's own name on a known app platform, or a
+  function URL service in its region.
 - `createEmailRule` and `updateEmailRule` answer the rule's saved
   `expectations` (`match` and `no_match`, by email id, as stored): on every
   create, and on an update that set or removed them.
@@ -788,6 +810,9 @@ date-time is kept as null and sorts last. A sync stops with an error after
   observe that turned active or was deleted after the page was read.
 - `listActivityObjects` coverage notices (`email_rule_coverage`) carry
   `rule_id`, the rule each is about (for a `pending` row, the same as `id`).
+  A notice's `started` means a rule was made or turned active over your
+  mailboxes, or an active rule came to reach you, once per rule; a rule in
+  draft or observe gets none.
 - `createEmailRule` and `updateEmailRule` (`EmailRuleWritten`) and
   `deleteEmailRule` carry `share_notice` after a write that ended the
   rule's share: that it did, with whom and the version they accepted, when
