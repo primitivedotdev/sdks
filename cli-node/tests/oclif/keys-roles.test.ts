@@ -37,6 +37,7 @@ import {
   STORE_SECRET_NOTICE,
   standingSummary,
   stepUpUrlOf,
+  wholeMailboxWarning,
   withApproval,
 } from "../../src/oclif/commands/keys.js";
 import {
@@ -987,7 +988,11 @@ describe("keys commands", () => {
       reason: "member_address",
       description: "ops@acme.example is a member's own address.",
     };
-    const warning = `Warning: this key reads every email at ops@acme.example, not only the emails its rules grant. An address or domain listed beside a rule is read in full. To limit a key to the rules' emails, create one with only --rule (no --address or --domain) and revoke this one with \`primitive keys revoke ${KEY_ID}\`.`;
+    const warning = `This key reads every email at ops@acme.example, not only the emails its rules grant. An address or domain listed beside a rule is read in full. To limit a key to the rules' emails, create one with the same permissions and only --rule for its mail (no --address or --domain), then revoke this one with \`primitive keys revoke ${KEY_ID}\`.`;
+    const permissionWarning = {
+      permission: "mail:read",
+      description: "mail:read also lets it read attachments.",
+    };
     const created = {
       id: KEY_ID,
       name: "orders",
@@ -1006,7 +1011,7 @@ describe("keys commands", () => {
       },
       expires_at: null,
       conditions: null,
-      warnings: [],
+      warnings: [permissionWarning],
       address_warnings: [whole, member],
     };
     useServer(() =>
@@ -1028,7 +1033,7 @@ describe("keys commands", () => {
     expect(result.stderr).toContain(`Note: ${member.description}`);
     // Said once, as the warning, last, after the key's secret.
     expect(result.stderr).not.toContain(`Note: ${whole.description}`);
-    expect(result.stderr.trimEnd().endsWith(warning)).toBe(true);
+    expect(result.stderr.trimEnd().endsWith(`Warning: ${warning}`)).toBe(true);
     const json = await run(KeysCreateCommand, [
       "--name",
       "orders",
@@ -1042,12 +1047,13 @@ describe("keys commands", () => {
       "pstep_x",
       "--json",
     ]);
-    // With --json stderr stays empty: the JSON guard puts the warning in the
-    // document's warnings, beside the notes as they came.
+    // With --json stderr stays empty and the server's warnings stay as they
+    // came: the warning has a field of its own.
     expect(json.exitCode).toBeUndefined();
     expect(json.stderr).toBe("");
     const document = JSON.parse(json.stdout);
-    expect(document.warnings).toEqual([warning]);
+    expect(document.whole_mailbox_warning).toBe(warning);
+    expect(document.warnings).toEqual([permissionWarning]);
     expect(document).toMatchObject({ address_warnings: [whole, member] });
   });
 
@@ -1087,13 +1093,120 @@ describe("keys commands", () => {
       "--json",
     ]);
     expect(json.stderr).toBe("");
-    expect(JSON.parse(json.stdout).warnings).toEqual([]);
+    expect(JSON.parse(json.stdout)).not.toHaveProperty("whole_mailbox_warning");
+  });
+
+  it("words the whole mailbox warning for several addresses, and for a note with none", () => {
+    const at = (address: string) => ({
+      address,
+      reason: "whole_mailbox",
+      description: "x",
+    });
+    expect(
+      wholeMailboxWarning(KEY_ID, [at("a@example.com"), at("example.org")]),
+    ).toContain("reads every email at a@example.com, example.org, not only");
+    expect(
+      wholeMailboxWarning(KEY_ID, [{ reason: "whole_mailbox" }]),
+    ).toContain("reads every email at an address or domain it lists, not only");
+    for (const notes of [undefined, null, [], [{ reason: "member_address" }]])
+      expect(wholeMailboxWarning(KEY_ID, notes)).toBeNull();
+    expect(
+      formatKeyRows([
+        keyRow(
+          { template: null, permissions: ["mail:read"], mail_scope: "org" },
+          { address_warnings: [at("a@example.com"), at("example.org")] },
+        ),
+      ]),
+    ).toContain("[reads all mail at a@example.com, example.org, not only");
+  });
+
+  it("update says nothing of a whole mailbox when it wrote no grant, and prints a note the server sent anyway", async () => {
+    const description = "acme.example is listed beside email rules.";
+    const note = {
+      address: "acme.example",
+      reason: "whole_mailbox",
+      description,
+    };
+    useServer((request) =>
+      request.method === "GET"
+        ? Response.json({
+            success: true,
+            data: { ...READER, address_warnings: [note] },
+          })
+        : Response.json({
+            success: true,
+            data: {
+              id: KEY_ID,
+              changed: ["name"],
+              warnings: [],
+              address_warnings: [note],
+            },
+          }),
+    );
+    const renamed = await run(KeysUpdateCommand, [KEY_ID, "--name", "ops"]);
+    expect(renamed.exitCode).toBeUndefined();
+    expect(renamed.stderr).not.toContain("Warning:");
+    expect(renamed.stderr).toContain(`Note: ${description}`);
+    const json = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--name",
+      "ops",
+      "--json",
+    ]);
+    expect(JSON.parse(json.stdout)).not.toHaveProperty("whole_mailbox_warning");
+  });
+
+  it("update --json keeps the whole mailbox warning when the key cannot be read back", async () => {
+    let reads = 0;
+    useServer((request) => {
+      if (request.method === "GET") {
+        reads += 1;
+        return reads === 1
+          ? Response.json({ success: true, data: READER })
+          : Response.json(
+              {
+                success: false,
+                error: { code: "internal_error", message: "boom" },
+              },
+              { status: 500 },
+            );
+      }
+      return Response.json({
+        success: true,
+        data: {
+          id: KEY_ID,
+          changed: ["grant"],
+          warnings: [],
+          address_warnings: [
+            {
+              address: "acme.example",
+              reason: "whole_mailbox",
+              description: "x",
+            },
+          ],
+        },
+      });
+    });
+    const json = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--add",
+      "mail:send",
+      "--step-up-token",
+      "pstep_y",
+      "--json",
+    ]);
+    expect(json.exitCode).toBeUndefined();
+    const document = JSON.parse(json.stdout);
+    expect(document.key_error).toBeDefined();
+    expect(document.whole_mailbox_warning).toContain(
+      "reads every email at acme.example",
+    );
   });
 
   it("update warns in every mode when the grant it wrote reads a whole domain beside its rules", async () => {
     const description =
       "acme.example is listed beside email rules, so this key reads all of its mail, not only what the rules match.";
-    const warning = `Warning: this key reads every email at acme.example, not only the emails its rules grant. An address or domain listed beside a rule is read in full. To limit a key to the rules' emails, create one with only --rule (no --address or --domain) and revoke this one with \`primitive keys revoke ${KEY_ID}\`.`;
+    const warning = `This key reads every email at acme.example, not only the emails its rules grant. An address or domain listed beside a rule is read in full. To limit a key to the rules' emails, create one with the same permissions and only --rule for its mail (no --address or --domain), then revoke this one with \`primitive keys revoke ${KEY_ID}\`.`;
     let reads = 0;
     useServer((request) => {
       if (request.method === "GET") {
@@ -1122,7 +1235,7 @@ describe("keys commands", () => {
     expect(result.exitCode).toBeUndefined();
     expect(reads).toBeGreaterThan(0);
     expect(result.stderr).not.toContain(`Note: ${description}`);
-    expect(result.stderr.trimEnd().endsWith(warning)).toBe(true);
+    expect(result.stderr.trimEnd().endsWith(`Warning: ${warning}`)).toBe(true);
     const json = await run(KeysUpdateCommand, [
       KEY_ID,
       "--add",
@@ -1134,7 +1247,8 @@ describe("keys commands", () => {
     expect(json.exitCode).toBeUndefined();
     expect(json.stderr).toBe("");
     const document = JSON.parse(json.stdout);
-    expect(document.warnings).toEqual([warning]);
+    expect(document.whole_mailbox_warning).toBe(warning);
+    expect(document.warnings).toEqual([]);
     expect(document.address_warnings).toEqual([
       { address: "acme.example", reason: "whole_mailbox", description },
     ]);

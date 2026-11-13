@@ -1286,9 +1286,9 @@ downgrading, or sign in again afterwards.
   email there, not only the rules' emails (the `whole_mailbox` note in
   `address_warnings`). `keys create`, and `keys update` when it writes the
   grant, then print a warning on stderr after the key, naming the addresses
-  and saying how to make a key limited to the rules; with `--json` it is in
-  the document's `warnings`. The key is still made, and the exit code is
-  unchanged. `keys list` marks such a key with what it reads in full, and
+  and saying how to make a key limited to the rules; with `--json` the same
+  text is in the document's `whole_mailbox_warning`. The key is still made or
+  changed as asked, and the exit code is unchanged. `keys list` marks such a key with what it reads in full, and
   `keys get` shows it in an `In full:` line.
 
 #### Rule request and objection webhook events
@@ -1444,8 +1444,7 @@ parsers.
   `--status`) names the filters given and notes that test fires are not
   logged, instead of saying no deliveries were logged.
 - `keys create` and `keys update` print the answer's `address_warnings`
-  without `--json`, such as an address or domain listed beside `--rule`,
-  which the key reads in full.
+  without `--json`, such as a member's own address.
 - `email-rules update-email-rule --fail-on-expectations` sends
   `if_expectations_pass`: the server judges the rule as the write would
   leave it before saving, and saves nothing when an expectation failed (exit

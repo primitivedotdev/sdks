@@ -275,9 +275,11 @@ export function wholeMailboxAddresses(notes: unknown): string[] {
 }
 
 /**
- * The warning a key create or update prints on stderr, with or without
- * --json, when the key reads whole mailboxes beside its email rules; null when
- * it does not. The exit code is not changed: the key is made as asked.
+ * What a key create or update says when the key reads whole mailboxes beside
+ * its email rules: on stderr as a Warning line, or under --json in the
+ * document's whole_mailbox_warning (the JSON guard keeps stderr empty, and the
+ * answer's warnings are the server's objects). Null when it does not. The
+ * exit code is not changed: the key is made or changed as asked.
  */
 export function wholeMailboxWarning(
   keyId: string,
@@ -289,7 +291,7 @@ export function wholeMailboxWarning(
     addresses.length > 0
       ? `every email at ${addresses.join(", ")}`
       : "every email at an address or domain it lists";
-  return `Warning: this key reads ${where}, not only the emails its rules grant. An address or domain listed beside a rule is read in full. To limit a key to the rules' emails, create one with only --rule (no --address or --domain) and revoke this one with \`primitive keys revoke ${keyId}\`.`;
+  return `This key reads ${where}, not only the emails its rules grant. An address or domain listed beside a rule is read in full. To limit a key to the rules' emails, create one with the same permissions and only --rule for its mail (no --address or --domain), then revoke this one with \`primitive keys revoke ${keyId}\`.`;
 }
 
 /** The notes other than whole_mailbox, which wholeMailboxWarning says instead. */
@@ -917,7 +919,7 @@ export class KeysCreateCommand extends Command {
 
   The secret is printed once, on its own line on stdout (in the JSON with --json). Store it right away: it is not shown again and the CLI does not save it.
 
-  A key limited to email rules (--rule, repeatable) reaches only the mail those rules match. Give it mail:read with --permission, or use --preset own_addresses_read_only. An --address or --domain given beside --rule is read in full, every email there and not only what the rules match: the key is still made, and the command warns on stderr, or in the document's warnings with --json.
+  A key limited to email rules (--rule, repeatable) reaches only the mail those rules match. Give it mail:read with --permission, or use --preset own_addresses_read_only. An --address or --domain given beside --rule is read in full, every email there and not only what the rules match: the key is still made, and the command warns on stderr, or in whole_mailbox_warning with --json.
 
   ${keyPermissionsHelp()}`;
 
@@ -1018,8 +1020,7 @@ export class KeysCreateCommand extends Command {
     const key = result.data;
     // address_warnings say what a listed address or domain reads; --json
     // carries them as is. One beside --rule, which the key reads in full, is
-    // also said on stderr after the key, with or without --json (where the
-    // JSON guard puts it in the document's warnings).
+    // said after the key: on stderr, or in whole_mailbox_warning with --json.
     if (!flags.json) {
       writeWarnings(key.warnings);
       writeWarnings(otherNotes(key.address_warnings));
@@ -1028,7 +1029,7 @@ export class KeysCreateCommand extends Command {
     printSecret(
       this,
       Boolean(flags.json),
-      key,
+      whole ? { ...key, whole_mailbox_warning: whole } : key,
       key.key,
       [
         `Created API key ${key.name ?? "(unnamed)"} (${key.id}), prefix ${key.key_prefix}.`,
@@ -1037,7 +1038,7 @@ export class KeysCreateCommand extends Command {
         `Expires: ${key.expires_at ?? "never"}`,
       ].join("\n"),
     );
-    if (whole) process.stderr.write(`${whole}\n`);
+    if (whole && !flags.json) process.stderr.write(`Warning: ${whole}\n`);
   }
 }
 
@@ -1128,11 +1129,11 @@ export class KeysUpdateCommand extends Command {
   static description =
     `Change an API key's permissions, email rules, name or expiry. It keeps its id and secret.
 
-  --add and --remove take permissions (repeatable, or comma-separated); \`primitive keys create --help-full\` lists the permissions a key can hold. --add-rule and --remove-rule add email rules to the key or take them off, and keep its other rules. --rule replaces every rule the key has with the ones given, so pass all the rules it should keep; it cannot be combined with --add-rule or --remove-rule. --expires-at gives it a new expiry: a later one extends it, within your organization's credential policy, and is how to keep a key working past its expiry (rotating keeps the expiry). --no-expiry removes it where the policy allows. An expired key cannot be extended. Everything else about the key stays as it is, and the output lists any rules a change took off. When the key's grant is written and it lists an address or domain beside its rules, which it reads in full, the command warns on stderr, or in the document's warnings with --json.
+  --add and --remove take permissions (repeatable, or comma-separated); \`primitive keys create --help-full\` lists the permissions a key can hold. --add-rule and --remove-rule add email rules to the key or take them off, and keep its other rules. --rule replaces every rule the key has with the ones given, so pass all the rules it should keep; it cannot be combined with --add-rule or --remove-rule. --expires-at gives it a new expiry: a later one extends it, within your organization's credential policy, and is how to keep a key working past its expiry (rotating keeps the expiry). --no-expiry removes it where the policy allows. An expired key cannot be extended. Everything else about the key stays as it is, and the output lists any rules a change took off. When the key's grant is written and it lists an address or domain beside its rules, which it reads in full, the command warns on stderr, or in whole_mailbox_warning with --json.
 
   The change runs directly; if your organization requires approval, the command prints the approval link and takes --step-up-token, as for a new key. A key never holds more than you do.
 
-  With --json it prints the key as it is now, in the shape keys get prints, with changed, warnings and address_warnings alongside, notice when its permissions or mail changed, rules_added when a change put rules on it (each with granted_emails, how many emails the rule has already shared), rules_removed when a change took rules off, and rules_not_on_key for rules asked to be taken off that it did not have. A permission or rule change that leaves the grant as it is, with no --name, --expires-at or --no-expiry, sends nothing and prints the key with changed: []. If the key cannot be read back after the change, key_error says why and only the change's fields are printed.`;
+  With --json it prints the key as it is now, in the shape keys get prints, with changed, warnings and address_warnings alongside, notice when its permissions or mail changed, rules_added when a change put rules on it (each with granted_emails, how many emails the rule has already shared), rules_removed when a change took rules off, rules_not_on_key for rules asked to be taken off that it did not have, and whole_mailbox_warning when the grant written reads a whole mailbox beside its rules. A permission or rule change that leaves the grant as it is, with no --name, --expires-at or --no-expiry, sends nothing and prints the key with changed: []. If the key cannot be read back after the change, key_error says why and only the change's fields are printed.`;
 
   static summary = "Change an API key";
 
@@ -1352,9 +1353,8 @@ export class KeysUpdateCommand extends Command {
     const standingNotes = after?.ok
       ? (after.data as { address_warnings?: unknown }).address_warnings
       : undefined;
-    // A grant written that reads a whole mailbox beside its rules is said on
-    // stderr after the result, with or without --json (where the JSON guard
-    // puts it in the document's warnings).
+    // A grant written that reads a whole mailbox beside its rules is said
+    // after the result: on stderr, or in whole_mailbox_warning with --json.
     const whole = grantChanged
       ? wholeMailboxWarning(args.id, result.data.address_warnings)
       : null;
@@ -1378,16 +1378,21 @@ export class KeysUpdateCommand extends Command {
               : {}),
             // The change was made; only reading the key back failed.
             ...(after && !after.ok ? { key_error: after.payload } : {}),
+            ...(whole ? { whole_mailbox_warning: whole } : {}),
           },
           null,
           2,
         ),
       );
-      if (whole) process.stderr.write(`${whole}\n`);
       return;
     }
     writeWarnings(result.data.warnings);
-    writeWarnings(otherNotes(result.data.address_warnings));
+    // A note the warning below does not say is printed as it came.
+    writeWarnings(
+      whole
+        ? otherNotes(result.data.address_warnings)
+        : result.data.address_warnings,
+    );
     const changed = result.data.changed;
     this.log(
       changed.length > 0
@@ -1406,7 +1411,7 @@ export class KeysUpdateCommand extends Command {
       this.log(`Expires: ${expiry.expiresAt ?? "never"}`);
     }
     if (grantChanged) process.stderr.write(`${HELD_REQUEST_NOTICE}\n`);
-    if (whole) process.stderr.write(`${whole}\n`);
+    if (whole) process.stderr.write(`Warning: ${whole}\n`);
   }
 }
 
