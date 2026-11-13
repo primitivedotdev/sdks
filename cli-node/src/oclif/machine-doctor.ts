@@ -228,6 +228,12 @@ export type MachineDoctorOptions = {
   now?: () => Date;
   /** Latest published version, or null when it cannot be read. */
   latestVersion?: () => Promise<string | null>;
+  /**
+   * The newest preview published (npm's `preview` dist-tag), or null when it
+   * cannot be read. Read only when the running CLI is itself a preview,
+   * whether or not the latest release could be read.
+   */
+  previewVersion?: () => Promise<string | null>;
   stopReceiver?: (
     target: BackgroundListenTarget,
   ) => Promise<BackgroundListenStatus>;
@@ -252,12 +258,65 @@ export function compareVersions(a: string, b: string): number | null {
   return 0;
 }
 
+type ParsedVersion = { core: number[]; prerelease: string[] };
+
+function parseVersion(value: string): ParsedVersion | null {
+  const match =
+    /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/.exec(
+      value.trim(),
+    );
+  if (!match) return null;
+  return {
+    core: match.slice(1, 4).map(Number),
+    prerelease: match[4] ? match[4].split(".") : [],
+  };
+}
+
+/** Whether a version is a prerelease, such as 3.0.0-preview.12. */
+export function isPrerelease(version: string): boolean {
+  return (parseVersion(version)?.prerelease.length ?? 0) > 0;
+}
+
+/**
+ * Compare two versions in semver order, prereleases included: 3.0.0-preview.9
+ * is older than 3.0.0-preview.12, which is older than 3.0.0. Null when either
+ * is not a version.
+ */
+export function compareReleaseVersions(a: string, b: string): number | null {
+  const left = parseVersion(a);
+  const right = parseVersion(b);
+  if (!left || !right) return null;
+  for (let index = 0; index < 3; index++) {
+    const difference = (left.core[index] ?? 0) - (right.core[index] ?? 0);
+    if (difference) return Math.sign(difference);
+  }
+  // A release is newer than any prerelease of it.
+  if (left.prerelease.length === 0 || right.prerelease.length === 0)
+    return Math.sign(right.prerelease.length - left.prerelease.length);
+  const length = Math.max(left.prerelease.length, right.prerelease.length);
+  for (let index = 0; index < length; index++) {
+    const l = left.prerelease[index];
+    const r = right.prerelease[index];
+    if (l === undefined) return -1;
+    if (r === undefined) return 1;
+    const ln = /^\d+$/.test(l) ? Number(l) : null;
+    const rn = /^\d+$/.test(r) ? Number(r) : null;
+    if (ln !== null && rn !== null) {
+      if (ln !== rn) return Math.sign(ln - rn);
+    } else if (ln !== null) return -1;
+    else if (rn !== null) return 1;
+    else if (l !== r) return l < r ? -1 : 1;
+  }
+  return 0;
+}
+
 async function npmLatestVersion(
   fetchImpl: typeof fetch,
+  tag: "latest" | "preview" = "latest",
 ): Promise<string | null> {
   try {
     const response = await fetchImpl(
-      "https://registry.npmjs.org/primitive/latest",
+      `https://registry.npmjs.org/primitive/${tag}`,
       {
         headers: { accept: "application/json" },
         redirect: "follow",
@@ -1371,7 +1430,11 @@ export async function runMachineDoctor(
       inspect: async () => {
         const version = options.cliVersion;
         if (options.minCliVersion) {
-          const compared = compareVersions(version, options.minCliVersion);
+          // A preview is below the release it previews, so it is compared
+          // whole; a release build as before.
+          const compared = isPrerelease(version)
+            ? compareReleaseVersions(version, options.minCliVersion)
+            : compareVersions(version, options.minCliVersion);
           if (compared === null)
             return check(
               "cli.version",
@@ -1386,9 +1449,66 @@ export async function runMachineDoctor(
               { action: "update_cli" },
             );
         }
-        const latest = await (
-          options.latestVersion ?? (() => npmLatestVersion(fetchImpl))
-        )();
+        const readLatest =
+          options.latestVersion ?? (() => npmLatestVersion(fetchImpl));
+        // A preview is compared with the newest preview, whole version and
+        // all; the latest release alone would call any 3.0.0 preview current.
+        // Both tags are read at once.
+        if (isPrerelease(version)) {
+          const [latest, preview] = await Promise.all([
+            readLatest(),
+            (
+              options.previewVersion ??
+              (() => npmLatestVersion(fetchImpl, "preview"))
+            )(),
+          ]);
+          const released = latest
+            ? compareReleaseVersions(version, latest)
+            : null;
+          if (released !== null && released < 0)
+            return check(
+              "cli.version",
+              "warn",
+              `${version} is a preview older than the latest release ${latest}. Install it with \`npm install -g primitive@latest\`.`,
+              { action: "update_cli" },
+            );
+          const previewBehind = preview
+            ? compareReleaseVersions(version, preview)
+            : null;
+          if (previewBehind !== null && previewBehind < 0)
+            return check(
+              "cli.version",
+              "warn",
+              `${version} is older than the newest preview ${preview}. Install it with \`npm install -g primitive@preview\`.`,
+              { action: "update_cli" },
+            );
+          if (previewBehind === 0)
+            return check(
+              "cli.version",
+              "ok",
+              `${version} is the newest preview.`,
+            );
+          if (previewBehind !== null)
+            return check(
+              "cli.version",
+              "ok",
+              `${version} is not older than the newest preview ${preview}.`,
+            );
+          // The preview tag could not be read, or is no version to compare.
+          const met = options.minCliVersion
+            ? ` meets the required ${options.minCliVersion};`
+            : ";";
+          return check(
+            "cli.version",
+            released !== null || options.minCliVersion ? "ok" : "skip",
+            preview
+              ? `${version}; the newest preview could not be compared with it (the tag is not a version).`
+              : released !== null
+                ? `${version} is not older than the latest release ${latest}; the newest preview could not be checked.`
+                : `${version}${met} neither the latest release nor the newest preview could be checked.`,
+          );
+        }
+        const latest = await readLatest();
         if (!latest)
           return options.minCliVersion
             ? check(

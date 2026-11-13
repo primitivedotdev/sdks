@@ -7,8 +7,17 @@ vi.mock("../../src/oclif/api-client.js", async (original) => ({
   ...(await original<typeof import("../../src/oclif/api-client.js")>()),
   createAuthenticatedCliApiClient: auth.create,
 }));
+// A retry's backoff is not waited out in tests.
+const sleeps = vi.hoisted(() => ({ sleep: vi.fn(async () => {}) }));
+vi.mock("../../src/oclif/commands/emails-poll.js", async (original) => ({
+  ...(await original<
+    typeof import("../../src/oclif/commands/emails-poll.js")
+  >()),
+  sleep: sleeps.sleep,
+}));
 
 import {
+  ACTIVITY_ATTEMPTS,
   ActivityAskedCommand,
   ActivityConcerningCommand,
   ActivityCreatedCommand,
@@ -18,6 +27,7 @@ import {
   formatAskedRows,
   formatConcerningRows,
   formatWithheld,
+  NETWORK_ERROR_MESSAGE,
   resumeCommand,
   throughLabel,
 } from "../../src/oclif/commands/activity.js";
@@ -723,5 +733,255 @@ describe("activity concerning command", () => {
     useApi([answer()]);
     await ActivityConcerningCommand.run(["--json"], { root });
     expect(JSON.parse(lines.join("\n"))).not.toHaveProperty("pending_complete");
+  });
+});
+
+describe("activity reads that fail on the way", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    auth.create.mockReset();
+    process.exitCode = undefined;
+  });
+
+  /** Answers attempt n with what reply(n) gives, or throws what it throws. */
+  function useFetch(reply: (n: number) => Response) {
+    let attempts = 0;
+    auth.create.mockResolvedValue({
+      apiClient: new PrimitiveApiClient({
+        apiKey: "test-key",
+        apiBaseUrl: "https://api.example.test/v1",
+        fetch: vi.fn<typeof globalThis.fetch>(async () => {
+          attempts += 1;
+          return reply(attempts);
+        }),
+      }),
+      auth: {},
+      baseUrlOverridden: false,
+    });
+    return () => attempts;
+  }
+
+  // As undici throws it: the cause is not an enumerable property.
+  const fetchFailed = (code: string) =>
+    new TypeError("fetch failed", {
+      cause: Object.assign(new Error(`connect ${code}`), { code }),
+    });
+  const connectTimeout = () => fetchFailed("UND_ERR_CONNECT_TIMEOUT");
+  const ok = () =>
+    new Response(JSON.stringify(page([item()], null).body), {
+      headers: { "content-type": "application/json" },
+    });
+
+  function captureStderr(): string[] {
+    const chunks: string[] = [];
+    vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+      chunks.push(String(chunk));
+      return true;
+    });
+    return chunks;
+  }
+
+  it("retries a network error, saying so, and then prints the feed", async () => {
+    const attempts = useFetch((n) => {
+      if (n === 1) throw connectTimeout();
+      return ok();
+    });
+    const lines = captureLog();
+    const stderr = captureStderr();
+    await ActivityCreatedCommand.run([], { root });
+    expect(attempts()).toBe(2);
+    expect(process.exitCode).toBeUndefined();
+    expect(stderr.join("")).toContain("primitive: network error; retrying in");
+    expect(lines.join("\n")).toContain("invoices hook");
+  });
+
+  it("retries an unavailable API, and not a refusal", async () => {
+    let attempts = useFetch((n) =>
+      n === 1
+        ? new Response(JSON.stringify({ success: false }), { status: 503 })
+        : ok(),
+    );
+    captureLog();
+    captureStderr();
+    await ActivityCreatedCommand.run([], { root });
+    expect(attempts()).toBe(2);
+    expect(process.exitCode).toBeUndefined();
+
+    attempts = useFetch(
+      () =>
+        new Response(
+          JSON.stringify({
+            success: false,
+            error: { code: "forbidden", message: "No." },
+          }),
+          { status: 403, headers: { "content-type": "application/json" } },
+        ),
+    );
+    await ActivityCreatedCommand.run([], { root });
+    expect(attempts()).toBe(1);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("waits out a Retry-After within its budget and tries again, and not one longer than it", async () => {
+    const limited = (seconds: string) =>
+      new Response(
+        JSON.stringify({
+          success: false,
+          error: { code: "rate_limit_exceeded", message: "Slow down." },
+        }),
+        {
+          status: 429,
+          headers: {
+            "content-type": "application/json",
+            "retry-after": seconds,
+          },
+        },
+      );
+    sleeps.sleep.mockClear();
+    let attempts = useFetch((n) => (n === 1 ? limited("2") : ok()));
+    captureLog();
+    captureStderr();
+    await ActivityCreatedCommand.run([], { root });
+    expect(attempts()).toBe(2);
+    expect(sleeps.sleep).toHaveBeenCalledWith(2000);
+    expect(process.exitCode).toBeUndefined();
+
+    sleeps.sleep.mockClear();
+    attempts = useFetch(() => limited("60"));
+    const stderr = captureStderr();
+    await ActivityCreatedCommand.run([], { root });
+    expect(attempts()).toBe(1);
+    expect(sleeps.sleep).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+    // The answer's own Retry-After is what the hint names.
+    expect(stderr.join("")).toContain("Retry in 60 s.");
+  });
+
+  it("stops retrying once a sleep runs past its budget", async () => {
+    let now = Date.now();
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    sleeps.sleep.mockImplementationOnce(async () => {
+      now += 20_000;
+    });
+    const attempts = useFetch(() => new Response("", { status: 503 }));
+    captureLog();
+    captureStderr();
+    await ActivityCreatedCommand.run([], { root });
+    expect(attempts()).toBe(1);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("keeps a network error's own code beside the words, with its hint", async () => {
+    const attempts = useFetch(() => {
+      throw fetchFailed("ENOTFOUND");
+    });
+    captureLog();
+    const stderr = captureStderr();
+    await ActivityCreatedCommand.run([], { root });
+    expect(attempts()).toBe(ACTIVITY_ATTEMPTS);
+    expect(process.exitCode).toBe(1);
+    const said = stderr.join("");
+    expect(said).toContain(NETWORK_ERROR_MESSAGE);
+    expect(said).toContain('"cause": "ENOTFOUND"');
+    expect(said).toContain("the API host name did not resolve");
+  });
+
+  it("asks for the same page again after a transient failure with --all", async () => {
+    const cursors: (string | null)[] = [];
+    let attempts = 0;
+    auth.create.mockResolvedValue({
+      apiClient: new PrimitiveApiClient({
+        apiKey: "test-key",
+        apiBaseUrl: "https://api.example.test/v1",
+        fetch: vi.fn<typeof globalThis.fetch>(async (input, init) => {
+          attempts += 1;
+          cursors.push(
+            new URL(new Request(input, init).url).searchParams.get("cursor"),
+          );
+          if (attempts === 2) throw connectTimeout();
+          const body =
+            attempts === 1
+              ? page([item()], "c1").body
+              : page([item({ name: "second page" })], null).body;
+          return new Response(JSON.stringify(body), {
+            headers: { "content-type": "application/json" },
+          });
+        }),
+      }),
+      auth: {},
+      baseUrlOverridden: false,
+    });
+    const lines = captureLog();
+    captureStderr();
+    await ActivityCreatedCommand.run(["--all"], { root });
+    expect(cursors).toEqual([null, "c1", "c1"]);
+    expect(lines.join("\n")).toContain("second page");
+  });
+
+  it("with --json, prints one document whose error is the network error", async () => {
+    useFetch(() => {
+      throw connectTimeout();
+    });
+    const lines = captureLog();
+    const stderr = captureStderr();
+    // The JSON guard prints the one document with console.log.
+    const stdout: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((line = "") => {
+      stdout.push(String(line));
+    });
+    await ActivityCreatedCommand.run(["--json"], { root });
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toBe("");
+    const document = JSON.parse(stdout.join("\n"));
+    expect(document.error).toEqual({
+      code: "network_error",
+      message: NETWORK_ERROR_MESSAGE,
+      cause: "UND_ERR_CONNECT_TIMEOUT",
+    });
+    expect(lines).toEqual([]);
+  });
+
+  it("never prints an empty error: an empty body is named by its status, and an unreadable one says so", async () => {
+    const jsonError = async (reply: () => Response) => {
+      useFetch(reply);
+      captureLog();
+      captureStderr();
+      const stdout: string[] = [];
+      vi.spyOn(console, "log").mockImplementation((line = "") => {
+        stdout.push(String(line));
+      });
+      process.exitCode = undefined;
+      await ActivityCreatedCommand.run(["--json"], { root });
+      expect(process.exitCode).toBe(1);
+      vi.restoreAllMocks();
+      return JSON.parse(stdout.join("\n")).error;
+    };
+    expect(await jsonError(() => new Response("", { status: 503 }))).toEqual({
+      code: "http_error",
+      message: "HTTP 503",
+    });
+    expect(
+      await jsonError(
+        () =>
+          new Response("not json", {
+            headers: { "content-type": "application/json" },
+          }),
+      ),
+    ).toMatchObject({ code: "response_error" });
+  });
+
+  it("words a network error that does not clear, keeping the transport's code only as its cause", async () => {
+    const attempts = useFetch(() => {
+      throw connectTimeout();
+    });
+    captureLog();
+    const stderr = captureStderr();
+    await ActivityConcerningCommand.run([], { root });
+    expect(attempts()).toBe(ACTIVITY_ATTEMPTS);
+    expect(process.exitCode).toBe(1);
+    const said = stderr.join("");
+    expect(said).toContain(NETWORK_ERROR_MESSAGE);
+    expect(said).toContain('"cause": "UND_ERR_CONNECT_TIMEOUT"');
+    expect(said).not.toContain("fetch failed");
   });
 });

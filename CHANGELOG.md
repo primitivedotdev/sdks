@@ -1376,6 +1376,30 @@ parsers.
   codes in parentheses. A Function or pull endpoint shows `-`, and a webhook
   whose delivery could not be checked shows `unknown`. `--json` output is
   unchanged.
+- `primitive activity created`, `asked` and `concerning` retry a rate
+  limit, an unavailable API (502, 503 or 504) or a network error with
+  backoff, up to four tries within about 15 seconds, saying so on stderr,
+  as the CLI's waits do. A `Retry-After` longer than that is not waited
+  out. When Primitive cannot be reached the error is `network_error`,
+  reading "Could not reach Primitive (network error). Try again in a
+  moment.", with the transport's code as `cause`, the same with and without
+  `--json`. An error answer with no code of its own (an empty body) is
+  named by its HTTP status, and one whose body cannot be read is
+  `response_error`. A host name that does not resolve (`ENOTFOUND`) gets a
+  hint wherever the CLI prints a network error's hints.
+- `primitive machine doctor` compares a preview build of the CLI with npm's
+  `preview` dist-tag, whole version and all, and warns when a newer preview
+  is out (`npm install -g primitive@preview`) or when the release it
+  previews is out (`primitive@latest`). Before, a preview was compared
+  with the latest release alone, ignoring its prerelease part, so it read
+  as current. `--min-cli-version` compares a preview build whole too, so
+  `3.0.0-preview.13` no longer meets `--min-cli-version 3.0.0`.
+- A samples file (`--expectation-samples-file`, `--add-expectation-samples-file`,
+  `--expect-samples-file`) whose samples or emails carry a field this CLI
+  does not know is no longer refused: the CLI names such fields on stderr,
+  once per file and only for the samples it takes, and passes them on as
+  they are, so the API, which validates samples itself, decides. A field the API
+  adds later then does not break an older CLI.
 - `email-rule-oversight create-email-rule-objection --help` says the
   message can ask the rule's author to narrow the rule or explain where its
   matches go, and that the author accepts (turning the rule off) or

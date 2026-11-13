@@ -7,9 +7,15 @@ import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   API_BASE_URL_FLAG_DESCRIPTION,
   extractErrorPayload,
+  networkErrorHint,
   surfaceUnauthorizedHint,
   writeErrorWithHints,
 } from "../api-command.js";
+import {
+  backoffDelay,
+  pauseForTransientFailure,
+  transientFailure,
+} from "../transient-retry.js";
 
 // What you created, or what other members asked of you (relation=asked), read
 // from GET /activity/objects. A key, an app or an agent sees what it created
@@ -42,25 +48,122 @@ export type WithheldKind = Page["withheld"][number];
 
 type SdkResult = { data?: unknown; error?: unknown; response?: Response };
 
-async function call(
-  request: Promise<SdkResult>,
-): Promise<{ ok: true; data: Page } | { ok: false; payload: unknown }> {
+/** How long a read of the feed keeps retrying a transient failure. */
+export const ACTIVITY_RETRY_MS = 15_000;
+/** The most times one page is asked for. */
+export const ACTIVITY_ATTEMPTS = 4;
+
+/** The message printed when Primitive could not be reached at all. */
+export const NETWORK_ERROR_MESSAGE =
+  "Could not reach Primitive (network error). Try again in a moment.";
+
+/**
+ * The error for a read that got no answer at all: always a plain object, so
+ * it prints the same with and without --json. The transport's own code (a
+ * host that does not resolve, say) is kept as `cause`, as a word, with no
+ * local detail.
+ */
+export function networkErrorPayload(error: unknown): {
+  code: string;
+  message: string;
+  cause?: string;
+} {
+  const cause =
+    error instanceof Error ? (error as { cause?: unknown }).cause : undefined;
+  const code =
+    cause && typeof cause === "object"
+      ? (cause as { code?: unknown }).code
+      : undefined;
+  return {
+    code: "network_error",
+    message: NETWORK_ERROR_MESSAGE,
+    ...(typeof code === "string" && /^[A-Z0-9_]+$/.test(code)
+      ? { cause: code }
+      : {}),
+  };
+}
+
+/**
+ * One page read, retried as the CLI's waits retry a read: a rate limit, a
+ * 502, 503 or 504, or a network error is tried again with backoff, up to
+ * ACTIVITY_ATTEMPTS times within ACTIVITY_RETRY_MS. A read that throws is
+ * taken as the network error it is. A wait (a Retry-After, or the backoff)
+ * longer than the time left is not slept on: the failure is returned at once.
+ */
+async function readWithRetry(
+  read: () => Promise<SdkResult>,
+): Promise<SdkResult> {
+  const deadline = Date.now() + ACTIVITY_RETRY_MS;
+  for (let attempt = 0; ; attempt += 1) {
+    let result: SdkResult;
+    try {
+      result = await read();
+    } catch (error) {
+      result = { error };
+    }
+    const failure = transientFailure(result);
+    if (!failure || attempt + 1 >= ACTIVITY_ATTEMPTS) return result;
+    const wait = failure.retryAfterMs ?? backoffDelay(attempt);
+    if (wait > deadline - Date.now()) return result;
+    // The wait worked out here is the one slept, so the check above holds;
+    // a sleep that ran past the deadline ends the retries all the same.
+    if (
+      !(await pauseForTransientFailure(
+        { ...failure, retryAfterMs: wait },
+        attempt,
+        { deadline },
+      ))
+    )
+      return result;
+  }
+}
+
+type CallResult =
+  | { ok: true; data: Page }
+  | { ok: false; payload: unknown; response?: Response };
+
+async function call(read: () => Promise<SdkResult>): Promise<CallResult> {
   try {
-    const result = await request;
+    const result = await readWithRetry(read);
+    // No answer at all: Primitive was not reached. Say so in words, not as
+    // the transport's error object.
+    if (transientFailure(result)?.reason === "network")
+      return { ok: false, payload: networkErrorPayload(result.error) };
     if (result.error !== undefined || !result.response?.ok) {
+      const status = result.response?.status;
+      // An answer whose body could not be read (cut off, or not JSON).
+      if (result.error instanceof Error)
+        return {
+          ok: false,
+          response: result.response,
+          payload: {
+            code: "response_error",
+            message: `The answer could not be read${status ? ` (HTTP ${status})` : ""}. Try again in a moment.`,
+          },
+        };
+      const extracted =
+        result.error === undefined ||
+        result.error === null ||
+        typeof result.error === "string"
+          ? undefined
+          : extractErrorPayload(result.error);
+      // An error with no code of its own (an empty body, say) is named by
+      // its status, never printed as {}.
+      const coded =
+        extracted !== null &&
+        typeof extracted === "object" &&
+        typeof (extracted as { code?: unknown }).code === "string";
       return {
         ok: false,
-        payload:
-          result.error === undefined ||
-          result.error === null ||
-          typeof result.error === "string"
-            ? {
-                code: "http_error",
-                message:
-                  (typeof result.error === "string" && result.error.trim()) ||
-                  `HTTP ${result.response?.status ?? ""}`.trim(),
-              }
-            : extractErrorPayload(result.error),
+        response: result.response,
+        payload: coded
+          ? extracted
+          : {
+              code: "http_error",
+              message:
+                (typeof result.error === "string" && result.error.trim()) ||
+                `HTTP ${status ?? ""}`.trim(),
+            },
       };
     }
     const data = result.data as { data?: Page } | Page | undefined;
@@ -69,7 +172,7 @@ async function call(
       data: ((data as { data?: Page })?.data ?? data) as Page,
     };
   } catch (error) {
-    return { ok: false, payload: extractErrorPayload(error) };
+    return { ok: false, payload: networkErrorPayload(error) };
   }
 }
 
@@ -387,7 +490,7 @@ async function runActivityList(
   let pendingComplete: boolean | undefined;
   let cursor = flags.cursor;
   for (let page = 0; page < (flags.all ? ALL_PAGES_LIMIT : 1); page += 1) {
-    const result = await call(
+    const result = await call(() =>
       listActivityObjects({
         client: auth.apiClient.client,
         query: {
@@ -402,7 +505,14 @@ async function runActivityList(
     if (!result.ok) {
       if (flags.json)
         process.stderr.write(`${JSON.stringify(result.payload)}\n`);
-      else writeErrorWithHints(result.payload);
+      else {
+        writeErrorWithHints(result.payload, result.response);
+        // A network error's own code can say what to check (a proxy, DNS).
+        const cause = (result.payload as { cause?: unknown } | null)?.cause;
+        const hint =
+          typeof cause === "string" ? networkErrorHint(cause) : undefined;
+        if (hint) process.stderr.write(`${hint}\n`);
+      }
       surfaceUnauthorizedHint({
         auth: auth.auth,
         baseUrlOverridden: auth.baseUrlOverridden,
