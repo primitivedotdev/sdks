@@ -3890,6 +3890,32 @@ describe("email-rules test-email-rule-on-sample --with-protection", () => {
     expect(stderrLines(compiled)).toEqual([
       "Breadth: its conditions hold for 6 of 40 recent emails checked in all the mail you can read.",
     ]);
+    // The answer's scope wins over what the request sent, or left out.
+    for (const [args, counted, where] of [
+      [[], "author", "in all the mail you can read"],
+      [
+        ["--evaluation-scope", "own_mailboxes"],
+        "selected",
+        "in the inboxes and domains the selected scope names",
+      ],
+    ] as const) {
+      answer({
+        tree: { version: 1, vocabulary: "v1", when: { all: [] } },
+        explanation: "Invoices.",
+        assumptions: [],
+        warnings: [],
+        breadth: { checked: 40, matched: 6 },
+        breadth_scope: { evaluation_scope: counted, scope_selection: null },
+      });
+      const followed = await run("email-rules:compile-email-rule", [
+        "--english",
+        "invoices",
+        ...args,
+      ]);
+      expect(stderrLines(followed), counted).toEqual([
+        `Breadth: its conditions hold for 6 of 40 recent emails checked ${where}.`,
+      ]);
+    }
     const note =
       "Active do-not-share rules reaching an email run first: one that matches it keeps it from being shared through this rule.";
     answer({
