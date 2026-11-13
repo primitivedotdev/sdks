@@ -1350,7 +1350,7 @@ parsers.
   bypass token: it prints as `?... (query hidden)`, and the endpoint gains
   `url_query_hidden: true`, with or without `--json`. Without `--json` a
   note on stderr says so. `--show-url` prints the URL in full. `endpoints
-  create` and `update` refuse (exit 2) a URL that ends in that placeholder,
+  create` and `update` refuse (exit 2) a URL that carries that placeholder,
   so a printed URL is not written back in place of the real one.
 - `primitive version` prints the line `primitive --version` prints (the
   CLI's name and version, platform and architecture, and Node version).

@@ -93,5 +93,5 @@ export function hiddenQueryUrlRefusal(body: unknown): string | null {
     return null;
   const url = (body as { url?: unknown }).url;
   if (typeof url !== "string" || !url.includes(HIDDEN_QUERY)) return null;
-  return `The url ends with ${HIDDEN_QUERY}, which is how the endpoint commands print a URL with its query string hidden, not the URL itself. Pass the full URL; \`primitive endpoints get <id> --show-url\` prints a webhook's URL in full.`;
+  return `The url carries ${HIDDEN_QUERY}, which is how the endpoint commands print a URL with its query string hidden, not the URL itself. Pass the full URL; \`primitive endpoints get <id> --show-url\` prints a webhook's URL in full.`;
 }
