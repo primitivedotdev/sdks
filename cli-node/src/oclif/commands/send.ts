@@ -171,8 +171,9 @@ class SendCommand extends Command {
         "Subject line. Defaults to the first line of --body / --html when omitted.",
     }),
     body: Flags.string({
+      aliases: ["text"],
       description:
-        "Plain-text message body. Either --body or --html (or both) is required.",
+        "Plain-text message body (--text is the same flag). Either --body or --html (or both) is required.",
     }),
     "body-file": Flags.string({
       description:

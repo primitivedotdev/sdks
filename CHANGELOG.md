@@ -1367,6 +1367,15 @@ parsers.
 
 #### CLI
 
+- `primitive send` and `primitive reply` take `--text` as another name for
+  `--body`, the plain-text body.
+- Without `--json`, `endpoints list` prints a table on stderr after the JSON
+  with each endpoint's ENABLED and DELIVERING. DELIVERING is read from
+  `delivery.delivering`, not from `enabled`, so an enabled webhook that is
+  sent nothing (its owner's key revoked, say) reads `no`, with the reason
+  codes in brackets. A Function or pull endpoint shows `-`, and a webhook
+  whose delivery could not be checked shows `unknown`. `--json` output is
+  unchanged.
 - `email-rule-oversight create-email-rule-objection --help` says the
   message can ask the rule's author to narrow the rule or explain where its
   matches go, and that the author accepts (turning the rule off) or

@@ -11,7 +11,9 @@ vi.mock("../../src/oclif/api-client.js", () => ({
 }));
 
 import {
+  deliveringCell,
   deliveryAttemptLines,
+  endpointDeliveryLines,
   routeWarningLines,
 } from "../../src/oclif/answer-reports.js";
 import RoutesAddCommand from "../../src/oclif/commands/routes-add.js";
@@ -290,5 +292,92 @@ describe("delivery attempts", () => {
       "  2026-11-10T10:00:00Z skipped_by_rules, not sent",
       "  #1 2026-11-10T10:00:01Z header_confirmed",
     ]);
+  });
+});
+
+describe("endpoints list DELIVERING", () => {
+  const ENDPOINT = "44444444-4444-4444-8444-444444444444";
+  const endpoint = (extra: Record<string, unknown>) => ({
+    id: ENDPOINT,
+    org_id: "55555555-5555-4555-8555-555555555555",
+    url: "https://hooks.example.test/p",
+    enabled: true,
+    rules: {},
+    created_at: "2026-11-01T00:00:00Z",
+    updated_at: "2026-11-01T00:00:00Z",
+    delivery_count: 0,
+    success_count: 0,
+    failure_count: 0,
+    consecutive_fails: 0,
+    kind: "http",
+    ...extra,
+  });
+  const revoked = {
+    delivering: false,
+    reasons: [
+      {
+        code: "acting_owner_revoked",
+        message: "Not delivered: the endpoint owner's credential was revoked.",
+      },
+    ],
+  };
+
+  it("reads delivery, not enabled", () => {
+    expect(deliveringCell(endpoint({ delivery: revoked }))).toBe(
+      "no (acting_owner_revoked)",
+    );
+    expect(
+      deliveringCell(endpoint({ delivery: { delivering: true, reasons: [] } })),
+    ).toBe("yes");
+    expect(
+      deliveringCell(
+        endpoint({ enabled: false, delivery: { delivering: false } }),
+      ),
+    ).toBe("no");
+    // Not checked just now, or a server that does not say.
+    expect(deliveringCell(endpoint({ delivery: null }))).toBe("unknown");
+    expect(deliveringCell(endpoint({}))).toBe("unknown");
+    // A Function or pull endpoint has no delivery.
+    expect(deliveringCell(endpoint({ kind: "function", url: null }))).toBe("-");
+  });
+
+  it("tables each endpoint's ENABLED and DELIVERING, and nothing for an empty list", () => {
+    const lines = endpointDeliveryLines([
+      endpoint({ delivery: revoked, name: "invoices" }),
+      endpoint({
+        id: "66666666-6666-4666-8666-666666666666",
+        kind: "function",
+        url: null,
+      }),
+    ]);
+    expect(lines[0]).toMatch(/^ID\s+KIND\s+ENABLED\s+DELIVERING\s+NAME$/);
+    expect(lines[1]).toMatch(
+      new RegExp(
+        `^${ENDPOINT}\\s+http\\s+yes\\s+no \\(acting_owner_revoked\\)\\s+invoices$`,
+      ),
+    );
+    expect(lines[2]).toMatch(/\sfunction\s+yes\s+-$/);
+    expect(endpointDeliveryLines([])).toEqual([]);
+    expect(endpointDeliveryLines(null)).toEqual([]);
+  });
+
+  it("prints the table on stderr after the JSON without --json, and leaves --json as it was", async () => {
+    const page = () =>
+      Response.json({
+        success: true,
+        data: [endpoint({ delivery: revoked })],
+        meta: { cursor: null },
+      });
+    useServer(page);
+    const listed = await run(COMMANDS["endpoints:list-endpoints"] as never, []);
+    expect(listed.exitCode).toBeUndefined();
+    expect(listed.stderr).toMatch(/ENABLED\s+DELIVERING/);
+    expect(listed.stderr).toContain("no (acting_owner_revoked)");
+    useServer(page);
+    const json = await run(COMMANDS["endpoints:list-endpoints"] as never, [
+      "--json",
+    ]);
+    expect(json.stderr).toBe("");
+    expect(JSON.parse(json.stdout)).toEqual([endpoint({ delivery: revoked })]);
   });
 });

@@ -588,3 +588,34 @@ describe("generated operations: declared request headers", () => {
     expect(sentKey()).toBe("send-key-1");
   });
 });
+
+describe("--text", () => {
+  it("is the same flag as --body on send and reply", async () => {
+    const sent = await run("send", [
+      "--to",
+      "alice@example.com",
+      "--from",
+      "support@example.com",
+      "--text",
+      "Hello by text",
+    ]);
+    expect(sent.exitCode).toBeUndefined();
+    expect(sentBody().body_text).toBe("Hello by text");
+    const replied = await run("reply", [
+      "--id",
+      "email-1",
+      "--text",
+      "Thanks by text.",
+    ]);
+    expect(replied.exitCode).toBeUndefined();
+    expect(mocks.replyToEmail.mock.calls[0]?.[0].body.body_text).toBe(
+      "Thanks by text.",
+    );
+  });
+
+  it("is refused beside --body, as --body twice would be", async () => {
+    const result = await run("send", [...sendArgs(), "--text", "Hello again"]);
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+    expect(result.exitCode).toBe(2);
+  });
+});

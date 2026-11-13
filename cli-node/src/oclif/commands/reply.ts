@@ -157,8 +157,9 @@ class ReplyCommand extends Command {
       exclusive: ["fyi"],
     }),
     body: Flags.string({
+      aliases: ["text"],
       description:
-        "Plain-text reply body. Either --body or --html (or both) is required, except with --fyi.",
+        "Plain-text reply body (--text is the same flag). Either --body or --html (or both) is required, except with --fyi.",
     }),
     "body-file": Flags.string({
       description:

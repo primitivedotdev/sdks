@@ -1,7 +1,8 @@
 // Readable stderr reports for generated and hand-written commands whose
 // answers carry something a person should not have to dig out of the JSON:
-// the warnings a route write answers with, and each attempt of a webhook
-// delivery with what the endpoint answered.
+// the warnings a route write answers with, each attempt of a webhook
+// delivery with what the endpoint answered, and whether each endpoint in a
+// list is being sent mail.
 //
 // This module does not import api-command.ts, which imports it.
 
@@ -95,6 +96,63 @@ export function deliveryAttemptLines(data: unknown): string[] {
   return lines.length > 0 ? [`Attempts (${lines.length}):`, ...lines] : [];
 }
 
+/**
+ * What an endpoint's DELIVERING column says, from `delivery` and never from
+ * `enabled`: an endpoint can be on and still be sent nothing (its owner's key
+ * revoked, say). `-` for an endpoint that is not a webhook (a Function or
+ * pull endpoint), which has no delivery; `unknown` for a webhook when it
+ * could not be checked just now, or the server does not say.
+ */
+export function deliveringCell(endpoint: Record<string, unknown>): string {
+  const webhook = endpoint.kind === undefined || endpoint.kind === "http";
+  if (!webhook) return "-";
+  const delivery = endpoint.delivery;
+  if (!isRecord(delivery) || typeof delivery.delivering !== "boolean")
+    return "unknown";
+  if (delivery.delivering) return "yes";
+  const codes = Array.isArray(delivery.reasons)
+    ? delivery.reasons.flatMap((reason) =>
+        isRecord(reason) && typeof reason.code === "string" && reason.code
+          ? [oneLine(reason.code)]
+          : [],
+      )
+    : [];
+  return codes.length > 0 ? `no (${codes.join(", ")})` : "no";
+}
+
+/**
+ * A table of an endpoints list (listEndpoints): each endpoint's id, kind,
+ * whether it is on (ENABLED) and whether it is being sent mail at all
+ * (DELIVERING, from `delivery`), and its name. Nothing for an empty list.
+ */
+export function endpointDeliveryLines(data: unknown): string[] {
+  const rows = Array.isArray(data) ? data.filter(isRecord) : [];
+  if (rows.length === 0) return [];
+  const text = (value: unknown) =>
+    typeof value === "string" && value ? oneLine(value) : "";
+  const table = [
+    ["ID", "KIND", "ENABLED", "DELIVERING", "NAME"],
+    ...rows.map((row) => [
+      text(row.id),
+      text(row.kind),
+      typeof row.enabled === "boolean" ? (row.enabled ? "yes" : "no") : "",
+      deliveringCell(row),
+      text(row.name),
+    ]),
+  ];
+  const widths = table[0].map((_, column) =>
+    Math.max(...table.map((cells) => (cells[column] ?? "").length)),
+  );
+  return table.map((cells) =>
+    cells
+      .map((cell, column) =>
+        column === cells.length - 1 ? cell : cell.padEnd(widths[column] ?? 0),
+      )
+      .join("  ")
+      .trimEnd(),
+  );
+}
+
 const routeReport: OperationExtension = {
   flags: {},
   report: (data) => ({ lines: routeWarningLines(data) }),
@@ -106,5 +164,9 @@ export const ANSWER_REPORT_EXTENSIONS: Record<string, OperationExtension> = {
   getDelivery: {
     flags: {},
     report: (data) => ({ lines: deliveryAttemptLines(data) }),
+  },
+  listEndpoints: {
+    flags: {},
+    report: (data) => ({ lines: endpointDeliveryLines(data) }),
   },
 };
