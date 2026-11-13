@@ -819,6 +819,29 @@ describe("primitive machine doctor", () => {
         "neither the latest release nor the newest preview could be checked",
       ),
     });
+    expect(await offline("next")).toMatchObject({
+      status: "skip",
+      detail: expect.stringContaining("could not be compared"),
+    });
+    // With a minimum: a preview below the release it previews does not meet
+    // it, and one that does meets it even with neither tag readable.
+    const required = (cliVersion: string) =>
+      runMachineDoctor({
+        ...options,
+        cliVersion,
+        minCliVersion: "3.0.0",
+        latestVersion: async () => null,
+        previewVersion: async () => null,
+      }).then((report) => byId(report)["cli.version"]);
+    expect(await required("3.0.0-preview.5")).toMatchObject({
+      status: "fail",
+      action: "update_cli",
+    });
+    expect(await required("3.0.1-preview.1")).toMatchObject({
+      status: "ok",
+      detail:
+        "3.0.1-preview.1 meets the required 3.0.0; neither the latest release nor the newest preview could be checked.",
+    });
     // A release build is still compared with the latest release only.
     let asked = false;
     const released = byId(

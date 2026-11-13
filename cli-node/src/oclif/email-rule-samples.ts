@@ -190,7 +190,7 @@ export function unknownFieldsNote(
         `${field} (sample${numbers.length === 1 ? "" : "s"} ${numbers.join(", ")})`,
     )
     .join(", ");
-  return `${source}: fields this CLI does not know are sent as they are, for the API to judge; if the API refuses one, take it out: ${named}.`;
+  return `${source} has fields this CLI does not know, which it does not refuse but leaves for the API to judge (if the API refuses one, take it out): ${named}.`;
 }
 
 /**

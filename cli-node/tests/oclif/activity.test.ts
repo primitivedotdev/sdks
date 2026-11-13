@@ -27,6 +27,7 @@ import {
   formatAskedRows,
   formatConcerningRows,
   formatWithheld,
+  NETWORK_ERROR_MESSAGE,
   resumeCommand,
   throughLabel,
 } from "../../src/oclif/commands/activity.js";
@@ -760,10 +761,12 @@ describe("activity reads that fail on the way", () => {
     return () => attempts;
   }
 
-  const connectTimeout = () =>
-    Object.assign(new TypeError("fetch failed"), {
-      cause: { code: "UND_ERR_CONNECT_TIMEOUT" },
+  // As undici throws it: the cause is not an enumerable property.
+  const fetchFailed = (code: string) =>
+    new TypeError("fetch failed", {
+      cause: Object.assign(new Error(`connect ${code}`), { code }),
     });
+  const connectTimeout = () => fetchFailed("UND_ERR_CONNECT_TIMEOUT");
   const ok = () =>
     new Response(JSON.stringify(page([item()], null).body), {
       headers: { "content-type": "application/json" },
@@ -819,44 +822,54 @@ describe("activity reads that fail on the way", () => {
     expect(process.exitCode).toBe(1);
   });
 
-  it("does not wait out a Retry-After longer than its budget, or retry a host that does not resolve", async () => {
-    sleeps.sleep.mockClear();
-    let attempts = useFetch(
-      () =>
-        new Response(
-          JSON.stringify({
-            success: false,
-            error: { code: "rate_limit_exceeded", message: "Slow down." },
-          }),
-          {
-            status: 429,
-            headers: {
-              "content-type": "application/json",
-              "retry-after": "60",
-            },
+  it("waits out a Retry-After within its budget and tries again, and not one longer than it", async () => {
+    const limited = (seconds: string) =>
+      new Response(
+        JSON.stringify({
+          success: false,
+          error: { code: "rate_limit_exceeded", message: "Slow down." },
+        }),
+        {
+          status: 429,
+          headers: {
+            "content-type": "application/json",
+            "retry-after": seconds,
           },
-        ),
-    );
+        },
+      );
+    sleeps.sleep.mockClear();
+    let attempts = useFetch((n) => (n === 1 ? limited("2") : ok()));
     captureLog();
     captureStderr();
+    await ActivityCreatedCommand.run([], { root });
+    expect(attempts()).toBe(2);
+    expect(sleeps.sleep).toHaveBeenCalledWith(2000);
+    expect(process.exitCode).toBeUndefined();
+
+    sleeps.sleep.mockClear();
+    attempts = useFetch(() => limited("60"));
+    const stderr = captureStderr();
     await ActivityCreatedCommand.run([], { root });
     expect(attempts()).toBe(1);
     expect(sleeps.sleep).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(1);
+    // The answer's own Retry-After is what the hint names.
+    expect(stderr.join("")).toContain("Retry in 60 s.");
+  });
 
-    process.exitCode = undefined;
-    attempts = useFetch(() => {
-      throw Object.assign(new TypeError("fetch failed"), {
-        cause: { code: "ENOTFOUND" },
-      });
+  it("keeps a network error's own code beside the words, with its hint", async () => {
+    const attempts = useFetch(() => {
+      throw fetchFailed("ENOTFOUND");
     });
+    captureLog();
     const stderr = captureStderr();
     await ActivityCreatedCommand.run([], { root });
-    expect(attempts()).toBe(1);
+    expect(attempts()).toBe(ACTIVITY_ATTEMPTS);
     expect(process.exitCode).toBe(1);
-    // Shown as it came, since trying again would not help.
-    expect(stderr.join("")).toContain("ENOTFOUND");
-    expect(stderr.join("")).not.toContain("Try again in a moment");
+    const said = stderr.join("");
+    expect(said).toContain(NETWORK_ERROR_MESSAGE);
+    expect(said).toContain('"cause": "ENOTFOUND"');
+    expect(said).toContain("the API host name did not resolve");
   });
 
   it("asks for the same page again after a transient failure with --all", async () => {
@@ -906,14 +919,15 @@ describe("activity reads that fail on the way", () => {
     expect(process.exitCode).toBe(1);
     expect(stderr.join("")).toBe("");
     const document = JSON.parse(stdout.join("\n"));
-    expect(document.error).toMatchObject({ code: "network_error" });
-    const printed = [...lines, ...stdout].join("\n");
-    expect(printed).toContain("network_error");
-    expect(printed).toContain("Could not reach Primitive (network error).");
-    expect(printed).not.toContain("UND_ERR_CONNECT_TIMEOUT");
+    expect(document.error).toEqual({
+      code: "network_error",
+      message: NETWORK_ERROR_MESSAGE,
+      cause: "UND_ERR_CONNECT_TIMEOUT",
+    });
+    expect(lines).toEqual([]);
   });
 
-  it("words a network error that does not clear, without the transport's code", async () => {
+  it("words a network error that does not clear, keeping the transport's code only as its cause", async () => {
     const attempts = useFetch(() => {
       throw connectTimeout();
     });
@@ -923,9 +937,8 @@ describe("activity reads that fail on the way", () => {
     expect(attempts()).toBe(ACTIVITY_ATTEMPTS);
     expect(process.exitCode).toBe(1);
     const said = stderr.join("");
-    expect(said).toContain(
-      "Could not reach Primitive (network error). Try again in a moment.",
-    );
-    expect(said).not.toContain("UND_ERR_CONNECT_TIMEOUT");
+    expect(said).toContain(NETWORK_ERROR_MESSAGE);
+    expect(said).toContain('"cause": "UND_ERR_CONNECT_TIMEOUT"');
+    expect(said).not.toContain("fetch failed");
   });
 });

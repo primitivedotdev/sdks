@@ -1429,7 +1429,11 @@ export async function runMachineDoctor(
       inspect: async () => {
         const version = options.cliVersion;
         if (options.minCliVersion) {
-          const compared = compareVersions(version, options.minCliVersion);
+          // A preview is below the release it previews, so it is compared
+          // whole; a release build as before.
+          const compared = isPrerelease(version)
+            ? compareReleaseVersions(version, options.minCliVersion)
+            : compareVersions(version, options.minCliVersion);
           if (compared === null)
             return check(
               "cli.version",
@@ -1444,16 +1448,19 @@ export async function runMachineDoctor(
               { action: "update_cli" },
             );
         }
-        const latest = await (
-          options.latestVersion ?? (() => npmLatestVersion(fetchImpl))
-        )();
+        const readLatest =
+          options.latestVersion ?? (() => npmLatestVersion(fetchImpl));
         // A preview is compared with the newest preview, whole version and
         // all; the latest release alone would call any 3.0.0 preview current.
+        // Both tags are read at once.
         if (isPrerelease(version)) {
-          const preview = await (
-            options.previewVersion ??
-            (() => npmLatestVersion(fetchImpl, "preview"))
-          )();
+          const [latest, preview] = await Promise.all([
+            readLatest(),
+            (
+              options.previewVersion ??
+              (() => npmLatestVersion(fetchImpl, "preview"))
+            )(),
+          ]);
           const released = latest
             ? compareReleaseVersions(version, latest)
             : null;
@@ -1492,14 +1499,15 @@ export async function runMachineDoctor(
             : ";";
           return check(
             "cli.version",
-            latest || options.minCliVersion ? "ok" : "skip",
+            released !== null || options.minCliVersion ? "ok" : "skip",
             preview
               ? `${version}; the newest preview (${preview}) could not be compared with it.`
-              : latest
+              : released !== null
                 ? `${version} is not older than the latest release ${latest}; the newest preview could not be checked.`
                 : `${version}${met} neither the latest release nor the newest preview could be checked.`,
           );
         }
+        const latest = await readLatest();
         if (!latest)
           return options.minCliVersion
             ? check(

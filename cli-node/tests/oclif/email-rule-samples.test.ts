@@ -305,7 +305,7 @@ describe("samples with fields this CLI does not know", () => {
       { expected: "match", email: withNew("three") },
     ]);
     expect(said).toEqual([
-      `--expect-samples-file ${path}: fields this CLI does not know are sent as they are, for the API to judge; if the API refuses one, take it out: sample field "lable" (sample 1), email field "reply_to" (samples 1, 3).\n`,
+      `--expect-samples-file ${path} has fields this CLI does not know, which it does not refuse but leaves for the API to judge (if the API refuses one, take it out): sample field "lable" (sample 1), email field "reply_to" (samples 1, 3).\n`,
     ]);
     // Only what --pick sends is named, by its number in the file.
     said.length = 0;
@@ -313,15 +313,33 @@ describe("samples with fields this CLI does not know", () => {
       expectSamples({ "expect-samples-file": path, pick: "2,3" }),
     ).toHaveLength(2);
     expect(said).toEqual([
-      `--expect-samples-file ${path}: fields this CLI does not know are sent as they are, for the API to judge; if the API refuses one, take it out: email field "reply_to" (sample 3).\n`,
+      `--expect-samples-file ${path} has fields this CLI does not know, which it does not refuse but leaves for the API to judge (if the API refuses one, take it out): email field "reply_to" (sample 3).\n`,
     ]);
     said.length = 0;
     expectSamples({ "expect-samples-file": path, pick: "2" });
     expect(said).toEqual([]);
   });
 
-  it("says nothing while reading a file that is then refused, and nothing for known fields", () => {
+  it("says nothing for a file that is then refused, or for known fields", () => {
     const said = captureStderr();
+    const path = join(dir, "many.json");
+    writeFileSync(
+      path,
+      JSON.stringify(
+        Array.from({ length: 21 }, (_, index) => ({
+          expected: "no_match",
+          email: index === 0 ? withNew("first") : email(`n${index}`),
+        })),
+      ),
+    );
+    // More than a test takes, and a --pick the file does not hold.
+    expect(() => expectSamples({ "expect-samples-file": path })).toThrow(
+      "holds 21 samples",
+    );
+    expect(() =>
+      expectSamples({ "expect-samples-file": path, pick: "99" }),
+    ).toThrow("99 is not a sample number");
+    // A sample refused part way through says nothing of the ones before it.
     expect(() =>
       samplesFromJson(
         [

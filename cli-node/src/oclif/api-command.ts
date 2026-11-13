@@ -816,7 +816,16 @@ const NETWORK_ERROR_HINTS: Record<string, string> = {
     "Hint: the connection timed out. Check egress rules and proxy configuration; if you're behind a proxy, re-run with NODE_USE_ENV_PROXY=1 and HTTPS_PROXY set. `primitive doctor` reports the local environment in one shot.",
   EAI_AGAIN:
     "Hint: DNS lookup failed. Check /etc/resolv.conf inside containers, and try `curl -v https://api.primitive.dev/v1/account` to confirm the host resolves. `primitive doctor` reports the local environment in one shot.",
+  ENOTFOUND:
+    "Hint: the API host name did not resolve. Check PRIMITIVE_API_BASE_URL and any --api-base-url for a typo, and your DNS. `primitive doctor` reports the local environment in one shot.",
 };
+
+/** The hint for a network failure's code (`cause.code` on a failed fetch), if there is one. */
+export function networkErrorHint(code: string): string | undefined {
+  return Object.hasOwn(NETWORK_ERROR_HINTS, code)
+    ? NETWORK_ERROR_HINTS[code]
+    : undefined;
+}
 
 // The API's rate-limit codes: `rate_limited` (organization-wide limiter,
 // /send-mail) and `rate_limit_exceeded` (per-resource limiters and the

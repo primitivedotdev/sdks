@@ -7,10 +7,12 @@ import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   API_BASE_URL_FLAG_DESCRIPTION,
   extractErrorPayload,
+  networkErrorHint,
   surfaceUnauthorizedHint,
   writeErrorWithHints,
 } from "../api-command.js";
 import {
+  backoffDelay,
   pauseForTransientFailure,
   transientFailure,
 } from "../transient-retry.js";
@@ -51,48 +53,42 @@ export const ACTIVITY_RETRY_MS = 15_000;
 /** The most times one page is asked for. */
 export const ACTIVITY_ATTEMPTS = 4;
 
-/** The error printed when Primitive could not be reached at all. */
-export const NETWORK_ERROR = {
-  code: "network_error",
-  message: "Could not reach Primitive (network error). Try again in a moment.",
-};
+/** The message printed when Primitive could not be reached at all. */
+export const NETWORK_ERROR_MESSAGE =
+  "Could not reach Primitive (network error). Try again in a moment.";
 
 /**
- * The transport's code for a failure no retry fixes: a host name that does
- * not resolve, or a certificate that is not trusted. Such an error is shown
- * as it came, with its own hint, rather than retried.
+ * The error for a read that got no answer at all: always a plain object, so
+ * it prints the same with and without --json. The transport's own code (a
+ * host that does not resolve, say) is kept as `cause`, as a word, with no
+ * local detail.
  */
-function permanentNetworkCode(error: unknown): string | null {
+export function networkErrorPayload(error: unknown): {
+  code: string;
+  message: string;
+  cause?: string;
+} {
   const cause =
     error instanceof Error ? (error as { cause?: unknown }).cause : undefined;
   const code =
     cause && typeof cause === "object"
       ? (cause as { code?: unknown }).code
       : undefined;
-  if (typeof code !== "string") return null;
-  return code === "ENOTFOUND" ||
-    /^(CERT_|ERR_TLS_|UNABLE_TO_)/.test(code) ||
-    code === "DEPTH_ZERO_SELF_SIGNED_CERT" ||
-    code === "SELF_SIGNED_CERT_IN_CHAIN"
-    ? code
-    : null;
-}
-
-/** Whether a result is a network error a retry could fix. */
-function retryableNetworkError(result: SdkResult): boolean {
-  return (
-    transientFailure(result)?.reason === "network" &&
-    permanentNetworkCode(result.error) === null
-  );
+  return {
+    code: "network_error",
+    message: NETWORK_ERROR_MESSAGE,
+    ...(typeof code === "string" && /^[A-Z0-9_]+$/.test(code)
+      ? { cause: code }
+      : {}),
+  };
 }
 
 /**
  * One page read, retried as the CLI's waits retry a read: a rate limit, a
  * 502, 503 or 504, or a network error is tried again with backoff, up to
  * ACTIVITY_ATTEMPTS times within ACTIVITY_RETRY_MS. A read that throws is
- * taken as the network error it is. A failure no retry fixes (a host that
- * does not resolve, an untrusted certificate), or a Retry-After longer than
- * the time left, is returned at once instead of waited on.
+ * taken as the network error it is. A wait (a Retry-After, or the backoff)
+ * longer than the time left is not slept on: the failure is returned at once.
  */
 async function readWithRetry(
   read: () => Promise<SdkResult>,
@@ -106,29 +102,33 @@ async function readWithRetry(
       result = { error };
     }
     const failure = transientFailure(result);
-    if (
-      !failure ||
-      (failure.reason === "network" && !retryableNetworkError(result)) ||
-      attempt + 1 >= ACTIVITY_ATTEMPTS ||
-      (failure.retryAfterMs ?? 0) > deadline - Date.now() ||
-      !(await pauseForTransientFailure(failure, attempt, { deadline }))
-    )
-      return result;
+    if (!failure || attempt + 1 >= ACTIVITY_ATTEMPTS) return result;
+    const wait = failure.retryAfterMs ?? backoffDelay(attempt);
+    if (wait > deadline - Date.now()) return result;
+    // The wait worked out here is the one slept, so the check above holds.
+    await pauseForTransientFailure(
+      { ...failure, retryAfterMs: wait },
+      attempt,
+      { deadline },
+    );
   }
 }
 
-async function call(
-  read: () => Promise<SdkResult>,
-): Promise<{ ok: true; data: Page } | { ok: false; payload: unknown }> {
+type CallResult =
+  | { ok: true; data: Page }
+  | { ok: false; payload: unknown; response?: Response };
+
+async function call(read: () => Promise<SdkResult>): Promise<CallResult> {
   try {
     const result = await readWithRetry(read);
     // No answer at all: Primitive was not reached. Say so in words, not as
-    // the transport's own code.
-    if (result.response === undefined && retryableNetworkError(result))
-      return { ok: false, payload: NETWORK_ERROR };
+    // the transport's error object.
+    if (transientFailure(result)?.reason === "network")
+      return { ok: false, payload: networkErrorPayload(result.error) };
     if (result.error !== undefined || !result.response?.ok) {
       return {
         ok: false,
+        response: result.response,
         payload:
           result.error === undefined ||
           result.error === null ||
@@ -148,7 +148,7 @@ async function call(
       data: ((data as { data?: Page })?.data ?? data) as Page,
     };
   } catch (error) {
-    return { ok: false, payload: extractErrorPayload(error) };
+    return { ok: false, payload: networkErrorPayload(error) };
   }
 }
 
@@ -481,7 +481,14 @@ async function runActivityList(
     if (!result.ok) {
       if (flags.json)
         process.stderr.write(`${JSON.stringify(result.payload)}\n`);
-      else writeErrorWithHints(result.payload);
+      else {
+        writeErrorWithHints(result.payload, result.response);
+        // A network error's own code can say what to check (a proxy, DNS).
+        const cause = (result.payload as { cause?: unknown } | null)?.cause;
+        const hint =
+          typeof cause === "string" ? networkErrorHint(cause) : undefined;
+        if (hint) process.stderr.write(`${hint}\n`);
+      }
       surfaceUnauthorizedHint({
         auth: auth.auth,
         baseUrlOverridden: auth.baseUrlOverridden,
