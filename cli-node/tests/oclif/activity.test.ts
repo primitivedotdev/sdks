@@ -546,7 +546,14 @@ describe("activity concerning command", () => {
     expect(out).toMatch(/Moved\s+.*no longer reaches your mailboxes$/m);
     expect(out).toMatch(/^started {2,}.*Other/m);
     // An older server, or a reason this CLI does not know: the state alone.
-    for (const reason of [undefined, "renamed", 3]) {
+    for (const reason of [
+      undefined,
+      "renamed",
+      3,
+      "constructor",
+      "toString",
+      "__proto__",
+    ]) {
       const bare = formatConcerningRows([stop(reason, "Bare")]);
       expect(bare).not.toContain("CHANGE");
       expect(bare).toMatch(/^stopped {2,}2026-/m);

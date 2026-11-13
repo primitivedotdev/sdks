@@ -327,11 +327,11 @@ export function receiversChangeText(item: ActivityItem): string | null {
     : "same totals, an owner or webhook site changed";
 }
 
-const STOP_REASONS: Readonly<Record<string, string>> = {
-  deleted: "rule deleted",
-  turned_off: "turned off",
-  no_longer_covers: "no longer reaches your mailboxes",
-};
+const STOP_REASONS: ReadonlyMap<string, string> = new Map([
+  ["deleted", "rule deleted"],
+  ["turned_off", "turned off"],
+  ["no_longer_covers", "no longer reaches your mailboxes"],
+]);
 
 /**
  * Why a stopped notice says the rule stopped covering you, from its
@@ -341,7 +341,7 @@ const STOP_REASONS: Readonly<Record<string, string>> = {
 export function stoppedText(item: ActivityItem): string | null {
   if (item.state !== "stopped") return null;
   const reason = (item as { stop_reason?: unknown }).stop_reason;
-  return typeof reason === "string" ? (STOP_REASONS[reason] ?? null) : null;
+  return typeof reason === "string" ? (STOP_REASONS.get(reason) ?? null) : null;
 }
 
 /** Where to see what covers you now, whatever the notices have caught up with. */
