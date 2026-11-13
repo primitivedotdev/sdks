@@ -451,7 +451,7 @@ describe("keys helpers", () => {
         { add: ["mail:send"], remove: [] },
       ).ok,
     ).toBe(false);
-    // A setting the CLI does not know is named, so the refusal says what it would drop.
+    // A setting the CLI does not know is named, so the refusal says what a change could drop.
     expect(
       buildUpdatedGrant(
         {
@@ -469,17 +469,40 @@ describe("keys helpers", () => {
       message:
         "This key's mail scope has a setting the CLI cannot restate (exclude), and a change here could drop it. Change the key in the dashboard, or create a key with what you need and revoke this one.",
     });
+    // Several are all named, and the read-only fields beside them are not.
     expect(
       buildUpdatedGrant(
         {
           ...ruled,
-          mail_scope: { addresses: "a@example.com", domains: [], rules: [] },
+          mail_scope: {
+            addresses: [],
+            domains: [],
+            rules: [RULE_ID],
+            rule_versions: [{ id: RULE_ID, current_version: 1 }],
+            ended_rules: [],
+            exclude: ["b@example.com"],
+            window: "business_hours",
+          },
         },
         { add: ["mail:send"], remove: [] },
       ),
-    ).toMatchObject({
+    ).toEqual({
       ok: false,
-      message: expect.stringContaining("could not be read (addresses)"),
+      message:
+        "This key's mail scope has settings the CLI cannot restate (exclude, window), and a change here could drop them. Change the key in the dashboard, or create a key with what you need and revoke this one.",
+    });
+    expect(
+      buildUpdatedGrant(
+        {
+          ...ruled,
+          mail_scope: { addresses: "a@example.com", domains: [], rules: 7 },
+        },
+        { add: ["mail:send"], remove: [] },
+      ),
+    ).toEqual({
+      ok: false,
+      message:
+        "This key's mail scope has addresses and rules the CLI could not read. Change the key in the dashboard, or create a key with what you need and revoke this one.",
     });
     expect(
       buildUpdatedGrant(
