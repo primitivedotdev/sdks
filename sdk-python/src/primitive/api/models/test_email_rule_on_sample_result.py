@@ -17,6 +17,7 @@ if TYPE_CHECKING:
   from ..models.test_email_rule_on_sample_result_classification import TestEmailRuleOnSampleResultClassification
   from ..models.test_email_rule_on_sample_result_facts import TestEmailRuleOnSampleResultFacts
   from ..models.test_email_rule_on_sample_result_parts_item import TestEmailRuleOnSampleResultPartsItem
+  from ..models.test_email_rule_on_sample_result_protection import TestEmailRuleOnSampleResultProtection
   from ..models.test_email_rule_on_sample_result_question_answers_item import TestEmailRuleOnSampleResultQuestionAnswersItem
   from ..models.test_email_rule_on_sample_result_values import TestEmailRuleOnSampleResultValues
 
@@ -50,6 +51,8 @@ class TestEmailRuleOnSampleResult:
                 compared it (a list cut at 50), and a fact's confidence. A fact left out reads null.
             unset_columns (list[str] | Unset): Email columns the rule reads that the made-up email left unset (spam_score
                 without one), decided as no value.
+            protection (TestEmailRuleOnSampleResultProtection | Unset): With with_protection: whether a match would be
+                shared. Nothing is stored.
      """
 
     rule: EmailRuleTested
@@ -62,6 +65,7 @@ class TestEmailRuleOnSampleResult:
     missing_facts: list[str] | Unset = UNSET
     values: TestEmailRuleOnSampleResultValues | Unset = UNSET
     unset_columns: list[str] | Unset = UNSET
+    protection: TestEmailRuleOnSampleResultProtection | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -73,6 +77,7 @@ class TestEmailRuleOnSampleResult:
         from ..models.test_email_rule_on_sample_result_classification import TestEmailRuleOnSampleResultClassification # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_facts import TestEmailRuleOnSampleResultFacts # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_parts_item import TestEmailRuleOnSampleResultPartsItem # noqa: PLC0415
+        from ..models.test_email_rule_on_sample_result_protection import TestEmailRuleOnSampleResultProtection # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_question_answers_item import TestEmailRuleOnSampleResultQuestionAnswersItem # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_values import TestEmailRuleOnSampleResultValues # noqa: PLC0415
         rule = self.rule.to_dict()
@@ -115,6 +120,10 @@ class TestEmailRuleOnSampleResult:
 
 
 
+        protection: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.protection, Unset):
+            protection = self.protection.to_dict()
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -133,6 +142,8 @@ class TestEmailRuleOnSampleResult:
             field_dict["values"] = values
         if unset_columns is not UNSET:
             field_dict["unset_columns"] = unset_columns
+        if protection is not UNSET:
+            field_dict["protection"] = protection
 
         return field_dict
 
@@ -144,6 +155,7 @@ class TestEmailRuleOnSampleResult:
         from ..models.test_email_rule_on_sample_result_classification import TestEmailRuleOnSampleResultClassification # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_facts import TestEmailRuleOnSampleResultFacts # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_parts_item import TestEmailRuleOnSampleResultPartsItem # noqa: PLC0415
+        from ..models.test_email_rule_on_sample_result_protection import TestEmailRuleOnSampleResultProtection # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_question_answers_item import TestEmailRuleOnSampleResultQuestionAnswersItem # noqa: PLC0415
         from ..models.test_email_rule_on_sample_result_values import TestEmailRuleOnSampleResultValues # noqa: PLC0415
         d = dict(src_dict)
@@ -208,6 +220,16 @@ class TestEmailRuleOnSampleResult:
         unset_columns = cast(list[str], d.pop("unset_columns", UNSET))
 
 
+        _protection = d.pop("protection", UNSET)
+        protection: TestEmailRuleOnSampleResultProtection | Unset
+        if isinstance(_protection,  Unset):
+            protection = UNSET
+        else:
+            protection = TestEmailRuleOnSampleResultProtection.from_dict(_protection)
+
+
+
+
         test_email_rule_on_sample_result = cls(
             rule=rule,
             received_at=received_at,
@@ -219,6 +241,7 @@ class TestEmailRuleOnSampleResult:
             missing_facts=missing_facts,
             values=values,
             unset_columns=unset_columns,
+            protection=protection,
         )
 
 

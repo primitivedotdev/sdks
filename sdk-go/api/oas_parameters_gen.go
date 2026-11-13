@@ -3543,10 +3543,12 @@ func decodeCreateEmailRuleObjectionParams(args [0]string, argsEscaped bool, r *h
 
 // CreateEmailRuleRequestParams is parameters of createEmailRuleRequest operation.
 type CreateEmailRuleRequestParams struct {
-	// Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with
-	// the same key runs the request again. Operations that need a credential refuse a key that is empty,
-	// longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one
-	// in the Idempotency-Key response header; operations that need none ignore it.
+	// Optional. With a key, a create identical to a pending request of yours to the same member (name,
+	// english, tree, explanation and message, naming the member the same way) returns that request with
+	// existing: true (200) instead of making a second one. The key itself is not stored, so any key does
+	// this, and a create without one is never matched to an existing request. A key that is empty,
+	// longer than 255 characters or not printable ASCII is refused with 400 `validation_error`; a valid
+	// one is echoed in the Idempotency-Key response header.
 	IdempotencyKey OptString `json:",omitempty,omitzero"`
 }
 

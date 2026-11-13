@@ -197,6 +197,7 @@ from .create_email_rule_request_expectations import CreateEmailRuleRequestExpect
 from .create_email_rule_request_kind import CreateEmailRuleRequestKind
 from .create_email_rule_request_request import CreateEmailRuleRequestRequest
 from .create_email_rule_request_request_kind import CreateEmailRuleRequestRequestKind
+from .create_email_rule_request_response_200 import CreateEmailRuleRequestResponse200
 from .create_email_rule_request_response_201 import CreateEmailRuleRequestResponse201
 from .create_email_rule_request_result import CreateEmailRuleRequestResult
 from .create_email_rule_request_result_proposed_via import CreateEmailRuleRequestResultProposedVia
@@ -339,6 +340,7 @@ from .credentials_revoke_credential_result_kind import CredentialsRevokeCredenti
 from .credentials_revoke_credential_result_standing_objects_item import CredentialsRevokeCredentialResultStandingObjectsItem
 from .credentials_rotate_key_input import CredentialsRotateKeyInput
 from .credentials_rotate_key_result import CredentialsRotateKeyResult
+from .credentials_rotate_key_result_grant import CredentialsRotateKeyResultGrant
 from .credentials_update_credential_policy_input import CredentialsUpdateCredentialPolicyInput
 from .credentials_update_credential_policy_input_cli_access import CredentialsUpdateCredentialPolicyInputCliAccess
 from .credentials_update_credential_policy_input_super_admin_key_creators import CredentialsUpdateCredentialPolicyInputSuperAdminKeyCreators
@@ -476,6 +478,8 @@ from .email_detail_relay_type_0 import EmailDetailRelayType0
 from .email_detail_relay_type_0_delivery_item import EmailDetailRelayType0DeliveryItem
 from .email_detail_repeat_type_0 import EmailDetailRepeatType0
 from .email_detail_reply import EmailDetailReply
+from .email_detail_rule_deliveries_type_0 import EmailDetailRuleDeliveriesType0
+from .email_detail_rule_deliveries_type_0_rules_item import EmailDetailRuleDeliveriesType0RulesItem
 from .email_detail_sender_member_type_0 import EmailDetailSenderMemberType0
 from .email_detail_shared_through_type_0 import EmailDetailSharedThroughType0
 from .email_detail_shared_through_type_0_sharer import EmailDetailSharedThroughType0Sharer
@@ -588,6 +592,9 @@ from .email_rule_saved_sample_email import EmailRuleSavedSampleEmail
 from .email_rule_saved_sample_email_from import EmailRuleSavedSampleEmailFrom
 from .email_rule_scope_names import EmailRuleScopeNames
 from .email_rule_scope_selection import EmailRuleScopeSelection
+from .email_rule_scope_used import EmailRuleScopeUsed
+from .email_rule_scope_used_evaluation_scope import EmailRuleScopeUsedEvaluationScope
+from .email_rule_scope_used_scope_selection_type_0 import EmailRuleScopeUsedScopeSelectionType0
 from .email_rule_scope_warning import EmailRuleScopeWarning
 from .email_rule_scope_warning_kind import EmailRuleScopeWarningKind
 from .email_rule_scope_warning_reason import EmailRuleScopeWarningReason
@@ -959,6 +966,7 @@ from .list_activity_objects_result_items_item_owned_now import ListActivityObjec
 from .list_activity_objects_result_items_item_receivers_change import ListActivityObjectsResultItemsItemReceiversChange
 from .list_activity_objects_result_items_item_receivers_change_after import ListActivityObjectsResultItemsItemReceiversChangeAfter
 from .list_activity_objects_result_items_item_receivers_change_before import ListActivityObjectsResultItemsItemReceiversChangeBefore
+from .list_activity_objects_result_items_item_rule_now import ListActivityObjectsResultItemsItemRuleNow
 from .list_activity_objects_result_withheld_item import ListActivityObjectsResultWithheldItem
 from .list_activity_objects_result_withheld_item_reason import ListActivityObjectsResultWithheldItemReason
 from .list_activity_objects_state import ListActivityObjectsState
@@ -1733,6 +1741,10 @@ from .test_email_rule_on_sample_result_facts import TestEmailRuleOnSampleResultF
 from .test_email_rule_on_sample_result_facts_additional_property import TestEmailRuleOnSampleResultFactsAdditionalProperty
 from .test_email_rule_on_sample_result_outcome import TestEmailRuleOnSampleResultOutcome
 from .test_email_rule_on_sample_result_parts_item import TestEmailRuleOnSampleResultPartsItem
+from .test_email_rule_on_sample_result_protection import TestEmailRuleOnSampleResultProtection
+from .test_email_rule_on_sample_result_protection_outcome import TestEmailRuleOnSampleResultProtectionOutcome
+from .test_email_rule_on_sample_result_protection_withheld_by_item import TestEmailRuleOnSampleResultProtectionWithheldByItem
+from .test_email_rule_on_sample_result_protection_withheld_by_item_reason import TestEmailRuleOnSampleResultProtectionWithheldByItemReason
 from .test_email_rule_on_sample_result_question_answers_item import TestEmailRuleOnSampleResultQuestionAnswersItem
 from .test_email_rule_on_sample_result_values import TestEmailRuleOnSampleResultValues
 from .test_email_rule_on_sample_result_values_additional_property import TestEmailRuleOnSampleResultValuesAdditionalProperty
@@ -2112,6 +2124,7 @@ __all__ = (
     "CreateEmailRuleRequestKind",
     "CreateEmailRuleRequestRequest",
     "CreateEmailRuleRequestRequestKind",
+    "CreateEmailRuleRequestResponse200",
     "CreateEmailRuleRequestResponse201",
     "CreateEmailRuleRequestResult",
     "CreateEmailRuleRequestResultProposedVia",
@@ -2253,6 +2266,7 @@ __all__ = (
     "CredentialsRevokeCredentialResultStandingObjectsItem",
     "CredentialsRotateKeyInput",
     "CredentialsRotateKeyResult",
+    "CredentialsRotateKeyResultGrant",
     "CredentialsUpdateCredentialPolicyInput",
     "CredentialsUpdateCredentialPolicyInputCliAccess",
     "CredentialsUpdateCredentialPolicyInputSuperAdminKeyCreators",
@@ -2390,6 +2404,8 @@ __all__ = (
     "EmailDetailRelayType0DeliveryItem",
     "EmailDetailRepeatType0",
     "EmailDetailReply",
+    "EmailDetailRuleDeliveriesType0",
+    "EmailDetailRuleDeliveriesType0RulesItem",
     "EmailDetailSenderMemberType0",
     "EmailDetailSharedThroughType0",
     "EmailDetailSharedThroughType0Sharer",
@@ -2502,6 +2518,9 @@ __all__ = (
     "EmailRuleSavedSampleEmailFrom",
     "EmailRuleScopeNames",
     "EmailRuleScopeSelection",
+    "EmailRuleScopeUsed",
+    "EmailRuleScopeUsedEvaluationScope",
+    "EmailRuleScopeUsedScopeSelectionType0",
     "EmailRuleScopeWarning",
     "EmailRuleScopeWarningKind",
     "EmailRuleScopeWarningReason",
@@ -2873,6 +2892,7 @@ __all__ = (
     "ListActivityObjectsResultItemsItemReceiversChange",
     "ListActivityObjectsResultItemsItemReceiversChangeAfter",
     "ListActivityObjectsResultItemsItemReceiversChangeBefore",
+    "ListActivityObjectsResultItemsItemRuleNow",
     "ListActivityObjectsResultWithheldItem",
     "ListActivityObjectsResultWithheldItemReason",
     "ListActivityObjectsState",
@@ -3647,6 +3667,10 @@ __all__ = (
     "TestEmailRuleOnSampleResultFactsAdditionalProperty",
     "TestEmailRuleOnSampleResultOutcome",
     "TestEmailRuleOnSampleResultPartsItem",
+    "TestEmailRuleOnSampleResultProtection",
+    "TestEmailRuleOnSampleResultProtectionOutcome",
+    "TestEmailRuleOnSampleResultProtectionWithheldByItem",
+    "TestEmailRuleOnSampleResultProtectionWithheldByItemReason",
     "TestEmailRuleOnSampleResultQuestionAnswersItem",
     "TestEmailRuleOnSampleResultValues",
     "TestEmailRuleOnSampleResultValuesAdditionalProperty",

@@ -96,6 +96,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_429
 
+    if response.status_code == 503:
+        response_503 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_503
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -123,9 +130,10 @@ def sync_detailed(
      Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text,
     attachment types and file names; optionally automated, from a mailing list, and a spam score),
     classified and decided as received mail would be. A rule reading a spam score you gave none for
-    decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id.
-    The answer includes what the classifier read. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token).
+    decides on none (unset_columns). Nothing is stored. Test an unsaved tree, a saved rule by rule_id,
+    or a pending rule request by request_id (its rule as asked, as you). The answer includes what the
+    classifier read. Needs mail:read, the email rules feature, and a member's own full-access credential
+    (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -164,9 +172,10 @@ def sync(
      Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text,
     attachment types and file names; optionally automated, from a mailing list, and a spam score),
     classified and decided as received mail would be. A rule reading a spam score you gave none for
-    decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id.
-    The answer includes what the classifier read. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token).
+    decides on none (unset_columns). Nothing is stored. Test an unsaved tree, a saved rule by rule_id,
+    or a pending rule request by request_id (its rule as asked, as you). The answer includes what the
+    classifier read. Needs mail:read, the email rules feature, and a member's own full-access credential
+    (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -200,9 +209,10 @@ async def asyncio_detailed(
      Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text,
     attachment types and file names; optionally automated, from a mailing list, and a spam score),
     classified and decided as received mail would be. A rule reading a spam score you gave none for
-    decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id.
-    The answer includes what the classifier read. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token).
+    decides on none (unset_columns). Nothing is stored. Test an unsaved tree, a saved rule by rule_id,
+    or a pending rule request by request_id (its rule as asked, as you). The answer includes what the
+    classifier read. Needs mail:read, the email rules feature, and a member's own full-access credential
+    (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -241,9 +251,10 @@ async def asyncio(
      Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text,
     attachment types and file names; optionally automated, from a mailing list, and a spam score),
     classified and decided as received mail would be. A rule reading a spam score you gave none for
-    decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id.
-    The answer includes what the classifier read. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token).
+    decides on none (unset_columns). Nothing is stored. Test an unsaved tree, a saved rule by rule_id,
+    or a pending rule request by request_id (its rule as asked, as you). The answer includes what the
+    classifier read. Needs mail:read, the email rules feature, and a member's own full-access credential
+    (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):

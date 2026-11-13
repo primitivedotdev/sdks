@@ -51,8 +51,8 @@ class EmailRule:
             pending_objections (int | Unset): To its author, on the dashboard or the Primitive CLI: objections to it waiting
                 for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time:
                 absent is not 0.
-            objection_notice (str | Unset): With pending_objections above 0: that members asked you to turn it off, and how
-                to answer.
+            objection_notice (str | Unset): With pending_objections above 0: that members objected (each message says what
+                they ask: to turn it off, narrow it or explain it), and how to answer.
      """
 
     id: UUID

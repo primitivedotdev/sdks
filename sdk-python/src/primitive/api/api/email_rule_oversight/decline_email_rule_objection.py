@@ -124,9 +124,11 @@ def sync_detailed(
 ) -> Response[DeclineEmailRuleObjectionResponse200 | ErrorResponse]:
     """ Decline an objection to your rule
 
-     Declines a pending objection to a rule you wrote, optionally saying why; the rule stays as it is.
-    Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
-    agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+     Declines a pending objection to a rule you wrote, optionally saying why (reason), which the member
+    who objected sees; the rule stays as it is. When its message asks you to narrow the rule or explain
+    who receives it, the reason is your answer; narrow it with a new version as well if you agree. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token). Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -165,9 +167,11 @@ def sync(
 ) -> DeclineEmailRuleObjectionResponse200 | ErrorResponse | None:
     """ Decline an objection to your rule
 
-     Declines a pending objection to a rule you wrote, optionally saying why; the rule stays as it is.
-    Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
-    agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+     Declines a pending objection to a rule you wrote, optionally saying why (reason), which the member
+    who objected sees; the rule stays as it is. When its message asks you to narrow the rule or explain
+    who receives it, the reason is your answer; narrow it with a new version as well if you agree. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token). Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -201,9 +205,11 @@ async def asyncio_detailed(
 ) -> Response[DeclineEmailRuleObjectionResponse200 | ErrorResponse]:
     """ Decline an objection to your rule
 
-     Declines a pending objection to a rule you wrote, optionally saying why; the rule stays as it is.
-    Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
-    agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+     Declines a pending objection to a rule you wrote, optionally saying why (reason), which the member
+    who objected sees; the rule stays as it is. When its message asks you to narrow the rule or explain
+    who receives it, the reason is your answer; narrow it with a new version as well if you agree. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token). Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -242,9 +248,11 @@ async def asyncio(
 ) -> DeclineEmailRuleObjectionResponse200 | ErrorResponse | None:
     """ Decline an objection to your rule
 
-     Declines a pending objection to a rule you wrote, optionally saying why; the rule stays as it is.
-    Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
-    agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+     Declines a pending objection to a rule you wrote, optionally saying why (reason), which the member
+    who objected sees; the rule stays as it is. When its message asks you to narrow the rule or explain
+    who receives it, the reason is your answer; narrow it with a new version as well if you agree. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token). Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):

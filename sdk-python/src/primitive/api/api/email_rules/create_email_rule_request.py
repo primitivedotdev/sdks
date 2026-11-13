@@ -9,6 +9,7 @@ from ...types import Response, UNSET
 from ... import errors
 
 from ...models.create_email_rule_request_request import CreateEmailRuleRequestRequest
+from ...models.create_email_rule_request_response_200 import CreateEmailRuleRequestResponse200
 from ...models.create_email_rule_request_response_201 import CreateEmailRuleRequestResponse201
 from ...models.error_response import ErrorResponse
 from ...types import UNSET, Unset
@@ -46,7 +47,14 @@ def _get_kwargs(
 
 
 
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> CreateEmailRuleRequestResponse201 | ErrorResponse | None:
+def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> CreateEmailRuleRequestResponse200 | CreateEmailRuleRequestResponse201 | ErrorResponse | None:
+    if response.status_code == 200:
+        response_200 = CreateEmailRuleRequestResponse200.from_dict(response.json())
+
+
+
+        return response_200
+
     if response.status_code == 201:
         response_201 = CreateEmailRuleRequestResponse201.from_dict(response.json())
 
@@ -109,7 +117,7 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[CreateEmailRuleRequestResponse201 | ErrorResponse]:
+def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[CreateEmailRuleRequestResponse200 | CreateEmailRuleRequestResponse201 | ErrorResponse]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -124,17 +132,20 @@ def sync_detailed(
     body: CreateEmailRuleRequestRequest,
     idempotency_key: str | Unset = UNSET,
 
-) -> Response[CreateEmailRuleRequestResponse201 | ErrorResponse]:
+) -> Response[CreateEmailRuleRequestResponse200 | CreateEmailRuleRequestResponse201 | ErrorResponse]:
     """ Ask a member for a rule
 
      Asks another member of the organization for a rule over their own mail, from a compile response or a
     tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work
     email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated or
     shared until they accept, and they may change the rule first. A message (up to 500 characters, fixed
-    once sent) tells them why you ask. At most 5 pending requests to one member and 50 in all. With
-    members:read the answer says whether they can accept it under their role (target_can_accept,
-    target_warning); POST /v1/email-rule-requests/target-check checks first. Needs mail:read, the email
-    rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+    once sent) tells them why you ask. With an Idempotency-Key, asking again for exactly what a pending
+    request of yours to the same member asks (name, english, tree, explanation and message, naming them
+    the same way) returns that request with existing: true (200), so a retry never asks them twice. At
+    most 5 pending requests to one member and 50 in all. With members:read the answer says whether they
+    can accept it under their role (target_can_accept, target_warning); POST /v1/email-rule-
+    requests/target-check checks first. Needs mail:read, the email rules feature, and a member's own
+    full-access credential (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -145,7 +156,7 @@ def sync_detailed(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[CreateEmailRuleRequestResponse201 | ErrorResponse]
+        Response[CreateEmailRuleRequestResponse200 | CreateEmailRuleRequestResponse201 | ErrorResponse]
      """
 
 
@@ -167,17 +178,20 @@ def sync(
     body: CreateEmailRuleRequestRequest,
     idempotency_key: str | Unset = UNSET,
 
-) -> CreateEmailRuleRequestResponse201 | ErrorResponse | None:
+) -> CreateEmailRuleRequestResponse200 | CreateEmailRuleRequestResponse201 | ErrorResponse | None:
     """ Ask a member for a rule
 
      Asks another member of the organization for a rule over their own mail, from a compile response or a
     tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work
     email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated or
     shared until they accept, and they may change the rule first. A message (up to 500 characters, fixed
-    once sent) tells them why you ask. At most 5 pending requests to one member and 50 in all. With
-    members:read the answer says whether they can accept it under their role (target_can_accept,
-    target_warning); POST /v1/email-rule-requests/target-check checks first. Needs mail:read, the email
-    rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+    once sent) tells them why you ask. With an Idempotency-Key, asking again for exactly what a pending
+    request of yours to the same member asks (name, english, tree, explanation and message, naming them
+    the same way) returns that request with existing: true (200), so a retry never asks them twice. At
+    most 5 pending requests to one member and 50 in all. With members:read the answer says whether they
+    can accept it under their role (target_can_accept, target_warning); POST /v1/email-rule-
+    requests/target-check checks first. Needs mail:read, the email rules feature, and a member's own
+    full-access credential (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -188,7 +202,7 @@ def sync(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        CreateEmailRuleRequestResponse201 | ErrorResponse
+        CreateEmailRuleRequestResponse200 | CreateEmailRuleRequestResponse201 | ErrorResponse
      """
 
 
@@ -205,17 +219,20 @@ async def asyncio_detailed(
     body: CreateEmailRuleRequestRequest,
     idempotency_key: str | Unset = UNSET,
 
-) -> Response[CreateEmailRuleRequestResponse201 | ErrorResponse]:
+) -> Response[CreateEmailRuleRequestResponse200 | CreateEmailRuleRequestResponse201 | ErrorResponse]:
     """ Ask a member for a rule
 
      Asks another member of the organization for a rule over their own mail, from a compile response or a
     tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work
     email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated or
     shared until they accept, and they may change the rule first. A message (up to 500 characters, fixed
-    once sent) tells them why you ask. At most 5 pending requests to one member and 50 in all. With
-    members:read the answer says whether they can accept it under their role (target_can_accept,
-    target_warning); POST /v1/email-rule-requests/target-check checks first. Needs mail:read, the email
-    rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+    once sent) tells them why you ask. With an Idempotency-Key, asking again for exactly what a pending
+    request of yours to the same member asks (name, english, tree, explanation and message, naming them
+    the same way) returns that request with existing: true (200), so a retry never asks them twice. At
+    most 5 pending requests to one member and 50 in all. With members:read the answer says whether they
+    can accept it under their role (target_can_accept, target_warning); POST /v1/email-rule-
+    requests/target-check checks first. Needs mail:read, the email rules feature, and a member's own
+    full-access credential (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -226,7 +243,7 @@ async def asyncio_detailed(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[CreateEmailRuleRequestResponse201 | ErrorResponse]
+        Response[CreateEmailRuleRequestResponse200 | CreateEmailRuleRequestResponse201 | ErrorResponse]
      """
 
 
@@ -248,17 +265,20 @@ async def asyncio(
     body: CreateEmailRuleRequestRequest,
     idempotency_key: str | Unset = UNSET,
 
-) -> CreateEmailRuleRequestResponse201 | ErrorResponse | None:
+) -> CreateEmailRuleRequestResponse200 | CreateEmailRuleRequestResponse201 | ErrorResponse | None:
     """ Ask a member for a rule
 
      Asks another member of the organization for a rule over their own mail, from a compile response or a
     tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work
     email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated or
     shared until they accept, and they may change the rule first. A message (up to 500 characters, fixed
-    once sent) tells them why you ask. At most 5 pending requests to one member and 50 in all. With
-    members:read the answer says whether they can accept it under their role (target_can_accept,
-    target_warning); POST /v1/email-rule-requests/target-check checks first. Needs mail:read, the email
-    rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+    once sent) tells them why you ask. With an Idempotency-Key, asking again for exactly what a pending
+    request of yours to the same member asks (name, english, tree, explanation and message, naming them
+    the same way) returns that request with existing: true (200), so a retry never asks them twice. At
+    most 5 pending requests to one member and 50 in all. With members:read the answer says whether they
+    can accept it under their role (target_can_accept, target_warning); POST /v1/email-rule-
+    requests/target-check checks first. Needs mail:read, the email rules feature, and a member's own
+    full-access credential (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -269,7 +289,7 @@ async def asyncio(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        CreateEmailRuleRequestResponse201 | ErrorResponse
+        CreateEmailRuleRequestResponse200 | CreateEmailRuleRequestResponse201 | ErrorResponse
      """
 
 

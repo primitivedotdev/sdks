@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.list_activity_objects_result_items_item_owned_now import ListActivityObjectsResultItemsItemOwnedNow
+from ..models.list_activity_objects_result_items_item_rule_now import ListActivityObjectsResultItemsItemRuleNow
 from typing import cast
 from uuid import UUID
 import datetime
@@ -50,14 +51,17 @@ class ListActivityObjectsResultItemsItem:
             created_at (datetime.datetime):
             ended_at (datetime.datetime | None): When it was deleted, replaced or revoked, when an API key expired, when a
                 repeating send stopped, or when a rule request or objection was decided (accepted, declined or withdrawn); null
-                otherwise, as on every coverage notice.
+                otherwise, as on every coverage notice (rule_now marks one whose rule was deleted).
             owned_now (ListActivityObjectsResultItemsItemOwnedNow): you: it is still yours: never transferred, or
                 transferred back to you. someone_else: it was transferred and another person holds it now, or, with
                 relation=asked or concerning, another member made it.
             created_through (ListActivityObjectsResultItemsItemCreatedThrough):
             rule_id (UUID | Unset): For email_rule_coverage, always: the rule it is about, since names need not be unique
                 (for pending, the same as id). GET /v1/email-rules/covering-me/{rule_id} shows the rule while it covers you, or
-                as it last decided on your mail; otherwise it answers not_found.
+                as it last decided on your mail; otherwise it answers not_found, with details.reason rule_deleted once a rule
+                you were told of is deleted.
+            rule_now (ListActivityObjectsResultItemsItemRuleNow | Unset): For email_rule_coverage: deleted once the rule it
+                is about has been deleted. Left out while it exists, or when that could not be checked.
             receivers_change (ListActivityObjectsResultItemsItemReceiversChange | Unset): For a receivers_changed notice:
                 who received the rule's matches before and after, in totals. They can be equal when only an owner or a webhook
                 site changed; covering-me shows them by owner. A rotated key counts once here while the old one still works;
@@ -73,6 +77,7 @@ class ListActivityObjectsResultItemsItem:
     owned_now: ListActivityObjectsResultItemsItemOwnedNow
     created_through: ListActivityObjectsResultItemsItemCreatedThrough
     rule_id: UUID | Unset = UNSET
+    rule_now: ListActivityObjectsResultItemsItemRuleNow | Unset = UNSET
     receivers_change: ListActivityObjectsResultItemsItemReceiversChange | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -108,6 +113,11 @@ class ListActivityObjectsResultItemsItem:
         if not isinstance(self.rule_id, Unset):
             rule_id = str(self.rule_id)
 
+        rule_now: str | Unset = UNSET
+        if not isinstance(self.rule_now, Unset):
+            rule_now = self.rule_now.value
+
+
         receivers_change: dict[str, Any] | Unset = UNSET
         if not isinstance(self.receivers_change, Unset):
             receivers_change = self.receivers_change.to_dict()
@@ -127,6 +137,8 @@ class ListActivityObjectsResultItemsItem:
         })
         if rule_id is not UNSET:
             field_dict["rule_id"] = rule_id
+        if rule_now is not UNSET:
+            field_dict["rule_now"] = rule_now
         if receivers_change is not UNSET:
             field_dict["receivers_change"] = receivers_change
 
@@ -196,6 +208,16 @@ class ListActivityObjectsResultItemsItem:
 
 
 
+        _rule_now = d.pop("rule_now", UNSET)
+        rule_now: ListActivityObjectsResultItemsItemRuleNow | Unset
+        if isinstance(_rule_now,  Unset):
+            rule_now = UNSET
+        else:
+            rule_now = ListActivityObjectsResultItemsItemRuleNow(_rule_now)
+
+
+
+
         _receivers_change = d.pop("receivers_change", UNSET)
         receivers_change: ListActivityObjectsResultItemsItemReceiversChange | Unset
         if isinstance(_receivers_change,  Unset):
@@ -216,6 +238,7 @@ class ListActivityObjectsResultItemsItem:
             owned_now=owned_now,
             created_through=created_through,
             rule_id=rule_id,
+            rule_now=rule_now,
             receivers_change=receivers_change,
         )
 

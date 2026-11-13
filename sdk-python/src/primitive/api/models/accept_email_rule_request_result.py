@@ -31,7 +31,9 @@ class AcceptEmailRuleRequestResult:
             rule (EmailRuleWithVersion):
             share (EmailRuleShare):
             notice (str | Unset): What is now shared, in words. When you changed the rule and it can now match mail the
-                request left out by who it was sent to (such as mail where an address is only copied), that comes first.
+                request left out by who it was sent to (such as mail where an address is only copied), that comes first; when
+                you changed its english, tree or explanation (edited_on_accept; a new name alone is no change), that
+                rule.current is what you agreed to and request what was asked.
      """
 
     request: EmailRuleRequest

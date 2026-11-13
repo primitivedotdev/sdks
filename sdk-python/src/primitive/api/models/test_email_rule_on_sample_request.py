@@ -39,8 +39,13 @@ class TestEmailRuleOnSampleRequest:
                 them the author reads); each one you can read.
             rule_id (UUID | Unset): A saved rule you can see, or one that covers your mailboxes (as you; dashboard or
                 Primitive CLI only). Its current version is tested.
+            request_id (UUID | Unset): A pending rule request you can see: its rule as asked, tested as you over your own
+                mailboxes (what accepting would share, for the member asked). Give one of tree, rule_id and request_id.
             kind (TestEmailRuleOnSampleRequestKind | Unset): For an unsaved tree: do_not_share tests it as a rule that
-                blocks sharing, so an email it cannot decide counts as matched. A saved rule uses its own.
+                blocks sharing, so an email it cannot decide counts as matched. A saved rule or a request uses its own.
+            with_protection (bool | Unset): With true, a grant rule that matches is also judged against the active do-not-
+                share rules over the first recipient's mailbox, which you must read in full and the rule must run over; see
+                protection. Limited to 20 an hour per member.
      """
 
     email: TestEmailRuleOnSampleRequestEmail
@@ -48,7 +53,9 @@ class TestEmailRuleOnSampleRequest:
     evaluation_scope: TestEmailRuleOnSampleRequestEvaluationScope | Unset = UNSET
     scope_selection: EmailRuleScopeSelection | Unset = UNSET
     rule_id: UUID | Unset = UNSET
+    request_id: UUID | Unset = UNSET
     kind: TestEmailRuleOnSampleRequestKind | Unset = UNSET
+    with_protection: bool | Unset = UNSET
 
 
 
@@ -77,10 +84,16 @@ class TestEmailRuleOnSampleRequest:
         if not isinstance(self.rule_id, Unset):
             rule_id = str(self.rule_id)
 
+        request_id: str | Unset = UNSET
+        if not isinstance(self.request_id, Unset):
+            request_id = str(self.request_id)
+
         kind: str | Unset = UNSET
         if not isinstance(self.kind, Unset):
             kind = self.kind.value
 
+
+        with_protection = self.with_protection
 
 
         field_dict: dict[str, Any] = {}
@@ -96,8 +109,12 @@ class TestEmailRuleOnSampleRequest:
             field_dict["scope_selection"] = scope_selection
         if rule_id is not UNSET:
             field_dict["rule_id"] = rule_id
+        if request_id is not UNSET:
+            field_dict["request_id"] = request_id
         if kind is not UNSET:
             field_dict["kind"] = kind
+        if with_protection is not UNSET:
+            field_dict["with_protection"] = with_protection
 
         return field_dict
 
@@ -154,6 +171,16 @@ class TestEmailRuleOnSampleRequest:
 
 
 
+        _request_id = d.pop("request_id", UNSET)
+        request_id: UUID | Unset
+        if isinstance(_request_id,  Unset):
+            request_id = UNSET
+        else:
+            request_id = UUID(_request_id)
+
+
+
+
         _kind = d.pop("kind", UNSET)
         kind: TestEmailRuleOnSampleRequestKind | Unset
         if isinstance(_kind,  Unset):
@@ -164,13 +191,17 @@ class TestEmailRuleOnSampleRequest:
 
 
 
+        with_protection = d.pop("with_protection", UNSET)
+
         test_email_rule_on_sample_request = cls(
             email=email,
             tree=tree,
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,
             rule_id=rule_id,
+            request_id=request_id,
             kind=kind,
+            with_protection=with_protection,
         )
 
         return test_email_rule_on_sample_request

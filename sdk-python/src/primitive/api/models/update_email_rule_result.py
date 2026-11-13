@@ -60,10 +60,14 @@ class UpdateEmailRuleResult:
             pending_objections (int | Unset): To its author, on the dashboard or the Primitive CLI: objections to it waiting
                 for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time:
                 absent is not 0.
-            objection_notice (str | Unset): With pending_objections above 0: that members asked you to turn it off, and how
-                to answer.
+            objection_notice (str | Unset): With pending_objections above 0: that members objected (each message says what
+                they ask: to turn it off, narrow it or explain it), and how to answer.
             scope_warnings (list[EmailRuleScopeWarning] | Unset): Names in scope_selection that match nothing this
                 organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.
+            do_not_share_note (str | Unset): On a grant rule's create answer: that active do-not-share rules reaching an
+                email run first: one that matches it keeps it from being shared through this rule, and one that cannot decide it
+                holds it back while it is decided again for up to a day; it is shared through this rule only if none of them
+                then matches it.
             expectations (UpdateEmailRuleResultExpectations | Unset): Its saved expectations, each list by email id, as
                 stored: on every create, and on an update that set or removed them.
             expectation_samples (list[EmailRuleExpectationSample] | Unset): Its saved made-up emails, when this write set or
@@ -104,6 +108,7 @@ class UpdateEmailRuleResult:
     pending_objections: int | Unset = UNSET
     objection_notice: str | Unset = UNSET
     scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
+    do_not_share_note: str | Unset = UNSET
     expectations: UpdateEmailRuleResultExpectations | Unset = UNSET
     expectation_samples: list[EmailRuleExpectationSample] | Unset = UNSET
     expectations_check: UpdateEmailRuleResultExpectationsCheck | Unset = UNSET
@@ -189,6 +194,8 @@ class UpdateEmailRuleResult:
 
 
 
+        do_not_share_note = self.do_not_share_note
+
         expectations: dict[str, Any] | Unset = UNSET
         if not isinstance(self.expectations, Unset):
             expectations = self.expectations.to_dict()
@@ -250,6 +257,8 @@ class UpdateEmailRuleResult:
             field_dict["objection_notice"] = objection_notice
         if scope_warnings is not UNSET:
             field_dict["scope_warnings"] = scope_warnings
+        if do_not_share_note is not UNSET:
+            field_dict["do_not_share_note"] = do_not_share_note
         if expectations is not UNSET:
             field_dict["expectations"] = expectations
         if expectation_samples is not UNSET:
@@ -406,6 +415,8 @@ class UpdateEmailRuleResult:
                 scope_warnings.append(scope_warnings_item)
 
 
+        do_not_share_note = d.pop("do_not_share_note", UNSET)
+
         _expectations = d.pop("expectations", UNSET)
         expectations: UpdateEmailRuleResultExpectations | Unset
         if isinstance(_expectations,  Unset):
@@ -481,6 +492,7 @@ class UpdateEmailRuleResult:
             pending_objections=pending_objections,
             objection_notice=objection_notice,
             scope_warnings=scope_warnings,
+            do_not_share_note=do_not_share_note,
             expectations=expectations,
             expectation_samples=expectation_samples,
             expectations_check=expectations_check,

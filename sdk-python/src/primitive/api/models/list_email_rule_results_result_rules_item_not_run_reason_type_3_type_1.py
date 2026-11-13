@@ -3,6 +3,7 @@ from enum import StrEnum
 class ListEmailRuleResultsResultRulesItemNotRunReasonType3Type1(StrEnum):
     CREATED_AFTER_EMAIL = "created_after_email"
     DRAFT = "draft"
+    OUTSIDE_SCOPE = "outside_scope"
 
     def __str__(self) -> str:
         return str(self.value)

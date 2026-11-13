@@ -102,9 +102,12 @@ def sync_detailed(
     covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and
     shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You
     do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the
-    site), the other inboxes and domains its scope names, or its saved expectations. Needs mail:read,
-    the email rules feature, and a member's own full-access credential (no API key, agent key or
-    narrowed token). Only on your own dashboard session or the Primitive CLI.
+    site), the other inboxes and domains its scope names, or its saved expectations. For what happened
+    to one email of yours, every rule's decision on it and, for another member's rule covering you, who
+    receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-
+    results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-
+    access credential (no API key, agent key or narrowed token). Only on your own dashboard session or
+    the Primitive CLI.
 
     Args:
         id (UUID):
@@ -145,9 +148,12 @@ def sync(
     covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and
     shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You
     do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the
-    site), the other inboxes and domains its scope names, or its saved expectations. Needs mail:read,
-    the email rules feature, and a member's own full-access credential (no API key, agent key or
-    narrowed token). Only on your own dashboard session or the Primitive CLI.
+    site), the other inboxes and domains its scope names, or its saved expectations. For what happened
+    to one email of yours, every rule's decision on it and, for another member's rule covering you, who
+    receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-
+    results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-
+    access credential (no API key, agent key or narrowed token). Only on your own dashboard session or
+    the Primitive CLI.
 
     Args:
         id (UUID):
@@ -183,9 +189,12 @@ async def asyncio_detailed(
     covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and
     shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You
     do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the
-    site), the other inboxes and domains its scope names, or its saved expectations. Needs mail:read,
-    the email rules feature, and a member's own full-access credential (no API key, agent key or
-    narrowed token). Only on your own dashboard session or the Primitive CLI.
+    site), the other inboxes and domains its scope names, or its saved expectations. For what happened
+    to one email of yours, every rule's decision on it and, for another member's rule covering you, who
+    receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-
+    results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-
+    access credential (no API key, agent key or narrowed token). Only on your own dashboard session or
+    the Primitive CLI.
 
     Args:
         id (UUID):
@@ -226,9 +235,12 @@ async def asyncio(
     covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and
     shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You
     do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the
-    site), the other inboxes and domains its scope names, or its saved expectations. Needs mail:read,
-    the email rules feature, and a member's own full-access credential (no API key, agent key or
-    narrowed token). Only on your own dashboard session or the Primitive CLI.
+    site), the other inboxes and domains its scope names, or its saved expectations. For what happened
+    to one email of yours, every rule's decision on it and, for another member's rule covering you, who
+    receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-
+    results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-
+    access credential (no API key, agent key or narrowed token). Only on your own dashboard session or
+    the Primitive CLI.
 
     Args:
         id (UUID):
