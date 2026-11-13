@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { openapiDocument } from "@primitivedotdev/api-core";
+import { openapiDocument, operationManifest } from "@primitivedotdev/api-core";
 import { describe, expect, it } from "vitest";
+import { cliOperationManifest } from "../../src/oclif/cli-operations.js";
 import { CANONICAL_OPERATION_ALIASES } from "../../src/oclif/index.js";
 
 function normalize(value: string): string {
@@ -37,7 +38,7 @@ const HAND_ROLLED_VISIBLE_TOPICS = new Set([
 ]);
 
 describe("oclif topics", () => {
-  it("has a topic entry for every spec tag", () => {
+  it("has a topic entry for every spec tag the CLI offers a command under", () => {
     const packageJsonPath = fileURLToPath(
       new URL("../../package.json", import.meta.url),
     );
@@ -49,11 +50,23 @@ describe("oclif topics", () => {
       (tag) => tag.name,
     );
 
+    // A tag whose every operation the CLI leaves out (cli-operations.ts) has
+    // no commands, so no topic.
+    const offered = new Set(cliOperationManifest.map((op) => op.tagCommand));
+    const unoffered = new Set(
+      operationManifest
+        .map((op) => op.tagCommand)
+        .filter((tag) => !offered.has(tag)),
+    );
+
     const missing = specTags
       .map((tag) => normalize(tag))
+      .filter((normalizedTag) => !unoffered.has(normalizedTag))
       .filter((normalizedTag) => !topicKeys.includes(normalizedTag));
 
     expect(missing).toEqual([]);
+    expect([...unoffered]).toEqual(["email-notifications"]);
+    expect(topicKeys).not.toContain("email-notifications");
   });
 
   it("has a spec tag or canonical alias for every topic entry", () => {

@@ -1550,6 +1550,34 @@ func encodeUpdateDomainRequest(
 	return nil
 }
 
+func encodeUpdateEmailNotificationPreferencesRequest(
+	req *EmailNotificationsUpdateEmailNotificationPreferencesInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateEmailNotificationSettingsRequest(
+	req *EmailNotificationsUpdateEmailNotificationSettingsInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeUpdateEmailRuleRequest(
 	req *UpdateEmailRuleRequest,
 	r *http.Request,

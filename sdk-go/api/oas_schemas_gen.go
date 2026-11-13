@@ -18892,11 +18892,20 @@ func (s *CredentialsGetCredentialPolicyResultSuperAdminKeyCreators) UnmarshalTex
 
 // Ref: #/components/schemas/Credentials_getKeyBuilder_Result
 type CredentialsGetKeyBuilderResult struct {
-	Enabled         bool                                        `json:"enabled"`
-	Presets         []CredentialsGetKeyBuilderResultPresetsItem `json:"presets"`
-	Matrix          []CredentialsGetKeyBuilderResultMatrixItem  `json:"matrix"`
-	Policy          CredentialsGetKeyBuilderResultPolicy        `json:"policy"`
-	AdditionalProps CredentialsGetKeyBuilderResultAdditional
+	Enabled bool                                        `json:"enabled"`
+	Presets []CredentialsGetKeyBuilderResultPresetsItem `json:"presets"`
+	// Whether a key limited to some mail (addresses, domains or email rules) would be created now. While
+	// false, creating one is refused, so a client offers neither the listed-address presets nor a listed
+	// mail reach for a custom key.
+	MailLimitsAvailable OptBool `json:"mail_limits_available"`
+	// Whether the credential policy lets a new key reach every mailbox. While false, creating one is
+	// refused, so a client offers no preset that reaches every mailbox, and a custom key lists its
+	// addresses or domains. With mail_limits_available false as well, no key can be created and every
+	// preset is unavailable.
+	OrgReachAvailable OptBool                                    `json:"org_reach_available"`
+	Matrix            []CredentialsGetKeyBuilderResultMatrixItem `json:"matrix"`
+	Policy            CredentialsGetKeyBuilderResultPolicy       `json:"policy"`
+	AdditionalProps   CredentialsGetKeyBuilderResultAdditional
 }
 
 // GetEnabled returns the value of Enabled.
@@ -18907,6 +18916,16 @@ func (s *CredentialsGetKeyBuilderResult) GetEnabled() bool {
 // GetPresets returns the value of Presets.
 func (s *CredentialsGetKeyBuilderResult) GetPresets() []CredentialsGetKeyBuilderResultPresetsItem {
 	return s.Presets
+}
+
+// GetMailLimitsAvailable returns the value of MailLimitsAvailable.
+func (s *CredentialsGetKeyBuilderResult) GetMailLimitsAvailable() OptBool {
+	return s.MailLimitsAvailable
+}
+
+// GetOrgReachAvailable returns the value of OrgReachAvailable.
+func (s *CredentialsGetKeyBuilderResult) GetOrgReachAvailable() OptBool {
+	return s.OrgReachAvailable
 }
 
 // GetMatrix returns the value of Matrix.
@@ -18932,6 +18951,16 @@ func (s *CredentialsGetKeyBuilderResult) SetEnabled(val bool) {
 // SetPresets sets the value of Presets.
 func (s *CredentialsGetKeyBuilderResult) SetPresets(val []CredentialsGetKeyBuilderResultPresetsItem) {
 	s.Presets = val
+}
+
+// SetMailLimitsAvailable sets the value of MailLimitsAvailable.
+func (s *CredentialsGetKeyBuilderResult) SetMailLimitsAvailable(val OptBool) {
+	s.MailLimitsAvailable = val
+}
+
+// SetOrgReachAvailable sets the value of OrgReachAvailable.
+func (s *CredentialsGetKeyBuilderResult) SetOrgReachAvailable(val OptBool) {
+	s.OrgReachAvailable = val
 }
 
 // SetMatrix sets the value of Matrix.
@@ -33917,6 +33946,1345 @@ func (s *EmailListMeta) SetRecipientRulesOnly(val OptBool) {
 	s.RecipientRulesOnly = val
 }
 
+// Ref: #/components/schemas/EmailNotifications_getEmailNotificationPreferences_Result
+type EmailNotificationsGetEmailNotificationPreferencesResult struct {
+	Entitled bool                                                               `json:"entitled"`
+	Kinds    []EmailNotificationsGetEmailNotificationPreferencesResultKindsItem `json:"kinds"`
+}
+
+// GetEntitled returns the value of Entitled.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResult) GetEntitled() bool {
+	return s.Entitled
+}
+
+// GetKinds returns the value of Kinds.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResult) GetKinds() []EmailNotificationsGetEmailNotificationPreferencesResultKindsItem {
+	return s.Kinds
+}
+
+// SetEntitled sets the value of Entitled.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResult) SetEntitled(val bool) {
+	s.Entitled = val
+}
+
+// SetKinds sets the value of Kinds.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResult) SetKinds(val []EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) {
+	s.Kinds = val
+}
+
+type EmailNotificationsGetEmailNotificationPreferencesResultKindsItem struct {
+	Kind                string                                                                         `json:"kind"`
+	Label               string                                                                         `json:"label"`
+	Description         string                                                                         `json:"description"`
+	Class               EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass          `json:"class"`
+	EntitlementRequired bool                                                                           `json:"entitlement_required"`
+	Entitled            bool                                                                           `json:"entitled"`
+	OrgMode             NilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode     `json:"org_mode"`
+	OrgModeIsDefault    bool                                                                           `json:"org_mode_is_default"`
+	OrgModes            []EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem `json:"org_modes"`
+	MemberEnabled       bool                                                                           `json:"member_enabled"`
+	MemberCanChange     bool                                                                           `json:"member_can_change"`
+}
+
+// GetKind returns the value of Kind.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) GetKind() string {
+	return s.Kind
+}
+
+// GetLabel returns the value of Label.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) GetLabel() string {
+	return s.Label
+}
+
+// GetDescription returns the value of Description.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) GetDescription() string {
+	return s.Description
+}
+
+// GetClass returns the value of Class.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) GetClass() EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass {
+	return s.Class
+}
+
+// GetEntitlementRequired returns the value of EntitlementRequired.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) GetEntitlementRequired() bool {
+	return s.EntitlementRequired
+}
+
+// GetEntitled returns the value of Entitled.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) GetEntitled() bool {
+	return s.Entitled
+}
+
+// GetOrgMode returns the value of OrgMode.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) GetOrgMode() NilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode {
+	return s.OrgMode
+}
+
+// GetOrgModeIsDefault returns the value of OrgModeIsDefault.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) GetOrgModeIsDefault() bool {
+	return s.OrgModeIsDefault
+}
+
+// GetOrgModes returns the value of OrgModes.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) GetOrgModes() []EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem {
+	return s.OrgModes
+}
+
+// GetMemberEnabled returns the value of MemberEnabled.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) GetMemberEnabled() bool {
+	return s.MemberEnabled
+}
+
+// GetMemberCanChange returns the value of MemberCanChange.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) GetMemberCanChange() bool {
+	return s.MemberCanChange
+}
+
+// SetKind sets the value of Kind.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) SetKind(val string) {
+	s.Kind = val
+}
+
+// SetLabel sets the value of Label.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) SetLabel(val string) {
+	s.Label = val
+}
+
+// SetDescription sets the value of Description.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) SetDescription(val string) {
+	s.Description = val
+}
+
+// SetClass sets the value of Class.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) SetClass(val EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass) {
+	s.Class = val
+}
+
+// SetEntitlementRequired sets the value of EntitlementRequired.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) SetEntitlementRequired(val bool) {
+	s.EntitlementRequired = val
+}
+
+// SetEntitled sets the value of Entitled.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) SetEntitled(val bool) {
+	s.Entitled = val
+}
+
+// SetOrgMode sets the value of OrgMode.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) SetOrgMode(val NilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) {
+	s.OrgMode = val
+}
+
+// SetOrgModeIsDefault sets the value of OrgModeIsDefault.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) SetOrgModeIsDefault(val bool) {
+	s.OrgModeIsDefault = val
+}
+
+// SetOrgModes sets the value of OrgModes.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) SetOrgModes(val []EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem) {
+	s.OrgModes = val
+}
+
+// SetMemberEnabled sets the value of MemberEnabled.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) SetMemberEnabled(val bool) {
+	s.MemberEnabled = val
+}
+
+// SetMemberCanChange sets the value of MemberCanChange.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) SetMemberCanChange(val bool) {
+	s.MemberCanChange = val
+}
+
+type EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass string
+
+const (
+	EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassPlatformRequired EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass = "platform_required"
+	EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOrgRequirable    EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass = "org_requirable"
+	EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOptional         EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass = "optional"
+)
+
+// AllValues returns all EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass values.
+func (EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass) AllValues() []EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass {
+	return []EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass{
+		EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassPlatformRequired,
+		EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOrgRequirable,
+		EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOptional,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassPlatformRequired:
+		return []byte(s), nil
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOrgRequirable:
+		return []byte(s), nil
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOptional:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass) UnmarshalText(data []byte) error {
+	switch EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass(data) {
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassPlatformRequired:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassPlatformRequired
+		return nil
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOrgRequirable:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOrgRequirable
+		return nil
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOptional:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOptional
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode string
+
+const (
+	EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOff         EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode = "off"
+	EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOptionalOn  EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode = "optional_on"
+	EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOptionalOff EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode = "optional_off"
+	EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeRequired    EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode = "required"
+)
+
+// AllValues returns all EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode values.
+func (EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) AllValues() []EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode {
+	return []EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode{
+		EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOff,
+		EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOptionalOn,
+		EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOptionalOff,
+		EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeRequired,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOff:
+		return []byte(s), nil
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOptionalOn:
+		return []byte(s), nil
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOptionalOff:
+		return []byte(s), nil
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeRequired:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) UnmarshalText(data []byte) error {
+	switch EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode(data) {
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOff:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOff
+		return nil
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOptionalOn:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOptionalOn
+		return nil
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOptionalOff:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOptionalOff
+		return nil
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeRequired:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeRequired
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem string
+
+const (
+	EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOff         EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem = "off"
+	EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOn  EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem = "optional_on"
+	EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOff EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem = "optional_off"
+	EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemRequired    EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem = "required"
+)
+
+// AllValues returns all EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem values.
+func (EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem) AllValues() []EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem {
+	return []EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem{
+		EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOff,
+		EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOn,
+		EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOff,
+		EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemRequired,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOff:
+		return []byte(s), nil
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOn:
+		return []byte(s), nil
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOff:
+		return []byte(s), nil
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemRequired:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem) UnmarshalText(data []byte) error {
+	switch EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem(data) {
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOff:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOff
+		return nil
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOn:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOn
+		return nil
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOff:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOff
+		return nil
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemRequired:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemRequired
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/EmailNotifications_getEmailNotificationSettings_Result
+type EmailNotificationsGetEmailNotificationSettingsResult struct {
+	Entitled bool                                                            `json:"entitled"`
+	Kinds    []EmailNotificationsGetEmailNotificationSettingsResultKindsItem `json:"kinds"`
+}
+
+// GetEntitled returns the value of Entitled.
+func (s *EmailNotificationsGetEmailNotificationSettingsResult) GetEntitled() bool {
+	return s.Entitled
+}
+
+// GetKinds returns the value of Kinds.
+func (s *EmailNotificationsGetEmailNotificationSettingsResult) GetKinds() []EmailNotificationsGetEmailNotificationSettingsResultKindsItem {
+	return s.Kinds
+}
+
+// SetEntitled sets the value of Entitled.
+func (s *EmailNotificationsGetEmailNotificationSettingsResult) SetEntitled(val bool) {
+	s.Entitled = val
+}
+
+// SetKinds sets the value of Kinds.
+func (s *EmailNotificationsGetEmailNotificationSettingsResult) SetKinds(val []EmailNotificationsGetEmailNotificationSettingsResultKindsItem) {
+	s.Kinds = val
+}
+
+type EmailNotificationsGetEmailNotificationSettingsResultKindsItem struct {
+	Kind                string                                                                      `json:"kind"`
+	Label               string                                                                      `json:"label"`
+	Description         string                                                                      `json:"description"`
+	Class               EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass          `json:"class"`
+	EntitlementRequired bool                                                                        `json:"entitlement_required"`
+	Entitled            bool                                                                        `json:"entitled"`
+	OrgMode             NilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode     `json:"org_mode"`
+	OrgModeIsDefault    bool                                                                        `json:"org_mode_is_default"`
+	OrgModes            []EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem `json:"org_modes"`
+	MemberEnabled       bool                                                                        `json:"member_enabled"`
+	MemberCanChange     bool                                                                        `json:"member_can_change"`
+}
+
+// GetKind returns the value of Kind.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) GetKind() string {
+	return s.Kind
+}
+
+// GetLabel returns the value of Label.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) GetLabel() string {
+	return s.Label
+}
+
+// GetDescription returns the value of Description.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) GetDescription() string {
+	return s.Description
+}
+
+// GetClass returns the value of Class.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) GetClass() EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass {
+	return s.Class
+}
+
+// GetEntitlementRequired returns the value of EntitlementRequired.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) GetEntitlementRequired() bool {
+	return s.EntitlementRequired
+}
+
+// GetEntitled returns the value of Entitled.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) GetEntitled() bool {
+	return s.Entitled
+}
+
+// GetOrgMode returns the value of OrgMode.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) GetOrgMode() NilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode {
+	return s.OrgMode
+}
+
+// GetOrgModeIsDefault returns the value of OrgModeIsDefault.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) GetOrgModeIsDefault() bool {
+	return s.OrgModeIsDefault
+}
+
+// GetOrgModes returns the value of OrgModes.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) GetOrgModes() []EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem {
+	return s.OrgModes
+}
+
+// GetMemberEnabled returns the value of MemberEnabled.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) GetMemberEnabled() bool {
+	return s.MemberEnabled
+}
+
+// GetMemberCanChange returns the value of MemberCanChange.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) GetMemberCanChange() bool {
+	return s.MemberCanChange
+}
+
+// SetKind sets the value of Kind.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) SetKind(val string) {
+	s.Kind = val
+}
+
+// SetLabel sets the value of Label.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) SetLabel(val string) {
+	s.Label = val
+}
+
+// SetDescription sets the value of Description.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) SetDescription(val string) {
+	s.Description = val
+}
+
+// SetClass sets the value of Class.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) SetClass(val EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass) {
+	s.Class = val
+}
+
+// SetEntitlementRequired sets the value of EntitlementRequired.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) SetEntitlementRequired(val bool) {
+	s.EntitlementRequired = val
+}
+
+// SetEntitled sets the value of Entitled.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) SetEntitled(val bool) {
+	s.Entitled = val
+}
+
+// SetOrgMode sets the value of OrgMode.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) SetOrgMode(val NilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) {
+	s.OrgMode = val
+}
+
+// SetOrgModeIsDefault sets the value of OrgModeIsDefault.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) SetOrgModeIsDefault(val bool) {
+	s.OrgModeIsDefault = val
+}
+
+// SetOrgModes sets the value of OrgModes.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) SetOrgModes(val []EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem) {
+	s.OrgModes = val
+}
+
+// SetMemberEnabled sets the value of MemberEnabled.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) SetMemberEnabled(val bool) {
+	s.MemberEnabled = val
+}
+
+// SetMemberCanChange sets the value of MemberCanChange.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) SetMemberCanChange(val bool) {
+	s.MemberCanChange = val
+}
+
+type EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass string
+
+const (
+	EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassPlatformRequired EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass = "platform_required"
+	EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOrgRequirable    EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass = "org_requirable"
+	EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOptional         EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass = "optional"
+)
+
+// AllValues returns all EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass values.
+func (EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass) AllValues() []EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass {
+	return []EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass{
+		EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassPlatformRequired,
+		EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOrgRequirable,
+		EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOptional,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassPlatformRequired:
+		return []byte(s), nil
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOrgRequirable:
+		return []byte(s), nil
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOptional:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass) UnmarshalText(data []byte) error {
+	switch EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass(data) {
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassPlatformRequired:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassPlatformRequired
+		return nil
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOrgRequirable:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOrgRequirable
+		return nil
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOptional:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOptional
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode string
+
+const (
+	EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOff         EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode = "off"
+	EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOptionalOn  EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode = "optional_on"
+	EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOptionalOff EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode = "optional_off"
+	EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeRequired    EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode = "required"
+)
+
+// AllValues returns all EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode values.
+func (EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) AllValues() []EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode {
+	return []EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode{
+		EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOff,
+		EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOptionalOn,
+		EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOptionalOff,
+		EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeRequired,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOff:
+		return []byte(s), nil
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOptionalOn:
+		return []byte(s), nil
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOptionalOff:
+		return []byte(s), nil
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeRequired:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) UnmarshalText(data []byte) error {
+	switch EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode(data) {
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOff:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOff
+		return nil
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOptionalOn:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOptionalOn
+		return nil
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOptionalOff:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOptionalOff
+		return nil
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeRequired:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeRequired
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem string
+
+const (
+	EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOff         EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem = "off"
+	EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOn  EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem = "optional_on"
+	EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOff EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem = "optional_off"
+	EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemRequired    EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem = "required"
+)
+
+// AllValues returns all EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem values.
+func (EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem) AllValues() []EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem {
+	return []EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem{
+		EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOff,
+		EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOn,
+		EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOff,
+		EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemRequired,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOff:
+		return []byte(s), nil
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOn:
+		return []byte(s), nil
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOff:
+		return []byte(s), nil
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemRequired:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem) UnmarshalText(data []byte) error {
+	switch EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem(data) {
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOff:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOff
+		return nil
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOn:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOn
+		return nil
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOff:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOff
+		return nil
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemRequired:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemRequired
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/EmailNotifications_updateEmailNotificationPreferences_Input
+type EmailNotificationsUpdateEmailNotificationPreferencesInput struct {
+	Preferences EmailNotificationsUpdateEmailNotificationPreferencesInputPreferences `json:"preferences"`
+}
+
+// GetPreferences returns the value of Preferences.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesInput) GetPreferences() EmailNotificationsUpdateEmailNotificationPreferencesInputPreferences {
+	return s.Preferences
+}
+
+// SetPreferences sets the value of Preferences.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesInput) SetPreferences(val EmailNotificationsUpdateEmailNotificationPreferencesInputPreferences) {
+	s.Preferences = val
+}
+
+type EmailNotificationsUpdateEmailNotificationPreferencesInputPreferences map[string]bool
+
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesInputPreferences) init() EmailNotificationsUpdateEmailNotificationPreferencesInputPreferences {
+	m := *s
+	if m == nil {
+		m = map[string]bool{}
+		*s = m
+	}
+	return m
+}
+
+// Ref: #/components/schemas/EmailNotifications_updateEmailNotificationPreferences_Result
+type EmailNotificationsUpdateEmailNotificationPreferencesResult struct {
+	Entitled bool                                                                  `json:"entitled"`
+	Kinds    []EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem `json:"kinds"`
+}
+
+// GetEntitled returns the value of Entitled.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResult) GetEntitled() bool {
+	return s.Entitled
+}
+
+// GetKinds returns the value of Kinds.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResult) GetKinds() []EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem {
+	return s.Kinds
+}
+
+// SetEntitled sets the value of Entitled.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResult) SetEntitled(val bool) {
+	s.Entitled = val
+}
+
+// SetKinds sets the value of Kinds.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResult) SetKinds(val []EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) {
+	s.Kinds = val
+}
+
+type EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem struct {
+	Kind                string                                                                            `json:"kind"`
+	Label               string                                                                            `json:"label"`
+	Description         string                                                                            `json:"description"`
+	Class               EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass          `json:"class"`
+	EntitlementRequired bool                                                                              `json:"entitlement_required"`
+	Entitled            bool                                                                              `json:"entitled"`
+	OrgMode             NilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode     `json:"org_mode"`
+	OrgModeIsDefault    bool                                                                              `json:"org_mode_is_default"`
+	OrgModes            []EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem `json:"org_modes"`
+	MemberEnabled       bool                                                                              `json:"member_enabled"`
+	MemberCanChange     bool                                                                              `json:"member_can_change"`
+}
+
+// GetKind returns the value of Kind.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) GetKind() string {
+	return s.Kind
+}
+
+// GetLabel returns the value of Label.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) GetLabel() string {
+	return s.Label
+}
+
+// GetDescription returns the value of Description.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) GetDescription() string {
+	return s.Description
+}
+
+// GetClass returns the value of Class.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) GetClass() EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass {
+	return s.Class
+}
+
+// GetEntitlementRequired returns the value of EntitlementRequired.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) GetEntitlementRequired() bool {
+	return s.EntitlementRequired
+}
+
+// GetEntitled returns the value of Entitled.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) GetEntitled() bool {
+	return s.Entitled
+}
+
+// GetOrgMode returns the value of OrgMode.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) GetOrgMode() NilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode {
+	return s.OrgMode
+}
+
+// GetOrgModeIsDefault returns the value of OrgModeIsDefault.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) GetOrgModeIsDefault() bool {
+	return s.OrgModeIsDefault
+}
+
+// GetOrgModes returns the value of OrgModes.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) GetOrgModes() []EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem {
+	return s.OrgModes
+}
+
+// GetMemberEnabled returns the value of MemberEnabled.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) GetMemberEnabled() bool {
+	return s.MemberEnabled
+}
+
+// GetMemberCanChange returns the value of MemberCanChange.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) GetMemberCanChange() bool {
+	return s.MemberCanChange
+}
+
+// SetKind sets the value of Kind.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) SetKind(val string) {
+	s.Kind = val
+}
+
+// SetLabel sets the value of Label.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) SetLabel(val string) {
+	s.Label = val
+}
+
+// SetDescription sets the value of Description.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) SetDescription(val string) {
+	s.Description = val
+}
+
+// SetClass sets the value of Class.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) SetClass(val EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass) {
+	s.Class = val
+}
+
+// SetEntitlementRequired sets the value of EntitlementRequired.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) SetEntitlementRequired(val bool) {
+	s.EntitlementRequired = val
+}
+
+// SetEntitled sets the value of Entitled.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) SetEntitled(val bool) {
+	s.Entitled = val
+}
+
+// SetOrgMode sets the value of OrgMode.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) SetOrgMode(val NilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) {
+	s.OrgMode = val
+}
+
+// SetOrgModeIsDefault sets the value of OrgModeIsDefault.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) SetOrgModeIsDefault(val bool) {
+	s.OrgModeIsDefault = val
+}
+
+// SetOrgModes sets the value of OrgModes.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) SetOrgModes(val []EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem) {
+	s.OrgModes = val
+}
+
+// SetMemberEnabled sets the value of MemberEnabled.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) SetMemberEnabled(val bool) {
+	s.MemberEnabled = val
+}
+
+// SetMemberCanChange sets the value of MemberCanChange.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) SetMemberCanChange(val bool) {
+	s.MemberCanChange = val
+}
+
+type EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass string
+
+const (
+	EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassPlatformRequired EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass = "platform_required"
+	EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOrgRequirable    EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass = "org_requirable"
+	EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOptional         EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass = "optional"
+)
+
+// AllValues returns all EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass values.
+func (EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass) AllValues() []EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass {
+	return []EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass{
+		EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassPlatformRequired,
+		EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOrgRequirable,
+		EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOptional,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassPlatformRequired:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOrgRequirable:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOptional:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass) UnmarshalText(data []byte) error {
+	switch EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass(data) {
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassPlatformRequired:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassPlatformRequired
+		return nil
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOrgRequirable:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOrgRequirable
+		return nil
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOptional:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOptional
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode string
+
+const (
+	EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOff         EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode = "off"
+	EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOptionalOn  EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode = "optional_on"
+	EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOptionalOff EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode = "optional_off"
+	EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeRequired    EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode = "required"
+)
+
+// AllValues returns all EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode values.
+func (EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) AllValues() []EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode {
+	return []EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode{
+		EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOff,
+		EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOptionalOn,
+		EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOptionalOff,
+		EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeRequired,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOff:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOptionalOn:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOptionalOff:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeRequired:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) UnmarshalText(data []byte) error {
+	switch EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode(data) {
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOff:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOff
+		return nil
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOptionalOn:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOptionalOn
+		return nil
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOptionalOff:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOptionalOff
+		return nil
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeRequired:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeRequired
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem string
+
+const (
+	EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOff         EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem = "off"
+	EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOn  EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem = "optional_on"
+	EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOff EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem = "optional_off"
+	EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemRequired    EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem = "required"
+)
+
+// AllValues returns all EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem values.
+func (EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem) AllValues() []EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem {
+	return []EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem{
+		EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOff,
+		EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOn,
+		EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOff,
+		EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemRequired,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOff:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOn:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOff:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemRequired:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem) UnmarshalText(data []byte) error {
+	switch EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem(data) {
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOff:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOff
+		return nil
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOn:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOn
+		return nil
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOff:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOff
+		return nil
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemRequired:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemRequired
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/EmailNotifications_updateEmailNotificationSettings_Input
+type EmailNotificationsUpdateEmailNotificationSettingsInput struct {
+	Modes EmailNotificationsUpdateEmailNotificationSettingsInputModes `json:"modes"`
+}
+
+// GetModes returns the value of Modes.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsInput) GetModes() EmailNotificationsUpdateEmailNotificationSettingsInputModes {
+	return s.Modes
+}
+
+// SetModes sets the value of Modes.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsInput) SetModes(val EmailNotificationsUpdateEmailNotificationSettingsInputModes) {
+	s.Modes = val
+}
+
+type EmailNotificationsUpdateEmailNotificationSettingsInputModes map[string]EmailNotificationsUpdateEmailNotificationSettingsInputModesItem
+
+func (s *EmailNotificationsUpdateEmailNotificationSettingsInputModes) init() EmailNotificationsUpdateEmailNotificationSettingsInputModes {
+	m := *s
+	if m == nil {
+		m = map[string]EmailNotificationsUpdateEmailNotificationSettingsInputModesItem{}
+		*s = m
+	}
+	return m
+}
+
+type EmailNotificationsUpdateEmailNotificationSettingsInputModesItem string
+
+const (
+	EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOff         EmailNotificationsUpdateEmailNotificationSettingsInputModesItem = "off"
+	EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOptionalOn  EmailNotificationsUpdateEmailNotificationSettingsInputModesItem = "optional_on"
+	EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOptionalOff EmailNotificationsUpdateEmailNotificationSettingsInputModesItem = "optional_off"
+	EmailNotificationsUpdateEmailNotificationSettingsInputModesItemRequired    EmailNotificationsUpdateEmailNotificationSettingsInputModesItem = "required"
+)
+
+// AllValues returns all EmailNotificationsUpdateEmailNotificationSettingsInputModesItem values.
+func (EmailNotificationsUpdateEmailNotificationSettingsInputModesItem) AllValues() []EmailNotificationsUpdateEmailNotificationSettingsInputModesItem {
+	return []EmailNotificationsUpdateEmailNotificationSettingsInputModesItem{
+		EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOff,
+		EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOptionalOn,
+		EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOptionalOff,
+		EmailNotificationsUpdateEmailNotificationSettingsInputModesItemRequired,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailNotificationsUpdateEmailNotificationSettingsInputModesItem) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOff:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOptionalOn:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOptionalOff:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationSettingsInputModesItemRequired:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsInputModesItem) UnmarshalText(data []byte) error {
+	switch EmailNotificationsUpdateEmailNotificationSettingsInputModesItem(data) {
+	case EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOff:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOff
+		return nil
+	case EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOptionalOn:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOptionalOn
+		return nil
+	case EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOptionalOff:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOptionalOff
+		return nil
+	case EmailNotificationsUpdateEmailNotificationSettingsInputModesItemRequired:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsInputModesItemRequired
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/EmailNotifications_updateEmailNotificationSettings_Result
+type EmailNotificationsUpdateEmailNotificationSettingsResult struct {
+	Entitled bool                                                               `json:"entitled"`
+	Kinds    []EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem `json:"kinds"`
+}
+
+// GetEntitled returns the value of Entitled.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResult) GetEntitled() bool {
+	return s.Entitled
+}
+
+// GetKinds returns the value of Kinds.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResult) GetKinds() []EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem {
+	return s.Kinds
+}
+
+// SetEntitled sets the value of Entitled.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResult) SetEntitled(val bool) {
+	s.Entitled = val
+}
+
+// SetKinds sets the value of Kinds.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResult) SetKinds(val []EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) {
+	s.Kinds = val
+}
+
+type EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem struct {
+	Kind                string                                                                         `json:"kind"`
+	Label               string                                                                         `json:"label"`
+	Description         string                                                                         `json:"description"`
+	Class               EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass          `json:"class"`
+	EntitlementRequired bool                                                                           `json:"entitlement_required"`
+	Entitled            bool                                                                           `json:"entitled"`
+	OrgMode             NilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode     `json:"org_mode"`
+	OrgModeIsDefault    bool                                                                           `json:"org_mode_is_default"`
+	OrgModes            []EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem `json:"org_modes"`
+	MemberEnabled       bool                                                                           `json:"member_enabled"`
+	MemberCanChange     bool                                                                           `json:"member_can_change"`
+}
+
+// GetKind returns the value of Kind.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) GetKind() string {
+	return s.Kind
+}
+
+// GetLabel returns the value of Label.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) GetLabel() string {
+	return s.Label
+}
+
+// GetDescription returns the value of Description.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) GetDescription() string {
+	return s.Description
+}
+
+// GetClass returns the value of Class.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) GetClass() EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass {
+	return s.Class
+}
+
+// GetEntitlementRequired returns the value of EntitlementRequired.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) GetEntitlementRequired() bool {
+	return s.EntitlementRequired
+}
+
+// GetEntitled returns the value of Entitled.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) GetEntitled() bool {
+	return s.Entitled
+}
+
+// GetOrgMode returns the value of OrgMode.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) GetOrgMode() NilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode {
+	return s.OrgMode
+}
+
+// GetOrgModeIsDefault returns the value of OrgModeIsDefault.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) GetOrgModeIsDefault() bool {
+	return s.OrgModeIsDefault
+}
+
+// GetOrgModes returns the value of OrgModes.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) GetOrgModes() []EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem {
+	return s.OrgModes
+}
+
+// GetMemberEnabled returns the value of MemberEnabled.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) GetMemberEnabled() bool {
+	return s.MemberEnabled
+}
+
+// GetMemberCanChange returns the value of MemberCanChange.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) GetMemberCanChange() bool {
+	return s.MemberCanChange
+}
+
+// SetKind sets the value of Kind.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) SetKind(val string) {
+	s.Kind = val
+}
+
+// SetLabel sets the value of Label.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) SetLabel(val string) {
+	s.Label = val
+}
+
+// SetDescription sets the value of Description.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) SetDescription(val string) {
+	s.Description = val
+}
+
+// SetClass sets the value of Class.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) SetClass(val EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass) {
+	s.Class = val
+}
+
+// SetEntitlementRequired sets the value of EntitlementRequired.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) SetEntitlementRequired(val bool) {
+	s.EntitlementRequired = val
+}
+
+// SetEntitled sets the value of Entitled.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) SetEntitled(val bool) {
+	s.Entitled = val
+}
+
+// SetOrgMode sets the value of OrgMode.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) SetOrgMode(val NilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) {
+	s.OrgMode = val
+}
+
+// SetOrgModeIsDefault sets the value of OrgModeIsDefault.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) SetOrgModeIsDefault(val bool) {
+	s.OrgModeIsDefault = val
+}
+
+// SetOrgModes sets the value of OrgModes.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) SetOrgModes(val []EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem) {
+	s.OrgModes = val
+}
+
+// SetMemberEnabled sets the value of MemberEnabled.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) SetMemberEnabled(val bool) {
+	s.MemberEnabled = val
+}
+
+// SetMemberCanChange sets the value of MemberCanChange.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) SetMemberCanChange(val bool) {
+	s.MemberCanChange = val
+}
+
+type EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass string
+
+const (
+	EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassPlatformRequired EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass = "platform_required"
+	EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOrgRequirable    EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass = "org_requirable"
+	EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOptional         EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass = "optional"
+)
+
+// AllValues returns all EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass values.
+func (EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass) AllValues() []EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass {
+	return []EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass{
+		EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassPlatformRequired,
+		EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOrgRequirable,
+		EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOptional,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassPlatformRequired:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOrgRequirable:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOptional:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass) UnmarshalText(data []byte) error {
+	switch EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass(data) {
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassPlatformRequired:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassPlatformRequired
+		return nil
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOrgRequirable:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOrgRequirable
+		return nil
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOptional:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOptional
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode string
+
+const (
+	EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOff         EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode = "off"
+	EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOptionalOn  EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode = "optional_on"
+	EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOptionalOff EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode = "optional_off"
+	EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeRequired    EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode = "required"
+)
+
+// AllValues returns all EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode values.
+func (EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) AllValues() []EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode {
+	return []EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode{
+		EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOff,
+		EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOptionalOn,
+		EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOptionalOff,
+		EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeRequired,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOff:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOptionalOn:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOptionalOff:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeRequired:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) UnmarshalText(data []byte) error {
+	switch EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode(data) {
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOff:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOff
+		return nil
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOptionalOn:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOptionalOn
+		return nil
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOptionalOff:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOptionalOff
+		return nil
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeRequired:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeRequired
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem string
+
+const (
+	EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOff         EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem = "off"
+	EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOn  EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem = "optional_on"
+	EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOff EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem = "optional_off"
+	EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemRequired    EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem = "required"
+)
+
+// AllValues returns all EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem values.
+func (EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem) AllValues() []EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem {
+	return []EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem{
+		EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOff,
+		EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOn,
+		EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOff,
+		EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemRequired,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOff:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOn:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOff:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemRequired:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem) UnmarshalText(data []byte) error {
+	switch EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem(data) {
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOff:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOff
+		return nil
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOn:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOn
+		return nil
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOff:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOff
+		return nil
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemRequired:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemRequired
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // What an inbound email says, as plain text, with the fields that identify it.
 // Ref: #/components/schemas/EmailReadable
 type EmailReadable struct {
@@ -37114,6 +38482,11 @@ type EmailRuleReceiversKeysItem struct {
 	// On a rule over your mail: how many of these keys also list one of your own mailboxes, or its
 	// domain, so they read your mail there beyond what this rule matches.
 	ReadsInFull OptInt `json:"reads_in_full"`
+	// When the newest of these was made, to the minute: a key, a webhook or the share, or the rule (the
+	// share, for what reaches it only through the share) if that was later. Not when a key was given
+	// access to this rule, or anything turned back on; a rotated key shows as newly made, and one key on
+	// two rules can show the same minute under both.
+	NewestAt OptDateTime `json:"newest_at"`
 }
 
 // GetOwner returns the value of Owner.
@@ -37131,6 +38504,11 @@ func (s *EmailRuleReceiversKeysItem) GetReadsInFull() OptInt {
 	return s.ReadsInFull
 }
 
+// GetNewestAt returns the value of NewestAt.
+func (s *EmailRuleReceiversKeysItem) GetNewestAt() OptDateTime {
+	return s.NewestAt
+}
+
 // SetOwner sets the value of Owner.
 func (s *EmailRuleReceiversKeysItem) SetOwner(val EmailRuleReceiversKeysItemOwner) {
 	s.Owner = val
@@ -37144,6 +38522,11 @@ func (s *EmailRuleReceiversKeysItem) SetCount(val int) {
 // SetReadsInFull sets the value of ReadsInFull.
 func (s *EmailRuleReceiversKeysItem) SetReadsInFull(val OptInt) {
 	s.ReadsInFull = val
+}
+
+// SetNewestAt sets the value of NewestAt.
+func (s *EmailRuleReceiversKeysItem) SetNewestAt(val OptDateTime) {
+	s.NewestAt = val
 }
 
 type EmailRuleReceiversKeysItemOwner struct {
@@ -37228,6 +38611,11 @@ func (s *EmailRuleReceiversKeysItemOwnerKind) UnmarshalText(data []byte) error {
 type EmailRuleReceiversSharesItem struct {
 	Beneficiary EmailRuleReceiversSharesItemBeneficiary `json:"beneficiary"`
 	Count       int                                     `json:"count"`
+	// When the newest of these was made, to the minute: a key, a webhook or the share, or the rule (the
+	// share, for what reaches it only through the share) if that was later. Not when a key was given
+	// access to this rule, or anything turned back on; a rotated key shows as newly made, and one key on
+	// two rules can show the same minute under both.
+	NewestAt OptDateTime `json:"newest_at"`
 }
 
 // GetBeneficiary returns the value of Beneficiary.
@@ -37240,6 +38628,11 @@ func (s *EmailRuleReceiversSharesItem) GetCount() int {
 	return s.Count
 }
 
+// GetNewestAt returns the value of NewestAt.
+func (s *EmailRuleReceiversSharesItem) GetNewestAt() OptDateTime {
+	return s.NewestAt
+}
+
 // SetBeneficiary sets the value of Beneficiary.
 func (s *EmailRuleReceiversSharesItem) SetBeneficiary(val EmailRuleReceiversSharesItemBeneficiary) {
 	s.Beneficiary = val
@@ -37248,6 +38641,11 @@ func (s *EmailRuleReceiversSharesItem) SetBeneficiary(val EmailRuleReceiversShar
 // SetCount sets the value of Count.
 func (s *EmailRuleReceiversSharesItem) SetCount(val int) {
 	s.Count = val
+}
+
+// SetNewestAt sets the value of NewestAt.
+func (s *EmailRuleReceiversSharesItem) SetNewestAt(val OptDateTime) {
+	s.NewestAt = val
 }
 
 type EmailRuleReceiversSharesItemBeneficiary struct {
@@ -37331,6 +38729,11 @@ type EmailRuleReceiversWebhooksItem struct {
 	Hosts []string `json:"hosts"`
 	// Hosts past those listed.
 	HostsNotListed OptInt `json:"hosts_not_listed"`
+	// When the newest of these was made, to the minute: a key, a webhook or the share, or the rule (the
+	// share, for what reaches it only through the share) if that was later. Not when a key was given
+	// access to this rule, or anything turned back on; a rotated key shows as newly made, and one key on
+	// two rules can show the same minute under both.
+	NewestAt OptDateTime `json:"newest_at"`
 }
 
 // GetOwner returns the value of Owner.
@@ -37353,6 +38756,11 @@ func (s *EmailRuleReceiversWebhooksItem) GetHostsNotListed() OptInt {
 	return s.HostsNotListed
 }
 
+// GetNewestAt returns the value of NewestAt.
+func (s *EmailRuleReceiversWebhooksItem) GetNewestAt() OptDateTime {
+	return s.NewestAt
+}
+
 // SetOwner sets the value of Owner.
 func (s *EmailRuleReceiversWebhooksItem) SetOwner(val EmailRuleReceiversWebhooksItemOwner) {
 	s.Owner = val
@@ -37371,6 +38779,11 @@ func (s *EmailRuleReceiversWebhooksItem) SetHosts(val []string) {
 // SetHostsNotListed sets the value of HostsNotListed.
 func (s *EmailRuleReceiversWebhooksItem) SetHostsNotListed(val OptInt) {
 	s.HostsNotListed = val
+}
+
+// SetNewestAt sets the value of NewestAt.
+func (s *EmailRuleReceiversWebhooksItem) SetNewestAt(val OptDateTime) {
+	s.NewestAt = val
 }
 
 type EmailRuleReceiversWebhooksItemOwner struct {
@@ -45652,6 +47065,7 @@ const (
 	ErrorResponseErrorCodeAgentWorkVersionConflict                 ErrorResponseErrorCode = "agent_work_version_conflict"
 	ErrorResponseErrorCodeAlreadyClaimed                           ErrorResponseErrorCode = "already_claimed"
 	ErrorResponseErrorCodeAlreadyMember                            ErrorResponseErrorCode = "already_member"
+	ErrorResponseErrorCodeAlwaysSent                               ErrorResponseErrorCode = "always_sent"
 	ErrorResponseErrorCodeArchiveBusy                              ErrorResponseErrorCode = "archive_busy"
 	ErrorResponseErrorCodeArchiveInvalid                           ErrorResponseErrorCode = "archive_invalid"
 	ErrorResponseErrorCodeArchiveLimitExceeded                     ErrorResponseErrorCode = "archive_limit_exceeded"
@@ -45844,6 +47258,7 @@ const (
 	ErrorResponseErrorCodeRemovalFailed                            ErrorResponseErrorCode = "removal_failed"
 	ErrorResponseErrorCodeRemovalTimeout                           ErrorResponseErrorCode = "removal_timeout"
 	ErrorResponseErrorCodeRequestExpired                           ErrorResponseErrorCode = "request_expired"
+	ErrorResponseErrorCodeRequiredByOrganization                   ErrorResponseErrorCode = "required_by_organization"
 	ErrorResponseErrorCodeResendLimitExceeded                      ErrorResponseErrorCode = "resend_limit_exceeded"
 	ErrorResponseErrorCodeResendTooSoon                            ErrorResponseErrorCode = "resend_too_soon"
 	ErrorResponseErrorCodeRoleAssigned                             ErrorResponseErrorCode = "role_assigned"
@@ -46015,6 +47430,7 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeAgentWorkVersionConflict,
 		ErrorResponseErrorCodeAlreadyClaimed,
 		ErrorResponseErrorCodeAlreadyMember,
+		ErrorResponseErrorCodeAlwaysSent,
 		ErrorResponseErrorCodeArchiveBusy,
 		ErrorResponseErrorCodeArchiveInvalid,
 		ErrorResponseErrorCodeArchiveLimitExceeded,
@@ -46207,6 +47623,7 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeRemovalFailed,
 		ErrorResponseErrorCodeRemovalTimeout,
 		ErrorResponseErrorCodeRequestExpired,
+		ErrorResponseErrorCodeRequiredByOrganization,
 		ErrorResponseErrorCodeResendLimitExceeded,
 		ErrorResponseErrorCodeResendTooSoon,
 		ErrorResponseErrorCodeRoleAssigned,
@@ -46477,6 +47894,8 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeAlreadyClaimed:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeAlreadyMember:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAlwaysSent:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeArchiveBusy:
 		return []byte(s), nil
@@ -46861,6 +48280,8 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeRemovalTimeout:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeRequestExpired:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRequiredByOrganization:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeResendLimitExceeded:
 		return []byte(s), nil
@@ -47300,6 +48721,9 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeAlreadyMember:
 		*s = ErrorResponseErrorCodeAlreadyMember
+		return nil
+	case ErrorResponseErrorCodeAlwaysSent:
+		*s = ErrorResponseErrorCodeAlwaysSent
 		return nil
 	case ErrorResponseErrorCodeArchiveBusy:
 		*s = ErrorResponseErrorCodeArchiveBusy
@@ -47876,6 +49300,9 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeRequestExpired:
 		*s = ErrorResponseErrorCodeRequestExpired
+		return nil
+	case ErrorResponseErrorCodeRequiredByOrganization:
+		*s = ErrorResponseErrorCodeRequiredByOrganization
 		return nil
 	case ErrorResponseErrorCodeResendLimitExceeded:
 		*s = ErrorResponseErrorCodeResendLimitExceeded
@@ -54372,6 +55799,100 @@ func (*GetEmailBadRequest) getEmailRes() {}
 type GetEmailNotFound ErrorResponse
 
 func (*GetEmailNotFound) getEmailRes() {}
+
+type GetEmailNotificationPreferencesBadRequest ErrorResponse
+
+func (*GetEmailNotificationPreferencesBadRequest) getEmailNotificationPreferencesRes() {}
+
+type GetEmailNotificationPreferencesForbidden ErrorResponse
+
+func (*GetEmailNotificationPreferencesForbidden) getEmailNotificationPreferencesRes() {}
+
+type GetEmailNotificationPreferencesNotFound ErrorResponse
+
+func (*GetEmailNotificationPreferencesNotFound) getEmailNotificationPreferencesRes() {}
+
+type GetEmailNotificationPreferencesOK struct {
+	Success bool                                                    `json:"success"`
+	Data    EmailNotificationsGetEmailNotificationPreferencesResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetEmailNotificationPreferencesOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetEmailNotificationPreferencesOK) GetData() EmailNotificationsGetEmailNotificationPreferencesResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetEmailNotificationPreferencesOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetEmailNotificationPreferencesOK) SetData(val EmailNotificationsGetEmailNotificationPreferencesResult) {
+	s.Data = val
+}
+
+func (*GetEmailNotificationPreferencesOK) getEmailNotificationPreferencesRes() {}
+
+type GetEmailNotificationPreferencesTooManyRequests ErrorResponseHeaders
+
+func (*GetEmailNotificationPreferencesTooManyRequests) getEmailNotificationPreferencesRes() {}
+
+type GetEmailNotificationPreferencesUnauthorized ErrorResponseHeaders
+
+func (*GetEmailNotificationPreferencesUnauthorized) getEmailNotificationPreferencesRes() {}
+
+type GetEmailNotificationSettingsBadRequest ErrorResponse
+
+func (*GetEmailNotificationSettingsBadRequest) getEmailNotificationSettingsRes() {}
+
+type GetEmailNotificationSettingsForbidden ErrorResponse
+
+func (*GetEmailNotificationSettingsForbidden) getEmailNotificationSettingsRes() {}
+
+type GetEmailNotificationSettingsNotFound ErrorResponse
+
+func (*GetEmailNotificationSettingsNotFound) getEmailNotificationSettingsRes() {}
+
+type GetEmailNotificationSettingsOK struct {
+	Success bool                                                 `json:"success"`
+	Data    EmailNotificationsGetEmailNotificationSettingsResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetEmailNotificationSettingsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetEmailNotificationSettingsOK) GetData() EmailNotificationsGetEmailNotificationSettingsResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetEmailNotificationSettingsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetEmailNotificationSettingsOK) SetData(val EmailNotificationsGetEmailNotificationSettingsResult) {
+	s.Data = val
+}
+
+func (*GetEmailNotificationSettingsOK) getEmailNotificationSettingsRes() {}
+
+type GetEmailNotificationSettingsTooManyRequests ErrorResponseHeaders
+
+func (*GetEmailNotificationSettingsTooManyRequests) getEmailNotificationSettingsRes() {}
+
+type GetEmailNotificationSettingsUnauthorized ErrorResponseHeaders
+
+func (*GetEmailNotificationSettingsUnauthorized) getEmailNotificationSettingsRes() {}
 
 // Merged schema.
 type GetEmailOK struct {
@@ -63096,10 +64617,10 @@ func (*ListActivityObjectsOK) listActivityObjectsRes() {}
 // Created (the default): what you created. asked: what other members asked of you, open or answered:
 // rule requests made to you, and objections to rules you wrote; kind may then name only
 // email_rule_request and email_rule_objection. concerning: what other members did that concerns your
-// own mail: an active rule that started covering one of your mailboxes, or saved a new version while
-// covering it (email_rule_coverage, the only kind it takes). A rule in draft or observe is not told
-// of; GET /v1/email-rules/covering-me lists it. asked and concerning are for a person's own view
-// only.
+// own mail: an active rule that started covering one of your mailboxes, saved a new version, or
+// changed who receives its matches while covering it (email_rule_coverage, the only kind it takes).
+// A rule in draft or observe is not told of; GET /v1/email-rules/covering-me lists it. asked and
+// concerning are for a person's own view only.
 type ListActivityObjectsRelation string
 
 const (
@@ -63248,7 +64769,8 @@ type ListActivityObjectsResultItemsItem struct {
 	// keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules),
 	// pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice
 	// what it told: started (a rule was made or turned active over your mailboxes, or an active rule
-	// came to reach you; once per rule, not per mailbox), new_version, or baseline (it already covered
+	// came to reach you; once per rule, not per mailbox), new_version, receivers_changed (who receives
+	// an active rule's matches changed: its keys, webhooks or share), or baseline (it already covered
 	// you when notices began). pending: a rule started covering your mailbox and the notices have not
 	// recorded that start yet (a restart within an hour of the last start notice is recorded without a
 	// new one); its id is then the rule's, and created_at when the rule last changed.
@@ -63267,6 +64789,10 @@ type ListActivityObjectsResultItemsItem struct {
 	//  the same as id). GET /v1/email-rules/covering-me/{rule_id} shows the rule while it covers you, or
 	// as it last decided on your mail; otherwise it answers not_found.
 	RuleID OptUUID `json:"rule_id"`
+	// For a receivers_changed notice: who received the rule's matches before and after, in totals. They
+	// can be equal when only an owner or a webhook site changed; covering-me shows them by owner. A
+	// rotated key counts once here while the old one still works; covering-me counts both.
+	ReceiversChange OptListActivityObjectsResultItemsItemReceiversChange `json:"receivers_change"`
 }
 
 // GetKind returns the value of Kind.
@@ -63314,6 +64840,11 @@ func (s *ListActivityObjectsResultItemsItem) GetRuleID() OptUUID {
 	return s.RuleID
 }
 
+// GetReceiversChange returns the value of ReceiversChange.
+func (s *ListActivityObjectsResultItemsItem) GetReceiversChange() OptListActivityObjectsResultItemsItemReceiversChange {
+	return s.ReceiversChange
+}
+
 // SetKind sets the value of Kind.
 func (s *ListActivityObjectsResultItemsItem) SetKind(val string) {
 	s.Kind = val
@@ -63357,6 +64888,11 @@ func (s *ListActivityObjectsResultItemsItem) SetCreatedThrough(val ListActivityO
 // SetRuleID sets the value of RuleID.
 func (s *ListActivityObjectsResultItemsItem) SetRuleID(val OptUUID) {
 	s.RuleID = val
+}
+
+// SetReceiversChange sets the value of ReceiversChange.
+func (s *ListActivityObjectsResultItemsItem) SetReceiversChange(val OptListActivityObjectsResultItemsItemReceiversChange) {
+	s.ReceiversChange = val
 }
 
 type ListActivityObjectsResultItemsItemCreatedThrough struct {
@@ -63449,6 +64985,130 @@ func (s *ListActivityObjectsResultItemsItemOwnedNow) UnmarshalText(data []byte) 
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// For a receivers_changed notice: who received the rule's matches before and after, in totals. They
+// can be equal when only an owner or a webhook site changed; covering-me shows them by owner. A
+// rotated key counts once here while the old one still works; covering-me counts both.
+type ListActivityObjectsResultItemsItemReceiversChange struct {
+	Before ListActivityObjectsResultItemsItemReceiversChangeBefore `json:"before"`
+	After  ListActivityObjectsResultItemsItemReceiversChangeAfter  `json:"after"`
+}
+
+// GetBefore returns the value of Before.
+func (s *ListActivityObjectsResultItemsItemReceiversChange) GetBefore() ListActivityObjectsResultItemsItemReceiversChangeBefore {
+	return s.Before
+}
+
+// GetAfter returns the value of After.
+func (s *ListActivityObjectsResultItemsItemReceiversChange) GetAfter() ListActivityObjectsResultItemsItemReceiversChangeAfter {
+	return s.After
+}
+
+// SetBefore sets the value of Before.
+func (s *ListActivityObjectsResultItemsItemReceiversChange) SetBefore(val ListActivityObjectsResultItemsItemReceiversChangeBefore) {
+	s.Before = val
+}
+
+// SetAfter sets the value of After.
+func (s *ListActivityObjectsResultItemsItemReceiversChange) SetAfter(val ListActivityObjectsResultItemsItemReceiversChangeAfter) {
+	s.After = val
+}
+
+type ListActivityObjectsResultItemsItemReceiversChangeAfter struct {
+	Keys int `json:"keys"`
+	// Of the keys, how many also read your own mail beyond the rule.
+	ReadsInFull int `json:"reads_in_full"`
+	Webhooks    int `json:"webhooks"`
+	Shares      int `json:"shares"`
+}
+
+// GetKeys returns the value of Keys.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) GetKeys() int {
+	return s.Keys
+}
+
+// GetReadsInFull returns the value of ReadsInFull.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) GetReadsInFull() int {
+	return s.ReadsInFull
+}
+
+// GetWebhooks returns the value of Webhooks.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) GetWebhooks() int {
+	return s.Webhooks
+}
+
+// GetShares returns the value of Shares.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) GetShares() int {
+	return s.Shares
+}
+
+// SetKeys sets the value of Keys.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) SetKeys(val int) {
+	s.Keys = val
+}
+
+// SetReadsInFull sets the value of ReadsInFull.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) SetReadsInFull(val int) {
+	s.ReadsInFull = val
+}
+
+// SetWebhooks sets the value of Webhooks.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) SetWebhooks(val int) {
+	s.Webhooks = val
+}
+
+// SetShares sets the value of Shares.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) SetShares(val int) {
+	s.Shares = val
+}
+
+type ListActivityObjectsResultItemsItemReceiversChangeBefore struct {
+	Keys int `json:"keys"`
+	// Of the keys, how many also read your own mail beyond the rule.
+	ReadsInFull int `json:"reads_in_full"`
+	Webhooks    int `json:"webhooks"`
+	Shares      int `json:"shares"`
+}
+
+// GetKeys returns the value of Keys.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) GetKeys() int {
+	return s.Keys
+}
+
+// GetReadsInFull returns the value of ReadsInFull.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) GetReadsInFull() int {
+	return s.ReadsInFull
+}
+
+// GetWebhooks returns the value of Webhooks.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) GetWebhooks() int {
+	return s.Webhooks
+}
+
+// GetShares returns the value of Shares.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) GetShares() int {
+	return s.Shares
+}
+
+// SetKeys sets the value of Keys.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) SetKeys(val int) {
+	s.Keys = val
+}
+
+// SetReadsInFull sets the value of ReadsInFull.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) SetReadsInFull(val int) {
+	s.ReadsInFull = val
+}
+
+// SetWebhooks sets the value of Webhooks.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) SetWebhooks(val int) {
+	s.Webhooks = val
+}
+
+// SetShares sets the value of Shares.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) SetShares(val int) {
+	s.Shares = val
 }
 
 type ListActivityObjectsResultWithheldItem struct {
@@ -79696,6 +81356,194 @@ func (o NilEmailDetailImported) Or(d EmailDetailImported) EmailDetailImported {
 	return d
 }
 
+// NewNilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode returns new NilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode with value set to v.
+func NewNilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode(v EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) NilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode {
+	return NilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode{
+		Value: v,
+	}
+}
+
+// NilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode is nullable EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode.
+type NilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode struct {
+	Value EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) SetTo(v EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) IsNull() bool {
+	return o.Null
+}
+
+// SetToNull sets value to null.
+func (o *NilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) SetToNull() {
+	o.Null = true
+	var v EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) Get() (v EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) Or(d EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode returns new NilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode with value set to v.
+func NewNilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode(v EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) NilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode {
+	return NilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode{
+		Value: v,
+	}
+}
+
+// NilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode is nullable EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode.
+type NilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode struct {
+	Value EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) SetTo(v EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) IsNull() bool {
+	return o.Null
+}
+
+// SetToNull sets value to null.
+func (o *NilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) SetToNull() {
+	o.Null = true
+	var v EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) Get() (v EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) Or(d EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode returns new NilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode with value set to v.
+func NewNilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode(v EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) NilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode {
+	return NilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode{
+		Value: v,
+	}
+}
+
+// NilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode is nullable EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode.
+type NilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode struct {
+	Value EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) SetTo(v EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) IsNull() bool {
+	return o.Null
+}
+
+// SetToNull sets value to null.
+func (o *NilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) SetToNull() {
+	o.Null = true
+	var v EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) Get() (v EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) Or(d EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode returns new NilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode with value set to v.
+func NewNilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode(v EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) NilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode {
+	return NilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode{
+		Value: v,
+	}
+}
+
+// NilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode is nullable EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode.
+type NilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode struct {
+	Value EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) SetTo(v EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) IsNull() bool {
+	return o.Null
+}
+
+// SetToNull sets value to null.
+func (o *NilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) SetToNull() {
+	o.Null = true
+	var v EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) Get() (v EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) Or(d EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilEmailReadableImported returns new NilEmailReadableImported with value set to v.
 func NewNilEmailReadableImported(v EmailReadableImported) NilEmailReadableImported {
 	return NilEmailReadableImported{
@@ -90075,6 +91923,52 @@ func (o OptListActivityObjectsRelation) Get() (v ListActivityObjectsRelation, ok
 
 // Or returns value if set, or given parameter if does not.
 func (o OptListActivityObjectsRelation) Or(d ListActivityObjectsRelation) ListActivityObjectsRelation {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptListActivityObjectsResultItemsItemReceiversChange returns new OptListActivityObjectsResultItemsItemReceiversChange with value set to v.
+func NewOptListActivityObjectsResultItemsItemReceiversChange(v ListActivityObjectsResultItemsItemReceiversChange) OptListActivityObjectsResultItemsItemReceiversChange {
+	return OptListActivityObjectsResultItemsItemReceiversChange{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListActivityObjectsResultItemsItemReceiversChange is optional ListActivityObjectsResultItemsItemReceiversChange.
+type OptListActivityObjectsResultItemsItemReceiversChange struct {
+	Value ListActivityObjectsResultItemsItemReceiversChange
+	Set   bool
+}
+
+// IsSet returns true if OptListActivityObjectsResultItemsItemReceiversChange was set.
+func (o OptListActivityObjectsResultItemsItemReceiversChange) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListActivityObjectsResultItemsItemReceiversChange) Reset() {
+	var v ListActivityObjectsResultItemsItemReceiversChange
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListActivityObjectsResultItemsItemReceiversChange) SetTo(v ListActivityObjectsResultItemsItemReceiversChange) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListActivityObjectsResultItemsItemReceiversChange) Get() (v ListActivityObjectsResultItemsItemReceiversChange, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListActivityObjectsResultItemsItemReceiversChange) Or(d ListActivityObjectsResultItemsItemReceiversChange) ListActivityObjectsResultItemsItemReceiversChange {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -137870,6 +139764,108 @@ func (s *UpdateDomainOK) SetData(val UpdatedDomain) {
 }
 
 func (*UpdateDomainOK) updateDomainRes() {}
+
+type UpdateEmailNotificationPreferencesBadRequest ErrorResponse
+
+func (*UpdateEmailNotificationPreferencesBadRequest) updateEmailNotificationPreferencesRes() {}
+
+type UpdateEmailNotificationPreferencesConflict ErrorResponse
+
+func (*UpdateEmailNotificationPreferencesConflict) updateEmailNotificationPreferencesRes() {}
+
+type UpdateEmailNotificationPreferencesForbidden ErrorResponse
+
+func (*UpdateEmailNotificationPreferencesForbidden) updateEmailNotificationPreferencesRes() {}
+
+type UpdateEmailNotificationPreferencesNotFound ErrorResponse
+
+func (*UpdateEmailNotificationPreferencesNotFound) updateEmailNotificationPreferencesRes() {}
+
+type UpdateEmailNotificationPreferencesOK struct {
+	Success bool                                                       `json:"success"`
+	Data    EmailNotificationsUpdateEmailNotificationPreferencesResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *UpdateEmailNotificationPreferencesOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *UpdateEmailNotificationPreferencesOK) GetData() EmailNotificationsUpdateEmailNotificationPreferencesResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *UpdateEmailNotificationPreferencesOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *UpdateEmailNotificationPreferencesOK) SetData(val EmailNotificationsUpdateEmailNotificationPreferencesResult) {
+	s.Data = val
+}
+
+func (*UpdateEmailNotificationPreferencesOK) updateEmailNotificationPreferencesRes() {}
+
+type UpdateEmailNotificationPreferencesTooManyRequests ErrorResponseHeaders
+
+func (*UpdateEmailNotificationPreferencesTooManyRequests) updateEmailNotificationPreferencesRes() {}
+
+type UpdateEmailNotificationPreferencesUnauthorized ErrorResponseHeaders
+
+func (*UpdateEmailNotificationPreferencesUnauthorized) updateEmailNotificationPreferencesRes() {}
+
+type UpdateEmailNotificationSettingsBadRequest ErrorResponse
+
+func (*UpdateEmailNotificationSettingsBadRequest) updateEmailNotificationSettingsRes() {}
+
+type UpdateEmailNotificationSettingsConflict ErrorResponse
+
+func (*UpdateEmailNotificationSettingsConflict) updateEmailNotificationSettingsRes() {}
+
+type UpdateEmailNotificationSettingsForbidden ErrorResponse
+
+func (*UpdateEmailNotificationSettingsForbidden) updateEmailNotificationSettingsRes() {}
+
+type UpdateEmailNotificationSettingsNotFound ErrorResponse
+
+func (*UpdateEmailNotificationSettingsNotFound) updateEmailNotificationSettingsRes() {}
+
+type UpdateEmailNotificationSettingsOK struct {
+	Success bool                                                    `json:"success"`
+	Data    EmailNotificationsUpdateEmailNotificationSettingsResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *UpdateEmailNotificationSettingsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *UpdateEmailNotificationSettingsOK) GetData() EmailNotificationsUpdateEmailNotificationSettingsResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *UpdateEmailNotificationSettingsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *UpdateEmailNotificationSettingsOK) SetData(val EmailNotificationsUpdateEmailNotificationSettingsResult) {
+	s.Data = val
+}
+
+func (*UpdateEmailNotificationSettingsOK) updateEmailNotificationSettingsRes() {}
+
+type UpdateEmailNotificationSettingsTooManyRequests ErrorResponseHeaders
+
+func (*UpdateEmailNotificationSettingsTooManyRequests) updateEmailNotificationSettingsRes() {}
+
+type UpdateEmailNotificationSettingsUnauthorized ErrorResponseHeaders
+
+func (*UpdateEmailNotificationSettingsUnauthorized) updateEmailNotificationSettingsRes() {}
 
 type UpdateEmailRuleBadRequest ErrorResponse
 

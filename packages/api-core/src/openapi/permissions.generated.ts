@@ -71,6 +71,8 @@ export const PERMISSIONS = [
   "notes:delete",
   "notes:read",
   "notes:write",
+  "notification_policy:manage",
+  "notifications:manage",
   "oauth_grants:manage",
   "org:manage",
   "org:read",
@@ -379,6 +381,12 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   ],
   "getEmail": [
     "mail:read"
+  ],
+  "getEmailNotificationPreferences": [
+    "notifications:manage"
+  ],
+  "getEmailNotificationSettings": [
+    "org:read"
   ],
   "getEmailReadable": [
     "mail:read"
@@ -949,6 +957,12 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   ],
   "updateDomain": [
     "domains:manage"
+  ],
+  "updateEmailNotificationPreferences": [
+    "notifications:manage"
+  ],
+  "updateEmailNotificationSettings": [
+    "notification_policy:manage"
   ],
   "updateEmailRule": [
     "mail:read"

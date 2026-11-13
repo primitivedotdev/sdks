@@ -7,6 +7,7 @@ import {
   CREDENTIAL_HEADER_OPERATION_IDS,
   cliOperationManifest,
   KEY_WRITE_OPERATION_IDS,
+  NOT_YET_OFFERED_OPERATION_IDS,
 } from "../../src/oclif/cli-operations.js";
 import {
   CANONICAL_OPERATION_ALIASES,
@@ -574,15 +575,33 @@ describe("COMMANDS / manifest coverage", () => {
     expect(COMMANDS["endpoints:pull-webhook-event"]).toBeDefined();
     expect(COMMANDS["endpoints:complete-webhook-event"]).toBeDefined();
   });
-  it("registers a command for every operation in the manifest except the key writes and those taking a credential header", () => {
+  it("registers a command for every operation in the manifest except those cli-operations.ts leaves out", () => {
     const missing = operationManifest
       .map((op) => `${op.tagCommand}:${op.command}`)
       .filter((id) => !(id in COMMANDS));
 
     expect(missing.sort()).toEqual([...CLI_OMITTED_OPERATION_IDS].sort());
     expect([...CLI_OMITTED_OPERATION_IDS].sort()).toEqual(
-      [...KEY_WRITE_OPERATION_IDS, ...CREDENTIAL_HEADER_OPERATION_IDS].sort(),
+      [
+        ...KEY_WRITE_OPERATION_IDS,
+        ...CREDENTIAL_HEADER_OPERATION_IDS,
+        ...NOT_YET_OFFERED_OPERATION_IDS,
+      ].sort(),
     );
+  });
+
+  it("offers no command yet for the email notification operations", () => {
+    const ids = operationManifest
+      .filter((op) => op.tagCommand === "email-notifications")
+      .map((op) => `${op.tagCommand}:${op.command}`)
+      .sort();
+    expect(ids).toEqual([...NOT_YET_OFFERED_OPERATION_IDS].sort());
+    for (const id of ids) expect(COMMANDS[id], id).toBeUndefined();
+    expect(
+      cliOperationManifest.some(
+        (op) => op.tagCommand === "email-notifications",
+      ),
+    ).toBe(false);
   });
 
   it("offers no command for an operation that takes a credential header, and keeps its sibling", () => {

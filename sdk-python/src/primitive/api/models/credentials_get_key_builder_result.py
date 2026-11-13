@@ -31,12 +31,21 @@ class CredentialsGetKeyBuilderResult:
             presets (list[CredentialsGetKeyBuilderResultPresetsItem]):
             matrix (list[CredentialsGetKeyBuilderResultMatrixItem]):
             policy (CredentialsGetKeyBuilderResultPolicy):
+            mail_limits_available (bool | Unset): Whether a key limited to some mail (addresses, domains or email rules)
+                would be created now. While false, creating one is refused, so a client offers neither the listed-address
+                presets nor a listed mail reach for a custom key.
+            org_reach_available (bool | Unset): Whether the credential policy lets a new key reach every mailbox. While
+                false, creating one is refused, so a client offers no preset that reaches every mailbox, and a custom key lists
+                its addresses or domains. With mail_limits_available false as well, no key can be created and every preset is
+                unavailable.
      """
 
     enabled: bool
     presets: list[CredentialsGetKeyBuilderResultPresetsItem]
     matrix: list[CredentialsGetKeyBuilderResultMatrixItem]
     policy: CredentialsGetKeyBuilderResultPolicy
+    mail_limits_available: bool | Unset = UNSET
+    org_reach_available: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -65,6 +74,10 @@ class CredentialsGetKeyBuilderResult:
 
         policy = self.policy.to_dict()
 
+        mail_limits_available = self.mail_limits_available
+
+        org_reach_available = self.org_reach_available
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -74,6 +87,10 @@ class CredentialsGetKeyBuilderResult:
             "matrix": matrix,
             "policy": policy,
         })
+        if mail_limits_available is not UNSET:
+            field_dict["mail_limits_available"] = mail_limits_available
+        if org_reach_available is not UNSET:
+            field_dict["org_reach_available"] = org_reach_available
 
         return field_dict
 
@@ -112,11 +129,17 @@ class CredentialsGetKeyBuilderResult:
 
 
 
+        mail_limits_available = d.pop("mail_limits_available", UNSET)
+
+        org_reach_available = d.pop("org_reach_available", UNSET)
+
         credentials_get_key_builder_result = cls(
             enabled=enabled,
             presets=presets,
             matrix=matrix,
             policy=policy,
+            mail_limits_available=mail_limits_available,
+            org_reach_available=org_reach_available,
         )
 
 

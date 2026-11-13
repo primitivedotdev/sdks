@@ -165,6 +165,11 @@ export const openapiDocument: Record<string, unknown> = {
       "x-openapi-spec": "https://api.primitive.dev/v1/openapi/tags/organization-settings"
     },
     {
+      "name": "Email notifications",
+      "description": "The notification emails Primitive sends an organization's members: the organization chooses, per kind, whether it is off, left to each member or required, and each member chooses where it is left to them. Some kinds are always sent. API keys, agent connection keys and agents are refused.",
+      "x-openapi-spec": "https://api.primitive.dev/v1/openapi/tags/email-notifications"
+    },
+    {
       "name": "Roles and members",
       "description": "Roles, member roles and removal, the mailbox access mode, break-glass, transfers and suspensions. Reads are open to people; every write is person only: a dashboard session, or the person's own OAuth or CLI token with a session step-up. API keys never reach these. Answers 404 feature_disabled while the feature is not enabled for the organization, with details.feature naming the feature; contact Primitive to turn it on.",
       "x-openapi-spec": "https://api.primitive.dev/v1/openapi/tags/roles-and-members"
@@ -34401,7 +34406,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "listActivityObjects",
         "summary": "List what you created, or what you were asked",
-        "description": "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules, rule requests and objections to rules over their mail (objections only on the dashboard or the Primitive CLI). Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked it lists instead what other members asked of the person, open or answered: the rule requests made to them, and the objections to rules they wrote, under their current membership, each naming the member who asked or objected in created_through. A key, an app or an agent has none, and gets both kinds in withheld. With relation=concerning it lists instead what other members did that concerns the person's own mail: each time a rule started covering one of their mailboxes or saved a new version while covering it, named as the rule was then, naming its author in created_through, under their current membership; only on the dashboard or the Primitive CLI. A key, an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads as ended. Notices are written by a periodic job and can lag: until the notices record a rule starting to cover you, the first page lists that rule as pending (pending_complete says whether that check finished), and as_of says about when the notices last looked. For what covers you now, read GET /email-rules/covering-me.",
+        "description": "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules, rule requests and objections to rules over their mail (objections only on the dashboard or the Primitive CLI). Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked it lists instead what other members asked of the person, open or answered: the rule requests made to them, and the objections to rules they wrote, under their current membership, each naming the member who asked or objected in created_through. A key, an app or an agent has none, and gets both kinds in withheld. With relation=concerning it lists instead what other members did that concerns the person's own mail: each time a rule started covering one of their mailboxes, saved a new version, or changed who receives its matches while covering it, named as the rule was then, naming its author in created_through, under their current membership; only on the dashboard or the Primitive CLI. A key, an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads as ended. Notices are written by a periodic job and can lag: until the notices record a rule starting to cover you, the first page lists that rule as pending (pending_complete says whether that check finished), and as_of says about when the notices last looked. For what covers you now, read GET /email-rules/covering-me.",
         "tags": [
           "Activity"
         ],
@@ -34418,7 +34423,7 @@ export const openapiDocument: Record<string, unknown> = {
             "description": "created (the default), asked or concerning.",
             "schema": {
               "default": "created",
-              "description": "created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you, and objections to rules you wrote; kind may then name only email_rule_request and email_rule_objection. concerning: what other members did that concerns your own mail: an active rule that started covering one of your mailboxes, or saved a new version while covering it (email_rule_coverage, the only kind it takes). A rule in draft or observe is not told of; GET /v1/email-rules/covering-me lists it. asked and concerning are for a person's own view only.",
+              "description": "created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you, and objections to rules you wrote; kind may then name only email_rule_request and email_rule_objection. concerning: what other members did that concerns your own mail: an active rule that started covering one of your mailboxes, saved a new version, or changed who receives its matches while covering it (email_rule_coverage, the only kind it takes). A rule in draft or observe is not told of; GET /v1/email-rules/covering-me lists it. asked and concerning are for a person's own view only.",
               "type": "string",
               "enum": [
                 "created",
@@ -57829,7 +57834,7 @@ export const openapiDocument: Record<string, unknown> = {
             "name": "Primitive-Step-Up",
             "in": "header",
             "required": false,
-            "description": "A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo or semantic search setting), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.",
+            "description": "A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.",
             "schema": {
               "type": "string",
               "pattern": "^pstep_[0-9a-f]{64}$"
@@ -58075,7 +58080,7 @@ export const openapiDocument: Record<string, unknown> = {
             "name": "Primitive-Step-Up",
             "in": "header",
             "required": false,
-            "description": "A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo or semantic search setting), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.",
+            "description": "A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.",
             "schema": {
               "type": "string",
               "pattern": "^pstep_[0-9a-f]{64}$"
@@ -58319,7 +58324,7 @@ export const openapiDocument: Record<string, unknown> = {
             "name": "Primitive-Step-Up",
             "in": "header",
             "required": false,
-            "description": "A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo or semantic search setting), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.",
+            "description": "A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.",
             "schema": {
               "type": "string",
               "pattern": "^pstep_[0-9a-f]{64}$"
@@ -58733,7 +58738,7 @@ export const openapiDocument: Record<string, unknown> = {
             "name": "Primitive-Step-Up",
             "in": "header",
             "required": false,
-            "description": "A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo or semantic search setting), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.",
+            "description": "A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.",
             "schema": {
               "type": "string",
               "pattern": "^pstep_[0-9a-f]{64}$"
@@ -58927,6 +58932,788 @@ export const openapiDocument: Record<string, unknown> = {
         },
         "x-primitive-permission": [
           "search_settings:manage"
+        ]
+      }
+    },
+    "/email-notification-settings": {
+      "get": {
+        "operationId": "getEmailNotificationSettings",
+        "summary": "Get the organization's email notification settings",
+        "tags": [
+          "Email notifications"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Every kind of notification email Primitive sends the organization's members, and who may turn it off. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.\n\nPerson only: a dashboard session or the person's own OAuth token (the CLI or an app they connected). API keys, agent connection keys and agents are refused.",
+        "x-primitive-person-only": {
+          "access": "person"
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/EmailNotifications_getEmailNotificationSettings_Result"
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy"
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-unauthenticated"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-unauthenticated"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset-unauthenticated"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-unauthenticated"
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              },
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-429"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-429"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-429"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-primitive-permission": [
+          "org:read"
+        ]
+      },
+      "put": {
+        "operationId": "updateEmailNotificationSettings",
+        "summary": "Change the organization's email notification settings",
+        "tags": [
+          "Email notifications"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Set the organization's mode for one or more kinds: off (nobody gets it), optional_on (each member gets it unless they turn it off), optional_off (only members who turn it on get it) or required (every member gets it). Kinds left out keep their mode. An unknown kind is refused with 400 (validation_error, details.reason unknown_kind). A platform_required kind is refused with 409 (conflict, details.reason platform_required), and required for an optional kind with 409 (conflict, details.reason mode_not_allowed); nothing is changed. Answers the settings as they now stand. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.\n\nPerson only: a dashboard session, or the person's own OAuth token with a step-up token for purpose `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role could not do it anyway). The person's role must hold notification_policy:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.",
+        "x-primitive-person-only": {
+          "access": "step_up",
+          "step_up_purpose": "org_settings.write"
+        },
+        "parameters": [
+          {
+            "name": "Primitive-Step-Up",
+            "in": "header",
+            "required": false,
+            "description": "A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.",
+            "schema": {
+              "type": "string",
+              "pattern": "^pstep_[0-9a-f]{64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/EmailNotifications_updateEmailNotificationSettings_Result"
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy"
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-unauthenticated"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-unauthenticated"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset-unauthenticated"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-unauthenticated"
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state of the resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "conflict",
+                    "message": "The request conflicts with the current state of the resource"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              },
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-429"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-429"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-429"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailNotifications_updateEmailNotificationSettings_Input"
+              }
+            }
+          }
+        },
+        "x-primitive-permission": [
+          "notification_policy:manage"
+        ]
+      }
+    },
+    "/email-notification-preferences": {
+      "get": {
+        "operationId": "getEmailNotificationPreferences",
+        "summary": "Get my email notification preferences",
+        "tags": [
+          "Email notifications"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "The notification emails the calling member gets, and which of them they may turn on or off. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.\n\nPerson only: a dashboard session or the person's own OAuth token (the CLI or an app they connected). The person's role must hold notifications:manage. API keys, agent connection keys and agents are refused.",
+        "x-primitive-person-only": {
+          "access": "person"
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/EmailNotifications_getEmailNotificationPreferences_Result"
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy"
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-unauthenticated"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-unauthenticated"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset-unauthenticated"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-unauthenticated"
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              },
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-429"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-429"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-429"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-primitive-permission": [
+          "notifications:manage"
+        ]
+      },
+      "put": {
+        "operationId": "updateEmailNotificationPreferences",
+        "summary": "Change my email notification preferences",
+        "tags": [
+          "Email notifications"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Turn one or more kinds on or off for the calling member. Only a kind whose organization mode is optional_on or optional_off can be changed: a platform_required kind, one the organization requires, and one it turned off are refused with 409 (conflict, details.reason not_member_choice, details.org_mode saying which), and nothing is changed. An unknown kind is refused with 400. Answers the preferences as they now stand. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.\n\nPerson only: a dashboard session or the person's own OAuth token (the CLI or an app they connected). The person's role must hold notifications:manage. API keys, agent connection keys and agents are refused.",
+        "x-primitive-person-only": {
+          "access": "person"
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/EmailNotifications_updateEmailNotificationPreferences_Result"
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy"
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-unauthenticated"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-unauthenticated"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset-unauthenticated"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-unauthenticated"
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state of the resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "conflict",
+                    "message": "The request conflicts with the current state of the resource"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              },
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-429"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-429"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-429"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailNotifications_updateEmailNotificationPreferences_Input"
+              }
+            }
+          }
+        },
+        "x-primitive-permission": [
+          "notifications:manage"
         ]
       }
     },
@@ -65386,6 +66173,7 @@ export const openapiDocument: Record<string, unknown> = {
                   "agent_work_version_conflict",
                   "already_claimed",
                   "already_member",
+                  "always_sent",
                   "archive_busy",
                   "archive_invalid",
                   "archive_limit_exceeded",
@@ -65578,6 +66366,7 @@ export const openapiDocument: Record<string, unknown> = {
                   "removal_failed",
                   "removal_timeout",
                   "request_expired",
+                  "required_by_organization",
                   "resend_limit_exceeded",
                   "resend_too_soon",
                   "role_assigned",
@@ -78686,7 +79475,7 @@ export const openapiDocument: Record<string, unknown> = {
                 },
                 "state": {
                   "type": "string",
-                  "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice what it told: started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version, or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice is recorded without a new one); its id is then the rule's, and created_at when the rule last changed."
+                  "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice what it told: started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version, receivers_changed (who receives an active rule's matches changed: its keys, webhooks or share), or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice is recorded without a new one); its id is then the rule's, and created_at when the rule last changed."
                 },
                 "created_at": {
                   "type": "string",
@@ -78740,6 +79529,72 @@ export const openapiDocument: Record<string, unknown> = {
                   "description": "For email_rule_coverage, always: the rule it is about, since names need not be unique (for pending, the same as id). GET /v1/email-rules/covering-me/{rule_id} shows the rule while it covers you, or as it last decided on your mail; otherwise it answers not_found.",
                   "type": "string",
                   "format": "uuid"
+                },
+                "receivers_change": {
+                  "description": "For a receivers_changed notice: who received the rule's matches before and after, in totals. They can be equal when only an owner or a webhook site changed; covering-me shows them by owner. A rotated key counts once here while the old one still works; covering-me counts both.",
+                  "type": "object",
+                  "properties": {
+                    "before": {
+                      "type": "object",
+                      "properties": {
+                        "keys": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "reads_in_full": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "Of the keys, how many also read your own mail beyond the rule."
+                        },
+                        "webhooks": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "shares": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "keys",
+                        "reads_in_full",
+                        "webhooks",
+                        "shares"
+                      ]
+                    },
+                    "after": {
+                      "type": "object",
+                      "properties": {
+                        "keys": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "reads_in_full": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "Of the keys, how many also read your own mail beyond the rule."
+                        },
+                        "webhooks": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "shares": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "keys",
+                        "reads_in_full",
+                        "webhooks",
+                        "shares"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "before",
+                    "after"
+                  ]
                 }
               },
               "required": [
@@ -81995,6 +82850,11 @@ export const openapiDocument: Record<string, unknown> = {
                   "description": "On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches.",
                   "type": "integer",
                   "minimum": 0
+                },
+                "newest_at": {
+                  "description": "When the newest of these was made, to the minute: a key, a webhook or the share, or the rule (the share, for what reaches it only through the share) if that was later. Not when a key was given access to this rule, or anything turned back on; a rotated key shows as newly made, and one key on two rules can show the same minute under both.",
+                  "type": "string",
+                  "format": "date-time"
                 }
               },
               "required": [
@@ -82067,6 +82927,11 @@ export const openapiDocument: Record<string, unknown> = {
                   "description": "Hosts past those listed.",
                   "type": "integer",
                   "minimum": 0
+                },
+                "newest_at": {
+                  "description": "When the newest of these was made, to the minute: a key, a webhook or the share, or the rule (the share, for what reaches it only through the share) if that was later. Not when a key was given access to this rule, or anything turned back on; a rotated key shows as newly made, and one key on two rules can show the same minute under both.",
+                  "type": "string",
+                  "format": "date-time"
                 }
               },
               "required": [
@@ -82110,6 +82975,11 @@ export const openapiDocument: Record<string, unknown> = {
                 "count": {
                   "type": "integer",
                   "exclusiveMinimum": 0
+                },
+                "newest_at": {
+                  "description": "When the newest of these was made, to the minute: a key, a webhook or the share, or the rule (the share, for what reaches it only through the share) if that was later. Not when a key was given access to this rule, or anything turned back on; a rotated key shows as newly made, and one key on two rules can show the same minute under both.",
+                  "type": "string",
+                  "format": "date-time"
                 }
               },
               "required": [
@@ -91016,6 +91886,14 @@ export const openapiDocument: Record<string, unknown> = {
               "additionalProperties": {}
             }
           },
+          "mail_limits_available": {
+            "description": "Whether a key limited to some mail (addresses, domains or email rules) would be created now. While false, creating one is refused, so a client offers neither the listed-address presets nor a listed mail reach for a custom key.",
+            "type": "boolean"
+          },
+          "org_reach_available": {
+            "description": "Whether the credential policy lets a new key reach every mailbox. While false, creating one is refused, so a client offers no preset that reaches every mailbox, and a custom key lists its addresses or domains. With mail_limits_available false as well, no key can be created and every preset is unavailable.",
+            "type": "boolean"
+          },
           "matrix": {
             "type": "array",
             "items": {
@@ -92909,6 +93787,410 @@ export const openapiDocument: Record<string, unknown> = {
         },
         "required": [
           "semantic_search_opt_in"
+        ],
+        "additionalProperties": false
+      },
+      "EmailNotifications_getEmailNotificationSettings_Result": {
+        "type": "object",
+        "properties": {
+          "entitled": {
+            "type": "boolean"
+          },
+          "kinds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "class": {
+                  "type": "string",
+                  "enum": [
+                    "platform_required",
+                    "org_requirable",
+                    "optional"
+                  ]
+                },
+                "entitlement_required": {
+                  "type": "boolean"
+                },
+                "entitled": {
+                  "type": "boolean"
+                },
+                "org_mode": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "off",
+                    "optional_on",
+                    "optional_off",
+                    "required",
+                    null
+                  ]
+                },
+                "org_mode_is_default": {
+                  "type": "boolean"
+                },
+                "org_modes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "off",
+                      "optional_on",
+                      "optional_off",
+                      "required"
+                    ]
+                  }
+                },
+                "member_enabled": {
+                  "type": "boolean"
+                },
+                "member_can_change": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "kind",
+                "label",
+                "description",
+                "class",
+                "entitlement_required",
+                "entitled",
+                "org_mode",
+                "org_mode_is_default",
+                "org_modes",
+                "member_enabled",
+                "member_can_change"
+              ]
+            }
+          }
+        },
+        "required": [
+          "entitled",
+          "kinds"
+        ]
+      },
+      "EmailNotifications_updateEmailNotificationSettings_Result": {
+        "type": "object",
+        "properties": {
+          "entitled": {
+            "type": "boolean"
+          },
+          "kinds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "class": {
+                  "type": "string",
+                  "enum": [
+                    "platform_required",
+                    "org_requirable",
+                    "optional"
+                  ]
+                },
+                "entitlement_required": {
+                  "type": "boolean"
+                },
+                "entitled": {
+                  "type": "boolean"
+                },
+                "org_mode": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "off",
+                    "optional_on",
+                    "optional_off",
+                    "required",
+                    null
+                  ]
+                },
+                "org_mode_is_default": {
+                  "type": "boolean"
+                },
+                "org_modes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "off",
+                      "optional_on",
+                      "optional_off",
+                      "required"
+                    ]
+                  }
+                },
+                "member_enabled": {
+                  "type": "boolean"
+                },
+                "member_can_change": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "kind",
+                "label",
+                "description",
+                "class",
+                "entitlement_required",
+                "entitled",
+                "org_mode",
+                "org_mode_is_default",
+                "org_modes",
+                "member_enabled",
+                "member_can_change"
+              ]
+            }
+          }
+        },
+        "required": [
+          "entitled",
+          "kinds"
+        ]
+      },
+      "EmailNotifications_updateEmailNotificationSettings_Input": {
+        "type": "object",
+        "properties": {
+          "modes": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+            },
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "off",
+                "optional_on",
+                "optional_off",
+                "required"
+              ]
+            }
+          }
+        },
+        "required": [
+          "modes"
+        ],
+        "additionalProperties": false
+      },
+      "EmailNotifications_getEmailNotificationPreferences_Result": {
+        "type": "object",
+        "properties": {
+          "entitled": {
+            "type": "boolean"
+          },
+          "kinds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "class": {
+                  "type": "string",
+                  "enum": [
+                    "platform_required",
+                    "org_requirable",
+                    "optional"
+                  ]
+                },
+                "entitlement_required": {
+                  "type": "boolean"
+                },
+                "entitled": {
+                  "type": "boolean"
+                },
+                "org_mode": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "off",
+                    "optional_on",
+                    "optional_off",
+                    "required",
+                    null
+                  ]
+                },
+                "org_mode_is_default": {
+                  "type": "boolean"
+                },
+                "org_modes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "off",
+                      "optional_on",
+                      "optional_off",
+                      "required"
+                    ]
+                  }
+                },
+                "member_enabled": {
+                  "type": "boolean"
+                },
+                "member_can_change": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "kind",
+                "label",
+                "description",
+                "class",
+                "entitlement_required",
+                "entitled",
+                "org_mode",
+                "org_mode_is_default",
+                "org_modes",
+                "member_enabled",
+                "member_can_change"
+              ]
+            }
+          }
+        },
+        "required": [
+          "entitled",
+          "kinds"
+        ]
+      },
+      "EmailNotifications_updateEmailNotificationPreferences_Result": {
+        "type": "object",
+        "properties": {
+          "entitled": {
+            "type": "boolean"
+          },
+          "kinds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "class": {
+                  "type": "string",
+                  "enum": [
+                    "platform_required",
+                    "org_requirable",
+                    "optional"
+                  ]
+                },
+                "entitlement_required": {
+                  "type": "boolean"
+                },
+                "entitled": {
+                  "type": "boolean"
+                },
+                "org_mode": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "off",
+                    "optional_on",
+                    "optional_off",
+                    "required",
+                    null
+                  ]
+                },
+                "org_mode_is_default": {
+                  "type": "boolean"
+                },
+                "org_modes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "off",
+                      "optional_on",
+                      "optional_off",
+                      "required"
+                    ]
+                  }
+                },
+                "member_enabled": {
+                  "type": "boolean"
+                },
+                "member_can_change": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "kind",
+                "label",
+                "description",
+                "class",
+                "entitlement_required",
+                "entitled",
+                "org_mode",
+                "org_mode_is_default",
+                "org_modes",
+                "member_enabled",
+                "member_can_change"
+              ]
+            }
+          }
+        },
+        "required": [
+          "entitled",
+          "kinds"
+        ]
+      },
+      "EmailNotifications_updateEmailNotificationPreferences_Input": {
+        "type": "object",
+        "properties": {
+          "preferences": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+            },
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          }
+        },
+        "required": [
+          "preferences"
         ],
         "additionalProperties": false
       },

@@ -1302,6 +1302,29 @@ type Invoker interface {
 	//
 	// GET /emails/{id}
 	GetEmail(ctx context.Context, params GetEmailParams) (GetEmailRes, error)
+	// GetEmailNotificationPreferences invokes getEmailNotificationPreferences operation.
+	//
+	// The notification emails the calling member gets, and which of them they may turn on or off. Each
+	// kind lists its label and description, its class, whether it needs an entitlement and whether the
+	// organization has it, the organization's mode (null for platform_required) and the modes it may
+	// choose, and whether the calling member gets it and may change that.
+	// Person only: a dashboard session or the person's own OAuth token (the CLI or an app they
+	// connected). The person's role must hold notifications:manage. API keys, agent connection keys and
+	// agents are refused.
+	//
+	// GET /email-notification-preferences
+	GetEmailNotificationPreferences(ctx context.Context) (GetEmailNotificationPreferencesRes, error)
+	// GetEmailNotificationSettings invokes getEmailNotificationSettings operation.
+	//
+	// Every kind of notification email Primitive sends the organization's members, and who may turn it
+	// off. Each kind lists its label and description, its class, whether it needs an entitlement and
+	// whether the organization has it, the organization's mode (null for platform_required) and the
+	// modes it may choose, and whether the calling member gets it and may change that.
+	// Person only: a dashboard session or the person's own OAuth token (the CLI or an app they
+	// connected). API keys, agent connection keys and agents are refused.
+	//
+	// GET /email-notification-settings
+	GetEmailNotificationSettings(ctx context.Context) (GetEmailNotificationSettingsRes, error)
 	// GetEmailReadable invokes getEmailReadable operation.
 	//
 	// Returns an inbound email as text a person or a model can read: the words of the message in reading
@@ -1913,13 +1936,13 @@ type Invoker interface {
 	// each naming the member who asked or objected in created_through. A key, an app or an agent has
 	// none, and gets both kinds in withheld. With relation=concerning it lists instead what other
 	// members did that concerns the person's own mail: each time a rule started covering one of their
-	// mailboxes or saved a new version while covering it, named as the rule was then, naming its author
-	// in created_through, under their current membership; only on the dashboard or the Primitive CLI. A
-	// key, an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads
-	// as ended. Notices are written by a periodic job and can lag: until the notices record a rule
-	// starting to cover you, the first page lists that rule as pending (pending_complete says whether
-	// that check finished), and as_of says about when the notices last looked. For what covers you now,
-	// read GET /email-rules/covering-me.
+	// mailboxes, saved a new version, or changed who receives its matches while covering it, named as
+	// the rule was then, naming its author in created_through, under their current membership; only on
+	// the dashboard or the Primitive CLI. A key, an app or an agent has none, and gets
+	// email_rule_coverage in withheld. A notice never reads as ended. Notices are written by a periodic
+	// job and can lag: until the notices record a rule starting to cover you, the first page lists that
+	// rule as pending (pending_complete says whether that check finished), and as_of says about when the
+	// notices last looked. For what covers you now, read GET /email-rules/covering-me.
 	//
 	// GET /activity/objects
 	ListActivityObjects(ctx context.Context, params ListActivityObjectsParams) (ListActivityObjectsRes, error)
@@ -3700,6 +3723,42 @@ type Invoker interface {
 	//
 	// PATCH /domains/{id}
 	UpdateDomain(ctx context.Context, request *UpdateDomainInput, params UpdateDomainParams) (UpdateDomainRes, error)
+	// UpdateEmailNotificationPreferences invokes updateEmailNotificationPreferences operation.
+	//
+	// Turn one or more kinds on or off for the calling member. Only a kind whose organization mode is
+	// optional_on or optional_off can be changed: a platform_required kind, one the organization
+	// requires, and one it turned off are refused with 409 (conflict, details.reason not_member_choice,
+	// details.org_mode saying which), and nothing is changed. An unknown kind is refused with 400.
+	// Answers the preferences as they now stand. Each kind lists its label and description, its class,
+	// whether it needs an entitlement and whether the organization has it, the organization's mode (null
+	// for platform_required) and the modes it may choose, and whether the calling member gets it and may
+	// change that.
+	// Person only: a dashboard session or the person's own OAuth token (the CLI or an app they
+	// connected). The person's role must hold notifications:manage. API keys, agent connection keys and
+	// agents are refused.
+	//
+	// PUT /email-notification-preferences
+	UpdateEmailNotificationPreferences(ctx context.Context, request *EmailNotificationsUpdateEmailNotificationPreferencesInput) (UpdateEmailNotificationPreferencesRes, error)
+	// UpdateEmailNotificationSettings invokes updateEmailNotificationSettings operation.
+	//
+	// Set the organization's mode for one or more kinds: off (nobody gets it), optional_on (each member
+	// gets it unless they turn it off), optional_off (only members who turn it on get it) or required
+	// (every member gets it). Kinds left out keep their mode. An unknown kind is refused with 400
+	// (validation_error, details.reason unknown_kind). A platform_required kind is refused with 409
+	// (conflict, details.reason platform_required), and required for an optional kind with 409 (conflict,
+	//  details.reason mode_not_allowed); nothing is changed. Answers the settings as they now stand.
+	// Each kind lists its label and description, its class, whether it needs an entitlement and whether
+	// the organization has it, the organization's mode (null for platform_required) and the modes it may
+	// choose, and whether the calling member gets it and may change that.
+	// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+	// `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+	// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+	// when the person's role could not do it anyway). The person's role must hold
+	// notification_policy:manage. API keys and agent connection keys are refused. An agent acting for
+	// the person is refused unless it carries a step-up token the person issued in the dashboard.
+	//
+	// PUT /email-notification-settings
+	UpdateEmailNotificationSettings(ctx context.Context, request *EmailNotificationsUpdateEmailNotificationSettingsInput, params UpdateEmailNotificationSettingsParams) (UpdateEmailNotificationSettingsRes, error)
 	// UpdateEmailRule invokes updateEmailRule operation.
 	//
 	// Renames the rule, saves a new version (english and tree together; earlier versions stay) or
@@ -18031,6 +18090,231 @@ func (c *Client) sendGetEmail(ctx context.Context, params GetEmailParams) (res G
 	return result, nil
 }
 
+// GetEmailNotificationPreferences invokes getEmailNotificationPreferences operation.
+//
+// The notification emails the calling member gets, and which of them they may turn on or off. Each
+// kind lists its label and description, its class, whether it needs an entitlement and whether the
+// organization has it, the organization's mode (null for platform_required) and the modes it may
+// choose, and whether the calling member gets it and may change that.
+// Person only: a dashboard session or the person's own OAuth token (the CLI or an app they
+// connected). The person's role must hold notifications:manage. API keys, agent connection keys and
+// agents are refused.
+//
+// GET /email-notification-preferences
+func (c *Client) GetEmailNotificationPreferences(ctx context.Context) (GetEmailNotificationPreferencesRes, error) {
+	res, err := c.sendGetEmailNotificationPreferences(ctx)
+	return res, err
+}
+
+func (c *Client) sendGetEmailNotificationPreferences(ctx context.Context) (res GetEmailNotificationPreferencesRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getEmailNotificationPreferences"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/email-notification-preferences"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetEmailNotificationPreferencesOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/email-notification-preferences"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetEmailNotificationPreferencesOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetEmailNotificationPreferencesResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetEmailNotificationSettings invokes getEmailNotificationSettings operation.
+//
+// Every kind of notification email Primitive sends the organization's members, and who may turn it
+// off. Each kind lists its label and description, its class, whether it needs an entitlement and
+// whether the organization has it, the organization's mode (null for platform_required) and the
+// modes it may choose, and whether the calling member gets it and may change that.
+// Person only: a dashboard session or the person's own OAuth token (the CLI or an app they
+// connected). API keys, agent connection keys and agents are refused.
+//
+// GET /email-notification-settings
+func (c *Client) GetEmailNotificationSettings(ctx context.Context) (GetEmailNotificationSettingsRes, error) {
+	res, err := c.sendGetEmailNotificationSettings(ctx)
+	return res, err
+}
+
+func (c *Client) sendGetEmailNotificationSettings(ctx context.Context) (res GetEmailNotificationSettingsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getEmailNotificationSettings"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/email-notification-settings"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetEmailNotificationSettingsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/email-notification-settings"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetEmailNotificationSettingsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetEmailNotificationSettingsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetEmailReadable invokes getEmailReadable operation.
 //
 // Returns an inbound email as text a person or a model can read: the words of the message in reading
@@ -25379,13 +25663,13 @@ func (c *Client) sendLeaveOrganization(ctx context.Context, params LeaveOrganiza
 // each naming the member who asked or objected in created_through. A key, an app or an agent has
 // none, and gets both kinds in withheld. With relation=concerning it lists instead what other
 // members did that concerns the person's own mail: each time a rule started covering one of their
-// mailboxes or saved a new version while covering it, named as the rule was then, naming its author
-// in created_through, under their current membership; only on the dashboard or the Primitive CLI. A
-// key, an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads
-// as ended. Notices are written by a periodic job and can lag: until the notices record a rule
-// starting to cover you, the first page lists that rule as pending (pending_complete says whether
-// that check finished), and as_of says about when the notices last looked. For what covers you now,
-// read GET /email-rules/covering-me.
+// mailboxes, saved a new version, or changed who receives its matches while covering it, named as
+// the rule was then, naming its author in created_through, under their current membership; only on
+// the dashboard or the Primitive CLI. A key, an app or an agent has none, and gets
+// email_rule_coverage in withheld. A notice never reads as ended. Notices are written by a periodic
+// job and can lag: until the notices record a rule starting to cover you, the first page lists that
+// rule as pending (pending_complete says whether that check finished), and as_of says about when the
+// notices last looked. For what covers you now, read GET /email-rules/covering-me.
 //
 // GET /activity/objects
 func (c *Client) ListActivityObjects(ctx context.Context, params ListActivityObjectsParams) (ListActivityObjectsRes, error) {
@@ -48670,6 +48954,269 @@ func (c *Client) sendUpdateDomain(ctx context.Context, request *UpdateDomainInpu
 
 	stage = "DecodeResponse"
 	result, err := decodeUpdateDomainResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// UpdateEmailNotificationPreferences invokes updateEmailNotificationPreferences operation.
+//
+// Turn one or more kinds on or off for the calling member. Only a kind whose organization mode is
+// optional_on or optional_off can be changed: a platform_required kind, one the organization
+// requires, and one it turned off are refused with 409 (conflict, details.reason not_member_choice,
+// details.org_mode saying which), and nothing is changed. An unknown kind is refused with 400.
+// Answers the preferences as they now stand. Each kind lists its label and description, its class,
+// whether it needs an entitlement and whether the organization has it, the organization's mode (null
+// for platform_required) and the modes it may choose, and whether the calling member gets it and may
+// change that.
+// Person only: a dashboard session or the person's own OAuth token (the CLI or an app they
+// connected). The person's role must hold notifications:manage. API keys, agent connection keys and
+// agents are refused.
+//
+// PUT /email-notification-preferences
+func (c *Client) UpdateEmailNotificationPreferences(ctx context.Context, request *EmailNotificationsUpdateEmailNotificationPreferencesInput) (UpdateEmailNotificationPreferencesRes, error) {
+	res, err := c.sendUpdateEmailNotificationPreferences(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendUpdateEmailNotificationPreferences(ctx context.Context, request *EmailNotificationsUpdateEmailNotificationPreferencesInput) (res UpdateEmailNotificationPreferencesRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("updateEmailNotificationPreferences"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/email-notification-preferences"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, UpdateEmailNotificationPreferencesOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/email-notification-preferences"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeUpdateEmailNotificationPreferencesRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, UpdateEmailNotificationPreferencesOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeUpdateEmailNotificationPreferencesResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// UpdateEmailNotificationSettings invokes updateEmailNotificationSettings operation.
+//
+// Set the organization's mode for one or more kinds: off (nobody gets it), optional_on (each member
+// gets it unless they turn it off), optional_off (only members who turn it on get it) or required
+// (every member gets it). Kinds left out keep their mode. An unknown kind is refused with 400
+// (validation_error, details.reason unknown_kind). A platform_required kind is refused with 409
+// (conflict, details.reason platform_required), and required for an optional kind with 409 (conflict,
+//
+//	details.reason mode_not_allowed); nothing is changed. Answers the settings as they now stand.
+//
+// Each kind lists its label and description, its class, whether it needs an entitlement and whether
+// the organization has it, the organization's mode (null for platform_required) and the modes it may
+// choose, and whether the calling member gets it and may change that.
+// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+// `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+// when the person's role could not do it anyway). The person's role must hold
+// notification_policy:manage. API keys and agent connection keys are refused. An agent acting for
+// the person is refused unless it carries a step-up token the person issued in the dashboard.
+//
+// PUT /email-notification-settings
+func (c *Client) UpdateEmailNotificationSettings(ctx context.Context, request *EmailNotificationsUpdateEmailNotificationSettingsInput, params UpdateEmailNotificationSettingsParams) (UpdateEmailNotificationSettingsRes, error) {
+	res, err := c.sendUpdateEmailNotificationSettings(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendUpdateEmailNotificationSettings(ctx context.Context, request *EmailNotificationsUpdateEmailNotificationSettingsInput, params UpdateEmailNotificationSettingsParams) (res UpdateEmailNotificationSettingsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("updateEmailNotificationSettings"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/email-notification-settings"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, UpdateEmailNotificationSettingsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/email-notification-settings"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeUpdateEmailNotificationSettingsRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Primitive-Step-Up",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.PrimitiveStepUp.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, UpdateEmailNotificationSettingsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeUpdateEmailNotificationSettingsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

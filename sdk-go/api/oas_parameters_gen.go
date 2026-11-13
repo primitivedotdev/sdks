@@ -33213,12 +33213,12 @@ func decodeRemoveMemberParams(args [1]string, argsEscaped bool, r *http.Request)
 
 // RemoveOrganizationLogoParams is parameters of removeOrganizationLogo operation.
 type RemoveOrganizationLogoParams struct {
-	// A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo or
-	// semantic search setting), valid 5 minutes. When this operation answers 403 `step_up_required`, the
-	// person confirms at the link in `details.step_up_url` and the request is retried with the token
-	// that page shows, in this header. Accepted only with the person's own OAuth token of the client it
-	// was confirmed for; refused with a token issued for MCP, with any API key or agent connection key,
-	// and with a dashboard session.
+	// A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo,
+	// semantic search setting or email notification settings), valid 5 minutes. When this operation
+	// answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the
+	// request is retried with the token that page shows, in this header. Accepted only with the person's
+	// own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any
+	// API key or agent connection key, and with a dashboard session.
 	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 }
 
@@ -42533,6 +42533,101 @@ func decodeUpdateDomainParams(args [1]string, argsEscaped bool, r *http.Request)
 	return params, nil
 }
 
+// UpdateEmailNotificationSettingsParams is parameters of updateEmailNotificationSettings operation.
+type UpdateEmailNotificationSettingsParams struct {
+	// A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo,
+	// semantic search setting or email notification settings), valid 5 minutes. When this operation
+	// answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the
+	// request is retried with the token that page shows, in this header. Accepted only with the person's
+	// own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any
+	// API key or agent connection key, and with a dashboard session.
+	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
+}
+
+func unpackUpdateEmailNotificationSettingsParams(packed middleware.Parameters) (params UpdateEmailNotificationSettingsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "Primitive-Step-Up",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.PrimitiveStepUp = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeUpdateEmailNotificationSettingsParams(args [0]string, argsEscaped bool, r *http.Request) (params UpdateEmailNotificationSettingsParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: Primitive-Step-Up.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Primitive-Step-Up",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotPrimitiveStepUpVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPrimitiveStepUpVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.PrimitiveStepUp.SetTo(paramsDotPrimitiveStepUpVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.PrimitiveStepUp.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     0,
+							MaxLengthSet:  false,
+							Email:         false,
+							Hostname:      false,
+							Regex:         regexMap["^pstep_[0-9a-f]{64}$"],
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Primitive-Step-Up",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // UpdateEmailRuleParams is parameters of updateEmailRule operation.
 type UpdateEmailRuleParams struct {
 	// The rule id.
@@ -43399,12 +43494,12 @@ func decodeUpdateKeyParams(args [1]string, argsEscaped bool, r *http.Request) (p
 
 // UpdateOrganizationParams is parameters of updateOrganization operation.
 type UpdateOrganizationParams struct {
-	// A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo or
-	// semantic search setting), valid 5 minutes. When this operation answers 403 `step_up_required`, the
-	// person confirms at the link in `details.step_up_url` and the request is retried with the token
-	// that page shows, in this header. Accepted only with the person's own OAuth token of the client it
-	// was confirmed for; refused with a token issued for MCP, with any API key or agent connection key,
-	// and with a dashboard session.
+	// A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo,
+	// semantic search setting or email notification settings), valid 5 minutes. When this operation
+	// answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the
+	// request is retried with the token that page shows, in this header. Accepted only with the person's
+	// own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any
+	// API key or agent connection key, and with a dashboard session.
 	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 }
 
@@ -43494,12 +43589,12 @@ func decodeUpdateOrganizationParams(args [0]string, argsEscaped bool, r *http.Re
 
 // UpdateOrganizationLogoParams is parameters of updateOrganizationLogo operation.
 type UpdateOrganizationLogoParams struct {
-	// A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo or
-	// semantic search setting), valid 5 minutes. When this operation answers 403 `step_up_required`, the
-	// person confirms at the link in `details.step_up_url` and the request is retried with the token
-	// that page shows, in this header. Accepted only with the person's own OAuth token of the client it
-	// was confirmed for; refused with a token issued for MCP, with any API key or agent connection key,
-	// and with a dashboard session.
+	// A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo,
+	// semantic search setting or email notification settings), valid 5 minutes. When this operation
+	// answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the
+	// request is retried with the token that page shows, in this header. Accepted only with the person's
+	// own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any
+	// API key or agent connection key, and with a dashboard session.
 	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 }
 
@@ -43935,12 +44030,12 @@ func decodeUpdateRouteParams(args [1]string, argsEscaped bool, r *http.Request) 
 
 // UpdateSearchSettingsParams is parameters of updateSearchSettings operation.
 type UpdateSearchSettingsParams struct {
-	// A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo or
-	// semantic search setting), valid 5 minutes. When this operation answers 403 `step_up_required`, the
-	// person confirms at the link in `details.step_up_url` and the request is retried with the token
-	// that page shows, in this header. Accepted only with the person's own OAuth token of the client it
-	// was confirmed for; refused with a token issued for MCP, with any API key or agent connection key,
-	// and with a dashboard session.
+	// A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo,
+	// semantic search setting or email notification settings), valid 5 minutes. When this operation
+	// answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the
+	// request is retried with the token that page shows, in this header. Accepted only with the person's
+	// own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any
+	// API key or agent connection key, and with a dashboard session.
 	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 }
 

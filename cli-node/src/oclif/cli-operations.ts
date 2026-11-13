@@ -24,10 +24,21 @@ export const CREDENTIAL_HEADER_OPERATION_IDS: ReadonlySet<string> = new Set([
   "emails:import-google-mail-message",
 ]);
 
+// Operation ids (`tag:command`) the CLI does not offer as commands yet. They
+// are left out of `list-operations`, `describe` and shell completion too, and
+// their tag has no topic. The SDK clients keep these methods.
+export const NOT_YET_OFFERED_OPERATION_IDS: ReadonlySet<string> = new Set([
+  "email-notifications:get-email-notification-preferences",
+  "email-notifications:update-email-notification-preferences",
+  "email-notifications:get-email-notification-settings",
+  "email-notifications:update-email-notification-settings",
+]);
+
 /** Every operation id the CLI generates no command for. */
 export const CLI_OMITTED_OPERATION_IDS: ReadonlySet<string> = new Set([
   ...KEY_WRITE_OPERATION_IDS,
   ...CREDENTIAL_HEADER_OPERATION_IDS,
+  ...NOT_YET_OFFERED_OPERATION_IDS,
 ]);
 
 /** The operations the CLI generates commands for: the manifest without CLI_OMITTED_OPERATION_IDS. */
