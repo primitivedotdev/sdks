@@ -41,10 +41,11 @@ class EmailRuleCoveringMe:
             is_author (bool): Whether you wrote it.
             covers (EmailRuleCoverage):
             current_version (int | None):
-            receivers (EmailRuleReceivers | None): Null when it could not be read in time; try again.
+            receivers (EmailRuleReceivers | None): Null when it could not be read in time, or for a rule shown in draft or
+                observe that turned active or was deleted after the page was read; try again.
             receivers_once_active (EmailRuleReceivers | None): For a grant rule in draft or observe: who would receive what
-                it matches once it is turned active. None of them receives anything yet. Null for any other rule, and when it
-                could not be read in time.
+                it matches once it is turned active. None of them receives anything yet. Null for any other rule, and as
+                receivers is null.
             created_at (datetime.datetime):
      """
 

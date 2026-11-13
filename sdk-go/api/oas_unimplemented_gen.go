@@ -2796,6 +2796,22 @@ func (UnimplementedHandler) ListEmailRuleVersions(ctx context.Context, params Li
 	return r, ht.ErrNotImplemented
 }
 
+// ListEmailRuleVersionsCoveringMe implements listEmailRuleVersionsCoveringMe operation.
+//
+// The versions of a rule that covers one of your own mailboxes now that applied to your mail: its
+// current version and each earlier one that decided on mail at your own mailboxes, so a decision can
+// be read in the words of the version that made it. Each has what the covering view shows of a
+// version: its wording, tree, explanation and assumptions. A version that did neither is not listed.
+// Without versions, newest first, a page at a time (meta.cursor); with versions, only those named
+// that are listed, oldest first. Needs mail:read, the email rules feature, and a member's own
+// full-access credential (no API key, agent key or narrowed token). Only on your own dashboard
+// session or the Primitive CLI.
+//
+// GET /email-rules/covering-me/{id}/versions
+func (UnimplementedHandler) ListEmailRuleVersionsCoveringMe(ctx context.Context, params ListEmailRuleVersionsCoveringMeParams) (r ListEmailRuleVersionsCoveringMeRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListEmailRules implements listEmailRules operation.
 //
 // The rules the caller can see, newest first: their own, or every member's rules for a caller who

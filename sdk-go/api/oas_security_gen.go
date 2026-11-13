@@ -220,6 +220,7 @@ var operationRolesBearerAuth = map[string][]string{
 	ListEmailRuleShareEmailsOperation:             []string{},
 	ListEmailRuleSharesOperation:                  []string{},
 	ListEmailRuleVersionsOperation:                []string{},
+	ListEmailRuleVersionsCoveringMeOperation:      []string{},
 	ListEmailRulesOperation:                       []string{},
 	ListEmailRulesCoveringMeOperation:             []string{},
 	ListEmailsOperation:                           []string{},

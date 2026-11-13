@@ -37,7 +37,8 @@ class GenerateLookAlikesRequest:
                 read, inboxes added later included. selected: what scope_selection names.
             scope_selection (EmailRuleScopeSelection | Unset): For a selected rule: inboxes, and domains (each address at
                 them the author reads); each one you can read.
-            rule_id (UUID | Unset): A saved rule you can see: its current version and words.
+            rule_id (UUID | Unset): A saved rule you can see, or one that covers your mailboxes (as you, sent to one of
+                them; dashboard or Primitive CLI only): its current version and words.
             request_id (UUID | Unset): A rule request you can see: its rule as asked.
             kind (GenerateLookAlikesRequestKind | Unset): For an unsaved tree: do_not_share tests it as a rule that blocks
                 sharing, so an email it cannot decide counts as matched. A saved rule uses its own.

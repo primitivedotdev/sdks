@@ -186,6 +186,7 @@ const (
 	ListEmailRuleShareEmailsOperation             OperationName = "ListEmailRuleShareEmails"
 	ListEmailRuleSharesOperation                  OperationName = "ListEmailRuleShares"
 	ListEmailRuleVersionsOperation                OperationName = "ListEmailRuleVersions"
+	ListEmailRuleVersionsCoveringMeOperation      OperationName = "ListEmailRuleVersionsCoveringMe"
 	ListEmailRulesOperation                       OperationName = "ListEmailRules"
 	ListEmailRulesCoveringMeOperation             OperationName = "ListEmailRulesCoveringMe"
 	ListEmailsOperation                           OperationName = "ListEmails"

@@ -1022,6 +1022,7 @@ from .list_email_rule_share_emails_result_item_sender_member_type_0 import ListE
 from .list_email_rule_shares_box import ListEmailRuleSharesBox
 from .list_email_rule_shares_live import ListEmailRuleSharesLive
 from .list_email_rule_shares_response_200 import ListEmailRuleSharesResponse200
+from .list_email_rule_versions_covering_me_response_200 import ListEmailRuleVersionsCoveringMeResponse200
 from .list_email_rule_versions_response_200 import ListEmailRuleVersionsResponse200
 from .list_email_rules_covering_me_response_200 import ListEmailRulesCoveringMeResponse200
 from .list_email_rules_response_200 import ListEmailRulesResponse200
@@ -2892,6 +2893,7 @@ __all__ = (
     "ListEmailRuleSharesLive",
     "ListEmailRuleSharesResponse200",
     "ListEmailRulesResponse200",
+    "ListEmailRuleVersionsCoveringMeResponse200",
     "ListEmailRuleVersionsResponse200",
     "ListEmailsAutomated",
     "ListEmailsAwaiting",

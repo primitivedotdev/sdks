@@ -609,6 +609,9 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   "listEmailRuleVersions": [
     "mail:read"
   ],
+  "listEmailRuleVersionsCoveringMe": [
+    "mail:read"
+  ],
   "listEmails": [
     "mail:read"
   ],

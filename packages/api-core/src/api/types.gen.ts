@@ -6719,7 +6719,7 @@ export type GenerateLookAlikesRequest = {
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
     scope_selection?: EmailRuleScopeSelection;
     /**
-     * A saved rule you can see: its current version and words.
+     * A saved rule you can see, or one that covers your mailboxes (as you, sent to one of them; dashboard or Primitive CLI only): its current version and words.
      */
     rule_id?: string;
     /**
@@ -6770,7 +6770,7 @@ export type TestEmailRuleOnSampleRequest = {
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
     scope_selection?: EmailRuleScopeSelection;
     /**
-     * A saved rule you can see. Its current version is tested.
+     * A saved rule you can see, or one that covers your mailboxes (as you; dashboard or Primitive CLI only). Its current version is tested.
      */
     rule_id?: string;
     /**
@@ -8091,7 +8091,7 @@ export type AcceptEmailRuleRequestResult = {
     rule: EmailRuleWithVersion;
     share: EmailRuleShare;
     /**
-     * What is now shared, in words.
+     * What is now shared, in words. When you changed the rule and it can now match mail the request left out by who it was sent to (such as mail where an address is only copied), that comes first.
      */
     notice?: string;
 };
@@ -8224,11 +8224,11 @@ export type EmailRuleCoveringMe = {
     covers: EmailRuleCoverage;
     current_version: number | null;
     /**
-     * Null when it could not be read in time; try again.
+     * Null when it could not be read in time, or for a rule shown in draft or observe that turned active or was deleted after the page was read; try again.
      */
     receivers: EmailRuleReceivers | null;
     /**
-     * For a grant rule in draft or observe: who would receive what it matches once it is turned active. None of them receives anything yet. Null for any other rule, and when it could not be read in time.
+     * For a grant rule in draft or observe: who would receive what it matches once it is turned active. None of them receives anything yet. Null for any other rule, and as receivers is null.
      */
     receivers_once_active: EmailRuleReceivers | null;
     created_at: string;
@@ -8275,7 +8275,7 @@ export type EmailRuleCoveringMeRead = {
      */
     current_version: number | null;
     /**
-     * Null when covers_now is false (who receives it now is not about your mail), or when it could not be read in time.
+     * Null when covers_now is false (who receives it now is not about your mail), when it could not be read in time, or for a rule shown in draft or observe that turned active or was deleted after it was read; try again.
      */
     receivers: EmailRuleReceivers | null;
     /**
@@ -8351,6 +8351,8 @@ export type EmailRuleDecisionOnMyMail = {
 };
 
 export type ListEmailRuleDecisionsOnMyMailResult = Array<EmailRuleDecisionOnMyMail>;
+
+export type ListEmailRuleVersionsCoveringMeResult = Array<EmailRuleCoveringMeVersion>;
 
 export type EmailRuleObjection = {
     id: string;
@@ -21120,7 +21122,7 @@ export type TestEmailRuleErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and a rule decides on what emails say. email_rule_scope_not_readable: scope_selection names something you cannot read.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and a rule decides on what emails say. email_rule_scope_not_readable: scope_selection names something you cannot read. forbidden with details.reason covering_view_only: you read this rule only in the covering view, since it decided on your mail before and covers none of your mailboxes now (details.covering_view).
      */
     403: ErrorResponse;
     /**
@@ -21173,15 +21175,15 @@ export type GenerateLookAlikesErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read. forbidden with details.reason covering_view_only: you read this rule only in the covering view, since it decided on your mail before and covers none of your mailboxes now (details.covering_view).
      */
     403: ErrorResponse;
     /**
-     * not_found: rule_id names no rule you can see (details.reason rule_not_found), or request_id no rule request you can see (request_not_found).
+     * not_found: rule_id names no rule you can see or that covers your mailboxes (details.reason rule_not_found), or request_id no rule request you can see (request_not_found).
      */
     404: ErrorResponse;
     /**
-     * email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree or a request, you). email_rule_request_not_pending: request_id names a request already decided.
+     * email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree, a request or a rule covering you, you). email_rule_request_not_pending: request_id names a request already decided.
      */
     409: ErrorResponse;
     /**
@@ -21234,15 +21236,15 @@ export type TestEmailRuleOnSampleErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read. forbidden with details.reason covering_view_only: you read this rule only in the covering view, since it decided on your mail before and covers none of your mailboxes now (details.covering_view).
      */
     403: ErrorResponse;
     /**
-     * not_found: rule_id names no rule you can see (details.reason rule_not_found).
+     * not_found: rule_id names no rule you can see or that covers your mailboxes (details.reason rule_not_found).
      */
     404: ErrorResponse;
     /**
-     * email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree, you), so it would decide nothing for real. details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_shareable_mailbox or no_selected_mailbox.
+     * email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree or a rule covering you, you), so it would decide nothing for real. details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_shareable_mailbox or no_selected_mailbox.
      */
     409: ErrorResponse;
     /**
@@ -21437,7 +21439,7 @@ export type GetEmailRuleErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox; details.covering_view is where (getEmailRuleCoveringMe).
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox or decided on your mail; details.covering_view is where (getEmailRuleCoveringMe).
      */
     403: ErrorResponse;
     /**
@@ -21554,7 +21556,7 @@ export type ListEmailRuleDecisionsErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what emails say.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what emails say. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox or decided on your mail; details.covering_view is where (listEmailRuleDecisionsOnMyMail).
      */
     403: ErrorResponse;
     /**
@@ -21643,7 +21645,7 @@ export type ListEmailRuleVersionsData = {
          */
         cursor?: string;
         /**
-         * Read only these version numbers, comma-separated. Without it, every version, newest first, a page at a time.
+         * Read only these version numbers, comma-separated. Without it, the versions listed, newest first, a page at a time.
          */
         versions?: string;
     };
@@ -21660,7 +21662,7 @@ export type ListEmailRuleVersionsErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox or decided on your mail; details.covering_view is where (listEmailRuleVersionsCoveringMe while it covers you).
      */
     403: ErrorResponse;
     /**
@@ -22634,6 +22636,68 @@ export type ListEmailRuleDecisionsOnMyMailResponses = {
 };
 
 export type ListEmailRuleDecisionsOnMyMailResponse = ListEmailRuleDecisionsOnMyMailResponses[keyof ListEmailRuleDecisionsOnMyMailResponses];
+
+export type ListEmailRuleVersionsCoveringMeData = {
+    body?: never;
+    path: {
+        /**
+         * The rule id.
+         */
+        id: string;
+    };
+    query?: {
+        /**
+         * Versions per page when versions is not given: 1 to 100, default 50.
+         */
+        limit?: number;
+        /**
+         * meta.cursor from the preceding page. Omit for the first page. Not with versions.
+         */
+        cursor?: string;
+        /**
+         * Read only these version numbers, comma-separated. Without it, the versions listed, newest first, a page at a time.
+         */
+        versions?: string;
+    };
+    url: '/email-rules/covering-me/{id}/versions';
+};
+
+export type ListEmailRuleVersionsCoveringMeErrors = {
+    /**
+     * validation_error: a cursor not returned in meta.cursor, or versions with limit or cursor.
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason no_longer_covers: it decided on your mail before but covers none of your mailboxes now; details.covering_view (getEmailRuleCoveringMe) shows the version that last decided on your mail.
+     */
+    403: ErrorResponse;
+    /**
+     * not_found: no rule with this id covers your mailboxes or decided on your mail.
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type ListEmailRuleVersionsCoveringMeError = ListEmailRuleVersionsCoveringMeErrors[keyof ListEmailRuleVersionsCoveringMeErrors];
+
+export type ListEmailRuleVersionsCoveringMeResponses = {
+    /**
+     * Read versions of a rule over your mail
+     */
+    200: SuccessEnvelope & {
+        data: ListEmailRuleVersionsCoveringMeResult;
+        meta?: CursorPageMeta;
+    };
+};
+
+export type ListEmailRuleVersionsCoveringMeResponse = ListEmailRuleVersionsCoveringMeResponses[keyof ListEmailRuleVersionsCoveringMeResponses];
 
 export type ListEmailRuleObjectionsData = {
     body?: never;

@@ -44,7 +44,8 @@ class EmailRuleCoveringMeRead:
                 decided on your mail.
             current_version (int | None): Null when covers_now is false.
             receivers (EmailRuleReceivers | None): Null when covers_now is false (who receives it now is not about your
-                mail), or when it could not be read in time.
+                mail), when it could not be read in time, or for a rule shown in draft or observe that turned active or was
+                deleted after it was read; try again.
             receivers_once_active (EmailRuleReceivers | None): As on the list; also null when covers_now is false.
             created_at (datetime.datetime):
             covers_now (bool): Whether it covers one of your own mailboxes now. False for a rule you see only because it

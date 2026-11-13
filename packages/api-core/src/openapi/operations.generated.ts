@@ -17274,7 +17274,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "description": "Null when covers_now is false."
         },
         "receivers": {
-          "description": "Null when covers_now is false (who receives it now is not about your mail), or when it could not be read in time.",
+          "description": "Null when covers_now is false (who receives it now is not about your mail), when it could not be read in time, or for a rule shown in draft or observe that turned active or was deleted after it was read; try again.",
           "anyOf": [
             {
               "type": "object",
@@ -18328,6 +18328,140 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "list-email-rule-versions-covering-me",
+    "description": "The versions of a rule that covers one of your own mailboxes now that applied to your mail: its current version and each earlier one that decided on mail at your own mailboxes, so a decision can be read in the words of the version that made it. Each has what the covering view shows of a version: its wording, tree, explanation and assumptions. A version that did neither is not listed. Without versions, newest first, a page at a time (meta.cursor); with versions, only those named that are listed, oldest first. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listEmailRuleVersionsCoveringMe",
+    "path": "/email-rules/covering-me/{id}/versions",
+    "pathParams": [
+      {
+        "description": "The rule id.",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [
+      {
+        "description": "Versions per page when versions is not given: 1 to 100, default 50.",
+        "enum": null,
+        "maximum": 100,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "meta.cursor from the preceding page. Omit for the first page. Not with versions.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Read only these version numbers, comma-separated, at most 100. Not with limit or cursor.",
+        "enum": null,
+        "name": "versions",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
+    "access": null,
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "english": {
+            "type": "string",
+            "description": "What its author asked for, in their words."
+          },
+          "tree": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "number",
+                "const": 1
+              },
+              "vocabulary": {
+                "type": "string",
+                "description": "Vocabulary version, such as v1."
+              },
+              "when": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {},
+                "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
+              },
+              "questions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Yes/no questions asked once the conditions match, over the email's text and attachment names, never attachment contents. A grant rule needs every one yes; a do_not_share rule matches on any yes."
+              }
+            },
+            "required": [
+              "version",
+              "vocabulary",
+              "when",
+              "questions"
+            ]
+          },
+          "explanation": {
+            "type": "string",
+            "description": "What the rule matches, as compiled."
+          },
+          "assumptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "compiled_by": {
+            "type": "string"
+          },
+          "vocabulary": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "version",
+          "english",
+          "tree",
+          "explanation",
+          "assumptions",
+          "compiled_by",
+          "vocabulary",
+          "created_at"
+        ]
+      }
+    },
+    "sdkName": "listEmailRuleVersionsCoveringMe",
+    "summary": "Read versions of a rule over your mail",
+    "tag": "Email Rule Oversight",
+    "tagCommand": "email-rule-oversight"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "list-email-rules-covering-me",
     "description": "Every email rule that covers one of your own mailboxes now, yours included, newest first, in any state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your member mailbox, or a personal agent's address): one whose author reads all your mail (author scope, for an author who reads the organization's mail or holds an access entry for your mailbox), or one that names your mailbox or its domain (selected). Another member's own_mailboxes rule never covers you. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope names, or its saved expectations. A page can hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
     "hasJsonBody": false,
@@ -18454,7 +18588,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "exclusiveMinimum": 0
           },
           "receivers": {
-            "description": "Null when it could not be read in time; try again.",
+            "description": "Null when it could not be read in time, or for a rule shown in draft or observe that turned active or was deleted after the page was read; try again.",
             "anyOf": [
               {
                 "type": "object",
@@ -18653,7 +18787,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ]
           },
           "receivers_once_active": {
-            "description": "For a grant rule in draft or observe: who would receive what it matches once it is turned active. None of them receives anything yet. Null for any other rule, and when it could not be read in time.",
+            "description": "For a grant rule in draft or observe: who would receive what it matches once it is turned active. None of them receives anything yet. Null for any other rule, and as receivers is null.",
             "anyOf": [
               {
                 "type": "object",
@@ -20095,7 +20229,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "notice": {
-          "description": "What is now shared, in words.",
+          "description": "What is now shared, in words. When you changed the rule and it can now match mail the request left out by who it was sent to (such as mail where an address is only copied), that comes first.",
           "type": "string"
         }
       },
@@ -22429,7 +22563,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "description": "For a selected rule: inboxes, and domains (each address at them the author reads); each one you can read."
         },
         "rule_id": {
-          "description": "A saved rule you can see: its current version and words.",
+          "description": "A saved rule you can see, or one that covers your mailboxes (as you, sent to one of them; dashboard or Primitive CLI only): its current version and words.",
           "type": "string",
           "format": "uuid"
         },
@@ -27756,7 +27890,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "description": "For a selected rule: inboxes, and domains (each address at them the author reads); each one you can read."
         },
         "rule_id": {
-          "description": "A saved rule you can see. Its current version is tested.",
+          "description": "A saved rule you can see, or one that covers your mailboxes (as you; dashboard or Primitive CLI only). Its current version is tested.",
           "type": "string",
           "format": "uuid"
         },

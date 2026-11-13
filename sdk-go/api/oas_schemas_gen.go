@@ -284,7 +284,8 @@ type AcceptEmailRuleRequestResult struct {
 	Request EmailRuleRequest     `json:"request"`
 	Rule    EmailRuleWithVersion `json:"rule"`
 	Share   EmailRuleShare       `json:"share"`
-	// What is now shared, in words.
+	// What is now shared, in words. When you changed the rule and it can now match mail the request left
+	// out by who it was sent to (such as mail where an address is only copied), that comes first.
 	Notice OptString `json:"notice"`
 }
 
@@ -34909,10 +34910,11 @@ type EmailRuleCoveringMe struct {
 	IsAuthor       bool              `json:"is_author"`
 	Covers         EmailRuleCoverage `json:"covers"`
 	CurrentVersion NilInt            `json:"current_version"`
-	// Null when it could not be read in time; try again.
+	// Null when it could not be read in time, or for a rule shown in draft or observe that turned active
+	// or was deleted after the page was read; try again.
 	Receivers NilEmailRuleReceivers `json:"receivers"`
 	// For a grant rule in draft or observe: who would receive what it matches once it is turned active.
-	// None of them receives anything yet. Null for any other rule, and when it could not be read in time.
+	// None of them receives anything yet. Null for any other rule, and as receivers is null.
 	ReceiversOnceActive NilEmailRuleReceivers `json:"receivers_once_active"`
 	CreatedAt           time.Time             `json:"created_at"`
 }
@@ -35087,8 +35089,9 @@ type EmailRuleCoveringMeRead struct {
 	Covers NilEmailRuleCoverage `json:"covers"`
 	// Null when covers_now is false.
 	CurrentVersion NilInt `json:"current_version"`
-	// Null when covers_now is false (who receives it now is not about your mail), or when it could not
-	// be read in time.
+	// Null when covers_now is false (who receives it now is not about your mail), when it could not be
+	// read in time, or for a rule shown in draft or observe that turned active or was deleted after it
+	// was read; try again.
 	Receivers NilEmailRuleReceivers `json:"receivers"`
 	// As on the list; also null when covers_now is false.
 	ReceiversOnceActive NilEmailRuleReceivers `json:"receivers_once_active"`
@@ -51547,7 +51550,8 @@ type GenerateLookAlikesRequest struct {
 	// what scope_selection names.
 	EvaluationScope OptGenerateLookAlikesRequestEvaluationScope `json:"evaluation_scope"`
 	ScopeSelection  OptEmailRuleScopeSelection                  `json:"scope_selection"`
-	// A saved rule you can see: its current version and words.
+	// A saved rule you can see, or one that covers your mailboxes (as you, sent to one of them;
+	// dashboard or Primitive CLI only): its current version and words.
 	RuleID OptUUID `json:"rule_id"`
 	// A rule request you can see: its rule as asked.
 	RequestID OptUUID `json:"request_id"`
@@ -70034,6 +70038,68 @@ func (*ListEmailRuleSharesUnauthorized) listEmailRuleSharesRes() {}
 type ListEmailRuleVersionsBadRequest ErrorResponse
 
 func (*ListEmailRuleVersionsBadRequest) listEmailRuleVersionsRes() {}
+
+type ListEmailRuleVersionsCoveringMeBadRequest ErrorResponse
+
+func (*ListEmailRuleVersionsCoveringMeBadRequest) listEmailRuleVersionsCoveringMeRes() {}
+
+type ListEmailRuleVersionsCoveringMeForbidden ErrorResponse
+
+func (*ListEmailRuleVersionsCoveringMeForbidden) listEmailRuleVersionsCoveringMeRes() {}
+
+type ListEmailRuleVersionsCoveringMeNotFound ErrorResponse
+
+func (*ListEmailRuleVersionsCoveringMeNotFound) listEmailRuleVersionsCoveringMeRes() {}
+
+// Merged schema.
+type ListEmailRuleVersionsCoveringMeOK struct {
+	Success bool                                  `json:"success"`
+	Data    ListEmailRuleVersionsCoveringMeResult `json:"data"`
+	// Absent when versions is given.
+	Meta OptCursorPageMeta `json:"meta"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListEmailRuleVersionsCoveringMeOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListEmailRuleVersionsCoveringMeOK) GetData() ListEmailRuleVersionsCoveringMeResult {
+	return s.Data
+}
+
+// GetMeta returns the value of Meta.
+func (s *ListEmailRuleVersionsCoveringMeOK) GetMeta() OptCursorPageMeta {
+	return s.Meta
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListEmailRuleVersionsCoveringMeOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListEmailRuleVersionsCoveringMeOK) SetData(val ListEmailRuleVersionsCoveringMeResult) {
+	s.Data = val
+}
+
+// SetMeta sets the value of Meta.
+func (s *ListEmailRuleVersionsCoveringMeOK) SetMeta(val OptCursorPageMeta) {
+	s.Meta = val
+}
+
+func (*ListEmailRuleVersionsCoveringMeOK) listEmailRuleVersionsCoveringMeRes() {}
+
+type ListEmailRuleVersionsCoveringMeResult []EmailRuleCoveringMeVersion
+
+type ListEmailRuleVersionsCoveringMeTooManyRequests ErrorResponseHeaders
+
+func (*ListEmailRuleVersionsCoveringMeTooManyRequests) listEmailRuleVersionsCoveringMeRes() {}
+
+type ListEmailRuleVersionsCoveringMeUnauthorized ErrorResponseHeaders
+
+func (*ListEmailRuleVersionsCoveringMeUnauthorized) listEmailRuleVersionsCoveringMeRes() {}
 
 type ListEmailRuleVersionsForbidden ErrorResponse
 
@@ -131838,7 +131904,8 @@ type TestEmailRuleOnSampleRequest struct {
 	// what scope_selection names.
 	EvaluationScope OptTestEmailRuleOnSampleRequestEvaluationScope `json:"evaluation_scope"`
 	ScopeSelection  OptEmailRuleScopeSelection                     `json:"scope_selection"`
-	// A saved rule you can see. Its current version is tested.
+	// A saved rule you can see, or one that covers your mailboxes (as you; dashboard or Primitive CLI
+	// only). Its current version is tested.
 	RuleID OptUUID `json:"rule_id"`
 	// For an unsaved tree: do_not_share tests it as a rule that blocks sharing, so an email it cannot
 	// decide counts as matched. A saved rule uses its own.

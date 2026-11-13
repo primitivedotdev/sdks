@@ -130,8 +130,8 @@ def sync_detailed(
         id (UUID):
         limit (int | Unset):
         cursor (str | Unset):
-        versions (str | Unset): Read only these version numbers, comma-separated. Without it,
-            every version, newest first, a page at a time.
+        versions (str | Unset): Read only these version numbers, comma-separated. Without it, the
+            versions listed, newest first, a page at a time.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -177,8 +177,8 @@ def sync(
         id (UUID):
         limit (int | Unset):
         cursor (str | Unset):
-        versions (str | Unset): Read only these version numbers, comma-separated. Without it,
-            every version, newest first, a page at a time.
+        versions (str | Unset): Read only these version numbers, comma-separated. Without it, the
+            versions listed, newest first, a page at a time.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -219,8 +219,8 @@ async def asyncio_detailed(
         id (UUID):
         limit (int | Unset):
         cursor (str | Unset):
-        versions (str | Unset): Read only these version numbers, comma-separated. Without it,
-            every version, newest first, a page at a time.
+        versions (str | Unset): Read only these version numbers, comma-separated. Without it, the
+            versions listed, newest first, a page at a time.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -266,8 +266,8 @@ async def asyncio(
         id (UUID):
         limit (int | Unset):
         cursor (str | Unset):
-        versions (str | Unset): Read only these version numbers, comma-separated. Without it,
-            every version, newest first, a page at a time.
+        versions (str | Unset): Read only these version numbers, comma-separated. Without it, the
+            versions listed, newest first, a page at a time.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

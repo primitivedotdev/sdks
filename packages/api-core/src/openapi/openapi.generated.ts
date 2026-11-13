@@ -35073,7 +35073,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "403": {
-            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and a rule decides on what emails say. email_rule_scope_not_readable: scope_selection names something you cannot read.",
+            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and a rule decides on what emails say. email_rule_scope_not_readable: scope_selection names something you cannot read. forbidden with details.reason covering_view_only: you read this rule only in the covering view, since it decided on your mail before and covers none of your mailboxes now (details.covering_view).",
             "content": {
               "application/json": {
                 "schema": {
@@ -35263,7 +35263,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "403": {
-            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read.",
+            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read. forbidden with details.reason covering_view_only: you read this rule only in the covering view, since it decided on your mail before and covers none of your mailboxes now (details.covering_view).",
             "content": {
               "application/json": {
                 "schema": {
@@ -35273,7 +35273,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "404": {
-            "description": "not_found: rule_id names no rule you can see (details.reason rule_not_found), or request_id no rule request you can see (request_not_found).",
+            "description": "not_found: rule_id names no rule you can see or that covers your mailboxes (details.reason rule_not_found), or request_id no rule request you can see (request_not_found).",
             "content": {
               "application/json": {
                 "schema": {
@@ -35283,7 +35283,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "409": {
-            "description": "email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree or a request, you). email_rule_request_not_pending: request_id names a request already decided.",
+            "description": "email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree, a request or a rule covering you, you). email_rule_request_not_pending: request_id names a request already decided.",
             "content": {
               "application/json": {
                 "schema": {
@@ -35473,7 +35473,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "403": {
-            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read.",
+            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read. forbidden with details.reason covering_view_only: you read this rule only in the covering view, since it decided on your mail before and covers none of your mailboxes now (details.covering_view).",
             "content": {
               "application/json": {
                 "schema": {
@@ -35483,7 +35483,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "404": {
-            "description": "not_found: rule_id names no rule you can see (details.reason rule_not_found).",
+            "description": "not_found: rule_id names no rule you can see or that covers your mailboxes (details.reason rule_not_found).",
             "content": {
               "application/json": {
                 "schema": {
@@ -35493,7 +35493,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "409": {
-            "description": "email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree, you), so it would decide nothing for real. details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_shareable_mailbox or no_selected_mailbox.",
+            "description": "email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree or a rule covering you, you), so it would decide nothing for real. details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_shareable_mailbox or no_selected_mailbox.",
             "content": {
               "application/json": {
                 "schema": {
@@ -36049,7 +36049,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "403": {
-            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox; details.covering_view is where (getEmailRuleCoveringMe).",
+            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox or decided on your mail; details.covering_view is where (getEmailRuleCoveringMe).",
             "content": {
               "application/json": {
                 "schema": {
@@ -36633,7 +36633,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "403": {
-            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what emails say.",
+            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what emails say. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox or decided on your mail; details.covering_view is where (listEmailRuleDecisionsOnMyMail).",
             "content": {
               "application/json": {
                 "schema": {
@@ -36912,7 +36912,7 @@ export const openapiDocument: Record<string, unknown> = {
             "required": false,
             "description": "Read only these version numbers, comma-separated, at most 100. Not with limit or cursor.",
             "schema": {
-              "description": "Read only these version numbers, comma-separated. Without it, every version, newest first, a page at a time.",
+              "description": "Read only these version numbers, comma-separated. Without it, the versions listed, newest first, a page at a time.",
               "type": "string",
               "pattern": "^[1-9]\\d{0,8}(,[1-9]\\d{0,8}){0,99}$"
             }
@@ -37011,7 +37011,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "403": {
-            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden.",
+            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox or decided on your mail; details.covering_view is where (listEmailRuleVersionsCoveringMe while it covers you).",
             "content": {
               "application/json": {
                 "schema": {
@@ -40322,6 +40322,211 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "403": {
             "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what emails say.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: no rule with this id covers your mailboxes or decided on your mail.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              },
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-429"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-429"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-429"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-primitive-permission": [
+          "mail:read"
+        ]
+      }
+    },
+    "/email-rules/covering-me/{id}/versions": {
+      "get": {
+        "operationId": "listEmailRuleVersionsCoveringMe",
+        "summary": "Read versions of a rule over your mail",
+        "description": "The versions of a rule that covers one of your own mailboxes now that applied to your mail: its current version and each earlier one that decided on mail at your own mailboxes, so a decision can be read in the words of the version that made it. Each has what the covering view shows of a version: its wording, tree, explanation and assumptions. A version that did neither is not listed. Without versions, newest first, a page at a time (meta.cursor); with versions, only those named that are listed, oldest first. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
+        "tags": [
+          "Email Rule Oversight"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The rule id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Versions per page when versions is not given: 1 to 100, default 50.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "meta.cursor from the preceding page. Omit for the first page. Not with versions.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "versions",
+            "in": "query",
+            "required": false,
+            "description": "Read only these version numbers, comma-separated, at most 100. Not with limit or cursor.",
+            "schema": {
+              "description": "Read only these version numbers, comma-separated. Without it, the versions listed, newest first, a page at a time.",
+              "type": "string",
+              "pattern": "^[1-9]\\d{0,8}(,[1-9]\\d{0,8}){0,99}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read versions of a rule over your mail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ListEmailRuleVersionsCoveringMeResult"
+                        },
+                        "meta": {
+                          "$ref": "#/components/schemas/CursorPageMeta",
+                          "description": "Absent when versions is given."
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy"
+              }
+            }
+          },
+          "400": {
+            "description": "validation_error: a cursor not returned in meta.cursor, or versions with limit or cursor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-unauthenticated"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-unauthenticated"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset-unauthenticated"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-unauthenticated"
+              }
+            }
+          },
+          "403": {
+            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason no_longer_covers: it decided on your mail before but covers none of your mailboxes now; details.covering_view (getEmailRuleCoveringMe) shows the version that last decided on your mail.",
             "content": {
               "application/json": {
                 "schema": {
@@ -80017,7 +80222,7 @@ export const openapiDocument: Record<string, unknown> = {
             "$ref": "#/components/schemas/EmailRuleScopeSelection"
           },
           "rule_id": {
-            "description": "A saved rule you can see: its current version and words.",
+            "description": "A saved rule you can see, or one that covers your mailboxes (as you, sent to one of them; dashboard or Primitive CLI only): its current version and words.",
             "type": "string",
             "format": "uuid"
           },
@@ -80138,7 +80343,7 @@ export const openapiDocument: Record<string, unknown> = {
             "$ref": "#/components/schemas/EmailRuleScopeSelection"
           },
           "rule_id": {
-            "description": "A saved rule you can see. Its current version is tested.",
+            "description": "A saved rule you can see, or one that covers your mailboxes (as you; dashboard or Primitive CLI only). Its current version is tested.",
             "type": "string",
             "format": "uuid"
           },
@@ -83375,7 +83580,7 @@ export const openapiDocument: Record<string, unknown> = {
             "$ref": "#/components/schemas/EmailRuleShare"
           },
           "notice": {
-            "description": "What is now shared, in words.",
+            "description": "What is now shared, in words. When you changed the rule and it can now match mail the request left out by who it was sent to (such as mail where an address is only copied), that comes first.",
             "type": "string"
           }
         },
@@ -83966,7 +84171,7 @@ export const openapiDocument: Record<string, unknown> = {
             "exclusiveMinimum": 0
           },
           "receivers": {
-            "description": "Null when it could not be read in time; try again.",
+            "description": "Null when it could not be read in time, or for a rule shown in draft or observe that turned active or was deleted after the page was read; try again.",
             "anyOf": [
               {
                 "$ref": "#/components/schemas/EmailRuleReceivers"
@@ -83977,7 +84182,7 @@ export const openapiDocument: Record<string, unknown> = {
             ]
           },
           "receivers_once_active": {
-            "description": "For a grant rule in draft or observe: who would receive what it matches once it is turned active. None of them receives anything yet. Null for any other rule, and when it could not be read in time.",
+            "description": "For a grant rule in draft or observe: who would receive what it matches once it is turned active. None of them receives anything yet. Null for any other rule, and as receivers is null.",
             "anyOf": [
               {
                 "$ref": "#/components/schemas/EmailRuleReceivers"
@@ -84096,7 +84301,7 @@ export const openapiDocument: Record<string, unknown> = {
             "description": "Null when covers_now is false."
           },
           "receivers": {
-            "description": "Null when covers_now is false (who receives it now is not about your mail), or when it could not be read in time.",
+            "description": "Null when covers_now is false (who receives it now is not about your mail), when it could not be read in time, or for a rule shown in draft or observe that turned active or was deleted after it was read; try again.",
             "anyOf": [
               {
                 "$ref": "#/components/schemas/EmailRuleReceivers"
@@ -84292,6 +84497,12 @@ export const openapiDocument: Record<string, unknown> = {
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/EmailRuleDecisionOnMyMail"
+        }
+      },
+      "ListEmailRuleVersionsCoveringMeResult": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/EmailRuleCoveringMeVersion"
         }
       },
       "EmailRuleObjection": {

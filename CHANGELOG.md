@@ -522,7 +522,7 @@ date-time is kept as null and sorts last. A sync stops with an error after
 
 #### New operations
 
-179 operations, by area:
+180 operations, by area:
 
 - Account: `getOwnGrant`, `getSendFrom` (the addresses a credential may
   send from, and the one a send that names no From should use).
@@ -626,14 +626,21 @@ date-time is kept as null and sorts last. A sync stops with an error after
   what it shares, each by its owner and a count, and its live share by the
   member it gives to; null when they could not be read in time. They need
   `mail:read` on a member's own
-  session or the CLI, not narrowed. In the CLI: `email-rule-oversight
-  list-email-rules-covering-me`, `get-email-rule-covering-me` and
-  `list-email-rule-decisions-on-my-mail`.
+  session or the CLI, not narrowed. `listEmailRuleVersionsCoveringMe`
+  (`GET /email-rules/covering-me/{id}/versions`) reads the versions of such
+  a rule that applied to your mail: its current version and each earlier
+  one that decided on mail at your own mailboxes, with the wording, tree,
+  explanation and assumptions the covering view shows. In the CLI:
+  `email-rule-oversight list-email-rules-covering-me`,
+  `get-email-rule-covering-me`, `list-email-rule-decisions-on-my-mail` and
+  `list-email-rule-versions-covering-me`.
   Objections (`/email-rule-objections`, each an `EmailRuleObjection`) ask
   the author of a rule that covers one of your own mailboxes now to turn
   it off: `createEmailRuleObjection` (`rule_id` and an optional `message`),
-  `listEmailRuleObjections` (`box` `outgoing`, the default, `incoming` or
-  `all`; `status` `pending`, the default, `decided` or `any`),
+  `listEmailRuleObjections` (`box` `mine`, the default, objections you made
+  and those to rules you wrote, `outgoing`, `incoming` or `all`, with each
+  objection's `is_objector` and `is_author` saying which side you are on;
+  `status` `pending`, the default, `decided` or `any`),
   `getEmailRuleObjection`, `withdrawEmailRuleObjection` (by the member who
   objected), and `declineEmailRuleObjection` (with an optional `reason`)
   and `acceptEmailRuleObjection` (which turns the rule off, state `draft`)
@@ -763,15 +770,18 @@ date-time is kept as null and sorts last. A sync stops with an error after
   In a rule's `receivers`, each `keys` entry over your mail carries
   `reads_in_full`, how many of those keys also list one of your own
   mailboxes or its domain.
+- `testEmailRuleOnSample` and `generateLookAlikes` take as `rule_id` a
+  rule that covers your mailboxes, run as you (on the dashboard or the CLI
+  only). `acceptEmailRuleRequest`'s `notice` says first when your changes
+  let the rule match mail the request left out by who it was sent to. A
+  covering rule's `receivers` is also null for a rule shown in draft or
+  observe that turned active or was deleted after the page was read.
 - `listActivityObjects` coverage notices (`email_rule_coverage`) carry
   `rule_id`, the rule each is about (for a `pending` row, the same as `id`).
 - `createEmailRule` and `updateEmailRule` (`EmailRuleWritten`) and
   `deleteEmailRule` carry `share_notice` after a write that ended the
   rule's share: that it did, with whom and the version they accepted, when
   those can be read.
-- `listEmailRuleObjections` takes `box` `mine`, now the default: objections
-  you made and objections to rules you wrote. Each objection's
-  `is_objector` and `is_author` say which side you are on.
 - A rule's author, on the dashboard or the CLI, reads `pending_objections`
   on it (from `listEmailRules`, `getEmailRule` and rule writes), with
   `objection_notice` while some wait for their answer. A write's answer

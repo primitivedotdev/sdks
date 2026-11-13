@@ -713,6 +713,10 @@ type ListEmailRuleSharesRes interface {
 	listEmailRuleSharesRes()
 }
 
+type ListEmailRuleVersionsCoveringMeRes interface {
+	listEmailRuleVersionsCoveringMeRes()
+}
+
 type ListEmailRuleVersionsRes interface {
 	listEmailRuleVersionsRes()
 }
