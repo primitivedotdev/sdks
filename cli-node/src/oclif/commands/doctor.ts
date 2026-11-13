@@ -513,7 +513,9 @@ export async function checkAskedOfYou(
   const pending = items.filter((item) => item.state === "pending").length;
   const notices = items.filter(
     (item) =>
-      (item.state === "started" || item.state === "new_version") &&
+      (item.state === "started" ||
+        item.state === "new_version" ||
+        item.state === "receivers_changed") &&
       Date.parse(item.created_at) >= since,
   ).length;
   const parts = [
@@ -595,7 +597,7 @@ function checkReceiverStart(
 
 class DoctorCommand extends Command {
   static description =
-    `Run a one-shot environment health check: Node version, proxy env, CLI auth resolution, /account reachability, verified-domain status, and, signed in as yourself, the rule requests and objections waiting for you and the rules that recently started covering your mail. With PRIMITIVE_AGENT_PROFILE selected, reports saved identity offline and points to whoami and exact listener status instead of account-only checks. Prints actionable hints for each warning or failure.`;
+    `Run a one-shot environment health check: Node version, proxy env, CLI auth resolution, /account reachability, verified-domain status, and, signed in as yourself, the rule requests and objections waiting for you and the rules over your mail that recently started covering it or changed. With PRIMITIVE_AGENT_PROFILE selected, reports saved identity offline and points to whoami and exact listener status instead of account-only checks. Prints actionable hints for each warning or failure.`;
 
   static summary =
     "Check the local environment and live API for common problems";

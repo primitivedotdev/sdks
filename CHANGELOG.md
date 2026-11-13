@@ -1527,7 +1527,11 @@ parsers.
   `--all` and `--json`.
 - `primitive activity concerning` lists what other members' rules did to
   your own mail, newest first: each coverage notice (`started`,
-  `new_version` or `baseline`), when, the rule's name then and its author.
+  `new_version`, `receivers_changed` or `baseline`), when, the rule's name
+  then and its author. A `receivers_changed` notice, a change in who
+  receives an active rule's matches, shows what changed in its totals in a
+  CHANGE column, and `primitive doctor` counts it among recent coverage
+  notices.
   It takes `--limit`, `--cursor`, `--all` and `--json`. `--json` keeps the
   answer's `pending_complete`, and when that is false the text says the
   check for rules covering you with no notice yet did not finish. Its

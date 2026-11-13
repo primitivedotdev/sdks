@@ -166,16 +166,76 @@ export function formatAskedRows(
   return [line(header), ...rows.map(line)].join("\n");
 }
 
+/** Totals of who receives a rule's matches, as a receivers_changed notice carries them before and after. */
+type ReceiverTotals = {
+  keys: number;
+  reads_in_full: number;
+  webhooks: number;
+  shares: number;
+};
+
+const TOTAL_KEYS = ["keys", "reads_in_full", "webhooks", "shares"] as const;
+
+/** `value` as receiver totals: an object whose four counts are all non-negative integers. */
+function receiverTotals(value: unknown): ReceiverTotals | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const totals = value as Record<string, unknown>;
+  return TOTAL_KEYS.every((key) => {
+    const count = totals[key];
+    return typeof count === "number" && Number.isInteger(count) && count >= 0;
+  })
+    ? (totals as ReceiverTotals)
+    : null;
+}
+
+/**
+ * What a receivers_changed notice says changed, from its totals before and
+ * after: "keys 3 to 2 (1 to 0 also reading your mail beyond the rule),
+ * webhooks 2 to 1",
+ * or, when the totals are equal (an owner or a webhook site changed), that
+ * they are. Null for any other notice, and for one whose totals are missing
+ * or not counts (an older server).
+ */
+export function receiversChangeText(item: ActivityItem): string | null {
+  if (item.state !== "receivers_changed") return null;
+  const change = (
+    item as { receivers_change?: { before?: unknown; after?: unknown } }
+  ).receivers_change;
+  const before = receiverTotals(change?.before);
+  const after = receiverTotals(change?.after);
+  if (!before || !after) return null;
+  const moved = (key: keyof ReceiverTotals) => before[key] !== after[key];
+  const span = (key: keyof ReceiverTotals) => `${before[key]} to ${after[key]}`;
+  // Keys also reading your mail beyond the rule are some of the keys, so they are told with them.
+  const full = moved("reads_in_full")
+    ? ` (${span("reads_in_full")} also reading your mail beyond the rule)`
+    : "";
+  const changed = [
+    ...(moved("keys")
+      ? [`keys ${span("keys")}${full}`]
+      : full
+        ? [`keys ${after.keys}${full}`]
+        : []),
+    ...(moved("webhooks") ? [`webhooks ${span("webhooks")}`] : []),
+    ...(moved("shares") ? [`shares ${span("shares")}`] : []),
+  ];
+  return changed.length > 0
+    ? changed.join(", ")
+    : "same totals, an owner or webhook site changed";
+}
+
 /** Where to see what covers you now, whatever the notices have caught up with. */
 const COVERING_NOW = `\`primitive email-rule-oversight list-email-rules-covering-me\` shows what covers you now.`;
 
 /**
- * One line per coverage notice: what it told (started, new_version, or
- * baseline for a rule that already covered you when notices began), when, the
- * rule's name then, and its author; and, first, each rule that covers you now
- * whose notice is not written yet (pending, dated when the rule last
- * changed), then the rule's id (rule_id; a pending row's own id is the
- * rule's), never the notice's own id, which no command takes.
+ * One line per coverage notice: what it told (started, new_version,
+ * receivers_changed, or baseline for a rule that already covered you when
+ * notices began), when, the rule's name then, and its author; and, first,
+ * each rule that covers you now whose notice is not written yet (pending,
+ * dated when the rule last changed), then the rule's id (rule_id; a pending
+ * row's own id is the rule's), never the notice's own id, which no command
+ * takes; and, when any row is a receivers_changed notice with its totals,
+ * what changed in them (CHANGE).
  * `complete` says the listing is the whole of it (from the first page to the
  * last, nothing withheld). Even then an empty one is no promise that nothing
  * covers you: notices can lag, so it
@@ -208,7 +268,19 @@ export function formatConcerningRows(
     // An older server sends no rule_id; a pending row's id is the rule's.
     item.rule_id ?? (item.state === "pending" ? item.id : ""),
   ]);
-  const header = ["NOTICE", "WHEN (UTC)", "RULE", "AUTHOR", "RULE ID"];
+  // Last, so it widens no other column, and only when a row has one.
+  const changes = items.map((item) => receiversChangeText(item));
+  const withChange = changes.some((change) => change !== null);
+  if (withChange)
+    for (const [i, row] of rows.entries()) row.push(changes[i] ?? "");
+  const header = [
+    "NOTICE",
+    "WHEN (UTC)",
+    "RULE",
+    "AUTHOR",
+    "RULE ID",
+    ...(withChange ? ["CHANGE"] : []),
+  ];
   const widths = header.map((h, i) =>
     Math.max(h.length, ...rows.map((row) => (row[i] ?? "").length)),
   );
@@ -225,10 +297,17 @@ export function formatConcerningRows(
         `pending: the rule covers you now and its notice is not written yet. ${COVERING_NOW}`,
       ]
     : [];
+  const receivers = items.some((item) => item.state === "receivers_changed")
+    ? [
+        "",
+        "receivers_changed: who receives the rule's matches changed, with the totals before and after where the server sends them. `primitive email-rule-oversight get-email-rule-covering-me <rule-id>` shows who receives them now, by owner, while the rule covers you.",
+      ]
+    : [];
   return [
     line(header),
     ...rows.map(line),
     ...pending,
+    ...receivers,
     // The pending line already says where to see what covers you now.
     ...(unfinished
       ? ["", pending.length > 0 ? unfinished : `${unfinished} ${COVERING_NOW}`]
@@ -485,7 +564,7 @@ export class ActivityAskedCommand extends Command {
 
 export class ActivityConcerningCommand extends Command {
   static description =
-    `List what other members did that concerns your own mail, newest first: each time another member's rule started covering your mailboxes, that is, it was made or turned active over them or an active rule came to reach you, once per rule, not per mailbox (started), or saved a new version while covering it (new_version), named as the rule was then, with its author. A rule that already covered you when these notices began is listed once as baseline. A rule in draft or observe grants and blocks nothing and gets no notice while it stays there, though \`primitive email-rule-oversight list-email-rules-covering-me\` lists it; turning it active is what is listed, and a rule that covers you again within an hour of its last started or baseline notice gets no new one, though a version it saved meanwhile is listed as new_version. A rule that stops covering you, a rename, and changes to its keys, webhooks or share are not listed.
+    `List what other members did that concerns your own mail, newest first: each time another member's rule started covering your mailboxes, that is, it was made or turned active over them or an active rule came to reach you, once per rule, not per mailbox (started), saved a new version while covering it (new_version), or changed who receives its matches: its keys, webhooks or share (receivers_changed, with the totals before and after in the table, and under receivers_change with --json, at most once every 15 minutes for a rule), named as the rule was then, with its author. A rule that already covered you when these notices began is listed once as baseline. A rule in draft or observe grants and blocks nothing and gets no notice while it stays there, though \`primitive email-rule-oversight list-email-rules-covering-me\` lists it; turning it active is what is listed, and a rule that covers you again within an hour of its last started or baseline notice gets no new one, though a version it saved meanwhile is listed as new_version, and a change in who receives its matches as receivers_changed. A rule that stops covering you and a rename are not listed.
 
   Notices can lag. Until a start is written, a rule that now covers you is listed first as pending, dated when the rule last changed, and with --json its id is the rule's. When the check for such rules did not finish, the listing says so and --json carries pending_complete: false; run it again in a moment.
 
