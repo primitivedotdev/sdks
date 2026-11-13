@@ -336,7 +336,7 @@ describe("the endpoint commands' URLs", () => {
     expect(`${shown.stdout}${shown.stderr}`).toContain(SECRET_URL);
   });
 
-  it("create and update refuse a URL as these commands print it, sending nothing", async () => {
+  it("create and update refuse a URL as these commands print it before reading a credential, sending nothing", async () => {
     for (const [sdkName, argv] of [
       ["createEndpoint", ["--url", SHOWN_URL]],
       ["updateEndpoint", [ENDPOINT_ID, "--url", SHOWN_URL]],
@@ -357,8 +357,11 @@ describe("the endpoint commands' URLs", () => {
       ],
     ] as const) {
       const calls = fixture();
+      auth.create.mockClear();
       const result = await run(sdkName, [...argv]);
       expect(calls).toHaveLength(0);
+      // Refused before any credential is read, so no refresh is sent either.
+      expect(auth.create).not.toHaveBeenCalled();
       expect(String((result.error as Error | null)?.message)).toContain(
         "--show-url",
       );

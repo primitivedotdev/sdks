@@ -1774,6 +1774,24 @@ export function createOperationCommand(
       ) {
         requireDefaultLoginProfile();
       }
+      // An endpoint write's JSON body is read before any credential is, so
+      // a URL as the endpoint commands print it, query hidden, is refused
+      // before anything is sent, a credential refresh included.
+      const prereadBody =
+        ENDPOINT_URL_WRITE_OPERATIONS.has(operation.sdkName) &&
+        operation.hasJsonBody
+          ? { value: readJsonBody(parsedFlags) }
+          : undefined;
+      if (prereadBody) {
+        const urlFlag = [...bodyFieldFlagToProperty].find(
+          ([, property]) => property === "url",
+        )?.[0];
+        const flagUrl = urlFlag ? parsedFlags[urlFlag] : undefined;
+        const refusal = hiddenQueryUrlRefusal(
+          typeof flagUrl === "string" ? { url: flagUrl } : prereadBody.value,
+        );
+        if (refusal) throw new Errors.CLIError(refusal, { exit: 2 });
+      }
       await runWithTiming(parsedFlags.time === true, async () => {
         const { apiClient, auth, baseUrlOverridden } =
           await createAuthenticatedCliApiClient({
@@ -1795,7 +1813,9 @@ export function createOperationCommand(
         // and override one field on the command line.
         let body: unknown;
         if (operation.hasJsonBody) {
-          const explicit = readJsonBody(parsedFlags);
+          const explicit = prereadBody
+            ? prereadBody.value
+            : readJsonBody(parsedFlags);
           const overrides = collectBodyFieldFlags(
             parsedFlags,
             bodyFieldFlagToProperty,
